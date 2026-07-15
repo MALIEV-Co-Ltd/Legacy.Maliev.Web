@@ -3,6 +3,7 @@
     <ProjectReference Include="..\Legacy.Maliev.Web.Application\Legacy.Maliev.Web.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Google.Cloud.RecaptchaEnterprise.V1" Version="2.20.0" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.4.0" />
   </ItemGroup>
   <ItemGroup>
