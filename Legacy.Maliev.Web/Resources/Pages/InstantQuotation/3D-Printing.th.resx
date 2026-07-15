@@ -301,4 +301,29 @@
     <value>ข้อมูลของคุณปลอดภัย</value>
   </data>
   <data name="Back" xml:space="preserve"><value>ย้อนกลับ</value></data><data name="Customer details" xml:space="preserve"><value>ข้อมูลลูกค้า</value></data>
+  <data name="Instant 3D Printing Estimate" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3 มิติทันที</value></data>
+  <data name="Estimate 3D printing price and production time with MALIEV's deterministic pricing calculator." xml:space="preserve"><value>ประเมินราคาและเวลาผลิตงานพิมพ์ 3 มิติด้วยเครื่องคำนวณสูตรของ MALIEV</value></data>
+  <data name="3D printing" xml:space="preserve"><value>งานพิมพ์ 3 มิติ</value></data>
+  <data name="Get an instant manufacturing estimate" xml:space="preserve"><value>ประเมินราคาการผลิตได้ทันที</value></data>
+  <data name="Enter the measurements reported by your CAD tool. The estimate uses deterministic production formulas and is reviewed by an engineer before it becomes a formal quotation." xml:space="preserve"><value>กรอกค่าขนาดจากโปรแกรม CAD ระบบจะคำนวณด้วยสูตรการผลิตที่กำหนดไว้ และวิศวกรจะตรวจสอบก่อนออกใบเสนอราคาอย่างเป็นทางการ</value></data>
+  <data name="Part configuration" xml:space="preserve"><value>ตั้งค่าชิ้นงาน</value></data>
+  <data name="Height (mm)" xml:space="preserve"><value>ความสูง (มม.)</value></data>
+  <data name="Solid volume (mm³)" xml:space="preserve"><value>ปริมาตรเนื้อชิ้นงาน (มม.³)</value></data>
+  <data name="Footprint area (mm²)" xml:space="preserve"><value>พื้นที่ฐาน (มม.²)</value></data>
+  <data name="Optional advanced geometry profiles" xml:space="preserve"><value>ข้อมูลรูปทรงขั้นสูง (ไม่บังคับ)</value></data>
+  <data name="Cross-sectional areas, comma-separated (mm²)" xml:space="preserve"><value>พื้นที่หน้าตัด คั่นด้วยจุลภาค (มม.²)</value></data>
+  <data name="Cross-sectional perimeters, comma-separated (mm)" xml:space="preserve"><value>เส้นรอบรูปหน้าตัด คั่นด้วยจุลภาค (มม.)</value></data>
+  <data name="Calculate estimate" xml:space="preserve"><value>คำนวณราคา</value></data>
+  <data name="Estimate" xml:space="preserve"><value>ราคาประเมิน</value></data>
+  <data name="Configure a part to see pricing" xml:space="preserve"><value>ตั้งค่าชิ้นงานเพื่อดูราคา</value></data>
+  <data name="Part subtotal" xml:space="preserve"><value>รวมราคาชิ้นงาน</value></data>
+  <data name="Estimated time per unit" xml:space="preserve"><value>เวลาผลิตโดยประมาณต่อชิ้น</value></data>
+  <data name="VAT" xml:space="preserve"><value>ภาษีมูลค่าเพิ่ม</value></data>
+  <data name="Estimated total" xml:space="preserve"><value>ยอดรวมโดยประมาณ</value></data>
+  <data name="Prices are shown in THB and are estimates until engineering review." xml:space="preserve"><value>ราคาแสดงเป็นเงินบาทและเป็นเพียงการประเมินจนกว่าวิศวกรจะตรวจสอบ</value></data>
+  <data name="Continue with files and request a formal quotation" xml:space="preserve"><value>แนบไฟล์และขอใบเสนอราคาอย่างเป็นทางการ</value></data>
+  <data name="Calculating estimate…" xml:space="preserve"><value>กำลังคำนวณราคา…</value></data>
+  <data name="Estimate calculated. A formal quotation requires engineering review." xml:space="preserve"><value>คำนวณราคาแล้ว ใบเสนอราคาอย่างเป็นทางการต้องผ่านการตรวจสอบโดยวิศวกร</value></data>
+  <data name="The estimate could not be calculated. Continue to the formal quotation form for assistance." xml:space="preserve"><value>ไม่สามารถคำนวณราคาได้ โปรดไปยังแบบฟอร์มขอใบเสนอราคาเพื่อรับความช่วยเหลือ</value></data>
+  <data name="minutes" xml:space="preserve"><value>นาที</value></data>
 </root>

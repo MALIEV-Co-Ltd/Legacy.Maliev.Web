@@ -1,0 +1,177 @@
+@page
+@model Legacy.Maliev.Web.Pages.InstantQuotation.ThreeDimensionalPrinting
+@{
+    ViewData["Title"] = Localizer["Instant 3D Printing Estimate"];
+    ViewData["Description"] = Localizer["Estimate 3D printing price and production time with MALIEV's deterministic pricing calculator."];
+}
+
+<main class="instant-quote">
+    <header class="instant-quote__header">
+        <p class="eyebrow">@Localizer["3D printing"]</p>
+        <h1>@Localizer["Get an instant manufacturing estimate"]</h1>
+        <p>@Localizer["Enter the measurements reported by your CAD tool. The estimate uses deterministic production formulas and is reviewed by an engineer before it becomes a formal quotation."]</p>
+    </header>
+
+    <div class="instant-quote__grid">
+        <form id="instant-estimate-form" class="instant-quote__form">
+            <fieldset>
+                <legend>@Localizer["Part configuration"]</legend>
+
+                <label for="material">@Localizer["Material"]</label>
+                <select id="material" name="material" required>
+                    @foreach (var material in Model.Materials)
+                    {
+                        if (string.Equals(material.Key, "PLA", StringComparison.Ordinal))
+                        {
+                            <option value="@material.Key" selected>@material.DisplayName</option>
+                        }
+                        else
+                        {
+                            <option value="@material.Key">@material.DisplayName</option>
+                        }
+                    }
+                </select>
+
+                <div class="instant-quote__dimensions">
+                    <div>
+                        <label for="height">@Localizer["Height (mm)"]</label>
+                        <input id="height" name="height" type="number" min="0.01" step="0.01" value="30" required />
+                    </div>
+                    <div>
+                        <label for="volume">@Localizer["Solid volume (mm³)"]</label>
+                        <input id="volume" name="volume" type="number" min="0.01" step="0.01" value="20000" required />
+                    </div>
+                    <div>
+                        <label for="footprint">@Localizer["Footprint area (mm²)"]</label>
+                        <input id="footprint" name="footprint" type="number" min="0" step="0.01" value="400" required />
+                    </div>
+                    <div>
+                        <label for="quantity">@Localizer["Quantity"]</label>
+                        <input id="quantity" name="quantity" type="number" min="1" max="1000" step="1" value="1" required />
+                    </div>
+                </div>
+
+                <details>
+                    <summary>@Localizer["Optional advanced geometry profiles"]</summary>
+                    <label for="area-profile">@Localizer["Cross-sectional areas, comma-separated (mm²)"]</label>
+                    <textarea id="area-profile" name="areaProfile" rows="3"></textarea>
+                    <label for="perimeter-profile">@Localizer["Cross-sectional perimeters, comma-separated (mm)"]</label>
+                    <textarea id="perimeter-profile" name="perimeterProfile" rows="3"></textarea>
+                </details>
+
+                <button type="submit" class="button button--primary">@Localizer["Calculate estimate"]</button>
+            </fieldset>
+        </form>
+
+        <section class="instant-quote__result" aria-labelledby="estimate-heading" aria-live="polite" aria-atomic="true">
+            <p class="eyebrow">@Localizer["Estimate"]</p>
+            <h2 id="estimate-heading">@Localizer["Configure a part to see pricing"]</h2>
+            <dl id="estimate-breakdown" hidden>
+                <div><dt>@Localizer["Unit price"]</dt><dd id="unit-price">—</dd></div>
+                <div><dt>@Localizer["Part subtotal"]</dt><dd id="subtotal">—</dd></div>
+                <div><dt>@Localizer["Estimated time per unit"]</dt><dd id="print-time">—</dd></div>
+                <div><dt>@Localizer["Shipping"]</dt><dd id="shipping">—</dd></div>
+                <div><dt>@Localizer["VAT"]</dt><dd id="vat">—</dd></div>
+                <div class="instant-quote__total"><dt>@Localizer["Estimated total"]</dt><dd id="grand-total">—</dd></div>
+            </dl>
+            <p id="estimate-status">@Localizer["Prices are shown in THB and are estimates until engineering review."]</p>
+            <a class="button button--secondary" asp-page="/Quotation/Index" asp-route-item="3D-Printing">@Localizer["Continue with files and request a formal quotation"]</a>
+        </section>
+    </div>
+</main>
+
+@section Head {
+    <style>
+        .instant-quote { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(2rem, 5vw, 5rem) 0; }
+        .instant-quote__header { max-width: 760px; margin-bottom: 2rem; }
+        .instant-quote__header h1 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1; }
+        .eyebrow { color: #c62828; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        .instant-quote__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 1.5rem; align-items: start; }
+        .instant-quote__form fieldset, .instant-quote__result { border: 1px solid #d8dde3; border-radius: 1rem; padding: clamp(1.25rem, 3vw, 2rem); background: #fff; }
+        .instant-quote__form legend { padding: 0 .5rem; font-size: 1.3rem; font-weight: 700; }
+        .instant-quote__form label { display: block; margin-top: 1rem; font-weight: 650; }
+        .instant-quote__form input, .instant-quote__form select, .instant-quote__form textarea { width: 100%; min-height: 44px; margin-top: .35rem; padding: .65rem .75rem; border: 1px solid #98a2ad; border-radius: .5rem; }
+        .instant-quote__dimensions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; }
+        .instant-quote details { margin: 1.25rem 0; }
+        .instant-quote summary { cursor: pointer; font-weight: 650; }
+        .button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: .7rem 1rem; border: 1px solid transparent; border-radius: .5rem; font-weight: 700; text-decoration: none; }
+        .button--primary { color: #fff; background: #b71c1c; }
+        .button--secondary { color: #8e1111; border-color: #b71c1c; background: #fff; }
+        .instant-quote__result { position: sticky; top: 1rem; }
+        .instant-quote__result dl div { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem 0; border-bottom: 1px solid #e7eaee; }
+        .instant-quote__result dd { margin: 0; font-weight: 700; text-align: right; }
+        .instant-quote__total { font-size: 1.2rem; }
+        @@media (max-width: 760px) { .instant-quote__grid { grid-template-columns: 1fr; } .instant-quote__dimensions { grid-template-columns: 1fr; } .instant-quote__result { position: static; } }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.getElementById('instant-estimate-form');
+            const status = document.getElementById('estimate-status');
+            const breakdown = document.getElementById('estimate-breakdown');
+            const text = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                Calculating = Localizer["Calculating estimate…"].Value,
+                Calculated = Localizer["Estimate calculated. A formal quotation requires engineering review."].Value,
+                Failed = Localizer["The estimate could not be calculated. Continue to the formal quotation form for assistance."].Value,
+                Quantity = Localizer["Quantity"].Value,
+                Minutes = Localizer["minutes"].Value
+            }));
+            const money = value => `${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB`;
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                if (!form.reportValidity()) return;
+                status.textContent = text.Calculating;
+
+                const values = new FormData(form);
+                const estimateQuery = new URLSearchParams({
+                    handler: 'GetEstimate',
+                    material: values.get('material'),
+                    dimensionZ: values.get('height'),
+                    volume: values.get('volume'),
+                    footprint: values.get('footprint'),
+                    quantity: values.get('quantity'),
+                    areaProfile: values.get('areaProfile'),
+                    perimeterProfile: values.get('perimeterProfile'),
+                    currency: 'THB'
+                });
+
+                try {
+                    const estimateResponse = await fetch(`?${estimateQuery}`, { headers: { Accept: 'application/json' } });
+                    if (!estimateResponse.ok) throw new Error('Estimate request failed');
+                    const estimate = await estimateResponse.json();
+                    if (!estimate.success) throw new Error(estimate.message || 'This material cannot be estimated');
+
+                    const quantity = Number(values.get('quantity'));
+                    const totalQuery = new URLSearchParams({
+                        handler: 'GetOrderTotal',
+                        processes: estimate.process,
+                        subtotals: estimate.subtotalThb,
+                        totalWeightGrams: estimate.weightGrams * quantity,
+                        totalBoundingCm3: estimate.boundingCm3 * quantity,
+                        currency: 'THB'
+                    });
+                    const totalResponse = await fetch(`?${totalQuery}`, { headers: { Accept: 'application/json' } });
+                    if (!totalResponse.ok) throw new Error('Order total request failed');
+                    const total = await totalResponse.json();
+
+                    document.getElementById('estimate-heading').textContent = `${values.get('material')} · ${text.Quantity} ${quantity}`;
+                    document.getElementById('unit-price').textContent = money(estimate.unitPrice);
+                    document.getElementById('subtotal').textContent = money(estimate.subtotal);
+                    document.getElementById('print-time').textContent = `${estimate.printTimeMinutes.toLocaleString()} ${text.Minutes}`;
+                    document.getElementById('shipping').textContent = money(total.shipping);
+                    document.getElementById('vat').textContent = money(total.vat);
+                    document.getElementById('grand-total').textContent = money(total.finalOrderPrice);
+                    breakdown.hidden = false;
+                    status.textContent = text.Calculated;
+                } catch (error) {
+                    breakdown.hidden = true;
+                    status.textContent = text.Failed;
+                }
+            });
+        })();
+    </script>
+}
