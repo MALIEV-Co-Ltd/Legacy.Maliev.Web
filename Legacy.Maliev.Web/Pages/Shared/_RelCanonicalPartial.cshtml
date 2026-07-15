@@ -1,0 +1,6 @@
+@{
+    string culture = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName;
+    string canonicalUrl = CanonicalUrlPolicy.GetLocalizedUrl(this.Context.Request.Path, culture);
+}
+
+<link rel="canonical" href="@canonicalUrl" />

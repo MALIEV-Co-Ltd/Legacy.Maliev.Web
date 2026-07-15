@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="304.61703mm"
+   height="321.04633mm"
+   viewBox="0 0 304.61703 321.04633"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   sodipodi:docname="3d-canvas-placeholder.svg">
+  <defs
+     id="defs2">
+    <marker
+       inkscape:stockid="Arrow1Lstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lstart"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         id="path981"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.00000003pt"
+         transform="matrix(0.8,0,0,0.8,10,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="-477.48738 : 298.53957 : 1"
+       inkscape:vp_y="2.3142168e-013 : 3779.5276 : 0"
+       inkscape:vp_z="442.88518 : 285.76576 : 1"
+       inkscape:persp3d-origin="-39.991574 : 250.31012 : 1"
+       id="perspective859" />
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0.67266983 : 109.19047 : 1"
+       inkscape:vp_y="0 : 999.99998 : 0"
+       inkscape:vp_z="276.58991 : 105.41071 : 1"
+       inkscape:persp3d-origin="131.82772 : 19.624997 : 1"
+       id="perspective815" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.35"
+     inkscape:cx="-77.260372"
+     inkscape:cy="640.34038"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     fit-margin-top="50"
+     fit-margin-left="50"
+     fit-margin-right="50"
+     fit-margin-bottom="50"
+     inkscape:window-width="1920"
+     inkscape:window-height="1137"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(282.7277,173.79386)">
+    <g
+       id="g1319"
+       transform="translate(0,27.516678)">
+      <rect
+         transform="matrix(0.8660254,0.5,0,1,0,0)"
+         y="44.753586"
+         x="-267.97989"
+         height="101.67559"
+         width="117.40486"
+         id="rect1261"
+         style="opacity:1;fill:#a2a2a2;fill-opacity:1;stroke:#7d7d7d;stroke-width:1.42156649;stroke-linecap:butt;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:113.72531891;stroke-opacity:1;paint-order:markers fill stroke" />
+      <rect
+         transform="matrix(0.86602542,-0.49999997,0,1,0,0)"
+         y="-105.82143"
+         x="-150.57503"
+         height="101.67558"
+         width="117.40486"
+         id="rect1261-1"
+         style="opacity:1;fill:#e5e5e5;fill-opacity:1;stroke:#7d7d7d;stroke-width:1.42156649;stroke-linecap:butt;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:113.72531891;stroke-opacity:1;paint-order:markers fill stroke" />
+      <rect
+         transform="matrix(0.8645013,-0.50263059,0.8645013,0.50263059,0,0)"
+         y="-223.51317"
+         x="-44.98185"
+         height="117.58524"
+         width="117.58524"
+         id="rect1261-19"
+         style="opacity:1;fill:#f9f9f9;fill-opacity:1;stroke:#7d7d7d;stroke-width:1.41909087;stroke-linecap:butt;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:113.52726746;stroke-opacity:1;paint-order:markers fill stroke" />
+    </g>
+  </g>
+</svg>

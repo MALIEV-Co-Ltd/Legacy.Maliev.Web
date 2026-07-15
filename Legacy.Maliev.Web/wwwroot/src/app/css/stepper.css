@@ -1,0 +1,70 @@
+﻿.stepper {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    font-size: 17px;
+}
+
+.step-label {
+    text-align: center;
+}
+
+    .step-label::after {
+        display: block;
+        content: attr(title);
+        font-weight: 500;
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+    }
+
+.step-line {
+    border-top: 1px solid rgba(0, 0, 18, 0.13);
+    flex: auto;
+    height: 0;
+    margin: 0 -1rem;
+    min-width: 2rem;
+}
+
+.step-circle {
+    border-radius: 50%;
+    background-color: rgba(0, 0, 18, 0.13);
+    color: #fff;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-right: .5rem;
+    height: 2rem;
+    width: 2rem;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    transition: all 0.5s;
+}
+
+    .step-circle.active {
+        background: #02c851;
+    }
+
+@media screen and (max-width: 767px) {
+    .step {
+        display: none;
+        padding: 1rem;
+    }
+
+    .step-selected {
+        display: flex;
+    }
+
+    .step-line {
+        display: none;
+    }
+}

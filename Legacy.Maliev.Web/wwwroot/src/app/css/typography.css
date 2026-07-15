@@ -1,0 +1,259 @@
+﻿.font-0p9rem {
+    font-size: 0.9rem !important;
+}
+
+.font-1rem {
+    font-size: 1rem !important;
+}
+
+.font-1p25rem {
+    font-size: 1.25rem !important;
+}
+
+.font-1p5rem {
+    font-size: 1.5rem !important;
+}
+
+.fs-2 {
+    font-size: 2rem !important;
+}
+
+.font-2p5rem {
+    font-size: 2.5rem !important;
+}
+
+.font-3rem {
+    font-size: 3rem !important;
+}
+
+.font-3p5rem {
+    font-size: 3.5rem !important;
+}
+
+.font-4rem {
+    font-size: 4rem !important;
+}
+
+.font-4p5rem {
+    font-size: 4.5rem !important;
+}
+
+.font-5rem {
+    font-size: 5rem !important;
+}
+
+@media (max-width: 576px) {
+    /* hide input group append on smaller devices */
+    .input-group-append {
+        display: none;
+    }
+}
+
+@media (min-width: 576px) {
+    .font-sm-0p9rem {
+        font-size: 0.9rem !important;
+    }
+
+    .font-sm-1rem {
+        font-size: 1rem !important;
+    }
+
+    .font-sm-1p25rem {
+        font-size: 1.25rem !important;
+    }
+
+    .font-sm-1p5rem {
+        font-size: 1.5rem !important;
+    }
+
+    .font-sm-2rem {
+        font-size: 2rem !important;
+    }
+
+    .font-sm-2p5rem {
+        font-size: 2.5rem !important;
+    }
+
+    .font-sm-3rem {
+        font-size: 3rem !important;
+    }
+
+    .font-sm-3p5rem {
+        font-size: 3.5rem !important;
+    }
+
+    .font-sm-4rem {
+        font-size: 4rem !important;
+    }
+
+    .font-sm-4p5rem {
+        font-size: 4.5rem !important;
+    }
+
+    .font-sm-5rem {
+        font-size: 5rem !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .font-md-0p9rem {
+        font-size: 0.9rem !important;
+    }
+
+    .font-md-1rem {
+        font-size: 1rem !important;
+    }
+
+    .font-md-1p25rem {
+        font-size: 1.25rem !important;
+    }
+
+    .font-md-1p5rem {
+        font-size: 1.5rem !important;
+    }
+
+    .font-md-2rem {
+        font-size: 2rem !important;
+    }
+
+    .font-md-2p5rem {
+        font-size: 2.5rem !important;
+    }
+
+    .font-md-3rem {
+        font-size: 3rem !important;
+    }
+
+    .font-md-3p5rem {
+        font-size: 3.5rem !important;
+    }
+
+    .font-md-4rem {
+        font-size: 4rem !important;
+    }
+
+    .font-md-4p5rem {
+        font-size: 4.5rem !important;
+    }
+
+    .font-md-5rem {
+        font-size: 5rem !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .font-lg-0p9rem {
+        font-size: 0.9rem !important;
+    }
+
+    .font-lg-1rem {
+        font-size: 1rem !important;
+    }
+
+    .font-lg-1p25rem {
+        font-size: 1.25rem !important;
+    }
+
+    .font-lg-1p5rem {
+        font-size: 1.5rem !important;
+    }
+
+    .font-lg-2rem {
+        font-size: 2rem !important;
+    }
+
+    .font-lg-2p5rem {
+        font-size: 2.5rem !important;
+    }
+
+    .font-lg-3rem {
+        font-size: 3rem !important;
+    }
+
+    .font-lg-3p5rem {
+        font-size: 3.5rem !important;
+    }
+
+    .font-lg-4rem {
+        font-size: 4rem !important;
+    }
+
+    .font-lg-4p5rem {
+        font-size: 4.5rem !important;
+    }
+
+    .font-lg-5rem {
+        font-size: 5rem !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .font-xl-0p9rem {
+        font-size: 0.9rem !important;
+    }
+
+    .font-xl-1rem {
+        font-size: 1rem !important;
+    }
+
+    .font-xl-1p25rem {
+        font-size: 1.25rem !important;
+    }
+
+    .font-xl-1p5rem {
+        font-size: 1.5rem !important;
+    }
+
+    .font-xl-2rem {
+        font-size: 2rem !important;
+    }
+
+    .font-xl-2p5rem {
+        font-size: 2.5rem !important;
+    }
+
+    .font-xl-3rem {
+        font-size: 3rem !important;
+    }
+
+    .font-xl-3p5rem {
+        font-size: 3.5rem !important;
+    }
+
+    .font-xl-4rem {
+        font-size: 4rem !important;
+    }
+
+    .font-xl-4p5rem {
+        font-size: 4.5rem !important;
+    }
+
+    .font-xl-5rem {
+        font-size: 5rem !important;
+    }
+}
+
+body {
+    color: #555555;
+    font-weight: 400;
+}
+
+.fw-semibold,
+.fw-bold,
+.fw-bolder,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+b,
+strong,
+dt,
+th {
+    font-weight: 600 !important;
+}
+
+.fw-normal {
+    font-weight: 400 !important;
+}

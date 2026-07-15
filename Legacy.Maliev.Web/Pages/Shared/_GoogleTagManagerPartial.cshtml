@@ -1,0 +1,43 @@
+@using System.Text.Json
+@using Legacy.Maliev.Web.Pages.Shared
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+
+@{
+    var consentFeature = Context.Features.Get<ITrackingConsentFeature>();
+    var consentState = consentFeature?.CanTrack == true ? "granted" : "denied";
+    var tempData = TempDataDictionaryFactory.GetTempData(Context);
+    var hasLeadEvent = LeadAnalyticsEventQueue.TryConsume(tempData, out var leadEvent);
+    var leadEventJson = hasLeadEvent ? JsonSerializer.Serialize(leadEvent) : null;
+}
+
+<!-- Google Consent Mode and application-owned data layer -->
+<script>
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    var consentState = '@consentState';
+    window.gtag('consent', 'default', {
+        'ad_storage': consentState,
+        'analytics_storage': consentState,
+        'ad_user_data': consentState,
+        'ad_personalization': consentState,
+        'wait_for_update': 500
+    });
+    @if (hasLeadEvent)
+    {
+        <text>window.dataLayer.push(@Html.Raw(leadEventJson));</text>
+    }
+</script>
+
+<!-- Google Tag Manager -->
+<script>
+    (function (w, d, s, l, i) {
+    w[l] = w[l] || []; w[l].push({
+        'gtm.start':
+            new Date().getTime(), event: 'gtm.js'
+    }); var f = d.getElementsByTagName(s)[0],
+        j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+            'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-KHDDLVRR');</script>
+<!-- End Google Tag Manager -->

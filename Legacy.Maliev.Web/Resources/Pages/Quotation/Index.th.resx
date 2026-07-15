@@ -1,0 +1,251 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Request for Quotation" xml:space="preserve">
+    <value>ขอใบเสนอราคา</value>
+  </data>
+  <data name="Company (if any)" xml:space="preserve">
+    <value>บริษัท (ถ้ามี)</value>
+  </data>
+  <data name="Contact" xml:space="preserve">
+    <value>ข้อมูลผู้ติดต่อ</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>อีเมล์</value>
+  </data>
+  <data name="First name" xml:space="preserve">
+    <value>ชื่อ</value>
+  </data>
+  <data name="Get a Quotation" xml:space="preserve">
+    <value>ขอรับใบเสนอราคา</value>
+  </data>
+  <data name="Last name" xml:space="preserve">
+    <value>นามสกุล</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>ข้อความ</value>
+  </data>
+  <data name="Please give us a little bit more detail" xml:space="preserve">
+    <value>กรุณาให้ข้อมูลเพิ่มเติมเกี่ยวกับงาน</value>
+  </data>
+  <data name="Please select your country" xml:space="preserve">
+    <value>กรุณาเลือกประเทศ</value>
+  </data>
+  <data name="Please upload files no larger than" xml:space="preserve">
+    <value>ขนาดสูงสุด</value>
+  </data>
+  <data name="Please use this form below to send us your files for quotation." xml:space="preserve">
+    <value>กรุณากรอกแบบฟอร์มข้างล่างนี้เพื่อขอใบเสนอราคา</value>
+  </data>
+  <data name="Tax number (if any)" xml:space="preserve">
+    <value>เลขประจำตัวผู้เสียภาษี (ถ้ามี)</value>
+  </data>
+  <data name="Telephone number" xml:space="preserve">
+    <value>เบอร์โทรศัพท์</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>อัพโหลด</value>
+  </data>
+  <data name="We can get in touch with you faster" xml:space="preserve">
+    <value>ทำให้เราสามารถติดต่อคุณได้เร็วยิ่งขึ้น</value>
+  </data>
+  <data name="We will get back to you with a quotation shortly." xml:space="preserve">
+    <value>เราจะรีบตอบกลับไปหาคุณ พร้อมกับใบเสนอราคา</value>
+  </data>
+  <data name="We'll never share your email with anyone" xml:space="preserve">
+    <value>เราไม่แชร์และขายอีเมล์ของคุณให้กับใคร</value>
+  </data>
+  <data name="You can contact us from here too!" xml:space="preserve">
+    <value>คุณสามารถติดต่อเราได้ผ่านช่องทางเหล่านี้เช่นกัน</value>
+  </data>
+  <data name="If you wish to upload larger file, try" xml:space="preserve">
+    <value>หากคุณต้องการอัพโหลดไฟล์ขนาดใหญ่ ลอง</value>
+  </data>
+  <data name="or" xml:space="preserve">
+    <value>หรือ</value>
+  </data>
+  <data name="Then send us the links." xml:space="preserve">
+    <value>แล้วส่งลิงค์มาให้เรา</value>
+  </data>
+  <data name="for a quotation." xml:space="preserve">
+    <value>เพื่อขอใบเสนอราคา</value>
+  </data>
+  <data name="If you are experiencing problem sending quotation. Please contact us directly at" xml:space="preserve">
+    <value>หากลูกค้ามีปัญหาในการส่งแบบยื่นขอใบเสนอราคา กรุณาติดต่อเราโดยตรงที่</value>
+  </data>
+  <data name="The selected files size are too large. Please use external upload services." xml:space="preserve">
+    <value>ไฟล์ที่คุณเลือกมีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ผ่านช่องทางอื่นแล้วส่งลิงค์มาให้เรา</value>
+  </data>
+  <data name="You have selected" xml:space="preserve">
+    <value>ไฟล์ที่คุณเลือกมีขนาดรวมทั้งหมด</value>
+  </data>
+  <data name="Company" xml:space="preserve">
+    <value>บริษัท</value>
+  </data>
+  <data name="form and send it back to us with your request." xml:space="preserve">
+    <value>แล้วส่งกลับมาให้เราพร้อมกับการขอใบเสนอราคา</value>
+  </data>
+  <data name="If you wish to sign a non-disclosure agreement with us, please download the" xml:space="preserve">
+    <value>หากคุณต้องการเซ็นเอกสารปกปิดความลับกับเรา กรุณาดาวโหลด</value>
+  </data>
+  <data name="NDA" xml:space="preserve">
+    <value>สัญญาปกปิดความลับ</value>
+  </data>
+  <data name="We take your data security seriously!" xml:space="preserve">
+    <value>เราให้ความสำคัญกับข้อมูลของคุณมากที่สุด!</value>
+  </data>
+  <data name=", please ZIP the files before sending it to us." xml:space="preserve">
+    <value>กรุณา ZIP ไฟล์งานก่อนส่งมาให้เรา</value>
+  </data>
+  <data name="If you want to send us files from" xml:space="preserve">
+    <value>หากคุณมีไฟล์ที่มาจากโปรแกรม</value>
+  </data>
+  <data name="Country" xml:space="preserve">
+    <value>ประเทศ</value>
+  </data>
+  <data name="Manual manufacturing quotation" xml:space="preserve"><value>ใบเสนอราคางานผลิตโดยทีมงาน</value></data>
+  <data name="Tell us what you need manufactured" xml:space="preserve"><value>บอกเราเกี่ยวกับชิ้นงานที่คุณต้องการผลิต</value></data>
+  <data name="Share your files, quantity, material, finish, and target date. Our engineering team will review the project and prepare a clear quotation." xml:space="preserve"><value>ส่งไฟล์ จำนวน วัสดุ ผิวสำเร็จ และวันที่ต้องการ ทีมวิศวกรของเราจะตรวจสอบงานและจัดทำใบเสนอราคาที่ชัดเจน</value></data>
+  <data name="Quotation service benefits" xml:space="preserve"><value>ข้อดีของบริการใบเสนอราคา</value></data>
+  <data name="Confidential file handling" xml:space="preserve"><value>ดูแลไฟล์อย่างเป็นความลับ</value></data>
+  <data name="Engineer-reviewed requests" xml:space="preserve"><value>ตรวจสอบโดยทีมวิศวกร</value></data>
+  <data name="CNC, 3D printing, and 3D scanning" xml:space="preserve"><value>งาน CNC งานพิมพ์และสแกน 3 มิติ</value></data>
+  <data name="Quotation guidance" xml:space="preserve"><value>คำแนะนำสำหรับขอใบเสนอราคา</value></data>
+  <data name="What helps us quote accurately" xml:space="preserve"><value>ข้อมูลที่ช่วยให้เราประเมินราคาได้แม่นยำ</value></data>
+  <data name="3D CAD, drawing, scan, or reference images" xml:space="preserve"><value>ไฟล์ 3D CAD แบบงาน ไฟล์สแกน หรือภาพอ้างอิง</value></data>
+  <data name="Required quantity and preferred material" xml:space="preserve"><value>จำนวนที่ต้องการและวัสดุที่เลือกไว้</value></data>
+  <data name="Critical dimensions, tolerances, and surface finish" xml:space="preserve"><value>ขนาดสำคัญ ค่าความคลาดเคลื่อน และผิวสำเร็จ</value></data>
+  <data name="Delivery location and required date" xml:space="preserve"><value>สถานที่จัดส่งและวันที่ต้องการรับงาน</value></data>
+  <data name="Preparing your files" xml:space="preserve"><value>การเตรียมไฟล์</value></data>
+  <data name="For files larger than 100 MB, upload them to a trusted file-sharing service and paste the link in your project details." xml:space="preserve"><value>สำหรับไฟล์ที่ใหญ่กว่า 100 MB กรุณาอัปโหลดผ่านบริการฝากไฟล์ที่เชื่อถือได้และวางลิงก์ไว้ในรายละเอียดงาน</value></data>
+  <data name="Prefer to speak with us?" xml:space="preserve"><value>ต้องการคุยกับทีมงานโดยตรง?</value></data>
+  <data name="Email your request to" xml:space="preserve"><value>ส่งรายละเอียดทางอีเมลมาที่</value></data>
+  <data name="or contact our team through these channels." xml:space="preserve"><value>หรือติดต่อทีมงานผ่านช่องทางเหล่านี้</value></data>
+  <data name="Request a manual quotation" xml:space="preserve"><value>ขอใบเสนอราคาจากทีมงาน</value></data>
+  <data name="Complete the form below. Required fields are marked with an asterisk." xml:space="preserve"><value>กรอกแบบฟอร์มด้านล่าง ช่องที่จำเป็นจะแสดงด้วยเครื่องหมายดอกจัน</value></data>
+  <data name="Contact details" xml:space="preserve"><value>ข้อมูลผู้ติดต่อ</value></data>
+  <data name="Required" xml:space="preserve"><value>จำเป็น</value></data>
+  <data name="Project details" xml:space="preserve"><value>รายละเอียดงาน</value></data>
+  <data name="What should we quote?" xml:space="preserve"><value>ต้องการให้เราประเมินงานอะไร?</value></data>
+  <data name="Include service, quantity, material, finish, tolerances, and target date when known." xml:space="preserve"><value>ระบุบริการ จำนวน วัสดุ ผิวสำเร็จ ค่าความคลาดเคลื่อน และวันที่ต้องการเมื่อทราบ</value></data>
+  <data name="Project files" xml:space="preserve"><value>ไฟล์งาน</value></data>
+  <data name="Upload files up to 100 MB total" xml:space="preserve"><value>อัปโหลดไฟล์รวมไม่เกิน 100 MB</value></data>
+  <data name="You may select multiple files. ZIP related files together to preserve references and folder structure." xml:space="preserve"><value>เลือกได้หลายไฟล์ ควร ZIP ไฟล์ที่เกี่ยวข้องเพื่อรักษาการอ้างอิงและโครงสร้างโฟลเดอร์</value></data>
+  <data name="For larger files, use" xml:space="preserve"><value>สำหรับไฟล์ขนาดใหญ่ กรุณาใช้</value></data>
+</root>

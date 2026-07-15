@@ -1,0 +1,69 @@
+<footer class="landing-footer">
+    <div class="landing-footer-grid">
+        <div class="landing-footer-brand">
+            <img src="~/src/images/navbar_logo_black.png" width="120" height="34" alt="MALIEV" />
+            <p>@Localizer["Your trusted partner for CNC machining, 3D printing, and 3D scanning services."]</p>
+            <div class="landing-social"><partial name="_SocialNetworksPartial" /></div>
+        </div>
+        <div>
+            <h2>@Localizer["Services"]</h2>
+            <ul>
+                <li><a asp-page="/Services/CNC-Machining">@Localizer["CNC Machining"]</a></li>
+                <li><a asp-page="/Services/3D-Printing">@Localizer["3D Printing"]</a></li>
+                <li><a asp-page="/Services/3D-Scanning">@Localizer["3D Scanning"]</a></li>
+                <li><a asp-page="/InstantQuotation/3D-Printing">@Localizer["Instant 3D Quotation"]</a></li>
+                <li><a asp-page="/Quotation/Index">@Localizer["Get a Quote"]</a></li>
+                <li><a href="https://shop.maliev.com/th" target="_blank" rel="noopener">@Localizer["Online Shop"]</a></li>
+            </ul>
+        </div>
+        <div>
+            <h2>@Localizer["Company"]</h2>
+            <ul>
+                <li><a asp-page="/About/Index">@Localizer["About Us"]</a></li>
+                <li><a asp-page="/Career/Index">@Localizer["Job Opportunities"]</a></li>
+                <li><a asp-page="/Contact/Index">@Localizer["Contact Us"]</a></li>
+                <li><a asp-page="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a></li>
+                <li><a asp-page="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a></li>
+                <li><a asp-page="/Legal/NonDisclosureAgreement">@Localizer["Non-Disclosure Agreement"]</a></li>
+            </ul>
+        </div>
+        <div class="landing-footer-contact">
+            <h2>@Localizer["Contact Us"]</h2>
+            <a class="landing-footer-contact-row" href="mailto:info@maliev.com"><i class="far fa-envelope" aria-hidden="true"></i><span>info@maliev.com</span></a>
+            <a class="landing-footer-contact-row" href="tel:+66818030404"><i class="fas fa-phone-alt" aria-hidden="true"></i><span>+66(0)81-803-0404</span></a>
+            <a class="landing-footer-contact-row" href="tel:+66898950690"><i class="fas fa-phone-alt" aria-hidden="true"></i><span>+66(0)89-895-0690</span></a>
+            <address class="landing-footer-contact-row"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span class="landing-footer-address-text">@Localizer["Maliev Co., Ltd."]<br />@Localizer["36/1 Moo 3"]<br />@if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th") { @Localizer["Khlong Khoi, Pak Kret"] } else { <text>Khlong Khoi, <span class="maliev-nowrap">Pak Kret</span></text> }<br />@Localizer["Nonthaburi 11120"], @Localizer["Thailand"]</span></address>
+            <p class="landing-footer-contact-row"><i class="far fa-clock" aria-hidden="true"></i><span><strong>@Localizer["Business hours"]</strong><br />@Localizer["Monday-Friday: 09:00-18:00"]<br />@Localizer["Saturday-Sunday: Closed"]</span></p>
+            @if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th")
+            {
+                <p>เลขประจำตัวผู้เสียภาษี 0125561001573 (สำนักงานใหญ่)</p>
+            }
+        </div>
+    </div>
+    <div class="landing-footer-bottom">
+        <span>&copy; @DateTime.UtcNow.Year Maliev Co., Ltd. @Localizer["All rights reserved."]</span>
+        <span>@Localizer["Secure"] <b aria-hidden="true">•</b> @Localizer["Confidential"]</span>
+    </div>
+</footer>
+
+<style>
+    .landing-footer { background: linear-gradient(115deg, #06192d, #041426); color: #d8e2ed; }
+    .landing-footer-grid { display: grid; gap: 2rem; width: min(92vw, 86rem); margin: auto; padding-block: 3rem 2.2rem; }
+    .landing-footer-brand img { width: auto; height: 1.9rem; filter: brightness(0) invert(1); }
+    .landing-footer-brand p { max-width: 19rem; margin: 1rem 0; color: #aebbc9; font-size: .84rem; }
+    .landing-footer h2 { margin: 0 0 .8rem; color: #fff; font-size: 1rem; }
+    .landing-footer ul { margin: 0; padding: 0; list-style: none; }
+    .landing-footer li + li { margin-top: .3rem; }
+    .landing-footer a, .landing-footer address, .landing-footer-contact p { color: #c6d1dc; font-size: .83rem; text-decoration: none; }
+    .landing-footer a:hover, .landing-footer a:focus-visible { color: #fff; }
+    .landing-footer-contact { display: flex; flex-direction: column; gap: .45rem; }
+    .landing-footer-contact-row { display: grid; grid-template-columns: 1rem minmax(0, 1fr); align-items: start; gap: .5rem; }
+    .landing-footer-contact-row i { margin-top: .2rem; text-align: center; }
+    .landing-footer-contact address { margin: .3rem 0 0; }
+    .landing-footer-address-text { display: block; min-width: 0; }
+    .landing-social { margin-top: 1rem; }
+    .landing-social a { margin-right: .75rem; font-size: 1.4rem; }
+    .landing-footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; width: min(92vw, 86rem); margin: auto; padding-block: 1rem; border-top: 1px solid rgba(255, 255, 255, .16); color: #aebbc9; font-size: .74rem; }
+    @@media (min-width: 48rem) { .landing-footer-grid { grid-template-columns: 1.2fr .7fr .8fr 1.2fr; } }
+    @@media (max-width: 47.99rem) { .landing-footer-grid { grid-template-columns: repeat(2, 1fr); } .landing-footer-brand, .landing-footer-contact { grid-column: 1 / -1; } }
+</style>

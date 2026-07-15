@@ -1,0 +1,179 @@
+@* Diagnostic channel preference event only. *@
+<script>
+    (function () {
+        'use strict';
+
+        function normalizePath(path) {
+            return (path || '/').replace(/\/+$/, '').toLowerCase() || '/';
+        }
+
+        function classifyContact(anchor) {
+            var url;
+            try {
+                url = new URL(anchor.href, document.baseURI);
+            } catch (error) {
+                return null;
+            }
+
+            var protocol = url.protocol.toLowerCase();
+            var host = url.hostname.toLowerCase();
+            var path = normalizePath(url.pathname);
+            var youtubePath = '/channel/UCCosquPSUed6UPlMcRCq0Ig'.toLowerCase();
+
+            if (protocol === 'tel:') {
+                return { channel: 'phone', destination: 'business_phone' };
+            }
+
+            if (protocol === 'mailto:') {
+                return { channel: 'email', destination: 'business_email' };
+            }
+
+            if ((host === 'line.me' || host === 'www.line.me') && path === '/ti/p/@@maliev') {
+                return { channel: 'line', destination: 'line_oa' };
+            }
+
+            if ((host === 'm.me' || host === 'www.m.me') && path === '/maliev.manufacturing') {
+                return { channel: 'messenger', destination: 'facebook_messenger' };
+            }
+
+            if ((host === 'facebook.com' || host === 'www.facebook.com') && path === '/maliev.manufacturing') {
+                return { channel: 'facebook', destination: 'facebook_page' };
+            }
+
+            if ((host === 'instagram.com' || host === 'www.instagram.com') && path === '/maliev.manufacturing') {
+                return { channel: 'instagram', destination: 'instagram_profile' };
+            }
+
+            if ((host === 'youtube.com' || host === 'www.youtube.com') && path === youtubePath) {
+                return { channel: 'youtube', destination: 'youtube_channel' };
+            }
+
+            return null;
+        }
+
+        function getPageContext(pathname) {
+            var segments = (pathname || '/').toLowerCase().split('/').filter(Boolean);
+            if (segments[0] === 'th' || segments[0] === 'en') {
+                segments.shift();
+            }
+
+            var firstSegment = segments[0] || '';
+            if (firstSegment === 'contact') {
+                return 'contact';
+            }
+
+            if (firstSegment === 'quotation') {
+                return 'quotation';
+            }
+
+            if (firstSegment === 'instantquotation') {
+                return 'instant_quotation';
+            }
+
+            if (firstSegment === 'services') {
+                return 'services';
+            }
+
+            if (firstSegment === 'about') {
+                return 'about';
+            }
+
+            if (firstSegment === 'career') {
+                return 'career';
+            }
+
+            if (firstSegment === 'legal') {
+                return 'legal';
+            }
+
+            if (firstSegment === 'member') {
+                return 'member';
+            }
+
+            if (firstSegment === 'knowledges' || firstSegment === 'specifications') {
+                return 'knowledge';
+            }
+
+            return 'other';
+        }
+
+        function isModifiedClick(event) {
+            return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+        }
+
+        document.addEventListener('click', function (event) {
+            if (event.defaultPrevented || isModifiedClick(event)) {
+                return;
+            }
+
+            var target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            var anchor = target.closest('a[href]');
+            if (!anchor || anchor.hasAttribute('download')) {
+                return;
+            }
+
+            var reviewPlatform = anchor.getAttribute('data-maliev-review-platform');
+            if (reviewPlatform) {
+                if (reviewPlatform !== 'google_business_profile') {
+                    return;
+                }
+
+                var reviewTargetName = (anchor.getAttribute('target') || '').toLowerCase();
+                var reviewIsSameWindow = !reviewTargetName || reviewTargetName === '_self';
+                var reviewTargetUrl = anchor.href;
+                if (reviewIsSameWindow) {
+                    event.preventDefault();
+                }
+
+                var reviewEvent = {
+                    event: 'maliev_review_link_click',
+                    platform: reviewPlatform,
+                    context: getPageContext(window.location.pathname)
+                };
+
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push(reviewEvent);
+
+                if (reviewIsSameWindow) {
+                    window.setTimeout(function () {
+                        window.location.assign(reviewTargetUrl);
+                    }, 150);
+                }
+
+                return;
+            }
+
+            var contact = classifyContact(anchor);
+            if (!contact) {
+                return;
+            }
+
+            var targetName = (anchor.getAttribute('target') || '').toLowerCase();
+            var isSameWindow = !targetName || targetName === '_self';
+            var targetUrl = anchor.href;
+            if (isSameWindow) {
+                event.preventDefault();
+            }
+
+            var contactEvent = {
+                event: 'maliev_contact_click',
+                channel: contact.channel,
+                destination: contact.destination,
+                context: getPageContext(window.location.pathname)
+            };
+
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push(contactEvent);
+
+            if (isSameWindow) {
+                window.setTimeout(function () {
+                    window.location.assign(targetUrl);
+                }, 150);
+            }
+        }, false);
+    })();
+</script>

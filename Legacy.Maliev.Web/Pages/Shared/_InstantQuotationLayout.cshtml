@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="@System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+    <meta name="description" content="@ViewData["Description"]" />
+    <meta name="keywords" content="@ViewData["Keywords"]" />
+    <meta name="author" content="Maliev Company Limited" />
+    <meta name="language" content="@System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName" />
+    <meta name="theme-color" content="#1A1A1A" />
+    @RenderSection("Meta", required: false)
+
+    <title>@ViewData["Title"]</title>
+
+    <partial name="_FacebookOpenGraphPartial" />
+    <partial name="_FaviconsPartial" />
+    <partial name="_GoogleTagManagerPartial" />
+    <partial name="_RelCanonicalPartial" />
+    <partial name="_RelAlternatePartial" />
+    <partial name="_CssPartial" />
+    <partial name="_FontPartial" />
+    <partial name="_SchemaOrganization" />
+    <partial name="_SchemaLocalBusiness" />
+    @RenderSection("Schema", required: false)
+    <link rel="shortlink" href="https://www.maliev.com/" />
+    @RenderSection("Head", required: false)
+</head>
+<body class="instant-quotation-shell" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+    <partial name="_FacebookSdkPartial" />
+    <partial name="_GoogleTagManagerBodyPartial" />
+    <partial name="_CookieConsentPartial" />
+    <partial name="_NavigationPartial" />
+    <partial name="_BrowserCompatibilityCheckPartial" />
+    @RenderBody()
+    <partial name="_ContactChannelAnalyticsPartial" />
+    <partial name="_JavaScriptsPartial" />
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

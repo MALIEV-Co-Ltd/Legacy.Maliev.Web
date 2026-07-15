@@ -1,0 +1,21 @@
+.table-of-contents {
+    background-color: #f0f0f0;
+    padding: 10px 5px 5px 10px;
+    font-size: 0.85rem;
+    max-width: 300px;
+    border-radius:3px;
+    border:1px solid rgba(0,0,0,0.2);
+    margin-bottom:1.5rem;
+    box-shadow: 0 0 5px 1px rgba(0,0,0,0.05) inset;
+}
+
+    .table-of-contents h2 {
+        font-size: 1.0rem;
+        font-weight:600;
+    }
+
+    .table-of-contents ul {
+        margin-bottom:5px;
+        list-style:decimal;
+        padding-left:1rem;
+    }

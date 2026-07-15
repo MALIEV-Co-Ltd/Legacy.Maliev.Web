@@ -1,0 +1,257 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="1. Upload CAD files" xml:space="preserve">
+    <value>1. ส่งไฟล์งาน</value>
+  </data>
+  <data name="2. Receive our quotation" xml:space="preserve">
+    <value>2. รับใบเสนอราคา</value>
+  </data>
+  <data name="3. Review the quotation" xml:space="preserve">
+    <value>3. ตรวจเช็คใบเสนอราคา</value>
+  </data>
+  <data name="4. Production" xml:space="preserve">
+    <value>4. ผลิตชิ้นงาน</value>
+  </data>
+  <data name="5. Delivery" xml:space="preserve">
+    <value>5. จัดส่ง</value>
+  </data>
+  <data name="Contact Us" xml:space="preserve">
+    <value>ติดต่อเรา</value>
+  </data>
+  <data name="CNC Machining" xml:space="preserve">
+    <value>งาน CNC ตามแบบ</value>
+  </data>
+  <data name="Great quality prototype does not have to be expensive" xml:space="preserve">
+    <value>งาน Prototype คุณภาพดีไม่จำเป็นต้องราคาแพง</value>
+  </data>
+  <data name="Have a project which we can help?" xml:space="preserve">
+    <value>คุณมีงานที่ต้องการให้เราช่วยเหลือไหม?</value>
+  </data>
+  <data name="Have an ideas which need someone to help manufacture it?" xml:space="preserve">
+    <value>หากคุณมีไอเดียที่ดีและกำลังมองหาผู้ผลิตที่มีคุณภาพ</value>
+  </data>
+  <data name="How does it work?" xml:space="preserve">
+    <value>สั่งงานกับเรายังไง?</value>
+  </data>
+  <data name="Kick-off your product ideas with affordable manufacturing services." xml:space="preserve">
+    <value>เริ่มต้นไอเดียของคุณกับการให้บริการงานผลิตของเรา</value>
+  </data>
+  <data name="Manufacturing Services" xml:space="preserve">
+    <value>บริการผลิตชิ้นงาน</value>
+  </data>
+  <data name="Once you're satisfied with our offer. We start the production." xml:space="preserve">
+    <value>เมื่อคุณพอใจกับข้อเสนอของเราแล้ว สามารถเริ่มการผลิตได้เลยทันที</value>
+  </data>
+  <data name="Part is produced by our manufacturing team and inspected in all processes" xml:space="preserve">
+    <value>มีการตรวจสอบและควบคุมคุณภาพการผลิตในทุกขั้นตอน โดยวิศวกรผู้ชำนาญ</value>
+  </data>
+  <data name="Talk with us" xml:space="preserve">
+    <value>สอบถามข้อมูลเพิ่มเติม</value>
+  </data>
+  <data name="Talk with us and discuss your needs." xml:space="preserve">
+    <value>พูดคุยกับเราและแลกเปลี่ยนความต้องการของคุณ</value>
+  </data>
+  <data name="Create your own product at the most affordable price" xml:space="preserve">
+    <value>สร้างสรรค์ผลงานของคุณเอง ในราคาที่ดีที่สุด</value>
+  </data>
+  <data name="We delivery your part safely to your doorstep, and there is one more happy customer" xml:space="preserve">
+    <value>เรามีบริการจัดส่งถึงหน้าบ้านคุณ</value>
+  </data>
+  <data name="We support students from universities completing their projects too." xml:space="preserve">
+    <value>ทั้งนี้เรายังมีบริการให้คำปรึกษาและสนับสนุน กลุ่มนิสิตนักศึกษาที่ต้องการความช่วยเหลือด้านการผลิตและออกแบบ</value>
+  </data>
+  <data name="You submit your request by contact us directly or using our upload portal. This can be CAD file or plain documents" xml:space="preserve">
+    <value>คุณส่งคำขอมาที่เราโดยตรงหรืออัพโหลดไฟล์งานผ่านระบบของเรา ในรูปแบบ CAD, รูปภาพ หรือ ไฟล์ PDF</value>
+  </data>
+  <data name="Your request is checked by our engineer and the quotation offer is generated for you to examine and review" xml:space="preserve">
+    <value>งานของคุณได้ผ่านการตรวจสอบจากทีมวิศวกรของเราและทางเราจัดทำใบเสนอราคาให้คุณได้ตรวจสอบ</value>
+  </data>
+  <data name="Get started now" xml:space="preserve">
+    <value>ลงทะเบียนแล้วสั่งงานตอนนี้</value>
+  </data>
+  <data name="3D Printing" xml:space="preserve">
+    <value>งานพิมพ์ 3 มิติ</value>
+  </data>
+  <data name="3D Scanning" xml:space="preserve">
+    <value>งานสแกน 3 มิติ</value>
+  </data>
+  <data name="Looking for our Online Shop?" xml:space="preserve">
+    <value>กำลังมองหาร้านค้าออนไลน์ของเราอยู่ไหม?</value>
+  </data>
+  <data name="Visit our online store" xml:space="preserve">
+    <value>ไปที่ร้านค้าออนไลน์</value>
+  </data>
+  <data name="Precision. Speed. Reliability." xml:space="preserve"><value>แม่นยำ รวดเร็ว เชื่อถือได้</value></data>
+  <data name="Manufacturing Services for Prototypes and Production Parts" xml:space="preserve"><value>บริการผลิตชิ้นงานต้นแบบและชิ้นส่วนสำหรับการผลิตจริง</value></data>
+  <data name="CNC machining, 3D printing, and 3D scanning under one roof. From rapid prototypes to end-use parts, we deliver precision manufacturing solutions that help you bring ideas to life faster." xml:space="preserve"><value>ครบทั้งงาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ ตั้งแต่ต้นแบบเร่งด่วนจนถึงชิ้นส่วนใช้งานจริง เราช่วยเปลี่ยนไอเดียของคุณให้เป็นชิ้นงานได้เร็วและแม่นยำยิ่งขึ้น</value></data>
+  <data name="Instant 3D Quotation" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3D ทันที</value></data>
+  <data name="Talk to Us" xml:space="preserve"><value>พูดคุยกับเรา</value></data>
+  <data name="Secure. Confidential. Trusted by engineers and product teams." xml:space="preserve"><value>ปลอดภัย รักษาความลับ และได้รับความไว้วางใจจากทีมวิศวกรและทีมพัฒนาผลิตภัณฑ์</value></data>
+  <data name="CNC machining, 3D printing, and 3D scanning" xml:space="preserve"><value>งาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ</value></data>
+  <data name="Precision CNC machining" xml:space="preserve"><value>งาน CNC ความแม่นยำสูง</value></data>
+  <data name="Industrial 3D printing" xml:space="preserve"><value>งานพิมพ์ 3 มิติสำหรับอุตสาหกรรม</value></data>
+  <data name="High-accuracy 3D scanning" xml:space="preserve"><value>งานสแกน 3 มิติความละเอียดสูง</value></data>
+  <data name="Why customers work with MALIEV" xml:space="preserve"><value>เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV</value></data>
+  <data name="Fast &amp; Competitive Quotes" xml:space="preserve"><value>เสนอราคารวดเร็วและคุ้มค่า</value></data>
+  <data name="Get an accurate quote in hours, not days." xml:space="preserve"><value>รับราคาที่แม่นยำภายในไม่กี่ชั่วโมง ไม่ต้องรอหลายวัน</value></data>
+  <data name="Multiple Manufacturing Methods" xml:space="preserve"><value>กระบวนการผลิตที่หลากหลาย</value></data>
+  <data name="CNC machining, 3D printing, and 3D scanning solutions." xml:space="preserve"><value>ครบทั้งงาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ</value></data>
+  <data name="Engineering Support" xml:space="preserve"><value>ทีมวิศวกรให้คำปรึกษา</value></data>
+  <data name="Expert guidance to optimize designs and reduce costs." xml:space="preserve"><value>แนะนำการปรับแบบเพื่อคุณภาพที่ดีขึ้นและลดต้นทุน</value></data>
+  <data name="Reliable Lead Times" xml:space="preserve"><value>กำหนดส่งที่เชื่อถือได้</value></data>
+  <data name="Clear production schedules you can count on." xml:space="preserve"><value>แผนการผลิตชัดเจน ให้คุณวางแผนงานได้อย่างมั่นใจ</value></data>
+  <data name="Our Services" xml:space="preserve"><value>บริการของเรา</value></data>
+  <data name="Precision Manufacturing Solutions" xml:space="preserve"><value>โซลูชันการผลิตที่แม่นยำครบวงจร</value></data>
+  <data name="End-to-end services for every stage of product development and production." xml:space="preserve"><value>ดูแลทุกขั้นตอน ตั้งแต่การพัฒนาผลิตภัณฑ์จนถึงการผลิตจริง</value></data>
+  <data name="CNC-machined metal component" xml:space="preserve"><value>ชิ้นส่วนโลหะที่ผลิตด้วยเครื่อง CNC</value></data>
+  <data name="High-precision machining for metals and plastics with tight tolerances and excellent surface finishes." xml:space="preserve"><value>ผลิตชิ้นส่วนโลหะและพลาสติกความแม่นยำสูง ควบคุมค่าความคลาดเคลื่อนและผิวงานอย่างละเอียด</value></data>
+  <data name="Intricate 3D-printed component" xml:space="preserve"><value>ชิ้นงานพิมพ์ 3 มิติที่มีรายละเอียดซับซ้อน</value></data>
+  <data name="Fast, flexible additive manufacturing for prototypes and functional parts in a variety of materials." xml:space="preserve"><value>ผลิตต้นแบบและชิ้นส่วนใช้งานจริงได้รวดเร็ว ยืดหยุ่น และเลือกวัสดุได้หลากหลาย</value></data>
+  <data name="3D scanning a mechanical component" xml:space="preserve"><value>การสแกน 3 มิติชิ้นส่วนเครื่องกล</value></data>
+  <data name="High-accuracy scanning for reverse engineering, inspection, and quality control." xml:space="preserve"><value>สแกนความละเอียดสูงสำหรับงานวิศวกรรมย้อนกลับ งานตรวจสอบ และควบคุมคุณภาพ</value></data>
+  <data name="Learn more" xml:space="preserve"><value>ดูรายละเอียด</value></data>
+  <data name="How It Works" xml:space="preserve"><value>ขั้นตอนการสั่งงาน</value></data>
+  <data name="Simple. Fast. Reliable." xml:space="preserve"><value>ง่าย รวดเร็ว และเชื่อถือได้</value></data>
+  <data name="Upload CAD files" xml:space="preserve"><value>อัปโหลดไฟล์ CAD</value></data>
+  <data name="Submit your CAD files and project details through our secure portal." xml:space="preserve"><value>ส่งไฟล์ CAD และรายละเอียดโครงการผ่านระบบที่ปลอดภัยของเรา</value></data>
+  <data name="Review quotation" xml:space="preserve"><value>ตรวจสอบใบเสนอราคา</value></data>
+  <data name="Receive a detailed quote with price, lead time, and engineering feedback." xml:space="preserve"><value>รับใบเสนอราคาพร้อมราคา ระยะเวลาผลิต และคำแนะนำจากวิศวกร</value></data>
+  <data name="Confirm order" xml:space="preserve"><value>ยืนยันคำสั่งซื้อ</value></data>
+  <data name="Approve the quote and we will start manufacturing your parts." xml:space="preserve"><value>ยืนยันใบเสนอราคา แล้วเราจะเริ่มผลิตชิ้นงานของคุณ</value></data>
+  <data name="Receive parts" xml:space="preserve"><value>รับชิ้นงาน</value></data>
+  <data name="Parts are quality-checked and delivered safely to your doorstep." xml:space="preserve"><value>ชิ้นงานผ่านการตรวจสอบคุณภาพและจัดส่งถึงคุณอย่างปลอดภัย</value></data>
+  <data name="Why Choose MALIEV" xml:space="preserve"><value>ทำไมต้องเลือก MALIEV</value></data>
+  <data name="Built for Quality. Driven by Engineering." xml:space="preserve"><value>ใส่ใจคุณภาพ ขับเคลื่อนด้วยวิศวกรรม</value></data>
+  <data name="Prototype to Production" xml:space="preserve"><value>ตั้งแต่ต้นแบบจนถึงการผลิตจริง</value></data>
+  <data name="From one-off prototypes to full-scale production, we grow with your project." xml:space="preserve"><value>รองรับตั้งแต่ต้นแบบชิ้นเดียวจนถึงการผลิตเต็มรูปแบบ พร้อมเติบโตไปกับโครงการของคุณ</value></data>
+  <data name="DFM analysis and practical advice improve your design and outcomes." xml:space="preserve"><value>วิเคราะห์ DFM และให้คำแนะนำที่ใช้ได้จริง เพื่อปรับปรุงแบบและผลลัพธ์ของชิ้นงาน</value></data>
+  <data name="Quality-Focused" xml:space="preserve"><value>มุ่งเน้นคุณภาพ</value></data>
+  <data name="Strict quality control and careful inspection deliver consistent results." xml:space="preserve"><value>ควบคุมคุณภาพและตรวจสอบอย่างละเอียด เพื่อผลลัพธ์ที่สม่ำเสมอ</value></data>
+  <data name="Responsive Communication" xml:space="preserve"><value>สื่อสารรวดเร็วและชัดเจน</value></data>
+  <data name="Real people, clear updates, and practical support when you need us." xml:space="preserve"><value>ติดต่อทีมงานจริง รับข้อมูลอัปเดตชัดเจน และความช่วยเหลือเมื่อคุณต้องการ</value></data>
+  <data name="Ready to bring your ideas to life?" xml:space="preserve"><value>พร้อมเปลี่ยนไอเดียของคุณให้เป็นชิ้นงานจริงหรือยัง?</value></data>
+  <data name="Get a fast, accurate 3D printing estimate for your project today." xml:space="preserve"><value>ประเมินราคางานพิมพ์ 3 มิติได้อย่างรวดเร็วและแม่นยำวันนี้</value></data>
+  <data name="Talk to an Expert" xml:space="preserve"><value>ปรึกษาผู้เชี่ยวชาญ</value></data>
+  <data name="Fast response" xml:space="preserve"><value>ตอบกลับรวดเร็ว</value></data>
+  <data name="Competitive pricing" xml:space="preserve"><value>ราคาคุ้มค่า</value></data>
+  <data name="Confidential and secure" xml:space="preserve"><value>รักษาความลับและปลอดภัย</value></data>
+  <data name="Precision-machined aluminum component" xml:space="preserve"><value>ชิ้นส่วนอะลูมิเนียมที่ผลิตด้วยความแม่นยำสูง</value></data>
+  <data name="Scanned production component" xml:space="preserve"><value>ชิ้นส่วนงานผลิตที่ผ่านการสแกน 3 มิติ</value></data>
+</root>

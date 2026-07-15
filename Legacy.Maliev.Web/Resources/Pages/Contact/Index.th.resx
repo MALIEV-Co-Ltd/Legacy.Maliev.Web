@@ -1,0 +1,209 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xms-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="36/1 Moo 3" xml:space="preserve">
+    <value>36/1 หมู่ 3 ถนนเลียบคลองขุนมหาดไทย</value>
+  </data>
+  <data name="Company" xml:space="preserve">
+    <value>บริษัท</value>
+  </data>
+  <data name="Contact Us" xml:space="preserve">
+    <value>ติดต่อเรา</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>อีเมล์</value>
+  </data>
+  <data name="First name" xml:space="preserve">
+    <value>ชื่อ</value>
+  </data>
+  <data name="Here are several ways you can contact us." xml:space="preserve">
+    <value>คุณสามารถติดต่อเราได้ผ่าน Social Networks เหล่านี้</value>
+  </data>
+  <data name="Just send us a message using the form below and we will get back to you as soon as possible." xml:space="preserve">
+    <value>ฝากข้อความของคุณไว้ผ่านฟอร์มข้างล่างนี้ แล้วเราจะติดต่อกลับไปโดยเร็วที่สุด</value>
+  </data>
+  <data name="Khlong Khoi" xml:space="preserve">
+    <value>ตำบลคลองข่อย</value>
+  </data>
+  <data name="Last name" xml:space="preserve">
+    <value>นามสกุล</value>
+  </data>
+  <data name="Nonthaburi 11120" xml:space="preserve">
+    <value>จังหวัดนนทบุรี 11120</value>
+  </data>
+  <data name="Pak Kret" xml:space="preserve">
+    <value>อำเภอปากเกร็ด</value>
+  </data>
+  <data name="Please select your country" xml:space="preserve">
+    <value>ประเทศ</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>ส่งข้อความ</value>
+  </data>
+  <data name="Telephone number" xml:space="preserve">
+    <value>เบอร์โทรศัพท์</value>
+  </data>
+  <data name="Thailand" xml:space="preserve">
+    <value>ประเทศไทย</value>
+  </data>
+  <data name="We are happy to answer any questions you may have." xml:space="preserve">
+    <value>เรายินดีที่จะตอบทุกคำถามที่คุณมี</value>
+  </data>
+  <data name="We can get in touch with you faster" xml:space="preserve">
+    <value>ทำให้เราสามารถติดต่อคุณได้เร็วขึ้น</value>
+  </data>
+  <data name="We'll never share your email with anyone" xml:space="preserve">
+    <value>เราจะไม่แชร์อีเมล์ให้กับใคร</value>
+  </data>
+  <data name="Your message" xml:space="preserve">
+    <value>ข้อความ</value>
+  </data>
+  <data name="Talk to our team" xml:space="preserve"><value>พูดคุยกับทีมงาน</value></data>
+  <data name="How can we help?" xml:space="preserve"><value>เราช่วยอะไรคุณได้บ้าง?</value></data>
+  <data name="Ask about a project, an existing request, or our manufacturing services. Choose the contact method that works best for you." xml:space="preserve"><value>สอบถามเกี่ยวกับงาน คำขอที่ส่งไว้ หรือบริการผลิตของเรา เลือกช่องทางติดต่อที่สะดวกสำหรับคุณ</value></data>
+  <data name="Contact service benefits" xml:space="preserve"><value>ข้อดีของการติดต่อเรา</value></data>
+  <data name="Real people, practical answers" xml:space="preserve"><value>ทีมงานจริง พร้อมคำตอบที่ใช้งานได้</value></data>
+  <data name="Thai and English support" xml:space="preserve"><value>ให้บริการภาษาไทยและอังกฤษ</value></data>
+  <data name="Based in Nonthaburi, Thailand" xml:space="preserve"><value>ตั้งอยู่ที่นนทบุรี ประเทศไทย</value></data>
+  <data name="Contact options" xml:space="preserve"><value>ช่องทางติดต่อ</value></data>
+  <data name="Email us" xml:space="preserve"><value>ส่งอีเมล</value></data>
+  <data name="Best for project details and files." xml:space="preserve"><value>เหมาะสำหรับส่งรายละเอียดงานและไฟล์</value></data>
+  <data name="Call us" xml:space="preserve"><value>โทรหาเรา</value></data>
+  <data name="Best for a quick question during business hours." xml:space="preserve"><value>เหมาะสำหรับคำถามเร่งด่วนในเวลาทำการ</value></data>
+  <data name="Visit our workshop" xml:space="preserve"><value>เยี่ยมชมสถานที่ของเรา</value></data>
+  <data name="Company contact details" xml:space="preserve"><value>ข้อมูลติดต่อบริษัท</value></data>
+  <data name="MALIEV LINE Official Account QR code" xml:space="preserve"><value>คิวอาร์โค้ด LINE Official Account ของ MALIEV</value></data>
+  <data name="Chat with us" xml:space="preserve"><value>แชตกับเรา</value></data>
+  <data name="Scan the QR code or open our LINE Official Account for a quick conversation." xml:space="preserve"><value>สแกนคิวอาร์โค้ดหรือเปิด LINE Official Account เพื่อพูดคุยกับเรา</value></data>
+  <data name="Open LINE Official Account" xml:space="preserve"><value>เปิด LINE Official Account</value></data>
+  <data name="Follow and message MALIEV" xml:space="preserve"><value>ติดตามและส่งข้อความถึง MALIEV</value></data>
+  <data name="Find our latest work and contact us through our official social channels." xml:space="preserve"><value>ดูผลงานล่าสุดและติดต่อเราผ่านช่องทางโซเชียลอย่างเป็นทางการ</value></data>
+  <data name="Send us a message" xml:space="preserve"><value>ส่งข้อความถึงเรา</value></data>
+  <data name="Tell us how we can help and include enough detail for the right team member to respond." xml:space="preserve"><value>แจ้งสิ่งที่ต้องการให้เราช่วย พร้อมรายละเอียดที่เพียงพอเพื่อให้ทีมที่เกี่ยวข้องตอบกลับ</value></data>
+  <data name="Your details" xml:space="preserve"><value>ข้อมูลของคุณ</value></data>
+  <data name="Required" xml:space="preserve"><value>จำเป็น</value></data>
+  <data name="Country" xml:space="preserve"><value>ประเทศ</value></data>
+  <data name="Your contact details are used only to respond to this request." xml:space="preserve"><value>เราจะใช้ข้อมูลติดต่อของคุณเพื่อตอบคำขอนี้เท่านั้น</value></data>
+  <data name="Find MALIEV" xml:space="preserve"><value>แผนที่ MALIEV</value></data>
+  <data name="Open in Google Maps" xml:space="preserve"><value>เปิดใน Google Maps</value></data>
+  <data name="Map showing the MALIEV workshop" xml:space="preserve"><value>แผนที่แสดงที่ตั้ง MALIEV</value></data>
+  <data name="Business hours" xml:space="preserve"><value>เวลาทำการ</value></data>
+  <data name="Monday-Friday: 09:00-18:00" xml:space="preserve"><value>จันทร์-ศุกร์: 09:00-18:00 น.</value></data>
+  <data name="Saturday-Sunday: Closed" xml:space="preserve"><value>เสาร์-อาทิตย์: ปิด</value></data>
+</root>
