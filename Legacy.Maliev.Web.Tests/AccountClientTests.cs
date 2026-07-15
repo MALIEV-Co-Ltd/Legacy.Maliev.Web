@@ -3,6 +3,8 @@ using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text.Json;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -24,6 +26,20 @@ public sealed class AccountClientTests
         Assert.Contains("\"userName\":\"customer@example.com\"", handler.Body, StringComparison.Ordinal);
         Assert.Contains("\"password\":\"correct-password\"", handler.Body, StringComparison.Ordinal);
         Assert.Contains("\"identityKind\":0", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Login_ExtractsPositiveCustomerDatabaseIdFromAuthIssuedAccessToken()
+    {
+        var accessToken = Jwt(new { legacy_database_id = "42" });
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            $$"""{"accessToken":"{{accessToken}}","refreshToken":"refresh","tokenType":"Bearer","expiresIn":900,"refreshExpiresAt":"2026-07-16T00:00:00Z"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.LoginAsync("customer@example.com", "correct-password", default);
+
+        Assert.Equal(42, result.DatabaseId);
     }
 
     [Fact]
@@ -69,6 +85,9 @@ public sealed class AccountClientTests
     {
         Content = new StringContent(body, Encoding.UTF8, "application/json"),
     };
+
+    private static string Jwt(object payload) =>
+        $"e30.{WebEncoders.Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(payload))}.signature";
 
     private sealed class RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage> response) : HttpMessageHandler
     {

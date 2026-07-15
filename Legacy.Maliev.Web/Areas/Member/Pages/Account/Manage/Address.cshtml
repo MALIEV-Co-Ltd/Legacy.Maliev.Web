@@ -1,0 +1,34 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage.Address
+@{
+    ViewData["Title"] = Localizer["Addresses | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+
+<section class="maliev-section">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Customer account"]</p>
+        <h1>@Localizer["Addresses"]</h1>
+        <p>@Localizer["Keep billing and shipping details current before placing an order."]</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert" role="status">@Model.Notification</div>
+    }
+
+    <form method="post" asp-page-handler="UpdateAddress" class="maliev-panel">
+        <div asp-validation-summary="All" class="field-validation-error" role="alert"></div>
+        <div class="maliev-card-grid">
+            <fieldset>
+                <legend>@Localizer["Billing address"]</legend>
+                <partial name="_AddressFields" model='new AddressFields("Billing", Model.BillingBuilding, Model.BillingAddress1, Model.BillingAddress2, Model.BillingCity, Model.BillingState, Model.BillingPostalCode, Model.BillingCountryId, Model.Countries)' />
+            </fieldset>
+            <fieldset>
+                <legend>@Localizer["Shipping address"]</legend>
+                <partial name="_AddressFields" model='new AddressFields("Shipping", Model.ShippingBuilding, Model.ShippingAddress1, Model.ShippingAddress2, Model.ShippingCity, Model.ShippingState, Model.ShippingPostalCode, Model.ShippingCountryId, Model.Countries)' />
+            </fieldset>
+        </div>
+        <button type="submit" class="maliev-button">@Localizer["Save addresses"]</button>
+    </form>
+</section>

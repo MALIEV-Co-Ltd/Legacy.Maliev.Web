@@ -1,0 +1,42 @@
+@model AddressFields
+<div class="form-group">
+    <label for="@(Model.Prefix)Building">@Localizer["Building"]</label>
+    <input id="@(Model.Prefix)Building" name="@(Model.Prefix)Building" value="@Model.Building" maxlength="256" />
+</div>
+<div class="form-group">
+    <label for="@(Model.Prefix)Address1">@Localizer["Address line 1"]</label>
+    <input id="@(Model.Prefix)Address1" name="@(Model.Prefix)Address1" value="@Model.AddressLine1" maxlength="256" required />
+</div>
+<div class="form-group">
+    <label for="@(Model.Prefix)Address2">@Localizer["Address line 2"]</label>
+    <input id="@(Model.Prefix)Address2" name="@(Model.Prefix)Address2" value="@Model.AddressLine2" maxlength="256" />
+</div>
+<div class="form-group">
+    <label for="@(Model.Prefix)City">@Localizer["City"]</label>
+    <input id="@(Model.Prefix)City" name="@(Model.Prefix)City" value="@Model.City" maxlength="128" />
+</div>
+<div class="form-group">
+    <label for="@(Model.Prefix)State">@Localizer["State or province"]</label>
+    <input id="@(Model.Prefix)State" name="@(Model.Prefix)State" value="@Model.State" maxlength="128" />
+</div>
+<div class="form-group">
+    <label for="@(Model.Prefix)PostalCode">@Localizer["Postal code"]</label>
+    <input id="@(Model.Prefix)PostalCode" name="@(Model.Prefix)PostalCode" value="@Model.PostalCode" maxlength="50" />
+</div>
+<div class="form-group">
+    <label for="@(Model.Prefix)CountryId">@Localizer["Country"]</label>
+    <select id="@(Model.Prefix)CountryId" name="@(Model.Prefix)CountryId" required>
+        <option value="0">@Localizer["Select a country"]</option>
+        @foreach (var country in Model.Countries)
+        {
+            if (country.Id == Model.CountryId)
+            {
+                <option value="@country.Id" selected>@country.Name</option>
+            }
+            else
+            {
+                <option value="@country.Id">@country.Name</option>
+            }
+        }
+    </select>
+</div>

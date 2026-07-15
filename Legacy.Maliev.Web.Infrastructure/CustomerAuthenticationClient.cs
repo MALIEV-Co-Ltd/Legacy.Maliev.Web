@@ -3,6 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Globalization;
+using System.Text.Json;
 
 namespace Legacy.Maliev.Web.Infrastructure;
 
@@ -28,9 +31,8 @@ internal sealed class CustomerAuthenticationClient(
             }
 
             response.EnsureSuccessStatusCode();
-            return new(
-                await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken),
-                true);
+            var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
+            return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -55,9 +57,8 @@ internal sealed class CustomerAuthenticationClient(
             }
 
             response.EnsureSuccessStatusCode();
-            return new(
-                await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken),
-                true);
+            var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
+            return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -225,6 +226,44 @@ internal sealed class CustomerAuthenticationClient(
     private static bool IsTransient(Exception exception, CancellationToken cancellationToken) =>
         exception is HttpRequestException
         || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
+
+    private static int? ExtractDatabaseId(string? accessToken)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return null;
+        }
+
+        var segments = accessToken.Split('.');
+        if (segments.Length != 3)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var payload = JsonDocument.Parse(WebEncoders.Base64UrlDecode(segments[1]));
+            if (!payload.RootElement.TryGetProperty("legacy_database_id", out var claim))
+            {
+                return null;
+            }
+
+            return claim.ValueKind switch
+            {
+                JsonValueKind.Number when claim.TryGetInt32(out var number) && number > 0 => number,
+                JsonValueKind.String when int.TryParse(
+                    claim.GetString(),
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var number) && number > 0 => number,
+                _ => null,
+            };
+        }
+        catch (Exception exception) when (exception is FormatException or JsonException)
+        {
+            return null;
+        }
+    }
 
     private sealed record LoginRequest(string UserName, string Password, int IdentityKind);
     private sealed record RefreshRequest(string RefreshToken);

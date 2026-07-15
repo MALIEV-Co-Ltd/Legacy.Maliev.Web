@@ -32,6 +32,13 @@ recovery never reveals whether an account exists. The `legacy-web` service ident
 therefore requires only `legacy-auth.customer-self-service`,
 `legacy-customer.customers.create`, `legacy-customer.customers.delete`, and the
 previously documented contact, quotation, file, and notification permissions.
+Authenticated Member address management additionally uses the server-held
+`legacy_database_id` from the Auth-issued access token and requires only
+`legacy-customer.customers.read`, `legacy-customer.customers.update`,
+`legacy-customer.addresses.create`, and `legacy-customer.addresses.update`.
+The BFF reloads the customer and address IDs
+from CustomerService before every write; browser form data cannot select another
+customer or address record.
 Runtime Redis and service credentials are projected from the single
 `maliev-legacy-secrets` secret; source configuration contains no credential. The
 same projection supplies `DataProtection__CertificatePfxBase64` and

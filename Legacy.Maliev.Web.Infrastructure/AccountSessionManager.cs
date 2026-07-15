@@ -26,6 +26,7 @@ public interface IAccountSessionManager
 
     Task SignOutAsync(HttpContext context, CancellationToken cancellationToken);
     Task<string?> GetAccessTokenAsync(HttpContext context, CancellationToken cancellationToken);
+    Task<int?> GetCustomerDatabaseIdAsync(HttpContext context, CancellationToken cancellationToken);
 }
 
 internal sealed class AccountSessionManager(
@@ -44,7 +45,7 @@ internal sealed class AccountSessionManager(
         CancellationToken cancellationToken)
     {
         var result = await authenticationClient.LoginAsync(email, password, cancellationToken);
-        if (result.Tokens is null)
+        if (result.Tokens is null || result.DatabaseId is null or <= 0)
         {
             return result.ServiceAvailable
                 ? AccountSignInStatus.InvalidCredentials
@@ -55,6 +56,7 @@ internal sealed class AccountSessionManager(
         var now = timeProvider.GetUtcNow();
         var session = new AccountSession(
             email.Trim(),
+            result.DatabaseId.Value,
             result.Tokens.AccessToken,
             result.Tokens.RefreshToken,
             now.AddSeconds(result.Tokens.ExpiresIn),
@@ -66,6 +68,7 @@ internal sealed class AccountSessionManager(
                 new Claim(ClaimTypes.Name, session.Email),
                 new Claim(ClaimTypes.Email, session.Email),
                 new Claim("identity_kind", "customer"),
+                new Claim("legacy_database_id", session.CustomerDatabaseId.ToString()),
                 new Claim(SessionIdClaim, sessionId),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme);
@@ -152,12 +155,29 @@ internal sealed class AccountSessionManager(
 
         var rotated = new AccountSession(
             session.Email,
+            session.CustomerDatabaseId,
             refreshed.Tokens.AccessToken,
             refreshed.Tokens.RefreshToken,
             now.AddSeconds(refreshed.Tokens.ExpiresIn),
             refreshed.Tokens.RefreshExpiresAt);
         await store.SetAsync(sessionId, rotated, cancellationToken);
         return rotated.AccessToken;
+    }
+
+    public async Task<int?> GetCustomerDatabaseIdAsync(
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var sessionId = context.User.FindFirstValue(SessionIdClaim);
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return null;
+        }
+
+        var session = await store.GetAsync(sessionId, cancellationToken);
+        return session is { CustomerDatabaseId: > 0 }
+            ? session.CustomerDatabaseId
+            : null;
     }
 }
 
