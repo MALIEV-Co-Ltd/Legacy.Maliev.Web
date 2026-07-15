@@ -33,6 +33,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICareerClient, CareerClient>();
         services.AddScoped<ICountryClient, CountryClient>();
         services.AddScoped<IContactClient, ContactClient>();
+        services.AddScoped<IQuotationClient, QuotationClient>();
+        services.AddScoped<IQuotationFileClient, QuotationFileClient>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IServiceAccessTokenProvider, ServiceAccessTokenProvider>();
         services.AddSingleton<IRecaptchaAssessmentClient, GoogleRecaptchaAssessmentClient>();
