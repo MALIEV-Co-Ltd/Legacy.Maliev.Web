@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="@System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+    <meta name="description" content="@ViewData["Description"]" />
+    <meta name="author" content="Maliev Company Limited" />
+    <meta name="robots" content="noindex,follow" />
+    @RenderSection("Meta", required: false)
+    <title>@ViewData["Title"]</title>
+    <partial name="_FaviconsPartial" />
+    <partial name="_GoogleTagManagerPartial" />
+    <partial name="_CssPartial" />
+    <partial name="_FontPartial" />
+    @RenderSection("Head", required: false)
+</head>
+<body style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+    <a class="maliev-skip-link" href="#member-main-content">@Localizer["Skip to main content"]</a>
+    <partial name="_GoogleTagManagerBodyPartial" />
+    <partial name="_CookieConsentPartial" />
+    <partial name="_NavigationPartial" />
+    <div class="workspace-page">
+        <div class="workspace-shell">
+            <partial name="_MemberNavigation" />
+            <main id="member-main-content" class="workspace-main" tabindex="-1">
+                <div class="workspace-toolbar">
+                    <button type="button"
+                            class="workspace-drawer-toggle"
+                            aria-controls="member-navigation"
+                            aria-expanded="false"
+                            data-member-navigation-open>
+                        <i class="fas fa-bars" aria-hidden="true"></i>
+                        <span>@Localizer["Member menu"]</span>
+                    </button>
+                </div>
+                @RenderBody()
+            </main>
+        </div>
+        <button type="button"
+                class="workspace-backdrop"
+                data-member-navigation-backdrop
+                hidden
+                aria-label="@Localizer["Close member menu"]"></button>
+    </div>
+    <partial name="_FooterPartial" />
+    <partial name="_ContactChannelAnalyticsPartial" />
+    <partial name="_JavaScriptsPartial" />
+    <script>
+        (() => {
+            const navigation = document.getElementById('member-navigation');
+            const openButton = document.querySelector('[data-member-navigation-open]');
+            const closeButton = document.querySelector('[data-member-navigation-close]');
+            const backdrop = document.querySelector('[data-member-navigation-backdrop]');
+            if (!navigation || !openButton || !backdrop) return;
+
+            const close = () => {
+                navigation.classList.remove('is-open');
+                document.body.classList.remove('workspace-drawer-open');
+                openButton.setAttribute('aria-expanded', 'false');
+                backdrop.hidden = true;
+                openButton.focus();
+            };
+            const open = () => {
+                navigation.classList.add('is-open');
+                document.body.classList.add('workspace-drawer-open');
+                openButton.setAttribute('aria-expanded', 'true');
+                backdrop.hidden = false;
+                closeButton?.focus();
+            };
+
+            openButton.addEventListener('click', open);
+            closeButton?.addEventListener('click', close);
+            backdrop.addEventListener('click', close);
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && navigation.classList.contains('is-open')) close();
+            });
+        })();
+    </script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

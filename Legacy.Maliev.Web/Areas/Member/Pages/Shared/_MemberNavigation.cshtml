@@ -1,0 +1,37 @@
+<aside id="member-navigation" class="workspace-sidebar workspace-sidebar--member" aria-label="@Localizer["Member workspace"]">
+    <div class="workspace-sidebar__header">
+        <strong>@Localizer["Member workspace"]</strong>
+        <button type="button"
+                class="workspace-drawer-close"
+                data-member-navigation-close
+                aria-label="@Localizer["Close member menu"]">
+            <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+    </div>
+    <nav aria-label="@Localizer["Member navigation"]">
+        <section class="workspace-nav-group" aria-labelledby="member-dashboard-navigation">
+            <p id="member-dashboard-navigation" class="workspace-nav-group__label">@Localizer["Dashboard"]</p>
+            <ul class="workspace-nav-list">
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Index"><i class="fas fa-chart-line" aria-hidden="true"></i><span>@Localizer["Overview"]</span></a></li>
+            </ul>
+        </section>
+        <section class="workspace-nav-group" aria-labelledby="member-project-navigation">
+            <p id="member-project-navigation" class="workspace-nav-group__label">@Localizer["Projects"]</p>
+            <ul class="workspace-nav-list">
+                <li><a class="workspace-nav-link" asp-area="" asp-page="/Quotation/Index"><i class="fas fa-plus-circle" aria-hidden="true"></i><span>@Localizer["Request a quotation"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Quotations/Index"><i class="fas fa-file-invoice" aria-hidden="true"></i><span>@Localizer["Quotations"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Orders/History"><i class="fas fa-history" aria-hidden="true"></i><span>@Localizer["Order history"]</span></a></li>
+            </ul>
+        </section>
+        <section class="workspace-nav-group" aria-labelledby="member-account-navigation">
+            <p id="member-account-navigation" class="workspace-nav-group__label">@Localizer["Account"]</p>
+            <ul class="workspace-nav-list">
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Index"><i class="fas fa-user-cog" aria-hidden="true"></i><span>@Localizer["Account settings"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/Profile"><i class="fas fa-user-circle" aria-hidden="true"></i><span>@Localizer["Profile"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/Address"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>@Localizer["Addresses"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/ChangeEmail"><i class="fas fa-envelope" aria-hidden="true"></i><span>@Localizer["Change email"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/ChangePassword"><i class="fas fa-key" aria-hidden="true"></i><span>@Localizer["Change password"]</span></a></li>
+            </ul>
+        </section>
+    </nav>
+</aside>
