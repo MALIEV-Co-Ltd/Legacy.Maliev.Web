@@ -38,6 +38,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICustomerAuthenticationClient>();
                     services.RemoveAll<ICustomerProfileClient>();
                     services.RemoveAll<ICustomerAccountClient>();
+                    services.RemoveAll<ICustomerOrderClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -48,6 +49,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<ICustomerAuthenticationClient, StubCustomerAuthenticationClient>();
                     services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
                     services.AddSingleton<ICustomerAccountClient, StubCustomerAccountClient>();
+                    services.AddSingleton<ICustomerOrderClient, StubCustomerOrderClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
@@ -65,6 +67,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/member/account/manage/createpassword")]
     [InlineData("/member/account/manage/profile")]
     [InlineData("/member/orders")]
+    [InlineData("/member/orders/history")]
+    [InlineData("/member/orders/view?itemID=7")]
     public async Task MemberRoutes_RedirectAnonymousUsersToLocalLogin(string route)
     {
         using var anonymous = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
@@ -104,6 +108,35 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", address, StringComparison.Ordinal);
         Assert.DoesNotContain("service-token", address, StringComparison.Ordinal);
         Assert.Contains("Start or review an order", orders, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SignedInMember_OrderHistoryDetailAndCancellationStayInsideOwnedBffBoundary()
+    {
+        await SignInAsync();
+
+        var history = await client.GetStringAsync("/member/orders/history?search=CNC");
+        var detail = await client.GetStringAsync("/member/orders/view?itemID=7");
+
+        Assert.Contains("Part", history, StringComparison.Ordinal);
+        Assert.Contains("/Member/Orders/View?itemID=7", history, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CNC", detail, StringComparison.Ordinal);
+        Assert.Contains("Reviewing", detail, StringComparison.Ordinal);
+        Assert.Contains("orders/part.step", detail, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", history, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", detail, StringComparison.Ordinal);
+
+        var form = await GetAntiforgeryFormAsync("/member/orders/view?itemID=7");
+        form["orderId"] = "7";
+        using var response = await client.PostAsync(
+            "/member/orders/view?handler=CancelOrder",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(
+            "/Member/Orders/View?itemID=7",
+            response.Headers.Location?.OriginalString);
     }
 
     [Fact]
@@ -672,5 +705,51 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                 customerId == Customer.Id,
                 true,
                 customerId == Customer.Id));
+    }
+
+    private sealed class StubCustomerOrderClient : ICustomerOrderClient
+    {
+        private static readonly CustomerOrder Order = new(
+            7, 42, "Part", "CNC part", 3, 2, 0, 2, 100, 0, 200, 5,
+            null, null, null, true, false, null,
+            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc));
+
+        private static readonly CustomerOrderDetails Details = new(
+            Order,
+            new CustomerOrderProcess(3, 1, "CNC"),
+            [new CustomerOrderStatus(9, 7, 2, "Reviewing", null, null, null)],
+            [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", null, null)]);
+
+        public Task<CustomerOrderListResult> ListAsync(
+            int customerId,
+            string? sort,
+            string? search,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderListResult(
+                customerId == 42 ? new CustomerOrderPage([Order], pageIndex, 1, 1) : null,
+                true,
+                customerId == 42));
+
+        public Task<CustomerOrderDetailsResult> GetAsync(
+            int customerId,
+            int orderId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderDetailsResult(
+                customerId == 42 && orderId == 7 ? Details : null,
+                true,
+                customerId == 42));
+
+        public Task<CustomerOrderOperationResult> CancelAsync(
+            int customerId,
+            int orderId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderOperationResult(
+                customerId == 42 && orderId == 7,
+                true,
+                customerId == 42,
+                false));
     }
 }

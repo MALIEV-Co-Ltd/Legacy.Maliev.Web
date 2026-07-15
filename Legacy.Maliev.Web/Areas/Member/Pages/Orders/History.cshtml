@@ -1,0 +1,51 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Orders.History
+@{
+    ViewData["Title"] = Localizer["Order history | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Order management"]</p>
+        <h1>@Localizer["Order history"]</h1>
+        <p>@Localizer["Review orders associated with your signed-in customer account."]</p>
+    </div>
+    <form method="get" class="maliev-panel maliev-form">
+        <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+        <div class="maliev-form-field">
+            <label asp-for="Search">@Localizer["Search orders"]</label>
+            <input asp-for="Search" autocomplete="off" />
+        </div>
+        <input type="hidden" asp-for="Sort" />
+        <input type="hidden" asp-for="PageSize" />
+        <button type="submit" class="maliev-button">@Localizer["Search"]</button>
+    </form>
+    @if (Model.Orders.Items.Count == 0)
+    {
+        <div class="maliev-panel">
+            <p>@Localizer["No orders were found."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="maliev-card-grid">
+            @foreach (var order in Model.Orders.Items)
+            {
+                <article class="maliev-panel">
+                    <p class="maliev-eyebrow">@Localizer["Order"] #@order.Id</p>
+                    <h2>@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</h2>
+                    @if (!string.IsNullOrWhiteSpace(order.Description))
+                    {
+                        <p>@order.Description</p>
+                    }
+                    <dl>
+                        <dt>@Localizer["Quantity"]</dt><dd>@order.Quantity</dd>
+                        <dt>@Localizer["Subtotal"]</dt><dd>@(order.Subtotal?.ToString("N2") ?? "-")</dd>
+                        <dt>@Localizer["Created"]</dt><dd>@(order.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")</dd>
+                    </dl>
+                    <a class="maliev-button maliev-button--secondary" asp-page="/Orders/View" asp-route-itemID="@order.Id">@Localizer["View order"]</a>
+                </article>
+            }
+        </div>
+    }
+</section>

@@ -1,0 +1,78 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Orders.View
+@{
+    ViewData["Title"] = Localizer["Order details | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Order management"]</p>
+        <h1>@Localizer["Order details"]</h1>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert maliev-alert--success" role="status">@Model.Notification</div>
+    }
+    <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+    @if (Model.Details is not null)
+    {
+        var order = Model.Details.Order;
+        <article class="maliev-panel">
+            <p class="maliev-eyebrow">@Localizer["Order"] #@order.Id</p>
+            <h2>@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</h2>
+            @if (!string.IsNullOrWhiteSpace(order.Description))
+            {
+                <p>@order.Description</p>
+            }
+            <dl>
+                <dt>@Localizer["Process"]</dt><dd>@(Model.Details.Process?.Name ?? "-")</dd>
+                <dt>@Localizer["Quantity"]</dt><dd>@order.Quantity</dd>
+                <dt>@Localizer["Manufactured"]</dt><dd>@order.Manufactured</dd>
+                <dt>@Localizer["Remaining"]</dt><dd>@(order.Remaining?.ToString() ?? "-")</dd>
+                <dt>@Localizer["Subtotal"]</dt><dd>@(order.Subtotal?.ToString("N2") ?? "-")</dd>
+                <dt>@Localizer["Tracking number"]</dt><dd>@(string.IsNullOrWhiteSpace(order.TrackingNumber) ? "-" : order.TrackingNumber)</dd>
+            </dl>
+        </article>
+        <section class="maliev-panel">
+            <h2>@Localizer["Status history"]</h2>
+            @if (Model.Details.History.Count == 0)
+            {
+                <p>@Localizer["No status history is available."]</p>
+            }
+            else
+            {
+                <ol>
+                    @foreach (var status in Model.Details.History)
+                    {
+                        <li><strong>@(status.Name ?? "Status")</strong> @status.CreatedDate?.ToString("yyyy-MM-dd HH:mm")</li>
+                    }
+                </ol>
+            }
+        </section>
+        <section class="maliev-panel">
+            <h2>@Localizer["Order files"]</h2>
+            @if (Model.Details.Files.Count == 0)
+            {
+                <p>@Localizer["No files are linked to this order."]</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var file in Model.Details.Files)
+                    {
+                        <li>@file.ObjectName</li>
+                    }
+                </ul>
+            }
+        </section>
+        @if (order.AllowCancellation)
+        {
+            <form method="post" asp-page-handler="CancelOrder" class="maliev-panel maliev-form">
+                <input type="hidden" name="orderId" value="@order.Id" />
+                <p>@Localizer["Cancellation is available while this order remains eligible."]</p>
+                <button type="submit" class="maliev-button maliev-button--danger">@Localizer["Cancel order"]</button>
+            </form>
+        }
+    }
+    <p><a class="maliev-button maliev-button--secondary" asp-page="/Orders/History">@Localizer["Back to order history"]</a></p>
+</section>
