@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
@@ -8,6 +9,26 @@ namespace Legacy.Maliev.Web.Infrastructure;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddLegacyAccountAuthentication(this IServiceCollection services)
+    {
+        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(options =>
+            {
+                options.AccessDeniedPath = "/Account/AccessDenied";
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+                options.Cookie.Name = "__Host-Maliev.Legacy.Session";
+                options.Cookie.Path = "/";
+                options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+                options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+                options.EventsType = typeof(AccountCookieEvents);
+                options.LoginPath = "/Account/Login";
+                options.SlidingExpiration = false;
+            });
+        services.AddAuthorization();
+        return services;
+    }
+
     public static IServiceCollection AddLegacyServiceClients(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -37,6 +58,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQuotationClient, QuotationClient>();
         services.AddScoped<IQuotationFileClient, QuotationFileClient>();
         services.AddScoped<INotificationClient, NotificationClient>();
+        services.AddScoped<ICustomerAuthenticationClient, CustomerAuthenticationClient>();
+        services.AddScoped<ICustomerProfileClient, CustomerProfileClient>();
+        services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
+        services.AddScoped<IAccountSessionManager, AccountSessionManager>();
+        services.AddScoped<AccountCookieEvents>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IServiceAccessTokenProvider, ServiceAccessTokenProvider>();
         services.AddSingleton<IRecaptchaAssessmentClient, GoogleRecaptchaAssessmentClient>();

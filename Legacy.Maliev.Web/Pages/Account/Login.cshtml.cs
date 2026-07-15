@@ -1,0 +1,72 @@
+using System.ComponentModel.DataAnnotations;
+using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
+
+namespace Legacy.Maliev.Web.Pages.Account;
+
+[EnableRateLimiting("account")]
+public sealed class Login(IAccountSessionManager sessionManager) : PageModel
+{
+    [BindProperty]
+    [Required]
+    [EmailAddress]
+    [StringLength(320)]
+    public string Email { get; set; } = string.Empty;
+
+    [BindProperty]
+    [Required]
+    [DataType(DataType.Password)]
+    [StringLength(1024)]
+    public string Password { get; set; } = string.Empty;
+
+    [BindProperty]
+    public bool RememberMe { get; set; }
+
+    [BindProperty]
+    public string? ReturnUrl { get; set; }
+
+    [TempData]
+    public string? Notification { get; set; }
+
+    public IActionResult OnGet(string? email, string? returnUrl)
+    {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return RedirectToPage("/Account/Index");
+        }
+
+        Email = email?.Trim() ?? string.Empty;
+        ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostLoginAsync(CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return Page();
+        }
+
+        var status = await sessionManager.SignInAsync(
+            HttpContext,
+            Email,
+            Password,
+            RememberMe,
+            cancellationToken);
+        if (status == AccountSignInStatus.Succeeded)
+        {
+            return Url.IsLocalUrl(ReturnUrl)
+                ? LocalRedirect(ReturnUrl!)
+                : RedirectToPage("/Account/Index");
+        }
+
+        ModelState.AddModelError(
+            string.Empty,
+            status == AccountSignInStatus.ServiceUnavailable
+                ? "Sign in is temporarily unavailable. Please try again."
+                : "The email or password is invalid, or the email has not been confirmed.");
+        return Page();
+    }
+}

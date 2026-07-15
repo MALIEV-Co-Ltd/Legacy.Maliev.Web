@@ -1,5 +1,6 @@
 using System.Net;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,7 +18,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     {
         client = factory.WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Development");
+                builder.UseEnvironment("Testing");
                 builder.ConfigureAppConfiguration((_, configuration) =>
                     configuration.AddInMemoryCollection(
                         new Dictionary<string, string?>
@@ -33,6 +34,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<IQuotationClient>();
                     services.RemoveAll<IQuotationFileClient>();
                     services.RemoveAll<INotificationClient>();
+                    services.RemoveAll<ICustomerAuthenticationClient>();
+                    services.RemoveAll<ICustomerProfileClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -40,10 +43,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<IQuotationClient, StubQuotationClient>();
                     services.AddSingleton<IQuotationFileClient, StubQuotationFileClient>();
                     services.AddSingleton<INotificationClient, StubNotificationClient>();
+                    services.AddSingleton<ICustomerAuthenticationClient, StubCustomerAuthenticationClient>();
+                    services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             })
-            .CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+                BaseAddress = new Uri("https://localhost"),
+            });
     }
 
     [Theory]
@@ -111,6 +120,91 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/account")]
+    [InlineData("/account/accessdenied")]
+    [InlineData("/account/forgotpassword")]
+    [InlineData("/account/login")]
+    [InlineData("/account/signup")]
+    public async Task AccountInteractiveRoutes_RenderWithoutAuthentication(string route)
+    {
+        using var response = await client.GetAsync(route);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<h1", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/account/changeemailconfirmation")]
+    [InlineData("/account/emailconfirmation")]
+    [InlineData("/account/resetpassword")]
+    public async Task AccountChallengeRoutes_RejectMissingChallengeData(string route)
+    {
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_UsesOpaqueHardenedCookieAndRejectsExternalReturnUrl()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/login");
+        form["Email"] = "customer@example.com";
+        form["Password"] = "correct-password";
+        form["RememberMe"] = "false";
+        form["ReturnUrl"] = "https://attacker.example/steal";
+
+        using var response = await client.PostAsync(
+            "/account/login?handler=Login",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account", response.Headers.Location?.OriginalString);
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("__Host-Maliev.Legacy.Session=", StringComparison.Ordinal));
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", cookie, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", cookie, StringComparison.Ordinal);
+
+        var account = await client.GetStringAsync("/account");
+        Assert.Contains("customer@example.com", account, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Login_DoesNotPromoteUntrustedQueryTextIntoTrustedAlert()
+    {
+        using var response = await client.GetAsync(
+            "/account/login?message=Send%20your%20password%20to%20support");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.DoesNotContain("Send your password to support", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_UsesSamePublicResponseForUnknownEmail()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/forgotpassword");
+        form["Email"] = "unknown@example.com";
+
+        using var response = await client.PostAsync(
+            "/account/forgotpassword?handler=PasswordReset",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var source = await client.GetStringAsync(response.Headers.Location);
+        Assert.Contains(
+            "If an eligible account exists, a password reset link has been sent.",
+            source,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("not existed", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not found", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -261,5 +355,60 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             EmailNotification notification,
             CancellationToken cancellationToken) =>
             Task.FromResult(new NotificationResult(true, true, true));
+    }
+
+    private async Task<Dictionary<string, string>> GetAntiforgeryFormAsync(string path)
+    {
+        var source = await client.GetStringAsync(path);
+        var match = Regex.Match(
+            source,
+            "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"",
+            RegexOptions.CultureInvariant);
+        Assert.True(match.Success, "The Razor form must include an antiforgery token.");
+        return new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = WebUtility.HtmlDecode(match.Groups[1].Value),
+        };
+    }
+
+    private sealed class StubCustomerAuthenticationClient : ICustomerAuthenticationClient
+    {
+        public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAuthenticationResult(
+                new CustomerTokenSet(
+                    "sensitive-access-token",
+                    "sensitive-refresh-token",
+                    "Bearer",
+                    900,
+                    DateTimeOffset.UtcNow.AddDays(1)),
+                true));
+
+        public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAuthenticationResult(null, true));
+
+        public Task RevokeAsync(string refreshToken, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<CustomerIdentityRegistration> RegisterAsync(int databaseId, string email, string password, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerIdentityRegistration(true, "identity-1", databaseId, email));
+
+        public Task<CustomerActionChallenge> RequestEmailConfirmationAsync(string email, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerActionChallenge(true, "confirmation-token", true, true));
+
+        public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+
+        public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerActionChallenge(true, null, true, true));
+
+        public Task<bool> CompletePasswordResetAsync(string email, string token, string password, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+    }
+
+    private sealed class StubCustomerProfileClient : ICustomerProfileClient
+    {
+        public Task<CustomerProfileResult> CreateAsync(string firstName, string lastName, string email, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerProfileResult(new CustomerProfile(42, firstName, lastName, email), true, true));
+
+        public Task<bool> DeleteAsync(int customerId, CancellationToken cancellationToken) => Task.FromResult(true);
     }
 }
