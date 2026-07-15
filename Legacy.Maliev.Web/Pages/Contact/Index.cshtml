@@ -1,0 +1,124 @@
+@page "/Contact"
+@model Legacy.Maliev.Web.Pages.Contact.Index
+@{
+    ViewData["Title"] = Localizer["Contact MALIEV"];
+    ViewData["Description"] = Localizer["Contact MALIEV for CNC machining, additive manufacturing, 3D scanning, and custom manufacturing support."];
+    ViewData["Keywords"] = Localizer["contact MALIEV, manufacturing enquiry, CNC quotation, 3D printing support"];
+}
+
+<header class="maliev-page-hero">
+    <div class="container">
+        <p class="maliev-eyebrow">@Localizer["Contact"]</p>
+        <h1>@Localizer["Let’s build something useful."]</h1>
+        <p>@Localizer["Tell us what you need, when you need it, and how we can reach you."]</p>
+    </div>
+</header>
+
+<main class="container maliev-section">
+    <div class="row g-5">
+        <section class="col-lg-7" aria-labelledby="contact-form-title">
+            <h2 id="contact-form-title">@Localizer["Send an enquiry"]</h2>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Notification))
+            {
+                <div class="alert alert-success" role="status">@Model.Notification</div>
+            }
+
+            <form method="post" asp-page-handler="SubmitRequest" id="contact-form">
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="FirstName" class="form-label">@Localizer["First name"]</label>
+                        <input asp-for="FirstName" class="form-control" autocomplete="given-name" />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="LastName" class="form-label">@Localizer["Last name"]</label>
+                        <input asp-for="LastName" class="form-control" autocomplete="family-name" />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label">@Localizer["Email"]</label>
+                        <input asp-for="Email" class="form-control" autocomplete="email" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Phone" class="form-label">@Localizer["Telephone"]</label>
+                        <input asp-for="Phone" class="form-control" autocomplete="tel" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Company" class="form-label">@Localizer["Company"]</label>
+                        <input asp-for="Company" class="form-control" autocomplete="organization" />
+                        <span asp-validation-for="Company" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Country" class="form-label">@Localizer["Country"]</label>
+                        <select asp-for="Country" class="form-select" disabled="@(!Model.CountryServiceAvailable)">
+                            <option value="">@Localizer["Select a country"]</option>
+                            @foreach (var country in Model.Countries)
+                            {
+                                <option value="@country.Name">@country.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Country" class="text-danger"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Message" class="form-label">@Localizer["How can we help?"]</label>
+                        <textarea asp-for="Message" class="form-control" rows="7"></textarea>
+                        <span asp-validation-for="Message" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="@Model.RecaptchaToken" />
+                <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
+                    @Localizer["Submit enquiry"]
+                </button>
+                <p class="small text-muted mt-3">
+                    @Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]
+                </p>
+            </form>
+        </section>
+
+        <aside class="col-lg-5" aria-labelledby="contact-details-title">
+            <h2 id="contact-details-title">@Localizer["Contact details"]</h2>
+            <address>
+                <strong>Maliev Co., Ltd.</strong><br />
+                @Localizer["Nonthaburi, Thailand"]<br />
+                <a href="mailto:info@maliev.com">info@maliev.com</a>
+            </address>
+            <iframe
+                title="@Localizer["MALIEV office location"]"
+                src="https://maps.google.com/maps?q=Maliev%20Co.%2C%20Ltd.%2C%20Nonthaburi%2C%20Thailand&amp;z=15&amp;output=embed"
+                width="100%"
+                height="360"
+                style="border:0"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </aside>
+    </div>
+</main>
+
+@section Scripts {
+    @if (!string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey))
+    {
+        <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(Model.RecaptchaSiteKey)" async defer></script>
+        <script>
+            (() => {
+                const form = document.getElementById('contact-form');
+                const tokenInput = document.getElementById('g-recaptcha-response');
+                if (!form || !tokenInput) return;
+
+                form.addEventListener('submit', event => {
+                    if (tokenInput.value) return;
+                    event.preventDefault();
+                    grecaptcha.enterprise.ready(async () => {
+                        tokenInput.value = await grecaptcha.enterprise.execute('@Model.RecaptchaSiteKey', { action: 'submit' });
+                        form.requestSubmit();
+                    });
+                });
+            })();
+        </script>
+    }
+}

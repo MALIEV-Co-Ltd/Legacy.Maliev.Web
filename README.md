@@ -11,6 +11,8 @@ Public clean-history migration of the MALIEV website from the private `maliev-we
 
 The Web process owns no domain database and contains no PayPal, PDF generation, barcode service, or database logging implementation. Service credentials are supplied by Workload Identity/ADC and the consolidated `maliev-legacy-secrets` deployment contract; no credentials belong in this repository.
 
+The public Contact form uses reCAPTCHA Enterprise through Application Default Credentials, reads countries anonymously from `Legacy.Maliev.CountryService`, and writes messages with a short-lived server-only service JWT. The deployment maps the Web client secret from `maliev-legacy-secrets` to `ServiceAuthentication__ClientSecret` and supplies the public reCAPTCHA site key as `Recaptcha__SiteKey`; neither value is stored in source. Unsafe HTTP methods are not retried automatically, preventing duplicate contact records.
+
 ## Local validation
 
 The repository is designed to run under `Legacy.Maliev.AppHost`, which reflects the existing GKE service topology without provisioning cloud resources.
@@ -23,6 +25,6 @@ dotnet test .\Legacy.Maliev.Web.slnx -c Release --no-build -p:MalievWorkspaceRoo
 
 ## Migration status
 
-The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. Route-by-route legacy rendering and behavior migration is tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
+The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. Twenty-one of the twenty-two indexed legacy routes are migrated; Quotation is the remaining public route. Route-by-route legacy rendering and behavior migration is tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
 
 Deployment is intentionally deferred until route compatibility, external credential rotation, live GTM malware review, and existing-cluster capacity gates are complete.

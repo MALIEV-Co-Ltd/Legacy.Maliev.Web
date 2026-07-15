@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Configuration;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -16,10 +17,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         client = factory.WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Development");
+                builder.ConfigureAppConfiguration((_, configuration) =>
+                    configuration.AddInMemoryCollection(
+                        new Dictionary<string, string?>
+                        {
+                            ["Recaptcha:SiteKey"] = "test-site-key",
+                            ["Recaptcha:ProjectId"] = "test-project"
+                        }));
                 builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<ICareerClient>();
+                    services.RemoveAll<ICountryClient>();
+                    services.RemoveAll<IContactClient>();
+                    services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
+                    services.AddSingleton<ICountryClient, StubCountryClient>();
+                    services.AddSingleton<IContactClient, StubContactClient>();
+                    services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             })
             .CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -77,6 +91,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/knowledges/specifications/3d-printing")]
     [InlineData("/knowledges/specifications/3d-scanning")]
     [InlineData("/career")]
+    [InlineData("/contact")]
     public async Task MigratedPublicRoutes_RenderCanonicalLocalizedDocuments(string route)
     {
         using var response = await client.GetAsync(route);
@@ -88,6 +103,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ContactPage_UsesConfiguredEnterpriseRecaptchaWithoutEmbeddedGoogleApiKey()
+    {
+        var source = await client.GetStringAsync("/contact");
+
+        Assert.Contains("test-site-key", source, StringComparison.Ordinal);
+        Assert.Contains("recaptcha/enterprise.js", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("AIza", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ServiceAuthentication", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ClientSecret", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -135,5 +163,32 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             int offerId,
             CancellationToken cancellationToken) =>
             Task.FromResult(new ServiceResponse<CareerOffer>(offerId == Offer.Id ? Offer : null, true));
+    }
+
+    private sealed class StubCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                new ServiceResponse<IReadOnlyList<Country>>(
+                    [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)],
+                    true));
+    }
+
+    private sealed class StubContactClient : IContactClient
+    {
+        public Task<ContactSubmissionResult> SubmitAsync(
+            ContactSubmission submission,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new ContactSubmissionResult(1, true, true));
+    }
+
+    private sealed class StubAntiBotVerifier : IAntiBotVerifier
+    {
+        public Task<bool> VerifyAsync(
+            string? token,
+            string expectedAction,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(true);
     }
 }
