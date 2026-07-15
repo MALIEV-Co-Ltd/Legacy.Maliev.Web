@@ -17,6 +17,27 @@ The manual Quotation form uses a stable per-form idempotency key, streams option
 
 Persisted Contact and Quotation requests trigger separate customer and internal messages through the authenticated NotificationService JSON API. Recipient data and bodies stay in JSON rather than URL query strings, user-provided values are HTML-encoded for internal email, and notification failure never hides an already persisted reference or tells the customer to resubmit it.
 
+Customer account routes use the modern AuthService login, rotating refresh,
+revocation, registration, email-confirmation, and password-recovery JSON APIs.
+The browser receives only a secure, HTTP-only, host-only opaque cookie. Access and
+refresh tokens are data-protected in the existing Redis deployment; Redis also
+coordinates refreshes across replicas so a single-use refresh token is never
+replayed concurrently. Data-protection keys use the same Redis deployment and no
+new database, node pool, or managed cloud service.
+
+Signup is a compensating BFF workflow: it creates the CustomerService profile,
+creates the AuthService identity, deletes the profile if identity creation fails,
+then sends a one-time confirmation link through NotificationService. Password
+recovery never reveals whether an account exists. The `legacy-web` service identity
+therefore requires only `legacy-auth.customer-self-service`,
+`legacy-customer.customers.create`, `legacy-customer.customers.delete`, and the
+previously documented contact, quotation, file, and notification permissions.
+Runtime Redis and service credentials are projected from the single
+`maliev-legacy-secrets` secret; source configuration contains no credential. The
+same projection supplies `DataProtection__CertificatePfxBase64` and
+`DataProtection__CertificatePassword`, which encrypt the shared Redis key ring at
+rest. Production fails closed if Redis or this certificate material is missing.
+
 ## Local validation
 
 The repository is designed to run under `Legacy.Maliev.AppHost`, which reflects the existing GKE service topology without provisioning cloud resources.
@@ -29,6 +50,6 @@ dotnet test .\Legacy.Maliev.Web.slnx -c Release --no-build -p:MalievWorkspaceRoo
 
 ## Migration status
 
-The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All twenty-two indexed legacy routes and the localized XML sitemap are migrated. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
+The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All twenty-two indexed legacy routes, the public Account surface, login, signup, email confirmation, and password recovery are migrated, together with the localized XML sitemap. Authenticated change-email completion remains part of the Member-management migration. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
 
 Deployment is intentionally deferred until route compatibility, external credential rotation, live GTM malware review, and existing-cluster capacity gates are complete.

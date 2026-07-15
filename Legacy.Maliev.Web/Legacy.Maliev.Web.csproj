@@ -7,4 +7,7 @@
     <ProjectReference Include="..\Legacy.Maliev.Web.Infrastructure\Legacy.Maliev.Web.Infrastructure.csproj" />
     <ProjectReference Include="$(MalievWorkspaceRoot)\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.10" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,40 @@
+@page
+@model Legacy.Maliev.Web.Pages.Account.Login
+@{ ViewData["Title"] = Localizer["Login | MALIEV"]; ViewData["Robots"] = "noindex, follow"; }
+<main class="auth-page">
+    <div class="maliev-container auth-shell">
+        <section class="auth-intro">
+            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
+            <h1>@Localizer["Manage your manufacturing projects"]</h1>
+            <p>@Localizer["Sign in to review quotations, orders, files, and account details in one secure place."]</p>
+        </section>
+        <section class="auth-card">
+            <header class="auth-card__header"><h1>@Localizer["Sign in"]</h1></header>
+            @if (!string.IsNullOrWhiteSpace(Model.Notification))
+            {
+                <div class="maliev-alert" role="status">@Model.Notification</div>
+            }
+            <form method="post" class="maliev-form">
+                <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div class="maliev-form-field">
+                    <label asp-for="Email">@Localizer["Email"]</label>
+                    <input asp-for="Email" autocomplete="email" autofocus />
+                    <span asp-validation-for="Email" class="maliev-form-error"></span>
+                </div>
+                <div class="maliev-form-field">
+                    <label asp-for="Password">@Localizer["Password"]</label>
+                    <input asp-for="Password" autocomplete="current-password" />
+                    <span asp-validation-for="Password" class="maliev-form-error"></span>
+                </div>
+                <label><input asp-for="RememberMe" /> @Localizer["Remember me"]</label>
+                <button type="submit" asp-page-handler="Login">@Localizer["Sign in"]</button>
+            </form>
+            <footer class="auth-card__footer">
+                <a asp-page="/Account/Signup">@Localizer["Create your account"]</a>
+                <a asp-page="/Account/ForgotPassword">@Localizer["Forgot your password?"]</a>
+            </footer>
+        </section>
+    </div>
+</main>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,4 @@
+@page
+@model Legacy.Maliev.Web.Pages.Account.ChangeEmailConfirmation
+@{ ViewData["Title"] = Localizer["Change Email Confirmation | MALIEV"]; ViewData["Robots"] = "noindex, nofollow"; }
+<main class="maliev-page maliev-page-main"><div class="maliev-container"><section class="maliev-panel maliev-status"><p class="maliev-eyebrow">@Localizer["Email address"]</p><h1>@Localizer["Email change confirmation"]</h1><div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div><a asp-page="/Account/Login" class="maliev-button">@Localizer["Back to sign in"]</a></section></div></main>
