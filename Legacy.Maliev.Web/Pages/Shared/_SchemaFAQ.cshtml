@@ -1,0 +1,32 @@
+@model List<(string Question, string Answer)>
+@{
+    // Model should be a list of FAQ items: (Question, Answer)
+    // This schema will be used once FAQ sections are added to pages
+
+    if (Model == null || Model.Count == 0)
+    {
+        return;
+    }
+}
+
+<script type="application/ld+json">
+{
+  "@@context": "https://schema.org",
+  "@@type": "FAQPage",
+  "mainEntity": [
+    @for (int i = 0; i < Model.Count; i++)
+    {
+        var faq = Model[i];
+        var isLast = i == Model.Count - 1;
+        <text>{
+      "@@type": "Question",
+      "name": "@faq.Question",
+      "acceptedAnswer": {
+        "@@type": "Answer",
+        "text": "@faq.Answer"
+      }
+    }@(isLast ? "" : ",")</text>
+    }
+  ]
+}
+</script>

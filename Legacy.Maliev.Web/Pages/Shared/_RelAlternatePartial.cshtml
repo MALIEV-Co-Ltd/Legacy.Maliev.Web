@@ -1,0 +1,8 @@
+@{
+    string uriEn = CanonicalUrlPolicy.GetLocalizedUrl(this.Context.Request.Path, "en");
+    string uriTh = CanonicalUrlPolicy.GetLocalizedUrl(this.Context.Request.Path, "th");
+}
+
+<link rel="alternate" href="@uriEn" hreflang="en" />
+<link rel="alternate" href="@uriTh" hreflang="th" />
+<link rel="alternate" href="@uriTh" hreflang="x-default" />

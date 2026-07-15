@@ -1,0 +1,192 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Affordable" xml:space="preserve">
+    <value>ราคาย่อมเยา</value>
+  </data>
+  <data name="As we are continuing to improve our capability, more materials will be supported in the future." xml:space="preserve">
+    <value>เราพยายามปรับปรุงความสามารถของเราอยู่อย่างต่อเนื่อง วัสดุแบบต่างๆจะมีให้เลือกมากขึ้นในอนาคต</value>
+  </data>
+  <data name="Brass offers very low friction against dissimilar metals. It is widely used for springs, bearings, bushings." xml:space="preserve">
+    <value>ทองเหลืองเป็นวัสดุที่มีแรงเสียดทานต่อวัสดุอื่นๆต่ำมาก จึงเหมาะสำหรับนำมาทำสปริง แบริ่ง และบุชชิ่ง</value>
+  </data>
+  <data name="CNC Machining Services" xml:space="preserve">
+    <value>บริการชิ้นงาน CNC&lt;br/&gt;CNC&amp;nbsp;Machining</value>
+  </data>
+  <data name="Exceptional corrosion resistance, typical application include marine, aircraft, architecture, heat exchanger, and general metal work." xml:space="preserve">
+    <value>ทนความสึกกร่อนได้เป็นอย่างดี จึงเหมาะกับการนำมาใช้กับงานทางน้ำ ทางอากาศ สถาปัตยากรรม และงาน sheet metal ต่างๆ</value>
+  </data>
+  <data name="Fast turnaround" xml:space="preserve">
+    <value>รวดเร็ว</value>
+  </data>
+  <data name="General structural steel. Good for plastic injection molding. Can be heat treated to increase strength." xml:space="preserve">
+    <value>เหมาะสำหรับงานพื้นฐานทั่วไป โครงสร้างแม่พิมพ์และแม่พิมพ์ฉีดพลาสติก ชุบแข็งได้ง่าย ทนการเสียดสีได้ดี มีความแข็งแรงสูง</value>
+  </data>
+  <data name="Get a quote" xml:space="preserve">
+    <value>ขอใบเสนอราคา</value>
+  </data>
+  <data name="Have a project which we can help?" xml:space="preserve">
+    <value>คุณมีงานที่ต้องการให้เราช่วยเหลือไหม?</value>
+  </data>
+  <data name="High quality" xml:space="preserve">
+    <value>คุณภาพดี</value>
+  </data>
+  <data name="High quality, affordable CNC machining services" xml:space="preserve">
+    <value>กัดชิ้นงาน CNC คุณภาพดีและราคาถูก</value>
+  </data>
+  <data name="High quality, affordable CNC machining services." xml:space="preserve">
+    <value>บริการด้าน CNC คุณภาพดีและราคาย่อมเยา</value>
+  </data>
+  <data name="High strength, high corrosion resistance. Used commonly for engineering structural like shafts, bolts and nuts, and spindles." xml:space="preserve">
+    <value>มีความแข็งแรงสูงและทนการกัดกร่อนได้ดี ใช้กันทั่วไปสำหรับโครงสร้างทางวิศวกรรมเช่นเพลา น็อต และแกนหมุนต่างๆ</value>
+  </data>
+  <data name="It is used widely in household and industrial applications such as food handling, screws, processing equipments, machinery parts." xml:space="preserve">
+    <value>ใช้งานกันมากในบ้านและงานอุตสาหกรรม เหมาะสำหรับทำบรรจุภัณฑ์ น๊อต และอุปกรณ์เครื่องจักรกล</value>
+  </data>
+  <data name="Machine with this material" xml:space="preserve">
+    <value>เริ่มผลิตด้วยวัสดุนี้</value>
+  </data>
+  <data name="Many More..." xml:space="preserve">
+    <value>และอื่นๆอีกมากมาย</value>
+  </data>
+  <data name="Materials" xml:space="preserve">
+    <value>วัสดุ</value>
+  </data>
+  <data name="Most commonly available aluminum. High corrosion resistance, excellent for forming and welding." xml:space="preserve">
+    <value>เป็นอลูมิเนียมที่สามารถหาได้โดยทั่วไป และทนทานต่อการสึกกร่อน สามารถขึ้นรูปง่ายและเหมาะสำหรับงานเชื่อม</value>
+  </data>
+  <data name="No minimum quantity" xml:space="preserve">
+    <value>ไม่มีขั้นต่ำในการสั่ง เริ่มต้นได้ตั้งแต่ 1 ชิ้น</value>
+  </data>
+  <data name="see more on instagram" xml:space="preserve">
+    <value>ดูเพิ่มเติมใน Instagram</value>
+  </data>
+  <data name="Soft, ductile and has very high thermal and electrical conductivity. Making it suitable for many applications such as heat sinks, heat exchangers, copper utensils, motor rotors." xml:space="preserve">
+    <value>สามารถนำความร้อนและกระแสไฟฟ้าได้ดีเยี่ยม เหมาะกับงานที่ต้องแลกเปลี่ยมความร้อน เครื่องครัวต่างๆ</value>
+  </data>
+  <data name="The strongest of available aluminum alloys. extreme strength and lightweight. Often used in transport application, including marine, automotive, and aviation." xml:space="preserve">
+    <value>เป็นอลูมิเนียมอัลลอยด์ที่แข็งแรงที่สุด มีน้ำหนักเบา และสามารถขัดเงาได้ นิยมสำหรับการใช้งานด้านงานขนส่ง </value>
+  </data>
+  <data name="There are even more material selection in our catalog. We will try to source it for you if we don't have it stocked." xml:space="preserve">
+    <value>เรายังมีวัสดุอื่นๆในระบบอีกมากมาย เรายินดีหาวัสดุให้ ถ้าวัสดุที่คุณต้องการยังไม่มีอยู่ในฐานข้อมูลของเรา</value>
+  </data>
+  <data name="We support all widely used materials." xml:space="preserve">
+    <value>เรารองรับวัสดุอย่างมากมาย</value>
+  </data>
+</root>

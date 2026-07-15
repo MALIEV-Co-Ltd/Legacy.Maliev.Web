@@ -1,0 +1,146 @@
+/* sprite flags */
+.sprite-flags {
+    background-image: url('/src/images/Flags/sprite-flags.png');
+    background-repeat: no-repeat;
+    display: block;
+}
+
+.sprite-flags-thailand {
+    width: 24px;
+    height: 24px;
+    background-position: -15px -15px;
+}
+
+.sprite-flags-united-states {
+    width: 24px;
+    height: 24px;
+    background-position: -15px -69px;
+}
+
+/* sprite payments */
+.sprite-payments {
+    background-image: url('/src/images/Payments/sprite-payments.png');
+    background-repeat: no-repeat;
+    display: block;
+}
+
+.sprite-payments-logo-bangkokbank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -15px;
+}
+
+.sprite-payments-logo-cash {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -75px;
+}
+
+.sprite-payments-logo-kasikornbank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -135px;
+}
+
+.sprite-payments-logo-krungsribank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -195px;
+}
+
+.sprite-payments-logo-krungthaibank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -255px;
+}
+
+.sprite-payments-logo-mastercard {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -315px;
+}
+
+.sprite-payments-logo-thaiqrpayment {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -375px;
+}
+
+.sprite-payments-logo-scbbank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -435px;
+}
+
+.sprite-payments-logo-thanachartbank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -495px;
+}
+
+.sprite-payments-logo-tmbbank {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -555px;
+}
+
+.sprite-payments-logo-visa {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -615px;
+}
+
+/* sprite shipping couriers */
+.sprite-shippingcouriers {
+    background-image: url('/src/images/ShippingCouriers/sprite-shippingcouriers.png');
+    background-repeat: no-repeat;
+    display: block;
+}
+
+.sprite-shippingcouriers-logo-dhl {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -15px;
+}
+
+.sprite-shippingcouriers-logo-dhlexpress {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -75px;
+}
+
+.sprite-shippingcouriers-logo-grabexpress {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -135px;
+}
+
+.sprite-shippingcouriers-logo-kerryexpress {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -195px;
+}
+
+.sprite-shippingcouriers-logo-lalamove {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -255px;
+}
+
+.sprite-shippingcouriers-logo-lineman {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -315px;
+}
+
+.sprite-shippingcouriers-logo-thailandpost {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -375px;
+}
+
+.sprite-shippingcouriers-logo-ups {
+    width: 48px;
+    height: 30px;
+    background-position: -15px -435px;
+}

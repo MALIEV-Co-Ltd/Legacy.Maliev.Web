@@ -1,0 +1,291 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Online 3D Printing Services" xml:space="preserve">
+    <value>บริการพิมพ์&amp;nbsp;3D&lt;br/&gt;3D&amp;nbsp;Printing&amp;nbsp;Services</value>
+  </data>
+  <data name="ABS (Acrylonitrile Butadiene Styrene) filament is a strong, rigid, and temperature-resistant thermoplastic used in 3D printing. It is impact-resistant, chemical-resistant, and highly durable, making it ideal for functional parts and industrial applications. Additionally, ABS has good layer adhesion and bridging capabilities, making it easy to print with. Additionally, the addition of glass fiber to the ABS increases its strength and stiffness, making it suitable for applications requiring higher strength and rigidity." xml:space="preserve">
+    <value>ABS (Acrylonitrile Butadiene Styrene) เป็นเทอร์โมพลาสติกที่มีความแข็งแรง ทนทานต่อแรงกระแทก และทนความร้อนได้สูง จึงเหมาะสำหรับชิ้นส่วนที่ใช้งานได้จริงและงานอุตสาหกรรม</value>
+  </data>
+  <data name="As we are continuing to improve our capability, more materials will be supported in the future." xml:space="preserve">
+    <value>เราพยายามปรับปรุงความสามารถของเราอยู่อย่างต่อเนื่อง วัสดุแบบต่างๆจะมีให้เลือกมากขึ้นในอนาคต</value>
+  </data>
+  <data name="Upload your design and get your part as soon as tomorrow" xml:space="preserve">
+    <value>ส่งไฟล์งาน แล้วรับชิ้นงานปริ้น&amp;nbsp;3D กลับได้เร็วที่สุดในวันถัดไป</value>
+  </data>
+  <data name="Fast turnaround" xml:space="preserve">
+    <value>จัดส่งเร็ว</value>
+  </data>
+  <data name="Get a quote" xml:space="preserve">
+    <value>ขอใบเสนอราคา</value>
+  </data>
+  <data name="High quality" xml:space="preserve">
+    <value>คุณภาพดี</value>
+  </data>
+  <data name="Materials" xml:space="preserve">
+    <value>วัสดุชิ้นงาน</value>
+  </data>
+  <data name="PETG (Polyethylene terephthalate glycol) filament is a strong, flexible, and temperature-resistant thermoplastic used in 3D printing. It is impact-resistant, chemical-resistant, and highly durable, making it ideal for functional parts and industrial applications. Additionally, the addition of glycol to the polyethylene terephthalate increases its flexibility and strength, making it suitable for applications requiring higher strength and flexibility." xml:space="preserve">
+    <value>PETG (Polyethylene terephthalate glycol) เป็นเทอร์โมพลาสติกที่แข็งแรง มีความยืดหยุ่นเล็กน้อย ทนทานต่อแรงกระแทก ทนสารเคมี สามารถใช้ผลิตชิ้นส่วนที่ใช้งานได้จริงและงานอุตสาหกรรม เหมาะสำหรับงานที่ต้องการความแข็งแรงและสามารถยืดหยุ่นได้เล็กน้อย</value>
+  </data>
+  <data name="PLA (Polylactic Acid) filament is a strong, rigid, and temperature-resistant thermoplastic used in 3D printing. It is easy to print with, has good layer adhesion, and is biodegradable, making it an eco-friendly option for 3D printing. Additionally, PLA has good tensile strength and is impact-resistant, making it suitable for applications requiring higher strength and rigidity." xml:space="preserve">
+    <value>PLA เป็นตัวเลือกที่ราคาถูกและเป็นวัสดุที่สามารถพิมพ์ได้ง่ายมาก เหมาะสำหรับการขึ้นชิ้นงานที่ต้องการลดต้นทุนเป็นพิเศษ และยังเป็นพลาสติกจากธรรมชาติและย่อยสลายได้เองโดยธรรมชาติ</value>
+  </data>
+  <data name="Sample parts" xml:space="preserve">
+    <value>ตัวอย่างงาน</value>
+  </data>
+  <data name="These are some of the parts we had manufactured in different kind of plastics." xml:space="preserve">
+    <value>นี่คือตัวอย่างชิ้นงานส่วนหนึ่งที่เราพิมพ์ขึ้นมาด้วยพลาสติกต่างๆ ระบบปริ้น&amp;nbsp;3D ของเราสามารถผลิตชิ้นงานออกมาได้หลากหลายสีและรูปแบบ</value>
+  </data>
+  <data name="We support all widely used materials." xml:space="preserve">
+    <value>เรารองรับวัสดุอย่างมากมาย</value>
+  </data>
+  <data name="A 3D printing technology that used untraviolet laser to cures bath of liquid resin, solidifying it layer by layer until the 3D object is complete." xml:space="preserve">
+    <value>เป็นระบบพิมพ์ที่ทำงานโดยการฉายแสง UV ลงไปในบ่อเรซิ่น ทำให้เรซิ่นแข็งตัวเป็นชั้นๆ จนได้ชิ้นงาน 3&amp;nbsp;มิติออกมา</value>
+  </data>
+  <data name="Build volume" xml:space="preserve">
+    <value>ขนาดชิ้นงานสูงสุด</value>
+  </data>
+  <data name="cm" xml:space="preserve">
+    <value>ซม.</value>
+  </data>
+  <data name="Quoted price range" xml:space="preserve">
+    <value>ช่วงราคาชิ้นงาน</value>
+  </data>
+  <data name="More technologies will be supported in the future." xml:space="preserve">
+    <value>ระบบพิมพ์รูปแบบอื่นๆจะถูกเพิ่มเติมในอนาคต</value>
+  </data>
+  <data name="Most common techniques used for 3D printing. It offer lowest cost among all other 3D printing technologies. It work by laying down molten plastic in layers, forming stacked layers of the desired part." xml:space="preserve">
+    <value>เป็นระบบปริ้น&amp;nbsp;3D ที่ใช้กันมากที่สุด ทำให้ชิ้นงานที่พิมพ์ออกมามีราคาถูกที่สุดเมื่อเทียบกับระบบพิมพ์รูปแบบอื่นๆ ทำงานโดยการฉีดเส้นพลาสติกลงเป็นชั้น ต่อขึ้นไปจนได้ชิ้นงานออกมา</value>
+  </data>
+  <data name="Supported Technologies" xml:space="preserve">
+    <value>ระบบพิมพ์</value>
+  </data>
+  <data name="The SLS uses high power laser to selectively fuses bed of powdered nylon, layer by layer without the needed of extra supported material. The complex assembly can be printed as a single piece." xml:space="preserve">
+    <value>เป็นระบบพิมพ์ที่ใช้แสงเลเซอร์ ยิงลงไปในแป้งไนลอน ละลายและเชื่อมวัสดุเป็นชั้นๆไป เนื่องจากชิ้นงานถูกสร้างขึ้นมาจากบ่อแป้งไนลอน ทำให้สามารถสร้างชิ้นงานที่มีความซับซ้อนมากได้ โดยไม่ต้องสร้างเสารับรองชิ้นงาน</value>
+  </data>
+  <data name="These are the 3D printing technologies that are currently supported by us." xml:space="preserve">
+    <value>นี่คือระบบพิมพ์ต่างๆที่เรารับรอง</value>
+  </data>
+  <data name="Print with this material" xml:space="preserve">
+    <value>ขอใบเสนอราคาวัสดุนี้</value>
+  </data>
+  <data name="Print with this technology" xml:space="preserve">
+    <value>ประเมินราคาด้วยระบบนี้</value>
+  </data>
+  <data name="3D Printed Samples" xml:space="preserve">
+    <value>ตัวอย่างชิ้นงานปริ้น 3D, พิมพ์ 3D, ปริ้น 3 มิติ, พิมพ์ 3 มิติ</value>
+  </data>
+  <data name="3D printing or additive manufacturing offers the lowest possible cost of developing prototype, when comparing with other manufacturing technologies." xml:space="preserve">
+    <value>งานปริ้น&amp;nbsp;3D หรือการผลิตในรูปแบบเติมแต่ง (Additive Manufacturing) ของเราสามารถผลิตชิ้นงานได้ถูกกว่าการผลิตรูปแบบอื่นๆ แม้ว่าคุณจะสั่งงานกับเราเพียงแค่ 1&amp;nbsp;ชิ้น เพราะคุณไม่ต้องลงทุนซื้อเครื่องจักร และอุปกรณ์ราคาหลายแสนด้วยตัวคุณเอง</value>
+  </data>
+  <data name="Why 3D Printing?" xml:space="preserve">
+    <value>ทำไมถึงปริ้น&amp;nbsp;3D?</value>
+  </data>
+  <data name="No minimum quantity" xml:space="preserve">
+    <value>รับงานไม่มีจำนวนขั้นต่ำ</value>
+  </data>
+  <data name="Resin 3D printing filament is a liquid photopolymer that hardens into a solid when exposed to UV light. It is highly accurate and has a smooth surface finish, making it ideal for creating detailed parts. It is also durable, temperature-resistant, and chemical-resistant, making it suitable for a variety of applications. Additionally, resin is non-toxic and biodegradable, making it an eco-friendly option for 3D printing." xml:space="preserve">
+    <value>เรซินที่ใช้ในระบบพิมพ์ 3 มิติ อยู่ในรูปแบบของเหลว ที่จะแข็งตัวเมื่อโดนแสง UV เนื่องจากราคาเรซินที่ใช้พิมพ์มีราคาค่อนข้างสูง จึงทำให้ราคาชิ้นงานที่ผลิตขึ้นมา มีต้นทุนที่สูงกว่าหลายเท่า เมื่อเทียบกับวัสดุที่ใช้ระบบฉีดพลาสติก</value>
+  </data>
+  <data name="Need to check the size of your file first?" xml:space="preserve">
+    <value>คุณต้องการตรวจสอบไฟล์ก่อนไหม?</value>
+  </data>
+  <data name="Online STL Viewer" xml:space="preserve">
+    <value>ดูไฟล์ STL ออนไลน์</value>
+  </data>
+  <data name="Use our online STL viewer" xml:space="preserve">
+    <value>ลองโปรแกรมดูไฟล์ STL ของเรา</value>
+  </data>
+  <data name="Looking for Lithophane?" xml:space="preserve">
+    <value>มองหา Lithophane?</value>
+  </data>
+  <data name="3D Printed CNC Prototype" xml:space="preserve">
+    <value>งานพิมพ์ชิ้นงาน CNC</value>
+  </data>
+  <data name="3D Printed Dental" xml:space="preserve">
+    <value>งานพิมพ์ทันตกรรม</value>
+  </data>
+  <data name="see more on instagram" xml:space="preserve">
+    <value>ดูเพิ่มเติมใน Instagram</value>
+  </data>
+  <data name="Get Instant Pricing" xml:space="preserve">
+    <value>ประเมินราคาปริ้น 3D ทันที</value>
+  </data>
+  <data name="Instant Pricing" xml:space="preserve">
+    <value>ลองเลยวันนี้</value>
+  </data>
+  <data name="Introduced" xml:space="preserve">
+    <value>แจ้งราคาพิมพ์ 3D ทันที</value>
+  </data>
+  <data name="Tired of waiting to get pricing information?" xml:space="preserve">
+    <value>คุณเบื่อที่จะรอไหม? กว่าจะได้ราคามา...</value>
+  </data>
+  <data name="Try our automated system!" xml:space="preserve">
+    <value>ลองระบบประเมินราคาอัตโนมัติของเรา</value>
+  </data>
+  <data name="Upload your file and get pricing within seconds!" xml:space="preserve">
+    <value>อัพโหลดไฟล์ 3D แล้วรู้ราคาทันที</value>
+  </data>
+  <data name="You only pay for your order, when your part is accepted by us." xml:space="preserve">
+    <value>คุณจ่ายเงินหลังจากงานคุณได้ผ่านการตรวจสอบจากเราแล้วเท่านั้น</value>
+  </data>
+  <data name="Get personalized quote" xml:space="preserve">
+    <value>ขอใบเสนอราคา</value>
+  </data>
+  <data name="Want us to personally look into your order?" xml:space="preserve">
+    <value>ต้องการให้เราดูงานคุณเป็นพิเศษไหม?</value>
+  </data>
+  <data name="MJF PA12 (Multi Jet Fusion Polyamide 12) is a strong and rigid thermoplastic used in 3D printing. It is temperature-resistant, chemical-resistant, and highly durable, making it ideal for functional parts and industrial applications. Additionally, the MJF process produces parts with a smooth, matt finish, enabling a higher level of detail with a smoother surface finish." xml:space="preserve">
+    <value>เป็นเทอร์โมพลาสติกที่แข็งแกร่ง สามารถผลิตชิ้นส่วนที่มีโครงสร้างแข็งแรงและทนต่อสารเคมีได้ดีเยี่ยม เนื่องจากเป็นไนล่อน ทำให้มีความยืดยุ่นในตัวสูง สามารถผลิตชิ้นงานที่ต้องการความยืดยุ่นได้โดยการลดความหนาของชิ้นงานลง</value>
+  </data>
+  <data name="The print head jets a fusing agent in one pass onto the PA12 powder surface in the shape of the two-dimensional layer. The infrared lamps heat and fuse the powder to form a solid layer." xml:space="preserve">
+    <value>เทคโนโลยีที่ทันสมัย พิมพ์ด้วยการพ่น binding agent ลงบนถังวัสดุ PA12 แล้วทำให้แข็งด้วยความร้อนและแสงอินฟราเรดจนชิ้นงานแข็งตัวเป็นชั้นๆ</value>
+  </data>
+  <data name="Ask us for more detail" xml:space="preserve">
+    <value>ติดต่อขอใบเสนอราคา</value>
+  </data>
+  <data name="PA-CF (Polyamide Carbon Fiber) filament is a strong and rigid thermoplastic used in 3D printing. It is temperature-resistant, chemical-resistant, and highly durable, making it ideal for functional parts and industrial applications. It also has good layer adhesion and bridging capabilities. Additionally, the addition of carbon fiber to the polyamide increases its strength and stiffness, making it suitable for applications requiring higher strength and rigidity." xml:space="preserve">
+    <value>รวมความทนทานของไนลอนเข้ากับความแข็งแรงของคาร์บอนไฟเบอร์เข้าด้วยกัน ทำให้สามารถพิมพ์ชิ้นงานที่มีความแข็งแรงทนทานต่อการใช้งานได้ดี และไม่เสียรูปทรงไปจากไฟล์ต้นแบบมากได้เยี่ยม</value>
+  </data>
+  <data name="With support of up to 4 colors in a single print. See your part in a whole new dimension." xml:space="preserve">
+    <value>รองรับได้มากถึง 4 เฉดสีต่อชิ้นงาน แสดงชิ้นงานของคุณอย่างที่ไม่เคยเห็นมาก่อน ติดต่อสอบถามข้อมูลและการทำไฟล์สามมิติได้ที่เราโดยตรง</value>
+  </data>
+  <data name="ASA (Acrylonitrile Styrene Acrylate) filament is a strong and durable thermoplastic used in 3D printing. It is UV-resistant, chemical-resistant and temperature-resistant, making it suitable for outdoor use and industrial applications. It is also easy to print with and has good layer adhesion." xml:space="preserve">
+    <value>ASA (Acrylonitrile Styrene Acrylate) เป็นเทอร์โมพลาสติกมีคุณสมบัติคล้ายกับ ABS แต่สามารถทนแสง UV ได้ดี จึงเหมาะกับงานที่ต้องใช้กลางแจ้ง หรือโดนแสง UV โดยตรงในระยะยาว</value>
+  </data>
+  <data name="HIPS (High Impact Polystyrene) filament is a strong and stable thermoplastic used in 3D printing. It is low-cost, temperature-resistant, easy to paint and glue, and suitable for intricate parts and high-precision objects." xml:space="preserve">
+    <value>HIPS (High Impact Polystyrene) เป็นเทอร์โมพลาสติกที่แข็งแรงและความเสถียรในตัววัสดุสูง มีราคาต่ำ ทนต่ออุณหภูมิสูงได้ดี ทาสีและทากาวได้ง่าย และเหมาะสำหรับชิ้นส่วนที่ต้องความแม่นยำสูง เพราะมีการหดตัวในวัสดุที่น้อยมาก</value>
+  </data>
+  <data name="PA6 (Polyamide 6) filament is a strong, rigid thermoplastic used in 3D printing. It is temperature-resistant, chemical-resistant, and highly durable, making it ideal for functional parts and industrial applications. It is also easy to print with and has excellent layer adhesion and bridging capabilities." xml:space="preserve">
+    <value>PA6 (Polyamide 6) เป็นเทอร์โมพลาสติกที่มีความเหนียวและแข็งแรงสูงมาก ทนต่อความร้อน สารเคมี และแรงกระแทกสูง จึงเหมาะสำหรับชิ้นส่วนที่ใช้งานได้จริงและงานอุตสาหกรรม</value>
+  </data>
+  <data name="PC (Polycarbonate) filament is a strong and heat-resistant thermoplastic used in 3D printing. It is impact-resistant, temperature-resistant, and highly durable, making it an ideal choice for functional parts and industrial applications. It is also easy to print with and has excellent layer adhesion and bridging capabilities." xml:space="preserve">
+    <value>PC (โพลีคาร์บอเนต) เป็นเทอร์โมพลาสติกที่แข็งแรง ทนความร้อน และทนต่อแรงกระแทกได้สูง ตัววัสดุมีความแข็งและมีผิวเงา เหมาะสำหรับชิ้นส่วนที่ใช้งานได้จริงและงานอุตสาหกรรมต่างๆ</value>
+  </data>
+  <data name="PVA (Polyvinyl Alcohol) filament is a water-soluble thermoplastic used in 3D printing. It is strong, flexible and easy to print with and is often used as a support material for intricate prints. It is also biodegradable, making it an eco-friendly option." xml:space="preserve">
+    <value>PVA (Polyvinyl Alcohol) เป็นเทอร์โมพลาสติกที่สามารถละลายน้ำเปล่าได้ มีความยืดหยุ่นที่สูงมาก และมักใช้เป็นวัสดุ support สำหรับงานพิมพ์ที่ซับซ้อน นอกจากนี้ยังสามารถย่อยสลายได้ทางชีวภาพ ทำให้เป็นตัวเลือกที่เป็นมิตรกับสิ่งแวดล้อม</value>
+  </data>
+  <data name="TPU (Thermoplastic Polyurethane) filament is a flexible, durable thermoplastic used in 3D printing. It is strong, elastic, and resistant to oils, greases, and abrasion, making it ideal for applications requiring wear resistance and flexibility. It is also easy to print with and has good layer adhesion." xml:space="preserve">
+    <value>TPU (Thermoplastic Polyurethane) เป็นเทอร์โมพลาสติกที่ยืดหยุ่นสูง ลักษณะคล้ายยางรถยนต์ มีความเหนียว ทนทานต่อน้ำมัน จาระบี จึงเหมาะสำหรับการใช้งานที่ต้องการความทนทานต่อการสึกหรอและความยืดหยุ่น</value>
+  </data>
+  <data name="Large machine, support upto 550 x 370 x 380mm in single piece!" xml:space="preserve">
+    <value>เครื่องปริ้น 3D ขนาดใหญ่ รับรองชิ้นงานได้ใหญ่สุด 550 x 370 x 380mm ต่อชิ้น!</value>
+  </data>
+</root>

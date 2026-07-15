@@ -1,0 +1,88 @@
+﻿.table-fit {
+    white-space: nowrap;
+    width: 1%;
+}
+
+.table-ellipsis {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.table-multiline {
+    white-space: pre-line;
+}
+
+@media (max-width: 576px) {
+    .mobile-smaller-font {
+        font-size: 0.7rem;
+    }
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+}
+
+.data-table {
+    border-bottom: 1px solid #f5f5f5;
+    width: 100%;
+    text-align: left;
+}
+
+    .data-table a:hover {
+        text-decoration: none;
+    }
+
+    .data-table caption {
+        font-size: 10px;
+        padding-left: 8px;
+        color: #878787;
+        padding-top: 0px;
+        padding-bottom: 5px;
+    }
+
+    .data-table thead {
+        border-bottom: 1px solid #ccc;
+        font-size: 12px;
+    }
+
+    .data-table tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .data-table th {
+        font-size: 11px;
+        font-weight: normal;
+        font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+        padding-left: 24px;
+        white-space: nowrap;
+    }
+
+    .data-table td {
+        border-bottom: 1px solid #f5f5f5;
+        padding-top: 5px;
+        color: #626262;
+    }
+
+    .data-table th:first-child {
+        padding-left: 8px;
+    }
+
+    .data-table td {
+        font-size: 11px;
+        font-weight: normal;
+        font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+        padding-left: 24px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: default;
+        vertical-align: middle;
+    }
+
+        .data-table td:first-child {
+            padding-left: 8px;
+        }

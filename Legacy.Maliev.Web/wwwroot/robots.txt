@@ -1,0 +1,14 @@
+User-agent: *
+Disallow: /career/*
+Disallow: /career/view?returnUrl=
+Disallow: /career?size=
+Disallow: /career?handler=
+Disallow: /quotation/*
+Disallow: /instantquotation/*
+Disallow: /login/*
+Disallow: /signup/*
+Disallow: /account/*
+
+
+# Sitemaps
+Sitemap: https://www.maliev.com/sitemap
