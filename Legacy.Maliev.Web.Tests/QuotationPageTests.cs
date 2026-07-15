@@ -48,7 +48,8 @@ public sealed class QuotationPageTests
         var submissionId = Guid.Parse("11111111-2222-3333-4444-555555555555");
         var quotation = new RecordingQuotationClient(new QuotationRequestResult(713, true, true));
         var files = new RecordingFileClient(new QuotationFileResult(false, false, true, false));
-        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true));
+        var notifications = new RecordingNotificationClient();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
         page.SubmissionId = submissionId;
         page.Files = [FormFile("model.stl", "model/stl", "solid test")];
 
@@ -62,18 +63,21 @@ public sealed class QuotationPageTests
         Assert.Contains("Do not submit", page.Notification, StringComparison.OrdinalIgnoreCase);
         var analytics = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("713", StringComparison.Ordinal));
         Assert.DoesNotContain("mali@example.com", analytics, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, notifications.Messages.Count);
     }
 
     private static QuotationPage CreatePage(
         RecordingQuotationClient quotationClient,
         RecordingFileClient fileClient,
-        IAntiBotVerifier antiBotVerifier)
+        IAntiBotVerifier antiBotVerifier,
+        INotificationClient? notificationClient = null)
     {
         var httpContext = new DefaultHttpContext();
         return new QuotationPage(
             new StubCountryClient(),
             quotationClient,
             fileClient,
+            notificationClient ?? new RecordingNotificationClient(),
             antiBotVerifier,
             Options.Create(
                 new RecaptchaEnterpriseOptions
@@ -157,6 +161,20 @@ public sealed class QuotationPageTests
         {
             Assert.Equal("submit", expectedAction);
             return Task.FromResult(valid);
+        }
+    }
+
+    private sealed class RecordingNotificationClient : INotificationClient
+    {
+        public List<EmailNotification> Messages { get; } = [];
+
+        public Task<NotificationResult> SendAsync(
+            NotificationChannel channel,
+            EmailNotification notification,
+            CancellationToken cancellationToken)
+        {
+            Messages.Add(notification);
+            return Task.FromResult(new NotificationResult(true, true, true));
         }
     }
 
