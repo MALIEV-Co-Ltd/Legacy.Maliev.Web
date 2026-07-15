@@ -1,4 +1,5 @@
 using System.Net;
+using System.Xml.Linq;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -29,10 +30,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICareerClient>();
                     services.RemoveAll<ICountryClient>();
                     services.RemoveAll<IContactClient>();
+                    services.RemoveAll<IQuotationClient>();
+                    services.RemoveAll<IQuotationFileClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
                     services.AddSingleton<IContactClient, StubContactClient>();
+                    services.AddSingleton<IQuotationClient, StubQuotationClient>();
+                    services.AddSingleton<IQuotationFileClient, StubQuotationFileClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             })
@@ -92,6 +97,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/knowledges/specifications/3d-scanning")]
     [InlineData("/career")]
     [InlineData("/contact")]
+    [InlineData("/quotation")]
     public async Task MigratedPublicRoutes_RenderCanonicalLocalizedDocuments(string route)
     {
         using var response = await client.GetAsync(route);
@@ -116,6 +122,41 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("AIza", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ServiceAuthentication", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ClientSecret", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuotationPage_PreservesPrefillAndSecureUploadContract()
+    {
+        var source = await client.GetStringAsync(
+            "/quotation?culture=en&item=3d-printing&process=sls&material=pa12");
+
+        Assert.Contains("I want: 3d-printing", source, StringComparison.Ordinal);
+        Assert.Contains("Please use: sls", source, StringComparison.Ordinal);
+        Assert.Contains("Material: pa12", source, StringComparison.Ordinal);
+        Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.Contains("100 MB", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("AIza", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("PayPal", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates()
+    {
+        using var response = await client.GetAsync("/sitemap");
+        var xml = await response.Content.ReadAsStringAsync();
+        var document = XDocument.Parse(xml);
+        XNamespace sitemap = "http://www.sitemaps.org/schemas/sitemap/0.9";
+        XNamespace xhtml = "http://www.w3.org/1999/xhtml";
+        var routes = document.Root!.Elements(sitemap + "url").ToArray();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(22, routes.Length);
+        Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
+        Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
+        Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
+        Assert.DoesNotContain("/account", xml, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -181,6 +222,25 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             ContactSubmission submission,
             CancellationToken cancellationToken) =>
             Task.FromResult(new ContactSubmissionResult(1, true, true));
+    }
+
+    private sealed class StubQuotationClient : IQuotationClient
+    {
+        public Task<QuotationRequestResult> CreateRequestAsync(
+            QuotationRequestSubmission submission,
+            string idempotencyKey,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new QuotationRequestResult(1, true, true));
+    }
+
+    private sealed class StubQuotationFileClient : IQuotationFileClient
+    {
+        public Task<QuotationFileResult> UploadAndLinkAsync(
+            int requestId,
+            Guid submissionId,
+            IReadOnlyList<QuotationUpload> files,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new QuotationFileResult(true, true, true, false));
     }
 
     private sealed class StubAntiBotVerifier : IAntiBotVerifier

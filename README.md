@@ -13,6 +13,8 @@ The Web process owns no domain database and contains no PayPal, PDF generation, 
 
 The public Contact form uses reCAPTCHA Enterprise through Application Default Credentials, reads countries anonymously from `Legacy.Maliev.CountryService`, and writes messages with a short-lived server-only service JWT. The deployment maps the Web client secret from `maliev-legacy-secrets` to `ServiceAuthentication__ClientSecret` and supplies the public reCAPTCHA site key as `Recaptcha__SiteKey`; neither value is stored in source. Unsafe HTTP methods are not retried automatically, preventing duplicate contact records.
 
+The manual Quotation form uses a stable per-form idempotency key, streams optional files through `Legacy.Maliev.FileService` quarantine and malware scanning, and stores only the resulting bucket/object metadata in `Legacy.Maliev.QuotationService`. Browser uploads are limited to 10 files and 100 MB combined. If metadata linking fails, the Web BFF attempts to remove objects that were not linked; an already persisted quotation reference is always shown as received so the customer does not submit it twice.
+
 ## Local validation
 
 The repository is designed to run under `Legacy.Maliev.AppHost`, which reflects the existing GKE service topology without provisioning cloud resources.
@@ -25,6 +27,6 @@ dotnet test .\Legacy.Maliev.Web.slnx -c Release --no-build -p:MalievWorkspaceRoo
 
 ## Migration status
 
-The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. Twenty-one of the twenty-two indexed legacy routes are migrated; Quotation is the remaining public route. Route-by-route legacy rendering and behavior migration is tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
+The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All twenty-two indexed legacy routes and the localized XML sitemap are migrated. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
 
 Deployment is intentionally deferred until route compatibility, external credential rotation, live GTM malware review, and existing-cluster capacity gates are complete.
