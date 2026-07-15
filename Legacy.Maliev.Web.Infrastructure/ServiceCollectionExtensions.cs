@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationClient, NotificationClient>();
         services.AddScoped<ICustomerAuthenticationClient, CustomerAuthenticationClient>();
         services.AddScoped<ICustomerProfileClient, CustomerProfileClient>();
+        services.AddScoped<ICustomerAccountClient, CustomerAccountClient>();
         services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
         services.AddScoped<IAccountSessionManager, AccountSessionManager>();
         services.AddScoped<AccountCookieEvents>();

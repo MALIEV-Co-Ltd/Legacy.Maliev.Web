@@ -11,6 +11,7 @@ namespace Legacy.Maliev.Web.Infrastructure;
 
 internal sealed record AccountSession(
     string Email,
+    int CustomerDatabaseId,
     string AccessToken,
     string RefreshToken,
     DateTimeOffset AccessExpiresAt,

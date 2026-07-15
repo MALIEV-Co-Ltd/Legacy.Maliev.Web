@@ -12,11 +12,12 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private readonly WebApplicationFactory<Program> configuredFactory;
     private readonly HttpClient client;
 
     public WebSurfaceTests(WebApplicationFactory<Program> factory)
     {
-        client = factory.WithWebHostBuilder(builder =>
+        configuredFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Testing");
                 builder.ConfigureAppConfiguration((_, configuration) =>
@@ -36,6 +37,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<INotificationClient>();
                     services.RemoveAll<ICustomerAuthenticationClient>();
                     services.RemoveAll<ICustomerProfileClient>();
+                    services.RemoveAll<ICustomerAccountClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -45,14 +47,76 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<INotificationClient, StubNotificationClient>();
                     services.AddSingleton<ICustomerAuthenticationClient, StubCustomerAuthenticationClient>();
                     services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
+                    services.AddSingleton<ICustomerAccountClient, StubCustomerAccountClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
-            })
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost"),
             });
+        client = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+    }
+
+    [Theory]
+    [InlineData("/member/account/manage/address")]
+    [InlineData("/member/orders")]
+    public async Task MemberRoutes_RedirectAnonymousUsersToLocalLogin(string route)
+    {
+        using var anonymous = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+
+        using var response = await anonymous.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var location = Assert.IsType<Uri>(response.Headers.Location);
+        Assert.Equal("localhost", location.Host);
+        Assert.Equal("/Account/Login", location.AbsolutePath);
+        Assert.Contains("ReturnUrl=", location.Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SignedInMember_AddressAndOrderRoutesPreserveSecureBffContract()
+    {
+        await SignInAsync();
+
+        var account = await client.GetStringAsync("/account?culture=en");
+        var address = await client.GetStringAsync("/member/account/manage/address");
+        var orders = await client.GetStringAsync("/member/orders?culture=en");
+
+        Assert.Contains("/Member/Account/Manage/Address", account, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/Member/Orders", account, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"BillingAddress1\"", address, StringComparison.Ordinal);
+        Assert.Contains("name=\"ShippingAddress1\"", address, StringComparison.Ordinal);
+        Assert.Contains("Thailand", address, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", address, StringComparison.Ordinal);
+        Assert.Contains("noindex,follow", address, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", address, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", address, StringComparison.Ordinal);
+        Assert.Contains("Start or review an order", orders, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AddressUpdate_UsesAntiforgeryAndRedirectAfterPost()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/account/manage/address");
+        form["BillingAddress1"] = "1 Billing Rd";
+        form["BillingCity"] = "Bangkok";
+        form["BillingCountryId"] = "764";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCity"] = "Bangkok";
+        form["ShippingCountryId"] = "764";
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/address?handler=UpdateAddress",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/member/account/manage/address", response.Headers.Location?.OriginalString?.ToLowerInvariant());
     }
 
     [Theory]
@@ -371,6 +435,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         };
     }
 
+    private async Task SignInAsync()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/login");
+        form["Email"] = "customer@example.com";
+        form["Password"] = "correct-password";
+        form["RememberMe"] = "false";
+        using var response = await client.PostAsync(
+            "/account/login?handler=Login",
+            new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+    }
+
     private sealed class StubCustomerAuthenticationClient : ICustomerAuthenticationClient
     {
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
@@ -381,7 +457,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     "Bearer",
                     900,
                     DateTimeOffset.UtcNow.AddDays(1)),
-                true));
+                true,
+                42));
 
         public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerAuthenticationResult(null, true));
@@ -410,5 +487,48 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             Task.FromResult(new CustomerProfileResult(new CustomerProfile(42, firstName, lastName, email), true, true));
 
         public Task<bool> DeleteAsync(int customerId, CancellationToken cancellationToken) => Task.FromResult(true);
+    }
+
+    private sealed class StubCustomerAccountClient : ICustomerAccountClient
+    {
+        private static readonly CustomerAddress Billing = new(
+            7, null, "Existing Billing", null, "Bangkok", null, "10110", 764, null, null);
+        private static readonly CustomerAddress Shipping = new(
+            11, null, "Existing Shipping", null, "Bangkok", null, "10200", 764, null, null);
+        private static readonly CustomerAccountDetails Customer = new(
+            42,
+            "Ada",
+            "Lovelace",
+            "Ada Lovelace",
+            null,
+            null,
+            null,
+            "customer@example.com",
+            null,
+            null,
+            Billing.Id,
+            Shipping.Id,
+            null,
+            null,
+            Billing,
+            null,
+            Shipping);
+
+        public Task<CustomerAddressProfileResult> GetAddressProfileAsync(
+            int customerId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAddressProfileResult(
+                customerId == Customer.Id ? new CustomerAddressProfile(Customer) : null,
+                true,
+                customerId == Customer.Id));
+
+        public Task<CustomerAddressOperationResult> UpdateAddressesAsync(
+            int customerId,
+            CustomerAddressUpdate update,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAddressOperationResult(
+                customerId == Customer.Id,
+                true,
+                customerId == Customer.Id));
     }
 }
