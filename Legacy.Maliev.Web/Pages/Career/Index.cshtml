@@ -1,0 +1,220 @@
+@page
+@model Legacy.Maliev.Web.Pages.About.Career.Index
+@{
+    if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th")
+    {
+        ViewData["Title"] = "ตำแน่งงาน | MALIEV";
+        ViewData["Description"] = "เข้ามาร่วมงานกับเรา เพื่ออิสระในการทำงานและการสนับสนุนที่จะผลักดันอาชีพคุณไปอีกระดับ";
+    }
+    else
+    {
+        ViewData["Title"] = "Career | MALIEV";
+        ViewData["Description"] = "Discover your perfect job match, and the freedom and support to take your career to the next level.";
+    }
+
+    var prevDisabled = !Model.JobOffers.HasPreviousPage ? "disabled" : "";
+    var nextDisabled = !Model.JobOffers.HasNextPage ? "disabled" : "";
+
+}
+
+<main class="maliev-page maliev-page-main">
+<div class="maliev-container workspace-content public-content">
+    @if (!Model.ServiceAvailable)
+    {
+        <div class="alert alert-warning" role="status">@Localizer["Job listings are temporarily unavailable. Please check back later."]</div>
+    }
+    <div class="row">
+        <div class="col-12">
+            <h1 class="fs-2">@Localizer["Job Offers"]</h1>
+            <p class="small">
+                @Localizer["Here you will find our current job offers."]
+                @Localizer["If you have any questions about the positions, please do not hesitate to contact our contact person directly."]
+                @Localizer["We look forward to meet you. If you have not found a suitable position, you can apply for a initiative position."]
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <form id="get-careers" method="get">
+                <div asp-validation-summary="All" class="small text-danger"></div>
+                <div class="row">
+                    <div class="col-12 col-md-6">
+                        <div class="input-group mb-2">
+                            <input type="text" placeholder='@Localizer["Search positions"]' name="search" value="@Model.JobSearch" class="form-control form-control-sm" aria-label='@Localizer["Search positions"]' />
+                            <input type="submit" value='@Localizer["Search"]' class="btn btn-primary btn-sm" />
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <select class="form-select form-select-sm mb-3">
+                            <option hidden selected class="bg-light">@Localizer["Career level"]</option>
+                            @{
+                                foreach (var level in Model.CareerLevels)
+                                {
+                                    <option value="@level.Id">@level.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="table-wrapper">
+                        <table id="search-result" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="table-col-compact">@Localizer["Ref."]</th>
+                                    <th>@Localizer["Title"]</th>
+                                    <th>@Localizer["Location"]</th>
+                                    <th>@Localizer["Type"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.JobOffers.Items.Count > 0)
+                                {
+                                    @foreach (var offer in Model.JobOffers.Items)
+                                    {
+                                        <tr>
+                                            <td data-title="@Localizer["Reference number"]" class="table-link-cell">
+                                                <a asp-route-id="@offer.Id" asp-page="View">@offer.Id</a>
+                                            </td>
+                                            <td data-title="Title">@offer.Title</td>
+                                            @{
+                                                var level = Model.CareerLevels.SingleOrDefault(item => item.Id == offer.LevelId);
+                                                var levelName = level == null ? "-" : level.Name;
+                                            }
+                                            <td data-title="Location">@offer.Location</td>
+                                            <td data-title="Level">@levelName</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="1000">@Localizer["No opening positions. Check back again later."]</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <div>
+                    <nav>
+                        @{
+                            string page25Active = Model.PageSize <= 25 ? "active" : string.Empty;
+                            string page50Active = Model.PageSize <= 50 && Model.PageSize > 25 ? "active" : string.Empty;
+                            string page100Active = Model.PageSize <= 100 && Model.PageSize > 50 ? "active" : string.Empty;
+                        }
+                        <ul class="pagination pagination-sm justify-content-start">
+                            <li class="page-item @page25Active"><a class="page-link" asp-page-handler="ChangeItemCount" asp-route-size="25">25</a></li>
+                            <li class="page-item @page50Active"><a class="page-link" asp-page-handler="ChangeItemCount" asp-route-size="50">50</a></li>
+                            <li class="page-item @page100Active"><a class="page-link" asp-page-handler="ChangeItemCount" asp-route-size="100">100</a></li>
+                        </ul>
+                    </nav>
+                    <nav>
+                        <ul class="pagination pagination-sm justify-content-end">
+                            @if (Model.JobOffers.HasPreviousPage)
+                            {
+                                <li class="page-item @prevDisabled">
+                                    <a class="page-link"
+                                        asp-route-sort="@Model.CurrentSort"
+                                        asp-route-index="1"
+                                        asp-route-size="@Model.PageSize"
+                                        asp-route-search="@Model.JobSearch">
+                                        <span aria-hidden="true">&laquo;</span>
+                                        <span class="sr-only">@Localizer["First"]</span>
+                                    </a>
+                                </li>
+                                <li class="page-item @prevDisabled">
+                                    <a class="page-link"
+                                        asp-route-sort="@Model.CurrentSort"
+                                        asp-route-index="@(Model.JobOffers.PageIndex - 1)"
+                                        asp-route-size="@Model.PageSize"
+                                        asp-route-search="@Model.JobSearch">
+                                        <span aria-hidden="true">&lsaquo;</span>
+                                        <span class="sr-only">@Localizer["Previous"]</span>
+                                    </a>
+                                </li>
+
+                                int counter = 0;
+                                for (int pageIndex = Math.Max(1, Model.JobOffers.PageIndex - 3); pageIndex < Model.JobOffers.PageIndex; pageIndex++)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                            asp-route-sort="@Model.CurrentSort"
+                                            asp-route-index="@pageIndex"
+                                            asp-route-size="@Model.PageSize"
+                                            asp-route-search="@Model.JobSearch">
+                                            @pageIndex
+                                        </a>
+                                    </li>
+                                    counter++;
+                                    if (counter >= 3)
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            @if (Model.JobOffers.HasPreviousPage || Model.JobOffers.HasNextPage)
+                            {
+                                <li class="page-item disabled"><a class="page-link bg-light" href="#">@Model.JobOffers.PageIndex</a></li>
+                            }
+
+                            @if (Model.JobOffers.HasNextPage)
+                            {
+                                int counter = 0;
+                                for (int pageIndex = Model.JobOffers.PageIndex + 1; pageIndex < Model.JobOffers.TotalPages; pageIndex++)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                            asp-route-sort="@Model.CurrentSort"
+                                            asp-route-index="@pageIndex"
+                                            asp-route-size="@Model.PageSize"
+                                            asp-route-search="@Model.JobSearch">
+                                            @pageIndex
+                                        </a>
+                                    </li>
+                                    counter++;
+                                    if (counter >= 3)
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                <li class="page-item @nextDisabled">
+                                    <a class="page-link"
+                                        asp-route-sort="@Model.CurrentSort"
+                                        asp-route-index="@(Model.JobOffers.PageIndex + 1)"
+                                        asp-route-size="@Model.PageSize"
+                                        asp-route-search="@Model.JobSearch">
+                                        <span aria-hidden="true">&rsaquo;</span>
+                                        <span class="sr-only">@Localizer["Next"]</span>
+                                    </a>
+                                </li>
+                                <li class="page-item @nextDisabled">
+                                    <a class="page-link"
+                                        asp-route-sort="@Model.CurrentSort"
+                                        asp-route-index="@(Model.JobOffers.TotalPages)"
+                                        asp-route-size="@Model.PageSize"
+                                        asp-route-search="@Model.JobSearch">
+                                        <span aria-hidden="true">&raquo;</span>
+                                        <span class="sr-only">@Localizer["Last"]</span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</main>
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+    <script type="text/javascript">
+    </script>
+}

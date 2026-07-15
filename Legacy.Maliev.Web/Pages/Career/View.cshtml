@@ -1,0 +1,125 @@
+@page "{id}"
+@model Legacy.Maliev.Web.Pages.About.Career.View
+
+@{
+    ViewData["Image"] = "https://www.maliev.com/src/images/career-3dprinting.jpg";
+
+    if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th")
+    {
+        ViewData["Title"] = $"{@Model.JobOffer.Title} | Career@MALIEV";
+        
+        if(string.IsNullOrEmpty(Model.JobOffer.Introduction))
+        {
+            ViewData["Description"] = "เข้ามาร่วมงานกับเรา เพื่ออิสระในการทำงานและการสนับสนุนที่จะผลักดันอาชีพคุณไปอีกระดับ";
+        }else{
+            ViewData["Description"] = @Model.JobOffer.Introduction;
+        }
+    }
+    else
+    {
+        ViewData["Title"] = $"{@Model.JobOffer.Title} | Career@MALIEV";
+        
+        if(string.IsNullOrEmpty(Model.JobOffer.Introduction))
+        {
+            ViewData["Description"] = "Discover your perfect job match, and the freedom and support to take your career to the next level.";
+        }else{
+            ViewData["Description"] = @Model.JobOffer.Introduction;
+        }
+    }
+}
+
+<main class="maliev-page maliev-page-main">
+<div class="maliev-container workspace-content public-content">
+    <div class="card shadow mb-3 mb-md-5 mt-2 mt-md-2 rounded-0">
+        <img class="card-img-top career-hero-image" src="~/src/images/career-3dprinting.jpg" title="@Localizer["Career at MALIEV"]" alt="@Localizer["3D printing workspace at MALIEV"]">
+        <div id="job-description">
+            <div class="card-body bg-light">
+
+                @if(Model.JobOffer.IsFilled != true) {
+                    <span class="badge rounded-pill bg-danger fw-normal text-light px-3">@Localizer["Urgent"]</span>
+                }
+                else{
+                    <span class="badge rounded-pill bg-success fw-normal text-light px-3">@Localizer["Filled"]</span>
+                }
+
+                <h5 class="card-title">@Model.JobOffer.Title</h5>
+                @{
+                    var levelName = Model.JobOffer.Level?.Name ?? "not specified";
+                }
+                <h6 class="card-subtitle mb-2 text-muted small">Ref: @Model.JobOffer.Id, Level: @levelName</h6>
+            </div>
+
+            <div class="card-body px-3 py-3">
+                <div class="card-text">
+                    <div class="row">
+                        <div class="col">
+                            <p class="small">@Model.JobOffer.Introduction</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 col-lg-6">
+                            <div>
+                                <h2 class="h6 fw-semibold">@Localizer["Responsibilities"]</h2>
+                                <p class="small">
+                                    @Model.JobOffer.Description
+                                </p>
+                            </div>
+                            <div>
+                                <h2 class="h6 fw-semibold">@Localizer["Qualifications"]</h2>
+                                <p class="small">
+                                    @Model.JobOffer.Prerequisites
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div>
+                                <h2 class="h6 fw-semibold">@Localizer["What we offer"]</h2>
+                                <p class="small">
+                                    @Model.JobOffer.WhatWeOffer
+                                </p>
+                            </div>
+                            <div>
+                                <p class="small">@Localizer["This position is offered as"] <u class="fw-semibold">@levelName</u> @Localizer["and is available in"] <span class="fw-semibold">@Model.JobOffer.Location</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body px-3 py-3">
+            <div class="row">
+                <div class="col">
+                    <p class="small text-muted mb-0">@Localizer["Interested in this position? Send us your application to"] <a href="mailto:career@maliev.com">career@maliev.com</a>.</p>
+                </div>
+                <div class="col">
+                    <partial name="_FacebookSocialSectionPartial" />
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="PrintJobDescription()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"></path>
+                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"></path>
+                            </svg><span class="small ms-1">@Localizer["Print"]</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <a class="maliev-button maliev-button--secondary" asp-page="/Career/Index">@Localizer["Back to careers"]</a>
+    </div>
+</div>
+</main>
+
+@section Scripts{
+    <script>
+        function PrintJobDescription() {
+            var contents = document.getElementById("job-description").innerHTML;
+            var a = window.open('', '', 'height=500, width=500');
+            a.document.write('<html>');
+            a.document.write('<body>');
+            a.document.write(contents);
+            a.document.write("</body>");
+            a.document.write("</html>");
+            a.document.close();
+            a.print();
+        }
+    </script>
+}

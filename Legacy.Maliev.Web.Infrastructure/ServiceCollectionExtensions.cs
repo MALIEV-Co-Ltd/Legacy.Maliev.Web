@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
         AddClient(services, "files", static endpoints => endpoints.File);
         AddClient(services, "orders", static endpoints => endpoints.Order);
         AddClient(services, "quotations", static endpoints => endpoints.Quotation);
+        services.AddScoped<ICareerClient, CareerClient>();
         return services;
     }
 
