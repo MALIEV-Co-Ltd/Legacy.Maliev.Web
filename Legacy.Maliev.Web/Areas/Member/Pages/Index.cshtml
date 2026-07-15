@@ -1,0 +1,102 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Index
+@{
+    ViewData["Title"] = Localizer["Member overview | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="workspace-content" aria-labelledby="member-overview-title">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
+        <h1 id="member-overview-title">
+            @if (Model.Profile is not null)
+            {
+                @Localizer["Welcome, {0}", Model.Profile.FirstName]
+            }
+            else
+            {
+                @Localizer["Account overview"]
+            }
+        </h1>
+        <p>@Localizer["Review your active manufacturing work and account status."]</p>
+    </div>
+
+    @if (Model.Notices.Count == 0)
+    {
+        <div class="maliev-alert maliev-alert--success" role="status">
+            @Localizer["Your account is ready."]
+        </div>
+    }
+    else
+    {
+        <section class="maliev-panel" aria-labelledby="member-notices-title">
+            <h2 id="member-notices-title">@Localizer["Account notices"]</h2>
+            <ul>
+                @foreach (var notice in Model.Notices)
+                {
+                    <li>@Localizer[notice]</li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section aria-labelledby="member-quick-actions-title">
+        <h2 id="member-quick-actions-title">@Localizer["Quick actions"]</h2>
+        <div class="maliev-card-grid">
+            <a class="maliev-panel docs-link-card" asp-area="" asp-page="/Quotation/Index"><strong>@Localizer["Request a quotation"]</strong><span>@Localizer["Send drawings and project requirements."]</span></a>
+            <a class="maliev-panel docs-link-card" asp-area="Member" asp-page="/Orders/History"><strong>@Localizer["Order history"]</strong><span>@Localizer["Review manufacturing progress and files."]</span></a>
+            <a class="maliev-panel docs-link-card" asp-area="Member" asp-page="/Account/Index"><strong>@Localizer["Account settings"]</strong><span>@Localizer["Manage profile, addresses, email, and password."]</span></a>
+        </div>
+    </section>
+
+    <section class="maliev-panel" aria-labelledby="recent-orders-title">
+        <h2 id="recent-orders-title">@Localizer["Recent orders"]</h2>
+        @if (Model.RecentOrders.Count == 0)
+        {
+            <p>@Localizer["No orders were found."]</p>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead><tr><th scope="col">@Localizer["Order"]</th><th scope="col">@Localizer["Name"]</th><th scope="col">@Localizer["Created"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var order in Model.RecentOrders)
+                    {
+                        <tr><td><a asp-page="/Orders/View" asp-route-itemID="@order.Id">#@order.Id</a></td><td>@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</td><td>@(order.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <p><a asp-page="/Orders/History">@Localizer["View all orders"]</a></p>
+    </section>
+
+    <section class="maliev-panel" aria-labelledby="recent-quotations-title">
+        <h2 id="recent-quotations-title">@Localizer["Recent quotations"]</h2>
+        @if (Model.RecentQuotations.Count == 0)
+        {
+            <p>@Localizer["No quotations were found."]</p>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead><tr><th scope="col">@Localizer["Quotation"]</th><th scope="col">@Localizer["Status"]</th><th scope="col">@Localizer["Expiration date"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var quotation in Model.RecentQuotations)
+                    {
+                        var status = quotation.Accepted switch
+                        {
+                            true => Localizer["Accepted"],
+                            false => Localizer["Declined"],
+                            _ => Localizer["Open"],
+                        };
+                        <tr><td><a asp-page="/Quotations/View" asp-route-id="@quotation.Id">#@quotation.Id</a></td><td>@status</td><td>@quotation.ExpirationDate.ToString("yyyy-MM-dd")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <p><a asp-page="/Quotations/Index">@Localizer["View all quotations"]</a></p>
+    </section>
+</section>
