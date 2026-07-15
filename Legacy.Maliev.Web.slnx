@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Legacy.Maliev.Web.Application/Legacy.Maliev.Web.Application.csproj" />
+  <Project Path="Legacy.Maliev.Web.Infrastructure/Legacy.Maliev.Web.Infrastructure.csproj" />
+  <Project Path="Legacy.Maliev.Web/Legacy.Maliev.Web.csproj" />
+  <Project Path="Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj" />
+</Solution>
