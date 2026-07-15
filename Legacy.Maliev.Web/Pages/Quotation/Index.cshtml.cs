@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
@@ -13,6 +14,7 @@ public sealed class Index(
     ICountryClient countryClient,
     IQuotationClient quotationClient,
     IQuotationFileClient quotationFileClient,
+    INotificationClient notificationClient,
     IAntiBotVerifier antiBotVerifier,
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
     ILogger<Index> logger) : PageModel
@@ -153,13 +155,54 @@ public sealed class Index(
             SubmissionId,
             uploads,
             cancellationToken);
-        Notification = fileResult.Completed
+        var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        Notification = fileResult.Completed && notificationsSent
             ? $"Thank you. Your quotation request reference is #{referenceNumber}."
             : fileResult.Rejected
                 ? $"Quotation request #{referenceNumber} was received, but an attachment was rejected by malware scanning. Do not submit it again; contact info@maliev.com with this reference."
-                : $"Quotation request #{referenceNumber} was received, but an attachment could not be completed. Do not submit it again; contact info@maliev.com with this reference.";
+                : $"Quotation request #{referenceNumber} was received, but an attachment or notification could not be completed. Do not submit it again; contact info@maliev.com with this reference.";
         return RedirectToPage("Index");
     }
+
+    private async Task<bool> SendNotificationsAsync(
+        int referenceNumber,
+        CancellationToken cancellationToken)
+    {
+        var customer = notificationClient.SendAsync(
+            NotificationChannel.Manufacturing,
+            new EmailNotification(
+                Email.Trim(),
+                $"Quotation request #{referenceNumber}",
+                $"<p>Thank you for requesting a quotation from MALIEV. Your reference number is <strong>#{referenceNumber}</strong>.</p><p>Our manufacturing team will review the request and reply directly.</p>",
+                null,
+                null,
+                null),
+            cancellationToken);
+        var internalNotification = notificationClient.SendAsync(
+            NotificationChannel.Manufacturing,
+            new EmailNotification(
+                "manufacturing@maliev.com",
+                $"Quotation request #{referenceNumber}",
+                BuildInternalMessage(referenceNumber),
+                Email.Trim(),
+                null,
+                null),
+            cancellationToken);
+        var results = await Task.WhenAll(customer, internalNotification);
+        return results.All(result => result.Sent);
+    }
+
+    private string BuildInternalMessage(int referenceNumber) =>
+        $"""
+        <h1>Quotation request #{referenceNumber}</h1>
+        <p><strong>Name:</strong> {Encode(FirstName)} {Encode(LastName)}</p>
+        <p><strong>Email:</strong> {Encode(Email)}</p>
+        <p><strong>Telephone:</strong> {Encode(Phone)}</p>
+        <p><strong>Company:</strong> {Encode(Company)}</p>
+        <p><strong>Tax ID:</strong> {Encode(TaxNumber)}</p>
+        <p><strong>Country:</strong> {Encode(Country)}</p>
+        <p><strong>Message:</strong><br />{Encode(Message).Replace("\n", "<br />", StringComparison.Ordinal)}</p>
+        """;
 
     private void ValidateSubmission()
     {
@@ -244,4 +287,6 @@ public sealed class Index(
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }

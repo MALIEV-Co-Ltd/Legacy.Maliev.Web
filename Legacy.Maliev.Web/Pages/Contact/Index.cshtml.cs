@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Shared;
@@ -11,6 +12,7 @@ namespace Legacy.Maliev.Web.Pages.Contact;
 public sealed class Index(
     ICountryClient countryClient,
     IContactClient contactClient,
+    INotificationClient notificationClient,
     IAntiBotVerifier antiBotVerifier,
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
     ILogger<Index> logger) : PageModel
@@ -111,9 +113,51 @@ public sealed class Index(
                 referenceNumber);
         }
 
-        Notification = $"Thank you for contacting us. Your reference number is #{referenceNumber}.";
+        var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        Notification = notificationsSent
+            ? $"Thank you for contacting us. Your reference number is #{referenceNumber}."
+            : $"Contact request #{referenceNumber} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference.";
         return RedirectToPage("Index");
     }
+
+    private async Task<bool> SendNotificationsAsync(
+        int referenceNumber,
+        CancellationToken cancellationToken)
+    {
+        var customer = notificationClient.SendAsync(
+            NotificationChannel.Info,
+            new EmailNotification(
+                Email.Trim(),
+                $"Contact request #{referenceNumber}",
+                $"<p>Thank you for contacting MALIEV. Your reference number is <strong>#{referenceNumber}</strong>.</p><p>We will reply as soon as possible.</p>",
+                null,
+                null,
+                null),
+            cancellationToken);
+        var internalNotification = notificationClient.SendAsync(
+            NotificationChannel.Info,
+            new EmailNotification(
+                "info@maliev.com",
+                $"Contact request #{referenceNumber}",
+                BuildInternalMessage(referenceNumber),
+                Email.Trim(),
+                null,
+                null),
+            cancellationToken);
+        var results = await Task.WhenAll(customer, internalNotification);
+        return results.All(result => result.Sent);
+    }
+
+    private string BuildInternalMessage(int referenceNumber) =>
+        $"""
+        <h1>Contact request #{referenceNumber}</h1>
+        <p><strong>Name:</strong> {Encode(FirstName)} {Encode(LastName)}</p>
+        <p><strong>Email:</strong> {Encode(Email)}</p>
+        <p><strong>Telephone:</strong> {Encode(Phone)}</p>
+        <p><strong>Company:</strong> {Encode(Company)}</p>
+        <p><strong>Country:</strong> {Encode(Country)}</p>
+        <p><strong>Message:</strong><br />{Encode(Message).Replace("\n", "<br />", StringComparison.Ordinal)}</p>
+        """;
 
     private async Task LoadCountriesAsync(CancellationToken cancellationToken)
     {
@@ -128,4 +172,6 @@ public sealed class Index(
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }

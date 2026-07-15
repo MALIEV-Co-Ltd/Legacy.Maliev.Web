@@ -33,7 +33,9 @@ public sealed class ContactPageTests
     {
         var contactClient = new RecordingContactClient(
             new ContactSubmissionResult(913, true, true));
-        var page = CreatePage(contactClient, new StubAntiBotVerifier(true));
+        var notifications = new RecordingNotificationClient();
+        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+        page.Message = "<script>alert('email')</script>";
 
         var result = await page.OnPostSubmitRequestAsync(CancellationToken.None);
 
@@ -43,16 +45,26 @@ public sealed class ContactPageTests
         var analyticsPayload = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("913", StringComparison.Ordinal));
         Assert.DoesNotContain("mali@example.com", analyticsPayload, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Please contact me", analyticsPayload, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, notifications.Messages.Count);
+        Assert.All(
+            notifications.Messages,
+            message => Assert.DoesNotContain("<script>", message.Body, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            "&lt;script&gt;alert(&#39;email&#39;)&lt;/script&gt;",
+            notifications.Messages[1].Body,
+            StringComparison.Ordinal);
     }
 
     private static ContactPage CreatePage(
         RecordingContactClient contactClient,
-        IAntiBotVerifier antiBotVerifier)
+        IAntiBotVerifier antiBotVerifier,
+        INotificationClient? notificationClient = null)
     {
         var httpContext = new DefaultHttpContext();
         var page = new ContactPage(
             new StubCountryClient(),
             contactClient,
+            notificationClient ?? new RecordingNotificationClient(),
             antiBotVerifier,
             Options.Create(
                 new RecaptchaEnterpriseOptions
@@ -108,6 +120,20 @@ public sealed class ContactPageTests
             Assert.Equal("submit", expectedAction);
             Assert.Equal("browser-token", token);
             return Task.FromResult(valid);
+        }
+    }
+
+    private sealed class RecordingNotificationClient : INotificationClient
+    {
+        public List<EmailNotification> Messages { get; } = [];
+
+        public Task<NotificationResult> SendAsync(
+            NotificationChannel channel,
+            EmailNotification notification,
+            CancellationToken cancellationToken)
+        {
+            Messages.Add(notification);
+            return Task.FromResult(new NotificationResult(true, true, true));
         }
     }
 

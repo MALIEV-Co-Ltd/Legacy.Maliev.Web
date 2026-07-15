@@ -32,12 +32,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<IContactClient>();
                     services.RemoveAll<IQuotationClient>();
                     services.RemoveAll<IQuotationFileClient>();
+                    services.RemoveAll<INotificationClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
                     services.AddSingleton<IContactClient, StubContactClient>();
                     services.AddSingleton<IQuotationClient, StubQuotationClient>();
                     services.AddSingleton<IQuotationFileClient, StubQuotationFileClient>();
+                    services.AddSingleton<INotificationClient, StubNotificationClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             })
@@ -250,5 +252,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             string expectedAction,
             CancellationToken cancellationToken) =>
             Task.FromResult(true);
+    }
+
+    private sealed class StubNotificationClient : INotificationClient
+    {
+        public Task<NotificationResult> SendAsync(
+            NotificationChannel channel,
+            EmailNotification notification,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new NotificationResult(true, true, true));
     }
 }
