@@ -1,6 +1,7 @@
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Infrastructure;
@@ -14,6 +15,10 @@ public static class ServiceCollectionExtensions
         services.AddOptions<ServiceEndpoints>()
             .Bind(configuration.GetSection("Services"))
             .ValidateOnStart();
+        services.AddOptions<ServiceAuthenticationOptions>()
+            .Bind(configuration.GetSection("ServiceAuthentication"));
+        services.AddOptions<RecaptchaEnterpriseOptions>()
+            .Bind(configuration.GetSection("Recaptcha"));
 
         AddClient(services, "auth", static endpoints => endpoints.Auth);
         AddClient(services, "careers", static endpoints => endpoints.Career);
@@ -26,6 +31,12 @@ public static class ServiceCollectionExtensions
         AddClient(services, "orders", static endpoints => endpoints.Order);
         AddClient(services, "quotations", static endpoints => endpoints.Quotation);
         services.AddScoped<ICareerClient, CareerClient>();
+        services.AddScoped<ICountryClient, CountryClient>();
+        services.AddScoped<IContactClient, ContactClient>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<IServiceAccessTokenProvider, ServiceAccessTokenProvider>();
+        services.AddSingleton<IRecaptchaAssessmentClient, GoogleRecaptchaAssessmentClient>();
+        services.AddScoped<IAntiBotVerifier, RecaptchaEnterpriseVerifier>();
         return services;
     }
 
@@ -38,6 +49,7 @@ public static class ServiceCollectionExtensions
         {
             client.BaseAddress = resolveBaseAddress(provider.GetRequiredService<IOptions<ServiceEndpoints>>().Value);
             client.Timeout = TimeSpan.FromSeconds(10);
-        }).AddStandardResilienceHandler();
+        }).AddStandardResilienceHandler(options =>
+            options.Retry.DisableForUnsafeHttpMethods());
     }
 }
