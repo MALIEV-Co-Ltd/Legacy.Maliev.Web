@@ -142,6 +142,70 @@ internal sealed class CustomerAuthenticationClient(
             new CompletePasswordResetRequest(email, token, password),
             cancellationToken);
 
+    public Task<CustomerCredentialOperationResult> ChangeEmailAsync(
+        string accessToken,
+        string currentPassword,
+        string newEmail,
+        CancellationToken cancellationToken) =>
+        ChangeCredentialAsync(
+            "email/change",
+            accessToken,
+            new ChangeEmailRequest(currentPassword, newEmail),
+            expectsChallenge: true,
+            cancellationToken);
+
+    public Task<CustomerCredentialOperationResult> ChangePasswordAsync(
+        string accessToken,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken) =>
+        ChangeCredentialAsync(
+            "password/change",
+            accessToken,
+            new ChangePasswordRequest(currentPassword, newPassword),
+            expectsChallenge: false,
+            cancellationToken);
+
+    private async Task<CustomerCredentialOperationResult> ChangeCredentialAsync(
+        string action,
+        string accessToken,
+        object content,
+        bool expectsChallenge,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"auth/v1/customer-self-service/{action}")
+            {
+                Content = JsonContent.Create(content),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var response = await clientFactory.CreateClient("auth").SendAsync(
+                request,
+                cancellationToken);
+            var authorized = response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new(false, (int)response.StatusCode < 500, authorized);
+            }
+
+            if (!expectsChallenge)
+            {
+                return new(true, true, true);
+            }
+
+            var challenge = await response.Content.ReadFromJsonAsync<ChallengeResponse>(cancellationToken);
+            return new(challenge?.Accepted == true && challenge.Token is not null, true, true, challenge?.Token);
+        }
+        catch (Exception exception) when (IsTransient(exception, cancellationToken))
+        {
+            logger.LogWarning(exception, "Auth service was unavailable during a customer credential change.");
+            return new(false, false, true);
+        }
+    }
+
     private async Task<CustomerActionChallenge> RequestChallengeAsync(
         string action,
         string email,
@@ -271,5 +335,7 @@ internal sealed class CustomerAuthenticationClient(
     private sealed record ActionRequest(string Email);
     private sealed record CompleteActionRequest(string Email, string Token);
     private sealed record CompletePasswordResetRequest(string Email, string Token, string Password);
+    private sealed record ChangeEmailRequest(string CurrentPassword, string NewEmail);
+    private sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
     private sealed record ChallengeResponse(bool Accepted, string? Token);
 }

@@ -60,6 +60,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("/member/account/manage/address")]
+    [InlineData("/member/account/manage/changeemail")]
+    [InlineData("/member/account/manage/changepassword")]
+    [InlineData("/member/account/manage/createpassword")]
+    [InlineData("/member/account/manage/profile")]
     [InlineData("/member/orders")]
     public async Task MemberRoutes_RedirectAnonymousUsersToLocalLogin(string route)
     {
@@ -88,6 +92,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var orders = await client.GetStringAsync("/member/orders?culture=en");
 
         Assert.Contains("/Member/Account/Manage/Address", account, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/Member/Account/Manage/Profile", account, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/Member/Account/Manage/ChangeEmail", account, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/Member/Account/Manage/ChangePassword", account, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("/Member/Orders", account, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("name=\"BillingAddress1\"", address, StringComparison.Ordinal);
         Assert.Contains("name=\"ShippingAddress1\"", address, StringComparison.Ordinal);
@@ -117,6 +124,89 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("/member/account/manage/address", response.Headers.Location?.OriginalString?.ToLowerInvariant());
+    }
+
+    [Fact]
+    public async Task SignedInMember_CredentialFormsStayInsideOpaqueBffSession()
+    {
+        await SignInAsync();
+
+        var changeEmail = await client.GetStringAsync("/member/account/manage/changeemail");
+        var changePassword = await client.GetStringAsync("/member/account/manage/changepassword");
+        var profile = await client.GetStringAsync("/member/account/manage/profile");
+        using var createPassword = await client.GetAsync("/member/account/manage/createpassword");
+
+        Assert.Contains("name=\"NewEmail\"", changeEmail, StringComparison.Ordinal);
+        Assert.Contains("name=\"CurrentPassword\"", changeEmail, StringComparison.Ordinal);
+        Assert.Contains("name=\"NewPassword\"", changePassword, StringComparison.Ordinal);
+        Assert.Contains("name=\"ConfirmPassword\"", changePassword, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", changeEmail, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", changeEmail, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", changePassword, StringComparison.Ordinal);
+        Assert.Contains("name=\"FirstName\"", profile, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", profile, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Email\"", profile, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Redirect, createPassword.StatusCode);
+        Assert.Equal(
+            "/Member/Account/Manage/ChangePassword",
+            createPassword.Headers.Location?.OriginalString);
+    }
+
+    [Fact]
+    public async Task ChangePassword_PostsWithAntiforgeryThenClearsTheBffSession()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/account/manage/changepassword");
+        form["CurrentPassword"] = "current-password";
+        form["NewPassword"] = "new-password";
+        form["ConfirmPassword"] = "new-password";
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/changepassword?handler=ChangePassword",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        using var account = await client.GetAsync("/member/account/manage/changepassword");
+        Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProfileUpdate_UsesAntiforgeryAndRedirectAfterPost()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/account/manage/profile");
+        form["FirstName"] = "Ada";
+        form["LastName"] = "Lovelace";
+        form["CompanyName"] = "Analytical Engines";
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/profile?handler=UpdateProfile",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(
+            "/member/account/manage/profile",
+            response.Headers.Location?.OriginalString?.ToLowerInvariant());
+    }
+
+    [Fact]
+    public async Task ChangeEmail_SynchronizesProfileThenClearsTheBffSession()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/account/manage/changeemail");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = "new@example.com";
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/changeemail?handler=ChangeEmail",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        Assert.Contains("email=new@example.com", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
+        using var account = await client.GetAsync("/member/account/manage/changeemail");
+        Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
     }
 
     [Theory]
@@ -211,6 +301,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         using var response = await client.GetAsync(route);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangeEmailConfirmation_ConsumesSingleUseChallengeAndReturnsToLogin()
+    {
+        using var response = await client.GetAsync(
+            "/account/changeemailconfirmation?email=new%40example.com&token=confirmation-token");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(
+            "/Account/Login?email=new@example.com",
+            response.Headers.Location?.OriginalString);
     }
 
     [Fact]
@@ -479,6 +581,20 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public Task<bool> CompletePasswordResetAsync(string email, string token, string password, CancellationToken cancellationToken) =>
             Task.FromResult(true);
+
+        public Task<CustomerCredentialOperationResult> ChangeEmailAsync(
+            string accessToken,
+            string currentPassword,
+            string newEmail,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerCredentialOperationResult(true, true, true, "confirmation-token"));
+
+        public Task<CustomerCredentialOperationResult> ChangePasswordAsync(
+            string accessToken,
+            string currentPassword,
+            string newPassword,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerCredentialOperationResult(true, true, true));
     }
 
     private sealed class StubCustomerProfileClient : ICustomerProfileClient
@@ -525,6 +641,32 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         public Task<CustomerAddressOperationResult> UpdateAddressesAsync(
             int customerId,
             CustomerAddressUpdate update,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAddressOperationResult(
+                customerId == Customer.Id,
+                true,
+                customerId == Customer.Id));
+
+        public Task<CustomerAddressOperationResult> UpdateEmailAsync(
+            int customerId,
+            string email,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAddressOperationResult(
+                customerId == Customer.Id,
+                true,
+                customerId == Customer.Id));
+
+        public Task<CustomerAccountProfileResult> GetProfileAsync(
+            int customerId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerAccountProfileResult(
+                customerId == Customer.Id ? Customer : null,
+                true,
+                customerId == Customer.Id));
+
+        public Task<CustomerAddressOperationResult> UpdateProfileAsync(
+            int customerId,
+            CustomerProfileUpdate update,
             CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerAddressOperationResult(
                 customerId == Customer.Id,

@@ -1,0 +1,40 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage.Profile
+@{
+    ViewData["Title"] = Localizer["Profile | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Customer account"]</p>
+        <h1>@Localizer["Profile"]</h1>
+        <p>@Localizer["Keep personal, contact, and company information current."]</p>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert" role="status">@Model.Notification</div>
+    }
+    <form method="post" asp-page-handler="UpdateProfile" class="maliev-panel maliev-form">
+        <div asp-validation-summary="All" class="field-validation-error" role="alert"></div>
+        <fieldset>
+            <legend>@Localizer["Personal information"]</legend>
+            <div class="maliev-form-field"><label asp-for="FirstName"></label><input asp-for="FirstName" autocomplete="given-name" /></div>
+            <div class="maliev-form-field"><label asp-for="LastName"></label><input asp-for="LastName" autocomplete="family-name" /></div>
+            <div class="maliev-form-field"><label>@Localizer["Email"]</label><output>@Model.Email</output><a asp-page="ChangeEmail">@Localizer["Change email"]</a></div>
+            <div class="maliev-form-field"><label asp-for="DateOfBirth"></label><input asp-for="DateOfBirth" /></div>
+        </fieldset>
+        <fieldset>
+            <legend>@Localizer["Contact information"]</legend>
+            <div class="maliev-form-field"><label asp-for="Telephone"></label><input asp-for="Telephone" autocomplete="tel" /></div>
+            <div class="maliev-form-field"><label asp-for="Mobile"></label><input asp-for="Mobile" autocomplete="tel" /></div>
+            <div class="maliev-form-field"><label asp-for="Fax"></label><input asp-for="Fax" /></div>
+        </fieldset>
+        <fieldset>
+            <legend>@Localizer["Company information"]</legend>
+            <div class="maliev-form-field"><label asp-for="CompanyName"></label><input asp-for="CompanyName" autocomplete="organization" /></div>
+            <div class="maliev-form-field"><label asp-for="TaxNumber"></label><input asp-for="TaxNumber" /></div>
+            <div class="maliev-form-field"><label asp-for="Registrar"></label><input asp-for="Registrar" /></div>
+        </fieldset>
+        <button type="submit" class="maliev-button">@Localizer["Save profile"]</button>
+    </form>
+</section>

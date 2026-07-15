@@ -76,6 +76,51 @@ public sealed class AccountClientTests
         Assert.False(result.Succeeded);
     }
 
+    [Fact]
+    public async Task ChangeEmail_UsesCustomerBearerAndJsonOnlyCredentials()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            """{"accepted":true,"token":"confirmation-token"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.ChangeEmailAsync(
+            "customer-access-token",
+            "current-password",
+            "new@example.com",
+            default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("confirmation-token", result.Token);
+        Assert.Equal("Bearer customer-access-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/email/change", handler.RequestUri);
+        Assert.DoesNotContain("current-password", handler.RequestUri, StringComparison.Ordinal);
+        Assert.Contains("\"currentPassword\":\"current-password\"", handler.Body, StringComparison.Ordinal);
+        Assert.Contains("\"newEmail\":\"new@example.com\"", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ChangePassword_UsesCustomerBearerAndReturnsSafeRejectedResult()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.BadRequest,
+            """{"title":"Credential change failed"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.ChangePasswordAsync(
+            "customer-access-token",
+            "wrong-password",
+            "new-password",
+            default);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Equal("Bearer customer-access-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/password/change", handler.RequestUri);
+        Assert.Contains("\"newPassword\":\"new-password\"", handler.Body, StringComparison.Ordinal);
+    }
+
     private static CustomerAuthenticationClient CreateClient(RecordingHandler handler) => new(
         new SingleClientFactory(new HttpClient(handler) { BaseAddress = new Uri("https://auth.test/") }),
         new StubServiceTokenProvider(),

@@ -14,7 +14,10 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <p>@Localizer["Signed in as"] <strong>@User.Identity.Name</strong></p>
+                    <a class="maliev-button" asp-area="Member" asp-page="/Account/Manage/Profile">@Localizer["Manage profile"]</a>
                     <a class="maliev-button" asp-area="Member" asp-page="/Account/Manage/Address">@Localizer["Manage addresses"]</a>
+                    <a class="maliev-button maliev-button--secondary" asp-area="Member" asp-page="/Account/Manage/ChangeEmail">@Localizer["Change email"]</a>
+                    <a class="maliev-button maliev-button--secondary" asp-area="Member" asp-page="/Account/Manage/ChangePassword">@Localizer["Change password"]</a>
                     <a class="maliev-button maliev-button--secondary" asp-area="Member" asp-page="/Orders/Index">@Localizer["Orders"]</a>
                     <form method="post" asp-page="/Account/Logout">
                         <button type="submit" class="maliev-button">@Localizer["Sign out"]</button>
