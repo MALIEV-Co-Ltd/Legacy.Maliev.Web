@@ -1,0 +1,16 @@
+@page
+@model Legacy.Maliev.Web.Areas.Knowledges.Pages.IndexModel
+@{
+    ViewData["Title"] = Localizer["Knowledge center | MALIEV"];
+    ViewData["Description"] = Localizer["Practical manufacturing guidance for preparing files, choosing processes, and working with MALIEV."];
+}
+<article class="knowledge-document">
+    <p class="maliev-eyebrow">@Localizer["Manufacturing resources"]</p>
+    <h1>@Localizer["Knowledge center"]</h1>
+    <p class="docs-lead">@Localizer["Use these concise guides to prepare your project and understand what happens after you request a quotation."]</p>
+    <div class="maliev-card-grid">
+        <a class="maliev-panel docs-link-card" asp-area="Knowledges" asp-page="/Guidelines"><i class="fas fa-clipboard-check" aria-hidden="true"></i><strong>@Localizer["Project guidelines"]</strong><span>@Localizer["Files, dimensions, tolerances, quantities, and supporting information."]</span></a>
+        <a class="maliev-panel docs-link-card" asp-area="Knowledges" asp-page="/Workflow"><i class="fas fa-project-diagram" aria-hidden="true"></i><strong>@Localizer["How projects move forward"]</strong><span>@Localizer["From review and quotation through production, inspection, and delivery."]</span></a>
+        <a class="maliev-panel docs-link-card" asp-area="Knowledges" asp-page="/Specifications/Index"><i class="fas fa-ruler-combined" aria-hidden="true"></i><strong>@Localizer["Service specifications"]</strong><span>@Localizer["Process-specific preparation and capability guidance."]</span></a>
+    </div>
+</article>

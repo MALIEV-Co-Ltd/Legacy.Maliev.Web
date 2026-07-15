@@ -1,0 +1,23 @@
+<aside id="knowledge-navigation" class="workspace-sidebar workspace-sidebar--knowledge" aria-label="@Localizer["Knowledge center"]">
+    <div class="workspace-sidebar__header">
+        <strong>@Localizer["Knowledge center"]</strong>
+        <button type="button" class="workspace-drawer-close" data-workspace-close aria-label="@Localizer["Close contents"]"><i class="fas fa-times" aria-hidden="true"></i></button>
+    </div>
+    <nav>
+        <section class="workspace-nav-group" aria-labelledby="knowledge-services">
+            <p id="knowledge-services" class="workspace-nav-group__label">@Localizer["Service specifications"]</p>
+            <ul class="workspace-nav-list">
+                <li><a class="workspace-nav-link" asp-area="Knowledges" asp-page="/Specifications/CNC-Machining"><i class="fas fa-cog" aria-hidden="true"></i><span>@Localizer["CNC manufacturing"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Knowledges" asp-page="/Specifications/3D-Printing"><i class="fas fa-cubes" aria-hidden="true"></i><span>@Localizer["3D printing"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Knowledges" asp-page="/Specifications/3D-Scanning"><i class="fas fa-cube" aria-hidden="true"></i><span>@Localizer["3D scanning"]</span></a></li>
+            </ul>
+        </section>
+        <section class="workspace-nav-group" aria-labelledby="knowledge-process">
+            <p id="knowledge-process" class="workspace-nav-group__label">@Localizer["Working with MALIEV"]</p>
+            <ul class="workspace-nav-list">
+                <li><a class="workspace-nav-link" asp-area="Knowledges" asp-page="/Guidelines"><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>@Localizer["Guidelines"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="Knowledges" asp-page="/Workflow"><i class="fas fa-project-diagram" aria-hidden="true"></i><span>@Localizer["Workflow"]</span></a></li>
+            </ul>
+        </section>
+    </nav>
+</aside>

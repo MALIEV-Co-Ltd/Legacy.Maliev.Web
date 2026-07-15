@@ -1,0 +1,17 @@
+@page
+@model Legacy.Maliev.Web.Areas.Knowledges.Pages.Specifications.Additive
+@{
+    ViewData["Title"] = Localizer["3D printing specifications | MALIEV"];
+    ViewData["Description"] = Localizer["Process, material, orientation, wall thickness, and post-processing all influence strength, appearance, and cost."];
+}
+<article class="knowledge-document">
+    <p class="maliev-eyebrow">@Localizer["3D printing preparation"]</p>
+    <h1>@Localizer["Prepare a model for 3D printing"]</h1>
+    <p class="docs-lead">@Localizer["Process, material, orientation, wall thickness, and post-processing all influence strength, appearance, and cost."]</p>
+    <div class="docs-step-list">
+        <section><span>1</span><div><h2>@Localizer["Export clean geometry"]</h2><p>@Localizer["Submit a watertight solid or mesh at the correct scale. Remove unintended bodies, self-intersections, open edges, and duplicate shells."]</p></div></section>
+        <section><span>2</span><div><h2>@Localizer["Describe functional needs"]</h2><p>@Localizer["Tell us about loads, heat, UV exposure, flexibility, chemical contact, fit, cosmetic faces, and required color."]</p></div></section>
+        <section><span>3</span><div><h2>@Localizer["Plan for the process"]</h2><p>@Localizer["Allow for supports, layer direction, minimum wall thickness, clearances, shrinkage, and the finish achievable with the selected technology."]</p></div></section>
+    </div>
+    <div class="maliev-actions"><a class="maliev-button" asp-area="" asp-page="/Services/3D-Printing">@Localizer["View 3D printing service"]</a></div>
+</article>
