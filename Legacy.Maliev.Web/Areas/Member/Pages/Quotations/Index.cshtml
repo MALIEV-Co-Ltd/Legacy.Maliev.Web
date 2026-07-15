@@ -1,0 +1,72 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Quotations.Index
+@{
+    ViewData["Title"] = Localizer["Quotations | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Quotation management"]</p>
+        <h1>@Localizer["Quotations"]</h1>
+        <p>@Localizer["Review quotations associated with your signed-in customer account."]</p>
+    </div>
+    <form method="get" class="maliev-panel maliev-form">
+        <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+        <div class="maliev-form-field">
+            <label asp-for="Search">@Localizer["Search quotations"]</label>
+            <input asp-for="Search" autocomplete="off" />
+        </div>
+        <input type="hidden" asp-for="Sort" />
+        <input type="hidden" asp-for="PageSize" />
+        <button type="submit" class="maliev-button">@Localizer["Search"]</button>
+    </form>
+    @if (Model.Quotations.Items.Count == 0)
+    {
+        <div class="maliev-panel">
+            <p>@Localizer["No quotations were found."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="maliev-card-grid">
+            @foreach (var quotation in Model.Quotations.Items)
+            {
+                var status = quotation.Accepted switch
+                {
+                    true => Localizer["Accepted"],
+                    false => Localizer["Declined"],
+                    _ => Localizer["Open"],
+                };
+                <article class="maliev-panel">
+                    <p class="maliev-eyebrow">@Localizer["Quotation"] #@quotation.Id</p>
+                    <h2>@status</h2>
+                    <dl>
+                        <dt>@Localizer["Quoted amount"]</dt><dd>@(quotation.QuotedAmount?.ToString("N2") ?? "-")</dd>
+                        <dt>@Localizer["Currency ID"]</dt><dd>@quotation.CurrencyId</dd>
+                        <dt>@Localizer["Expiration date"]</dt><dd>@quotation.ExpirationDate.ToString("yyyy-MM-dd")</dd>
+                        <dt>@Localizer["Created"]</dt><dd>@(quotation.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")</dd>
+                    </dl>
+                    <a class="maliev-button maliev-button--secondary" asp-page="/Quotations/View" asp-route-id="@quotation.Id">@Localizer["View quotation"]</a>
+                </article>
+            }
+        </div>
+        <nav aria-label="@Localizer["Quotation pages"]">
+            @if (Model.Quotations.HasPreviousPage)
+            {
+                <a class="maliev-button maliev-button--secondary"
+                   asp-route-index="@(Model.Quotations.PageIndex - 1)"
+                   asp-route-size="@Model.PageSize"
+                   asp-route-sort="@Model.Sort"
+                   asp-route-search="@Model.Search">@Localizer["Previous"]</a>
+            }
+            @if (Model.Quotations.HasNextPage)
+            {
+                <a class="maliev-button maliev-button--secondary"
+                   asp-route-index="@(Model.Quotations.PageIndex + 1)"
+                   asp-route-size="@Model.PageSize"
+                   asp-route-sort="@Model.Sort"
+                   asp-route-search="@Model.Search">@Localizer["Next"]</a>
+            }
+        </nav>
+    }
+</section>

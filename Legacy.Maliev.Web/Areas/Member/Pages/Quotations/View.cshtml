@@ -1,0 +1,99 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Quotations.View
+@{
+    ViewData["Title"] = Localizer["Quotation details | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Quotation management"]</p>
+        <h1>@Localizer["Quotation details"]</h1>
+        <p>@Localizer["This page is read-only while the legacy payment workflow is being replaced."]</p>
+    </div>
+    <div asp-validation-summary="All" class="validation-summary-errors" role="alert"></div>
+    @if (Model.Details is not null)
+    {
+        var quotation = Model.Details.Quotation;
+        var status = quotation.Accepted switch
+        {
+            true => Localizer["Accepted"],
+            false => Localizer["Declined"],
+            _ => Localizer["Open"],
+        };
+        <article class="maliev-panel">
+            <p class="maliev-eyebrow">@Localizer["Quotation"] #@quotation.Id</p>
+            <h2>@status</h2>
+            <dl>
+                <dt>@Localizer["Period"]</dt><dd>@quotation.Period @Localizer["days"]</dd>
+                <dt>@Localizer["Expiration date"]</dt><dd>@quotation.ExpirationDate.ToString("yyyy-MM-dd")</dd>
+                <dt>@Localizer["Subtotal"]</dt><dd>@quotation.Subtotal.ToString("N2")</dd>
+                <dt>@Localizer["VAT"]</dt><dd>@quotation.Vat.ToString("N2")</dd>
+                <dt>@Localizer["Total"]</dt><dd>@quotation.Total.ToString("N2")</dd>
+                <dt>@Localizer["Withholding tax"]</dt><dd>@(quotation.WithholdingTax?.ToString("N2") ?? "-")</dd>
+                <dt>@Localizer["Quoted amount"]</dt><dd>@(quotation.QuotedAmount?.ToString("N2") ?? "-")</dd>
+                <dt>@Localizer["Currency ID"]</dt><dd>@quotation.CurrencyId</dd>
+                <dt>@Localizer["Shipping method"]</dt><dd>@(string.IsNullOrWhiteSpace(quotation.ShippedVia) ? "-" : quotation.ShippedVia)</dd>
+                <dt>@Localizer["Free on board"]</dt><dd>@(string.IsNullOrWhiteSpace(quotation.Fob) ? "-" : quotation.Fob)</dd>
+                <dt>@Localizer["Terms"]</dt><dd>@(string.IsNullOrWhiteSpace(quotation.Terms) ? "-" : quotation.Terms)</dd>
+            </dl>
+            @if (!string.IsNullOrWhiteSpace(quotation.Comment))
+            {
+                <p>@quotation.Comment</p>
+            }
+        </article>
+        <section class="maliev-panel">
+            <h2>@Localizer["Quotation items"]</h2>
+            @if (Model.Details.OrderItems.Count == 0)
+            {
+                <p>@Localizer["No quotation items are available."]</p>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">@Localizer["Description"]</th><th scope="col">@Localizer["Quantity"]</th><th scope="col">@Localizer["Unit price"]</th><th scope="col">@Localizer["Subtotal"]</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in Model.Details.OrderItems)
+                        {
+                            <tr><td>@(item.Description ?? "-")</td><td>@(item.Quantity?.ToString() ?? "-")</td><td>@(item.UnitPrice?.ToString("N2") ?? "-")</td><td>@(item.Subtotal?.ToString("N2") ?? "-")</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+        <section class="maliev-panel">
+            <h2>@Localizer["Linked orders"]</h2>
+            @if (Model.Details.Orders.Count == 0)
+            {
+                <p>@Localizer["No orders are linked to this quotation."]</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var order in Model.Details.Orders)
+                    {
+                        <li><a asp-page="/Orders/View" asp-route-itemID="@order.OrderId">@Localizer["Order"] #@order.OrderId</a></li>
+                    }
+                </ul>
+            }
+        </section>
+        <section class="maliev-panel">
+            <h2>@Localizer["Quotation files"]</h2>
+            @if (Model.Details.Files.Count == 0)
+            {
+                <p>@Localizer["No files are linked to this quotation."]</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var file in Model.Details.Files)
+                    {
+                        <li>@file.ObjectName</li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+    <p><a class="maliev-button maliev-button--secondary" asp-page="/Quotations/Index">@Localizer["Back to quotations"]</a></p>
+</section>

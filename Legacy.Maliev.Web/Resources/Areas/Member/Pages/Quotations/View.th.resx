@@ -243,9 +243,6 @@
   <data name="Number:" xml:space="preserve">
     <value>เลขที่:</value>
   </data>
-  <data name="We do not use shipping address from your PayPal account." xml:space="preserve">
-    <value>เราไม่ใช้ที่อยู่จัดส่ง ที่ PayPal ส่งให้เรามา</value>
-  </data>
   <data name="not given" xml:space="preserve">
     <value>ไม่มีข้อมูล</value>
   </data>
@@ -257,9 +254,6 @@
   </data>
   <data name="Withholding Tax" xml:space="preserve">
     <value>ภาษีหัก ณ ที่จ่าย</value>
-  </data>
-  <data name="We charge an extra 5% for the PayPal fees to customer who choose pay with PayPal." xml:space="preserve">
-    <value>ชำระด้วย PayPal มีค่าบริการเพิ่มเติม 5% เพื่อหักเป็นค่าบริการในส่วนของ PayPal</value>
   </data>
   <data name="Please let us know where to bill and ship your order before continue." xml:space="preserve"><value>โปรดระบุที่อยู่ออกใบเสร็จและจัดส่งก่อนดำเนินการต่อ</value></data><data name="We don't have your billing or shipping address yet." xml:space="preserve"><value>ยังไม่มีที่อยู่ออกใบเสร็จหรือจัดส่งของคุณ</value></data>
 </root>
