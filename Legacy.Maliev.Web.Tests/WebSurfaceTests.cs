@@ -119,6 +119,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var detail = await client.GetStringAsync("/member/orders/view?itemID=7");
 
         Assert.Contains("Part", history, StringComparison.Ordinal);
+        Assert.DoesNotContain("The Sort field is required.", history, StringComparison.Ordinal);
         Assert.Contains("/Member/Orders/View?itemID=7", history, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CNC", detail, StringComparison.Ordinal);
         Assert.Contains("Reviewing", detail, StringComparison.Ordinal);

@@ -17,7 +17,7 @@ public sealed class History(
     public string? Search { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string Sort { get; set; } = "OrderCreatedDate_Descending";
+    public string? Sort { get; set; }
 
     [BindProperty(SupportsGet = true, Name = "index")]
     public int PageIndex { get; set; } = 1;
@@ -37,7 +37,7 @@ public sealed class History(
         PageSize = Math.Clamp(PageSize, 1, 100);
         var result = await orderClient.ListAsync(
             customerId.Value,
-            Sort,
+            string.IsNullOrWhiteSpace(Sort) ? "OrderCreatedDate_Descending" : Sort,
             Search,
             PageIndex,
             PageSize,
