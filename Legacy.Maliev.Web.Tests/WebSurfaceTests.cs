@@ -1,6 +1,9 @@
 using System.Net;
+using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -10,7 +13,15 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     public WebSurfaceTests(WebApplicationFactory<Program> factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"))
+        client = factory.WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Development");
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<ICareerClient>();
+                    services.AddSingleton<ICareerClient, StubCareerClient>();
+                });
+            })
             .CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
     }
 
@@ -65,6 +76,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/knowledges/specifications/cnc-machining")]
     [InlineData("/knowledges/specifications/3d-printing")]
     [InlineData("/knowledges/specifications/3d-scanning")]
+    [InlineData("/career")]
     public async Task MigratedPublicRoutes_RenderCanonicalLocalizedDocuments(string route)
     {
         using var response = await client.GetAsync(route);
@@ -76,5 +88,52 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CareerDetail_RendersServiceDataWithoutTrustingStoredHtml()
+    {
+        using var response = await client.GetAsync("/career/view/1");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>alert(1)</script>", source, StringComparison.Ordinal);
+    }
+
+    private sealed class StubCareerClient : ICareerClient
+    {
+        private static readonly CareerLevel Level = new(1, "Engineer", null, null, null);
+
+        private static readonly CareerOffer Offer = new(
+            1,
+            Level.Id,
+            "Manufacturing Engineer",
+            "<script>alert(1)</script>",
+            "Build reliable manufacturing processes.",
+            "Engineering experience.",
+            "A practical team.",
+            "Nonthaburi",
+            false,
+            null,
+            null,
+            Level);
+
+        public Task<CareerListing> GetListingAsync(
+            CareerSort sort,
+            string? search,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                new CareerListing(
+                    [Level],
+                    new CareerOfferPage([Offer], pageIndex, 1, 1, false, false),
+                    true));
+
+        public Task<ServiceResponse<CareerOffer>> GetOfferAsync(
+            int offerId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<CareerOffer>(offerId == Offer.Id ? Offer : null, true));
     }
 }
