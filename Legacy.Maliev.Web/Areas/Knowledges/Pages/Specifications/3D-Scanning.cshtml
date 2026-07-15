@@ -1,0 +1,17 @@
+@page
+@model Legacy.Maliev.Web.Areas.Knowledges.Pages.Specifications.Scanning
+@{
+    ViewData["Title"] = Localizer["3D scanning specifications | MALIEV"];
+    ViewData["Description"] = Localizer["Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report."];
+}
+<article class="knowledge-document">
+    <p class="maliev-eyebrow">@Localizer["3D scanning preparation"]</p>
+    <h1>@Localizer["Prepare a part for 3D scanning"]</h1>
+    <p class="docs-lead">@Localizer["Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report."]</p>
+    <div class="docs-step-list">
+        <section><span>1</span><div><h2>@Localizer["Clean and identify the part"]</h2><p>@Localizer["Remove loose dirt and temporary items. Mark features that must remain untouched and disclose damaged or missing areas."]</p></div></section>
+        <section><span>2</span><div><h2>@Localizer["Explain the deliverable"]</h2><p>@Localizer["Raw scans preserve measured surface data; reverse engineering creates editable CAD; deviation analysis compares a scan with reference geometry."]</p></div></section>
+        <section><span>3</span><div><h2>@Localizer["Plan access and surface treatment"]</h2><p>@Localizer["Deep internal features, occluded surfaces, reflective or transparent materials may need repositioning, temporary scanning spray, or another measurement method."]</p></div></section>
+    </div>
+    <div class="maliev-actions"><a class="maliev-button" asp-area="" asp-page="/Services/3D-Scanning">@Localizer["View 3D scanning service"]</a></div>
+</article>

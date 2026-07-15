@@ -1,0 +1,17 @@
+@page
+@model Legacy.Maliev.Web.Areas.Knowledges.Pages.Specifications.Machining
+@{
+    ViewData["Title"] = Localizer["CNC machining specifications | MALIEV"];
+    ViewData["Description"] = Localizer["A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe."];
+}
+<article class="knowledge-document">
+    <p class="maliev-eyebrow">@Localizer["CNC machining preparation"]</p>
+    <h1>@Localizer["Files and requirements for CNC machining"]</h1>
+    <p class="docs-lead">@Localizer["A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe."]</p>
+    <div class="docs-step-list">
+        <section><span>1</span><div><h2>@Localizer["Provide the model"]</h2><p>@Localizer["STEP or another solid CAD format is preferred. Include separate files for each part and identify the revision."]</p></div></section>
+        <section><span>2</span><div><h2>@Localizer["Add the drawing"]</h2><p>@Localizer["Call out tolerances, datums, threads, fits, surface finish, heat treatment, coatings, deburring, and inspection requirements."]</p></div></section>
+        <section><span>3</span><div><h2>@Localizer["Confirm production details"]</h2><p>@Localizer["Specify material grade, quantity, repeat-order expectations, supplied components, packaging, and target date."]</p></div></section>
+    </div>
+    <div class="maliev-actions"><a class="maliev-button" asp-area="" asp-page="/Services/CNC-Machining">@Localizer["View CNC machining service"]</a></div>
+</article>

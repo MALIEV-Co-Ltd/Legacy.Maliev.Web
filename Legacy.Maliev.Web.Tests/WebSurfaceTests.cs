@@ -44,4 +44,37 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("UA-133315708-1", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GTM-5VBH5LK", source, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/services")]
+    [InlineData("/services/custom-manufacturing")]
+    [InlineData("/services/cnc-machining")]
+    [InlineData("/services/3d-printing")]
+    [InlineData("/services/3d-scanning")]
+    [InlineData("/about")]
+    [InlineData("/about/socialmedia")]
+    [InlineData("/legal")]
+    [InlineData("/legal/privacypolicy")]
+    [InlineData("/legal/termsconditions")]
+    [InlineData("/legal/nondisclosureagreement")]
+    [InlineData("/knowledges")]
+    [InlineData("/knowledges/guidelines")]
+    [InlineData("/knowledges/workflow")]
+    [InlineData("/knowledges/specifications")]
+    [InlineData("/knowledges/specifications/cnc-machining")]
+    [InlineData("/knowledges/specifications/3d-printing")]
+    [InlineData("/knowledges/specifications/3d-scanning")]
+    public async Task MigratedPublicRoutes_RenderCanonicalLocalizedDocuments(string route)
+    {
+        using var response = await client.GetAsync(route);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<h1", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+    }
 }
