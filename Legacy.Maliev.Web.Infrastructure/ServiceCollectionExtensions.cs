@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICountryClient, CountryClient>();
         services.AddScoped<IContactClient, ContactClient>();
         services.AddScoped<IQuotationClient, QuotationClient>();
+        services.AddScoped<ICustomerQuotationClient, CustomerQuotationClient>();
         services.AddScoped<IQuotationFileClient, QuotationFileClient>();
         services.AddScoped<INotificationClient, NotificationClient>();
         services.AddScoped<ICustomerAuthenticationClient, CustomerAuthenticationClient>();
