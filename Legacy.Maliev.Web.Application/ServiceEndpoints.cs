@@ -20,5 +20,7 @@ public sealed class ServiceEndpoints
 
     public Uri Order { get; init; } = new("http://orders");
 
+    public Uri Notification { get; init; } = new("http://notifications");
+
     public Uri Quotation { get; init; } = new("http://quotations");
 }

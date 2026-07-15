@@ -29,12 +29,14 @@ public static class ServiceCollectionExtensions
         AddClient(services, "documents", static endpoints => endpoints.Document);
         AddClient(services, "files", static endpoints => endpoints.File);
         AddClient(services, "orders", static endpoints => endpoints.Order);
+        AddClient(services, "notifications", static endpoints => endpoints.Notification);
         AddClient(services, "quotations", static endpoints => endpoints.Quotation);
         services.AddScoped<ICareerClient, CareerClient>();
         services.AddScoped<ICountryClient, CountryClient>();
         services.AddScoped<IContactClient, ContactClient>();
         services.AddScoped<IQuotationClient, QuotationClient>();
         services.AddScoped<IQuotationFileClient, QuotationFileClient>();
+        services.AddScoped<INotificationClient, NotificationClient>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IServiceAccessTokenProvider, ServiceAccessTokenProvider>();
         services.AddSingleton<IRecaptchaAssessmentClient, GoogleRecaptchaAssessmentClient>();
