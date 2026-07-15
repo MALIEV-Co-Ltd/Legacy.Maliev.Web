@@ -89,6 +89,58 @@ public sealed class CustomerAccountClientTests
         Assert.Contains("\"email\":\"customer@example.com\"", customerUpdate.Body, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task UpdateEmail_ReloadsOwnedCustomerAndPreservesServerHeldRelationships()
+    {
+        var handler = new RecordingHandler(request => request.RequestUri!.PathAndQuery switch
+        {
+            "/customers/42" when request.Method == HttpMethod.Get =>
+                Json(HttpStatusCode.OK, CustomerJson(7, 11)),
+            "/customers/42" when request.Method == HttpMethod.Put =>
+                new HttpResponseMessage(HttpStatusCode.NoContent),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        });
+        var client = CreateClient(handler);
+
+        var result = await client.UpdateEmailAsync(42, "new@example.com", default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(["customers/42", "customers/42"], handler.Requests.Select(request => request.Path));
+        Assert.Contains("\"email\":\"new@example.com\"", handler.Requests[1].Body, StringComparison.Ordinal);
+        Assert.Contains("\"billingAddressId\":7", handler.Requests[1].Body, StringComparison.Ordinal);
+        Assert.Contains("\"shippingAddressId\":11", handler.Requests[1].Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_CreatesCompanyAndLinksOnlyTheServerReturnedId()
+    {
+        var handler = new RecordingHandler(request => request.RequestUri!.PathAndQuery switch
+        {
+            "/customers/42" when request.Method == HttpMethod.Get =>
+                Json(HttpStatusCode.OK, CustomerJson(7, 11)),
+            "/customers/companies" when request.Method == HttpMethod.Post =>
+                Json(HttpStatusCode.Created, """{"id":88,"name":"Analytical Engines","taxNumber":"TAX","registrar":"DBD","createdDate":null,"modifiedDate":null}"""),
+            "/customers/42" when request.Method == HttpMethod.Put =>
+                new HttpResponseMessage(HttpStatusCode.NoContent),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        });
+        var client = CreateClient(handler);
+
+        var result = await client.UpdateProfileAsync(
+            42,
+            new CustomerProfileUpdate(
+                "Ada", "Lovelace", "02", "08", null, null,
+                "Analytical Engines", "TAX", "DBD"),
+            default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            ["customers/42", "customers/companies", "customers/42"],
+            handler.Requests.Select(request => request.Path));
+        Assert.Contains("\"companyId\":88", handler.Requests[^1].Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("companyId", handler.Requests[1].Body, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static CustomerAccountClient CreateClient(RecordingHandler handler) => new(
         new SingleClientFactory(new HttpClient(handler) { BaseAddress = new Uri("https://customers.test/") }),
         new StubServiceTokenProvider(),

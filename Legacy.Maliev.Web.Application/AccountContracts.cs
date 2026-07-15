@@ -24,6 +24,12 @@ public sealed record CustomerActionChallenge(
     bool ServiceAvailable,
     bool Authorized);
 
+public sealed record CustomerCredentialOperationResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized,
+    string? Token = null);
+
 public interface ICustomerAuthenticationClient
 {
     Task<CustomerAuthenticationResult> LoginAsync(
@@ -61,6 +67,18 @@ public interface ICustomerAuthenticationClient
         string token,
         string password,
         CancellationToken cancellationToken);
+
+    Task<CustomerCredentialOperationResult> ChangeEmailAsync(
+        string accessToken,
+        string currentPassword,
+        string newEmail,
+        CancellationToken cancellationToken);
+
+    Task<CustomerCredentialOperationResult> ChangePasswordAsync(
+        string accessToken,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken);
 }
 
 public sealed record CustomerProfile(
@@ -97,6 +115,14 @@ public sealed record CustomerAddress(
     DateTime? CreatedDate,
     DateTime? ModifiedDate);
 
+public sealed record CustomerCompany(
+    int Id,
+    string Name,
+    string? TaxNumber,
+    string? Registrar,
+    DateTime? CreatedDate,
+    DateTime? ModifiedDate);
+
 public sealed record CustomerAccountDetails(
     int Id,
     string FirstName,
@@ -113,7 +139,7 @@ public sealed record CustomerAccountDetails(
     DateTime? CreatedDate,
     DateTime? ModifiedDate,
     CustomerAddress? BillingAddress,
-    object? Company,
+    CustomerCompany? Company,
     CustomerAddress? ShippingAddress);
 
 public sealed record CustomerAddressProfile(CustomerAccountDetails Customer);
@@ -141,6 +167,22 @@ public sealed record CustomerAddressOperationResult(
     bool ServiceAvailable,
     bool Authorized);
 
+public sealed record CustomerAccountProfileResult(
+    CustomerAccountDetails? Profile,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public sealed record CustomerProfileUpdate(
+    string FirstName,
+    string LastName,
+    string? Telephone,
+    string? Mobile,
+    string? Fax,
+    DateTime? DateOfBirth,
+    string? CompanyName,
+    string? TaxNumber,
+    string? Registrar);
+
 public interface ICustomerAccountClient
 {
     Task<CustomerAddressProfileResult> GetAddressProfileAsync(
@@ -150,5 +192,19 @@ public interface ICustomerAccountClient
     Task<CustomerAddressOperationResult> UpdateAddressesAsync(
         int customerId,
         CustomerAddressUpdate update,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAddressOperationResult> UpdateEmailAsync(
+        int customerId,
+        string email,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAccountProfileResult> GetProfileAsync(
+        int customerId,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAddressOperationResult> UpdateProfileAsync(
+        int customerId,
+        CustomerProfileUpdate update,
         CancellationToken cancellationToken);
 }
