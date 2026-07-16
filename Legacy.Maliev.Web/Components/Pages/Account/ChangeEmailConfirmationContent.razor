@@ -6,7 +6,7 @@
         <section class="maliev-panel maliev-status">
             <p class="maliev-eyebrow">@Localizer["Email address"]</p>
             <h1>@Localizer["Email change confirmation"]</h1>
-            <div class="validation-summary-errors text-break @(Model.Errors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert" data-valmsg-summary="true">
+            <div class="validation-summary-errors text-break @(Model.Errors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
                 <ul>
                     @foreach (var error in Model.Errors)
                     {

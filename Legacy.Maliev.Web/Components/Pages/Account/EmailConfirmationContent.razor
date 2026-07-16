@@ -7,7 +7,7 @@
             <p class="maliev-eyebrow">@Localizer["Email confirmation"]</p>
             <h1>@Localizer["We could not confirm your email"]</h1>
             <p>@Localizer["Request a new confirmation email or contact support."]</p>
-            <div class="validation-summary-errors @(Model.Errors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert" data-valmsg-summary="true">
+            <div class="validation-summary-errors @(Model.Errors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
                 <ul>
                     @foreach (var error in Model.Errors)
                     {

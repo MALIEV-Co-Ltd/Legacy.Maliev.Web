@@ -72,6 +72,41 @@ public sealed class AssetDeliveryContractTests
     }
 
     [Fact]
+    public void ObsoleteJqueryValidationStack_IsAbsentFromSourceAndBundles()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var package = File.ReadAllText(Path.Combine(web, "package.json"));
+        var packageLock = File.ReadAllText(Path.Combine(web, "package-lock.json"));
+        var vendorEntry = File.ReadAllText(Path.Combine(web, "assets", "vendor-entry.js"));
+        var applicationScripts = Directory.GetFiles(
+                Path.Combine(web, "wwwroot", "src", "app", "js"),
+                "*.js",
+                SearchOption.TopDirectoryOnly)
+            .Select(File.ReadAllText)
+            .ToArray();
+        var components = Directory.GetFiles(
+                Path.Combine(web, "Components"),
+                "*.razor",
+                SearchOption.AllDirectories)
+            .Select(File.ReadAllText)
+            .ToArray();
+        var vendorBundle = File.ReadAllText(Path.Combine(web, "wwwroot", "dist", "vendor.min.js"));
+        var applicationBundle = File.ReadAllText(Path.Combine(web, "wwwroot", "dist", "app.min.js"));
+
+        Assert.DoesNotContain("\"jquery\"", package, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("node_modules/jquery", packageLock, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("jquery", vendorEntry, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(applicationScripts, source => source.Contains("$(", StringComparison.Ordinal));
+        Assert.DoesNotContain(applicationScripts, source => source.Contains("jQuery", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(components, source => source.Contains("data-val", StringComparison.Ordinal));
+        Assert.DoesNotContain("jQuery requires a window with a document", vendorBundle, StringComparison.Ordinal);
+        Assert.DoesNotContain("3.7.1", vendorBundle, StringComparison.Ordinal);
+        Assert.DoesNotContain("jQuery", applicationBundle, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(applicationScripts, source => source.Contains("addEventListener", StringComparison.Ordinal));
+        Assert.Contains(applicationScripts, source => source.Contains("querySelectorAll", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void KnowledgeActionLinks_KeepAccessibleButtonTextContrast()
     {
         var stylesheet = File.ReadAllText(Path.Combine(

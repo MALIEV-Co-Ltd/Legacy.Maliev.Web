@@ -2,7 +2,7 @@
 @inject IStringLocalizer<QuotationContent> Localizer
 
 <div data-migration-component="quotation-form-fields" data-migration-renderer="blazor-static-ssr">
-    <div class="text-danger @(Model.ErrorsFor(string.Empty).Count > 0 ? "validation-summary-errors" : "validation-summary-valid")" data-valmsg-summary="true" role="alert">
+    <div class="text-danger @(Model.ErrorsFor(string.Empty).Count > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
         @if (Model.ErrorsFor(string.Empty).Count > 0)
         {
             <ul>
@@ -14,61 +14,61 @@
         }
     </div>
 
-    <input type="hidden" data-val="true" data-val-required="The SubmissionId field is required." id="SubmissionId" name="SubmissionId" value="@Model.SubmissionId" />
-    <input type="hidden" data-val="true" data-val-required="The ServiceContext field is required." id="ServiceContext" name="ServiceContext" value="@Model.ServiceContext" />
+    <input type="hidden" id="SubmissionId" name="SubmissionId" value="@Model.SubmissionId" />
+    <input type="hidden" id="ServiceContext" name="ServiceContext" value="@Model.ServiceContext" />
 
     <div class="row g-3">
         <div class="col-md-6">
             <label for="FirstName" class="form-label">@Localizer["First name"]</label>
-            <input class="form-control" autocomplete="given-name" type="text" data-val="true" data-val-length="The field FirstName must be a string with a maximum length of 50." data-val-length-max="50" data-val-required="Please enter your first name" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" />
-            <span class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="FirstName" data-valmsg-replace="true">@Model.FirstErrorFor("FirstName")</span>
+            <input class="form-control" autocomplete="given-name" type="text" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
+            <span id="FirstName-error" class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
         </div>
         <div class="col-md-6">
             <label for="LastName" class="form-label">@Localizer["Last name"]</label>
-            <input class="form-control" autocomplete="family-name" type="text" data-val="true" data-val-length="The field LastName must be a string with a maximum length of 50." data-val-length-max="50" data-val-required="Please enter your last name" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" />
-            <span class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="LastName" data-valmsg-replace="true">@Model.FirstErrorFor("LastName")</span>
+            <input class="form-control" autocomplete="family-name" type="text" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
+            <span id="LastName-error" class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
         </div>
         <div class="col-md-6">
             <label for="Email" class="form-label">@Localizer["Email"]</label>
-            <input class="form-control" autocomplete="email" type="email" data-val="true" data-val-email="The Email field is not a valid e-mail address." data-val-length="The field Email must be a string with a maximum length of 50." data-val-length-max="50" data-val-required="Email address is required" id="Email" maxlength="50" name="Email" value="@Model.Email" />
-            <span class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Email" data-valmsg-replace="true">@Model.FirstErrorFor("Email")</span>
+            <input class="form-control" autocomplete="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+            <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
         </div>
         <div class="col-md-6">
             <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
-            <input class="form-control" autocomplete="tel" type="text" data-val="true" data-val-length="The field Phone must be a string with a maximum length of 50." data-val-length-max="50" id="Phone" maxlength="50" name="Phone" value="@Model.Phone" />
-            <span class="text-danger @(HasError("Phone") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Phone" data-valmsg-replace="true">@Model.FirstErrorFor("Phone")</span>
+            <input class="form-control" autocomplete="tel" type="tel" id="Phone" maxlength="50" name="Phone" value="@Model.Phone" aria-invalid="@AriaInvalid("Phone")" aria-describedby="Phone-error" />
+            <span id="Phone-error" class="text-danger @(HasError("Phone") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Phone")</span>
         </div>
         <div class="col-md-6">
             <label for="Company" class="form-label">@Localizer["Company"]</label>
-            <input class="form-control" autocomplete="organization" type="text" data-val="true" data-val-length="The field Company must be a string with a maximum length of 50." data-val-length-max="50" id="Company" maxlength="50" name="Company" value="@Model.Company" />
-            <span class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Company" data-valmsg-replace="true">@Model.FirstErrorFor("Company")</span>
+            <input class="form-control" autocomplete="organization" type="text" id="Company" maxlength="50" name="Company" value="@Model.Company" aria-invalid="@AriaInvalid("Company")" aria-describedby="Company-error" />
+            <span id="Company-error" class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Company")</span>
         </div>
         <div class="col-md-6">
             <label for="TaxNumber" class="form-label">@Localizer["Tax identification (optional)"]</label>
-            <input class="form-control" type="text" data-val="true" data-val-length="The field TaxNumber must be a string with a maximum length of 50." data-val-length-max="50" id="TaxNumber" maxlength="50" name="TaxNumber" value="@Model.TaxNumber" />
-            <span class="text-danger @(HasError("TaxNumber") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="TaxNumber" data-valmsg-replace="true">@Model.FirstErrorFor("TaxNumber")</span>
+            <input class="form-control" type="text" id="TaxNumber" maxlength="50" name="TaxNumber" value="@Model.TaxNumber" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="TaxNumber-error" />
+            <span id="TaxNumber-error" class="text-danger @(HasError("TaxNumber") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("TaxNumber")</span>
         </div>
         <div class="col-md-6">
             <label for="Country" class="form-label">@Localizer["Country"]</label>
-            <select class="form-select" data-val="true" data-val-length="The field Country must be a string with a maximum length of 50." data-val-length-max="50" data-val-required="Please select your country" id="Country" name="Country" disabled="@(!Model.CountryServiceAvailable)">
+            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error">
                 <option value="">@Localizer["Select a country"]</option>
                 @foreach (var country in Model.Countries)
                 {
                     <option value="@country.Name" selected="@(string.Equals(Model.Country, country.Name, StringComparison.Ordinal))">@country.Name</option>
                 }
             </select>
-            <span class="text-danger @(HasError("Country") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Country" data-valmsg-replace="true">@Model.FirstErrorFor("Country")</span>
+            <span id="Country-error" class="text-danger @(HasError("Country") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Country")</span>
         </div>
         <div class="col-12">
             <label for="Message" class="form-label">@Localizer["Project requirements"]</label>
-            <textarea class="form-control" rows="10" data-val="true" data-val-length="The field Message must be a string with a maximum length of 10000." data-val-length-max="10000" data-val-required="Please describe what you need" id="Message" maxlength="10000" name="Message">@Model.Message</textarea>
-            <span class="text-danger @(HasError("Message") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Message" data-valmsg-replace="true">@Model.FirstErrorFor("Message")</span>
+            <textarea class="form-control" rows="10" id="Message" maxlength="10000" name="Message" required aria-invalid="@AriaInvalid("Message")" aria-describedby="Message-error">@Model.Message</textarea>
+            <span id="Message-error" class="text-danger @(HasError("Message") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Message")</span>
         </div>
         <div class="col-12">
             <label for="Files" class="form-label">@Localizer["Drawings and reference files (optional)"]</label>
-            <input type="file" class="form-control" multiple aria-describedby="quotation-files-help" data-val="true" data-val-required="The Files field is required." id="Files" name="Files" />
+            <input type="file" class="form-control" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" />
             <div id="quotation-files-help" class="form-text">@Localizer["Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage."]</div>
-            <span class="text-danger @(HasError("Files") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Files" data-valmsg-replace="true">@Model.FirstErrorFor("Files")</span>
+            <span id="Files-error" class="text-danger @(HasError("Files") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Files")</span>
         </div>
     </div>
 
@@ -84,4 +84,6 @@
     public QuotationFormDisplayModel Model { get; set; } = null!;
 
     private bool HasError(string fieldName) => Model.ErrorsFor(fieldName).Count > 0;
+
+    private string? AriaInvalid(string fieldName) => HasError(fieldName) ? "true" : null;
 }

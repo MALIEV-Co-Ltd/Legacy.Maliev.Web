@@ -170,4 +170,5 @@
   <data name="Sign Up" xml:space="preserve"><value>สมัครสมาชิก</value></data>
   <data name="Already have an account?" xml:space="preserve"><value>มีบัญชีอยู่แล้ว?</value></data>
   <data name="Sign in" xml:space="preserve"><value>เข้าสู่ระบบ</value></data>
+  <data name="Passwords do not match." xml:space="preserve"><value>รหัสผ่านทั้งสองช่องไม่ตรงกัน</value></data>
 </root>
