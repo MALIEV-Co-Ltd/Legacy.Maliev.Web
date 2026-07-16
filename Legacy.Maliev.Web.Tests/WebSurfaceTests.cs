@@ -671,6 +671,31 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "CNC Milling & Turning", "Precision CNC Machining for One-Off and Production Parts", "Can you machine only one piece?")]
+    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
+    public async Task CncMachiningRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]

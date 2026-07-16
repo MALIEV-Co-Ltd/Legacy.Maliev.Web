@@ -77,7 +77,6 @@ public sealed class BlazorMigrationContractTests
     }
 
     [Theory]
-    [InlineData("CNC-Machining.cshtml", "CNC Machining")]
     [InlineData("3D-Printing.cshtml", "3D Printing")]
     [InlineData("3D-Scanning.cshtml", "3D Scanning")]
     public void ServiceDetailRoute_UsesStaticSharedBlazorComponents(string pageName, string serviceKey)
@@ -125,6 +124,23 @@ public sealed class BlazorMigrationContractTests
             "CustomManufacturingContent.razor"));
 
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"Custom Manufacturing\" />", body, StringComparison.Ordinal);
+        Assert.Contains("<ServiceLocation />", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CncMachiningRoute_UsesStaticBlazorBody()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Services", "CNC-Machining.cshtml"));
+
+        Assert.Contains("type=\"typeof(CncMachiningContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
+        Assert.Contains("<partial name=\"_SchemaService\"", page, StringComparison.Ordinal);
+        Assert.Contains("FAQPage", page, StringComparison.Ordinal);
+
+        var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "CncMachiningContent.razor"));
+        Assert.Contains("<ServiceBreadcrumb ServiceKey=\"CNC Machining\" />", body, StringComparison.Ordinal);
         Assert.Contains("<ServiceLocation />", body, StringComparison.Ordinal);
     }
 }
