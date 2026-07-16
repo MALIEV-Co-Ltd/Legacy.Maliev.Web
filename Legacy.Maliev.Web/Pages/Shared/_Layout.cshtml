@@ -1,3 +1,4 @@
+@using Legacy.Maliev.Web.Components.Layout
 <!DOCTYPE html>
 <html lang="@System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName">
 <head>
@@ -43,7 +44,7 @@
     <div id="main-content" tabindex="-1">
         @RenderBody()
     </div>
-    <partial name="_FooterPartial" />
+    <component type="typeof(PublicFooter)" render-mode="Static" />
     @*<partial name="_Go2TopPartial" />*@
     @*<partial name="_ReportBugPartial" />*@
     <partial name="_ContactChannelAnalyticsPartial" />
