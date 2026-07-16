@@ -30,6 +30,33 @@ public sealed class BlazorMigrationContractTests
         Assert.DoesNotContain("@rendermode", legalComponent, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("Services/Index.cshtml", "Services/ServicesContent.razor", "ServicesContent")]
+    [InlineData("About/SocialMedia.cshtml", "About/SocialMediaContent.razor", "SocialMediaContent")]
+    public void ReadOnlyPublicRoute_UsesNonInteractiveStaticSsrComponent(
+        string pagePath,
+        string componentPath,
+        string componentName)
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Pages",
+            pagePath.Replace('/', Path.DirectorySeparatorChar)));
+        var component = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            componentPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Contains($"type=\"typeof({componentName})\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
