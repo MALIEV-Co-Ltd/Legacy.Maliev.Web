@@ -1647,6 +1647,46 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", "Get an instant manufacturing estimate", "Part configuration", "Calculate estimate", "Configure a part to see pricing")]
+    [InlineData("th", "ประเมินราคาการผลิตได้ทันที", "ตั้งค่าชิ้นงาน", "คำนวณราคา", "ตั้งค่าชิ้นงานเพื่อดูราคา")]
+    public async Task InstantQuotation_RendersLocalizedStaticSsrCalculatorContract(
+        string culture,
+        string heading,
+        string legend,
+        string calculateLabel,
+        string resultHeading)
+    {
+        using var response = await client.GetAsync($"/InstantQuotation/3D-Printing?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"instant-quotation-three-dimensional-printing\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{legend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{calculateLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{resultHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-instant-estimate", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"material\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"PLA\" selected", source, StringComparison.Ordinal);
+        foreach (var field in new[] { "height", "volume", "footprint", "quantity", "areaProfile", "perimeterProfile" })
+        {
+            Assert.Contains($"name=\"{field}\"", source, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("aria-live=\"polite\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-calculating=", source, StringComparison.Ordinal);
+        Assert.Contains("data-calculated=", source, StringComparison.Ordinal);
+        Assert.Contains("data-failed=", source, StringComparison.Ordinal);
+        Assert.Contains("gtag('consent', 'default'", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"cookieConsent\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task ProductionJavaScriptAsset_UsesMimeTypeAndNegotiatedCompression()
     {
