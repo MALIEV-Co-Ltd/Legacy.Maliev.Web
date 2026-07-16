@@ -902,7 +902,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
-    public async Task Logout_PostRequiresAntiforgeryThenRevokesTheOpaqueSessionAndClearsAuthentication()
+    public async Task Logout_PostRequiresAntiforgeryThenSignsOutAndClearsAuthentication()
     {
         await SignInAsync();
 
