@@ -689,6 +689,11 @@ body {
     text-decoration: none;
 }
 
+.docs-content a.maliev-button {
+    color: #fff;
+    text-decoration: none;
+}
+
 .legal-document a.maliev-button:hover,
 .legal-document a.maliev-button:focus-visible {
     color: #fff;

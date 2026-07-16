@@ -71,6 +71,24 @@ public sealed class AssetDeliveryContractTests
         Assert.DoesNotContain("animate__", styles, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void KnowledgeActionLinks_KeepAccessibleButtonTextContrast()
+    {
+        var stylesheet = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "css",
+            "application-shell.css"));
+
+        Assert.Contains(
+            ".docs-content a.maliev-button {\n    color: #fff;\n    text-decoration: none;\n}",
+            stylesheet,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
