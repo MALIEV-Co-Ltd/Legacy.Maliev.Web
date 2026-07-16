@@ -726,6 +726,47 @@ public sealed class BlazorMigrationContractTests
     }
 
     [Fact]
+    public void MemberChangeEmailRoute_UsesPasswordAndTokenFreeStaticSsrProjectionInsideOwnedBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Account", "Manage", "ChangeEmail.cshtml"));
+        var pageModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Account", "Manage", "ChangeEmail.cshtml.cs"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Member", "MemberChangeEmailContent.razor");
+
+        Assert.Contains("<form method=\"post\" asp-page-handler=\"ChangeEmail\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(MemberChangeEmailContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("[Authorize]", pageModel, StringComparison.Ordinal);
+        Assert.Contains("[EnableRateLimiting(\"account\")]", pageModel, StringComparison.Ordinal);
+        Assert.Contains("OnGetAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("GetAccessTokenAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("GetCustomerDatabaseIdAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("UpdateEmailAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("ChangeEmailAsync", pageModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("data-migration-component=\"member-change-email-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<MemberChangeEmailContent>", component, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\" name=\"NewEmail\"", component, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"CurrentPassword\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("value=\"@Model.CurrentPassword", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<form", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Member", "MemberChangeEmailDisplayModel.cs"));
+        Assert.DoesNotContain("CurrentPassword", displayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("Token", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CustomerId", displayModel, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Member", "MemberChangeEmailContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Areas", "Member", "Pages", "Account", "Manage", "ChangeEmail.th.resx")));
+    }
+
+    [Fact]
     public void CareerDetailRoute_UsesDisplayOnlyStaticSsrComponentAndMinimalPrintBridge()
     {
         var root = FindRepositoryRoot();

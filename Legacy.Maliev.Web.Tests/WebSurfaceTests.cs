@@ -1072,23 +1072,229 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task ChangeEmail_SynchronizesProfileThenClearsTheBffSession()
+    [Theory]
+    [InlineData("en", "Customer account", "Change email", "You will need to confirm the new address and sign in again.")]
+    [InlineData("th", "บัญชีลูกค้า", "เปลี่ยนอีเมล", "คุณต้องยืนยันอีเมลใหม่และเข้าสู่ระบบอีกครั้ง")]
+    public async Task MemberChangeEmail_RendersLocalizedPasswordFreeStaticSsrForm(
+        string culture,
+        string eyebrow,
+        string heading,
+        string guidance)
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/changeemail");
-        form["CurrentPassword"] = "current-password";
-        form["NewEmail"] = "new@example.com";
 
-        using var response = await client.PostAsync(
-            "/member/account/manage/changeemail?handler=ChangeEmail",
-            new FormUrlEncodedContent(form));
+        using var response = await client.GetAsync($"/member/account/manage/changeemail?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-change-email-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{guidance}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\" name=\"NewEmail\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"CurrentPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"email\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"current-password\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("confirmation-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ChangeEmail_SynchronizesExactProfileAndIdentityThenClearsTheBffSession(string culture)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        var notifications = Assert.IsType<StubNotificationClient>(
+            configuredFactory.Services.GetRequiredService<INotificationClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        notifications.Reset();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = "  new@example.com  ";
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}")
+        {
+            Content = new FormUrlEncodedContent(form),
+        };
+        request.Headers.Host = "attacker.example";
+        using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
         Assert.Contains("email=new@example.com", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
+        var profileUpdate = Assert.Single(accountClient.EmailUpdateInvocations);
+        Assert.Equal(42, profileUpdate.CustomerId);
+        Assert.Equal("new@example.com", profileUpdate.Email);
+        var identityUpdate = Assert.IsType<EmailChangeInvocation>(authentication.LastEmailChangeInvocation);
+        Assert.Equal("sensitive-access-token", identityUpdate.AccessToken);
+        Assert.Equal("current-password", identityUpdate.CurrentPassword);
+        Assert.Equal("new@example.com", identityUpdate.NewEmail);
+        var notification = Assert.IsType<EmailNotification>(notifications.LastNotification);
+        Assert.Equal("new@example.com", notification.To);
+        Assert.Contains("https://www.maliev.com/account/changeemailconfirmation", notification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("attacker.example", notification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("http://www.maliev.com", notification.Body, StringComparison.Ordinal);
+        Assert.Contains("confirmation-token", notification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("current-password", notification.Body, StringComparison.Ordinal);
         using var account = await client.GetAsync("/member/account/manage/changeemail");
         Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
+    }
+
+    [Fact]
+    public async Task MemberChangeEmail_WithoutAntiforgeryIsRejectedBeforeEitherService()
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/changeemail?handler=ChangeEmail",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["CurrentPassword"] = "current-password",
+                ["NewEmail"] = "new@example.com",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "Current password is required.", "Enter a valid email address.")]
+    [InlineData("th", "กรุณากรอกรหัสผ่านปัจจุบัน", "กรุณากรอกอีเมลที่ถูกต้อง")]
+    public async Task MemberChangeEmail_InvalidFieldsRenderLocalizedAllowlistedErrorsWithoutPassword(
+        string culture,
+        string passwordRequired,
+        string invalidEmail)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = string.Empty;
+        form["NewEmail"] = "not-an-email";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{passwordRequired}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{invalidEmail}<", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("value=\"current-password\"", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "Enter a different email address.")]
+    [InlineData("th", "กรุณากรอกอีเมลที่แตกต่างจากอีเมลปัจจุบัน")]
+    public async Task MemberChangeEmail_RejectsCurrentEmailBeforeEitherService(string culture, string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "The email address could not be changed.")]
+    [InlineData("th", "ไม่สามารถเปลี่ยนอีเมลได้")]
+    public async Task MemberChangeEmail_ProfileFailureStopsBeforeIdentityAndRendersSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        accountClient.EmailUpdateResults.Enqueue(new CustomerAddressOperationResult(false, false, true));
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = "new@example.com";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Single(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "The current password is invalid or the email address is already in use.")]
+    [InlineData("th", "รหัสผ่านปัจจุบันไม่ถูกต้องหรืออีเมลนี้ถูกใช้งานแล้ว")]
+    public async Task MemberChangeEmail_IdentityRejectionRollsProfileBackBeforeSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        authentication.EmailChangeResultOverride = new CustomerCredentialOperationResult(false, true, true);
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "rejected-password";
+        form["NewEmail"] = "new@example.com";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Equal(["new@example.com", "customer@example.com"], accountClient.EmailUpdateInvocations.Select(item => item.Email));
+        Assert.DoesNotContain("rejected-password", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("confirmation-token", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -2495,11 +2701,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubNotificationClient : INotificationClient
     {
+        public EmailNotification? LastNotification { get; private set; }
+
+        public void Reset() => LastNotification = null;
+
         public Task<NotificationResult> SendAsync(
             NotificationChannel channel,
             EmailNotification notification,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new NotificationResult(true, true, true));
+            CancellationToken cancellationToken)
+        {
+            LastNotification = notification;
+            return Task.FromResult(new NotificationResult(true, true, true));
+        }
     }
 
     private async Task<Dictionary<string, string>> GetAntiforgeryFormAsync(string path)
@@ -2588,6 +2801,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubCustomerAuthenticationClient : ICustomerAuthenticationClient
     {
+        public EmailChangeInvocation? LastEmailChangeInvocation { get; private set; }
+
+        public CustomerCredentialOperationResult? EmailChangeResultOverride { get; set; }
+
         public PasswordChangeInvocation? LastPasswordChangeInvocation { get; private set; }
 
         public CustomerCredentialOperationResult? PasswordChangeResultOverride { get; set; }
@@ -2596,6 +2813,12 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         {
             LastPasswordChangeInvocation = null;
             PasswordChangeResultOverride = null;
+        }
+
+        public void ResetEmailChangeInvocations()
+        {
+            LastEmailChangeInvocation = null;
+            EmailChangeResultOverride = null;
         }
 
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
@@ -2633,8 +2856,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             string accessToken,
             string currentPassword,
             string newEmail,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerCredentialOperationResult(true, true, true, "confirmation-token"));
+            CancellationToken cancellationToken)
+        {
+            LastEmailChangeInvocation = new(accessToken, currentPassword, newEmail);
+            return Task.FromResult(
+                EmailChangeResultOverride
+                ?? new CustomerCredentialOperationResult(true, true, true, "confirmation-token"));
+        }
 
         public Task<CustomerCredentialOperationResult> ChangePasswordAsync(
             string accessToken,
@@ -2653,6 +2881,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         string AccessToken,
         string CurrentPassword,
         string NewPassword);
+
+    private sealed record EmailChangeInvocation(
+        string AccessToken,
+        string CurrentPassword,
+        string NewEmail);
 
     private sealed class StubCustomerProfileClient : ICustomerProfileClient
     {
@@ -2695,12 +2928,22 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public CustomerAddressOperationResult? ProfileUpdateResultOverride { get; set; }
 
+        public List<EmailUpdateInvocation> EmailUpdateInvocations { get; } = [];
+
+        public Queue<CustomerAddressOperationResult> EmailUpdateResults { get; } = [];
+
         public void ResetProfileInvocations()
         {
             LastProfileGetCustomerId = null;
             LastProfileUpdateInvocation = null;
             ProfileGetResultOverride = null;
             ProfileUpdateResultOverride = null;
+        }
+
+        public void ResetEmailInvocations()
+        {
+            EmailUpdateInvocations.Clear();
+            EmailUpdateResults.Clear();
         }
 
         public Task<CustomerAddressProfileResult> GetAddressProfileAsync(
@@ -2723,11 +2966,17 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         public Task<CustomerAddressOperationResult> UpdateEmailAsync(
             int customerId,
             string email,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressOperationResult(
-                customerId == Customer.Id,
-                true,
-                customerId == Customer.Id));
+            CancellationToken cancellationToken)
+        {
+            EmailUpdateInvocations.Add(new(customerId, email));
+            return Task.FromResult(
+                EmailUpdateResults.Count > 0
+                    ? EmailUpdateResults.Dequeue()
+                    : new CustomerAddressOperationResult(
+                        customerId == Customer.Id,
+                        true,
+                        customerId == Customer.Id));
+        }
 
         public Task<CustomerAccountProfileResult> GetProfileAsync(
             int customerId,
@@ -2764,6 +3013,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     private sealed record ProfileUpdateInvocation(int CustomerId, CustomerProfileUpdate Update);
+
+    private sealed record EmailUpdateInvocation(int CustomerId, string Email);
 
     private sealed class StubCustomerOrderClient : ICustomerOrderClient
     {

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true"><xsd:complexType><xsd:choice maxOccurs="unbounded">
+      <xsd:element name="data"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" /><xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" /><xsd:attribute ref="xml:space" /></xsd:complexType></xsd:element>
+      <xsd:element name="resheader"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" /></xsd:complexType></xsd:element>
+    </xsd:choice></xsd:complexType></xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Change email | MALIEV" xml:space="preserve"><value>เปลี่ยนอีเมล | MALIEV</value></data>
+  <data name="Customer account" xml:space="preserve"><value>บัญชีลูกค้า</value></data>
+  <data name="Change email" xml:space="preserve"><value>เปลี่ยนอีเมล</value></data>
+  <data name="You will need to confirm the new address and sign in again." xml:space="preserve"><value>คุณต้องยืนยันอีเมลใหม่และเข้าสู่ระบบอีกครั้ง</value></data>
+  <data name="New email" xml:space="preserve"><value>อีเมลใหม่</value></data>
+  <data name="Current password" xml:space="preserve"><value>รหัสผ่านปัจจุบัน</value></data>
+  <data name="Current password is required." xml:space="preserve"><value>กรุณากรอกรหัสผ่านปัจจุบัน</value></data>
+  <data name="New email is required." xml:space="preserve"><value>กรุณากรอกอีเมลใหม่</value></data>
+  <data name="Enter a different email address." xml:space="preserve"><value>กรุณากรอกอีเมลที่แตกต่างจากอีเมลปัจจุบัน</value></data>
+  <data name="Enter a valid email address." xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
+  <data name="One or more account values are invalid." xml:space="preserve"><value>ข้อมูลบัญชีอย่างน้อยหนึ่งรายการไม่ถูกต้อง</value></data>
+  <data name="The email address could not be changed." xml:space="preserve"><value>ไม่สามารถเปลี่ยนอีเมลได้</value></data>
+  <data name="The current password is invalid or the email address is already in use." xml:space="preserve"><value>รหัสผ่านปัจจุบันไม่ถูกต้องหรืออีเมลนี้ถูกใช้งานแล้ว</value></data>
+  <data name="Account security is temporarily unavailable." xml:space="preserve"><value>ระบบความปลอดภัยของบัญชีไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Your account email could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดอีเมลปัจจุบันของบัญชีได้</value></data>
+  <data name="Customer profile service is temporarily unavailable." xml:space="preserve"><value>ระบบข้อมูลลูกค้าไม่พร้อมใช้งานชั่วคราว</value></data>
+</root>

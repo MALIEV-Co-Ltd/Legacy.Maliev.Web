@@ -1,0 +1,34 @@
+@inject IStringLocalizer<MemberChangeEmailContent> Localizer
+
+<div data-migration-component="member-change-email-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Customer account"]</p>
+        <h1 id="member-change-email-title">@Localizer["Change email"]</h1>
+        <p id="member-change-email-guidance">@Localizer["You will need to confirm the new address and sign in again."]</p>
+    </div>
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="field-validation-error" role="alert">
+            <ul>
+                @foreach (var error in Model.Errors)
+                {
+                    <li>@Localizer[error]</li>
+                }
+            </ul>
+        </div>
+    }
+    <div class="maliev-form-field">
+        <label for="member-new-email">@Localizer["New email"]</label>
+        <input id="member-new-email" type="email" name="NewEmail" value="@Model.NewEmail" autocomplete="email" required maxlength="320" aria-describedby="member-change-email-guidance" />
+    </div>
+    <div class="maliev-form-field">
+        <label for="member-change-email-password">@Localizer["Current password"]</label>
+        <input id="member-change-email-password" type="password" name="CurrentPassword" autocomplete="current-password" required maxlength="1024" aria-describedby="member-change-email-guidance" />
+    </div>
+    <button type="submit" class="maliev-button">@Localizer["Change email"]</button>
+</div>
+
+@code {
+    [Parameter]
+    public MemberChangeEmailDisplayModel Model { get; set; } = MemberChangeEmailDisplayModel.Empty;
+}
