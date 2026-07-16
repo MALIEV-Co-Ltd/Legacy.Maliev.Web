@@ -65,6 +65,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("/member")]
+    [InlineData("/member/account")]
     [InlineData("/member/account/manage/address")]
     [InlineData("/member/account/manage/changeemail")]
     [InlineData("/member/account/manage/changepassword")]
@@ -281,6 +282,37 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{orderHistoryLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Account settings", "Profile", "Addresses", "Password")]
+    [InlineData("th", "ตั้งค่าบัญชี", "โปรไฟล์", "ที่อยู่", "รหัสผ่าน")]
+    public async Task MemberAccountIndex_RendersLocalizedDisplayOnlyStaticSsrWithoutSecrets(
+        string culture,
+        string heading,
+        string profileLabel,
+        string addressLabel,
+        string passwordLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member/account?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-account-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{profileLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{addressLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/account/manage/profile\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/account/manage/address\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/account/manage/changeemail\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/account/manage/changepassword\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);

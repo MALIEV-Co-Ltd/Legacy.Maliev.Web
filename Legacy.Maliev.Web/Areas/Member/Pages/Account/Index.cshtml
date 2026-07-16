@@ -1,19 +1,8 @@
 @page
 @model Legacy.Maliev.Web.Areas.Member.Pages.Account.Index
+@inject IStringLocalizer<MemberAccountIndexContent> MetadataLocalizer
 @{
-    ViewData["Title"] = Localizer["Account settings | MALIEV"];
+    ViewData["Title"] = MetadataLocalizer["Account settings | MALIEV"];
     ViewData["Robots"] = "noindex,follow";
 }
-<section class="workspace-content" aria-labelledby="account-settings-title">
-    <div class="maliev-section-header">
-        <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
-        <h1 id="account-settings-title">@Localizer["Account settings"]</h1>
-        <p>@Localizer["Keep your contact, delivery, and sign-in information current."]</p>
-    </div>
-    <div class="maliev-card-grid">
-        <a class="maliev-panel docs-link-card" asp-page="/Account/Manage/Profile"><strong>@Localizer["Profile"]</strong><span>@Localizer["Contact and company information"]</span></a>
-        <a class="maliev-panel docs-link-card" asp-page="/Account/Manage/Address"><strong>@Localizer["Addresses"]</strong><span>@Localizer["Billing and shipping addresses"]</span></a>
-        <a class="maliev-panel docs-link-card" asp-page="/Account/Manage/ChangeEmail"><strong>@Localizer["Email"]</strong><span>@Localizer["Change your account email address"]</span></a>
-        <a class="maliev-panel docs-link-card" asp-page="/Account/Manage/ChangePassword"><strong>@Localizer["Password"]</strong><span>@Localizer["Update your sign-in password"]</span></a>
-    </div>
-</section>
+<component type="typeof(MemberAccountIndexContent)" render-mode="Static" />
