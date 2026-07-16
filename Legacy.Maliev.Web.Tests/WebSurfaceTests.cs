@@ -873,6 +873,60 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("Send your password to support", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", "Email", "Password", "Remember me", "Sign in")]
+    [InlineData("th", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
+    public async Task Login_RendersLocalizedStaticSsrFormInsideHardenedSessionBoundary(
+        string culture,
+        string emailLabel,
+        string passwordLabel,
+        string rememberLabel,
+        string submitLabel)
+    {
+        using var response = await client.GetAsync(
+            $"/account/login?culture={culture}&email=user%40example.com&returnUrl=%2FMember%2FOrders");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"login-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(rememberLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/Login?handler=Login\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"ReturnUrl\" value=\"/Member/Orders\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"RememberMe\" value=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"RememberMe\" type=\"hidden\" value=\"false\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Login_InvalidPostPreservesEmailAndErrorsWithoutEchoingPassword()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/login?culture=en");
+        form["Email"] = "not-an-email";
+        form["Password"] = "do-not-echo";
+        form["RememberMe"] = "false";
+
+        using var response = await client.PostAsync(
+            "/account/login?handler=Login&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"login-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("do-not-echo", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ForgotPassword_UsesSamePublicResponseForUnknownEmail()
     {
