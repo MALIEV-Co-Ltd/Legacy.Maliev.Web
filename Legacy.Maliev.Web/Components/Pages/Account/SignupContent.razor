@@ -2,7 +2,7 @@
 @inject IStringLocalizer<SignupContent> Localizer
 
 <div data-migration-component="signup-content" data-migration-renderer="blazor-static-ssr">
-    <div class="validation-summary-errors @(Model.AllErrors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert" data-valmsg-summary="true">
+    <div class="validation-summary-errors @(Model.AllErrors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
         <ul>
             @if (Model.AllErrors.Count == 0)
             {
@@ -18,31 +18,31 @@
         </ul>
     </div>
 
-    <div class="maliev-form-grid">
+    <div class="maliev-form-grid" data-password-confirmation data-password-mismatch="@Localizer["Passwords do not match."]">
         <div class="maliev-form-field">
             <label for="FirstName">@Localizer["First name"]</label>
-            <input autocomplete="given-name" type="text" data-val="true" data-val-length="The field FirstName must be a string with a maximum length of 100." data-val-length-max="100" data-val-required="The FirstName field is required." id="FirstName" maxlength="100" name="FirstName" value="@Model.FirstName" />
-            <span class="@(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="FirstName" data-valmsg-replace="true">@Model.FirstErrorFor("FirstName")</span>
+            <input autocomplete="given-name" type="text" id="FirstName" maxlength="100" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
+            <span id="FirstName-error" class="@(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
         </div>
         <div class="maliev-form-field">
             <label for="LastName">@Localizer["Last name"]</label>
-            <input autocomplete="family-name" type="text" data-val="true" data-val-length="The field LastName must be a string with a maximum length of 100." data-val-length-max="100" data-val-required="The LastName field is required." id="LastName" maxlength="100" name="LastName" value="@Model.LastName" />
-            <span class="@(HasError("LastName") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="LastName" data-valmsg-replace="true">@Model.FirstErrorFor("LastName")</span>
+            <input autocomplete="family-name" type="text" id="LastName" maxlength="100" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
+            <span id="LastName-error" class="@(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
         </div>
         <div class="maliev-form-field maliev-form-field--full">
             <label for="Email">@Localizer["Email"]</label>
-            <input autocomplete="email" type="email" data-val="true" data-val-email="The Email field is not a valid e-mail address." data-val-length="The field Email must be a string with a maximum length of 320." data-val-length-max="320" data-val-required="The Email field is required." id="Email" maxlength="320" name="Email" value="@Model.Email" />
-            <span class="@(HasError("Email") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Email" data-valmsg-replace="true">@Model.FirstErrorFor("Email")</span>
+            <input autocomplete="email" type="email" id="Email" maxlength="320" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+            <span id="Email-error" class="@(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
         </div>
         <div class="maliev-form-field">
             <label for="Password">@Localizer["Password"]</label>
-            <input autocomplete="new-password" type="password" data-val="true" data-val-length="The field Password must be a string with a minimum length of 6 and a maximum length of 1024." data-val-length-max="1024" data-val-length-min="6" data-val-required="The Password field is required." id="Password" maxlength="1024" name="Password" />
-            <span class="@(HasError("Password") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="Password" data-valmsg-replace="true">@Model.FirstErrorFor("Password")</span>
+            <input autocomplete="new-password" type="password" id="Password" minlength="6" maxlength="1024" name="Password" required aria-invalid="@AriaInvalid("Password")" aria-describedby="Password-error" data-password-primary />
+            <span id="Password-error" class="@(HasError("Password") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Password")</span>
         </div>
         <div class="maliev-form-field">
             <label for="ConfirmPassword">@Localizer["Retype Password"]</label>
-            <input autocomplete="new-password" type="password" data-val="true" data-val-equalto="Passwords do not match." data-val-equalto-other="*.Password" data-val-required="The ConfirmPassword field is required." id="ConfirmPassword" name="ConfirmPassword" />
-            <span class="@(HasError("ConfirmPassword") ? "field-validation-error" : "field-validation-valid")" data-valmsg-for="ConfirmPassword" data-valmsg-replace="true">@Model.FirstErrorFor("ConfirmPassword")</span>
+            <input autocomplete="new-password" type="password" id="ConfirmPassword" name="ConfirmPassword" required aria-invalid="@AriaInvalid("ConfirmPassword")" aria-describedby="ConfirmPassword-error" data-password-confirm />
+            <span id="ConfirmPassword-error" class="@(HasError("ConfirmPassword") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("ConfirmPassword")</span>
         </div>
     </div>
 
@@ -56,4 +56,6 @@
     public SignupFormDisplayModel Model { get; set; } = null!;
 
     private bool HasError(string fieldName) => Model.ErrorsFor(fieldName).Count > 0;
+
+    private string? AriaInvalid(string fieldName) => HasError(fieldName) ? "true" : null;
 }

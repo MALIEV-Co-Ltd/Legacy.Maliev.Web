@@ -1,5 +1,4 @@
-﻿$(window).ready(function () {
-    // enable bootstrap tooltip everywhere
+function initializeApplication() {
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
         window.bootstrap.Tooltip.getOrCreateInstance(element);
     });
@@ -26,10 +25,30 @@
         });
         updateTermsSubmitState();
     });
-});
 
-$(window).resize(function () {
-});
+    document.querySelectorAll('[data-password-confirmation]').forEach(function (container) {
+        var password = container.querySelector('[data-password-primary]');
+        var confirmation = container.querySelector('[data-password-confirm]');
+        if (!password || !confirmation) {
+            return;
+        }
+
+        function validatePasswordConfirmation() {
+            var mismatch = confirmation.value.length > 0 && confirmation.value !== password.value;
+            confirmation.setCustomValidity(mismatch ? container.dataset.passwordMismatch : '');
+        }
+
+        password.addEventListener('input', validatePasswordConfirmation);
+        confirmation.addEventListener('input', validatePasswordConfirmation);
+        validatePasswordConfirmation();
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApplication, { once: true });
+} else {
+    initializeApplication();
+}
 
 // Prevents reCAPTCHA callbacks from bypassing the normal in-flight button state
 // when they invoke the browser's native form.submit() method.
@@ -56,96 +75,82 @@ function SubmitFormOnce(formId, buttonId, submittingText) {
     return true;
 }
 
-// show preview image of the file
 function PreviewImageFile(targetElementID) {
     var preview = document.getElementById(targetElementID);
-    var file = document.querySelector('input[type=file]').files[0];
+    var fileInput = document.querySelector('input[type=file]');
+    var file = fileInput?.files[0];
     var reader = new FileReader();
 
-    // when loaded
     reader.onloadend = function () {
         preview.src = reader.result;
     };
 
-    // if file is selected
     if (file) {
         reader.readAsDataURL(file);
     } else {
-        preview.src = "";
+        preview.src = '';
     }
 }
 
-// scroll to the top of the page
 function ScrollToTop() {
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
 }
 
-// force input type='number' to be limited within given range
 function ForceInputNumberInRange(inputElement, minValue, maxValue) {
     if (inputElement.value < minValue) inputElement.value = minValue;
     if (inputElement.value > maxValue) inputElement.value = maxValue;
 }
 
-// convert float/double to two decimal point
 function ToTwoDecimalPoint(value) {
-    var valueString = value.toString();
-    valueString = valueString.replace(',', '');
+    var valueString = value.toString().replace(',', '');
     var result = Math.round(valueString * 100) / 100;
-    result = parseFloat(result).toFixed(2);
-    return result;
+    return parseFloat(result).toFixed(2);
 }
 
-// convert utc datetime to client local datetime
 Date.prototype.ToLocalDate = function () {
     var offset = new Date().getTimezoneOffset() * 60000;
     return new Date(this.getTime() - offset).toLocaleDateString();
-}
+};
 
 Date.prototype.ToLocalTime = function () {
     var offset = new Date().getTimezoneOffset() * 60000;
     var localDate = new Date(this.getTime() - offset);
-    return localDate.toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit', hour12: false })
-}
+    return localDate.toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit', hour12: false });
+};
 
 Date.prototype.ToLocalDateTime = function () {
     var offset = new Date().getTimezoneOffset() * 60000;
     var localDate = new Date(this.getTime() - offset);
     return localDate.toLocaleString();
+};
+
+function convertUtcElementsToLocalTime() {
+    convertElements('.convert-to-localtime', 'ToLocalTime');
+    convertElements('.convert-to-localdate', 'ToLocalDate');
+    convertElements('.convert-to-localdatetime', 'ToLocalDateTime');
 }
 
-// perform automatic conversion when element is decorated with class
-$(document).ready(function () {
-    $('.convert-to-localtime').each(function (i, obj) {
-        if (obj.nodeName == "INPUT") {
-            var utcDate = new Date(obj.value);
-            obj.value = utcDate.ToLocalTime();
-        }
-        else {
-            var utcDate = new Date(obj.innerText);
-            obj.innerText = utcDate.ToLocalTime();
+function convertElements(selector, converter) {
+    document.querySelectorAll(selector).forEach(function (element) {
+        var value = element.nodeName === 'INPUT' ? element.value : element.innerText;
+        var converted = new Date(value)[converter]();
+        if (element.nodeName === 'INPUT') {
+            element.value = converted;
+        } else {
+            element.innerText = converted;
         }
     });
+}
 
-    $('.convert-to-localdate').each(function (i, obj) {
-        if (obj.nodeName == "INPUT") {
-            var utcDate = new Date(obj.value);
-            obj.value = utcDate.ToLocalDate();
-        }
-        else {
-            var utcDate = new Date(obj.innerText);
-            obj.innerText = utcDate.ToLocalDate();
-        }
-    });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', convertUtcElementsToLocalTime, { once: true });
+} else {
+    convertUtcElementsToLocalTime();
+}
 
-    $('.convert-to-localdatetime').each(function (i, obj) {
-        if (obj.nodeName == "INPUT") {
-            var utcDate = new Date(obj.value);
-            obj.value = utcDate.ToLocalDateTime();
-        }
-        else {
-            var utcDate = new Date(obj.innerText);
-            obj.innerText = utcDate.ToLocalDateTime();
-        }
-    });
-});
+window.SubmitFormOnce = SubmitFormOnce;
+window.PreviewImageFile = PreviewImageFile;
+window.ScrollToTop = ScrollToTop;
+window.ForceInputNumberInRange = ForceInputNumberInRange;
+window.ToTwoDecimalPoint = ToTwoDecimalPoint;

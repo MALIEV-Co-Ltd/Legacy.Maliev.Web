@@ -2261,8 +2261,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up")]
-    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก")]
+    [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up", "Passwords do not match.")]
+    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
     public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(
         string culture,
         string firstNameLabel,
@@ -2270,7 +2270,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         string emailLabel,
         string passwordLabel,
         string confirmLabel,
-        string submitLabel)
+        string submitLabel,
+        string mismatchLabel)
     {
         using var response = await client.GetAsync($"/account/signup?culture={culture}");
         var source = await response.Content.ReadAsStringAsync();
@@ -2284,6 +2285,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"data-password-mismatch=\"{mismatchLabel}\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-password-primary", source, StringComparison.Ordinal);
+        Assert.Contains("data-password-confirm", source, StringComparison.Ordinal);
         Assert.Contains("formaction=\"/Account/Signup?handler=SignUp\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\" id=\"signup-recaptcha-response\"", source, StringComparison.Ordinal);
@@ -2332,13 +2336,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "New Password", "Retype Password", "Change Password")]
-    [InlineData("th", "รหัสผ่านใหม่", "ยืนยันรหัสผ่าน", "เปลี่ยนรหัสผ่าน")]
+    [InlineData("en", "New Password", "Retype Password", "Change Password", "Passwords do not match.")]
+    [InlineData("th", "รหัสผ่านใหม่", "ยืนยันรหัสผ่าน", "เปลี่ยนรหัสผ่าน", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
     public async Task ResetPassword_RendersLocalizedStaticSsrChallengeWithoutPasswordValues(
         string culture,
         string passwordLabel,
         string confirmLabel,
-        string submitLabel)
+        string submitLabel,
+        string mismatchLabel)
     {
         const string token = "abcdefghijklmnopqrstuvwxyz123456";
         using var response = await client.GetAsync(
@@ -2353,6 +2358,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"data-password-mismatch=\"{mismatchLabel}\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-password-primary", source, StringComparison.Ordinal);
+        Assert.Contains("data-password-confirm", source, StringComparison.Ordinal);
         Assert.Contains("formaction=\"/Account/ResetPassword?handler=ChangePassword\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
         Assert.Contains($"name=\"Token\" value=\"{token}\"", source, StringComparison.Ordinal);
@@ -2585,7 +2593,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"login-content\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
         Assert.DoesNotContain("do-not-echo", source, StringComparison.Ordinal);
     }
@@ -2650,7 +2660,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"forgot-password-content\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
     }
 
@@ -2695,8 +2707,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-val-required=\"Please enter your first name\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-valmsg-for=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.Contains("required", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"FirstName-error\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-val", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -2721,7 +2735,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
         Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
     }
@@ -2768,7 +2784,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("name=\"Files\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
         Assert.Contains("multiple", source, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"quotation-files-help\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
@@ -2794,7 +2810,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
         Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
     }
