@@ -571,6 +571,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task KnowledgeGuidelines_NdaActionTargetsLiveCanonicalRoute()
+    {
+        using var guidelines = await client.GetAsync("/knowledges/guidelines?culture=en");
+        var source = await guidelines.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, guidelines.StatusCode);
+        Assert.Contains("href=\"/legal/nondisclosureagreement\"", source, StringComparison.Ordinal);
+
+        using var nda = await client.GetAsync("/legal/nondisclosureagreement?culture=en");
+        Assert.Equal(HttpStatusCode.OK, nda.StatusCode);
+    }
+
     [Theory]
     [InlineData("en", "Legal information", "Privacy Policy")]
     [InlineData("th", "ข้อมูลทางกฎหมาย", "นโยบายความเป็นส่วนตัว")]
