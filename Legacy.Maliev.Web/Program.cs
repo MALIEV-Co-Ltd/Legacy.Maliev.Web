@@ -1,5 +1,6 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
+using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
@@ -140,6 +141,7 @@ app.UseOutputCache();
 app.MapDefaultEndpoints("web");
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
+app.MapRazorComponents<App>();
 app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();
