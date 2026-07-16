@@ -1,0 +1,176 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<CareerIndexContent> Localizer
+
+<main class="maliev-page maliev-page-main" data-migration-component="career-index-content" data-migration-renderer="blazor-static-ssr">
+    <div class="maliev-container workspace-content public-content">
+        @if (!Model.ServiceAvailable)
+        {
+            <div class="alert alert-warning" role="status">@Localizer["Job listings are temporarily unavailable. Please check back later."]</div>
+        }
+        <div class="row">
+            <div class="col-12">
+                <h1 class="fs-2">@Localizer["Job Offers"]</h1>
+                <p class="small">
+                    @Localizer["Here you will find our current job offers."]
+                    @Localizer["If you have any questions about the positions, please do not hesitate to contact our contact person directly."]
+                    @Localizer["We look forward to meet you. If you have not found a suitable position, you can apply for a initiative position."]
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <form id="get-careers" method="get" action="/career">
+                    <div class="small text-danger"></div>
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div class="input-group mb-2">
+                                <input type="text" placeholder="@Localizer["Search positions"]" name="search" value="@Model.Search" class="form-control form-control-sm" aria-label="@Localizer["Search positions"]" />
+                                <input type="submit" value="@Localizer["Search"]" class="btn btn-primary btn-sm" />
+                            </div>
+                        </div>
+
+                        <div class="col">
+                            <select class="form-select form-select-sm mb-3">
+                                <option hidden selected class="bg-light">@Localizer["Career level"]</option>
+                                @foreach (var level in Model.Levels)
+                                {
+                                    <option value="@level.Id">@level.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="table-wrapper">
+                            <table id="search-result" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="table-col-compact">@Localizer["Ref."]</th>
+                                        <th>@Localizer["Title"]</th>
+                                        <th>@Localizer["Location"]</th>
+                                        <th>@Localizer["Type"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.Offers.Count > 0)
+                                    {
+                                        @foreach (var offer in Model.Offers)
+                                        {
+                                            <tr>
+                                                <td data-title="@Localizer["Reference number"]" class="table-link-cell">
+                                                    <a href="/Career/View/@offer.Id">@offer.Id</a>
+                                                </td>
+                                                <td data-title="Title">@offer.Title</td>
+                                                <td data-title="Location">@offer.Location</td>
+                                                <td data-title="Level">@offer.LevelName</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="1000">@Localizer["No opening positions. Check back again later."]</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <nav>
+                            <ul class="pagination pagination-sm justify-content-start">
+                                <li class="page-item @(Model.PageSize <= 25 ? "active" : string.Empty)"><a class="page-link" href="/career?handler=ChangeItemCount&amp;size=25">25</a></li>
+                                <li class="page-item @(Model.PageSize <= 50 && Model.PageSize > 25 ? "active" : string.Empty)"><a class="page-link" href="/career?handler=ChangeItemCount&amp;size=50">50</a></li>
+                                <li class="page-item @(Model.PageSize <= 100 && Model.PageSize > 50 ? "active" : string.Empty)"><a class="page-link" href="/career?handler=ChangeItemCount&amp;size=100">100</a></li>
+                            </ul>
+                        </nav>
+                        <nav>
+                            <ul class="pagination pagination-sm justify-content-end">
+                                @if (Model.HasPreviousPage)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@PageUrl(1)">
+                                            <span aria-hidden="true">&laquo;</span>
+                                            <span class="sr-only">@Localizer["First"]</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="@PageUrl(Model.PageIndex - 1)">
+                                            <span aria-hidden="true">&lsaquo;</span>
+                                            <span class="sr-only">@Localizer["Previous"]</span>
+                                        </a>
+                                    </li>
+
+                                    var previousPageCount = 0;
+                                    for (var pageIndex = Math.Max(1, Model.PageIndex - 3); pageIndex < Model.PageIndex; pageIndex++)
+                                    {
+                                        <li class="page-item"><a class="page-link" href="@PageUrl(pageIndex)">@pageIndex</a></li>
+                                        previousPageCount++;
+                                        if (previousPageCount >= 3)
+                                        {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                @if (Model.HasPreviousPage || Model.HasNextPage)
+                                {
+                                    <li class="page-item disabled"><a class="page-link bg-light" href="#">@Model.PageIndex</a></li>
+                                }
+
+                                @if (Model.HasNextPage)
+                                {
+                                    var nextPageCount = 0;
+                                    for (var pageIndex = Model.PageIndex + 1; pageIndex < Model.TotalPages; pageIndex++)
+                                    {
+                                        <li class="page-item"><a class="page-link" href="@PageUrl(pageIndex)">@pageIndex</a></li>
+                                        nextPageCount++;
+                                        if (nextPageCount >= 3)
+                                        {
+                                            break;
+                                        }
+                                    }
+
+                                    <li class="page-item">
+                                        <a class="page-link" href="@PageUrl(Model.PageIndex + 1)">
+                                            <span aria-hidden="true">&rsaquo;</span>
+                                            <span class="sr-only">@Localizer["Next"]</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="@PageUrl(Model.TotalPages)">
+                                            <span aria-hidden="true">&raquo;</span>
+                                            <span class="sr-only">@Localizer["Last"]</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+@code {
+    [Parameter, EditorRequired]
+    public CareerIndexContentModel Model { get; set; } = null!;
+
+    private string PageUrl(int pageIndex)
+    {
+        var values = new List<string>
+        {
+            $"sort={Uri.EscapeDataString(Model.CurrentSort)}",
+            $"index={pageIndex}",
+            $"size={Model.PageSize}"
+        };
+
+        if (!string.IsNullOrEmpty(Model.Search))
+        {
+            values.Add($"search={Uri.EscapeDataString(Model.Search)}");
+        }
+
+        return $"/career?{string.Join('&', values)}";
+    }
+}
