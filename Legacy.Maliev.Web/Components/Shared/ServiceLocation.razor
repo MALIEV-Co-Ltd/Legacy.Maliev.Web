@@ -1,14 +1,11 @@
-@{
-    bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
-    Func<string, string, string> T = (en, th) => isThai ? th : en;
-}
+@using System.Globalization
 
-<section class="service-section service-section-soft" aria-labelledby="service-location-title">
+<section class="service-section service-section-soft" aria-labelledby="service-location-title" data-migration-component="service-location">
     <div class="service-container service-split">
         <div class="service-copy">
             <p class="service-eyebrow">@T("Verified workshop and contact", "สถานที่และช่องทางติดต่อที่ยืนยันแล้ว")</p>
             <h2 id="service-location-title">
-                @if (isThai)
+                @if (IsThai)
                 {
                     <text>บริการผลิตชิ้นงานจาก<span class="maliev-nowrap">ปากเกร็ด</span> นนทบุรี</text>
                 }
@@ -22,7 +19,7 @@
                 "MALIEV ให้บริการลูกค้าในกรุงเทพและนนทบุรี พร้อมประเมินโครงการจากทั่วประเทศไทย สามารถส่งไฟล์และรายละเอียดออนไลน์ โดยการจัดส่งและงานนอกสถานที่ขึ้นกับประเภทบริการและการประเมินโครงการ")</p>
             <address>
                 <strong>Maliev Co., Ltd.</strong><br />
-                @if (isThai)
+                @if (IsThai)
                 {
                     <text>36/1 หมู่ 3 ตำบลคลองข่อย อำเภอ<span class="maliev-nowrap">ปากเกร็ด</span> จังหวัดนนทบุรี 11120 ประเทศไทย</text>
                 }
@@ -39,8 +36,14 @@
             <div class="service-actions">
                 <a class="service-button service-button-primary" href="@Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps" target="_blank" rel="noopener">@T("Open Google Maps", "เปิด Google Maps")</a>
                 <a class="service-button service-button-secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener">@T("Chat on LINE OA", "ติดต่อผ่าน LINE OA")</a>
-                <a class="service-button service-button-secondary" asp-page="/Quotation/Index">@T("Send files for review", "ส่งไฟล์เพื่อประเมิน")</a>
+                <a class="service-button service-button-secondary" href="/quotation">@T("Send files for review", "ส่งไฟล์เพื่อประเมิน")</a>
             </div>
         </div>
     </div>
 </section>
+
+@code {
+    private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

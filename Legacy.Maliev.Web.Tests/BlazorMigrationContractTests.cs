@@ -75,4 +75,27 @@ public sealed class BlazorMigrationContractTests
 
         throw new DirectoryNotFoundException("Could not locate the Legacy.Maliev.Web repository root.");
     }
+
+    [Theory]
+    [InlineData("Custom-Manufacturing.cshtml", "Custom Manufacturing")]
+    [InlineData("CNC-Machining.cshtml", "CNC Machining")]
+    [InlineData("3D-Printing.cshtml", "3D Printing")]
+    [InlineData("3D-Scanning.cshtml", "3D Scanning")]
+    public void ServiceDetailRoute_UsesStaticSharedBlazorComponents(string pageName, string serviceKey)
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Pages",
+            "Services",
+            pageName));
+
+        Assert.Contains("type=\"typeof(ServiceBreadcrumb)\"", page, StringComparison.Ordinal);
+        Assert.Contains($"param-ServiceKey='\"{serviceKey}\"'", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ServiceLocation)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("_SchemaBreadcrumb", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ServiceLocationPartial", page, StringComparison.Ordinal);
+    }
 }
