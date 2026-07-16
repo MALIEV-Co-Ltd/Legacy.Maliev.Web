@@ -21,7 +21,7 @@
     <partial name="_FontPartial" />
     @RenderSection("Head", required: false)
 </head>
-<body style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+<body>
     <a class="maliev-skip-link" href="#member-main-content">@Localizer["Skip to main content"]</a>
     <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
