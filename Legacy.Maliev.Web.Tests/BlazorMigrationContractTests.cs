@@ -1285,9 +1285,10 @@ public sealed class BlazorMigrationContractTests
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "ErrorContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Error.th.resx")));
 
-        var loginPartial = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Shared", "_LoginPartial.cshtml"));
-        Assert.Contains("SuppressIdentityNavigation", loginPartial, StringComparison.Ordinal);
-        Assert.Contains("is not true", loginPartial, StringComparison.Ordinal);
+        var navigationComponent = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Layout", "PublicNavigation.razor"));
+        var navigationModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Layout", "PublicNavigationDisplayModel.cs"));
+        Assert.Contains("Model.SuppressIdentityNavigation", navigationComponent, StringComparison.Ordinal);
+        Assert.Contains("bool SuppressIdentityNavigation", navigationModel, StringComparison.Ordinal);
     }
 
     [Fact]

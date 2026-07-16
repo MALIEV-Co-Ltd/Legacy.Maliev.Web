@@ -1,0 +1,71 @@
+@inject IStringLocalizer<PublicNavigation> Localizer
+
+<header class="landing-header" data-migration-component="public-navigation" data-migration-renderer="blazor-static-ssr">
+    <nav class="landing-nav" aria-label="Primary navigation">
+        <a href="/" class="landing-brand" aria-label="MALIEV home">
+            <img src="/src/images/navbar_logo_black.png" width="120" height="34" alt="MALIEV" />
+        </a>
+        <button class="landing-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#NavigationBarTop" aria-controls="NavigationBarTop" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="fas fa-bars" aria-hidden="true"></span>
+        </button>
+        <div class="collapse landing-nav-content" id="NavigationBarTop">
+            <ul class="landing-nav-links">
+                <li><a href="/Quotation">@Localizer["Get a Quote"]</a></li>
+                <li><a href="/Services/CNC-Machining">@Localizer["CNC Machining"]</a></li>
+                <li><a href="/Services/3D-Printing">@Localizer["3D Printing"]</a></li>
+                <li><a href="/Services/3D-Scanning">@Localizer["3D Scanning"]</a></li>
+                <li><a href="https://shop.maliev.com/th" target="_blank" rel="noopener">@Localizer["Online Shop"]</a></li>
+            </ul>
+            <ul class="landing-nav-account">
+                @if (!Model.SuppressIdentityNavigation)
+                {
+                    @if (Model.IsAuthenticated)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link maliev-account-link" href="/Member">
+                                <i class="far fa-user" aria-hidden="true"></i>
+                                <span>@(Model.DisplayName ?? Localizer["Account"].Value)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <form method="post" action="/Account/Logout">
+                                <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryToken" />
+                                <button type="submit" class="nav-link btn btn-link maliev-account-link">
+                                    <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                                    <span>@Localizer["Logout"]</span>
+                                </button>
+                            </form>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link maliev-account-link" href="/Account/Login">
+                                <i class="far fa-user" aria-hidden="true"></i>
+                                <span>@Localizer["Login"]</span>
+                            </a>
+                        </li>
+                    }
+                }
+                <li class="landing-language">
+                    <form class="maliev-language-form" method="post" role="form" action="@Model.LanguageAction">
+                        <i class="fas fa-globe" aria-hidden="true"></i>
+                        <label class="visually-hidden" for="maliev-navbar-language">Select language</label>
+                        <select id="maliev-navbar-language" class="form-select form-select-sm maliev-language-select" name="culture" onchange="this.form.submit()">
+                            @foreach (var culture in Model.Cultures)
+                            {
+                                <option value="@culture.Name" selected="@culture.IsSelected">@culture.Label</option>
+                            }
+                        </select>
+                        <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryToken" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public PublicNavigationDisplayModel Model { get; set; } = default!;
+}
