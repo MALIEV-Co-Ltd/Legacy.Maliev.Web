@@ -866,6 +866,36 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Account access", "Access denied", "You are not authorized to see this content", "Back to the home page", "Contact support")]
+    [InlineData("th", "การเข้าถึงบัญชี", "ไม่สามารถเข้าถึงได้", "คุณไม่สามารถเข้าถึงส่วนนี้ได้", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    public async Task AccessDenied_RendersLocalizedStaticSsrWithoutSessionState(
+        string culture,
+        string eyebrow,
+        string heading,
+        string description,
+        string homeLabel,
+        string supportLabel)
+    {
+        using var response = await client.GetAsync($"/account/accessdenied?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"access-denied-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{homeLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{supportLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("<meta name=\"robots\" content=\"noindex, nofollow\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up")]
     [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก")]
     public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(

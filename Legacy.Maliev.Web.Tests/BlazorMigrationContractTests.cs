@@ -530,4 +530,30 @@ public sealed class BlazorMigrationContractTests
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "AccountIndexContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "Index.th.resx")));
     }
+
+    [Fact]
+    public void AccessDeniedRoute_UsesLocalizedDisplayOnlyStaticSsr()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "AccessDenied.cshtml"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "AccessDeniedContent.razor");
+
+        Assert.Contains("type=\"typeof(AccessDeniedContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("ViewData[\"Robots\"] = \"noindex, nofollow\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("User.", page, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<AccessDeniedContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"access-denied-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"/\"", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("Token", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "AccessDeniedContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "AccessDenied.th.resx")));
+    }
 }
