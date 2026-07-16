@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "node build-assets.mjs",
-    "ci": "node install-assets.mjs && npm run build"
+    "ci": "node install-assets.mjs && npm run build && npm run test:browser-module",
+    "test:browser-module": "node --test tests/instant-quotation-controller.test.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "6.7.2",

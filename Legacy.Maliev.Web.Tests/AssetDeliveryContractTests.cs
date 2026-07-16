@@ -89,6 +89,36 @@ public sealed class AssetDeliveryContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void InstantQuotationAssets_AreBundledAndKeepPricingOnServerEndpoints()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var appEntry = File.ReadAllText(Path.Combine(web, "assets", "app-entry.js"));
+        var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "site-entry.css"));
+        var browserModule = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "instant-quotation.js"));
+        var controllerModule = File.ReadAllText(Path.Combine(
+            web,
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            "instant-quotation-controller.mjs"));
+        var module = string.Join('\n', browserModule, controllerModule);
+
+        Assert.Contains("instant-quotation.js", appEntry, StringComparison.Ordinal);
+        Assert.Contains("instant-quotation.css", styleEntry, StringComparison.Ordinal);
+        Assert.Contains("[data-instant-estimate]", module, StringComparison.Ordinal);
+        Assert.Contains("handler: 'GetEstimate'", module, StringComparison.Ordinal);
+        Assert.Contains("handler: 'GetOrderTotal'", module, StringComparison.Ordinal);
+        Assert.Contains("window.fetch.bind(window)", module, StringComparison.Ordinal);
+        Assert.Contains("fetchImpl(", module, StringComparison.Ordinal);
+        Assert.Contains("AbortController", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("$(", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("jquery", module, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("unitPrice =", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("vat =", module, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
