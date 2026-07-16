@@ -138,6 +138,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseOutputCache();
 app.MapDefaultEndpoints("web");
+app.MapLegacySitemap();
 app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();

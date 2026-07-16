@@ -1567,11 +1567,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
         Assert.Equal(22, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
         Assert.DoesNotContain("/account", xml, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<!DOCTYPE html>", xml, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
