@@ -218,4 +218,49 @@ public sealed class BlazorMigrationContractTests
             "Career",
             "Index.th.resx")));
     }
+
+    [Fact]
+    public void CareerDetailRoute_UsesDisplayOnlyStaticSsrComponentAndMinimalPrintBridge()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Career", "View.cshtml"));
+        var componentPath = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Career",
+            "CareerDetailContent.razor");
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+
+        Assert.Contains("type=\"typeof(CareerDetailContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("function PrintJobDescription()", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"job-description\"", page, StringComparison.Ordinal);
+
+        Assert.Contains("data-migration-component=\"career-detail-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<CareerDetailContent>", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICareerClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("MarkupString", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Career",
+            "CareerDetailContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Pages",
+            "Career",
+            "View.th.resx")));
+    }
 }
