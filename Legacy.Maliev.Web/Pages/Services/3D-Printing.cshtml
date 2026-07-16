@@ -18,7 +18,6 @@
 
 @section Head {
     <link rel="preload" as="image" href="~/src/images/services/printing/printing-hero.webp" />
-    <link rel="stylesheet" href="~/src/app/css/service-pages.css" asp-append-version="true" />
 }
 
 <main class="service-page">
@@ -129,4 +128,3 @@
 </main>
 
 @section Schema { <partial name="_SchemaService" model='"3D Printing"' /><script type="application/ld+json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(faqSchema))</script> }
-@section Scripts { <script src="~/src/app/js/material-comparison.js" defer></script> }

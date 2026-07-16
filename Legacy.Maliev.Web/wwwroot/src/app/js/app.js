@@ -1,6 +1,8 @@
 ﻿$(window).ready(function () {
     // enable bootstrap tooltip everywhere
-    $('[data-bs-toggle="tooltip"]').tooltip();
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+        window.bootstrap.Tooltip.getOrCreateInstance(element);
+    });
 
     document.querySelectorAll('[data-terms-gated-form]').forEach(function (form) {
         var termsCheckbox = form.querySelector('[data-terms-checkbox]');

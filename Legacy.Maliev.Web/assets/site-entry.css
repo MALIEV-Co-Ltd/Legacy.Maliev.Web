@@ -1,0 +1,16 @@
+@import 'bootstrap/dist/css/bootstrap.css';
+@import 'animate.css/animate.css';
+@import '@fortawesome/fontawesome-free/css/all.css';
+@import '../wwwroot/src/app/css/app.css';
+@import '../wwwroot/src/app/css/typography.css';
+@import '../wwwroot/src/app/css/table.css';
+@import '../wwwroot/src/app/css/sidebar.css';
+@import '../wwwroot/src/app/css/stepper.css';
+@import '../wwwroot/src/app/css/loader.css';
+@import '../wwwroot/src/app/css/toc.css';
+@import '../wwwroot/src/app/css/timeline.css';
+@import '../wwwroot/src/app/css/sprite.css';
+@import '../wwwroot/src/app/css/application-shell.css';
+@import '../wwwroot/src/app/css/inquiry-pages.css';
+@import '../wwwroot/src/app/css/landing.css';
+@import '../wwwroot/src/app/css/service-pages.css';
