@@ -339,6 +339,22 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("GTM-5VBH5LK", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task HomePage_ContentSecurityPolicyAllowsOnlyRequiredMeasurementHosts()
+    {
+        using var response = await client.GetAsync("/");
+        var policy = Assert.Single(response.Headers.GetValues("Content-Security-Policy"));
+
+        Assert.Contains("script-src", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.googletagmanager.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.google.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.gstatic.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://connect.facebook.net", policy, StringComparison.Ordinal);
+        Assert.Contains("frame-src", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("script-src *", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("frame-src *", policy, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("en")]
     [InlineData("th")]

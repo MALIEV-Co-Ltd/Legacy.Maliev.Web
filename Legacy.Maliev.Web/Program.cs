@@ -1,5 +1,6 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
+using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Localization;
@@ -121,6 +122,7 @@ else
 
 var app = builder.Build();
 app.UseStandardMiddleware();
+app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
 app.UseExceptionHandler("/Error");
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseResponseCompression();
