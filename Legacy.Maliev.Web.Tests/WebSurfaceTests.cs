@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
@@ -324,9 +325,109 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("google-site-verification", source, StringComparison.Ordinal);
         Assert.Contains("data-consent-action=\"accept\"", source, StringComparison.Ordinal);
         Assert.Contains("data-consent-action=\"reject\"", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics", source, StringComparison.Ordinal);
+        Assert.Contains("pendingEvents", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.setConsent(state)", source, StringComparison.Ordinal);
+        Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
+        Assert.Contains("line_click", source, StringComparison.Ordinal);
+        Assert.Contains("messenger_click", source, StringComparison.Ordinal);
+        Assert.Contains("whatsapp_click", source, StringComparison.Ordinal);
+        Assert.Contains("phone_click", source, StringComparison.Ordinal);
+        Assert.Contains("email_click", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("event: 'maliev_contact_click'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("analytics.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("UA-133315708-1", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GTM-5VBH5LK", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HomePage_ContentSecurityPolicyAllowsOnlyRequiredMeasurementHosts()
+    {
+        using var response = await client.GetAsync("/");
+        var policy = Assert.Single(response.Headers.GetValues("Content-Security-Policy"));
+
+        Assert.Contains("script-src", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.googletagmanager.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.google.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.gstatic.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://connect.facebook.net", policy, StringComparison.Ordinal);
+        Assert.Contains("https://tagmanager.google.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://googleads.g.doubleclick.net", policy, StringComparison.Ordinal);
+        Assert.Contains("https://*.google-analytics.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://*.analytics.google.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://*.googletagmanager.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://*.g.doubleclick.net", policy, StringComparison.Ordinal);
+        Assert.Contains("frame-src", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("script-src *", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("frame-src *", policy, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task QuotationLocales_RenderTheSameControlledUploadEventContract(string culture)
+    {
+        var source = await client.GetStringAsync(
+            $"/quotation?culture={culture}&item=cnc-machining");
+
+        Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"cnc_machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("event: 'file_upload_start'", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.emit", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ContactLocales_PersistTheSameCanonicalRequestQuotePayload()
+    {
+        using var english = await SubmitPersistedContactAsync("en");
+        using var thai = await SubmitPersistedContactAsync("th");
+
+        Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
+        Assert.Equal("request_quote", english.RootElement.GetProperty("event").GetString());
+        Assert.Equal("contact_request", english.RootElement.GetProperty("intent_type").GetString());
+        Assert.Equal("general_contact", english.RootElement.GetProperty("service").GetString());
+        Assert.Equal("persisted", english.RootElement.GetProperty("submission_status").GetString());
+    }
+
+    [Fact]
+    public async Task QuotationLocales_PersistTheSameCanonicalRequestQuotePayload()
+    {
+        using var english = await SubmitPersistedQuotationAsync("en");
+        using var thai = await SubmitPersistedQuotationAsync("th");
+
+        Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
+        Assert.Equal("request_quote", english.RootElement.GetProperty("event").GetString());
+        Assert.Equal("quotation_request", english.RootElement.GetProperty("intent_type").GetString());
+        Assert.Equal("cnc_machining", english.RootElement.GetProperty("service").GetString());
+        Assert.Equal("persisted", english.RootElement.GetProperty("submission_status").GetString());
+    }
+
+    [Fact]
+    public async Task PersistedContactEvent_IsHeldBehindConsentGateWithoutPii()
+    {
+        var form = await GetAntiforgeryFormAsync("/contact");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "private@example.com";
+        form["Country"] = "Thailand";
+        form["Message"] = "Private project details";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var post = await client.PostAsync(
+            "/contact?handler=SubmitRequest",
+            new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        using var landing = await client.GetAsync(post.Headers.Location);
+        var source = landing.StatusCode == HttpStatusCode.MovedPermanently
+            ? await client.GetStringAsync(landing.Headers.Location)
+            : await landing.Content.ReadAsStringAsync();
+        Assert.Contains("window.malievAnalytics.emit({\"event\":\"request_quote\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"request_quote\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("private@example.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Private project details", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -641,6 +742,64 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         {
             ["__RequestVerificationToken"] = WebUtility.HtmlDecode(match.Groups[1].Value),
         };
+    }
+
+    private async Task<JsonDocument> SubmitPersistedContactAsync(string culture)
+    {
+        var form = await GetAntiforgeryFormAsync($"/contact?culture={culture}");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "locale-test@example.com";
+        form["Country"] = "Thailand";
+        form["Message"] = "Localized contract test";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var post = await client.PostAsync(
+            $"/contact?handler=SubmitRequest&culture={culture}",
+            new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        using var landing = await client.GetAsync(post.Headers.Location);
+        var source = landing.StatusCode == HttpStatusCode.MovedPermanently
+            ? await client.GetStringAsync(landing.Headers.Location)
+            : await landing.Content.ReadAsStringAsync();
+        var payload = Regex.Match(
+            source,
+            @"window\.malievAnalytics\.emit\((\{[^;]+\})\);",
+            RegexOptions.CultureInvariant);
+        Assert.True(payload.Success, $"The {culture} persisted response must render a canonical analytics payload.");
+        return JsonDocument.Parse(payload.Groups[1].Value);
+    }
+
+    private async Task<JsonDocument> SubmitPersistedQuotationAsync(string culture)
+    {
+        var form = await GetAntiforgeryFormAsync($"/quotation?culture={culture}&item=cnc-machining");
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form["__RequestVerificationToken"]), "__RequestVerificationToken");
+        content.Add(new StringContent(Guid.Parse("11111111-2222-3333-4444-555555555555").ToString()), "SubmissionId");
+        content.Add(new StringContent("cnc_machining"), "ServiceContext");
+        content.Add(new StringContent("Mali"), "FirstName");
+        content.Add(new StringContent("Ev"), "LastName");
+        content.Add(new StringContent("locale-quote@example.com"), "Email");
+        content.Add(new StringContent("Thailand"), "Country");
+        content.Add(new StringContent("Localized quotation contract test"), "Message");
+        content.Add(new StringContent("browser-token"), "g-recaptcha-response");
+
+        using var post = await client.PostAsync(
+            $"/quotation?handler=SubmitRequest&culture={culture}",
+            content);
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        using var landing = await client.GetAsync(post.Headers.Location);
+        var source = landing.StatusCode == HttpStatusCode.MovedPermanently
+            ? await client.GetStringAsync(landing.Headers.Location)
+            : await landing.Content.ReadAsStringAsync();
+        var payload = Regex.Match(
+            source,
+            @"window\.malievAnalytics\.emit\((\{[^;]+\})\);",
+            RegexOptions.CultureInvariant);
+        Assert.True(payload.Success, $"The {culture} persisted quotation must render a canonical analytics payload.");
+        return JsonDocument.Parse(payload.Groups[1].Value);
     }
 
     private async Task SignInAsync()

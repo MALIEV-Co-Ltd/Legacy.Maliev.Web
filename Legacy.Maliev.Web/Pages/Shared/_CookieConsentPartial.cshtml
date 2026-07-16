@@ -46,6 +46,9 @@
                     ad_user_data: state,
                     ad_personalization: state
                 });
+                if (window.malievAnalytics && typeof window.malievAnalytics.setConsent === 'function') {
+                    window.malievAnalytics.setConsent(state);
+                }
             }
 
             button.addEventListener('click', function () {

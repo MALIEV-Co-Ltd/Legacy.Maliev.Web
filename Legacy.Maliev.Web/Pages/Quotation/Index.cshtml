@@ -28,6 +28,7 @@
                 <form method="post" enctype="multipart/form-data" asp-page-handler="SubmitRequest" id="quotation-form">
                     <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
                     <input asp-for="SubmissionId" type="hidden" />
+                    <input asp-for="ServiceContext" type="hidden" />
 
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -103,10 +104,34 @@
             (() => {
                 const form = document.getElementById('quotation-form');
                 const tokenInput = document.getElementById('quotation-recaptcha-response');
+                const filesInput = document.getElementById('Files');
+                const serviceInput = document.getElementById('ServiceContext');
+                let uploadStartEmitted = false;
                 if (!form || !tokenInput) return;
 
+                function emitUploadStart() {
+                    if (uploadStartEmitted || !filesInput || filesInput.files.length === 0) return false;
+                    if (!window.malievAnalytics || typeof window.malievAnalytics.emit !== 'function') return false;
+
+                    uploadStartEmitted = true;
+                    window.malievAnalytics.emit({
+                        event: 'file_upload_start',
+                        service: serviceInput ? serviceInput.value : 'custom_manufacturing',
+                        file_count: filesInput.files.length
+                    });
+                    return true;
+                }
+
                 form.addEventListener('submit', event => {
-                    if (tokenInput.value) return;
+                    if (tokenInput.value) {
+                        if (!emitUploadStart()) return;
+
+                        event.preventDefault();
+                        window.setTimeout(function () {
+                            form.submit();
+                        }, 150);
+                        return;
+                    }
                     event.preventDefault();
                     grecaptcha.enterprise.ready(async () => {
                         tokenInput.value = await grecaptcha.enterprise.execute('@Model.RecaptchaSiteKey', { action: 'submit' });
