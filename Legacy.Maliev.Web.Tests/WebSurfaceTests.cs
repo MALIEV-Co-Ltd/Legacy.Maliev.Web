@@ -169,6 +169,28 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("/authenticated-missing-route?culture=en", HttpStatusCode.NotFound)]
+    [InlineData("/error?code=500&culture=en", HttpStatusCode.InternalServerError)]
+    public async Task ErrorRoute_SuppressesIdentityDependentNavigationForAuthenticatedCustomers(
+        string route,
+        HttpStatusCode expectedStatus)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(expectedStatus, response.StatusCode);
+        Assert.Contains("data-migration-component=\"error-content\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer@example.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy_session_id", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("href=\"/Member", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task RetiredPaymentSuccessRoute_IsAuthenticatedAndDoesNotProcessPayment()
     {
