@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Legacy.Maliev.Web.Components.Pages.Account;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -29,6 +30,22 @@ public sealed class Login(IAccountSessionManager sessionManager) : PageModel
 
     [TempData]
     public string? Notification { get; set; }
+
+    public LoginFormDisplayModel DisplayModel => new(
+        Email,
+        RememberMe,
+        ReturnUrl,
+        Notification,
+        ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => entry.Key,
+                entry => (IReadOnlyList<string>)entry.Value!.Errors
+                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                        ? "The submitted value is invalid."
+                        : error.ErrorMessage)
+                    .ToArray(),
+                StringComparer.Ordinal));
 
     public IActionResult OnGet(string? email, string? returnUrl)
     {
