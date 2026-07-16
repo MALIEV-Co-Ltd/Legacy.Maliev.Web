@@ -69,7 +69,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/member/account/manage/profile")]
     [InlineData("/member/orders")]
     [InlineData("/member/orders/history")]
+    [InlineData("/member/orders/cnc-machining")]
+    [InlineData("/member/orders/3d-printing")]
+    [InlineData("/member/orders/3d-scanning")]
     [InlineData("/member/orders/view?itemID=7")]
+    [InlineData("/member/quotations/paymentsuccess")]
     public async Task MemberRoutes_RedirectAnonymousUsersToLocalLogin(string route)
     {
         using var anonymous = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
@@ -205,6 +209,25 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.Redirect, authenticated.StatusCode);
         Assert.Equal("/Member/Quotations", authenticated.Headers.Location?.OriginalString);
+        Assert.Equal(string.Empty, await authenticated.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData("/member/orders/cnc-machining?untrusted=discard", "/Quotation?item=CNC-Machining")]
+    [InlineData("/member/orders/3d-printing?untrusted=discard", "/Quotation?item=3D-Printing")]
+    [InlineData("/member/orders/3d-scanning?untrusted=discard", "/Quotation?item=3D-Scanning")]
+    [InlineData("/member/account/manage/createpassword?untrusted=discard", "/Member/Account/Manage/ChangePassword")]
+    public async Task AuthenticatedCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery(
+        string route,
+        string expectedLocation)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(expectedLocation, response.Headers.Location?.OriginalString);
+        Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
