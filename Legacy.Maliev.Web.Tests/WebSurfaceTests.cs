@@ -644,6 +644,33 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Made-to-order project intake", "Which path should your project start with?", "Which manufacturing process should I choose?")]
+    [InlineData("th", "เริ่มต้นงานผลิตตามแบบ", "โครงการของคุณควรเริ่มจากทางใด?", "ควรเลือกกระบวนการผลิตแบบใด?")]
+    public async Task CustomManufacturingRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string processHeading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/custom-manufacturing?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"custom-manufacturing-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(processHeading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=custom-manufacturing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]
