@@ -340,10 +340,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{historyLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{cncLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
