@@ -87,6 +87,35 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task ErrorRoute_PreservesStatusWithoutExposingRequestContext()
+    {
+        using var response = await client.GetAsync("/error?code=404&culture=en");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("Page not found", content, StringComparison.Ordinal);
+        Assert.Contains("noindex", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("customer@example.com", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("REFERRER", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RetiredPaymentSuccessRoute_IsAuthenticatedAndDoesNotProcessPayment()
+    {
+        using var anonymous = await client.GetAsync(
+            "/member/quotations/paymentsuccess?paymentId=untrusted&invoice=untrusted");
+        Assert.Equal(HttpStatusCode.Redirect, anonymous.StatusCode);
+        Assert.Equal("/Account/Login", anonymous.Headers.Location?.AbsolutePath);
+
+        await SignInAsync();
+        using var authenticated = await client.GetAsync(
+            "/member/quotations/paymentsuccess?paymentId=untrusted&invoice=untrusted");
+
+        Assert.Equal(HttpStatusCode.Redirect, authenticated.StatusCode);
+        Assert.Equal("/Member/Quotations", authenticated.Headers.Location?.OriginalString);
+    }
+
+    [Fact]
     public async Task SignedInMember_AddressAndOrderRoutesPreserveSecureBffContract()
     {
         await SignInAsync();
