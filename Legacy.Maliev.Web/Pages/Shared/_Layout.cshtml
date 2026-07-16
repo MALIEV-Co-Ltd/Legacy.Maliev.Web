@@ -19,7 +19,7 @@
 
     <title>@ViewData["Title"]</title>
 
-    <partial name="_FacebookOpenGraphPartial" />
+    <component type="typeof(PublicOpenGraphMetadata)" render-mode="Static" param-Model="@(PublicOpenGraphMetadataDisplayModel.Create(Context, ViewData["Title"], ViewData["Description"], ViewData["Image"]))" />
     <partial name="_FaviconsPartial" />
     <partial name="_GoogleTagManagerPartial" />
     <component type="typeof(PublicDocumentLinks)" render-mode="Static" param-Model="@(PublicDocumentLinksDisplayModel.Create(Context))" />
