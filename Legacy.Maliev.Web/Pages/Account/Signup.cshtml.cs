@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Account;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -53,6 +54,21 @@ public sealed class Signup(
 
     [TempData]
     public string? Notification { get; set; }
+
+    public SignupFormDisplayModel DisplayModel => new(
+        FirstName,
+        LastName,
+        Email,
+        ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => entry.Key,
+                entry => (IReadOnlyList<string>)entry.Value!.Errors
+                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                        ? "The submitted value is invalid."
+                        : error.ErrorMessage)
+                    .ToArray(),
+                StringComparer.Ordinal));
 
     public IActionResult OnGet() => User.Identity?.IsAuthenticated == true
         ? RedirectToPage("/Account/Index")

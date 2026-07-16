@@ -444,4 +444,37 @@ public sealed class BlazorMigrationContractTests
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "ResetPasswordContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "ResetPassword.th.resx")));
     }
+
+    [Fact]
+    public void SignupRoute_UsesStaticSsrComponentInsideTheServerRegistrationBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "Signup.cshtml"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "SignupContent.razor");
+
+        Assert.Contains("<form id=\"customer-signup\" method=\"post\" class=\"maliev-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(SignupContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("document.getElementById('signup-recaptcha-response').value = token", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<SignupContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"signup-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerProfileClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAntiBotVerifier", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "SignupFormDisplayModel.cs"));
+        Assert.DoesNotContain("string Password", displayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("string ConfirmPassword", displayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecaptchaToken", displayModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "SignupContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "Signup.th.resx")));
+    }
 }
