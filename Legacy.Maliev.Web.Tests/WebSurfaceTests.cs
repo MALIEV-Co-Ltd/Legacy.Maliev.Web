@@ -1057,6 +1057,37 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Email address", "Email change confirmation", "The email-change link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "อีเมล", "ยืนยันการเปลี่ยนอีเมล", "ลิงก์เปลี่ยนอีเมลไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    public async Task ChangeEmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
+        string culture,
+        string eyebrow,
+        string heading,
+        string errorMessage,
+        string backLabel)
+    {
+        const string email = "customer@example.com";
+        const string token = "invalid-token";
+        using var response = await client.GetAsync(
+            $"/account/changeemailconfirmation?email={WebUtility.UrlEncode(email)}&token={token}&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"change-email-confirmation-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{errorMessage}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/Login\"", source, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain(email, decodedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(token, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("en", "Email confirmation", "We could not confirm your email", "Request a new confirmation email or contact support.", "The confirmation link is invalid or expired.", "Back to sign in")]
     [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "ขออีเมลยืนยันใหม่หรือติดต่อฝ่ายช่วยเหลือ", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
     public async Task EmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
