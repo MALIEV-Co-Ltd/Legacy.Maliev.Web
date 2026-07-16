@@ -270,6 +270,51 @@ public sealed class BlazorMigrationContractTests
     }
 
     [Fact]
+    public void MemberLandingRoute_UsesLocalizedDisplayOnlyStaticSsrComponent()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Index.cshtml"));
+        var component = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOverviewContent.razor"));
+
+        Assert.Contains("type=\"typeof(MemberOverviewContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<MemberOverviewContent>", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace-content", page, StringComparison.Ordinal);
+
+        Assert.Contains("data-migration-component=\"member-overview-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<MemberOverviewContent>", component, StringComparison.Ordinal);
+        Assert.Contains("MemberOverviewDisplayModel", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomer", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOverviewContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Areas",
+            "Member",
+            "Pages",
+            "Index.th.resx")));
+    }
+
+    [Fact]
     public void CareerDetailRoute_UsesDisplayOnlyStaticSsrComponentAndMinimalPrintBridge()
     {
         var root = FindRepositoryRoot();

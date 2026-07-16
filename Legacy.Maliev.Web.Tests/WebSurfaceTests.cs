@@ -40,6 +40,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICustomerProfileClient>();
                     services.RemoveAll<ICustomerAccountClient>();
                     services.RemoveAll<ICustomerOrderClient>();
+                    services.RemoveAll<ICustomerQuotationClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -51,6 +52,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
                     services.AddSingleton<ICustomerAccountClient, StubCustomerAccountClient>();
                     services.AddSingleton<ICustomerOrderClient, StubCustomerOrderClient>();
+                    services.AddSingleton<ICustomerQuotationClient, StubCustomerQuotationClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
@@ -62,6 +64,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("/member")]
     [InlineData("/member/account/manage/address")]
     [InlineData("/member/account/manage/changeemail")]
     [InlineData("/member/account/manage/changepassword")]
@@ -252,6 +255,33 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", address, StringComparison.Ordinal);
         Assert.DoesNotContain("service-token", address, StringComparison.Ordinal);
         Assert.Contains("Start or review an order", orders, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Welcome, Ada", "Recent orders", "Recent quotations")]
+    [InlineData("th", "ยินดีต้อนรับ Ada", "คำสั่งซื้อล่าสุด", "ใบเสนอราคาล่าสุด")]
+    public async Task MemberLanding_RendersLocalizedDisplayOnlyStaticSsrWithoutSecrets(
+        string culture,
+        string heading,
+        string ordersHeading,
+        string quotationsHeading)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-overview-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{ordersHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{quotationsHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -2051,5 +2081,46 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                 true,
                 customerId == 42,
                 false));
+    }
+
+    private sealed class StubCustomerQuotationClient : ICustomerQuotationClient
+    {
+        private static readonly CustomerQuotation Quotation = new(
+            15,
+            42,
+            null,
+            30,
+            new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
+            100,
+            7,
+            107,
+            null,
+            null,
+            764,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc));
+
+        public Task<CustomerQuotationListResult> ListAsync(
+            int customerId,
+            string? sort,
+            string? search,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerQuotationListResult(
+                customerId == 42 ? new CustomerQuotationPage([Quotation], pageIndex, 1, 1) : null,
+                true,
+                customerId == 42));
+
+        public Task<CustomerQuotationDetailsResult> GetAsync(
+            int customerId,
+            int quotationId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerQuotationDetailsResult(null, true, customerId == 42));
     }
 }
