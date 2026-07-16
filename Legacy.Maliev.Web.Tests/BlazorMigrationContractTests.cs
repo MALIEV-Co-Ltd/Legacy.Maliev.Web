@@ -175,4 +175,47 @@ public sealed class BlazorMigrationContractTests
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Index.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Index.th.resx")));
     }
+
+    [Fact]
+    public void CareerListingRoute_UsesDisplayOnlyStaticSsrComponent()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Career", "Index.cshtml"));
+        var componentPath = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Career",
+            "CareerIndexContent.razor");
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+
+        Assert.Contains("type=\"typeof(CareerIndexContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"get-careers\"", page, StringComparison.Ordinal);
+
+        Assert.Contains("data-migration-component=\"career-index-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<CareerIndexContent>", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICareerClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Career",
+            "CareerIndexContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Pages",
+            "Career",
+            "Index.th.resx")));
+    }
 }

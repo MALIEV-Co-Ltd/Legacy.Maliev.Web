@@ -952,6 +952,31 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("<script>alert(1)</script>", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", "Job Offers", "Manufacturing Engineer", "Engineer")]
+    [InlineData("th", "ตำแหน่งงาน", "Manufacturing Engineer", "Engineer")]
+    public async Task CareerListing_RendersLocalizedServiceBackedStaticSsrContent(
+        string culture,
+        string heading,
+        string offerTitle,
+        string levelName)
+    {
+        using var response = await client.GetAsync($"/career?culture={culture}&sort=JobCreatedDate_Descending&index=1&size=25");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"career-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{offerTitle}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{levelName}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Career/View/1\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/career?sort=JobCreatedDate_Descending&amp;index=2&amp;size=25\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class StubCareerClient : ICareerClient
     {
         private static readonly CareerLevel Level = new(1, "Engineer", null, null, null);
@@ -979,7 +1004,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             Task.FromResult(
                 new CareerListing(
                     [Level],
-                    new CareerOfferPage([Offer], pageIndex, 1, 1, false, false),
+                    new CareerOfferPage([Offer], pageIndex, 3, 3, pageIndex > 1, pageIndex < 3),
                     true));
 
         public Task<ServiceResponse<CareerOffer>> GetOfferAsync(
