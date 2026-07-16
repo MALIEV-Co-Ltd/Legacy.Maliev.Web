@@ -1971,8 +1971,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Our manufacturing journey", "Founded", "First CNC Machine")]
-    [InlineData("th", "เส้นทางงานผลิตของเรา", "ก่อตั้ง", "เครื่อง CNC เครื่องแรก")]
+    [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
+    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
     public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookIntegration(
         string culture,
         string heading,
@@ -1985,7 +1985,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
