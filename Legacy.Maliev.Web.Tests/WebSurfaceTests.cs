@@ -87,6 +87,61 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task MissingRoute_ReExecutesErrorPageWithoutExposingRequestContext()
+    {
+        using var response = await client.GetAsync("/definitely-not-a-maliev-route?culture=en");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("<p class=\"maliev-eyebrow\">404</p>", content, StringComparison.Ordinal);
+        Assert.Contains("noindex", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("customer@example.com", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("REFERRER", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UnhandledPageException_RendersGenericHtmlWithoutExceptionDetails()
+    {
+        using var throwingFactory = configuredFactory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICareerClient>();
+                services.AddSingleton<ICareerClient, ThrowingCareerClient>();
+            }));
+        using var throwingClient = throwingFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+
+        using var response = await throwingClient.GetAsync("/career?culture=en");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("Something did not work properly", content, StringComparison.Ordinal);
+        Assert.Contains("Request ID", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive exception detail", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\"statusCode\"", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RetiredPaymentSuccessRoute_IsAuthenticatedAndDoesNotProcessPayment()
+    {
+        using var anonymous = await client.GetAsync(
+            "/member/quotations/paymentsuccess?paymentId=untrusted&invoice=untrusted");
+        Assert.Equal(HttpStatusCode.Redirect, anonymous.StatusCode);
+        Assert.Equal("/Account/Login", anonymous.Headers.Location?.AbsolutePath);
+
+        await SignInAsync();
+        using var authenticated = await client.GetAsync(
+            "/member/quotations/paymentsuccess?paymentId=untrusted&invoice=untrusted");
+
+        Assert.Equal(HttpStatusCode.Redirect, authenticated.StatusCode);
+        Assert.Equal("/Member/Quotations", authenticated.Headers.Location?.OriginalString);
+    }
+
+    [Fact]
     public async Task SignedInMember_AddressAndOrderRoutesPreserveSecureBffContract()
     {
         await SignInAsync();
@@ -500,6 +555,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             int offerId,
             CancellationToken cancellationToken) =>
             Task.FromResult(new ServiceResponse<CareerOffer>(offerId == Offer.Id ? Offer : null, true));
+    }
+
+    private sealed class ThrowingCareerClient : ICareerClient
+    {
+        public Task<CareerListing> GetListingAsync(
+            CareerSort sort,
+            string? search,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken) =>
+            Task.FromException<CareerListing>(new InvalidOperationException("sensitive exception detail"));
+
+        public Task<ServiceResponse<CareerOffer>> GetOfferAsync(
+            int offerId,
+            CancellationToken cancellationToken) =>
+            Task.FromException<ServiceResponse<CareerOffer>>(
+                new InvalidOperationException("sensitive exception detail"));
     }
 
     private sealed class StubCountryClient : ICountryClient

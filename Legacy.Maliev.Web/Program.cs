@@ -121,6 +121,8 @@ else
 
 var app = builder.Build();
 app.UseStandardMiddleware();
+app.UseExceptionHandler("/Error");
+app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseCookiePolicy();
