@@ -258,13 +258,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Welcome, Ada", "Recent orders", "Recent quotations")]
-    [InlineData("th", "ยินดีต้อนรับ Ada", "คำสั่งซื้อล่าสุด", "ใบเสนอราคาล่าสุด")]
+    [InlineData("en", "Welcome, Ada", "Recent orders", "Recent quotations", "Order history")]
+    [InlineData("th", "ยินดีต้อนรับ Ada", "คำสั่งซื้อล่าสุด", "ใบเสนอราคาล่าสุด", "ประวัติการสั่งงาน")]
     public async Task MemberLanding_RendersLocalizedDisplayOnlyStaticSsrWithoutSecrets(
         string culture,
         string heading,
         string ordersHeading,
-        string quotationsHeading)
+        string quotationsHeading,
+        string orderHistoryLabel)
     {
         await SignInAsync();
 
@@ -277,6 +278,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{ordersHeading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{quotationsHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{orderHistoryLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
