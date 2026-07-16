@@ -1057,10 +1057,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Email address", "Email change confirmation", "The email-change link is invalid or expired.", "Back to sign in")]
-    [InlineData("th", "อีเมล", "ยืนยันการเปลี่ยนอีเมล", "ลิงก์เปลี่ยนอีเมลไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    [InlineData("en", "Change Email Confirmation | MALIEV", "Email address", "Email change confirmation", "The email-change link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "ยืนยันการเปลี่ยนอีเมล | MALIEV", "อีเมล", "ยืนยันการเปลี่ยนอีเมล", "ลิงก์เปลี่ยนอีเมลไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
     public async Task ChangeEmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
         string culture,
+        string pageTitle,
         string eyebrow,
         string heading,
         string errorMessage,
@@ -1074,6 +1075,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<title>{pageTitle}</title>", decodedSource, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"change-email-confirmation-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
