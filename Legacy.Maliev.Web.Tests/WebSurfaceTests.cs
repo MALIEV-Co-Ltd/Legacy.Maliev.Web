@@ -77,6 +77,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/member/orders/3d-printing")]
     [InlineData("/member/orders/3d-scanning")]
     [InlineData("/member/orders/view?itemID=7")]
+    [InlineData("/member/quotations")]
     [InlineData("/member/quotations/paymentsuccess")]
     public async Task MemberRoutes_RedirectAnonymousUsersToLocalLogin(string route)
     {
@@ -344,6 +345,43 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Quotation management", "Quotations", "Open", "Previous", "Next")]
+    [InlineData("th", "จัดการใบเสนอราคา", "ใบเสนอราคา", "ยังไม่ได้ตอบรับ", "ก่อนหน้า", "ถัดไป")]
+    public async Task MemberQuotationsIndex_RendersLocalizedStaticSsrWithQueryAndPaginationParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string status,
+        string previousLabel,
+        string nextLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(
+            $"/member/quotations?culture={culture}&index=2&size=10&sort=QuotationCreatedDate_Ascending&search=CNC");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-quotations-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{previousLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{nextLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\" value=\"QuotationCreatedDate_Ascending\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=1&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=3&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -2178,7 +2216,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             int pageSize,
             CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerQuotationListResult(
-                customerId == 42 ? new CustomerQuotationPage([Quotation], pageIndex, 1, 1) : null,
+                customerId == 42 ? new CustomerQuotationPage([Quotation], pageIndex, 3, 1) : null,
                 true,
                 customerId == 42));
 
