@@ -10,7 +10,6 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
 {
     private static readonly string[] SocialLinks =
     [
-        SocialNetworks.Facebook,
         SocialNetworks.Instagram,
         SocialNetworks.Line,
         SocialNetworks.YouTube,

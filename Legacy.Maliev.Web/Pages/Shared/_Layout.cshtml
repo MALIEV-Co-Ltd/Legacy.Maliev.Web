@@ -40,7 +40,6 @@
 </head>
 <body style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
-    <partial name="_FacebookSdkPartial" />
     <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />

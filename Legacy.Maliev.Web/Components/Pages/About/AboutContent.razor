@@ -1,5 +1,4 @@
 @inject IStringLocalizer<AboutContent> Localizer
-@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 
 <main class="maliev-page maliev-page-main" data-migration-renderer="blazor-static-ssr">
 <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["About MALIEV"]</p><h1>@Localizer["Our manufacturing journey"]</h1><p>@Localizer["How our CNC machining, 3D printing, and 3D scanning capabilities developed to support customer projects."]</p></div></header>
@@ -65,24 +64,5 @@
     <div class="text-center">
         <p class="fw-semibold">@Localizer["Our journey continues"]</p>
     </div>
-    <div class="container">
-        <div class="mb-3 text-center">
-            <div class="fb-like" data-href="@FacebookPageUrl" data-layout="button" data-action="like" data-size="small" data-show-faces="false" data-share="true"></div>
-        </div>
-    </div>
 </div>
 </main>
-
-
-@code {
-    private string FacebookPageUrl
-    {
-        get
-        {
-            var request = HttpContextAccessor.HttpContext?.Request;
-            return request is null
-                ? "https://www.maliev.com/about"
-                : $"https://{request.Host}{request.Path}";
-        }
-    }
-}
