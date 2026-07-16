@@ -823,6 +823,84 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("en", "New Password", "Retype Password", "Change Password")]
+    [InlineData("th", "รหัสผ่านใหม่", "ยืนยันรหัสผ่าน", "เปลี่ยนรหัสผ่าน")]
+    public async Task ResetPassword_RendersLocalizedStaticSsrChallengeWithoutPasswordValues(
+        string culture,
+        string passwordLabel,
+        string confirmLabel,
+        string submitLabel)
+    {
+        const string token = "abcdefghijklmnopqrstuvwxyz123456";
+        using var response = await client.GetAsync(
+            $"/account/resetpassword?culture={culture}&email=user%40example.com&token={token}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
+        Assert.Contains("data-migration-component=\"reset-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/ResetPassword?handler=ChangePassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
+        Assert.Contains($"name=\"Token\" value=\"{token}\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Password\" value=", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"ConfirmPassword\" value=", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResetPassword_MismatchedPostPreservesChallengeWithoutEchoingPasswords()
+    {
+        const string token = "abcdefghijklmnopqrstuvwxyz123456";
+        var form = await GetAntiforgeryFormAsync(
+            $"/account/resetpassword?culture=en&email=user%40example.com&token={token}");
+        form["Email"] = "user@example.com";
+        form["Token"] = token;
+        var submittedPassword = new string('x', 12);
+        var submittedConfirmation = new string('y', 12);
+        form["Password"] = submittedPassword;
+        form["ConfirmPassword"] = submittedConfirmation;
+
+        using var response = await client.PostAsync(
+            "/account/resetpassword?handler=ChangePassword&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"reset-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($"name=\"Token\" value=\"{token}\"", source, StringComparison.Ordinal);
+        Assert.Contains("Passwords do not match.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedPassword, source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedConfirmation, source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken()
+    {
+        const string token = "abcdefghijklmnopqrstuvwxyz123456";
+        var form = await GetAntiforgeryFormAsync(
+            $"/account/resetpassword?email=user%40example.com&token={token}");
+        form["Email"] = "user@example.com";
+        form["Token"] = token;
+        var submittedPassword = new string('z', 12);
+        form["Password"] = submittedPassword;
+        form["ConfirmPassword"] = submittedPassword;
+
+        using var response = await client.PostAsync(
+            "/account/resetpassword?handler=ChangePassword",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account/Login?email=user@example.com", response.Headers.Location?.OriginalString);
+        Assert.DoesNotContain(token, response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ChangeEmailConfirmation_ConsumesSingleUseChallengeAndReturnsToLogin()
     {

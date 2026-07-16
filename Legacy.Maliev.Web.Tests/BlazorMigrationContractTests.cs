@@ -363,7 +363,14 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("IStringLocalizer<LoginContent>", component, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"login-content\"", component, StringComparison.Ordinal);
         Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("Password", component.Split("@code", StringSplitOptions.None).Last(), StringComparison.Ordinal);
+        var loginDisplayModel = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Account",
+            "LoginFormDisplayModel.cs"));
+        Assert.DoesNotContain("string Password", loginDisplayModel, StringComparison.Ordinal);
         Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
 
         Assert.True(File.Exists(Path.Combine(
@@ -403,5 +410,38 @@ public sealed class BlazorMigrationContractTests
 
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "ForgotPasswordContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "ForgotPassword.th.resx")));
+    }
+
+    [Fact]
+    public void ResetPasswordRoute_UsesStaticSsrComponentInsideTheServerChallengeBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "ResetPassword.cshtml"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "ResetPasswordContent.razor");
+
+        Assert.Contains("<form method=\"post\" class=\"maliev-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ResetPasswordContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<ResetPasswordContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"reset-password-content\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        var resetDisplayModel = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Account",
+            "ResetPasswordFormDisplayModel.cs"));
+        Assert.DoesNotContain("string Password", resetDisplayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("string ConfirmPassword", resetDisplayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "ResetPasswordContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "ResetPassword.th.resx")));
     }
 }
