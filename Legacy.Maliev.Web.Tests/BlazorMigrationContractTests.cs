@@ -657,4 +657,41 @@ public sealed class BlazorMigrationContractTests
 
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "LogoutContent.th.resx")));
     }
+
+    [Fact]
+    public void ErrorRoute_ProjectsOnlySafeDiagnosticStateIntoStaticSsr()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Error.cshtml"));
+        var pageModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Error.cshtml.cs"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "ErrorContent.razor");
+
+        Assert.Contains("type=\"typeof(ErrorContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("Response.StatusCode = code.Value", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Activity.Current?.Id ?? HttpContext.TraceIdentifier", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.Headers.CacheControl = \"no-store\"", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.Headers[\"Referrer-Policy\"] = \"no-referrer\"", pageModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<ErrorContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"error-content\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpContext", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("Exception", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Referrer", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("User", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "ErrorDisplayModel.cs"));
+        Assert.Contains("bool IsNotFound", displayModel, StringComparison.Ordinal);
+        Assert.Contains("string? RequestId", displayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("Exception", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Referrer", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ClaimsPrincipal", displayModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "ErrorContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Error.th.resx")));
+    }
 }

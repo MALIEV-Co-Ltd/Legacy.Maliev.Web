@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Legacy.Maliev.Web.Components.Pages;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Pages;
@@ -11,8 +12,14 @@ public sealed class ErrorModel : PageModel
 
     public bool ShowRequestId => !string.IsNullOrWhiteSpace(RequestId);
 
+    public ErrorDisplayModel DisplayModel => new(
+        ErrorStatusCode == StatusCodes.Status404NotFound,
+        ShowRequestId ? RequestId : null);
+
     public void OnGet(int? code = null)
     {
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
         ErrorStatusCode = code;
         RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
 

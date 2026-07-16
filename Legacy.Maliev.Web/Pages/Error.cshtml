@@ -1,35 +1,10 @@
 @page
 @model Legacy.Maliev.Web.Pages.ErrorModel
+@using Legacy.Maliev.Web.Components.Pages
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<ErrorContent> ErrorLocalizer
 @{
-    ViewData["Title"] = Localizer["Error | MALIEV"];
+    ViewData["Title"] = ErrorLocalizer["Error | MALIEV"];
     ViewData["Robots"] = "noindex,nofollow";
 }
-<main class="maliev-page maliev-page-main">
-    <div class="maliev-container">
-        <section class="maliev-panel maliev-status" aria-labelledby="error-title">
-            @if (Model.ErrorStatusCode == StatusCodes.Status404NotFound)
-            {
-                <p class="maliev-eyebrow">404</p>
-                <h1 id="error-title">@Localizer["Page not found"]</h1>
-                <p>@Localizer["The page may have moved, or the address may be incorrect."]</p>
-            }
-            else
-            {
-                <p class="maliev-eyebrow">@Localizer["Application error"]</p>
-                <h1 id="error-title">@Localizer["Sorry. Something did not work properly."]</h1>
-                <p>@Localizer["Please try again. If the problem continues, contact support and include the request ID below."]</p>
-                @if (Model.ShowRequestId)
-                {
-                    <dl class="maliev-meta-list maliev-status__details">
-                        <dt>@Localizer["Request ID"]</dt>
-                        <dd><code>@Model.RequestId</code></dd>
-                    </dl>
-                }
-            }
-            <div class="maliev-actions">
-                <a asp-page="/Index" class="maliev-button">@Localizer["Back to the home page"]</a>
-                <a asp-page="/Contact/Index" class="maliev-button maliev-button--secondary">@Localizer["Contact support"]</a>
-            </div>
-        </section>
-    </div>
-</main>
+<component type="typeof(ErrorContent)" render-mode="Static" param-Model="Model.DisplayModel" />
