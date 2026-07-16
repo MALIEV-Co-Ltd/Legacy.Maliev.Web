@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true"><xsd:complexType><xsd:choice maxOccurs="unbounded">
+      <xsd:element name="data"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" /><xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" /><xsd:attribute ref="xml:space" /></xsd:complexType></xsd:element>
+      <xsd:element name="resheader"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" /></xsd:complexType></xsd:element>
+    </xsd:choice></xsd:complexType></xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Addresses | MALIEV" xml:space="preserve"><value>ที่อยู่ | MALIEV</value></data>
+  <data name="Customer account" xml:space="preserve"><value>บัญชีลูกค้า</value></data>
+  <data name="Addresses" xml:space="preserve"><value>ที่อยู่</value></data>
+  <data name="Keep billing and shipping details current before placing an order." xml:space="preserve"><value>ปรับปรุงที่อยู่ออกใบแจ้งหนี้และที่อยู่จัดส่งให้เป็นปัจจุบันก่อนสั่งซื้อ</value></data>
+  <data name="Billing address" xml:space="preserve"><value>ที่อยู่ออกใบแจ้งหนี้</value></data>
+  <data name="Shipping address" xml:space="preserve"><value>ที่อยู่จัดส่ง</value></data>
+  <data name="Building" xml:space="preserve"><value>อาคาร</value></data>
+  <data name="Address line 1" xml:space="preserve"><value>ที่อยู่บรรทัดที่ 1</value></data>
+  <data name="Address line 2" xml:space="preserve"><value>ที่อยู่บรรทัดที่ 2</value></data>
+  <data name="City" xml:space="preserve"><value>เขต/อำเภอ</value></data>
+  <data name="State or province" xml:space="preserve"><value>จังหวัด</value></data>
+  <data name="Postal code" xml:space="preserve"><value>รหัสไปรษณีย์</value></data>
+  <data name="Country" xml:space="preserve"><value>ประเทศ</value></data>
+  <data name="Select a country" xml:space="preserve"><value>เลือกประเทศ</value></data>
+  <data name="Save addresses" xml:space="preserve"><value>บันทึกที่อยู่</value></data>
+  <data name="Address successfully updated" xml:space="preserve"><value>อัปเดตที่อยู่เรียบร้อยแล้ว</value></data>
+  <data name="Address line 1 is required for the billing address." xml:space="preserve"><value>กรุณากรอกที่อยู่บรรทัดที่ 1 สำหรับที่อยู่ออกใบแจ้งหนี้</value></data>
+  <data name="Address line 1 is required for the shipping address." xml:space="preserve"><value>กรุณากรอกที่อยู่บรรทัดที่ 1 สำหรับที่อยู่จัดส่ง</value></data>
+  <data name="Country must be selected for the billing address." xml:space="preserve"><value>กรุณาเลือกประเทศสำหรับที่อยู่ออกใบแจ้งหนี้</value></data>
+  <data name="Country must be selected for the shipping address." xml:space="preserve"><value>กรุณาเลือกประเทศสำหรับที่อยู่จัดส่ง</value></data>
+  <data name="One or more address values are invalid." xml:space="preserve"><value>ข้อมูลที่อยู่อย่างน้อยหนึ่งรายการไม่ถูกต้อง</value></data>
+  <data name="Your address profile could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดข้อมูลที่อยู่ของคุณได้</value></data>
+  <data name="Address service is temporarily unavailable." xml:space="preserve"><value>ระบบที่อยู่ไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Country list is temporarily unavailable." xml:space="preserve"><value>รายการประเทศไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="The address could not be updated." xml:space="preserve"><value>ไม่สามารถอัปเดตที่อยู่ได้</value></data>
+</root>
