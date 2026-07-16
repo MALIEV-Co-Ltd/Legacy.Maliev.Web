@@ -73,6 +73,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/member/account/manage/profile")]
     [InlineData("/member/orders")]
     [InlineData("/member/orders/history")]
+    [InlineData("/member/quotations/view?id=15")]
     [InlineData("/member/orders/cnc-machining")]
     [InlineData("/member/orders/3d-printing")]
     [InlineData("/member/orders/3d-scanning")]
@@ -416,6 +417,83 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{expectedMessage}<", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("FormatException", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Input string was not in a correct format", decodedSource, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files")]
+    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา")]
+    public async Task MemberQuotationDetail_RendersLocalizedOwnedStaticSsr(
+        string culture,
+        string heading,
+        string status,
+        string itemsHeading,
+        string ordersHeading,
+        string filesHeading)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        using var response = await client.GetAsync($"/member/quotations/view?id=15&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-quotation-detail-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{itemsHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{ordersHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{filesHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("CNC bracket", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
+        Assert.Contains("drawing.pdf", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-private-quotations", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("customers/42/quotations/15", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<QuotationDetailInvocation>(quotationClient.LastDetailInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(15, invocation.QuotationId);
+    }
+
+    [Theory]
+    [InlineData("/member/quotations/view")]
+    [InlineData("/member/quotations/view?id=0")]
+    [InlineData("/member/quotations/view?id=-1")]
+    [InlineData("/member/quotations/view?id=999")]
+    public async Task MemberQuotationDetail_InvalidOrUnownedIdReturnsNotFound(string route)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "Quotation service is temporarily unavailable.")]
+    [InlineData("th", "ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberQuotationDetail_ServiceFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.DetailResultOverride = new CustomerQuotationDetailsResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/quotations/view?id=15&culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-private-quotations", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2241,7 +2319,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public QuotationListInvocation? LastInvocation { get; private set; }
 
-        public void ResetInvocation() => LastInvocation = null;
+        public QuotationDetailInvocation? LastDetailInvocation { get; private set; }
+
+        public CustomerQuotationDetailsResult? DetailResultOverride { get; set; }
+
+        public void ResetInvocation()
+        {
+            LastInvocation = null;
+            LastDetailInvocation = null;
+            DetailResultOverride = null;
+        }
 
         public Task<CustomerQuotationListResult> ListAsync(
             int customerId,
@@ -2261,8 +2348,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         public Task<CustomerQuotationDetailsResult> GetAsync(
             int customerId,
             int quotationId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerQuotationDetailsResult(null, true, customerId == 42));
+            CancellationToken cancellationToken)
+        {
+            LastDetailInvocation = new(customerId, quotationId);
+            if (DetailResultOverride is not null)
+            {
+                return Task.FromResult(DetailResultOverride);
+            }
+
+            var details = customerId == 42 && quotationId == Quotation.Id
+                ? new CustomerQuotationDetails(
+                    Quotation,
+                    [new CustomerQuotationLine(1, Quotation.Id, 7, "CNC bracket", 2, 50, 100, null, null)],
+                    [new CustomerQuotationOrder(1, Quotation.Id, 7, null, null)],
+                    [new CustomerQuotationFile(1, Quotation.Id, "legacy-private-quotations", "customers/42/quotations/15/drawing.pdf", null, null)])
+                : null;
+            return Task.FromResult(new CustomerQuotationDetailsResult(details, true, customerId == 42));
+        }
     }
 
     private sealed record QuotationListInvocation(
@@ -2271,4 +2373,6 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         string? Search,
         int PageIndex,
         int PageSize);
+
+    private sealed record QuotationDetailInvocation(int CustomerId, int QuotationId);
 }

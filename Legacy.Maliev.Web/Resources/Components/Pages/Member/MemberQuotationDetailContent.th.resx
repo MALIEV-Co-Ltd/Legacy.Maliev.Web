@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType><xsd:choice maxOccurs="unbounded">
+        <xsd:element name="data"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" /><xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" /><xsd:attribute ref="xml:space" /></xsd:complexType></xsd:element>
+        <xsd:element name="resheader"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" /></xsd:complexType></xsd:element>
+      </xsd:choice></xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Quotation details | MALIEV" xml:space="preserve"><value>รายละเอียดใบเสนอราคา | MALIEV</value></data>
+  <data name="Quotation management" xml:space="preserve"><value>จัดการใบเสนอราคา</value></data>
+  <data name="Quotation details" xml:space="preserve"><value>รายละเอียดใบเสนอราคา</value></data>
+  <data name="This page is read-only while the legacy payment workflow is being replaced." xml:space="preserve"><value>หน้านี้เป็นแบบอ่านอย่างเดียวระหว่างการเปลี่ยนระบบชำระเงินเดิม</value></data>
+  <data name="Accepted" xml:space="preserve"><value>ยอมรับ</value></data>
+  <data name="Declined" xml:space="preserve"><value>ปฏิเสธ</value></data>
+  <data name="Open" xml:space="preserve"><value>ยังไม่ได้ตอบรับ</value></data>
+  <data name="Quotation" xml:space="preserve"><value>ใบเสนอราคา</value></data>
+  <data name="Period" xml:space="preserve"><value>ระยะเวลา</value></data>
+  <data name="days" xml:space="preserve"><value>วัน</value></data>
+  <data name="Expiration date" xml:space="preserve"><value>วันหมดอายุ</value></data>
+  <data name="Subtotal" xml:space="preserve"><value>ยอดก่อนภาษี</value></data>
+  <data name="VAT" xml:space="preserve"><value>ภาษีมูลค่าเพิ่ม</value></data>
+  <data name="Total" xml:space="preserve"><value>ยอดรวม</value></data>
+  <data name="Withholding tax" xml:space="preserve"><value>ภาษีหัก ณ ที่จ่าย</value></data>
+  <data name="Quoted amount" xml:space="preserve"><value>ยอดเสนอราคา</value></data>
+  <data name="Currency ID" xml:space="preserve"><value>รหัสสกุลเงิน</value></data>
+  <data name="Shipping method" xml:space="preserve"><value>วิธีจัดส่ง</value></data>
+  <data name="Free on board" xml:space="preserve"><value>เงื่อนไขส่งมอบ</value></data>
+  <data name="Terms" xml:space="preserve"><value>เงื่อนไข</value></data>
+  <data name="Quotation items" xml:space="preserve"><value>รายการในใบเสนอราคา</value></data>
+  <data name="No quotation items are available." xml:space="preserve"><value>ไม่มีรายการในใบเสนอราคา</value></data>
+  <data name="Description" xml:space="preserve"><value>รายละเอียด</value></data>
+  <data name="Quantity" xml:space="preserve"><value>จำนวน</value></data>
+  <data name="Unit price" xml:space="preserve"><value>ราคาต่อหน่วย</value></data>
+  <data name="Linked orders" xml:space="preserve"><value>คำสั่งซื้อที่เชื่อมโยง</value></data>
+  <data name="No orders are linked to this quotation." xml:space="preserve"><value>ไม่มีคำสั่งซื้อที่เชื่อมโยงกับใบเสนอราคานี้</value></data>
+  <data name="Order" xml:space="preserve"><value>คำสั่งซื้อ</value></data>
+  <data name="Quotation files" xml:space="preserve"><value>ไฟล์ใบเสนอราคา</value></data>
+  <data name="No files are linked to this quotation." xml:space="preserve"><value>ไม่มีไฟล์ที่เชื่อมโยงกับใบเสนอราคานี้</value></data>
+  <data name="Back to quotations" xml:space="preserve"><value>กลับไปยังใบเสนอราคา</value></data>
+  <data name="Your quotation could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดใบเสนอราคาของคุณได้</value></data>
+  <data name="Quotation service is temporarily unavailable." xml:space="preserve"><value>ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว</value></data>
+</root>
