@@ -1,5 +1,6 @@
 @page
 @model AboutModel
+@using Legacy.Maliev.Web.Components.Pages.About
 @{
     if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th")
     {
@@ -13,75 +14,4 @@
     }
 
 }
-
-<main class="maliev-page maliev-page-main">
-<header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["About MALIEV"]</p><h1>@Localizer["Our manufacturing journey"]</h1><p>@Localizer["How our CNC machining, 3D printing, and 3D scanning capabilities developed to support customer projects."]</p></div></header>
-<div class="maliev-container public-content">
-
-    <div class="text-center mt-3 mt-md-5">
-        <p class="fw-semibold">@Localizer["Our journey begins"]</p>
-    </div>
-    <ul class="timeline">
-
-        <li>
-            <div class="direction-r">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["Founded"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["January"] 2018</span></span>
-                </div>
-                <div class="desc font-0p9rem">
-                    @Localizer["The company was founded on the property of"] <span class="no-break"> @Localizer["Mali Co., Ltd."] </span> @Localizer["as a family owned business with 3 directors."]<br />
-                    <ul class="pb-2">
-                        <li class="py-0">@Localizer["Natthapol Vanasrivilai"]</li>
-                        <li class="py-0">@Localizer["Thossapol Vanasrivilai"]</li>
-                        <li class="py-0">@Localizer["Natthakarn Vanasrivilai"]</li>
-                    </ul>
-                    @Localizer["The main goal of the company is to provide customers locally and internationally the CNC and 3D printing services."]
-                </div>
-            </div>
-        </li>
-
-        <li>
-            <div class="direction-l">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["3D Scanning Services"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["January"] 2019</span></span>
-                </div>
-                <div class="desc font-0p9rem">@Localizer["We have expanded our capability to be able to offer 3D scanning services to our customers."]</div>
-            </div>
-        </li>
-
-        <li>
-            <div class="direction-r">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["First CNC Machine"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["April"] 2019</span></span>
-                </div>
-                <div class="desc font-0p9rem">@Localizer["First CNC machine that we used was the Haas VF-2."]</div>
-            </div>
-        </li>
-
-        <li>
-            <div class="direction-l">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["Instant Pricing for 3D Printing"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["June"] 2019</span></span>
-                </div>
-                <div class="desc font-0p9rem">@Localizer["We were the first to introduced machine learning to the world of automated pricing process. This dramatically reduce the quotation time down for our customers. Hence improved customer satisfaction with us."]</div>
-            </div>
-        </li>
-    </ul>
-    <div class="text-center">
-        <p class="fw-semibold">@Localizer["Our journey continues"]</p>
-    </div>
-    <div class="container">
-        <div class="mb-3 text-center">
-            <partial name="_FacebookSocialSectionPartial" />
-        </div>
-    </div>
-</div>
-</main>
+<component type="typeof(AboutContent)" render-mode="Static" />
