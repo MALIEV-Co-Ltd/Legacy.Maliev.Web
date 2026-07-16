@@ -480,6 +480,30 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Legal information", "Privacy Policy")]
+    [InlineData("th", "ข้อมูลทางกฎหมาย", "นโยบายความเป็นส่วนตัว")]
+    public async Task LegalRoute_RendersLocalizedBlazorStaticSsrContent(
+        string culture,
+        string heading,
+        string privacyLink)
+    {
+        using var response = await client.GetAsync($"/legal?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(privacyLink, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]

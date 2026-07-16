@@ -1,4 +1,5 @@
 @page
 @model Legacy.Maliev.Web.Pages.Legal.IndexModel
+@using Legacy.Maliev.Web.Components.Pages.Legal
 @{ ViewData["Title"] = Localizer["Legal information | MALIEV"]; }
-<main class="legal-page"><header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["Policies and agreements"]</p><h1>@Localizer["Legal information"]</h1><p>@Localizer["Review the documents that govern website use, privacy, and confidential project information."]</p></div></header><div class="maliev-container public-content"><div class="maliev-card-grid"><a class="maliev-panel docs-link-card" asp-page="/Legal/NonDisclosureAgreement"><strong>@Localizer["Non-Disclosure Agreement"]</strong><span>@Localizer["Request and download our mutual confidentiality agreement."]</span></a><a class="maliev-panel docs-link-card" asp-page="/Legal/PrivacyPolicy"><strong>@Localizer["Privacy Policy"]</strong><span>@Localizer["How information is collected, used, and protected."]</span></a><a class="maliev-panel docs-link-card" asp-page="/Legal/TermsConditions"><strong>@Localizer["Terms and Conditions"]</strong><span>@Localizer["Rules and conditions for using the MALIEV website."]</span></a></div></div></main>
+<component type="typeof(LegalContent)" render-mode="Static" />
