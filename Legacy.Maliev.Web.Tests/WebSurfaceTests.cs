@@ -696,6 +696,31 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "FDM & Resin 3D Printing", "Professional 3D Printing for Prototypes and Functional Parts", "How much does 3D printing cost?")]
+    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
+    public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]
