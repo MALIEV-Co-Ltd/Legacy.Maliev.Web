@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +14,27 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class QuotationPageTests
 {
+    [Theory]
+    [InlineData("3d-printing", "3d_printing")]
+    [InlineData("3D-Scanning", "3d_scanning")]
+    [InlineData("cnc-machining", "cnc_machining")]
+    [InlineData("injection-molding", "injection_molding")]
+    [InlineData("unsupported", "custom_manufacturing")]
+    [InlineData(null, "custom_manufacturing")]
+    public async Task Get_NormalizesServiceContextToControlledAnalyticsValue(
+        string? item,
+        string expectedService)
+    {
+        var page = CreatePage(
+            new RecordingQuotationClient(),
+            new RecordingFileClient(),
+            new StubAntiBotVerifier(true));
+
+        await page.OnGetAsync("en", item, null, null, CancellationToken.None);
+
+        Assert.Equal(expectedService, page.ServiceContext);
+    }
+
     [Fact]
     public async Task Post_InvalidAntiBotTokenNeverPersistsRequest()
     {
@@ -62,8 +84,38 @@ public sealed class QuotationPageTests
         Assert.Contains("#713", page.Notification, StringComparison.Ordinal);
         Assert.Contains("Do not submit", page.Notification, StringComparison.OrdinalIgnoreCase);
         var analytics = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("713", StringComparison.Ordinal));
+        using var analyticsDocument = JsonDocument.Parse(analytics);
+        var analyticsEvent = analyticsDocument.RootElement;
+        Assert.Equal("request_quote", analyticsEvent.GetProperty("event").GetString());
+        Assert.Equal("quotation_request", analyticsEvent.GetProperty("intent_type").GetString());
+        Assert.Equal("cnc_machining", analyticsEvent.GetProperty("service").GetString());
+        Assert.Equal("quotation-713", analyticsEvent.GetProperty("transaction_id").GetString());
+        Assert.Equal("persisted", analyticsEvent.GetProperty("submission_status").GetString());
+        Assert.True(analyticsEvent.GetProperty("has_files").GetBoolean());
+        Assert.False(analyticsEvent.GetProperty("file_upload_completed").GetBoolean());
         Assert.DoesNotContain("mali@example.com", analytics, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, notifications.Messages.Count);
+    }
+
+    [Fact]
+    public async Task Post_CompletedUploadQueuesCompletionAndNormalizesTamperedService()
+    {
+        var quotation = new RecordingQuotationClient(new QuotationRequestResult(714, true, true));
+        var files = new RecordingFileClient(new QuotationFileResult(true, true, true, false));
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true));
+        page.Files = [FormFile("model.step", "application/step", "STEP")];
+        page.ServiceContext = "untrusted-service";
+
+        await page.OnPostSubmitRequestAsync(CancellationToken.None);
+
+        var analytics = Assert.Single(
+            page.TempData.Values.OfType<string>(),
+            value => value.Contains("714", StringComparison.Ordinal));
+        using var analyticsDocument = JsonDocument.Parse(analytics);
+        var analyticsEvent = analyticsDocument.RootElement;
+        Assert.Equal("custom_manufacturing", analyticsEvent.GetProperty("service").GetString());
+        Assert.True(analyticsEvent.GetProperty("has_files").GetBoolean());
+        Assert.True(analyticsEvent.GetProperty("file_upload_completed").GetBoolean());
     }
 
     private static QuotationPage CreatePage(
@@ -90,6 +142,7 @@ public sealed class QuotationPageTests
             PageContext = new PageContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new MemoryTempDataProvider()),
             SubmissionId = Guid.NewGuid(),
+            ServiceContext = "cnc_machining",
             FirstName = "Mali",
             LastName = "Ev",
             Email = "mali@example.com",
