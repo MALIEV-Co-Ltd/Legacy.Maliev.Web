@@ -815,23 +815,147 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(42, accountClient.LastProfileGetCustomerId);
     }
 
-    [Fact]
-    public async Task ChangePassword_PostsWithAntiforgeryThenClearsTheBffSession()
+    [Theory]
+    [InlineData("en", "Customer account", "Change password", "All signed-in sessions will be revoked after this change.")]
+    [InlineData("th", "บัญชีลูกค้า", "เปลี่ยนรหัสผ่าน", "เซสชันที่เข้าสู่ระบบทั้งหมดจะถูกเพิกถอนหลังจากเปลี่ยนรหัสผ่าน")]
+    public async Task MemberChangePassword_RendersLocalizedPasswordFreeStaticSsrForm(
+        string culture,
+        string eyebrow,
+        string heading,
+        string explanation)
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/changepassword");
+
+        using var response = await client.GetAsync($"/member/account/manage/changepassword?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-change-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{explanation}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"CurrentPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"NewPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"ConfirmPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"current-password\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"new-password\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ChangePassword_PostsExactCredentialsWithAntiforgeryThenClearsTheBffSession(string culture)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changepassword?culture={culture}");
         form["CurrentPassword"] = "current-password";
         form["NewPassword"] = "new-password";
         form["ConfirmPassword"] = "new-password";
 
         using var response = await client.PostAsync(
-            "/member/account/manage/changepassword?handler=ChangePassword",
+            $"/member/account/manage/changepassword?handler=ChangePassword&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        var invocation = Assert.IsType<PasswordChangeInvocation>(authentication.LastPasswordChangeInvocation);
+        Assert.Equal("sensitive-access-token", invocation.AccessToken);
+        Assert.Equal("current-password", invocation.CurrentPassword);
+        Assert.Equal("new-password", invocation.NewPassword);
         using var account = await client.GetAsync("/member/account/manage/changepassword");
         Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
+    }
+
+    [Fact]
+    public async Task MemberChangePassword_WithoutAntiforgeryIsRejectedBeforeCredentialService()
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/changepassword?handler=ChangePassword",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["CurrentPassword"] = "current-password",
+                ["NewPassword"] = "new-password",
+                ["ConfirmPassword"] = "new-password",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(authentication.LastPasswordChangeInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Current password is required.", "New password is required.", "Passwords do not match.")]
+    [InlineData("th", "กรุณากรอกรหัสผ่านปัจจุบัน", "กรุณากรอกรหัสผ่านใหม่", "รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน")]
+    public async Task MemberChangePassword_InvalidFieldsRenderLocalizedAllowlistedErrorsWithoutPasswords(
+        string culture,
+        string currentRequired,
+        string newRequired,
+        string mismatch)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changepassword?culture={culture}");
+        form["CurrentPassword"] = string.Empty;
+        form["NewPassword"] = string.Empty;
+        form["ConfirmPassword"] = "must-not-render";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changepassword?handler=ChangePassword&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{currentRequired}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{newRequired}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{mismatch}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-render", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastPasswordChangeInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", false, "The current password is invalid or the new password was rejected.")]
+    [InlineData("th", false, "รหัสผ่านปัจจุบันไม่ถูกต้องหรือรหัสผ่านใหม่ถูกปฏิเสธ")]
+    [InlineData("en", true, "Account security is temporarily unavailable.")]
+    [InlineData("th", true, "ระบบความปลอดภัยของบัญชีไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberChangePassword_FailureRendersOnlyLocalizedSafeError(
+        string culture,
+        bool unavailable,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+        authentication.PasswordChangeResultOverride = new CustomerCredentialOperationResult(false, !unavailable, true);
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changepassword?culture={culture}");
+        form["CurrentPassword"] = "rejected-current-password";
+        form["NewPassword"] = "rejected-new-password";
+        form["ConfirmPassword"] = "rejected-new-password";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changepassword?handler=ChangePassword&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("rejected-current-password", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("rejected-new-password", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -2464,6 +2588,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubCustomerAuthenticationClient : ICustomerAuthenticationClient
     {
+        public PasswordChangeInvocation? LastPasswordChangeInvocation { get; private set; }
+
+        public CustomerCredentialOperationResult? PasswordChangeResultOverride { get; set; }
+
+        public void ResetCredentialInvocations()
+        {
+            LastPasswordChangeInvocation = null;
+            PasswordChangeResultOverride = null;
+        }
+
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerAuthenticationResult(
                 new CustomerTokenSet(
@@ -2506,9 +2640,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             string accessToken,
             string currentPassword,
             string newPassword,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerCredentialOperationResult(true, true, true));
+            CancellationToken cancellationToken)
+        {
+            LastPasswordChangeInvocation = new(accessToken, currentPassword, newPassword);
+            return Task.FromResult(
+                PasswordChangeResultOverride
+                ?? new CustomerCredentialOperationResult(true, true, true));
+        }
     }
+
+    private sealed record PasswordChangeInvocation(
+        string AccessToken,
+        string CurrentPassword,
+        string NewPassword);
 
     private sealed class StubCustomerProfileClient : ICustomerProfileClient
     {
