@@ -531,6 +531,61 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData(
+        "/legal/privacypolicy",
+        "en",
+        "Privacy Policy",
+        "Information Collection And Use",
+        "Children's Privacy",
+        "id=\"contact\"")]
+    [InlineData(
+        "/legal/privacypolicy",
+        "th",
+        "นโยบายความเป็นส่วนตัว",
+        "Information Collection And Use",
+        "Children's Privacy",
+        "id=\"contact\"")]
+    [InlineData(
+        "/legal/termsconditions",
+        "en",
+        "Terms and Conditions",
+        "Hyperlinking to our Content",
+        "Reservation of Rights",
+        "id=\"license\"")]
+    [InlineData(
+        "/legal/termsconditions",
+        "th",
+        "ข้อกำหนดและเงื่อนไข",
+        "Hyperlinking to our Content",
+        "Reservation of Rights",
+        "id=\"license\"")]
+    public async Task LegalDocumentRoute_PreservesLocalizedStaticSsrContent(
+        string route,
+        string culture,
+        string heading,
+        string firstSentinel,
+        string secondSentinel,
+        string anchorSentinel)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(firstSentinel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(secondSentinel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(anchorSentinel, source, StringComparison.Ordinal);
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]
