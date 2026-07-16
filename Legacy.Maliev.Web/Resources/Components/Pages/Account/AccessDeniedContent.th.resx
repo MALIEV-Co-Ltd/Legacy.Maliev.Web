@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -125,3 +125,4 @@
   <data name="Back to the home page" xml:space="preserve"><value>กลับหน้าหลัก</value></data>
   <data name="Contact support" xml:space="preserve"><value>ติดต่อฝ่ายช่วยเหลือ</value></data>
 </root>
+
