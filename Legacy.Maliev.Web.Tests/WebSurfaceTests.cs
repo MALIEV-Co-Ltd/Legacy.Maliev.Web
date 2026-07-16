@@ -1056,6 +1056,50 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             response.Headers.Location?.OriginalString);
     }
 
+    [Theory]
+    [InlineData("en", "Email confirmation", "We could not confirm your email", "Request a new confirmation email or contact support.", "The confirmation link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "ขออีเมลยืนยันใหม่หรือติดต่อฝ่ายช่วยเหลือ", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    public async Task EmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
+        string culture,
+        string eyebrow,
+        string heading,
+        string description,
+        string errorMessage,
+        string backLabel)
+    {
+        const string email = "customer@example.com";
+        const string token = "invalid-token";
+        using var response = await client.GetAsync(
+            $"/account/emailconfirmation?email={WebUtility.UrlEncode(email)}&token={token}&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"email-confirmation-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{errorMessage}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain(email, decodedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(token, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EmailConfirmation_ValidChallengeRedirectsWithoutLeakingToken()
+    {
+        const string token = "confirmation-token";
+        using var response = await client.GetAsync(
+            $"/account/emailconfirmation?email=customer%40example.com&token={token}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account/Login?email=customer@example.com", response.Headers.Location?.OriginalString);
+        Assert.DoesNotContain(token, response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Login_UsesOpaqueHardenedCookieAndRejectsExternalReturnUrl()
     {
@@ -1671,7 +1715,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             Task.FromResult(new CustomerActionChallenge(true, "confirmation-token", true, true));
 
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) =>
-            Task.FromResult(true);
+            Task.FromResult(!string.Equals(token, "invalid-token", StringComparison.Ordinal));
 
         public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerActionChallenge(true, null, true, true));

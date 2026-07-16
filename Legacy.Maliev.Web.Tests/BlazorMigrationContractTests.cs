@@ -556,4 +556,39 @@ public sealed class BlazorMigrationContractTests
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "AccessDeniedContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "AccessDenied.th.resx")));
     }
+
+    [Fact]
+    public void EmailConfirmationRoute_KeepsChallengeServerSideAndRendersOnlySafeResultState()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "EmailConfirmation.cshtml"));
+        var pageModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "EmailConfirmation.cshtml.cs"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "EmailConfirmationContent.razor");
+
+        Assert.Contains("type=\"typeof(EmailConfirmationContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("string? email", pageModel, StringComparison.Ordinal);
+        Assert.Contains("string? token", pageModel, StringComparison.Ordinal);
+        Assert.Contains("CompleteEmailConfirmationAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.Headers.CacheControl = \"no-store\"", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.Headers[\"Referrer-Policy\"] = \"no-referrer\"", pageModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<EmailConfirmationContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"email-confirmation-content\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("Model.Email", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Model.Token", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "EmailConfirmationDisplayModel.cs"));
+        Assert.Contains("IReadOnlyList<string> Errors", displayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("Email { get;", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Token { get;", displayModel, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "EmailConfirmationContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "EmailConfirmation.th.resx")));
+    }
 }
