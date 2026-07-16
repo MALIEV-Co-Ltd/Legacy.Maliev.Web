@@ -477,4 +477,57 @@ public sealed class BlazorMigrationContractTests
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "SignupContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "Signup.th.resx")));
     }
+
+    [Fact]
+    public void AccountIndexRoute_UsesDisplayOnlyStaticSsrInsideTheServerLogoutBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "Index.cshtml"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "AccountIndexContent.razor");
+
+        Assert.Contains("type=\"typeof(AccountIndexContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\" asp-page=\"/Account/Logout\">", page, StringComparison.Ordinal);
+        Assert.True(
+            page.IndexOf("type=\"typeof(AccountIndexContent)\"", StringComparison.Ordinal) <
+            page.IndexOf("asp-page=\"/Account/Logout\"", StringComparison.Ordinal));
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<AccountIndexContent>", component, StringComparison.Ordinal);
+        Assert.Contains("class=\"account-index-actions\"", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"account-index-content\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccessToken", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("RefreshToken", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Account",
+            "AccountIndexDisplayModel.cs"));
+        Assert.Contains("bool IsAuthenticated", displayModel, StringComparison.Ordinal);
+        Assert.Contains("string? DisplayName", displayModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("CustomerId", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Token", displayModel, StringComparison.OrdinalIgnoreCase);
+
+        var stylesheet = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "css",
+            "application-shell.css"));
+        Assert.Contains(".account-index-actions", stylesheet, StringComparison.Ordinal);
+        Assert.Contains("display: contents;", stylesheet, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "AccountIndexContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "Index.th.resx")));
+    }
 }
