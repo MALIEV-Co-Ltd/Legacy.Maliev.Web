@@ -1,8 +1,11 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Globalization;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Quotations;
 
@@ -12,6 +15,8 @@ public sealed class Index(
     ICustomerQuotationClient quotationClient) : PageModel
 {
     public CustomerQuotationPage Quotations { get; private set; } = new([], 1, 0, 0);
+
+    public MemberQuotationsIndexDisplayModel DisplayModel { get; private set; } = MemberQuotationsIndexDisplayModel.Empty;
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -55,6 +60,50 @@ public sealed class Index(
                     : "Quotation service is temporarily unavailable.");
         }
 
+        DisplayModel = new MemberQuotationsIndexDisplayModel(
+            Search,
+            Sort,
+            PageSize,
+            ModelState.Values
+                .SelectMany(value => value.Errors)
+                .Select(error => error.ErrorMessage)
+                .Where(error => !string.IsNullOrWhiteSpace(error))
+                .ToArray(),
+            Quotations.Items.Select(quotation => new MemberQuotationListItemDisplayModel(
+                quotation.Id,
+                quotation.Accepted,
+                quotation.QuotedAmount?.ToString("N2") ?? "-",
+                quotation.CurrencyId,
+                quotation.ExpirationDate.ToString("yyyy-MM-dd"),
+                quotation.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")).ToArray(),
+            Quotations.HasPreviousPage
+                ? BuildPageHref(Quotations.PageIndex - 1, PageSize, Sort, Search)
+                : null,
+            Quotations.HasNextPage
+                ? BuildPageHref(Quotations.PageIndex + 1, PageSize, Sort, Search)
+                : null);
+
         return Page();
+    }
+
+    private static string BuildPageHref(int pageIndex, int pageSize, string? sort, string? search)
+    {
+        var values = new List<KeyValuePair<string, string?>>
+        {
+            new("index", pageIndex.ToString(CultureInfo.InvariantCulture)),
+            new("size", pageSize.ToString(CultureInfo.InvariantCulture)),
+        };
+
+        if (!string.IsNullOrWhiteSpace(sort))
+        {
+            values.Add(new("sort", sort));
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            values.Add(new("search", search));
+        }
+
+        return "/member/quotations" + QueryString.Create(values);
     }
 }
