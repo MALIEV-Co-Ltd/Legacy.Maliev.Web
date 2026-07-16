@@ -36,6 +36,7 @@ public sealed class BlazorMigrationContractTests
     [InlineData("About/Index.cshtml", "About/AboutContent.razor", "AboutContent")]
     [InlineData("Legal/PrivacyPolicy.cshtml", "Legal/PrivacyPolicyContent.razor", "PrivacyPolicyContent")]
     [InlineData("Legal/TermsConditions.cshtml", "Legal/TermsConditionsContent.razor", "TermsConditionsContent")]
+    [InlineData("Legal/NonDisclosureAgreement.cshtml", "Legal/NonDisclosureAgreementContent.razor", "NonDisclosureAgreementContent")]
     public void ReadOnlyPublicRoute_UsesNonInteractiveStaticSsrComponent(
         string pagePath,
         string componentPath,

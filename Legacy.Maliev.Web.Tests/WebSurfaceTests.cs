@@ -613,6 +613,30 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Non-Disclosure Agreement", "Mutual Non-disclosure agreement", "Download Non-Disclosure Agreement")]
+    [InlineData("th", "สัญญาปกปิดความลับ", "สัญญาปกปิดความลับแบบสองฝ่าย", "ดาวน์โหลดสัญญาปกปิดความลับ")]
+    public async Task NonDisclosureAgreementRoute_RendersLocalizedStaticSsrContent(
+        string culture,
+        string heading,
+        string documentHeading,
+        string downloadLabel)
+    {
+        using var response = await client.GetAsync($"/legal/nondisclosureagreement?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(documentHeading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(downloadLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"mailto:nda@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("en", "Our manufacturing journey", "Founded", "First CNC Machine")]
     [InlineData("th", "เส้นทางงานผลิตของเรา", "ก่อตั้ง", "เครื่อง CNC เครื่องแรก")]
     public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineAndFacebookUrl(
