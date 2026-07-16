@@ -981,6 +981,63 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("PayPal", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", "First name", "I want: 3d-printing")]
+    [InlineData("th", "ชื่อ", "สินค้าที่ต้องการ: 3d-printing")]
+    public async Task QuotationPage_RendersLocalizedStaticSsrFieldsInsideRazorMultipartBoundary(
+        string culture,
+        string firstNameLabel,
+        string prefill)
+    {
+        using var response = await client.GetAsync(
+            $"/quotation?culture={culture}&item=3d-printing&process=sls&material=pa12");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"quotation-hero-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Quotation?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"SubmissionId\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"3d_printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"Files\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
+        Assert.Contains("multiple", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quotation-files-help\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QuotationPage_InvalidPostPreservesInputAndFieldErrorsInStaticSsrComponent()
+    {
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=en&item=cnc-machining");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Country"] = "Thailand";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/quotation?handler=SubmitRequest&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates()
     {

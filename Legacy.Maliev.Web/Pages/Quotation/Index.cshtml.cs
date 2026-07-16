@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Quotation;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
@@ -81,6 +82,32 @@ public sealed class Index(
     public string? TaxNumber { get; set; }
 
     public bool CountryServiceAvailable { get; private set; } = true;
+
+    public QuotationFormDisplayModel DisplayModel => new(
+        SubmissionId,
+        ServiceContext,
+        FirstName,
+        LastName,
+        Email,
+        Phone,
+        Company,
+        TaxNumber,
+        Country,
+        Message,
+        RecaptchaToken,
+        RecaptchaSiteKey,
+        CountryServiceAvailable,
+        Countries.Select(country => new QuotationCountryOption(country.Name)).ToArray(),
+        ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => entry.Key,
+                entry => (IReadOnlyList<string>)entry.Value!.Errors
+                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                        ? "The submitted value is invalid."
+                        : error.ErrorMessage)
+                    .ToArray(),
+                StringComparer.Ordinal));
 
     public async Task<IActionResult> OnGetAsync(
         string? culture,
