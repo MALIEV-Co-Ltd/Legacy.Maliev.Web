@@ -76,26 +76,6 @@ public sealed class BlazorMigrationContractTests
         throw new DirectoryNotFoundException("Could not locate the Legacy.Maliev.Web repository root.");
     }
 
-    [Theory]
-    [InlineData("3D-Scanning.cshtml", "3D Scanning")]
-    public void ServiceDetailRoute_UsesStaticSharedBlazorComponents(string pageName, string serviceKey)
-    {
-        var root = FindRepositoryRoot();
-        var page = File.ReadAllText(Path.Combine(
-            root,
-            "Legacy.Maliev.Web",
-            "Pages",
-            "Services",
-            pageName));
-
-        Assert.Contains("type=\"typeof(ServiceBreadcrumb)\"", page, StringComparison.Ordinal);
-        Assert.Contains($"param-ServiceKey='\"{serviceKey}\"'", page, StringComparison.Ordinal);
-        Assert.Contains("type=\"typeof(ServiceLocation)\"", page, StringComparison.Ordinal);
-        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("_SchemaBreadcrumb", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ServiceLocationPartial", page, StringComparison.Ordinal);
-    }
-
     [Fact]
     public void CustomManufacturingRoute_UsesStaticBlazorBody()
     {
@@ -156,6 +136,22 @@ public sealed class BlazorMigrationContractTests
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"3D Printing\" />", body, StringComparison.Ordinal);
+        Assert.Contains("<ServiceLocation />", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ThreeDimensionalScanningRoute_UsesStaticBlazorBody()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Services", "3D-Scanning.cshtml"));
+        Assert.Contains("type=\"typeof(ThreeDimensionalScanningContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
+        Assert.Contains("<partial name=\"_SchemaService\"", page, StringComparison.Ordinal);
+        Assert.Contains("FAQPage", page, StringComparison.Ordinal);
+
+        var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor"));
+        Assert.Contains("<ServiceBreadcrumb ServiceKey=\"3D Scanning\" />", body, StringComparison.Ordinal);
         Assert.Contains("<ServiceLocation />", body, StringComparison.Ordinal);
     }
 }
