@@ -22,8 +22,7 @@
     <partial name="_FacebookOpenGraphPartial" />
     <partial name="_FaviconsPartial" />
     <partial name="_GoogleTagManagerPartial" />
-    <partial name="_RelCanonicalPartial" />
-    <partial name="_RelAlternatePartial" />
+    <component type="typeof(PublicDocumentLinks)" render-mode="Static" param-Model="@(PublicDocumentLinksDisplayModel.Create(Context))" />
     <partial name="_CssPartial" />
     <partial name="_FontPartial" />
     @* Structured Data / Schema Markup *@
