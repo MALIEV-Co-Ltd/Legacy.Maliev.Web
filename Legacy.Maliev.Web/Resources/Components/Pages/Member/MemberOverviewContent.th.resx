@@ -174,7 +174,7 @@
   <data name="Notification" xml:space="preserve">
     <value>แจ้งเตือน</value>
   </data>
-  <data name="Order History" xml:space="preserve">
+  <data name="Order history" xml:space="preserve">
     <value>ประวัติการสั่งงาน</value>
   </data>
   <data name="pending" xml:space="preserve">
