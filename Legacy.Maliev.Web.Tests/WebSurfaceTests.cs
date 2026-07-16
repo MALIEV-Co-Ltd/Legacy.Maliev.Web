@@ -496,17 +496,90 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task SignedInMember_OrderHistoryStaysInsideOwnedBffBoundary()
+    [Theory]
+    [InlineData("en", "Order management", "Order history", "Previous", "Next")]
+    [InlineData("th", "จัดการคำสั่งซื้อ", "ประวัติคำสั่งซื้อ", "ก่อนหน้า", "ถัดไป")]
+    public async Task MemberOrderHistory_RendersLocalizedOwnedStaticSsrWithQueryAndPaginationParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string previousLabel,
+        string nextLabel)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
+
+        using var response = await client.GetAsync(
+            $"/member/orders/history?culture={culture}&index=2&size=10&sort=OrderCreatedDate_Ascending&search=CNC");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-order-history-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{previousLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{nextLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Part", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\" value=\"OrderCreatedDate_Ascending\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=1&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=3&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<OrderListInvocation>(orderClient.LastListInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("OrderCreatedDate_Ascending", invocation.Sort);
+        Assert.Equal("CNC", invocation.Search);
+        Assert.Equal(2, invocation.PageIndex);
+        Assert.Equal(10, invocation.PageSize);
+    }
+
+    [Theory]
+    [InlineData("en", "One or more query values are invalid.")]
+    [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
+    public async Task MemberOrderHistory_MalformedPagingRendersLocalizedSafeValidation(
+        string culture,
+        string expectedMessage)
     {
         await SignInAsync();
 
-        var history = await client.GetStringAsync("/member/orders/history?search=CNC");
+        using var response = await client.GetAsync(
+            $"/member/orders/history?culture={culture}&index=not-a-number&size=also-invalid");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        Assert.Contains("Part", history, StringComparison.Ordinal);
-        Assert.DoesNotContain("The Sort field is required.", history, StringComparison.Ordinal);
-        Assert.Contains("/Member/Orders/View?itemID=7", history, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("sensitive-access-token", history, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Input string was not in a correct format", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Order service is temporarily unavailable.")]
+    [InlineData("th", "ระบบคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberOrderHistory_ServiceFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ListResultOverride = new CustomerOrderListResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/orders/history?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -2392,16 +2465,22 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public OrderInvocation? LastCancelInvocation { get; private set; }
 
+        public OrderListInvocation? LastListInvocation { get; private set; }
+
         public CustomerOrderDetailsResult? GetResultOverride { get; set; }
 
         public CustomerOrderOperationResult? CancelResultOverride { get; set; }
+
+        public CustomerOrderListResult? ListResultOverride { get; set; }
 
         public void ResetInvocations()
         {
             LastGetInvocation = null;
             LastCancelInvocation = null;
+            LastListInvocation = null;
             GetResultOverride = null;
             CancelResultOverride = null;
+            ListResultOverride = null;
         }
 
         public Task<CustomerOrderListResult> ListAsync(
@@ -2410,11 +2489,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             string? search,
             int pageIndex,
             int pageSize,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderListResult(
-                customerId == 42 ? new CustomerOrderPage([Order], pageIndex, 1, 1) : null,
+            CancellationToken cancellationToken)
+        {
+            LastListInvocation = new(customerId, sort, search, pageIndex, pageSize);
+            if (ListResultOverride is not null)
+            {
+                return Task.FromResult(ListResultOverride);
+            }
+
+            return Task.FromResult(new CustomerOrderListResult(
+                customerId == 42 ? new CustomerOrderPage([Order], pageIndex, 3, 1) : null,
                 true,
                 customerId == 42));
+        }
 
         public Task<CustomerOrderDetailsResult> GetAsync(
             int customerId,
@@ -2453,6 +2540,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     private sealed record OrderInvocation(int CustomerId, int OrderId);
+
+    private sealed record OrderListInvocation(
+        int CustomerId,
+        string? Sort,
+        string? Search,
+        int PageIndex,
+        int PageSize);
 
     private sealed class StubCustomerQuotationClient : ICustomerQuotationClient
     {

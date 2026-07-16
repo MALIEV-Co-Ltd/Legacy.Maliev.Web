@@ -590,6 +590,65 @@ public sealed class BlazorMigrationContractTests
     }
 
     [Fact]
+    public void MemberOrderHistoryRoute_UsesLocalizedDisplayOnlyStaticSsrComponent()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Orders", "History.cshtml"));
+        var componentPath = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOrderHistoryContent.razor");
+
+        Assert.Contains("type=\"typeof(MemberOrderHistoryContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<MemberOrderHistoryContent>", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-for", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("Model.Orders", page, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("data-migration-component=\"member-order-history-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<MemberOrderHistoryContent>", component, StringComparison.Ordinal);
+        Assert.Contains("MemberOrderHistoryDisplayModel", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerOrderClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOrderHistoryDisplayModel.cs"));
+        Assert.DoesNotContain("CustomerId", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Token", displayModel, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOrderHistoryContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Areas",
+            "Member",
+            "Pages",
+            "Orders",
+            "History.th.resx")));
+    }
+
+    [Fact]
     public void CareerDetailRoute_UsesDisplayOnlyStaticSsrComponentAndMinimalPrintBridge()
     {
         var root = FindRepositoryRoot();
