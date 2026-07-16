@@ -21,31 +21,35 @@
             var youtubePath = '/channel/UCCosquPSUed6UPlMcRCq0Ig'.toLowerCase();
 
             if (protocol === 'tel:') {
-                return { channel: 'phone', destination: 'business_phone' };
+                return { eventName: 'phone_click', channel: 'phone', destination: 'business_phone' };
             }
 
             if (protocol === 'mailto:') {
-                return { channel: 'email', destination: 'business_email' };
+                return { eventName: 'email_click', channel: 'email', destination: 'business_email' };
             }
 
             if ((host === 'line.me' || host === 'www.line.me') && path === '/ti/p/@@maliev') {
-                return { channel: 'line', destination: 'line_oa' };
+                return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
             }
 
             if ((host === 'm.me' || host === 'www.m.me') && path === '/maliev.manufacturing') {
-                return { channel: 'messenger', destination: 'facebook_messenger' };
+                return { eventName: 'messenger_click', channel: 'messenger', destination: 'facebook_messenger' };
+            }
+
+            if (host === 'wa.me' || (host === 'api.whatsapp.com' && path === '/send')) {
+                return { eventName: 'whatsapp_click', channel: 'whatsapp', destination: 'whatsapp_business' };
             }
 
             if ((host === 'facebook.com' || host === 'www.facebook.com') && path === '/maliev.manufacturing') {
-                return { channel: 'facebook', destination: 'facebook_page' };
+                return { eventName: 'facebook_click', channel: 'facebook', destination: 'facebook_page' };
             }
 
             if ((host === 'instagram.com' || host === 'www.instagram.com') && path === '/maliev.manufacturing') {
-                return { channel: 'instagram', destination: 'instagram_profile' };
+                return { eventName: 'instagram_click', channel: 'instagram', destination: 'instagram_profile' };
             }
 
             if ((host === 'youtube.com' || host === 'www.youtube.com') && path === youtubePath) {
-                return { channel: 'youtube', destination: 'youtube_channel' };
+                return { eventName: 'youtube_click', channel: 'youtube', destination: 'youtube_channel' };
             }
 
             return null;
@@ -135,8 +139,9 @@
                     context: getPageContext(window.location.pathname)
                 };
 
-                window.dataLayer = window.dataLayer || [];
-                window.dataLayer.push(reviewEvent);
+                if (window.malievAnalytics && typeof window.malievAnalytics.emit === 'function') {
+                    window.malievAnalytics.emit(reviewEvent);
+                }
 
                 if (reviewIsSameWindow) {
                     window.setTimeout(function () {
@@ -160,14 +165,15 @@
             }
 
             var contactEvent = {
-                event: 'maliev_contact_click',
+                event: contact.eventName,
                 channel: contact.channel,
                 destination: contact.destination,
                 context: getPageContext(window.location.pathname)
             };
 
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push(contactEvent);
+            if (window.malievAnalytics && typeof window.malievAnalytics.emit === 'function') {
+                window.malievAnalytics.emit(contactEvent);
+            }
 
             if (isSameWindow) {
                 window.setTimeout(function () {

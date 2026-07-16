@@ -324,9 +324,59 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("google-site-verification", source, StringComparison.Ordinal);
         Assert.Contains("data-consent-action=\"accept\"", source, StringComparison.Ordinal);
         Assert.Contains("data-consent-action=\"reject\"", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics", source, StringComparison.Ordinal);
+        Assert.Contains("pendingEvents", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.setConsent(state)", source, StringComparison.Ordinal);
+        Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
+        Assert.Contains("line_click", source, StringComparison.Ordinal);
+        Assert.Contains("messenger_click", source, StringComparison.Ordinal);
+        Assert.Contains("whatsapp_click", source, StringComparison.Ordinal);
+        Assert.Contains("phone_click", source, StringComparison.Ordinal);
+        Assert.Contains("email_click", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("event: 'maliev_contact_click'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("analytics.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("UA-133315708-1", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GTM-5VBH5LK", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task QuotationLocales_RenderTheSameControlledUploadEventContract(string culture)
+    {
+        var source = await client.GetStringAsync(
+            $"/quotation?culture={culture}&item=cnc-machining");
+
+        Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"cnc_machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("event: 'file_upload_start'", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.emit", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PersistedContactEvent_IsHeldBehindConsentGateWithoutPii()
+    {
+        var form = await GetAntiforgeryFormAsync("/contact");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "private@example.com";
+        form["Country"] = "Thailand";
+        form["Message"] = "Private project details";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var post = await client.PostAsync(
+            "/contact?handler=SubmitRequest",
+            new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        using var landing = await client.GetAsync(post.Headers.Location);
+        var source = landing.StatusCode == HttpStatusCode.MovedPermanently
+            ? await client.GetStringAsync(landing.Headers.Location)
+            : await landing.Content.ReadAsStringAsync();
+        Assert.Contains("window.malievAnalytics.emit({\"event\":\"request_quote\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"request_quote\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("private@example.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Private project details", source, StringComparison.Ordinal);
     }
 
     [Theory]
