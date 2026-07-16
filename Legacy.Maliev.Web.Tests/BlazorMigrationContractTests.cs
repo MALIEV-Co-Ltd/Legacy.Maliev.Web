@@ -154,4 +154,24 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"3D Scanning\" />", body, StringComparison.Ordinal);
         Assert.Contains("<ServiceLocation />", body, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void HomeRoute_UsesStaticBlazorBodyAndComponentLocalization()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Index.cshtml"));
+        Assert.Contains("type=\"typeof(HomeContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("landing-hero", page, StringComparison.Ordinal);
+
+        var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Home", "HomeContent.razor"));
+        Assert.Contains("IStringLocalizer<HomeContent>", body, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"home-content\"", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page", body, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Home", "HomeContent.resx")));
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Home", "HomeContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Index.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Index.th.resx")));
+    }
 }
