@@ -318,6 +318,37 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", "Order management", "Start or review an order", "Order history", "CNC machining")]
+    [InlineData("th", "จัดการคำสั่งซื้อ", "เริ่มหรือตรวจสอบคำสั่งซื้อ", "ประวัติคำสั่งซื้อ", "งาน CNC")]
+    public async Task MemberOrdersIndex_RendersLocalizedDisplayOnlyStaticSsrWithCanonicalActions(
+        string culture,
+        string eyebrow,
+        string heading,
+        string historyLabel,
+        string cncLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member/orders?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-orders-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{historyLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{cncLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task SignedInMember_OrderHistoryDetailAndCancellationStayInsideOwnedBffBoundary()
     {
