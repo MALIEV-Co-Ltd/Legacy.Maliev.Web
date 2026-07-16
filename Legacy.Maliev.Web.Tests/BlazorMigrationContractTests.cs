@@ -669,6 +669,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("type=\"typeof(ErrorContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("ViewData[\"SuppressIdentityNavigation\"] = true", page, StringComparison.Ordinal);
         Assert.Contains("Response.StatusCode = code.Value", pageModel, StringComparison.Ordinal);
         Assert.Contains("Activity.Current?.Id ?? HttpContext.TraceIdentifier", pageModel, StringComparison.Ordinal);
         Assert.Contains("Response.Headers.CacheControl = \"no-store\"", pageModel, StringComparison.Ordinal);
@@ -693,5 +694,9 @@ public sealed class BlazorMigrationContractTests
 
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "ErrorContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Error.th.resx")));
+
+        var loginPartial = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Shared", "_LoginPartial.cshtml"));
+        Assert.Contains("SuppressIdentityNavigation", loginPartial, StringComparison.Ordinal);
+        Assert.Contains("is not true", loginPartial, StringComparison.Ordinal);
     }
 }
