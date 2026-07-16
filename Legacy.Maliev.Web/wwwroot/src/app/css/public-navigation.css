@@ -1,0 +1,32 @@
+.landing-header { position: relative; z-index: 1030; background: #fff; border-bottom: 1px solid #e8edf3; }
+.landing-nav { display: flex; align-items: center; width: min(94vw, 90rem); min-height: 4.5rem; margin: auto; gap: 2rem; }
+.landing-brand { display: flex; align-items: center; flex: 0 0 auto; }
+.landing-brand img { width: auto; height: 2rem; object-fit: contain; }
+.landing-nav-toggle { margin-left: auto; padding: .75rem; border: 0; background: transparent; color: #111f33; font-size: 1.35rem; }
+.landing-nav-content { width: 100%; }
+.landing-nav-links, .landing-nav-account { margin: 0; padding: 0; list-style: none; }
+.landing-nav-links a, .landing-nav-account .nav-link, .landing-nav-account button { color: #111f33; font-size: .91rem; text-decoration: none; }
+.landing-nav-links a:hover, .landing-nav-links a:focus-visible, .landing-nav-account a:hover, .landing-nav-account a:focus-visible { color: #075de8; }
+.landing-nav-account .nav-item { list-style: none; }
+.landing-nav-account .maliev-account-link { display: inline-flex; align-items: center; gap: .6rem; }
+.landing-nav-account .maliev-account-link i, .landing-nav-account .maliev-account-link .svg-inline--fa { flex: 0 0 auto; width: 1.15rem; color: #111f33; font-size: 1rem; text-align: center; }
+.landing-language { padding-block: .4rem; }
+.landing-nav-toggle:focus-visible, .landing-nav a:focus-visible { outline: 3px solid #72a9ff; outline-offset: 3px; }
+.maliev-language-form { display: flex; flex: 0 0 auto; align-items: center; gap: .45rem; inline-size: fit-content; min-inline-size: 0; margin: 0; color: #6f777e; }
+.maliev-language-select { flex: 0 0 4.75rem; inline-size: 4.75rem; min-inline-size: 4.75rem; color: #313b47; cursor: pointer; }
+
+@media (min-width: 68rem) {
+    .landing-nav-toggle { display: none; }
+    .landing-nav-content { display: flex !important; align-items: center; }
+    .landing-nav-links, .landing-nav-account { display: flex; align-items: center; }
+    .landing-nav-links { gap: clamp(1.4rem, 2.2vw, 2.8rem); }
+    .landing-nav-account { gap: clamp(.8rem, 1.5vw, 1.7rem); margin-left: auto; }
+    .landing-nav-links a, .landing-nav-account a, .landing-nav-account button { white-space: nowrap; }
+}
+
+@media (max-width: 67.99rem) {
+    .landing-nav-content { position: absolute; top: 100%; left: 0; width: 100%; padding: 1rem 1.25rem; background: #fff; border-bottom: 1px solid #dce4ee; box-shadow: 0 1rem 2rem rgba(4, 23, 45, .12); }
+    .landing-nav-links li + li, .landing-nav-account li + li { margin-top: .35rem; }
+    .landing-nav-links a, .landing-nav-account a, .landing-nav-account button { display: flex; width: 100%; padding: .65rem 0; }
+    .landing-nav-account { margin-top: .7rem; padding-top: .7rem; border-top: 1px solid #dce4ee; }
+}

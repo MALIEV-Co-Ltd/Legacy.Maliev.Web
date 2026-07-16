@@ -19,7 +19,7 @@
     <a class="maliev-skip-link" href="#member-main-content">@Localizer["Skip to main content"]</a>
     <partial name="_GoogleTagManagerBodyPartial" />
     <partial name="_CookieConsentPartial" />
-    <partial name="_NavigationPartial" />
+    <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
     <div class="workspace-page">
         <div class="workspace-shell">
             <partial name="_MemberNavigation" />

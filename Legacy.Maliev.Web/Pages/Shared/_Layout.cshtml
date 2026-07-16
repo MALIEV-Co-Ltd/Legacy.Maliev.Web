@@ -39,7 +39,7 @@
     <partial name="_FacebookSdkPartial" />
     <partial name="_GoogleTagManagerBodyPartial" />
     <partial name="_CookieConsentPartial" />
-    <partial name="_NavigationPartial" />
+    <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
     <partial name="_BrowserCompatibilityCheckPartial" />
     <div id="main-content" tabindex="-1">
         @RenderBody()

@@ -193,12 +193,36 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(expectedStatus, response.StatusCode);
         Assert.Contains("data-migration-component=\"error-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("customer@example.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("legacy_session_id", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("href=\"/Member", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Logout")]
+    [InlineData("th", "ออกจากระบบ")]
+    public async Task PublicNavigation_RendersAuthenticatedIdentityAndProtectedLogout(
+        string culture,
+        string logoutLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/legal?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($">{logoutLabel}<", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
     }
 
     [Fact]
