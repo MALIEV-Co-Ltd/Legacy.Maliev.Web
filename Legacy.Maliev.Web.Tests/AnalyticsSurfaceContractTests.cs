@@ -29,6 +29,26 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.Contains("window.malievAnalytics.emit", quotation, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AnalyticsRunbook_DefinesPrimarySecondaryAndLocalizedValidationBoundaries()
+    {
+        var runbook = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "docs",
+            "analytics-validation.md"));
+
+        Assert.Contains("`request_quote`", runbook, StringComparison.Ordinal);
+        Assert.Contains("Primary Ads conversion", runbook, StringComparison.Ordinal);
+        Assert.Contains("Secondary only", runbook, StringComparison.Ordinal);
+        Assert.Contains("GTM Preview", runbook, StringComparison.Ordinal);
+        Assert.Contains("GA4 DebugView", runbook, StringComparison.Ordinal);
+        Assert.Contains("Google Ads conversion diagnostics", runbook, StringComparison.Ordinal);
+        Assert.Contains("Thai", runbook, StringComparison.Ordinal);
+        Assert.Contains("English", runbook, StringComparison.Ordinal);
+        Assert.Contains("Google-hosted lead form", runbook, StringComparison.Ordinal);
+        Assert.Contains("maliev-legacy", runbook, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
