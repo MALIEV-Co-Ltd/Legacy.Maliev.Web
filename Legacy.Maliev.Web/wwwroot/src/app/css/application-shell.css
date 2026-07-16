@@ -225,6 +225,10 @@ body {
     align-items: center;
 }
 
+.account-index-actions {
+    display: contents;
+}
+
 .maliev-button,
 .maliev-form button,
 .maliev-form input[type="submit"] {

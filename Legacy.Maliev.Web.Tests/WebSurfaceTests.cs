@@ -813,6 +813,59 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Member workspace", "Review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
+    [InlineData("th", "พื้นที่สมาชิก", "ตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    public async Task AccountIndex_RendersLocalizedAnonymousStaticSsrActions(
+        string culture,
+        string workspaceLabel,
+        string description,
+        string signInLabel,
+        string createAccountLabel,
+        string resetPasswordLabel)
+    {
+        using var response = await client.GetAsync($"/account?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{workspaceLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{signInLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{createAccountLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{resetPasswordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/Login\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/Signup\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/ForgotPassword\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("action=\"/Account/Logout\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AccountIndex_SignedInActionsKeepLogoutInsideAntiforgeryBoundary()
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync("/account?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("Signed in as", source, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Member/Account/Manage/Profile\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Account/Manage/Address\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Account/Manage/ChangeEmail\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Account/Manage/ChangePassword\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Orders\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up")]
     [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก")]
     public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(
