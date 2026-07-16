@@ -27,6 +27,9 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.DoesNotContain("window.dataLayer.push(reviewEvent)", contact, StringComparison.Ordinal);
         Assert.Contains("file_upload_start", quotation, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.emit", quotation, StringComparison.Ordinal);
+        Assert.Contains("event.preventDefault()", quotation, StringComparison.Ordinal);
+        Assert.Contains("window.setTimeout", quotation, StringComparison.Ordinal);
+        Assert.Contains("form.submit()", quotation, StringComparison.Ordinal);
     }
 
     [Fact]
