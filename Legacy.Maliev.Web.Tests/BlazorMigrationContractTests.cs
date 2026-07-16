@@ -376,4 +376,32 @@ public sealed class BlazorMigrationContractTests
             "LoginContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "Login.th.resx")));
     }
+
+    [Fact]
+    public void ForgotPasswordRoute_UsesStaticSsrComponentWithoutExposingResetState()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "ForgotPassword.cshtml"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "ForgotPasswordContent.razor");
+
+        Assert.Contains("<form method=\"post\" class=\"maliev-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ForgotPasswordContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
+        Assert.True(page.IndexOf("</form>", StringComparison.Ordinal) < page.IndexOf("auth-card__footer", StringComparison.Ordinal));
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<ForgotPasswordContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"forgot-password-content\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("INotificationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("Token", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("eligible", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "ForgotPasswordContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "ForgotPassword.th.resx")));
+    }
 }

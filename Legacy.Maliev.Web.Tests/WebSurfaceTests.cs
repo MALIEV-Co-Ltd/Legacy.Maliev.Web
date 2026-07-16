@@ -947,6 +947,50 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("not found", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", "Email", "Reset password", "Back to sign in")]
+    [InlineData("th", "อีเมล", "รีเซ็ตรหัสผ่าน", "กลับไปหน้าเข้าสู่ระบบ")]
+    public async Task ForgotPassword_RendersLocalizedStaticSsrFormWithoutEligibilityState(
+        string culture,
+        string emailLabel,
+        string submitLabel,
+        string backLabel)
+    {
+        using var response = await client.GetAsync($"/account/forgotpassword?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"forgot-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/ForgotPassword?handler=PasswordReset\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("reset-token", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("eligible-account", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_InvalidPostPreservesEmailAndValidationError()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/forgotpassword?culture=en");
+        form["Email"] = "not-an-email";
+
+        using var response = await client.PostAsync(
+            "/account/forgotpassword?handler=PasswordReset&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"forgot-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ContactPage_UsesConfiguredEnterpriseRecaptchaWithoutEmbeddedGoogleApiKey()
     {
