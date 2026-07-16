@@ -1898,35 +1898,40 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         "Privacy Policy",
         "Information Collection And Use",
         "Children's Privacy",
-        "id=\"contact\"")]
+        "id=\"contact\"",
+        null)]
     [InlineData(
         "/legal/privacypolicy",
         "th",
         "นโยบายความเป็นส่วนตัว",
-        "Information Collection And Use",
-        "Children's Privacy",
-        "id=\"contact\"")]
+        "การเก็บรวบรวมและการใช้ข้อมูล",
+        "ความเป็นส่วนตัวของเด็ก",
+        "id=\"contact\"",
+        "Information Collection And Use")]
     [InlineData(
         "/legal/termsconditions",
         "en",
         "Terms and Conditions",
         "Hyperlinking to our Content",
         "Reservation of Rights",
-        "id=\"license\"")]
+        "id=\"license\"",
+        null)]
     [InlineData(
         "/legal/termsconditions",
         "th",
         "ข้อกำหนดและเงื่อนไข",
-        "Hyperlinking to our Content",
-        "Reservation of Rights",
-        "id=\"license\"")]
+        "การเชื่อมโยงมายังเนื้อหาของเรา",
+        "การสงวนสิทธิ์",
+        "id=\"license\"",
+        "Hyperlinking to our Content")]
     public async Task LegalDocumentRoute_PreservesLocalizedStaticSsrContent(
         string route,
         string culture,
         string heading,
         string firstSentinel,
         string secondSentinel,
-        string anchorSentinel)
+        string anchorSentinel,
+        string? forbiddenSentinel)
     {
         using var response = await client.GetAsync($"{route}?culture={culture}");
         var source = await response.Content.ReadAsStringAsync();
@@ -1938,6 +1943,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains(firstSentinel, decodedSource, StringComparison.Ordinal);
         Assert.Contains(secondSentinel, decodedSource, StringComparison.Ordinal);
         Assert.Contains(anchorSentinel, source, StringComparison.Ordinal);
+        if (forbiddenSentinel is not null)
+        {
+            Assert.DoesNotContain(forbiddenSentinel, decodedSource, StringComparison.Ordinal);
+        }
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);

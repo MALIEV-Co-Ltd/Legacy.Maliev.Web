@@ -1,10 +1,18 @@
+@using System.Globalization
 @inject IStringLocalizer<PrivacyPolicyContent> Localizer
 
 <main class="legal-page" data-migration-renderer="blazor-static-ssr">
     <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["Legal"]</p><h1>@Localizer["Privacy Policy"]</h1></div></header>
     <div class="legal-shell maliev-container">
-        <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#collection">Information collection</a></li><li><a href="#use">Use of data</a></li><li><a href="#security">Security</a></li><li><a href="#contact">Contact us</a></li></ul></nav>
+        <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#collection">@T("Information collection", "การเก็บรวบรวมข้อมูล")</a></li><li><a href="#use">@T("Use of data", "การใช้ข้อมูล")</a></li><li><a href="#security">@T("Security", "ความปลอดภัย")</a></li><li><a href="#contact">@T("Contact us", "ติดต่อเรา")</a></li></ul></nav>
         <article class="legal-document">
+    @if (IsThai)
+    {
+        <PrivacyPolicyThaiContent />
+    }
+    else
+    {
+    <div class="legal-document-body">
     <h2>Privacy Policy</h2>
 
     <p>Effective date: July 07, 2018</p>
@@ -109,6 +117,13 @@
         <li>By phone number: +66818030404</li>
         <li>By mail: 36/1 Moo 3 Khlong Khoi, Pak Kret, Nonthaburi 11120, Thailand </li>
     </ul>
+    </div>
+    }
         </article>
     </div>
 </main>
+
+@code {
+    private static bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    private static string T(string english, string thai) => IsThai ? thai : english;
+}
