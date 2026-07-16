@@ -1,5 +1,6 @@
 @page
 @model Legacy.Maliev.Web.Pages.Services.AdditiveModel
+@using Legacy.Maliev.Web.Components.Shared
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
@@ -21,7 +22,7 @@
 }
 
 <main class="service-page">
-    <partial name="_SchemaBreadcrumb" model='"3D Printing"' />
+    <component type="typeof(ServiceBreadcrumb)" render-mode="Static" param-ServiceKey='"3D Printing"' />
     <section class="service-hero" aria-labelledby="printing-title">
         <img class="service-hero-media" src="~/src/images/services/printing/printing-hero.webp" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="@T("Professional FDM printer producing a blue engineering fixture", "เครื่องพิมพ์ FDM กำลังผลิตฟิกซ์เจอร์วิศวกรรมสีน้ำเงิน")" />
         <div class="service-container service-hero-copy">
@@ -122,7 +123,7 @@
         <details><summary>@T("Can a 3D print replace an injection-molded or machined part?", "ชิ้นงานพิมพ์แทนงานฉีดหรือ CNC ได้หรือไม่?")</summary><p>@T("Sometimes, especially for prototypes, low quantity, custom geometry, and fixtures. Long-term loads, heat, chemicals, finish, tolerances, certification, and production volume may make another process more suitable.", "บางกรณีได้ โดยเฉพาะต้นแบบ จำนวนน้อย รูปทรงเฉพาะ และฟิกซ์เจอร์ แต่แรงระยะยาว ความร้อน สารเคมี ผิว ค่าคลาดเคลื่อน การรับรอง และจำนวนอาจเหมาะกับกระบวนการอื่น")</p></details>
     </div></div></section>
 
-    <partial name="_ServiceLocationPartial" />
+    <component type="typeof(ServiceLocation)" render-mode="Static" />
 
     <section class="service-cta-wrap"><div class="service-container service-cta"><div><h2>@T("Ready to price your 3D model?", "พร้อมประเมินราคาโมเดล 3D แล้วหรือยัง?")</h2><p>@T("Upload the file, inspect the model, choose material and quantity, and receive an instant estimate.", "อัปโหลดไฟล์ ตรวจโมเดล เลือกวัสดุและจำนวน แล้วรับราคาประเมินทันที")</p></div><div class="service-actions"><a class="service-button service-button-yellow" asp-page="/InstantQuotation/3D-Printing">@T("Instant 3D Quotation", "ประเมินราคา 3D ทันที") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></div></section>
 </main>

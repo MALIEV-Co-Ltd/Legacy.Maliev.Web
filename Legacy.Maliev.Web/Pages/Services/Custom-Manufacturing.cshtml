@@ -1,5 +1,6 @@
 @page
 @model Legacy.Maliev.Web.Pages.Services.CustomManufacturingModel
+@using Legacy.Maliev.Web.Components.Shared
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
@@ -92,7 +93,7 @@
 }
 
 <main class="service-page">
-    <partial name="_SchemaBreadcrumb" model='"Custom Manufacturing"' />
+    <component type="typeof(ServiceBreadcrumb)" render-mode="Static" param-ServiceKey='"Custom Manufacturing"' />
     <section class="service-hero" aria-labelledby="custom-manufacturing-title">
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("Made-to-order project intake", "เริ่มต้นงานผลิตตามแบบ")</p>
@@ -192,7 +193,7 @@
         </div>
     </section>
 
-    <partial name="_ServiceLocationPartial" />
+    <component type="typeof(ServiceLocation)" render-mode="Static" />
 
     <section class="service-cta-wrap" aria-labelledby="custom-cta-title">
         <div class="service-container service-cta">

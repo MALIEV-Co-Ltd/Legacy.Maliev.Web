@@ -612,6 +612,38 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("/services/custom-manufacturing", "en", "Custom manufacturing", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/custom-manufacturing", "th", "ผลิตชิ้นงานตามแบบ", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    [InlineData("/services/cnc-machining", "en", "CNC machining", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/cnc-machining", "th", "งาน CNC", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    [InlineData("/services/3d-printing", "en", "3D printing", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/3d-printing", "th", "พิมพ์ 3D", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    [InlineData("/services/3d-scanning", "en", "3D scanning", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/3d-scanning", "th", "สแกน 3D", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    public async Task ServiceDetailRoute_RendersSharedStaticSsrBreadcrumbAndLocation(
+        string route,
+        string culture,
+        string serviceName,
+        string breadcrumbLabel,
+        string locationHeading)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"service-breadcrumb\"", source, StringComparison.Ordinal);
+        Assert.Contains($"aria-label=\"{breadcrumbLabel}\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"aria-current=\"page\">{serviceName}</li>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"BreadcrumbList\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-location\"", source, StringComparison.Ordinal);
+        Assert.Contains(locationHeading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]

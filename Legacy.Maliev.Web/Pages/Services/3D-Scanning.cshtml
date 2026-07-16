@@ -1,5 +1,6 @@
 @page
 @model Legacy.Maliev.Web.Pages.Services.ScanningModel
+@using Legacy.Maliev.Web.Components.Shared
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
@@ -21,7 +22,7 @@
 }
 
 <main class="service-page">
-    <partial name="_SchemaBreadcrumb" model='"3D Scanning"' />
+    <component type="typeof(ServiceBreadcrumb)" render-mode="Static" param-ServiceKey='"3D Scanning"' />
     <section class="service-hero" aria-labelledby="scanning-title">
         <img class="service-hero-media" src="~/src/images/services/scanning/scanning-hero.webp" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="@T("Structured-light 3D scanning of a cast aluminum housing", "การสแกน 3D แบบ Structured Light บนตัวเรือนอะลูมิเนียมหล่อ")" />
         <div class="service-container service-hero-copy">
@@ -99,7 +100,7 @@
         <details><summary>@T("Can you scan at our factory or site?", "ไปสแกนที่โรงงานหรือหน้างานได้หรือไม่?")</summary><p>@T("Yes. We provide onsite scanning when feasibility, access, safety, environment, working space, and schedule are agreed. Send photos, approximate dimensions, location, restrictions, and required deliverables for planning.", "ได้ เรามีบริการนอกสถานที่เมื่อประเมินความเป็นไปได้ การเข้าถึง ความปลอดภัย สภาพแวดล้อม พื้นที่ และตารางแล้ว กรุณาส่งรูป ขนาดโดยประมาณ สถานที่ ข้อจำกัด และผลลัพธ์ที่ต้องการ")</p></details>
     </div></div></section>
 
-    <partial name="_ServiceLocationPartial" />
+    <component type="typeof(ServiceLocation)" render-mode="Static" />
 
     <section class="service-cta-wrap"><div class="service-container service-cta"><div><h2>@T("Tell us what you need after the scan", "บอกเราว่าต้องการนำข้อมูลสแกนไปทำอะไร")</h2><p>@T("Share photos, size, location, surface condition, critical areas, nominal CAD, and target files. We will help define an appropriate scope.", "ส่งรูป ขนาด สถานที่ สภาพผิว จุดสำคัญ CAD ต้นแบบ และไฟล์ที่ต้องการ เราจะช่วยกำหนดขอบเขตที่เหมาะสม")</p></div><div class="service-actions"><a class="service-button service-button-yellow" asp-page="/Quotation/Index" asp-route-item="3D-Scanning">@T("Request a Quote", "ขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></div></section>
 </main>
