@@ -721,6 +721,31 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "In-House & Onsite 3D Scanning", "3D Scanning, Reverse Engineering, and Deviation Analysis", "How much does 3D scanning cost?")]
+    [InlineData("th", "บริการสแกน 3D ในสถานที่และนอกสถานที่", "รับสแกน 3D, Reverse Engineering และ Deviation Analysis", "สแกน 3D ราคาเท่าไร?")]
+    public async Task ThreeDimensionalScanningRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/3d-scanning?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"three-dimensional-scanning-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
     [InlineData("/account/forgotpassword")]
