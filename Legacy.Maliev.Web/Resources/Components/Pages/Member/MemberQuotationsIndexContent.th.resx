@@ -54,4 +54,5 @@
   <data name="Next" xml:space="preserve"><value>ถัดไป</value></data>
   <data name="Your quotation history could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดประวัติใบเสนอราคาของคุณได้</value></data>
   <data name="Quotation service is temporarily unavailable." xml:space="preserve"><value>ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="One or more query values are invalid." xml:space="preserve"><value>ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง</value></data>
 </root>
