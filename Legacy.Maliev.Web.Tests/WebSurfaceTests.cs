@@ -770,6 +770,51 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             createPassword.Headers.Location?.OriginalString);
     }
 
+    [Theory]
+    [InlineData("en", "Customer account", "Profile", "Personal information", "Save profile")]
+    [InlineData("th", "บัญชีลูกค้า", "ข้อมูลส่วนตัว", "ข้อมูลส่วนบุคคล", "บันทึกข้อมูลส่วนตัว")]
+    public async Task MemberProfile_RendersLocalizedStaticSsrFieldsInsideOwnedAntiforgeryForm(
+        string culture,
+        string eyebrow,
+        string heading,
+        string personalLegend,
+        string submitLabel)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+
+        using var response = await client.GetAsync($"/member/account/manage/profile?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-profile-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{personalLegend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        foreach (var field in new[] { "FirstName", "LastName", "Telephone", "Mobile", "Fax", "DateOfBirth", "CompanyName", "TaxNumber", "Registrar" })
+        {
+            Assert.Contains($"name=\"{field}\"", source, StringComparison.Ordinal);
+        }
+        Assert.Contains("value=\"Ada\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Lovelace\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"date\" name=\"DateOfBirth\" value=\"1815-12-10\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"tel\" name=\"Telephone\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"tel\" name=\"Mobile\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"tel\" name=\"Fax\"", source, StringComparison.Ordinal);
+        Assert.Contains(">customer@example.com<", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/account/manage/changeemail\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(42, accountClient.LastProfileGetCustomerId);
+    }
+
     [Fact]
     public async Task ChangePassword_PostsWithAntiforgeryThenClearsTheBffSession()
     {
@@ -789,23 +834,118 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
     }
 
-    [Fact]
-    public async Task ProfileUpdate_UsesAntiforgeryAndRedirectAfterPost()
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ProfileUpdate_UsesInvariantBrowserDateAntiforgeryAndRedirectAfterPost(string culture)
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/profile");
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/profile?culture={culture}");
         form["FirstName"] = "Ada";
         form["LastName"] = "Lovelace";
+        form["Telephone"] = "021234567";
+        form["Mobile"] = "0812345678";
+        form["Fax"] = "021234568";
+        form["DateOfBirth"] = "1815-12-10";
         form["CompanyName"] = "Analytical Engines";
+        form["TaxNumber"] = "0105550000000";
+        form["Registrar"] = "DBD";
 
         using var response = await client.PostAsync(
-            "/member/account/manage/profile?handler=UpdateProfile",
+            $"/member/account/manage/profile?handler=UpdateProfile&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal(
             "/member/account/manage/profile",
             response.Headers.Location?.OriginalString?.ToLowerInvariant());
+
+        var invocation = Assert.IsType<ProfileUpdateInvocation>(accountClient.LastProfileUpdateInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("Ada", invocation.Update.FirstName);
+        Assert.Equal("Lovelace", invocation.Update.LastName);
+        Assert.Equal("021234567", invocation.Update.Telephone);
+        Assert.Equal("0812345678", invocation.Update.Mobile);
+        Assert.Equal("021234568", invocation.Update.Fax);
+        Assert.Equal(new DateTime(1815, 12, 10), invocation.Update.DateOfBirth);
+        Assert.Equal("Analytical Engines", invocation.Update.CompanyName);
+        Assert.Equal("0105550000000", invocation.Update.TaxNumber);
+        Assert.Equal("DBD", invocation.Update.Registrar);
+    }
+
+    [Fact]
+    public async Task MemberProfile_UpdateWithoutAntiforgeryIsRejectedBeforeServiceCall()
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/profile?handler=UpdateProfile",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["FirstName"] = "Ada",
+                ["LastName"] = "Lovelace",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(accountClient.LastProfileUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "First name is required.", "Last name is required.", "One or more profile values are invalid.")]
+    [InlineData("th", "กรุณากรอกชื่อ", "กรุณากรอกนามสกุล", "ข้อมูลส่วนตัวอย่างน้อยหนึ่งรายการไม่ถูกต้อง")]
+    public async Task MemberProfile_InvalidFieldsRenderLocalizedAllowlistedErrors(
+        string culture,
+        string firstNameError,
+        string lastNameError,
+        string invalidValueError)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/profile?culture={culture}");
+        form["FirstName"] = string.Empty;
+        form["LastName"] = string.Empty;
+        form["DateOfBirth"] = "not-a-date";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/profile?handler=UpdateProfile&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{firstNameError}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lastNameError}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{invalidValueError}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
+        Assert.Null(accountClient.LastProfileUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Profile service is temporarily unavailable.")]
+    [InlineData("th", "ระบบข้อมูลส่วนตัวไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberProfile_LoadFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ProfileGetResultOverride = new CustomerAccountProfileResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/account/manage/profile?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2393,7 +2533,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             null,
             null,
             "customer@example.com",
-            null,
+            new DateTime(1815, 12, 10),
             null,
             Billing.Id,
             Shipping.Id,
@@ -2402,6 +2542,22 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             Billing,
             null,
             Shipping);
+
+        public int? LastProfileGetCustomerId { get; private set; }
+
+        public ProfileUpdateInvocation? LastProfileUpdateInvocation { get; private set; }
+
+        public CustomerAccountProfileResult? ProfileGetResultOverride { get; set; }
+
+        public CustomerAddressOperationResult? ProfileUpdateResultOverride { get; set; }
+
+        public void ResetProfileInvocations()
+        {
+            LastProfileGetCustomerId = null;
+            LastProfileUpdateInvocation = null;
+            ProfileGetResultOverride = null;
+            ProfileUpdateResultOverride = null;
+        }
 
         public Task<CustomerAddressProfileResult> GetAddressProfileAsync(
             int customerId,
@@ -2431,21 +2587,39 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public Task<CustomerAccountProfileResult> GetProfileAsync(
             int customerId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAccountProfileResult(
+            CancellationToken cancellationToken)
+        {
+            LastProfileGetCustomerId = customerId;
+            if (ProfileGetResultOverride is not null)
+            {
+                return Task.FromResult(ProfileGetResultOverride);
+            }
+
+            return Task.FromResult(new CustomerAccountProfileResult(
                 customerId == Customer.Id ? Customer : null,
                 true,
                 customerId == Customer.Id));
+        }
 
         public Task<CustomerAddressOperationResult> UpdateProfileAsync(
             int customerId,
             CustomerProfileUpdate update,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressOperationResult(
+            CancellationToken cancellationToken)
+        {
+            LastProfileUpdateInvocation = new(customerId, update);
+            if (ProfileUpdateResultOverride is not null)
+            {
+                return Task.FromResult(ProfileUpdateResultOverride);
+            }
+
+            return Task.FromResult(new CustomerAddressOperationResult(
                 customerId == Customer.Id,
                 true,
                 customerId == Customer.Id));
+        }
     }
+
+    private sealed record ProfileUpdateInvocation(int CustomerId, CustomerProfileUpdate Update);
 
     private sealed class StubCustomerOrderClient : ICustomerOrderClient
     {
