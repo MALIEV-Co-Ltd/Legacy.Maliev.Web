@@ -364,6 +364,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("frame-src *", policy, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ProductionJavaScriptAsset_UsesMimeTypeAndNegotiatedCompression()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/dist/app.min.js");
+        request.Headers.AcceptEncoding.ParseAdd("gzip");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("gzip", response.Content.Headers.ContentEncoding);
+    }
+
     [Theory]
     [InlineData("en")]
     [InlineData("th")]

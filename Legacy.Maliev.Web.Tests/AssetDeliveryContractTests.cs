@@ -35,6 +35,30 @@ public sealed class AssetDeliveryContractTests
         Assert.True(info.Length > 0, $"Production asset is empty: {relativePath}");
     }
 
+    [Fact]
+    public void AboutTimeline_UsesWowContractCompatibleWithBundledAnimateCss()
+    {
+        var root = FindRepositoryRoot();
+        var about = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Pages",
+            "About",
+            "Index.cshtml"));
+        var styles = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "dist",
+            "site.min.css"));
+
+        Assert.Contains("wow animate__fadeIn", about, StringComparison.Ordinal);
+        Assert.Contains("animateClass: 'animate__animated'", about, StringComparison.Ordinal);
+        Assert.DoesNotContain("wow fadeIn", about, StringComparison.Ordinal);
+        Assert.Contains(".animate__animated", styles, StringComparison.Ordinal);
+        Assert.Contains(".animate__fadeIn", styles, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
