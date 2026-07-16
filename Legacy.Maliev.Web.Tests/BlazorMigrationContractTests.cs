@@ -767,6 +767,49 @@ public sealed class BlazorMigrationContractTests
     }
 
     [Fact]
+    public void MemberAddressRoute_UsesOwnedStaticSsrProjectionInsideAntiforgeryBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Account", "Manage", "Address.cshtml"));
+        var pageModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Account", "Manage", "Address.cshtml.cs"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Member", "MemberAddressContent.razor");
+
+        Assert.Contains("<form method=\"post\" asp-page-handler=\"UpdateAddress\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(MemberAddressContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("[Authorize]", pageModel, StringComparison.Ordinal);
+        Assert.Contains("GetCustomerDatabaseIdAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("GetAddressProfileAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("UpdateAddressesAsync", pageModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("data-migration-component=\"member-address-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<MemberAddressContent>", component, StringComparison.Ordinal);
+        foreach (var prefix in new[] { "Billing", "Shipping" })
+        {
+            foreach (var suffix in new[] { "Building", "Address1", "Address2", "City", "State", "PostalCode", "CountryId" })
+            {
+                Assert.Contains($"name=\"{prefix}{suffix}\"", component, StringComparison.Ordinal);
+            }
+        }
+        Assert.DoesNotContain("<form", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ICustomerAccountClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var displayModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Member", "MemberAddressDisplayModel.cs"));
+        Assert.DoesNotContain("CustomerId", displayModel, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Token", displayModel, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Member", "MemberAddressContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Areas", "Member", "Pages", "Account", "Manage", "Address.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Account", "Manage", "_AddressFields.cshtml")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Account", "Manage", "AddressFields.cs")));
+    }
+
+    [Fact]
     public void CareerDetailRoute_UsesDisplayOnlyStaticSsrComponentAndMinimalPrintBridge()
     {
         var root = FindRepositoryRoot();

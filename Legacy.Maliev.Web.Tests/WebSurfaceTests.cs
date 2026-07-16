@@ -724,24 +724,282 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task AddressUpdate_UsesAntiforgeryAndRedirectAfterPost()
+    [Theory]
+    [InlineData("en", "Customer account", "Addresses", "Billing address", "Shipping address", "Save addresses")]
+    [InlineData("th", "บัญชีลูกค้า", "ที่อยู่", "ที่อยู่ออกใบแจ้งหนี้", "ที่อยู่จัดส่ง", "บันทึกที่อยู่")]
+    public async Task MemberAddress_RendersLocalizedOwnedStaticSsrFields(
+        string culture,
+        string eyebrow,
+        string heading,
+        string billingLegend,
+        string shippingLegend,
+        string saveLabel)
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/address");
-        form["BillingAddress1"] = "1 Billing Rd";
-        form["BillingCity"] = "Bangkok";
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+
+        using var response = await client.GetAsync($"/member/account/manage/address?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-address-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{billingLegend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{shippingLegend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{saveLabel}<", decodedSource, StringComparison.Ordinal);
+        foreach (var prefix in new[] { "Billing", "Shipping" })
+        {
+            foreach (var suffix in new[] { "Building", "Address1", "Address2", "City", "State", "PostalCode", "CountryId" })
+            {
+                Assert.Contains($"name=\"{prefix}{suffix}\"", source, StringComparison.Ordinal);
+            }
+        }
+        Assert.Contains("value=\"Existing Billing\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Existing Shipping\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"764\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(42, accountClient.LastAddressGetCustomerId);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task AddressUpdate_UsesExactOwnedDtoAntiforgeryAndRedirectAfterPost(string culture)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingBuilding"] = " Billing Tower ";
+        form["BillingAddress1"] = " 1 Billing Rd ";
+        form["BillingAddress2"] = "   ";
+        form["BillingCity"] = " Bangkok ";
+        form["BillingState"] = " ";
+        form["BillingPostalCode"] = " 10110 ";
         form["BillingCountryId"] = "764";
-        form["ShippingAddress1"] = "2 Shipping Rd";
-        form["ShippingCity"] = "Bangkok";
+        form["ShippingBuilding"] = "   ";
+        form["ShippingAddress1"] = " 2 Shipping Rd ";
+        form["ShippingAddress2"] = " Dock 3 ";
+        form["ShippingCity"] = " ";
+        form["ShippingState"] = " Bangkok ";
+        form["ShippingPostalCode"] = "   ";
         form["ShippingCountryId"] = "764";
 
         using var response = await client.PostAsync(
-            "/member/account/manage/address?handler=UpdateAddress",
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("/member/account/manage/address", response.Headers.Location?.OriginalString?.ToLowerInvariant());
+        var invocation = Assert.IsType<AddressUpdateInvocation>(accountClient.LastAddressUpdateInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(new CustomerAddressInput("Billing Tower", "1 Billing Rd", null, "Bangkok", null, "10110", 764), invocation.Update.Billing);
+        Assert.Equal(new CustomerAddressInput(null, "2 Shipping Rd", "Dock 3", null, "Bangkok", null, 764), invocation.Update.Shipping);
+    }
+
+    [Fact]
+    public async Task MemberAddress_WithoutAntiforgeryIsRejectedBeforeCustomerService()
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/address?handler=UpdateAddress",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["BillingAddress1"] = "1 Billing Rd",
+                ["BillingCountryId"] = "764",
+                ["ShippingAddress1"] = "2 Shipping Rd",
+                ["ShippingCountryId"] = "764",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(accountClient.LastAddressUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Address line 1 is required for the billing address.", "Country must be selected for the shipping address.")]
+    [InlineData("th", "กรุณากรอกที่อยู่บรรทัดที่ 1 สำหรับที่อยู่ออกใบแจ้งหนี้", "กรุณาเลือกประเทศสำหรับที่อยู่จัดส่ง")]
+    public async Task MemberAddress_InvalidOwnedFieldsRenderLocalizedSafeErrors(
+        string culture,
+        string billingError,
+        string shippingError)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingAddress1"] = string.Empty;
+        form["BillingCountryId"] = "764";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCountryId"] = "999";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var rawSource = await response.Content.ReadAsStringAsync();
+        var source = WebUtility.HtmlDecode(rawSource);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{billingError}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{shippingError}<", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"BillingAddress1\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"address-error-BillingAddress1\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("id=\"address-error-BillingAddress1\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"address-error-ShippingCountryId\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("id=\"address-error-ShippingCountryId\"", rawSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
+        Assert.Null(accountClient.LastAddressUpdateInvocation);
+    }
+
+    [Fact]
+    public async Task MemberAddress_HtmlEncodesOwnedPiiAndCountryLabels()
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        var countryClient = Assert.IsType<StubCountryClient>(
+            configuredFactory.Services.GetRequiredService<ICountryClient>());
+        accountClient.ResetAddressInvocations();
+        var hostileAddress = new CustomerAddress(
+            7,
+            "\"HQ\" <script>alert('building')</script>",
+            "<script>alert('address')</script>",
+            null,
+            null,
+            null,
+            null,
+            764,
+            null,
+            null);
+        accountClient.AddressGetResultOverride = new CustomerAddressProfileResult(
+            new CustomerAddressProfile(new CustomerAccountDetails(
+                42,
+                "Ada",
+                "Lovelace",
+                "Ada Lovelace",
+                null,
+                null,
+                null,
+                "customer@example.com",
+                null,
+                null,
+                hostileAddress.Id,
+                hostileAddress.Id,
+                null,
+                null,
+                hostileAddress,
+                null,
+                hostileAddress)),
+            true,
+            true);
+        countryClient.ResultOverride = new ServiceResponse<IReadOnlyList<Country>>(
+            [new Country(764, "<img src=x onerror=alert('country')>", null, null, null, null, null, null)],
+            true);
+
+        using var response = await client.GetAsync("/member/account/manage/address?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("&quot;HQ&quot; &lt;script&gt;alert(&#x27;building&#x27;)&lt;/script&gt;", source, StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;alert(&#x27;address&#x27;)&lt;/script&gt;", source, StringComparison.Ordinal);
+        Assert.Contains("&lt;img src=x onerror=alert(&#x27;country&#x27;)&gt;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>alert('building')</script>", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<script>alert('address')</script>", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<img src=x", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Country list is temporarily unavailable.")]
+    [InlineData("th", "รายการประเทศไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberAddress_EmptyCountryCatalogBlocksArbitraryCountryIds(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var countryClient = Assert.IsType<StubCountryClient>(
+            configuredFactory.Services.GetRequiredService<ICountryClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        countryClient.ResultOverride = new ServiceResponse<IReadOnlyList<Country>>([], true);
+        accountClient.ResetAddressInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingAddress1"] = "1 Billing Rd";
+        form["BillingCountryId"] = "999";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCountryId"] = "999";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Null(accountClient.LastAddressUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Address service is temporarily unavailable.")]
+    [InlineData("th", "ระบบที่อยู่ไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberAddress_LoadFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        accountClient.AddressGetResultOverride = new CustomerAddressProfileResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/account/manage/address?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "The address could not be updated.")]
+    [InlineData("th", "ไม่สามารถอัปเดตที่อยู่ได้")]
+    public async Task MemberAddress_UpdateFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        accountClient.AddressUpdateResultOverride = new CustomerAddressOperationResult(false, true, true);
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingAddress1"] = "1 Billing Rd";
+        form["BillingCountryId"] = "764";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCountryId"] = "764";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.NotNull(accountClient.LastAddressUpdateInvocation);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2655,9 +2913,12 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubCountryClient : ICountryClient
     {
+        public ServiceResponse<IReadOnlyList<Country>>? ResultOverride { get; set; }
+
         public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(
             CancellationToken cancellationToken) =>
-            Task.FromResult(
+            Task.FromResult(ResultOverride
+                ??
                 new ServiceResponse<IReadOnlyList<Country>>(
                     [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)],
                     true));
@@ -2932,6 +3193,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public Queue<CustomerAddressOperationResult> EmailUpdateResults { get; } = [];
 
+        public int? LastAddressGetCustomerId { get; private set; }
+
+        public AddressUpdateInvocation? LastAddressUpdateInvocation { get; private set; }
+
+        public CustomerAddressProfileResult? AddressGetResultOverride { get; set; }
+
+        public CustomerAddressOperationResult? AddressUpdateResultOverride { get; set; }
+
         public void ResetProfileInvocations()
         {
             LastProfileGetCustomerId = null;
@@ -2946,22 +3215,40 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             EmailUpdateResults.Clear();
         }
 
+        public void ResetAddressInvocations()
+        {
+            LastAddressGetCustomerId = null;
+            LastAddressUpdateInvocation = null;
+            AddressGetResultOverride = null;
+            AddressUpdateResultOverride = null;
+        }
+
         public Task<CustomerAddressProfileResult> GetAddressProfileAsync(
             int customerId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressProfileResult(
-                customerId == Customer.Id ? new CustomerAddressProfile(Customer) : null,
-                true,
-                customerId == Customer.Id));
+            CancellationToken cancellationToken)
+        {
+            LastAddressGetCustomerId = customerId;
+            return Task.FromResult(
+                AddressGetResultOverride
+                ?? new CustomerAddressProfileResult(
+                    customerId == Customer.Id ? new CustomerAddressProfile(Customer) : null,
+                    true,
+                    customerId == Customer.Id));
+        }
 
         public Task<CustomerAddressOperationResult> UpdateAddressesAsync(
             int customerId,
             CustomerAddressUpdate update,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressOperationResult(
-                customerId == Customer.Id,
-                true,
-                customerId == Customer.Id));
+            CancellationToken cancellationToken)
+        {
+            LastAddressUpdateInvocation = new(customerId, update);
+            return Task.FromResult(
+                AddressUpdateResultOverride
+                ?? new CustomerAddressOperationResult(
+                    customerId == Customer.Id,
+                    true,
+                    customerId == Customer.Id));
+        }
 
         public Task<CustomerAddressOperationResult> UpdateEmailAsync(
             int customerId,
@@ -3015,6 +3302,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     private sealed record ProfileUpdateInvocation(int CustomerId, CustomerProfileUpdate Update);
 
     private sealed record EmailUpdateInvocation(int CustomerId, string Email);
+
+    private sealed record AddressUpdateInvocation(int CustomerId, CustomerAddressUpdate Update);
 
     private sealed class StubCustomerOrderClient : ICustomerOrderClient
     {
