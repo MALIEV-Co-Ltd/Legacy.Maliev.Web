@@ -953,6 +953,48 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Urgent", "Responsibilities", "Qualifications", "What we offer", "Back to careers")]
+    [InlineData("th", "เร่งด่วน", "หน้าที่ความรับผิดชอบ", "คุณสมบัติ", "สิ่งที่เราเสนอ", "กลับหน้าตำแหน่งงาน")]
+    public async Task CareerDetail_RendersLocalizedServiceBackedStaticSsrContent(
+        string culture,
+        string status,
+        string responsibilities,
+        string qualifications,
+        string offerHeading,
+        string backLabel)
+    {
+        using var response = await client.GetAsync($"/career/view/1?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"career-detail-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{responsibilities}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{qualifications}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{offerHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"mailto:career@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("onclick=\"PrintJobDescription()\"", source, StringComparison.Ordinal);
+        Assert.Contains("function PrintJobDescription()", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Career\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/career/view/0", HttpStatusCode.BadRequest)]
+    [InlineData("/career/view/999", HttpStatusCode.NotFound)]
+    public async Task CareerDetail_PreservesInvalidAndMissingOfferStatusCodes(
+        string route,
+        HttpStatusCode expectedStatus)
+    {
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(expectedStatus, response.StatusCode);
+    }
+
+    [Theory]
     [InlineData("en", "Job Offers", "Manufacturing Engineer", "Engineer")]
     [InlineData("th", "ตำแหน่งงาน", "Manufacturing Engineer", "Engineer")]
     public async Task CareerListing_RendersLocalizedServiceBackedStaticSsrContent(
