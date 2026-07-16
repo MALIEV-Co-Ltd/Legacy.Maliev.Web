@@ -1,0 +1,49 @@
+@inject IStringLocalizer<MemberProfileContent> Localizer
+
+<div data-migration-component="member-profile-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Customer account"]</p>
+        <h1 id="member-profile-title">@Localizer["Profile"]</h1>
+        <p>@Localizer["Keep personal, contact, and company information current."]</p>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert" role="status">@Localizer[Model.Notification]</div>
+    }
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="field-validation-error" role="alert">
+            <ul>
+                @foreach (var error in Model.Errors)
+                {
+                    <li>@Localizer[error]</li>
+                }
+            </ul>
+        </div>
+    }
+    <fieldset>
+        <legend>@Localizer["Personal information"]</legend>
+        <div class="maliev-form-field"><label for="profile-first-name">@Localizer["First name"]</label><input id="profile-first-name" name="FirstName" value="@Model.FirstName" autocomplete="given-name" required maxlength="250" /></div>
+        <div class="maliev-form-field"><label for="profile-last-name">@Localizer["Last name"]</label><input id="profile-last-name" name="LastName" value="@Model.LastName" autocomplete="family-name" required maxlength="250" /></div>
+        <div class="maliev-form-field"><span>@Localizer["Email"]</span><output>@Model.Email</output><a href="/member/account/manage/changeemail">@Localizer["Change email"]</a></div>
+        <div class="maliev-form-field"><label for="profile-date-of-birth">@Localizer["Date of birth"]</label><input id="profile-date-of-birth" type="date" name="DateOfBirth" value="@Model.DateOfBirth" /></div>
+    </fieldset>
+    <fieldset>
+        <legend>@Localizer["Contact information"]</legend>
+        <div class="maliev-form-field"><label for="profile-telephone">@Localizer["Telephone"]</label><input id="profile-telephone" type="tel" name="Telephone" value="@Model.Telephone" autocomplete="tel" maxlength="250" /></div>
+        <div class="maliev-form-field"><label for="profile-mobile">@Localizer["Mobile"]</label><input id="profile-mobile" type="tel" name="Mobile" value="@Model.Mobile" autocomplete="tel" maxlength="250" /></div>
+        <div class="maliev-form-field"><label for="profile-fax">@Localizer["Fax"]</label><input id="profile-fax" type="tel" name="Fax" value="@Model.Fax" maxlength="250" /></div>
+    </fieldset>
+    <fieldset>
+        <legend>@Localizer["Company information"]</legend>
+        <div class="maliev-form-field"><label for="profile-company-name">@Localizer["Company name"]</label><input id="profile-company-name" name="CompanyName" value="@Model.CompanyName" autocomplete="organization" maxlength="250" /></div>
+        <div class="maliev-form-field"><label for="profile-tax-number">@Localizer["Tax number"]</label><input id="profile-tax-number" name="TaxNumber" value="@Model.TaxNumber" maxlength="250" /></div>
+        <div class="maliev-form-field"><label for="profile-registrar">@Localizer["Registrar"]</label><input id="profile-registrar" name="Registrar" value="@Model.Registrar" maxlength="250" /></div>
+    </fieldset>
+    <button type="submit" class="maliev-button">@Localizer["Save profile"]</button>
+</div>
+
+@code {
+    [Parameter]
+    public MemberProfileDisplayModel Model { get; set; } = MemberProfileDisplayModel.Empty;
+}
