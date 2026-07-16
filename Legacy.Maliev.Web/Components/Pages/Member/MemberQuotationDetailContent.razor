@@ -1,0 +1,109 @@
+@inject IStringLocalizer<MemberQuotationDetailContent> Localizer
+
+<section class="maliev-section" aria-labelledby="member-quotation-detail-title" data-migration-component="member-quotation-detail-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Quotation management"]</p>
+        <h1 id="member-quotation-detail-title">@Localizer["Quotation details"]</h1>
+        <p>@Localizer["This page is read-only while the legacy payment workflow is being replaced."]</p>
+    </div>
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="validation-summary-errors" role="alert">
+            <ul>
+                @foreach (var error in Model.Errors)
+                {
+                    <li>@Localizer[error]</li>
+                }
+            </ul>
+        </div>
+    }
+    @if (Model.Id > 0)
+    {
+        var status = Model.Accepted switch
+        {
+            true => Localizer["Accepted"],
+            false => Localizer["Declined"],
+            _ => Localizer["Open"],
+        };
+        <article class="maliev-panel">
+            <p class="maliev-eyebrow">@Localizer["Quotation"] #@Model.Id</p>
+            <h2>@status</h2>
+            <dl>
+                <dt>@Localizer["Period"]</dt><dd>@Model.Period @Localizer["days"]</dd>
+                <dt>@Localizer["Expiration date"]</dt><dd>@Model.ExpirationDate</dd>
+                <dt>@Localizer["Subtotal"]</dt><dd>@Model.Subtotal</dd>
+                <dt>@Localizer["VAT"]</dt><dd>@Model.Vat</dd>
+                <dt>@Localizer["Total"]</dt><dd>@Model.Total</dd>
+                <dt>@Localizer["Withholding tax"]</dt><dd>@Model.WithholdingTax</dd>
+                <dt>@Localizer["Quoted amount"]</dt><dd>@Model.QuotedAmount</dd>
+                <dt>@Localizer["Currency ID"]</dt><dd>@Model.CurrencyId</dd>
+                <dt>@Localizer["Shipping method"]</dt><dd>@Model.ShippingMethod</dd>
+                <dt>@Localizer["Free on board"]</dt><dd>@Model.FreeOnBoard</dd>
+                <dt>@Localizer["Terms"]</dt><dd>@Model.Terms</dd>
+            </dl>
+            @if (!string.IsNullOrWhiteSpace(Model.Comment))
+            {
+                <p>@Model.Comment</p>
+            }
+        </article>
+        <section class="maliev-panel">
+            <h2>@Localizer["Quotation items"]</h2>
+            @if (Model.Items.Count == 0)
+            {
+                <p>@Localizer["No quotation items are available."]</p>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">@Localizer["Description"]</th><th scope="col">@Localizer["Quantity"]</th><th scope="col">@Localizer["Unit price"]</th><th scope="col">@Localizer["Subtotal"]</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr><td>@item.Description</td><td>@item.Quantity</td><td>@item.UnitPrice</td><td>@item.Subtotal</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+        <section class="maliev-panel">
+            <h2>@Localizer["Linked orders"]</h2>
+            @if (Model.Orders.Count == 0)
+            {
+                <p>@Localizer["No orders are linked to this quotation."]</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var order in Model.Orders)
+                    {
+                        <li><a href="@order.Href">@Localizer["Order"] #@order.Id</a></li>
+                    }
+                </ul>
+            }
+        </section>
+        <section class="maliev-panel">
+            <h2>@Localizer["Quotation files"]</h2>
+            @if (Model.FileNames.Count == 0)
+            {
+                <p>@Localizer["No files are linked to this quotation."]</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var fileName in Model.FileNames)
+                    {
+                        <li>@fileName</li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+    <p><a class="maliev-button maliev-button--secondary" href="/member/quotations">@Localizer["Back to quotations"]</a></p>
+</section>
+
+@code {
+    [Parameter]
+    public MemberQuotationDetailDisplayModel Model { get; set; } = MemberQuotationDetailDisplayModel.Empty;
+}
