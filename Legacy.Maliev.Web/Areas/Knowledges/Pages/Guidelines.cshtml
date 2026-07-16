@@ -1,17 +1,8 @@
 @page
 @model Legacy.Maliev.Web.Areas.Knowledges.Pages.GuidelinesModel
+@inject IStringLocalizer<GuidelinesContent> MetadataLocalizer
 @{
-    ViewData["Title"] = Localizer["Project guidelines | MALIEV"];
-    ViewData["Description"] = Localizer["Information to include when requesting CNC machining, 3D printing, or 3D scanning services."];
+    ViewData["Title"] = MetadataLocalizer["Project guidelines | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Information to include when requesting CNC machining, 3D printing, or 3D scanning services."];
 }
-<article class="knowledge-document">
-    <p class="maliev-eyebrow">@Localizer["Prepare your project"]</p>
-    <h1>@Localizer["Quotation request guidelines"]</h1>
-    <p class="docs-lead">@Localizer["Clear files and requirements let our engineers review feasibility, price, and lead time with fewer follow-up questions."]</p>
-    <div class="docs-step-list">
-        <section><span>1</span><div><h2>@Localizer["Send usable files"]</h2><p>@Localizer["Provide a 3D CAD file when possible. Add a drawing when tolerances, threads, finishes, inspection points, or critical dimensions matter."]</p></div></section>
-        <section><span>2</span><div><h2>@Localizer["Define the result"]</h2><p>@Localizer["State the process, material, quantity, color or finish, intended use, and required delivery date."]</p></div></section>
-        <section><span>3</span><div><h2>@Localizer["Flag critical requirements"]</h2><p>@Localizer["Identify mating surfaces, cosmetic faces, dimensional priorities, assemblies, and any parts supplied by you."]</p></div></section>
-        <section><span>4</span><div><h2>@Localizer["Protect confidential work"]</h2><p>@Localizer["Request our mutual NDA before sharing confidential project information when your organization requires it."]</p><a asp-area="" asp-page="/Legal/NonDisclosureAgreement">@Localizer["View NDA information"]</a></div></section>
-    </div>
-</article>
+<component type="typeof(GuidelinesContent)" render-mode="Static" />

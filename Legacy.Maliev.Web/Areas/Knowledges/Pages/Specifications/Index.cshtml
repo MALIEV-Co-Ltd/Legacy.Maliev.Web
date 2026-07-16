@@ -1,16 +1,8 @@
 @page
 @model Legacy.Maliev.Web.Areas.Knowledges.Pages.Specifications.IndexModel
+@inject IStringLocalizer<SpecificationsIndexContent> MetadataLocalizer
 @{
-    ViewData["Title"] = Localizer["Service specifications | MALIEV"];
-    ViewData["Description"] = Localizer["Choose a process for concise preparation guidance, then use the service page for current materials, pricing, lead-time, and FAQ information."];
+    ViewData["Title"] = MetadataLocalizer["Service specifications | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Choose a process for concise preparation guidance, then use the service page for current materials, pricing, lead-time, and FAQ information."];
 }
-<article class="knowledge-document">
-    <p class="maliev-eyebrow">@Localizer["Technical guidance"]</p>
-    <h1>@Localizer["Service specifications"]</h1>
-    <p class="docs-lead">@Localizer["Choose a process for concise preparation guidance, then use the service page for current materials, pricing, lead-time, and FAQ information."]</p>
-    <div class="maliev-card-grid">
-        <a class="maliev-panel docs-link-card" asp-page="/Specifications/CNC-Machining"><i class="fas fa-cog" aria-hidden="true"></i><strong>@Localizer["CNC machining"]</strong><span>@Localizer["CAD, drawings, tolerances, threads, and finishes."]</span></a>
-        <a class="maliev-panel docs-link-card" asp-page="/Specifications/3D-Printing"><i class="fas fa-cubes" aria-hidden="true"></i><strong>@Localizer["3D printing"]</strong><span>@Localizer["Watertight models, process choice, orientation, and support considerations."]</span></a>
-        <a class="maliev-panel docs-link-card" asp-page="/Specifications/3D-Scanning"><i class="fas fa-cube" aria-hidden="true"></i><strong>@Localizer["3D scanning"]</strong><span>@Localizer["Part condition, surface preparation, access, and deliverables."]</span></a>
-    </div>
-</article>
+<component type="typeof(SpecificationsIndexContent)" render-mode="Static" />

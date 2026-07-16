@@ -61,6 +61,56 @@ public sealed class BlazorMigrationContractTests
         Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("Index.cshtml", "KnowledgeIndexContent.razor", "KnowledgeIndexContent")]
+    [InlineData("Guidelines.cshtml", "GuidelinesContent.razor", "GuidelinesContent")]
+    [InlineData("Workflow.cshtml", "WorkflowContent.razor", "WorkflowContent")]
+    [InlineData("Specifications/Index.cshtml", "Specifications/SpecificationsIndexContent.razor", "SpecificationsIndexContent")]
+    [InlineData("Specifications/CNC-Machining.cshtml", "Specifications/CncMachiningContent.razor", "CncMachiningContent")]
+    [InlineData("Specifications/3D-Printing.cshtml", "Specifications/ThreeDimensionalPrintingContent.razor", "ThreeDimensionalPrintingContent")]
+    [InlineData("Specifications/3D-Scanning.cshtml", "Specifications/ThreeDimensionalScanningContent.razor", "ThreeDimensionalScanningContent")]
+    public void KnowledgeRoute_UsesLocalizedNonInteractiveStaticSsrComponent(
+        string pagePath,
+        string componentPath,
+        string componentName)
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Areas",
+            "Knowledges",
+            "Pages",
+            pagePath.Replace('/', Path.DirectorySeparatorChar)));
+        var component = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Knowledges",
+            componentPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Contains($"type=\"typeof({componentName})\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains($"IStringLocalizer<{componentName}>", page, StringComparison.Ordinal);
+        Assert.Contains("MetadataLocalizer", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("<article", page, StringComparison.Ordinal);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", component, StringComparison.Ordinal);
+        Assert.Contains($"IStringLocalizer<{componentName}>", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        var resourceRelativePath = Path.ChangeExtension(componentPath, ".th.resx");
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Knowledges",
+            resourceRelativePath.Replace('/', Path.DirectorySeparatorChar))));
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
