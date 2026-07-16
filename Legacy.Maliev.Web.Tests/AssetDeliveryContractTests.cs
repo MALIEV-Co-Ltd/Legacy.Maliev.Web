@@ -36,7 +36,7 @@ public sealed class AssetDeliveryContractTests
     }
 
     [Fact]
-    public void AboutTimeline_UsesWowContractCompatibleWithBundledAnimateCss()
+    public void ObsoleteAnimationDependencies_AreAbsentFromSourceAndBundles()
     {
         var root = FindRepositoryRoot();
         var about = File.ReadAllText(Path.Combine(
@@ -45,6 +45,15 @@ public sealed class AssetDeliveryContractTests
             "Pages",
             "About",
             "Index.cshtml"));
+        var package = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "package.json"));
+        var vendorEntry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "vendor-entry.js"));
+        var styleEntry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "site-entry.css"));
+        var scripts = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "dist",
+            "vendor.min.js"));
         var styles = File.ReadAllText(Path.Combine(
             root,
             "Legacy.Maliev.Web",
@@ -52,11 +61,14 @@ public sealed class AssetDeliveryContractTests
             "dist",
             "site.min.css"));
 
-        Assert.Contains("wow animate__fadeIn", about, StringComparison.Ordinal);
-        Assert.Contains("animateClass: 'animate__animated'", about, StringComparison.Ordinal);
-        Assert.DoesNotContain("wow fadeIn", about, StringComparison.Ordinal);
-        Assert.Contains(".animate__animated", styles, StringComparison.Ordinal);
-        Assert.Contains(".animate__fadeIn", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("wow", about, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("animate__", about, StringComparison.Ordinal);
+        Assert.DoesNotContain("wowjs", package, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("animate.css", package, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("wowjs", vendorEntry, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("animate.css", styleEntry, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WOW", scripts, StringComparison.Ordinal);
+        Assert.DoesNotContain("animate__", styles, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
