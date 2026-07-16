@@ -906,6 +906,65 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("ClientSecret", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", "Contact", "Let’s build something useful.", "Send an enquiry", "First name", "Submit enquiry")]
+    [InlineData("th", "Contact", "Let’s build something useful.", "Send an enquiry", "ชื่อ", "Submit enquiry")]
+    public async Task ContactPage_RendersLocalizedStaticSsrFieldsInsideRazorPostBoundary(
+        string culture,
+        string eyebrow,
+        string heading,
+        string formHeading,
+        string firstNameLabel,
+        string submitLabel)
+    {
+        using var response = await client.GetAsync($"/contact?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"contact-hero-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"contact-details-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Contact?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-val-required=\"Please enter your first name\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-valmsg-for=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ContactPage_InvalidPostPreservesInputAndFieldErrorsInStaticSsrComponent()
+    {
+        var form = await GetAntiforgeryFormAsync("/contact?culture=en");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Country"] = "Thailand";
+        form["Message"] = "Please contact me";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/contact?handler=SubmitRequest&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-valmsg-for=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task QuotationPage_PreservesPrefillAndSecureUploadContract()
     {

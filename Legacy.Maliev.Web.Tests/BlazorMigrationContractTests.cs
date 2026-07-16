@@ -263,4 +263,40 @@ public sealed class BlazorMigrationContractTests
             "Career",
             "View.th.resx")));
     }
+
+    [Fact]
+    public void ContactRoute_UsesStaticSsrComponentsInsideTheRazorAntiforgeryBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Contact", "Index.cshtml"));
+        var componentRoot = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Contact");
+
+        Assert.Contains("<form method=\"post\" asp-page-handler=\"SubmitRequest\" id=\"contact-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ContactHeroContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ContactFormFields)\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ContactDetailsContent)\"", page, StringComparison.Ordinal);
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
+        Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"g-recaptcha-response\"", page, StringComparison.Ordinal);
+
+        foreach (var componentName in new[] { "ContactHeroContent", "ContactFormFields", "ContactDetailsContent" })
+        {
+            var component = File.ReadAllText(Path.Combine(componentRoot, $"{componentName}.razor"));
+            Assert.Contains("IStringLocalizer<ContactContent>", component, StringComparison.Ordinal);
+            Assert.DoesNotContain("IContactClient", component, StringComparison.Ordinal);
+            Assert.DoesNotContain("IAntiBotVerifier", component, StringComparison.Ordinal);
+            Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Contact",
+            "ContactContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Contact", "Index.th.resx")));
+    }
 }
