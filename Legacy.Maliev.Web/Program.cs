@@ -139,6 +139,7 @@ app.UseAuthorization();
 app.UseOutputCache();
 app.MapDefaultEndpoints("web");
 app.MapLegacySitemap();
+app.MapMemberCompatibilityEndpoints();
 app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();
