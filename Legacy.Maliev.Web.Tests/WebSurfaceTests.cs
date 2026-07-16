@@ -362,6 +362,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         string nextLabel)
     {
         await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
 
         using var response = await client.GetAsync(
             $"/member/quotations?culture={culture}&index=2&size=10&sort=QuotationCreatedDate_Ascending&search=CNC");
@@ -385,6 +388,34 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<QuotationListInvocation>(quotationClient.LastInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("QuotationCreatedDate_Ascending", invocation.Sort);
+        Assert.Equal("CNC", invocation.Search);
+        Assert.Equal(2, invocation.PageIndex);
+        Assert.Equal(10, invocation.PageSize);
+    }
+
+    [Theory]
+    [InlineData("en", "One or more query values are invalid.")]
+    [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
+    public async Task MemberQuotationsIndex_MalformedPagingRendersLocalizedSafeValidation(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(
+            $"/member/quotations?culture={culture}&index=not-a-number&size=also-invalid");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("class=\"validation-summary-errors\" role=\"alert\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{expectedMessage}<", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Input string was not in a correct format", decodedSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2208,17 +2239,24 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc));
 
+        public QuotationListInvocation? LastInvocation { get; private set; }
+
+        public void ResetInvocation() => LastInvocation = null;
+
         public Task<CustomerQuotationListResult> ListAsync(
             int customerId,
             string? sort,
             string? search,
             int pageIndex,
             int pageSize,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerQuotationListResult(
+            CancellationToken cancellationToken)
+        {
+            LastInvocation = new(customerId, sort, search, pageIndex, pageSize);
+            return Task.FromResult(new CustomerQuotationListResult(
                 customerId == 42 ? new CustomerQuotationPage([Quotation], pageIndex, 3, 1) : null,
                 true,
                 customerId == 42));
+        }
 
         public Task<CustomerQuotationDetailsResult> GetAsync(
             int customerId,
@@ -2226,4 +2264,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerQuotationDetailsResult(null, true, customerId == 42));
     }
+
+    private sealed record QuotationListInvocation(
+        int CustomerId,
+        string? Sort,
+        string? Search,
+        int PageIndex,
+        int PageSize);
 }

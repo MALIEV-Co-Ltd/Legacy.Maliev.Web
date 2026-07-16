@@ -14,6 +14,8 @@ public sealed class Index(
     IAccountSessionManager sessionManager,
     ICustomerQuotationClient quotationClient) : PageModel
 {
+    private const string InvalidQueryValuesMessage = "One or more query values are invalid.";
+
     public CustomerQuotationPage Quotations { get; private set; } = new([], 1, 0, 0);
 
     public MemberQuotationsIndexDisplayModel DisplayModel { get; private set; } = MemberQuotationsIndexDisplayModel.Empty;
@@ -64,10 +66,14 @@ public sealed class Index(
             Search,
             Sort,
             PageSize,
-            ModelState.Values
-                .SelectMany(value => value.Errors)
-                .Select(error => error.ErrorMessage)
+            ModelState
+                .Where(entry => entry.Value is not null)
+                .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                    error.Exception is not null || IsPagingKey(entry.Key)
+                        ? InvalidQueryValuesMessage
+                        : error.ErrorMessage))
                 .Where(error => !string.IsNullOrWhiteSpace(error))
+                .Distinct(StringComparer.Ordinal)
                 .ToArray(),
             Quotations.Items.Select(quotation => new MemberQuotationListItemDisplayModel(
                 quotation.Id,
@@ -106,4 +112,10 @@ public sealed class Index(
 
         return "/member/quotations" + QueryString.Create(values);
     }
+
+    private static bool IsPagingKey(string key) =>
+        key.Equals("index", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals(nameof(PageIndex), StringComparison.OrdinalIgnoreCase) ||
+        key.Equals("size", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals(nameof(PageSize), StringComparison.OrdinalIgnoreCase);
 }
