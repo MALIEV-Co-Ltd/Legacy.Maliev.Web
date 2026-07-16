@@ -497,22 +497,102 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
-    public async Task SignedInMember_OrderHistoryDetailAndCancellationStayInsideOwnedBffBoundary()
+    public async Task SignedInMember_OrderHistoryStaysInsideOwnedBffBoundary()
     {
         await SignInAsync();
 
         var history = await client.GetStringAsync("/member/orders/history?search=CNC");
-        var detail = await client.GetStringAsync("/member/orders/view?itemID=7");
 
         Assert.Contains("Part", history, StringComparison.Ordinal);
         Assert.DoesNotContain("The Sort field is required.", history, StringComparison.Ordinal);
         Assert.Contains("/Member/Orders/View?itemID=7", history, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CNC", detail, StringComparison.Ordinal);
-        Assert.Contains("Reviewing", detail, StringComparison.Ordinal);
-        Assert.Contains("orders/part.step", detail, StringComparison.Ordinal);
-        Assert.Contains("__RequestVerificationToken", detail, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", history, StringComparison.Ordinal);
-        Assert.DoesNotContain("service-token", detail, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Order details", "Status history", "Order files", "Cancel order")]
+    [InlineData("th", "รายละเอียดคำสั่งซื้อ", "ประวัติสถานะ", "ไฟล์คำสั่งซื้อ", "ยกเลิกคำสั่งซื้อ")]
+    public async Task MemberOrderDetail_RendersLocalizedOwnedStaticSsrAndAntiforgeryForm(
+        string culture,
+        string heading,
+        string historyHeading,
+        string filesHeading,
+        string cancelLabel)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
+
+        using var response = await client.GetAsync($"/member/orders/view?itemID=7&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-order-detail-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{historyHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{filesHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{cancelLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("CNC", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Reviewing", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("part.step", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("orders/part.step", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-orders", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"orderId\" value=\"7\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<OrderInvocation>(orderClient.LastGetInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(7, invocation.OrderId);
+    }
+
+    [Theory]
+    [InlineData("/member/orders/view")]
+    [InlineData("/member/orders/view?itemID=0")]
+    [InlineData("/member/orders/view?itemID=-1")]
+    [InlineData("/member/orders/view?itemID=999")]
+    public async Task MemberOrderDetail_InvalidOrUnownedIdReturnsNotFound(string route)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "Order service is temporarily unavailable.")]
+    [InlineData("th", "ระบบคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberOrderDetail_ServiceFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.GetResultOverride = new CustomerOrderDetailsResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/orders/view?itemID=7&culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-orders", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MemberOrderDetail_CancellationRetainsOwnedAntiforgeryPostAndRedirect()
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
 
         var form = await GetAntiforgeryFormAsync("/member/orders/view?itemID=7");
         form["orderId"] = "7";
@@ -524,6 +604,51 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(
             "/Member/Orders/View?itemID=7",
             response.Headers.Location?.OriginalString);
+
+        var invocation = Assert.IsType<OrderInvocation>(orderClient.LastCancelInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(7, invocation.OrderId);
+    }
+
+    [Fact]
+    public async Task MemberOrderDetail_CancellationWithoutAntiforgeryIsRejectedBeforeServiceCall()
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/orders/view?handler=CancelOrder",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["orderId"] = "7" }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(orderClient.LastCancelInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "This order can no longer be cancelled.")]
+    [InlineData("th", "ไม่สามารถยกเลิกคำสั่งซื้อนี้ได้อีก")]
+    public async Task MemberOrderDetail_CancellationConflictRendersLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        var form = await GetAntiforgeryFormAsync($"/member/orders/view?itemID=7&culture={culture}");
+        form["orderId"] = "7";
+        orderClient.CancelResultOverride = new CustomerOrderOperationResult(false, true, true, true);
+
+        using var response = await client.PostAsync(
+            $"/member/orders/view?handler=CancelOrder&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2263,6 +2388,22 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             [new CustomerOrderStatus(9, 7, 2, "Reviewing", null, null, null)],
             [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", null, null)]);
 
+        public OrderInvocation? LastGetInvocation { get; private set; }
+
+        public OrderInvocation? LastCancelInvocation { get; private set; }
+
+        public CustomerOrderDetailsResult? GetResultOverride { get; set; }
+
+        public CustomerOrderOperationResult? CancelResultOverride { get; set; }
+
+        public void ResetInvocations()
+        {
+            LastGetInvocation = null;
+            LastCancelInvocation = null;
+            GetResultOverride = null;
+            CancelResultOverride = null;
+        }
+
         public Task<CustomerOrderListResult> ListAsync(
             int customerId,
             string? sort,
@@ -2278,22 +2419,40 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         public Task<CustomerOrderDetailsResult> GetAsync(
             int customerId,
             int orderId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderDetailsResult(
+            CancellationToken cancellationToken)
+        {
+            LastGetInvocation = new(customerId, orderId);
+            if (GetResultOverride is not null)
+            {
+                return Task.FromResult(GetResultOverride);
+            }
+
+            return Task.FromResult(new CustomerOrderDetailsResult(
                 customerId == 42 && orderId == 7 ? Details : null,
                 true,
                 customerId == 42));
+        }
 
         public Task<CustomerOrderOperationResult> CancelAsync(
             int customerId,
             int orderId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderOperationResult(
+            CancellationToken cancellationToken)
+        {
+            LastCancelInvocation = new(customerId, orderId);
+            if (CancelResultOverride is not null)
+            {
+                return Task.FromResult(CancelResultOverride);
+            }
+
+            return Task.FromResult(new CustomerOrderOperationResult(
                 customerId == 42 && orderId == 7,
                 true,
                 customerId == 42,
                 false));
+        }
     }
+
+    private sealed record OrderInvocation(int CustomerId, int OrderId);
 
     private sealed class StubCustomerQuotationClient : ICustomerQuotationClient
     {
