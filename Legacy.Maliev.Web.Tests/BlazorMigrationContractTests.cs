@@ -627,4 +627,34 @@ public sealed class BlazorMigrationContractTests
         Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "ChangeEmailConfirmationContent.th.resx")));
         Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Pages", "Account", "ChangeEmailConfirmation.th.resx")));
     }
+
+    [Fact]
+    public void LogoutRoute_UsesDisplayOnlyStaticSsrInsideTheAuthorizedAntiforgeryBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "Logout.cshtml"));
+        var pageModel = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "Logout.cshtml.cs"));
+        var componentPath = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Account", "LogoutContent.razor");
+
+        Assert.Contains("type=\"typeof(LogoutContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\" asp-page=\"/Account/Logout\">", page, StringComparison.Ordinal);
+        Assert.Contains("[Authorize]", pageModel, StringComparison.Ordinal);
+        Assert.Contains("SignOutAsync(HttpContext, cancellationToken)", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.Headers.CacheControl = \"no-store\"", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.Headers[\"Referrer-Policy\"] = \"no-referrer\"", pageModel, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(componentPath));
+        var component = File.ReadAllText(componentPath);
+        Assert.Contains("IStringLocalizer<LogoutContent>", component, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"logout-content\"", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account\"", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAccountSessionManager", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ICustomerAuthenticationClient", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccessToken", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("RefreshToken", component, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "Account", "LogoutContent.th.resx")));
+    }
 }

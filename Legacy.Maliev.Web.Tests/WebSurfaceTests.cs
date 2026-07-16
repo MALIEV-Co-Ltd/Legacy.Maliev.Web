@@ -866,6 +866,62 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Sign out | MALIEV", "Account security", "Sign out of your account?", "You will need to sign in again to access your member workspace.", "Sign out", "Keep me signed in")]
+    [InlineData("th", "ออกจากระบบ | MALIEV", "ความปลอดภัยของบัญชี", "ออกจากระบบบัญชีของคุณหรือไม่", "คุณจะต้องเข้าสู่ระบบอีกครั้งเพื่อเข้าถึงพื้นที่สมาชิก", "ออกจากระบบ", "คงการเข้าสู่ระบบไว้")]
+    public async Task Logout_RendersLocalizedStaticSsrConfirmationInsideServerPostBoundary(
+        string culture,
+        string pageTitle,
+        string eyebrow,
+        string heading,
+        string description,
+        string signOutLabel,
+        string cancelLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/account/logout?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<title>{pageTitle}</title>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"logout-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{signOutLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{cancelLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account\"", source, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Logout_PostRequiresAntiforgeryThenRevokesTheOpaqueSessionAndClearsAuthentication()
+    {
+        await SignInAsync();
+
+        using var rejected = await client.PostAsync("/account/logout", new FormUrlEncodedContent([]));
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        using var stillAuthenticated = await client.GetAsync("/account/logout?culture=en");
+        Assert.Equal(HttpStatusCode.OK, stillAuthenticated.StatusCode);
+
+        var form = await GetAntiforgeryFormAsync("/account/logout?culture=en");
+        using var response = await client.PostAsync("/account/logout", new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/", response.Headers.Location?.OriginalString);
+        using var afterSignOut = await client.GetAsync("/account/logout");
+        Assert.Equal(HttpStatusCode.Redirect, afterSignOut.StatusCode);
+        Assert.Equal("/Account/Login", afterSignOut.Headers.Location?.AbsolutePath);
+    }
+
+    [Theory]
     [InlineData("en", "Account access", "Access denied", "You are not authorized to see this content", "Back to the home page", "Contact support")]
     [InlineData("th", "การเข้าถึงบัญชี", "ไม่สามารถเข้าถึงได้", "คุณไม่สามารถเข้าถึงส่วนนี้ได้", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     public async Task AccessDenied_RendersLocalizedStaticSsrWithoutSessionState(
