@@ -699,4 +699,26 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("SuppressIdentityNavigation", loginPartial, StringComparison.Ordinal);
         Assert.Contains("is not true", loginPartial, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Sitemap_UsesDedicatedXmlEndpointInsteadOfRazorOrBlazorRendering()
+    {
+        var root = FindRepositoryRoot();
+        var program = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Program.cs"));
+        var endpointPath = Path.Combine(root, "Legacy.Maliev.Web", "SitemapEndpointRouteBuilderExtensions.cs");
+
+        Assert.Contains("app.MapLegacySitemap()", program, StringComparison.Ordinal);
+        Assert.True(File.Exists(endpointPath));
+        var endpoint = File.ReadAllText(endpointPath);
+        Assert.Contains("MapGet(", endpoint, StringComparison.Ordinal);
+        Assert.Contains("\"/Sitemap\"", endpoint, StringComparison.Ordinal);
+        Assert.Contains("SitemapXmlRenderer.Render(PublicSearchRouteCatalog.Routes)", endpoint, StringComparison.Ordinal);
+        Assert.Contains("\"application/xml; charset=utf-8\"", endpoint, StringComparison.Ordinal);
+        Assert.Contains("ExcludeFromDescription()", endpoint, StringComparison.Ordinal);
+        Assert.DoesNotContain("MapRazorComponents", endpoint, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor", endpoint, StringComparison.OrdinalIgnoreCase);
+
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Sitemap.cshtml")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Sitemap.cshtml.cs")));
+    }
 }
