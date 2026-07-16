@@ -813,6 +813,66 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up")]
+    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก")]
+    public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(
+        string culture,
+        string firstNameLabel,
+        string lastNameLabel,
+        string emailLabel,
+        string passwordLabel,
+        string confirmLabel,
+        string submitLabel)
+    {
+        using var response = await client.GetAsync($"/account/signup?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"signup-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{lastNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/Signup?handler=SignUp\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\" id=\"signup-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"RecaptchaToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("recaptcha/enterprise.js?render=test-site-key", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Signup_InvalidPostPreservesIdentityFieldsWithoutEchoingPasswordsOrAntiBotToken()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/signup?culture=en");
+        var submittedPassword = new string('q', 12);
+        var submittedAntiBotToken = new string('r', 24);
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Password"] = submittedPassword;
+        form["ConfirmPassword"] = submittedPassword;
+        form["g-recaptcha-response"] = submittedAntiBotToken;
+
+        using var response = await client.PostAsync(
+            "/account/signup?handler=SignUp&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"signup-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Mali\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Ev\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedPassword, source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedAntiBotToken, source, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("/account/changeemailconfirmation")]
     [InlineData("/account/emailconfirmation")]
     [InlineData("/account/resetpassword")]
