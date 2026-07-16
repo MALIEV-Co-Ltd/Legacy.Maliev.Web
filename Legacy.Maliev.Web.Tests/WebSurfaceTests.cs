@@ -364,6 +364,33 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("frame-src *", policy, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", "Precision. Speed. Reliability.", "Manufacturing Services for Prototypes and Production Parts", "Why customers work with MALIEV")]
+    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "บริการผลิตชิ้นงานต้นแบบและชิ้นส่วนสำหรับการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
+    public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string valueLabel)
+    {
+        using var response = await client.GetAsync($"/?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"home-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(valueLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task ProductionJavaScriptAsset_UsesMimeTypeAndNegotiatedCompression()
     {
