@@ -13,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
 builder.AddServiceDefaults();
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
@@ -38,7 +39,15 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
     options.MinimumSameSitePolicy = SameSiteMode.Lax;
     options.Secure = CookieSecurePolicy.Always;
 });
-builder.Services.AddRazorPages()
+builder.Services.AddRazorPages(options =>
+{
+    if (useBlazorServicesRoute)
+    {
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/Index",
+            model => model.Selectors.Clear());
+    }
+})
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
     .AddDataAnnotationsLocalization();
 builder.Services.AddRazorComponents();
@@ -137,11 +146,15 @@ app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 app.UseOutputCache();
 app.MapDefaultEndpoints("web");
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
-app.MapRazorComponents<App>();
+if (useBlazorServicesRoute)
+{
+    app.MapRazorComponents<App>();
+}
 app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();

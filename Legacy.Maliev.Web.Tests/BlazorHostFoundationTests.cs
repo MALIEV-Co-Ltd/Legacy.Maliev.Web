@@ -18,7 +18,7 @@ public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFact
     }
 
     [Fact]
-    public void Program_RegistersRealBlazorHostWithoutInteractiveInfrastructureOrPrematureRoutes()
+    public void Program_RegistersStaticSsrHostWithoutInteractiveInfrastructureAndOnlyTheApprovedRoute()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
@@ -31,18 +31,21 @@ public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFact
         Assert.DoesNotContain("AddInteractiveServerComponents", program, StringComparison.Ordinal);
         Assert.DoesNotContain("AddInteractiveWebAssemblyComponents", program, StringComparison.Ordinal);
         Assert.DoesNotContain("MapBlazorHub", program, StringComparison.Ordinal);
+        Assert.Contains("<!DOCTYPE html>", app, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<HeadOutlet", app, StringComparison.Ordinal);
         Assert.Contains("<Routes />", app, StringComparison.Ordinal);
         Assert.Contains("<Router", routes, StringComparison.Ordinal);
         Assert.Contains("AppAssembly=\"typeof(Program).Assembly\"", routes, StringComparison.Ordinal);
         Assert.Contains("<RouteView", routes, StringComparison.Ordinal);
 
-        var prematureRoutes = Directory.EnumerateFiles(
+        var routedPages = Directory.EnumerateFiles(
                 Path.Combine(web, "Components"),
                 "*.razor",
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
             .ToArray();
-        Assert.Empty(prematureRoutes);
+        var servicesRoute = Assert.Single(routedPages);
+        Assert.Equal("ServicesPage.razor", Path.GetFileName(servicesRoute));
     }
 
     [Theory]
