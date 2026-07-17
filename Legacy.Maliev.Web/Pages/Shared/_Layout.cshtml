@@ -26,8 +26,7 @@
     <partial name="_CssPartial" />
     <partial name="_FontPartial" />
     @* Structured Data / Schema Markup *@
-    <partial name="_SchemaOrganization" />
-    <partial name="_SchemaLocalBusiness" />
+    <component type="typeof(PublicBusinessStructuredData)" render-mode="Static" param-Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
     @RenderSection("Schema", required: false)
 
     <link rel="shortlink" href="https://www.maliev.com/" />
