@@ -142,7 +142,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<section class=\"service-hero\"", page, StringComparison.Ordinal);
-        Assert.Contains("<partial name=\"_SchemaService\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
         Assert.Contains("FAQPage", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(
@@ -166,7 +166,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("type=\"typeof(CncMachiningContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
-        Assert.Contains("<partial name=\"_SchemaService\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
         Assert.Contains("FAQPage", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "CncMachiningContent.razor"));
@@ -182,7 +182,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("type=\"typeof(ThreeDimensionalPrintingContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
-        Assert.Contains("<partial name=\"_SchemaService\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
         Assert.Contains("FAQPage", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
@@ -198,7 +198,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("type=\"typeof(ThreeDimensionalScanningContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
-        Assert.Contains("<partial name=\"_SchemaService\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
         Assert.Contains("FAQPage", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor"));
