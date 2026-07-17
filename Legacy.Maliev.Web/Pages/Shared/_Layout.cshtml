@@ -36,7 +36,7 @@
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
     <partial name="_FacebookSdkPartial" />
     <partial name="_GoogleTagManagerBodyPartial" />
-    <partial name="_CookieConsentPartial" />
+    <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
     <partial name="_BrowserCompatibilityCheckPartial" />
     <div id="main-content" tabindex="-1">
