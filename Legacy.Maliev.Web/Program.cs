@@ -14,6 +14,8 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
+var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
+var useBlazorRouteHost = useBlazorServicesRoute && useBlazorKnowledgesIndexRoute;
 builder.AddServiceDefaults();
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
@@ -41,7 +43,7 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
 });
 builder.Services.AddRazorPages(options =>
 {
-    if (useBlazorServicesRoute)
+    if (useBlazorRouteHost)
     {
         options.Conventions.AddPageRouteModelConvention(
             "/Services/Index",
@@ -57,6 +59,14 @@ builder.Services.AddRazorPages(options =>
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Services/3D-Scanning",
+            model => model.Selectors.Clear());
+    }
+
+    if (useBlazorRouteHost)
+    {
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Index",
             model => model.Selectors.Clear());
     }
 })
@@ -163,7 +173,7 @@ app.UseOutputCache();
 app.MapDefaultEndpoints("web");
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
-if (useBlazorServicesRoute)
+if (useBlazorRouteHost)
 {
     app.MapRazorComponents<App>();
 }

@@ -1,6 +1,6 @@
 @inject IStringLocalizer<KnowledgeIndexContent> Localizer
 
-<article class="knowledge-document" data-migration-renderer="blazor-static-ssr">
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <p class="maliev-eyebrow">@Localizer["Manufacturing resources"]</p>
     <h1>@Localizer["Knowledge center"]</h1>
     <p class="docs-lead">@Localizer["Use these concise guides to prepare your project and understand what happens after you request a quotation."]</p>
@@ -10,3 +10,8 @@
         <a class="maliev-panel docs-link-card" href="/knowledges/specifications"><i class="fas fa-ruler-combined" aria-hidden="true"></i><strong>@Localizer["Service specifications"]</strong><span>@Localizer["Process-specific preparation and capability guidance."]</span></a>
     </div>
 </article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

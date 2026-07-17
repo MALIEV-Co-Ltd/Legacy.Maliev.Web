@@ -61,6 +61,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
             [
                 "CncMachiningPage.razor",
                 "CustomManufacturingPage.razor",
+                "KnowledgeIndexPage.razor",
                 "ServicesPage.razor",
                 "ThreeDimensionalPrintingPage.razor",
                 "ThreeDimensionalScanningPage.razor"
