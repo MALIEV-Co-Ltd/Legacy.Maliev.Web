@@ -36,7 +36,7 @@
     <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
-    <partial name="_BrowserCompatibilityCheckPartial" />
+    <component type="typeof(PublicBrowserCompatibilityNotice)" render-mode="Static" param-Model="@(PublicBrowserCompatibilityNoticeDisplayModel.Create(Context))" />
     @RenderBody()
     <component type="typeof(PublicContactChannelAnalytics)" render-mode="Static" />
     <partial name="_JavaScriptsPartial" />
