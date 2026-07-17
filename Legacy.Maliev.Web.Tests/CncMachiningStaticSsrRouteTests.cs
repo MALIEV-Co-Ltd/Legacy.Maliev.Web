@@ -53,7 +53,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
             .ToArray();
 
         Assert.Equal(
-            ["CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "HomePage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages);
     }
 
