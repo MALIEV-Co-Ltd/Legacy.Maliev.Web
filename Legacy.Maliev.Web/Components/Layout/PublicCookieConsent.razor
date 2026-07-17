@@ -1,16 +1,8 @@
-@using Microsoft.AspNetCore.Http.Features
+@inject IStringLocalizer<PublicCookieConsent> Localizer
 
-@{
-    const string trackingConsentCookieName = "maliev_tracking_consent";
-    var consentFeature = Context.Features.Get<ITrackingConsentFeature>();
-    var hasRecordedDenial = string.Equals(Context.Request.Cookies[trackingConsentCookieName], "denied", StringComparison.Ordinal);
-    var showBanner = consentFeature?.CanTrack != true && !hasRecordedDenial;
-    var cookieString = consentFeature?.CreateConsentCookie();
-}
-
-@if (showBanner)
+@if (Model.ShowBanner)
 {
-    <aside id="cookieConsent" class="privacy-consent" role="region" aria-labelledby="privacy-consent-title" aria-describedby="privacy-consent-description">
+    <aside id="cookieConsent" class="privacy-consent" role="region" aria-labelledby="privacy-consent-title" aria-describedby="privacy-consent-description" data-migration-component="public-cookie-consent" data-migration-renderer="blazor-static-ssr">
         <div class="privacy-consent__inner">
             <div class="privacy-consent__icon" aria-hidden="true">
                 <i class="fas fa-shield-alt"></i>
@@ -19,12 +11,12 @@
                 <strong id="privacy-consent-title">@Localizer["Your privacy choices"]</strong>
                 <p id="privacy-consent-description">
                     @Localizer["This website uses cookies to ensure you get the best experience on our website."]
-                    <a asp-page="/Legal/PrivacyPolicy">@Localizer["Learn more about our privacy policy"]</a>
+                    <a href="/legal/privacypolicy">@Localizer["Learn more about our privacy policy"]</a>
                 </p>
             </div>
             <div class="privacy-consent__actions" role="group" aria-label="@Localizer["Cookie choices"]">
                 <button type="button" class="privacy-consent__reject" data-consent-action="reject">@Localizer["Reject optional cookies"]</button>
-                <button type="button" class="accept-policy privacy-consent__accept" data-consent-action="accept" data-cookie-string="@cookieString">@Localizer["Accept cookies"]</button>
+                <button type="button" class="accept-policy privacy-consent__accept" data-consent-action="accept" data-cookie-string="@Model.ConsentCookie">@Localizer["Accept cookies"]</button>
             </div>
         </div>
     </aside>
@@ -68,4 +60,9 @@
             }, false);
         })();
     </script>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicCookieConsentDisplayModel Model { get; set; }
 }
