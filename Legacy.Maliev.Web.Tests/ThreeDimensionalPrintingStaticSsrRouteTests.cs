@@ -62,7 +62,8 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "CncMachiningPage.razor",
                 "CustomManufacturingPage.razor",
                 "ServicesPage.razor",
-                "ThreeDimensionalPrintingPage.razor"
+                "ThreeDimensionalPrintingPage.razor",
+                "ThreeDimensionalScanningPage.razor"
             ],
             routedPages);
     }

@@ -1,7 +1,7 @@
 @using System.Globalization
 @using Legacy.Maliev.Web.Components.Shared
 
-<main class="service-page" data-migration-component="three-dimensional-scanning-content">
+<main class="service-page" data-migration-component="three-dimensional-scanning-content" data-migration-route-owner="@RouteOwner">
     <ServiceBreadcrumb ServiceKey="3D Scanning" />
     <section class="service-hero" aria-labelledby="scanning-title">
         <img class="service-hero-media" src="/src/images/services/scanning/scanning-hero.webp" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="@T("Structured-light 3D scanning of a cast aluminum housing", "การสแกน 3D แบบ Structured Light บนตัวเรือนอะลูมิเนียมหล่อ")" />
@@ -86,6 +86,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
     private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
     private string T(string english, string thai) => IsThai ? thai : english;
