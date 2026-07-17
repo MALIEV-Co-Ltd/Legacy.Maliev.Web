@@ -38,7 +38,7 @@
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
     <partial name="_BrowserCompatibilityCheckPartial" />
     @RenderBody()
-    <partial name="_ContactChannelAnalyticsPartial" />
+    <component type="typeof(PublicContactChannelAnalytics)" render-mode="Static" />
     <partial name="_JavaScriptsPartial" />
     @RenderSection("Scripts", required: false)
 </body>
