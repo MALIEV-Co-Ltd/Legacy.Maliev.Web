@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
 var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
 var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
+var useBlazorLegalRoute = builder.Configuration.GetValue("BlazorRouting:Legal", true);
 var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
 var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
 var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
@@ -28,6 +29,7 @@ var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.G
 var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorAboutRoute
     && useBlazorSocialMediaRoute
+    && useBlazorLegalRoute
     && useBlazorServicesRoute
     && useBlazorKnowledgesIndexRoute
     && useBlazorKnowledgesWorkflowRoute
@@ -73,6 +75,9 @@ builder.Services.AddRazorPages(options =>
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/About/SocialMedia",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Legal/Index",
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Services/Index",

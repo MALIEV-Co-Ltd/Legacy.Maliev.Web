@@ -63,11 +63,12 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<WebApp
     }
 
     [Theory]
-    [InlineData("en", "Legal information | MALIEV", "https://www.maliev.com/legal?culture=en")]
-    [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV", "https://www.maliev.com/legal")]
+    [InlineData("en", "Legal information | MALIEV", "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.", "https://www.maliev.com/legal?culture=en")]
+    [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV", "ตรวจสอบนโยบายของ MALIEV เกี่ยวกับการใช้เว็บไซต์ ความเป็นส่วนตัว และข้อมูลงานผลิตที่เป็นความลับ", "https://www.maliev.com/legal")]
     public async Task OpenGraphMetadata_PreservesValuesAndUsesCanonicalLocalizedUrl(
         string culture,
         string title,
+        string description,
         string canonicalUrl)
     {
         using var response = await client.GetAsync($"/legal?culture={culture}&tracking=excluded");
@@ -81,13 +82,12 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<WebApp
         Assert.Equal(1, CountMeta(source, "og:image:width", "159"));
         Assert.Equal(1, CountMeta(source, "og:locale", culture));
         Assert.Equal(1, CountMeta(source, "og:title", title));
-        Assert.Equal(1, CountMeta(source, "og:description"));
+        Assert.Equal(1, CountMeta(source, "og:description", description));
         Assert.Equal(1, CountMeta(source, "og:type", "website"));
         Assert.Equal(1, CountMeta(source, "og:url", canonicalUrl));
         Assert.Equal(1, CountMeta(source, "og:site_name", "Maliev Manufacturing"));
         Assert.Equal(0, CountMeta(source, "fb:app_id"));
         Assert.DoesNotContain("content=", GetMeta(source, "og:image"), StringComparison.Ordinal);
-        Assert.DoesNotContain("content=", GetMeta(source, "og:description"), StringComparison.Ordinal);
         Assert.DoesNotContain("untrusted-request-host.example", ExtractOpenGraphMetadata(source), StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractOpenGraphMetadata(source), StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
