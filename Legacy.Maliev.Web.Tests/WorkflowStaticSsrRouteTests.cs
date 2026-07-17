@@ -52,6 +52,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
             [
                 "CncMachiningPage.razor",
                 "CustomManufacturingPage.razor",
+                "GuidelinesPage.razor",
                 "KnowledgeIndexPage.razor",
                 "ServicesPage.razor",
                 "ThreeDimensionalPrintingPage.razor",
