@@ -26,7 +26,14 @@ public sealed class AnalyticsSurfaceContractTests
             "Components",
             "Layout",
             "PublicCookieConsent.razor"));
-        var contact = File.ReadAllText(Path.Combine(shared, "_ContactChannelAnalyticsPartial.cshtml"));
+        var contactPath = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Analytics",
+            "PublicContactChannelAnalytics.razor");
+        Assert.True(File.Exists(contactPath));
+        var contact = File.ReadAllText(contactPath);
         var quotation = File.ReadAllText(Path.Combine(
             root,
             "Legacy.Maliev.Web",
