@@ -11,6 +11,7 @@ public sealed class FontDeliveryContractTests
         var entry = File.ReadAllText(Path.Combine(webRoot, "assets", "site-entry.css"));
         var appCss = File.ReadAllText(Path.Combine(webRoot, "wwwroot", "src", "app", "css", "app.css"));
         var fontPartial = File.ReadAllText(Path.Combine(webRoot, "Pages", "Shared", "_FontPartial.cshtml"));
+        var blazorShell = File.ReadAllText(Path.Combine(webRoot, "Components", "App.razor"));
 
         Assert.Contains("@fontsource/inter", packageJson, StringComparison.Ordinal);
         Assert.Contains("@fontsource/noto-sans-thai", packageJson, StringComparison.Ordinal);
@@ -23,6 +24,9 @@ public sealed class FontDeliveryContractTests
         Assert.DoesNotContain("sans-serif", appCss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", fontPartial, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fonts.googleapis.com", blazorShell, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fonts.gstatic.com", blazorShell, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<body style=\"font-family", blazorShell, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

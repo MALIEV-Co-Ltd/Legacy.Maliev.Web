@@ -30,13 +30,10 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <PublicGoogleTagManagerHead Model="googleTagManagerModel" />
     <link rel="stylesheet" href="@siteStyle" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Sans+Thai:wght@400;500;600&amp;display=swap" rel="stylesheet" />
     <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
     <link rel="shortlink" href="https://www.maliev.com/" />
 </head>
-<body style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+<body>
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
     <PublicGoogleTagManagerBody Model="googleTagManagerModel" />
     <PublicCookieConsent Model="@(PublicCookieConsentDisplayModel.Create(context))" />
