@@ -161,7 +161,6 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
         Assert.Equal(
             new[]
             {
-                SocialNetworks.Facebook,
                 SocialNetworks.Instagram,
                 SocialNetworks.Line,
                 SocialNetworks.YouTube,
@@ -169,6 +168,9 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
                 SocialNetworks.Threads
             },
             sameAs.EnumerateArray().Select(link => link.GetString()));
+        Assert.DoesNotContain(
+            sameAs.EnumerateArray(),
+            link => link.GetString()?.Contains("facebook", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static (int Width, int Height) ReadPngDimensions(string path)
