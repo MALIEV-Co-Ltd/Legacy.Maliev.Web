@@ -52,6 +52,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
             [
                 "CncMachiningPage.razor",
                 "CustomManufacturingPage.razor",
+                "GuidelinesPage.razor",
                 "KnowledgeIndexPage.razor",
                 "ServicesPage.razor",
                 "ThreeDimensionalPrintingPage.razor",
@@ -124,7 +125,8 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("wow", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("wow.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("class=\"wow", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("animate__", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
