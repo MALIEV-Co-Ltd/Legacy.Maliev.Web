@@ -44,9 +44,9 @@ public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFact
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
             .ToArray();
-        Assert.Equal(2, routedPages.Length);
+        Assert.Equal(3, routedPages.Length);
         Assert.Equal(
-            ["CustomManufacturingPage.razor", "ServicesPage.razor"],
+            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "ServicesPage.razor"],
             routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
     }
 

@@ -1,7 +1,7 @@
 @using System.Globalization
 @using Legacy.Maliev.Web.Components.Shared
 
-<main class="service-page" data-migration-component="cnc-machining-content">
+<main class="service-page" data-migration-component="cnc-machining-content" data-migration-route-owner="@RouteOwner">
     <ServiceBreadcrumb ServiceKey="CNC Machining" />
     <section class="service-hero" aria-labelledby="cnc-title">
         <img class="service-hero-media" src="/src/images/services/cnc/cnc-hero.webp" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="@T("CNC milling an aluminum component held in a machine vise", "เครื่อง CNC กำลังกัดชิ้นงานอะลูมิเนียมที่ยึดในปากกาอย่างมั่นคง")" />
@@ -91,6 +91,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
     private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
     private string T(string english, string thai) => IsThai ? thai : english;
