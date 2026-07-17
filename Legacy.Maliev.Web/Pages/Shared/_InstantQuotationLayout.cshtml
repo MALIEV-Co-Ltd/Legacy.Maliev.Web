@@ -31,8 +31,7 @@
     <link rel="shortlink" href="https://www.maliev.com/" />
     @RenderSection("Head", required: false)
 </head>
-<body class="instant-quotation-shell" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
-    <partial name="_FacebookSdkPartial" />
+<body class="instant-quotation-shell">
     <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />

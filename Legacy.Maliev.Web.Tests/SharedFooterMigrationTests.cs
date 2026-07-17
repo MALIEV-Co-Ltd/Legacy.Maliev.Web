@@ -84,7 +84,8 @@ public sealed class SharedFooterMigrationTests : IClassFixture<WebApplicationFac
         Assert.Contains("href=\"tel:+66818030404\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66898950690\"", source, StringComparison.Ordinal);
         Assert.Contains($"href=\"{SocialNetworks.Line}\"", source, StringComparison.Ordinal);
-        Assert.Contains($"href=\"{SocialNetworks.MessengerChat}\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("messenger", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         Assert.Contains("<footer class=\"landing-footer\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);

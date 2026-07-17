@@ -1,10 +1,18 @@
+@using System.Globalization
 @inject IStringLocalizer<TermsConditionsContent> Localizer
 
 <main class="legal-page" data-migration-renderer="blazor-static-ssr">
     <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["Legal"]</p><h1>@Localizer["Terms and Conditions"]</h1></div></header>
     <div class="legal-shell maliev-container">
-        <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#terms-overview">Overview</a></li><li><a href="#cookies">Cookies</a></li><li><a href="#license">License</a></li><li><a href="#rights">Reservation of rights</a></li></ul></nav>
+        <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#terms-overview">@T("Overview", "ภาพรวม")</a></li><li><a href="#cookies">@T("Cookies", "คุกกี้")</a></li><li><a href="#license">@T("License", "สิทธิการใช้งาน")</a></li><li><a href="#rights">@T("Reservation of rights", "การสงวนสิทธิ์")</a></li></ul></nav>
         <article class="legal-document">
+    @if (IsThai)
+    {
+        <TermsConditionsThaiContent />
+    }
+    else
+    {
+    <div class="legal-document-body">
     <h2 id="terms-overview">Terms and Conditions</h2>
 
     <p>These terms and conditions outline the rules and regulations for the use of Maliev Co., Ltd.'s Website.</p>
@@ -74,7 +82,7 @@
         </li>
     </ol>
     <p class="text-justify">
-        We will approve link requests from these organizations if we determine that: (a) the link would not reflect unfavorably on us or our accredited businesses (for example, trade associations or other organizations representing inherently suspect types of business, such as work-at-home opportunities, shall not be allowed to link); (b)the organization does not have an unsatisfactory record with us; (c) the benefit to us from the visibility associated with the hyperlink outweighs the absence of <?=$companyName?>; and (d) where the link is in the context of general resource information or is otherwise consistent with editorial content in a newsletter or similar product furthering the mission of the organization.
+        We will approve link requests from these organizations if we determine that: (a) the link would not reflect unfavorably on us or our accredited businesses (for example, trade associations or other organizations representing inherently suspect types of business, such as work-at-home opportunities, shall not be allowed to link); (b)the organization does not have an unsatisfactory record with us; (c) the benefit to us from the visibility associated with the hyperlink outweighs the absence of Maliev Co., Ltd.; and (d) where the link is in the context of general resource information or is otherwise consistent with editorial content in a newsletter or similar product furthering the mission of the organization.
     </p>
     <p class="text-justify">
         These organizations may link to our home page, to publications or to other Web site information so long as the link: (a) is not in any way misleading; (b) does not falsely imply sponsorship, endorsement or approval of the linking party and it products or services; and (c) fits within the context of the linking party's site.
@@ -119,6 +127,13 @@
     </ol>
     <p class="text-justify">The limitations and exclusions of liability set out in this Section and elsewhere in this disclaimer: (a) are subject to the preceding paragraph; and (b) govern all liabilities arising under the disclaimer or in relation to the subject matter of this disclaimer, including liabilities arising in contract, in tort (including negligence) and for breach of statutory duty.</p>
     <p class="text-justify">To the extent that the website and the information and services on the website are provided free of charge, we will not be liable for any loss or damage of any nature.</p>
+    </div>
+    }
         </article>
     </div>
 </main>
+
+@code {
+    private static bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    private static string T(string english, string thai) => IsThai ? thai : english;
+}

@@ -1,88 +1,146 @@
-@inject IStringLocalizer<AboutContent> Localizer
-@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@using System.Globalization
 
-<main class="maliev-page maliev-page-main" data-migration-renderer="blazor-static-ssr">
-<header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["About MALIEV"]</p><h1>@Localizer["Our manufacturing journey"]</h1><p>@Localizer["How our CNC machining, 3D printing, and 3D scanning capabilities developed to support customer projects."]</p></div></header>
-<div class="maliev-container public-content">
-
-    <div class="text-center mt-3 mt-md-5">
-        <p class="fw-semibold">@Localizer["Our journey begins"]</p>
-    </div>
-    <ul class="timeline">
-
-        <li>
-            <div class="direction-r">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["Founded"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["January"] 2018</span></span>
-                </div>
-                <div class="desc font-0p9rem">
-                    @Localizer["The company was founded on the property of"] <span class="no-break"> @Localizer["Mali Co., Ltd."] </span> @Localizer["as a family owned business with 3 directors."]<br />
-                    <ul class="pb-2">
-                        <li class="py-0">@Localizer["Natthapol Vanasrivilai"]</li>
-                        <li class="py-0">@Localizer["Thossapol Vanasrivilai"]</li>
-                        <li class="py-0">@Localizer["Natthakarn Vanasrivilai"]</li>
-                    </ul>
-                    @Localizer["The main goal of the company is to provide customers locally and internationally the CNC and 3D printing services."]
+<main class="about-page" data-migration-renderer="blazor-static-ssr">
+    <section class="about-hero" aria-labelledby="about-hero-title">
+        <div class="about-shell about-hero-grid">
+            <div class="about-hero-copy">
+                <p class="about-kicker">@T("MALIEV / SINCE 2018", "MALIEV / ตั้งแต่ปี 2018")</p>
+                <h1 id="about-hero-title">@T("From a family workshop to connected manufacturing.", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน")</h1>
+                <p class="about-hero-lead">@T(
+                    "We built MALIEV one capability at a time—combining physical production with digital tools that make custom manufacturing easier to start.",
+                    "เราสร้าง MALIEV ทีละความสามารถ โดยเชื่อมงานผลิตจริงเข้ากับเครื่องมือดิจิทัล เพื่อให้การเริ่มต้นผลิตชิ้นงานตามแบบทำได้ง่ายขึ้น")</p>
+                <div class="about-actions">
+                    <a class="about-button about-button-primary" href="/Quotation">@T("Request a quote", "ขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    <a class="about-button about-button-secondary" href="/Services">@T("Explore our services", "ดูบริการของเรา")</a>
                 </div>
             </div>
-        </li>
-
-        <li>
-            <div class="direction-l">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["3D Scanning Services"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["January"] 2019</span></span>
-                </div>
-                <div class="desc font-0p9rem">@Localizer["We have expanded our capability to be able to offer 3D scanning services to our customers."]</div>
+            <div class="about-hero-media" aria-label="@T("MALIEV manufacturing capabilities", "ความสามารถด้านการผลิตของ MALIEV")">
+                <figure class="about-process about-process-scan">
+                    <img src="/src/images/landing/landing-hero-scanning.webp" alt="@T("3D scanning a manufactured component", "การสแกนชิ้นงานแบบ 3 มิติ")" width="640" height="720" />
+                    <figcaption>@T("Scan", "สแกน")</figcaption>
+                </figure>
+                <figure class="about-process about-process-machine">
+                    <img src="/src/images/landing/landing-hero-cnc.webp" alt="@T("CNC machining in the MALIEV workshop", "งาน CNC ในเวิร์กช็อป MALIEV")" width="640" height="720" />
+                    <figcaption>@T("Machine", "CNC")</figcaption>
+                </figure>
+                <figure class="about-process about-process-print">
+                    <img src="/src/images/landing/landing-hero-printing.webp" alt="@T("Industrial 3D printing", "งานพิมพ์ 3 มิติระดับอุตสาหกรรม")" width="640" height="720" />
+                    <figcaption>@T("Print", "พิมพ์")</figcaption>
+                </figure>
             </div>
-        </li>
-
-        <li>
-            <div class="direction-r">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["First CNC Machine"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["April"] 2019</span></span>
-                </div>
-                <div class="desc font-0p9rem">@Localizer["First CNC machine that we used was the Haas VF-2."]</div>
-            </div>
-        </li>
-
-        <li>
-            <div class="direction-l">
-                <div class="flag-wrapper">
-                    <span class="hexa"></span>
-                    <span class="flag">@Localizer["Instant Pricing for 3D Printing"]</span>
-                    <span class="time-wrapper"><span class="time">@Localizer["June"] 2019</span></span>
-                </div>
-                <div class="desc font-0p9rem">@Localizer["We were the first to introduced machine learning to the world of automated pricing process. This dramatically reduce the quotation time down for our customers. Hence improved customer satisfaction with us."]</div>
-            </div>
-        </li>
-    </ul>
-    <div class="text-center">
-        <p class="fw-semibold">@Localizer["Our journey continues"]</p>
-    </div>
-    <div class="container">
-        <div class="mb-3 text-center">
-            <div class="fb-like" data-href="@FacebookPageUrl" data-layout="button" data-action="like" data-size="small" data-show-faces="false" data-share="true"></div>
         </div>
-    </div>
-</div>
+    </section>
+
+    <section class="about-ledger-wrap" aria-label="@T("MALIEV at a glance", "ข้อมูล MALIEV โดยสรุป")">
+        <div class="about-shell about-ledger">
+            <article><strong>2018</strong><span>@T("Founded in Nonthaburi", "ก่อตั้งในจังหวัดนนทบุรี")</span></article>
+            <article><strong>3 @T("processes", "กระบวนการ")</strong><span>@T("CNC · 3D print · 3D scan", "CNC · พิมพ์ 3 มิติ · สแกน 3 มิติ")</span></article>
+            <article><strong>@T("Thailand", "ประเทศไทย")</strong><span>@T("Workshop and support team", "เวิร์กช็อปและทีมสนับสนุน")</span></article>
+            <article><strong>1 @T("part", "ชิ้น")+</strong><span>@T("Prototype through small production", "ตั้งแต่งานต้นแบบถึงการผลิตจำนวนน้อย")</span></article>
+        </div>
+    </section>
+
+    <section class="about-history" aria-labelledby="about-history-title">
+        <div class="about-shell">
+            <header class="about-section-heading">
+                <p class="about-kicker">@T("THE MANUFACTURING RECORD", "บันทึกการผลิต")</p>
+                <h2 id="about-history-title">@T("The manufacturing record", "บันทึกเส้นทางการผลิต")</h2>
+                <p>@T(
+                    "The moments that changed what we could make—documented through company records, supplier archives, public procurement, and our product journal.",
+                    "เหตุการณ์สำคัญที่เปลี่ยนขีดความสามารถในการผลิตของเรา โดยอ้างอิงจากทะเบียนบริษัท บันทึกผู้จัดจำหน่าย การจัดซื้อสาธารณะ และบันทึกผลิตภัณฑ์ของเรา")</p>
+            </header>
+
+            <ol class="about-records">
+                <li class="about-record">
+                    <time datetime="2018-01-18">18 JAN 2018</time>
+                    <div class="about-record-copy">
+                        <p class="about-record-number" aria-hidden="true">01</p>
+                        <h3>@T("MALIEV is founded", "ก่อตั้ง MALIEV")</h3>
+                        <p>@T("A family manufacturing company begins in Pak Kret, Nonthaburi, with a goal of making CNC machining and additive manufacturing more accessible.", "บริษัทการผลิตของครอบครัวเริ่มต้นในปากเกร็ด จังหวัดนนทบุรี ด้วยเป้าหมายให้การผลิต CNC และการผลิตแบบเติมเนื้อวัสดุเข้าถึงได้ง่ายขึ้น")</p>
+                        <a class="about-evidence" href="https://www.dataforthai.com/company/0125561001573/" target="_blank" rel="noopener noreferrer">@T("Company registration record", "ข้อมูลทะเบียนบริษัท") <span aria-hidden="true">↗</span></a>
+                    </div>
+                    <p class="about-record-stamp" aria-hidden="true">@T("FOUNDING / NONTHABURI", "ก่อตั้ง / นนทบุรี")</p>
+                </li>
+
+                <li class="about-record">
+                    <time datetime="2019-01">JAN 2019</time>
+                    <div class="about-record-copy">
+                        <p class="about-record-number" aria-hidden="true">02</p>
+                        <h3>@T("3D scanning moves in-house", "เพิ่มงานสแกน 3 มิติภายในบริษัท")</h3>
+                        <p>@T("The EinScan Pro 2X+ adds high-detail capture and reverse-engineering support to the workshop.", "EinScan Pro 2X+ เพิ่มความสามารถในการเก็บรายละเอียดชิ้นงานและสนับสนุนงานวิศวกรรมย้อนกลับภายในเวิร์กช็อป")</p>
+                        <a class="about-evidence" href="https://www.print3dd.com/maliev-co-ltd/" target="_blank" rel="noopener noreferrer">@T("Supplier archive", "บันทึกจากผู้จัดจำหน่าย") <span aria-hidden="true">↗</span></a>
+                    </div>
+                    <p class="about-record-stamp about-record-stamp-dark" aria-hidden="true">@T("SCAN / REVERSE ENGINEER", "สแกน / วิศวกรรมย้อนกลับ")</p>
+                </li>
+
+                <li class="about-record">
+                    <time datetime="2019-04">APR—JUN 2019</time>
+                    <div class="about-record-copy">
+                        <p class="about-record-number" aria-hidden="true">03</p>
+                        <h3>@T("Machining meets digital quoting", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")</h3>
+                        <p>@T("The first Haas VF-2 expands machining capability while instant 3D-print pricing shortens the path from uploaded file to estimate.", "Haas VF-2 เครื่องแรกเพิ่มขีดความสามารถด้าน CNC ขณะที่ระบบประเมินราคาพิมพ์ 3 มิติช่วยย่นขั้นตอนจากการอัปโหลดไฟล์สู่ราคาประเมิน")</p>
+                        <span class="about-evidence about-evidence-static">@T("MALIEV company record", "บันทึกภายใน MALIEV")</span>
+                    </div>
+                    <p class="about-record-stamp" aria-hidden="true">@T("MACHINE / QUOTE", "CNC / เสนอราคา")</p>
+                </li>
+
+                <li class="about-record">
+                    <time datetime="2021">2021—2024</time>
+                    <div class="about-record-copy">
+                        <p class="about-record-number" aria-hidden="true">04</p>
+                        <h3>@T("Institutional manufacturing work", "งานผลิตสำหรับหน่วยงาน")</h3>
+                        <p>@T("Public procurement records document MALIEV supplying research and infrastructure organizations in Thailand. These records evidence completed supply work, not customer endorsements.", "บันทึกการจัดซื้อสาธารณะแสดงการส่งมอบงานของ MALIEV ให้หน่วยงานวิจัยและโครงสร้างพื้นฐานในประเทศไทย ข้อมูลนี้เป็นหลักฐานการส่งมอบ ไม่ใช่คำรับรองจากลูกค้า")</p>
+                        <div class="about-evidence-group">
+                            <a class="about-evidence" href="https://waa.inter.nstda.or.th/stks/pub/2022/20220613-procurement-winner-co-2565-q02.pdf" target="_blank" rel="noopener noreferrer">NSTDA 2021 <span aria-hidden="true">↗</span></a>
+                            <a class="about-evidence" href="https://fprocurement.egat.co.th/storage/documents/dprocurement/result/domestic_july2024.pdf" target="_blank" rel="noopener noreferrer">EGAT 2024 <span aria-hidden="true">↗</span></a>
+                        </div>
+                    </div>
+                    <p class="about-record-stamp about-record-stamp-dark" aria-hidden="true">@T("TRUST / PRODUCTION", "ความไว้วางใจ / การผลิต")</p>
+                </li>
+
+                <li class="about-record">
+                    <time datetime="2024">2024—2025</time>
+                    <div class="about-record-copy">
+                        <p class="about-record-number" aria-hidden="true">05</p>
+                        <h3>@T("From projects to products", "จากโครงการสู่ผลิตภัณฑ์")</h3>
+                        <p>@T("MALIEV-designed fixtures, 3D-printed goods, and SimMount hardware bring workshop problem-solving into a public product catalogue.", "ฟิกซ์เจอร์ สินค้าพิมพ์ 3 มิติ และฮาร์ดแวร์ SimMount ที่ออกแบบโดย MALIEV นำการแก้ปัญหาในเวิร์กช็อปมาสู่แค็ตตาล็อกสินค้าสาธารณะ")</p>
+                        <div class="about-evidence-group">
+                            <a class="about-evidence" href="https://shop.maliev.com/blogs/news" target="_blank" rel="noopener noreferrer">@T("Product journal", "บันทึกผลิตภัณฑ์") <span aria-hidden="true">↗</span></a>
+                            <a class="about-evidence" href="https://shop.maliev.com/collections/sim-racing-solutions" target="_blank" rel="noopener noreferrer">SimMount <span aria-hidden="true">↗</span></a>
+                        </div>
+                    </div>
+                    <p class="about-record-stamp" aria-hidden="true">@T("DESIGN / PRODUCT", "ออกแบบ / ผลิตภัณฑ์")</p>
+                </li>
+
+                <li class="about-record about-record-current">
+                    <time datetime="2026">@T("TODAY", "วันนี้")</time>
+                    <div class="about-record-copy">
+                        <p class="about-record-number" aria-hidden="true">06</p>
+                        <h3>@T("Connected manufacturing", "ระบบการผลิตที่เชื่อมต่อกัน")</h3>
+                        <p>@T("CNC machining, 3D printing, and 3D scanning now work as one practical path—from physical part or CAD file to reviewed, manufacturable output.", "ปัจจุบัน CNC การพิมพ์ 3 มิติ และการสแกน 3 มิติทำงานเป็นเส้นทางเดียวกัน ตั้งแต่ชิ้นงานจริงหรือไฟล์ CAD ไปจนถึงผลลัพธ์ที่ผ่านการตรวจสอบและผลิตได้")</p>
+                        <a class="about-evidence" href="/Services">@T("Review current capabilities", "ดูความสามารถในปัจจุบัน") <span aria-hidden="true">→</span></a>
+                    </div>
+                    <p class="about-record-stamp about-record-stamp-accent" aria-hidden="true">@T("SCAN / MAKE / DELIVER", "สแกน / ผลิต / ส่งมอบ")</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="about-closing" aria-labelledby="about-closing-title">
+        <div class="about-shell about-closing-grid">
+            <div>
+                <p class="about-kicker">@T("THE NEXT RECORD", "บันทึกบทต่อไป")</p>
+                <h2 id="about-closing-title">@T("Your part could be what we make next.", "ชิ้นงานของคุณอาจเป็นสิ่งที่เราผลิตต่อไป")</h2>
+            </div>
+            <div>
+                <p>@T("Share a drawing, CAD file, scan requirement, or physical sample. Our team will help define a practical manufacturing route.", "ส่งแบบ ไฟล์ CAD ความต้องการสแกน หรือตัวอย่างชิ้นงาน ทีมของเราจะช่วยกำหนดแนวทางการผลิตที่เหมาะสม")</p>
+                <a class="about-button about-button-yellow" href="/Quotation">@T("Start a quotation", "เริ่มขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </section>
 </main>
 
-
 @code {
-    private string FacebookPageUrl
-    {
-        get
-        {
-            var request = HttpContextAccessor.HttpContext?.Request;
-            return request is null
-                ? "https://www.maliev.com/about"
-                : $"https://{request.Host}{request.Path}";
-        }
-    }
+    private static string T(string english, string thai) =>
+        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? thai : english;
 }

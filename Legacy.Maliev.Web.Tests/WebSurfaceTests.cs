@@ -1610,10 +1610,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("window.malievAnalytics.setConsent(state)", source, StringComparison.Ordinal);
         Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
         Assert.Contains("line_click", source, StringComparison.Ordinal);
-        Assert.Contains("messenger_click", source, StringComparison.Ordinal);
         Assert.Contains("whatsapp_click", source, StringComparison.Ordinal);
         Assert.Contains("phone_click", source, StringComparison.Ordinal);
         Assert.Contains("email_click", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("messenger_click", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook_click", source, StringComparison.Ordinal);
         Assert.DoesNotContain("event: 'maliev_contact_click'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("analytics.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("UA-133315708-1", source, StringComparison.Ordinal);
@@ -1630,7 +1631,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("https://www.googletagmanager.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://www.google.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://www.gstatic.com", policy, StringComparison.Ordinal);
-        Assert.Contains("https://connect.facebook.net", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook", policy, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("https://tagmanager.google.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
@@ -1897,35 +1898,40 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         "Privacy Policy",
         "Information Collection And Use",
         "Children's Privacy",
-        "id=\"contact\"")]
+        "id=\"contact\"",
+        null)]
     [InlineData(
         "/legal/privacypolicy",
         "th",
         "นโยบายความเป็นส่วนตัว",
-        "Information Collection And Use",
-        "Children's Privacy",
-        "id=\"contact\"")]
+        "การเก็บรวบรวมและการใช้ข้อมูล",
+        "ความเป็นส่วนตัวของเด็ก",
+        "id=\"contact\"",
+        "Information Collection And Use")]
     [InlineData(
         "/legal/termsconditions",
         "en",
         "Terms and Conditions",
         "Hyperlinking to our Content",
         "Reservation of Rights",
-        "id=\"license\"")]
+        "id=\"license\"",
+        null)]
     [InlineData(
         "/legal/termsconditions",
         "th",
         "ข้อกำหนดและเงื่อนไข",
-        "Hyperlinking to our Content",
-        "Reservation of Rights",
-        "id=\"license\"")]
+        "การเชื่อมโยงมายังเนื้อหาของเรา",
+        "การสงวนสิทธิ์",
+        "id=\"license\"",
+        "Hyperlinking to our Content")]
     public async Task LegalDocumentRoute_PreservesLocalizedStaticSsrContent(
         string route,
         string culture,
         string heading,
         string firstSentinel,
         string secondSentinel,
-        string anchorSentinel)
+        string anchorSentinel,
+        string? forbiddenSentinel)
     {
         using var response = await client.GetAsync($"{route}?culture={culture}");
         var source = await response.Content.ReadAsStringAsync();
@@ -1937,6 +1943,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains(firstSentinel, decodedSource, StringComparison.Ordinal);
         Assert.Contains(secondSentinel, decodedSource, StringComparison.Ordinal);
         Assert.Contains(anchorSentinel, source, StringComparison.Ordinal);
+        if (forbiddenSentinel is not null)
+        {
+            Assert.DoesNotContain(forbiddenSentinel, decodedSource, StringComparison.Ordinal);
+        }
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
@@ -1970,9 +1980,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Our manufacturing journey", "Founded", "First CNC Machine")]
-    [InlineData("th", "เส้นทางงานผลิตของเรา", "ก่อตั้ง", "เครื่อง CNC เครื่องแรก")]
-    public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineAndFacebookUrl(
+    [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
+    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
+    public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookIntegration(
         string culture,
         string heading,
         string foundedMilestone,
@@ -1984,11 +1994,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
-        Assert.Contains("data-href=\"https://localhost/about\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("data-href=\"https://localhost/about?culture=", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);

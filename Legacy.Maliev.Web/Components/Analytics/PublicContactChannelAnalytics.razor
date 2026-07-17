@@ -32,16 +32,8 @@
                 return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
             }
 
-            if ((host === 'm.me' || host === 'www.m.me') && path === '/maliev.manufacturing') {
-                return { eventName: 'messenger_click', channel: 'messenger', destination: 'facebook_messenger' };
-            }
-
             if (host === 'wa.me' || (host === 'api.whatsapp.com' && path === '/send')) {
                 return { eventName: 'whatsapp_click', channel: 'whatsapp', destination: 'whatsapp_business' };
-            }
-
-            if ((host === 'facebook.com' || host === 'www.facebook.com') && path === '/maliev.manufacturing') {
-                return { eventName: 'facebook_click', channel: 'facebook', destination: 'facebook_page' };
             }
 
             if ((host === 'instagram.com' || host === 'www.instagram.com') && path === '/maliev.manufacturing') {

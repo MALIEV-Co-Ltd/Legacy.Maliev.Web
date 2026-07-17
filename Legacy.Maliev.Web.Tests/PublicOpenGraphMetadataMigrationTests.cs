@@ -85,7 +85,7 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<WebApp
         Assert.Equal(1, CountMeta(source, "og:type", "website"));
         Assert.Equal(1, CountMeta(source, "og:url", canonicalUrl));
         Assert.Equal(1, CountMeta(source, "og:site_name", "Maliev Manufacturing"));
-        Assert.Equal(1, CountMeta(source, "fb:app_id", "2103879633189130"));
+        Assert.Equal(0, CountMeta(source, "fb:app_id"));
         Assert.DoesNotContain("content=", GetMeta(source, "og:image"), StringComparison.Ordinal);
         Assert.DoesNotContain("content=", GetMeta(source, "og:description"), StringComparison.Ordinal);
         Assert.DoesNotContain("untrusted-request-host.example", ExtractOpenGraphMetadata(source), StringComparison.Ordinal);
