@@ -40,9 +40,9 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
             .ToArray();
-        Assert.Equal(15, routedPages.Length);
+        Assert.Equal(16, routedPages.Length);
         Assert.Equal(
-            ["AboutPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "HomePage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["AboutPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "HomePage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "ServicesPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
     }
 

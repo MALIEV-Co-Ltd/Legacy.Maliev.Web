@@ -44,25 +44,26 @@ public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFact
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
             .ToArray();
-        Assert.Equal(15, routedPages.Length);
+        Assert.Equal(16, routedPages.Length);
         Assert.Equal(
-            ["AboutPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "HomePage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["AboutPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "HomePage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "ServicesPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
     }
 
     [Theory]
     [InlineData("en", "Legal information | MALIEV")]
     [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV")]
-    public async Task ExistingLegalRoute_RemainsRazorOwnedWithCompleteStaticDocument(
+    public async Task LegalRoute_RemainsACompleteStaticDocument(
         string culture,
         string title)
     {
         using var response = await client.GetAsync($"/legal?culture={culture}");
-        var source = await response.Content.ReadAsStringAsync();
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($"<title>{title}</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);

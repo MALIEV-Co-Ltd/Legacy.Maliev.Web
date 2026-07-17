@@ -1,6 +1,6 @@
 @inject IStringLocalizer<LegalContent> Localizer
 
-<main class="legal-page" data-migration-renderer="blazor-static-ssr">
+<main class="legal-page" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <header class="maliev-page-header">
         <div class="maliev-container">
             <p class="maliev-eyebrow">@Localizer["Policies and agreements"]</p>
@@ -25,3 +25,8 @@
         </div>
     </div>
 </main>
+
+@code {
+    [Parameter]
+    public string RouteOwner { get; set; } = "razor-static-ssr";
+}
