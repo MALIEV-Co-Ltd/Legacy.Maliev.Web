@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SocialMediaContent> Localizer
 
-<main class="maliev-page maliev-page-main" data-migration-renderer="blazor-static-ssr">
+<main class="maliev-page maliev-page-main" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <header class="maliev-page-header">
         <div class="maliev-container">
             <p class="maliev-eyebrow">@Localizer["Connect with us"]</p>
@@ -18,3 +18,8 @@
         </div>
     </div>
 </main>
+
+@code {
+    [Parameter]
+    public string RouteOwner { get; set; } = "razor-static-ssr";
+}
