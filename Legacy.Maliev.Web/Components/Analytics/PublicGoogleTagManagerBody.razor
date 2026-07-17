@@ -1,16 +1,14 @@
-@using Microsoft.AspNetCore.Http.Features
-
-@{
-    var consentFeature = Context.Features.Get<ITrackingConsentFeature>();
-    var canTrack = consentFeature?.CanTrack == true;
-}
-
-@if (canTrack)
+@if (Model.CanTrack)
 {
     <!-- Google Tag Manager (noscript) -->
-    <noscript>
+    <noscript data-migration-component="public-google-tag-manager-body" data-migration-renderer="blazor-static-ssr">
         <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KHDDLVRR"
                 height="0" width="0" style="display:none;visibility:hidden"></iframe>
     </noscript>
     <!-- End Google Tag Manager (noscript) -->
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicGoogleTagManagerDisplayModel Model { get; set; }
 }

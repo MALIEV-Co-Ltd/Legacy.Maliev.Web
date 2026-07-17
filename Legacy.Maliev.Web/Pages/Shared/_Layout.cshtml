@@ -1,4 +1,10 @@
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Analytics
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@{
+    var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(Context, TempDataDictionaryFactory);
+}
 <!DOCTYPE html>
 <html lang="@System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName">
 <head>
@@ -21,7 +27,7 @@
 
     <component type="typeof(PublicOpenGraphMetadata)" render-mode="Static" param-Model="@(PublicOpenGraphMetadataDisplayModel.Create(Context, ViewData["Title"], ViewData["Description"], ViewData["Image"]))" />
     <partial name="_FaviconsPartial" />
-    <partial name="_GoogleTagManagerPartial" />
+    <component type="typeof(PublicGoogleTagManagerHead)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicDocumentLinks)" render-mode="Static" param-Model="@(PublicDocumentLinksDisplayModel.Create(Context))" />
     <partial name="_CssPartial" />
     <partial name="_FontPartial" />
@@ -35,7 +41,7 @@
 <body style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
     <partial name="_FacebookSdkPartial" />
-    <partial name="_GoogleTagManagerBodyPartial" />
+    <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
     <partial name="_BrowserCompatibilityCheckPartial" />

@@ -1,4 +1,10 @@
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Analytics
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@{
+    var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(Context, TempDataDictionaryFactory);
+}
 <!DOCTYPE html>
 <html lang="@System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName">
 <head>
@@ -15,12 +21,12 @@
     <title>@ViewData["Title"]</title>
     <partial name="_CssPartial" />
     <partial name="_FontPartial" />
-    <partial name="_GoogleTagManagerPartial" />
+    <component type="typeof(PublicGoogleTagManagerHead)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicDocumentLinks)" render-mode="Static" param-Model="@(PublicDocumentLinksDisplayModel.Create(Context))" />
 </head>
 <body>
     <a class="maliev-skip-link" href="#knowledge-content">@Localizer["Skip to main content"]</a>
-    <partial name="_GoogleTagManagerBodyPartial" />
+    <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
     <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
     <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
     <div class="docs-page">
