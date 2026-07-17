@@ -54,6 +54,7 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Equal(
             [
                 "CncMachiningPage.razor",
+                "CncMachiningSpecificationPage.razor",
                 "CustomManufacturingPage.razor",
                 "GuidelinesPage.razor",
                 "KnowledgeIndexPage.razor",

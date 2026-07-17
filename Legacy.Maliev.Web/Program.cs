@@ -20,13 +20,15 @@ var useBlazorKnowledgesGuidelinesRoute = builder.Configuration.GetValue("BlazorR
 var useBlazorKnowledgesSpecificationsRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications", true);
 var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DPrinting", true);
 var useBlazorKnowledgesSpecifications3DScanningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DScanning", true);
+var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecificationsCncMachining", true);
 var useBlazorRouteHost = useBlazorServicesRoute
     && useBlazorKnowledgesIndexRoute
     && useBlazorKnowledgesWorkflowRoute
     && useBlazorKnowledgesGuidelinesRoute
     && useBlazorKnowledgesSpecificationsRoute
     && useBlazorKnowledgesSpecifications3DPrintingRoute
-    && useBlazorKnowledgesSpecifications3DScanningRoute;
+    && useBlazorKnowledgesSpecifications3DScanningRoute
+    && useBlazorKnowledgesSpecificationsCncMachiningRoute;
 builder.AddServiceDefaults();
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
@@ -98,6 +100,10 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Knowledges",
             "/Specifications/3D-Scanning",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Specifications/CNC-Machining",
             model => model.Selectors.Clear());
     }
 })
