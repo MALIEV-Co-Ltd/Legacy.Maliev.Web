@@ -1,7 +1,7 @@
 @using System.Globalization
 @using Legacy.Maliev.Web.Components.Shared
 
-<main class="service-page" data-migration-component="custom-manufacturing-content">
+<main class="service-page" data-migration-component="custom-manufacturing-content" data-migration-route-owner="@RouteOwner">
     <ServiceBreadcrumb ServiceKey="Custom Manufacturing" />
     <section class="service-hero" aria-labelledby="custom-manufacturing-title">
         <div class="service-container service-hero-copy">
@@ -113,6 +113,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
     private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
     private string FaqProcessQuestion => T("Which manufacturing process should I choose?", "ควรเลือกกระบวนการผลิตแบบใด?");
