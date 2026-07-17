@@ -55,6 +55,9 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddPageRouteModelConvention(
             "/Services/3D-Printing",
             model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/3D-Scanning",
+            model => model.Selectors.Clear());
     }
 })
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
