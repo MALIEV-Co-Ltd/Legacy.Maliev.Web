@@ -40,9 +40,9 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
             .ToArray();
-        Assert.Equal(9, routedPages.Length);
+        Assert.Equal(10, routedPages.Length);
         Assert.Equal(
-            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalScanningPage.razor", "WorkflowPage.razor"],
+            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "WorkflowPage.razor"],
             routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
     }
 

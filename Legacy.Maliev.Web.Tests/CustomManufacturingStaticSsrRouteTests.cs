@@ -54,7 +54,7 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
             .ToArray();
 
         Assert.Equal(
-            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalScanningPage.razor", "WorkflowPage.razor"],
+            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "SpecificationsIndexPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "WorkflowPage.razor"],
             routedPages);
     }
 

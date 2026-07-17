@@ -18,11 +18,13 @@ var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRoutin
 var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
 var useBlazorKnowledgesGuidelinesRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesGuidelines", true);
 var useBlazorKnowledgesSpecificationsRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications", true);
+var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DPrinting", true);
 var useBlazorRouteHost = useBlazorServicesRoute
     && useBlazorKnowledgesIndexRoute
     && useBlazorKnowledgesWorkflowRoute
     && useBlazorKnowledgesGuidelinesRoute
-    && useBlazorKnowledgesSpecificationsRoute;
+    && useBlazorKnowledgesSpecificationsRoute
+    && useBlazorKnowledgesSpecifications3DPrintingRoute;
 builder.AddServiceDefaults();
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
@@ -86,6 +88,10 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Knowledges",
             "/Specifications/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Specifications/3D-Printing",
             model => model.Selectors.Clear());
     }
 })
