@@ -1,0 +1,18 @@
+@page "/services"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<ServicesPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = Localizer["Manufacturing services | MALIEV"];
+    var description = Localizer["Custom part manufacturing, CNC machining, 3D printing, and 3D scanning services in Thailand."];
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<ServicesContent RouteOwner="blazor-static-ssr" />
