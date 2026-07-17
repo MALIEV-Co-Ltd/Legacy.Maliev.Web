@@ -46,6 +46,9 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddPageRouteModelConvention(
             "/Services/Index",
             model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/Custom-Manufacturing",
+            model => model.Selectors.Clear());
     }
 })
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
