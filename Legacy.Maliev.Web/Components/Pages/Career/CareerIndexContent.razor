@@ -1,7 +1,7 @@
 @using Microsoft.AspNetCore.Components
 @inject IStringLocalizer<CareerIndexContent> Localizer
 
-<main class="maliev-page maliev-page-main" data-migration-component="career-index-content" data-migration-renderer="blazor-static-ssr">
+<main class="maliev-page maliev-page-main" data-migration-component="career-index-content" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <div class="maliev-container workspace-content public-content">
         @if (!Model.ServiceAvailable)
         {
@@ -156,6 +156,9 @@
 @code {
     [Parameter, EditorRequired]
     public CareerIndexContentModel Model { get; set; } = null!;
+
+    [Parameter]
+    public string RouteOwner { get; set; } = "razor-static-ssr";
 
     private string PageUrl(int pageIndex)
     {
