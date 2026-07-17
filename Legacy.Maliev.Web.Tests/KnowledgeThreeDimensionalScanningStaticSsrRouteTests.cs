@@ -5,39 +5,42 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public WorkflowStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public KnowledgeThreeDimensionalScanningStaticSsrRouteTests(WebApplicationFactory<Program> factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
     }
 
     [Fact]
-    public void Host_DeclaresTheWorkflowStaticSsrPageAndKeepsTheRazorRollbackSource()
+    public void Host_DeclaresTheThreeDimensionalScanningSpecificationPageAndKeepsTheRazorRollbackSource()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
-        var routePath = Path.Combine(web, "Components", "Pages", "Knowledges", "WorkflowPage.razor");
+        var routePath = Path.Combine(web, "Components", "Pages", "Knowledges", "Specifications", "ThreeDimensionalScanningSpecificationPage.razor");
 
         Assert.True(File.Exists(routePath), $"Expected routed component '{routePath}'.");
 
         var program = File.ReadAllText(Path.Combine(web, "Program.cs"));
         var route = File.ReadAllText(routePath);
-        var content = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Knowledges", "WorkflowContent.razor"));
-        var razorFallback = File.ReadAllText(Path.Combine(web, "Areas", "Knowledges", "Pages", "Workflow.cshtml"));
+        var content = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Knowledges", "Specifications", "ThreeDimensionalScanningContent.razor"));
+        var razorFallback = File.ReadAllText(Path.Combine(web, "Areas", "Knowledges", "Pages", "Specifications", "3D-Scanning.cshtml"));
+        var stylesheet = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "application-shell.css"));
 
-        Assert.Contains("BlazorRouting:KnowledgesWorkflow", program, StringComparison.Ordinal);
+        Assert.Contains("BlazorRouting:KnowledgesSpecifications3DScanning", program, StringComparison.Ordinal);
         Assert.Contains("AddAreaPageRouteModelConvention", program, StringComparison.Ordinal);
         Assert.Contains("\"Knowledges\"", program, StringComparison.Ordinal);
-        Assert.Contains("\"/Workflow\"", program, StringComparison.Ordinal);
+        Assert.Contains("\"/Specifications/3D-Scanning\"", program, StringComparison.Ordinal);
         Assert.Contains("model.Selectors.Clear()", program, StringComparison.Ordinal);
-        Assert.Contains("@page \"/Knowledges/Workflow\"", route, StringComparison.Ordinal);
+        Assert.Contains("@page \"/Knowledges/Specifications/3D-Scanning\"", route, StringComparison.Ordinal);
         Assert.Contains("RouteOwner=\"blazor-static-ssr\"", route, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("@page", razorFallback, StringComparison.Ordinal);
-        Assert.Contains("type=\"typeof(WorkflowContent)\"", razorFallback, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ThreeDimensionalScanningContent)\"", razorFallback, StringComparison.Ordinal);
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", stylesheet, StringComparison.Ordinal);
+        Assert.Contains("transition-duration: .01ms !important", stylesheet, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
                 Path.Combine(web, "Components"),
@@ -68,31 +71,46 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
     [Theory]
     [InlineData(
         "en",
-        "Manufacturing workflow | MALIEV",
-        "Understand the MALIEV workflow from file review and quotation to production and delivery.",
-        "What happens after you request a quote",
-        "Project workflow",
-        "Engineering review",
-        "Delivery")]
+        "3D scanning specifications | MALIEV",
+        "Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report.",
+        "Prepare a part for 3D scanning",
+        "3D scanning preparation",
+        "Clean and identify the part",
+        "Remove loose dirt and temporary items. Mark features that must remain untouched and disclose damaged or missing areas.",
+        "Explain the deliverable",
+        "Raw scans preserve measured surface data; reverse engineering creates editable CAD; deviation analysis compares a scan with reference geometry.",
+        "Plan access and surface treatment",
+        "Deep internal features, occluded surfaces, reflective or transparent materials may need repositioning, temporary scanning spray, or another measurement method.",
+        "View 3D scanning service")]
     [InlineData(
         "th",
-        "ขั้นตอนงานผลิต | MALIEV",
-        "เข้าใจขั้นตอนของ MALIEV ตั้งแต่ตรวจไฟล์และเสนอราคา ไปจนถึงผลิตและส่งมอบ",
-        "เกิดอะไรขึ้นหลังขอใบเสนอราคา",
-        "ขั้นตอนโครงการ",
-        "วิศวกรรมตรวจสอบ",
-        "ส่งมอบ")]
-    public async Task WorkflowRoute_RendersCompleteLocalizedStaticDocument(
+        "ข้อแนะนำงานสแกน 3 มิติ | MALIEV",
+        "นำชิ้นงานสภาพดีที่สุดมา และระบุว่าต้องการไฟล์สแกนดิบ CAD reverse engineering หรือรายงาน deviation",
+        "เตรียมชิ้นงานสำหรับสแกน 3 มิติ",
+        "การเตรียมงานสแกน 3 มิติ",
+        "ทำความสะอาดและระบุชิ้นงาน",
+        "กำจัดฝุ่นและสิ่งของชั่วคราว ระบุจุดที่ห้ามแก้ไขและส่วนที่เสียหายหรือขาด",
+        "ระบุไฟล์ส่งมอบ",
+        "ไฟล์สแกนดิบเก็บข้อมูลผิวที่วัดได้ reverse engineering สร้าง CAD แก้ไขได้ และ deviation analysis เปรียบเทียบสแกนกับแบบอ้างอิง",
+        "วางแผนการเข้าถึงและเตรียมผิว",
+        "ร่องลึก ผิวที่บัง วัสดุสะท้อนหรือโปร่งใส อาจต้องจัดท่า ใช้สเปรย์ชั่วคราว หรือใช้วิธีวัดอื่น",
+        "ดูบริการสแกน 3 มิติ")]
+    public async Task ThreeDimensionalScanningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
         string title,
         string description,
         string heading,
         string eyebrow,
         string firstStep,
-        string finalStep)
+        string firstStepDescription,
+        string secondStep,
+        string secondStepDescription,
+        string thirdStep,
+        string thirdStepDescription,
+        string serviceLink)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/knowledges/workflow?culture={culture}&tracking=excluded");
+        using var response = await client.GetAsync($"/knowledges/specifications/3d-scanning?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -105,8 +123,14 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStep}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{finalStep}<", source, StringComparison.Ordinal);
-        Assert.Equal(5, Regex.Matches(source, "<section[^>]*data-workflow-step", RegexOptions.CultureInvariant).Count);
+        Assert.Contains($">{firstStepDescription}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{secondStep}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{secondStepDescription}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{thirdStepDescription}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
+        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
+        Assert.Contains("href=\"/services/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -121,15 +145,19 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains("id=\"knowledge-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"knowledge-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-expanded=\"false\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/knowledges/specifications/3d-printing\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/knowledges/specifications/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("wow.js", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("class=\"wow", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("wow", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("animate__", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -137,16 +165,16 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
     }
 
     [Theory]
-    [InlineData("en", "https://www.maliev.com/knowledges/workflow?culture=en", "https://www.maliev.com/knowledges/workflow?culture=en", "https://www.maliev.com/knowledges/workflow")]
-    [InlineData("th", "https://www.maliev.com/knowledges/workflow", "https://www.maliev.com/knowledges/workflow?culture=en", "https://www.maliev.com/knowledges/workflow")]
-    public async Task WorkflowRoute_PreservesCanonicalAndLocalizedAlternates(
+    [InlineData("en", "https://www.maliev.com/knowledges/specifications/3d-scanning?culture=en", "https://www.maliev.com/knowledges/specifications/3d-scanning?culture=en", "https://www.maliev.com/knowledges/specifications/3d-scanning")]
+    [InlineData("th", "https://www.maliev.com/knowledges/specifications/3d-scanning", "https://www.maliev.com/knowledges/specifications/3d-scanning?culture=en", "https://www.maliev.com/knowledges/specifications/3d-scanning")]
+    public async Task ThreeDimensionalScanningSpecificationRoute_PreservesCanonicalAndLocalizedAlternates(
         string culture,
         string canonical,
         string english,
         string thai)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/knowledges/workflow?culture={culture}&tracking=excluded");
+        using var response = await client.GetAsync($"/knowledges/specifications/3d-scanning?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -158,16 +186,17 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
     }
 
     [Theory]
-    [InlineData("en", "Manufacturing workflow | MALIEV", "Knowledge center", "Manufacturing workflow")]
-    [InlineData("th", "ขั้นตอนงานผลิต | MALIEV", "ศูนย์ความรู้", "ขั้นตอนงานผลิต")]
-    public async Task WorkflowRoute_EmitsWebPageAndBreadcrumbStructuredData(
+    [InlineData("en", "3D scanning specifications | MALIEV", "Knowledge center", "Service specifications", "3D scanning specifications")]
+    [InlineData("th", "ข้อแนะนำงานสแกน 3 มิติ | MALIEV", "ศูนย์ความรู้", "ข้อแนะนำเฉพาะบริการ", "ข้อแนะนำงานสแกน 3 มิติ")]
+    public async Task ThreeDimensionalScanningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema(
         string culture,
         string pageName,
         string knowledgeCenterName,
-        string workflowName)
+        string specificationsName,
+        string scanningName)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/knowledges/workflow?culture={culture}");
+        using var response = await client.GetAsync($"/knowledges/specifications/3d-scanning?culture={culture}");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         var documents = StructuredDataRegex().Matches(source)
             .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
@@ -178,19 +207,22 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         using var breadcrumb = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
         Assert.Equal(pageName, webPage.RootElement.GetProperty("name").GetString());
         Assert.Equal(culture, webPage.RootElement.GetProperty("inLanguage").GetString());
-        Assert.Equal(knowledgeCenterName, breadcrumb.RootElement.GetProperty("itemListElement")[1].GetProperty("name").GetString());
-        Assert.Equal(workflowName, breadcrumb.RootElement.GetProperty("itemListElement")[2].GetProperty("name").GetString());
+        var items = breadcrumb.RootElement.GetProperty("itemListElement");
+        Assert.Equal(4, items.GetArrayLength());
+        Assert.Equal(knowledgeCenterName, items[1].GetProperty("name").GetString());
+        Assert.Equal(specificationsName, items[2].GetProperty("name").GetString());
+        Assert.Equal(scanningName, items[3].GetProperty("name").GetString());
     }
 
     [Fact]
-    public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheWorkflowRoute()
+    public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheThreeDimensionalScanningSpecificationRoute()
     {
         using var client = CreateClient(factory);
-        var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/knowledges/workflow?culture=en"));
+        var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/knowledges/specifications/3d-scanning?culture=en"));
         var consentCookie = ConsentCookieRegex().Match(initial).Groups["cookie"].Value;
         Assert.False(string.IsNullOrWhiteSpace(consentCookie));
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/knowledges/workflow?culture=en");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/knowledges/specifications/3d-scanning?culture=en");
         request.Headers.Add("Cookie", consentCookie.Split(';', 2)[0]);
         using var response = await client.SendAsync(request);
         var source = await response.Content.ReadAsStringAsync();
@@ -203,16 +235,16 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
     }
 
     [Fact]
-    public async Task DisabledWorkflowRoute_UsesTheRetainedRazorFallbackAtTheCanonicalUrl()
+    public async Task DisabledThreeDimensionalScanningSpecificationRoute_UsesTheRetainedRazorFallback()
     {
         var fallbackFactory = factory.WithWebHostBuilder(builder =>
-            builder.UseSetting("BlazorRouting:KnowledgesWorkflow", "false"));
+            builder.UseSetting("BlazorRouting:KnowledgesSpecifications3DScanning", "false"));
         using var client = CreateClient(fallbackFactory);
-        using var response = await client.GetAsync("/knowledges/workflow?culture=en");
+        using var response = await client.GetAsync("/knowledges/specifications/3d-scanning?culture=en");
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>Manufacturing workflow | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>3D scanning specifications | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
@@ -257,6 +289,6 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
     [GeneratedRegex("<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>.*?)</script>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
     private static partial Regex StructuredDataRegex();
 
-    [GeneratedRegex("data-cookie-string=\"(?<cookie>[^\"]+)\"", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("data-cookie-string=\"(?<cookie>[^\"]+)\"")]
     private static partial Regex ConsentCookieRegex();
 }

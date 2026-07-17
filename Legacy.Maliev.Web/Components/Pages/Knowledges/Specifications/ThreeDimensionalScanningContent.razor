@@ -1,6 +1,6 @@
 @inject IStringLocalizer<ThreeDimensionalScanningContent> Localizer
 
-<article class="knowledge-document" data-migration-renderer="blazor-static-ssr">
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <p class="maliev-eyebrow">@Localizer["3D scanning preparation"]</p>
     <h1>@Localizer["Prepare a part for 3D scanning"]</h1>
     <p class="docs-lead">@Localizer["Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report."]</p>
@@ -11,3 +11,8 @@
     </div>
     <div class="maliev-actions"><a class="maliev-button" href="/services/3d-scanning">@Localizer["View 3D scanning service"]</a></div>
 </article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}
