@@ -5,43 +5,39 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CncMachiningStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public WorkflowStaticSsrRouteTests(WebApplicationFactory<Program> factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
     }
 
     [Fact]
-    public void Host_DeclaresTheCncMachiningRouteAndRetainsItsRazorRollbackSource()
+    public void Host_DeclaresTheWorkflowStaticSsrPageAndKeepsTheRazorRollbackSource()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
-        var routePath = Path.Combine(web, "Components", "Pages", "Services", "CncMachiningPage.razor");
+        var routePath = Path.Combine(web, "Components", "Pages", "Knowledges", "WorkflowPage.razor");
 
         Assert.True(File.Exists(routePath), $"Expected routed component '{routePath}'.");
 
         var program = File.ReadAllText(Path.Combine(web, "Program.cs"));
         var route = File.ReadAllText(routePath);
-        var content = File.ReadAllText(Path.Combine(
-            web,
-            "Components",
-            "Pages",
-            "Services",
-            "CncMachiningContent.razor"));
-        var razorFallback = File.ReadAllText(Path.Combine(web, "Pages", "Services", "CNC-Machining.cshtml"));
+        var content = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Knowledges", "WorkflowContent.razor"));
+        var razorFallback = File.ReadAllText(Path.Combine(web, "Areas", "Knowledges", "Pages", "Workflow.cshtml"));
 
-        Assert.Contains("BlazorRouting:Services", program, StringComparison.Ordinal);
-        Assert.Contains("/Services/CNC-Machining", program, StringComparison.Ordinal);
-        Assert.Contains("@page \"/services/cnc-machining\"", route, StringComparison.Ordinal);
+        Assert.Contains("BlazorRouting:KnowledgesWorkflow", program, StringComparison.Ordinal);
+        Assert.Contains("AddAreaPageRouteModelConvention", program, StringComparison.Ordinal);
+        Assert.Contains("\"Knowledges\"", program, StringComparison.Ordinal);
+        Assert.Contains("\"/Workflow\"", program, StringComparison.Ordinal);
+        Assert.Contains("model.Selectors.Clear()", program, StringComparison.Ordinal);
+        Assert.Contains("@page \"/Knowledges/Workflow\"", route, StringComparison.Ordinal);
         Assert.Contains("RouteOwner=\"blazor-static-ssr\"", route, StringComparison.Ordinal);
-        Assert.Contains("<PublicServiceStructuredData", route, StringComparison.Ordinal);
-        Assert.Contains("FAQPage", route, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("@page", razorFallback, StringComparison.Ordinal);
-        Assert.Contains("type=\"typeof(CncMachiningContent)\"", razorFallback, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(WorkflowContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
                 Path.Combine(web, "Components"),
@@ -53,32 +49,46 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
             .ToArray();
 
         Assert.Equal(
-            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "KnowledgeIndexPage.razor", "ServicesPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalScanningPage.razor", "WorkflowPage.razor"],
+            [
+                "CncMachiningPage.razor",
+                "CustomManufacturingPage.razor",
+                "KnowledgeIndexPage.razor",
+                "ServicesPage.razor",
+                "ThreeDimensionalPrintingPage.razor",
+                "ThreeDimensionalScanningPage.razor",
+                "WorkflowPage.razor"
+            ],
             routedPages);
     }
 
     [Theory]
     [InlineData(
         "en",
-        "CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts",
-        "CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.",
-        "Precision CNC Machining for One-Off and Production Parts",
-        "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi")]
+        "Manufacturing workflow | MALIEV",
+        "Understand the MALIEV workflow from file review and quotation to production and delivery.",
+        "What happens after you request a quote",
+        "Project workflow",
+        "Engineering review",
+        "Delivery")]
     [InlineData(
         "th",
-        "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต",
-        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม",
-        "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต",
-        "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC")]
-    public async Task Route_RendersCompleteLocalizedStaticDocument(
+        "ขั้นตอนงานผลิต | MALIEV",
+        "เข้าใจขั้นตอนของ MALIEV ตั้งแต่ตรวจไฟล์และเสนอราคา ไปจนถึงผลิตและส่งมอบ",
+        "เกิดอะไรขึ้นหลังขอใบเสนอราคา",
+        "ขั้นตอนโครงการ",
+        "วิศวกรรมตรวจสอบ",
+        "ส่งมอบ")]
+    public async Task WorkflowRoute_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
         string description,
         string heading,
-        string keywords)
+        string eyebrow,
+        string firstStep,
+        string finalStep)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}&tracking=excluded");
+        using var response = await client.GetAsync($"/knowledges/workflow?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -86,37 +96,52 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Contains($"<html lang=\"{culture}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<title>{title}</title>", source, StringComparison.Ordinal);
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
-        Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
-        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/cnc/cnc-hero.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{firstStep}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{finalStep}<", source, StringComparison.Ordinal);
+        Assert.Equal(5, Regex.Matches(source, "<section[^>]*data-workflow-step", RegexOptions.CultureInvariant).Count);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-google-tag-manager-head\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"public-business-structured-data\"", source, StringComparison.Ordinal);
         Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-migration-component=\"public-google-tag-manager-body\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-contact-channel-analytics\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"google-site-verification\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"knowledge-navigation\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"knowledge-navigation\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"false\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
+        Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
+        Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("wow", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("animate__", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fonts.googleapis.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
-    [InlineData("en", "https://www.maliev.com/services/cnc-machining?culture=en", "https://www.maliev.com/services/cnc-machining?culture=en", "https://www.maliev.com/services/cnc-machining")]
-    [InlineData("th", "https://www.maliev.com/services/cnc-machining", "https://www.maliev.com/services/cnc-machining?culture=en", "https://www.maliev.com/services/cnc-machining")]
-    public async Task Route_PreservesCanonicalAndLocalizedAlternates(
+    [InlineData("en", "https://www.maliev.com/knowledges/workflow?culture=en", "https://www.maliev.com/knowledges/workflow?culture=en", "https://www.maliev.com/knowledges/workflow")]
+    [InlineData("th", "https://www.maliev.com/knowledges/workflow", "https://www.maliev.com/knowledges/workflow?culture=en", "https://www.maliev.com/knowledges/workflow")]
+    public async Task WorkflowRoute_PreservesCanonicalAndLocalizedAlternates(
         string culture,
         string canonical,
         string english,
         string thai)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}&tracking=excluded");
+        using var response = await client.GetAsync($"/knowledges/workflow?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -128,38 +153,39 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
     }
 
     [Theory]
-    [InlineData("en", "CNC Machining Services", "Can you machine only one piece?")]
-    [InlineData("th", "บริการรับงาน CNC ตามแบบ", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
-    public async Task Route_PreservesServiceAndFaqStructuredData(
+    [InlineData("en", "Manufacturing workflow | MALIEV", "Knowledge center", "Manufacturing workflow")]
+    [InlineData("th", "ขั้นตอนงานผลิต | MALIEV", "ศูนย์ความรู้", "ขั้นตอนงานผลิต")]
+    public async Task WorkflowRoute_EmitsWebPageAndBreadcrumbStructuredData(
         string culture,
-        string serviceName,
-        string faqQuestion)
+        string pageName,
+        string knowledgeCenterName,
+        string workflowName)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
+        using var response = await client.GetAsync($"/knowledges/workflow?culture={culture}");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         var documents = StructuredDataRegex().Matches(source)
             .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
             .ToArray();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var service = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "Service");
-        using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
-        Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
-        Assert.Equal("CNC Machining", service.RootElement.GetProperty("serviceType").GetString());
-        Assert.Equal(3, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
-        Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+        using var webPage = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "WebPage");
+        using var breadcrumb = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
+        Assert.Equal(pageName, webPage.RootElement.GetProperty("name").GetString());
+        Assert.Equal(culture, webPage.RootElement.GetProperty("inLanguage").GetString());
+        Assert.Equal(knowledgeCenterName, breadcrumb.RootElement.GetProperty("itemListElement")[1].GetProperty("name").GetString());
+        Assert.Equal(workflowName, breadcrumb.RootElement.GetProperty("itemListElement")[2].GetProperty("name").GetString());
     }
 
     [Fact]
-    public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheRoute()
+    public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheWorkflowRoute()
     {
         using var client = CreateClient(factory);
-        var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/services/cnc-machining?culture=en"));
+        var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/knowledges/workflow?culture=en"));
         var consentCookie = ConsentCookieRegex().Match(initial).Groups["cookie"].Value;
         Assert.False(string.IsNullOrWhiteSpace(consentCookie));
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/services/cnc-machining?culture=en");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/knowledges/workflow?culture=en");
         request.Headers.Add("Cookie", consentCookie.Split(';', 2)[0]);
         using var response = await client.SendAsync(request);
         var source = await response.Content.ReadAsStringAsync();
@@ -172,19 +198,18 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
     }
 
     [Fact]
-    public async Task DisabledServicesRoutes_UsesTheRetainedRazorFallbackAtTheCanonicalUrl()
+    public async Task DisabledWorkflowRoute_UsesTheRetainedRazorFallbackAtTheCanonicalUrl()
     {
         var fallbackFactory = factory.WithWebHostBuilder(builder =>
-            builder.UseSetting("BlazorRouting:Services", "false"));
+            builder.UseSetting("BlazorRouting:KnowledgesWorkflow", "false"));
         using var client = CreateClient(fallbackFactory);
-        using var response = await client.GetAsync("/services/cnc-machining?culture=en");
+        using var response = await client.GetAsync("/knowledges/workflow?culture=en");
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>CNC Machining Services in Bangkok &amp; Nonthaburi | One-Off and Production Parts</title>", source, StringComparison.Ordinal);
-        Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Manufacturing workflow | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
     }

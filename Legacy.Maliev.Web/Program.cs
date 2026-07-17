@@ -15,7 +15,10 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
 var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
-var useBlazorRouteHost = useBlazorServicesRoute && useBlazorKnowledgesIndexRoute;
+var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
+var useBlazorRouteHost = useBlazorServicesRoute
+    && useBlazorKnowledgesIndexRoute
+    && useBlazorKnowledgesWorkflowRoute;
 builder.AddServiceDefaults();
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
@@ -67,6 +70,10 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Knowledges",
             "/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Workflow",
             model => model.Selectors.Clear());
     }
 })
