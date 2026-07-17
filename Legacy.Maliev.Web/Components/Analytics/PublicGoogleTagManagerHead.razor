@@ -1,22 +1,8 @@
-@using System.Text.Json
-@using Legacy.Maliev.Web.Pages.Shared
-@using Microsoft.AspNetCore.Http.Features
-@using Microsoft.AspNetCore.Mvc.ViewFeatures
-@inject ITempDataDictionaryFactory TempDataDictionaryFactory
-
-@{
-    var consentFeature = Context.Features.Get<ITrackingConsentFeature>();
-    var consentState = consentFeature?.CanTrack == true ? "granted" : "denied";
-    var tempData = TempDataDictionaryFactory.GetTempData(Context);
-    var hasLeadEvent = LeadAnalyticsEventQueue.TryConsume(tempData, out var leadEvent);
-    var leadEventJson = hasLeadEvent ? JsonSerializer.Serialize(leadEvent) : null;
-}
-
 <!-- Google Consent Mode and application-owned data layer -->
-<script>
+<script data-migration-component="public-google-tag-manager-head" data-migration-renderer="blazor-static-ssr">
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-    var consentState = '@consentState';
+    var consentState = '@Model.ConsentState';
     window.gtag('consent', 'default', {
         'ad_storage': consentState,
         'analytics_storage': consentState,
@@ -56,20 +42,7 @@
             }
         };
     })(consentState === 'granted');
-    @if (hasLeadEvent)
-    {
-        <text>window.malievAnalytics.emit(@Html.Raw(leadEventJson));</text>
-        if (leadEvent?.FileUploadCompleted == true)
-        {
-            var fileUploadEventJson = JsonSerializer.Serialize(new
-            {
-                @event = "file_upload_complete",
-                service = leadEvent.Service,
-                transaction_id = leadEvent.TransactionId,
-            });
-            <text>window.malievAnalytics.emit(@Html.Raw(fileUploadEventJson));</text>
-        }
-    }
+    @((MarkupString)Model.QueuedEventScript)
 </script>
 
 <!-- Google Tag Manager -->
@@ -83,3 +56,8 @@
             'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
     })(window, document, 'script', 'dataLayer', 'GTM-KHDDLVRR');</script>
 <!-- End Google Tag Manager -->
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicGoogleTagManagerDisplayModel Model { get; set; }
+}
