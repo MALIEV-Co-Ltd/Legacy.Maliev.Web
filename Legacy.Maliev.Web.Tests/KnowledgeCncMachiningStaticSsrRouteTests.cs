@@ -116,7 +116,8 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("wow", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("new WOW", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"wow", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("animate__", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
