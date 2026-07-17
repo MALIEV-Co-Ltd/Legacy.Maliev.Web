@@ -1,7 +1,7 @@
 @using System.Globalization
 @inject IStringLocalizer<PrivacyPolicyContent> Localizer
 
-<main class="legal-page" data-migration-renderer="blazor-static-ssr">
+<main class="legal-page" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["Legal"]</p><h1>@Localizer["Privacy Policy"]</h1></div></header>
     <div class="legal-shell maliev-container">
         <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#collection">@T("Information collection", "การเก็บรวบรวมข้อมูล")</a></li><li><a href="#use">@T("Use of data", "การใช้ข้อมูล")</a></li><li><a href="#security">@T("Security", "ความปลอดภัย")</a></li><li><a href="#contact">@T("Contact us", "ติดต่อเรา")</a></li></ul></nav>
@@ -124,6 +124,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string RouteOwner { get; set; } = "razor-static-ssr";
+
     private static bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
     private static string T(string english, string thai) => IsThai ? thai : english;
 }
