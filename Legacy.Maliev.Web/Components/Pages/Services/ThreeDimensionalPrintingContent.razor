@@ -1,7 +1,7 @@
 @using System.Globalization
 @using Legacy.Maliev.Web.Components.Shared
 
-<main class="service-page" data-migration-component="three-dimensional-printing-content">
+<main class="service-page" data-migration-component="three-dimensional-printing-content" data-migration-route-owner="@RouteOwner">
     <ServiceBreadcrumb ServiceKey="3D Printing" />
     <section class="service-hero" aria-labelledby="printing-title">
         <img class="service-hero-media" src="/src/images/services/printing/printing-hero.webp" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="@T("Professional FDM printer producing a blue engineering fixture", "เครื่องพิมพ์ FDM กำลังผลิตฟิกซ์เจอร์วิศวกรรมสีน้ำเงิน")" />
@@ -109,6 +109,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
     private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
     private string T(string english, string thai) => IsThai ? thai : english;
