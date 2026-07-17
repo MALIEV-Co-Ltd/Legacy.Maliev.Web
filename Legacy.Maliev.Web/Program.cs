@@ -4,6 +4,7 @@ using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -13,6 +14,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
 var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
 var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
 var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
@@ -21,7 +23,8 @@ var useBlazorKnowledgesSpecificationsRoute = builder.Configuration.GetValue("Bla
 var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DPrinting", true);
 var useBlazorKnowledgesSpecifications3DScanningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DScanning", true);
 var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecificationsCncMachining", true);
-var useBlazorRouteHost = useBlazorServicesRoute
+var useBlazorRouteHost = useBlazorHomeRoute
+    && useBlazorServicesRoute
     && useBlazorKnowledgesIndexRoute
     && useBlazorKnowledgesWorkflowRoute
     && useBlazorKnowledgesGuidelinesRoute
@@ -58,6 +61,9 @@ builder.Services.AddRazorPages(options =>
 {
     if (useBlazorRouteHost)
     {
+        options.Conventions.AddPageRouteModelConvention(
+            "/Index",
+            model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Services/Index",
             model => model.Selectors.Clear());
@@ -213,6 +219,30 @@ app.MapMemberCompatibilityEndpoints();
 if (useBlazorRouteHost)
 {
     app.MapRazorComponents<App>();
+    app.MapPost(
+            "/",
+            ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>
+            {
+                if (culture is not ("th" or "en"))
+                {
+                    culture = "th";
+                }
+
+                context.Response.Cookies.Append(
+                    CookieRequestCultureProvider.DefaultCookieName,
+                    CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                    new CookieOptions
+                    {
+                        Expires = DateTimeOffset.UtcNow.AddYears(1),
+                        HttpOnly = true,
+                        IsEssential = true,
+                        SameSite = SameSiteMode.Lax,
+                        Secure = true
+                    });
+
+                return Results.LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? "~/" : returnUrl);
+            })
+        .WithMetadata(new RequireAntiforgeryTokenAttribute(true));
 }
 app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");

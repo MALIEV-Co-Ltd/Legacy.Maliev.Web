@@ -17,6 +17,6 @@ public sealed class Logout(IAccountSessionManager sessionManager) : PageModel
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
         await sessionManager.SignOutAsync(HttpContext, cancellationToken);
-        return RedirectToPage("/Index");
+        return LocalRedirect("~/");
     }
 }
