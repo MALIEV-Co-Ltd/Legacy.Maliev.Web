@@ -1,70 +1,94 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public ServicesStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public ThreeDimensionalPrintingStaticSsrRouteTests(WebApplicationFactory<Program> factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
     }
 
     [Fact]
-    public void Host_DeclaresTheApprovedStaticSsrPagesAndKeepsTheServicesRazorRollbackSource()
+    public void Host_DeclaresTheThreeDimensionalPrintingRouteAndRetainsItsRazorRollbackSource()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
+        var routePath = Path.Combine(
+            web,
+            "Components",
+            "Pages",
+            "Services",
+            "ThreeDimensionalPrintingPage.razor");
+
+        Assert.True(File.Exists(routePath), $"Expected routed component '{routePath}'.");
+
         var program = File.ReadAllText(Path.Combine(web, "Program.cs"));
-        var app = File.ReadAllText(Path.Combine(web, "Components", "App.razor"));
-        var route = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ServicesPage.razor"));
-        var razorFallback = File.ReadAllText(Path.Combine(web, "Pages", "Services", "Index.cshtml"));
+        var route = File.ReadAllText(routePath);
+        var content = File.ReadAllText(Path.Combine(
+            web,
+            "Components",
+            "Pages",
+            "Services",
+            "ThreeDimensionalPrintingContent.razor"));
+        var razorFallback = File.ReadAllText(Path.Combine(web, "Pages", "Services", "3D-Printing.cshtml"));
 
         Assert.Contains("BlazorRouting:Services", program, StringComparison.Ordinal);
-        Assert.Contains("model.Selectors.Clear()", program, StringComparison.Ordinal);
-        Assert.Contains("app.UseAntiforgery()", program, StringComparison.Ordinal);
-        Assert.Contains("app.MapRazorComponents<App>()", program, StringComparison.Ordinal);
-        Assert.Contains("<!DOCTYPE html>", app, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("<HeadOutlet", app, StringComparison.Ordinal);
-        Assert.Contains("<Routes", app, StringComparison.Ordinal);
-        Assert.Contains("@page \"/services\"", route, StringComparison.Ordinal);
+        Assert.Contains("/Services/3D-Printing", program, StringComparison.Ordinal);
+        Assert.Contains("@page \"/services/3d-printing\"", route, StringComparison.Ordinal);
         Assert.Contains("RouteOwner=\"blazor-static-ssr\"", route, StringComparison.Ordinal);
+        Assert.Contains("<PublicServiceStructuredData", route, StringComparison.Ordinal);
+        Assert.Contains("FAQPage", route, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("@page", razorFallback, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ThreeDimensionalPrintingContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
                 Path.Combine(web, "Components"),
                 "*.razor",
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
+            .Select(path => Path.GetFileName(path)!)
+            .Order(StringComparer.Ordinal)
             .ToArray();
-        Assert.Equal(4, routedPages.Length);
+
         Assert.Equal(
-            ["CncMachiningPage.razor", "CustomManufacturingPage.razor", "ServicesPage.razor", "ThreeDimensionalPrintingPage.razor"],
-            routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
+            [
+                "CncMachiningPage.razor",
+                "CustomManufacturingPage.razor",
+                "ServicesPage.razor",
+                "ThreeDimensionalPrintingPage.razor"
+            ],
+            routedPages);
     }
 
     [Theory]
     [InlineData(
         "en",
-        "Manufacturing services | MALIEV",
-        "Custom part manufacturing, CNC machining, 3D printing, and 3D scanning services in Thailand.",
-        "Manufacturing services")]
+        "3D Printing Services Bangkok & Nonthaburi | Instant Online Quote",
+        "Order FDM and resin 3D printed parts in engineering materials. Compare material uses, prepare files, and upload CAD for instant 3D printing pricing.",
+        "Professional 3D Printing for Prototypes and Functional Parts",
+        "3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing")]
     [InlineData(
         "th",
-        "บริการผลิตชิ้นส่วน | MALIEV",
-        "บริการผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติในประเทศไทย",
-        "บริการผลิตชิ้นส่วน")]
-    public async Task ServicesRoute_RendersCompleteLocalizedStaticDocument(
+        "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี | ประเมินราคาออนไลน์",
+        "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซินสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์",
+        "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง",
+        "รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิน")]
+    public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
         string description,
-        string heading)
+        string heading,
+        string keywords)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services?culture={culture}&tracking=excluded");
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -72,40 +96,37 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains($"<html lang=\"{culture}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<title>{title}</title>", source, StringComparison.Ordinal);
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
+        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/printing/printing-hero.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-google-tag-manager-head\"", source, StringComparison.Ordinal);
         Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("data-migration-component=\"public-google-tag-manager-body\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-contact-channel-analytics\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/dist/site.min.css?v=", source, StringComparison.Ordinal);
-        Assert.Contains("src=\"/dist/vendor.min.js?v=", source, StringComparison.Ordinal);
-        Assert.Contains("src=\"/dist/app.min.js?v=", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/services/custom-manufacturing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/services/cnc-machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/services/3d-printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/services/3d-scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
-    [InlineData("en", "https://www.maliev.com/services?culture=en", "https://www.maliev.com/services?culture=en", "https://www.maliev.com/services")]
-    [InlineData("th", "https://www.maliev.com/services", "https://www.maliev.com/services?culture=en", "https://www.maliev.com/services")]
-    public async Task ServicesRoute_PreservesCanonicalAndLocalizedAlternates(
+    [InlineData("en", "https://www.maliev.com/services/3d-printing?culture=en", "https://www.maliev.com/services/3d-printing?culture=en", "https://www.maliev.com/services/3d-printing")]
+    [InlineData("th", "https://www.maliev.com/services/3d-printing", "https://www.maliev.com/services/3d-printing?culture=en", "https://www.maliev.com/services/3d-printing")]
+    public async Task Route_PreservesCanonicalAndLocalizedAlternates(
         string culture,
         string canonical,
         string english,
         string thai)
     {
         using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services?culture={culture}&tracking=excluded");
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -116,15 +137,40 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains($"<meta property=\"og:url\" content=\"{canonical}\"", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheBlazorRoute()
+    [Theory]
+    [InlineData("en", "3D Printing Services", "How much does 3D printing cost?")]
+    [InlineData("th", "บริการรับพิมพ์ 3D", "พิมพ์ 3D ราคาเท่าไร?")]
+    public async Task Route_PreservesServiceFaqAndBreadcrumbStructuredData(
+        string culture,
+        string serviceName,
+        string faqQuestion)
     {
         using var client = CreateClient(factory);
-        var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/services?culture=en"));
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        var documents = StructuredDataRegex().Matches(source)
+            .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
+            .ToArray();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var service = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "Service");
+        using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
+        Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
+        Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
+        Assert.Equal("3D Printing", service.RootElement.GetProperty("serviceType").GetString());
+        Assert.Equal(3, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
+        Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheRoute()
+    {
+        using var client = CreateClient(factory);
+        var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/services/3d-printing?culture=en"));
         var consentCookie = ConsentCookieRegex().Match(initial).Groups["cookie"].Value;
         Assert.False(string.IsNullOrWhiteSpace(consentCookie));
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/services?culture=en");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/services/3d-printing?culture=en");
         request.Headers.Add("Cookie", consentCookie.Split(';', 2)[0]);
         using var response = await client.SendAsync(request);
         var source = await response.Content.ReadAsStringAsync();
@@ -137,18 +183,19 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
     }
 
     [Fact]
-    public async Task DisabledServicesRoute_UsesTheRetainedRazorFallbackAtTheCanonicalUrl()
+    public async Task DisabledServicesRoutes_UsesTheRetainedRazorFallbackAtTheCanonicalUrl()
     {
         var fallbackFactory = factory.WithWebHostBuilder(builder =>
             builder.UseSetting("BlazorRouting:Services", "false"));
         using var client = CreateClient(fallbackFactory);
-        using var response = await client.GetAsync("/services?culture=en");
+        using var response = await client.GetAsync("/services/3d-printing?culture=en");
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>Manufacturing services | MALIEV</title>", source, StringComparison.Ordinal);
-        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("<title>3D Printing Services Bangkok &amp; Nonthaburi | Instant Online Quote</title>", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
     }
@@ -187,6 +234,9 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
     }
+
+    [GeneratedRegex("<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>.*?)</script>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
+    private static partial Regex StructuredDataRegex();
 
     [GeneratedRegex("data-cookie-string=\"(?<cookie>[^\"]+)\"", RegexOptions.CultureInvariant)]
     private static partial Regex ConsentCookieRegex();
