@@ -15,6 +15,7 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
+var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
 var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
 var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
 var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
@@ -24,6 +25,7 @@ var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.Get
 var useBlazorKnowledgesSpecifications3DScanningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DScanning", true);
 var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecificationsCncMachining", true);
 var useBlazorRouteHost = useBlazorHomeRoute
+    && useBlazorAboutRoute
     && useBlazorServicesRoute
     && useBlazorKnowledgesIndexRoute
     && useBlazorKnowledgesWorkflowRoute
@@ -63,6 +65,9 @@ builder.Services.AddRazorPages(options =>
     {
         options.Conventions.AddPageRouteModelConvention(
             "/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/About/Index",
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Services/Index",

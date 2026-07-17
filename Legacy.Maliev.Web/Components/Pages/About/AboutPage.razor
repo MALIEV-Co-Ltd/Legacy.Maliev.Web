@@ -1,0 +1,27 @@
+@page "/About"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai
+        ? "เกี่ยวกับ MALIEV | ระบบการผลิตที่เชื่อมต่อกันในประเทศไทย"
+        : "About MALIEV | Connected manufacturing in Thailand";
+    var description = isThai
+        ? "ติดตามเส้นทางที่มีหลักฐานของ MALIEV จากเวิร์กช็อปครอบครัวในนนทบุรี สู่บริการ CNC พิมพ์ 3 มิติ และสแกน 3 มิติที่เชื่อมต่อกัน"
+        : "Follow MALIEV's documented journey from a family workshop in Nonthaburi to connected CNC machining, 3D printing, and 3D scanning services.";
+    var keywords = isThai
+        ? "ประวัติ MALIEV, บริษัทผลิตชิ้นส่วน, CNC นนทบุรี, พิมพ์ 3 มิติ, สแกน 3 มิติ"
+        : "MALIEV history, manufacturing company Thailand, CNC Nonthaburi, 3D printing Thailand, 3D scanning Thailand";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<AboutContent RouteOwner="blazor-static-ssr" />
