@@ -194,6 +194,8 @@ The required columns are:
 The weekly review compares services, channels, and locales without promoting click-only behavior.
 Flag duplicate transaction IDs, completion counts greater than upload starts, Ads primary counts
 without persisted requests, and any row containing PII or an uncontrolled dimension value.
+The channel-specific readiness gates, KPI formulas, and owner decision rubric are defined in
+[`channel-quality-measurement.md`](./channel-quality-measurement.md).
 
 ## Cross-console QA evidence matrix
 
