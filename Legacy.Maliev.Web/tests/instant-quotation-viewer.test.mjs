@@ -15,6 +15,7 @@ import {
   Float32BufferAttribute,
   Mesh,
   MeshStandardMaterial,
+  Texture,
 } from 'three';
 import {
   analyzeAdvisoryGeometry,
@@ -160,14 +161,55 @@ test('one mesh with disconnected triangle shells receives stable per-body vertex
     0, 0, 0, 1, 0, 0, 0, 1, 0,
     10, 0, 0, 11, 0, 0, 10, 1, 0,
   ], 3));
-  const mesh = new Mesh(geometry, new MeshStandardMaterial({ color: '#ffffff' }));
+  const originalMaterial = new MeshStandardMaterial({ color: '#ffffff' });
+  const mesh = new Mesh(geometry, originalMaterial);
   const root = { traverse: callback => callback(mesh) };
   const count = colorDisconnectedBodies(root);
   const colors = geometry.getAttribute('color');
   assert.equal(count, 2);
+  assert.equal(mesh.material, originalMaterial);
   assert.equal(mesh.material.vertexColors, true);
   assert.deepEqual([colors.getX(0), colors.getY(0), colors.getZ(0)], [colors.getX(1), colors.getY(1), colors.getZ(1)]);
   assert.notDeepEqual([colors.getX(0), colors.getY(0), colors.getZ(0)], [colors.getX(3), colors.getY(3), colors.getZ(3)]);
+});
+
+test('disconnected-body analysis skips vertex walking above the 200k topology cap', () => {
+  let vertexReads = 0;
+  const position = {
+    count: 600003,
+    getX() { vertexReads += 1; throw new Error('topology walk exceeded cap'); },
+    getY() { vertexReads += 1; throw new Error('topology walk exceeded cap'); },
+    getZ() { vertexReads += 1; throw new Error('topology walk exceeded cap'); },
+  };
+  const geometry = {
+    getAttribute: name => name === 'position' ? position : null,
+    getIndex: () => null,
+  };
+  const root = { traverse: callback => callback({ isMesh: true, geometry }) };
+  assert.equal(colorDisconnectedBodies(root), 1);
+  assert.equal(vertexReads, 0);
+});
+
+test('shared original materials and textures remain owned and dispose exactly once', () => {
+  let materialDisposals = 0;
+  let textureDisposals = 0;
+  const texture = new Texture();
+  texture.dispose = () => { textureDisposals += 1; };
+  const material = new MeshStandardMaterial({ color: '#ffffff' });
+  material.map = texture;
+  material.dispose = () => { materialDisposals += 1; };
+  const first = new Mesh(singleTriangleGeometry(0), material);
+  const second = new Mesh(singleTriangleGeometry(10), material);
+  const root = { traverse: callback => { callback(first); callback(second); } };
+
+  assert.equal(colorDisconnectedBodies(root), 2);
+  assert.equal(first.material, material);
+  assert.equal(second.material, material);
+  const viewer = createModelViewer({ adapter: createAdapter() });
+  viewer.addPart('shared-resources', root);
+  viewer.remove('shared-resources');
+  assert.equal(materialDisposals, 1);
+  assert.equal(textureDisposals, 1);
 });
 
 test('standalone textual GLTF permits embedded data only and rejects external URIs', () => {
@@ -271,4 +313,12 @@ function squarePyramidTriangles() {
     ...a, ...b, ...top, ...b, ...c, ...top,
     ...c, ...d, ...top, ...d, ...a, ...top,
   ];
+}
+
+function singleTriangleGeometry(offset) {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute([
+    offset, 0, 0, offset + 1, 0, 0, offset, 1, 0,
+  ], 3));
+  return geometry;
 }

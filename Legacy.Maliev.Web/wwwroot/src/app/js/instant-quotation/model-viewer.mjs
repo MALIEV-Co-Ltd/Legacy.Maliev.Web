@@ -8,6 +8,7 @@ import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
 const bodyPalette = Object.freeze([
   '#2563eb', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d',
 ]);
+const maximumTopologyTriangles = 200000;
 
 export function stableBodyColor(index) {
   const safeIndex = Number.isSafeInteger(index) && index >= 0 ? index : 0;
@@ -26,7 +27,8 @@ export function colorDisconnectedBodies(object) {
 
   let bodyOffset = 0;
   analyses.forEach((analysis, meshIndex) => {
-    applyComponentColors(meshes[meshIndex], analysis, bodyOffset);
+    if (analysis.skipped) applyBoundedMeshColor(meshes[meshIndex], bodyOffset);
+    else applyComponentColors(meshes[meshIndex], analysis, bodyOffset);
     bodyOffset += analysis.count;
   });
   return bodyCount;
@@ -367,14 +369,25 @@ function defaultMaterial() {
 }
 
 function disposeObject(object) {
+  const disposedGeometries = new Set();
+  const disposedMaterials = new Set();
+  const disposedTextures = new Set();
   if (typeof object?.traverse === 'function') {
     object.traverse(child => {
-      child.geometry?.dispose?.();
+      if (child.geometry && !disposedGeometries.has(child.geometry)) {
+        disposedGeometries.add(child.geometry);
+        child.geometry.dispose?.();
+      }
       for (const material of asArray(child.material)) {
+        if (!material || disposedMaterials.has(material)) continue;
+        disposedMaterials.add(material);
         for (const value of Object.values(material ?? {})) {
-          if (value?.isTexture) value.dispose();
+          if (value?.isTexture && !disposedTextures.has(value)) {
+            disposedTextures.add(value);
+            value.dispose();
+          }
         }
-        material?.dispose?.();
+        material.dispose?.();
       }
     });
   }
@@ -395,6 +408,9 @@ function analyzeMeshComponents(geometry) {
   const index = geometry.getIndex?.();
   const triangleCount = Math.floor((index?.count ?? position.count) / 3);
   if (triangleCount === 0) return { count: 0, componentByTriangle: [] };
+  if (triangleCount > maximumTopologyTriangles) {
+    return { count: 1, componentByTriangle: [], vertexIndices: [], skipped: true };
+  }
   const parents = Array.from({ length: triangleCount }, (_, value) => value);
   const firstTriangleByVertex = new Map();
   const vertexIndices = [];
@@ -418,7 +434,7 @@ function analyzeMeshComponents(geometry) {
     if (!componentIndex.has(root)) componentIndex.set(root, componentIndex.size);
     return componentIndex.get(root);
   });
-  return { count: componentIndex.size, componentByTriangle, vertexIndices };
+  return { count: componentIndex.size, componentByTriangle, vertexIndices, skipped: false };
 }
 
 function applyComponentColors(mesh, analysis, bodyOffset) {
@@ -433,13 +449,19 @@ function applyComponentColors(mesh, analysis, bodyOffset) {
     }
   });
   mesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  const materials = asArray(mesh.material).map(material => {
-    const colored = material.clone();
-    colored.vertexColors = true;
-    colored.color?.set(0xffffff);
-    return colored;
-  });
-  mesh.material = materials.length === 1 ? materials[0] : materials;
+  for (const material of asArray(mesh.material)) {
+    material.vertexColors = true;
+    material.color?.set(0xffffff);
+    material.needsUpdate = true;
+  }
+}
+
+function applyBoundedMeshColor(mesh, bodyIndex) {
+  for (const material of asArray(mesh.material)) {
+    material.vertexColors = false;
+    material.color?.set(stableBodyColor(bodyIndex));
+    material.needsUpdate = true;
+  }
 }
 
 function find(parents, value) {

@@ -281,14 +281,25 @@ function snapshot(part) {
 }
 
 function disposePreview(object) {
+  const disposedGeometries = new Set();
+  const disposedMaterials = new Set();
+  const disposedTextures = new Set();
   if (typeof object?.traverse === 'function') {
     object.traverse(child => {
-      child.geometry?.dispose?.();
+      if (child.geometry && !disposedGeometries.has(child.geometry)) {
+        disposedGeometries.add(child.geometry);
+        child.geometry.dispose?.();
+      }
       for (const material of asArray(child.material)) {
+        if (!material || disposedMaterials.has(material)) continue;
+        disposedMaterials.add(material);
         for (const value of Object.values(material ?? {})) {
-          if (value?.isTexture) value.dispose?.();
+          if (value?.isTexture && !disposedTextures.has(value)) {
+            disposedTextures.add(value);
+            value.dispose?.();
+          }
         }
-        material?.dispose?.();
+        material.dispose?.();
       }
     });
   }
