@@ -1,0 +1,12 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage.Profile
+@inject IStringLocalizer<MemberProfileContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Profile | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section" aria-labelledby="member-profile-title">
+    <form method="post" asp-page-handler="UpdateProfile" class="maliev-panel maliev-form">
+        <component type="typeof(MemberProfileContent)" render-mode="Static" param-Model="Model.DisplayModel" />
+    </form>
+</section>

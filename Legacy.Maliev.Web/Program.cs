@@ -1,7 +1,10 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
+using Legacy.Maliev.Web.Components;
+using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -11,6 +14,38 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
+var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
+var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
+var useBlazorLegalRoute = builder.Configuration.GetValue("BlazorRouting:Legal", true);
+var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
+var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
+var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
+var useBlazorCareerDetailRoute = builder.Configuration.GetValue("BlazorRouting:CareerDetail", true);
+var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
+var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
+var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
+var useBlazorKnowledgesGuidelinesRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesGuidelines", true);
+var useBlazorKnowledgesSpecificationsRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications", true);
+var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DPrinting", true);
+var useBlazorKnowledgesSpecifications3DScanningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DScanning", true);
+var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecificationsCncMachining", true);
+var useBlazorRouteHost = useBlazorHomeRoute
+    && useBlazorAboutRoute
+    && useBlazorSocialMediaRoute
+    && useBlazorLegalRoute
+    && useBlazorPrivacyPolicyRoute
+    && useBlazorTermsConditionsRoute
+    && useBlazorCareerIndexRoute
+    && useBlazorCareerDetailRoute
+    && useBlazorServicesRoute
+    && useBlazorKnowledgesIndexRoute
+    && useBlazorKnowledgesWorkflowRoute
+    && useBlazorKnowledgesGuidelinesRoute
+    && useBlazorKnowledgesSpecificationsRoute
+    && useBlazorKnowledgesSpecifications3DPrintingRoute
+    && useBlazorKnowledgesSpecifications3DScanningRoute
+    && useBlazorKnowledgesSpecificationsCncMachiningRoute;
 builder.AddServiceDefaults();
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
@@ -36,9 +71,86 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
     options.MinimumSameSitePolicy = SameSiteMode.Lax;
     options.Secure = CookieSecurePolicy.Always;
 });
-builder.Services.AddRazorPages()
+builder.Services.AddRazorPages(options =>
+{
+    if (useBlazorRouteHost)
+    {
+        options.Conventions.AddPageRouteModelConvention(
+            "/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/About/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/About/SocialMedia",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Legal/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Legal/PrivacyPolicy",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Legal/TermsConditions",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Career/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Career/View",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/Custom-Manufacturing",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/CNC-Machining",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/3D-Printing",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Services/3D-Scanning",
+            model => model.Selectors.Clear());
+    }
+
+    if (useBlazorRouteHost)
+    {
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Workflow",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Guidelines",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Specifications/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Specifications/3D-Printing",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Specifications/3D-Scanning",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Specifications/CNC-Machining",
+            model => model.Selectors.Clear());
+    }
+})
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
     .AddDataAnnotationsLocalization();
+builder.Services.AddRazorComponents();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddResponseCompression();
 builder.Services.AddOutputCache();
@@ -121,6 +233,9 @@ else
 
 var app = builder.Build();
 app.UseStandardMiddleware();
+app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
+app.UseExceptionHandler("/Error");
+app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseCookiePolicy();
@@ -131,8 +246,39 @@ app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 app.UseOutputCache();
 app.MapDefaultEndpoints("web");
+app.MapLegacySitemap();
+app.MapMemberCompatibilityEndpoints();
+if (useBlazorRouteHost)
+{
+    app.MapRazorComponents<App>();
+    app.MapPost(
+            "/",
+            ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>
+            {
+                if (culture is not ("th" or "en"))
+                {
+                    culture = "th";
+                }
+
+                context.Response.Cookies.Append(
+                    CookieRequestCultureProvider.DefaultCookieName,
+                    CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                    new CookieOptions
+                    {
+                        Expires = DateTimeOffset.UtcNow.AddYears(1),
+                        HttpOnly = true,
+                        IsEssential = true,
+                        SameSite = SameSiteMode.Lax,
+                        Secure = true
+                    });
+
+                return Results.LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? "~/" : returnUrl);
+            })
+        .WithMetadata(new RequireAntiforgeryTokenAttribute(true));
+}
 app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();

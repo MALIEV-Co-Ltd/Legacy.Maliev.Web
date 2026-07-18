@@ -1,0 +1,63 @@
+<!-- Google Consent Mode and application-owned data layer -->
+<script data-migration-component="public-google-tag-manager-head" data-migration-renderer="blazor-static-ssr">
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    var consentState = '@Model.ConsentState';
+    window.gtag('consent', 'default', {
+        'ad_storage': consentState,
+        'analytics_storage': consentState,
+        'ad_user_data': consentState,
+        'ad_personalization': consentState,
+        'wait_for_update': 500
+    });
+    window.malievAnalytics = window.malievAnalytics || (function (initialConsentGranted) {
+        var consentGranted = initialConsentGranted;
+        var pendingEvents = [];
+
+        function push(eventData) {
+            if (!eventData || typeof eventData.event !== 'string') {
+                return;
+            }
+
+            window.dataLayer.push(eventData);
+        }
+
+        return {
+            emit: function (eventData) {
+                if (consentGranted) {
+                    push(eventData);
+                    return;
+                }
+
+                pendingEvents.push(eventData);
+            },
+            setConsent: function (state) {
+                consentGranted = state === 'granted';
+                if (!consentGranted) {
+                    pendingEvents.length = 0;
+                    return;
+                }
+
+                pendingEvents.splice(0).forEach(push);
+            }
+        };
+    })(consentState === 'granted');
+    @((MarkupString)Model.QueuedEventScript)
+</script>
+
+<!-- Google Tag Manager -->
+<script>
+    (function (w, d, s, l, i) {
+    w[l] = w[l] || []; w[l].push({
+        'gtm.start':
+            new Date().getTime(), event: 'gtm.js'
+    }); var f = d.getElementsByTagName(s)[0],
+        j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+            'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-KHDDLVRR');</script>
+<!-- End Google Tag Manager -->
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicGoogleTagManagerDisplayModel Model { get; set; }
+}

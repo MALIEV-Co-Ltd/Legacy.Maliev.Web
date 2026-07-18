@@ -1,0 +1,18 @@
+@inject IStringLocalizer<GuidelinesContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+    <p class="maliev-eyebrow">@Localizer["Prepare your project"]</p>
+    <h1>@Localizer["Quotation request guidelines"]</h1>
+    <p class="docs-lead">@Localizer["Clear files and requirements let our engineers review feasibility, price, and lead time with fewer follow-up questions."]</p>
+    <div class="docs-step-list">
+        <section id="guideline-files"><span aria-hidden="true">1</span><div><h2>@Localizer["Send usable files"]</h2><p>@Localizer["Provide a 3D CAD file when possible. Add a drawing when tolerances, threads, finishes, inspection points, or critical dimensions matter."]</p></div></section>
+        <section id="guideline-result"><span aria-hidden="true">2</span><div><h2>@Localizer["Define the result"]</h2><p>@Localizer["State the process, material, quantity, color or finish, intended use, and required delivery date."]</p></div></section>
+        <section id="guideline-requirements"><span aria-hidden="true">3</span><div><h2>@Localizer["Flag critical requirements"]</h2><p>@Localizer["Identify mating surfaces, cosmetic faces, dimensional priorities, assemblies, and any parts supplied by you."]</p></div></section>
+        <section id="guideline-confidentiality"><span aria-hidden="true">4</span><div><h2>@Localizer["Protect confidential work"]</h2><p>@Localizer["Request our mutual NDA before sharing confidential project information when your organization requires it."]</p><a href="/legal/nondisclosureagreement">@Localizer["View NDA information"]</a></div></section>
+    </div>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

@@ -1,0 +1,25 @@
+@page "/Legal/PrivacyPolicy"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "นโยบายความเป็นส่วนตัว | MALIEV" : "Privacy Policy | MALIEV";
+    var description = isThai
+        ? "รายละเอียดนโยบายความเป็นส่วนตัว"
+        : "By using the Service, you agree to the collection and use of information in accordance with this policy. Unless otherwise defined in this Privacy Policy, terms used in this Privacy Policy have the same meanings as in our Terms and Conditions, accessible from http://www.maliev.com";
+    var keywords = isThai
+        ? "นโยบายความเป็นส่วนตัว, ข้อมูล, cookies"
+        : "privacy policy, policies, service, collection, terms and conditions, data, cookies, tracking, legal, security";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<PrivacyPolicyContent RouteOwner="blazor-static-ssr" />

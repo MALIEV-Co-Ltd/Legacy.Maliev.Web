@@ -1,2 +1,16 @@
 @page
 @model Legacy.Maliev.Web.Pages.Account.Logout
+@using Legacy.Maliev.Web.Components.Pages.Account
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<LogoutContent> LogoutLocalizer
+@{ ViewData["Title"] = LogoutLocalizer["Sign out | MALIEV"]; ViewData["Robots"] = "noindex, nofollow"; }
+<main class="maliev-page maliev-page-main">
+    <div class="maliev-container">
+        <section class="maliev-panel maliev-status">
+            <component type="typeof(LogoutContent)" render-mode="Static" />
+            <form method="post" asp-page="/Account/Logout">
+                <button type="submit" class="maliev-button">@LogoutLocalizer["Sign out"]</button>
+            </form>
+        </section>
+    </div>
+</main>

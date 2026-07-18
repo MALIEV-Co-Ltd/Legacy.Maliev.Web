@@ -1,3 +1,10 @@
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Analytics
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@{
+    var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(Context, TempDataDictionaryFactory);
+}
 <!DOCTYPE html>
 <html lang="@System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName">
 <head>
@@ -18,35 +25,32 @@
 
     <title>@ViewData["Title"]</title>
 
-    <partial name="_FacebookOpenGraphPartial" />
+    <component type="typeof(PublicOpenGraphMetadata)" render-mode="Static" param-Model="@(PublicOpenGraphMetadataDisplayModel.Create(Context, ViewData["Title"], ViewData["Description"], ViewData["Image"]))" />
     <partial name="_FaviconsPartial" />
-    <partial name="_GoogleTagManagerPartial" />
-    <partial name="_RelCanonicalPartial" />
-    <partial name="_RelAlternatePartial" />
+    <component type="typeof(PublicGoogleTagManagerHead)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
+    <component type="typeof(PublicDocumentLinks)" render-mode="Static" param-Model="@(PublicDocumentLinksDisplayModel.Create(Context))" />
     <partial name="_CssPartial" />
     <partial name="_FontPartial" />
     @* Structured Data / Schema Markup *@
-    <partial name="_SchemaOrganization" />
-    <partial name="_SchemaLocalBusiness" />
+    <component type="typeof(PublicBusinessStructuredData)" render-mode="Static" param-Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
     @RenderSection("Schema", required: false)
 
     <link rel="shortlink" href="https://www.maliev.com/" />
     @RenderSection("Head", required: false)
 </head>
-<body style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+<body>
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
-    <partial name="_FacebookSdkPartial" />
-    <partial name="_GoogleTagManagerBodyPartial" />
-    <partial name="_CookieConsentPartial" />
-    <partial name="_NavigationPartial" />
-    <partial name="_BrowserCompatibilityCheckPartial" />
+    <component type="typeof(PublicGoogleTagManagerBody)" render-mode="Static" param-Model="@(googleTagManagerModel)" />
+    <component type="typeof(PublicCookieConsent)" render-mode="Static" param-Model="@(PublicCookieConsentDisplayModel.Create(Context))" />
+    <component type="typeof(PublicNavigation)" render-mode="Static" param-Model="@(PublicNavigationDisplayModel.Create(Context, ViewData["SuppressIdentityNavigation"] is true))" />
+    <component type="typeof(PublicBrowserCompatibilityNotice)" render-mode="Static" param-Model="@(PublicBrowserCompatibilityNoticeDisplayModel.Create(Context))" />
     <div id="main-content" tabindex="-1">
         @RenderBody()
     </div>
-    <partial name="_FooterPartial" />
+    <component type="typeof(PublicFooter)" render-mode="Static" />
     @*<partial name="_Go2TopPartial" />*@
     @*<partial name="_ReportBugPartial" />*@
-    <partial name="_ContactChannelAnalyticsPartial" />
+    <component type="typeof(PublicContactChannelAnalytics)" render-mode="Static" />
     <partial name="_JavaScriptsPartial" />
     @RenderSection("Scripts", required: false)
 </body>

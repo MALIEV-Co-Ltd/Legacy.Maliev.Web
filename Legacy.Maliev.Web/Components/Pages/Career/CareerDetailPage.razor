@@ -1,0 +1,122 @@
+@page "/Career/View/{Id}"
+@attribute [StreamRendering(false)]
+@using System.Globalization
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Components.Layout
+@using Microsoft.AspNetCore.Diagnostics
+@inject ICareerClient CareerClient
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ILogger<CareerDetailPage> Logger
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var defaultDescription = isThai
+        ? "เข้ามาร่วมงานกับเรา เพื่ออิสระในการทำงานและการสนับสนุนที่จะผลักดันอาชีพคุณไปอีกระดับ"
+        : "Discover your perfect job match, and the freedom and support to take your career to the next level.";
+    var title = failureStatus is null
+        ? $"{offer?.Title} | Career@MALIEV"
+        : (isThai ? "ข้อผิดพลาด | MALIEV" : "Error | MALIEV");
+    var description = string.IsNullOrEmpty(offer?.Introduction) ? defaultDescription : offer.Introduction;
+}
+<PageTitle>@title</PageTitle>
+@if (failureStatus is not null)
+{
+    <HeadContent>
+        <meta name="robots" content="noindex,nofollow" />
+    </HeadContent>
+    <ErrorContent Model="@(new ErrorDisplayModel(failureStatus == StatusCodes.Status404NotFound, context.TraceIdentifier))" />
+}
+else if (offer is not null)
+{
+    <HeadContent>
+        <meta name="description" content="@description" />
+        <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(
+                                            context,
+                                            title,
+                                            description,
+                                            "https://www.maliev.com/src/images/career-3dprinting.jpg"))" />
+        <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    </HeadContent>
+    <CareerDetailContent Model="@CreateDisplayModel(context)" RouteOwner="blazor-static-ssr" />
+    <script>
+        function PrintJobDescription() {
+            var contents = document.getElementById("job-description").innerHTML;
+            var printWindow = window.open("", "", "height=500, width=500");
+            printWindow.document.write("<html><body>");
+            printWindow.document.write(contents);
+            printWindow.document.write("</body></html>");
+            printWindow.document.close();
+            printWindow.print();
+        }
+    </script>
+}
+
+@code {
+    private CareerOffer? offer;
+    private int? failureStatus;
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var cancellationToken = context.RequestAborted;
+        offer = null;
+        failureStatus = null;
+
+        if (!int.TryParse(Id, NumberStyles.None, CultureInfo.InvariantCulture, out var offerId) || offerId <= 0)
+        {
+            SetFailure(context, StatusCodes.Status400BadRequest);
+            return;
+        }
+
+        try
+        {
+            var response = await CareerClient.GetOfferAsync(offerId, cancellationToken);
+            if (!response.ServiceAvailable)
+            {
+                SetFailure(context, StatusCodes.Status503ServiceUnavailable);
+                return;
+            }
+
+            if (response.Value is null)
+            {
+                SetFailure(context, StatusCodes.Status404NotFound);
+                return;
+            }
+
+            offer = response.Value;
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            Logger.LogError(exception, "An unexpected error occurred while rendering career offer {OfferId}.", offerId);
+            SetFailure(context, StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    private CareerDetailContentModel CreateDisplayModel(HttpContext context) => CareerDetailContentModel.Create(
+        offer ?? throw new InvalidOperationException("A successful career response must include an offer."),
+        $"https://{context.Request.Host}{context.Request.Path}");
+
+    private void SetFailure(HttpContext context, int statusCode)
+    {
+        failureStatus = statusCode;
+        var statusCodePages = context.Features.Get<IStatusCodePagesFeature>();
+        if (statusCodePages is not null)
+        {
+            statusCodePages.Enabled = false;
+        }
+
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        context.Response.OnStarting(() =>
+        {
+            context.Response.StatusCode = statusCode;
+            return Task.CompletedTask;
+        });
+    }
+}

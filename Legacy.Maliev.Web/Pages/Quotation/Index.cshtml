@@ -1,24 +1,21 @@
 @page "/Quotation"
 @model Legacy.Maliev.Web.Pages.Quotation.Index
+@using Legacy.Maliev.Web.Components.Pages.Quotation
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<QuotationContent> QuotationLocalizer
 @{
-    ViewData["Title"] = Localizer["Request a manufacturing quotation"];
-    ViewData["Description"] = Localizer["Request a CNC machining, 3D printing, 3D scanning, or custom manufacturing quotation from MALIEV."];
-    ViewData["Keywords"] = Localizer["manufacturing quotation, CNC quote, 3D printing quote, 3D scanning quote"];
+    ViewData["Title"] = QuotationLocalizer["Request a manufacturing quotation"];
+    ViewData["Description"] = QuotationLocalizer["Request a CNC machining, 3D printing, 3D scanning, or custom manufacturing quotation from MALIEV."];
+    ViewData["Keywords"] = QuotationLocalizer["manufacturing quotation, CNC quote, 3D printing quote, 3D scanning quote"];
 }
 
-<header class="maliev-page-hero">
-    <div class="container">
-        <p class="maliev-eyebrow">@Localizer["Quotation"]</p>
-        <h1>@Localizer["Tell us about your project."]</h1>
-        <p>@Localizer["Share the requirements and drawings you have. Our manufacturing team will review them and respond directly."]</p>
-    </div>
-</header>
+<component type="typeof(QuotationHeroContent)" render-mode="Static" />
 
 <main class="container maliev-section">
     <section aria-labelledby="quotation-form-title">
         <div class="row justify-content-center">
             <div class="col-xl-9">
-                <h2 id="quotation-form-title">@Localizer["Manual quotation request"]</h2>
+                <h2 id="quotation-form-title">@QuotationLocalizer["Manual quotation request"]</h2>
 
                 @if (!string.IsNullOrWhiteSpace(Model.Notification))
                 {
@@ -26,69 +23,7 @@
                 }
 
                 <form method="post" enctype="multipart/form-data" asp-page-handler="SubmitRequest" id="quotation-form">
-                    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                    <input asp-for="SubmissionId" type="hidden" />
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label asp-for="FirstName" class="form-label">@Localizer["First name"]</label>
-                            <input asp-for="FirstName" class="form-control" autocomplete="given-name" />
-                            <span asp-validation-for="FirstName" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="LastName" class="form-label">@Localizer["Last name"]</label>
-                            <input asp-for="LastName" class="form-control" autocomplete="family-name" />
-                            <span asp-validation-for="LastName" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Email" class="form-label">@Localizer["Email"]</label>
-                            <input asp-for="Email" class="form-control" autocomplete="email" />
-                            <span asp-validation-for="Email" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Phone" class="form-label">@Localizer["Telephone"]</label>
-                            <input asp-for="Phone" class="form-control" autocomplete="tel" />
-                            <span asp-validation-for="Phone" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Company" class="form-label">@Localizer["Company"]</label>
-                            <input asp-for="Company" class="form-control" autocomplete="organization" />
-                            <span asp-validation-for="Company" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="TaxNumber" class="form-label">@Localizer["Tax identification (optional)"]</label>
-                            <input asp-for="TaxNumber" class="form-control" />
-                            <span asp-validation-for="TaxNumber" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Country" class="form-label">@Localizer["Country"]</label>
-                            <select asp-for="Country" class="form-select" disabled="@(!Model.CountryServiceAvailable)">
-                                <option value="">@Localizer["Select a country"]</option>
-                                @foreach (var country in Model.Countries)
-                                {
-                                    <option value="@country.Name">@country.Name</option>
-                                }
-                            </select>
-                            <span asp-validation-for="Country" class="text-danger"></span>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Message" class="form-label">@Localizer["Project requirements"]</label>
-                            <textarea asp-for="Message" class="form-control" rows="10"></textarea>
-                            <span asp-validation-for="Message" class="text-danger"></span>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Files" class="form-label">@Localizer["Drawings and reference files (optional)"]</label>
-                            <input asp-for="Files" type="file" class="form-control" multiple aria-describedby="quotation-files-help" />
-                            <div id="quotation-files-help" class="form-text">@Localizer["Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage."]</div>
-                            <span asp-validation-for="Files" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <input type="hidden" name="g-recaptcha-response" id="quotation-recaptcha-response" value="@Model.RecaptchaToken" />
-                    <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
-                        @Localizer["Submit quotation request"]
-                    </button>
-                    <p class="small text-muted mt-3">@Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]</p>
+                    <component type="typeof(QuotationFormFields)" render-mode="Static" param-Model="Model.DisplayModel" />
                 </form>
             </div>
         </div>
@@ -103,10 +38,34 @@
             (() => {
                 const form = document.getElementById('quotation-form');
                 const tokenInput = document.getElementById('quotation-recaptcha-response');
+                const filesInput = document.getElementById('Files');
+                const serviceInput = document.getElementById('ServiceContext');
+                let uploadStartEmitted = false;
                 if (!form || !tokenInput) return;
 
+                function emitUploadStart() {
+                    if (uploadStartEmitted || !filesInput || filesInput.files.length === 0) return false;
+                    if (!window.malievAnalytics || typeof window.malievAnalytics.emit !== 'function') return false;
+
+                    uploadStartEmitted = true;
+                    window.malievAnalytics.emit({
+                        event: 'file_upload_start',
+                        service: serviceInput ? serviceInput.value : 'custom_manufacturing',
+                        file_count: filesInput.files.length
+                    });
+                    return true;
+                }
+
                 form.addEventListener('submit', event => {
-                    if (tokenInput.value) return;
+                    if (tokenInput.value) {
+                        if (!emitUploadStart()) return;
+
+                        event.preventDefault();
+                        window.setTimeout(function () {
+                            form.submit();
+                        }, 150);
+                        return;
+                    }
                     event.preventDefault();
                     grecaptcha.enterprise.ready(async () => {
                         tokenInput.value = await grecaptcha.enterprise.execute('@Model.RecaptchaSiteKey', { action: 'submit' });

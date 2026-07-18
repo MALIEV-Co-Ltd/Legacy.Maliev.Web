@@ -3,6 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Globalization;
+using System.Text.Json;
 
 namespace Legacy.Maliev.Web.Infrastructure;
 
@@ -28,9 +31,8 @@ internal sealed class CustomerAuthenticationClient(
             }
 
             response.EnsureSuccessStatusCode();
-            return new(
-                await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken),
-                true);
+            var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
+            return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -55,9 +57,8 @@ internal sealed class CustomerAuthenticationClient(
             }
 
             response.EnsureSuccessStatusCode();
-            return new(
-                await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken),
-                true);
+            var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
+            return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -140,6 +141,70 @@ internal sealed class CustomerAuthenticationClient(
             "password-reset/complete",
             new CompletePasswordResetRequest(email, token, password),
             cancellationToken);
+
+    public Task<CustomerCredentialOperationResult> ChangeEmailAsync(
+        string accessToken,
+        string currentPassword,
+        string newEmail,
+        CancellationToken cancellationToken) =>
+        ChangeCredentialAsync(
+            "email/change",
+            accessToken,
+            new ChangeEmailRequest(currentPassword, newEmail),
+            expectsChallenge: true,
+            cancellationToken);
+
+    public Task<CustomerCredentialOperationResult> ChangePasswordAsync(
+        string accessToken,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken) =>
+        ChangeCredentialAsync(
+            "password/change",
+            accessToken,
+            new ChangePasswordRequest(currentPassword, newPassword),
+            expectsChallenge: false,
+            cancellationToken);
+
+    private async Task<CustomerCredentialOperationResult> ChangeCredentialAsync(
+        string action,
+        string accessToken,
+        object content,
+        bool expectsChallenge,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"auth/v1/customer-self-service/{action}")
+            {
+                Content = JsonContent.Create(content),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var response = await clientFactory.CreateClient("auth").SendAsync(
+                request,
+                cancellationToken);
+            var authorized = response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new(false, (int)response.StatusCode < 500, authorized);
+            }
+
+            if (!expectsChallenge)
+            {
+                return new(true, true, true);
+            }
+
+            var challenge = await response.Content.ReadFromJsonAsync<ChallengeResponse>(cancellationToken);
+            return new(challenge?.Accepted == true && challenge.Token is not null, true, true, challenge?.Token);
+        }
+        catch (Exception exception) when (IsTransient(exception, cancellationToken))
+        {
+            logger.LogWarning(exception, "Auth service was unavailable during a customer credential change.");
+            return new(false, false, true);
+        }
+    }
 
     private async Task<CustomerActionChallenge> RequestChallengeAsync(
         string action,
@@ -226,11 +291,51 @@ internal sealed class CustomerAuthenticationClient(
         exception is HttpRequestException
         || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
 
+    private static int? ExtractDatabaseId(string? accessToken)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return null;
+        }
+
+        var segments = accessToken.Split('.');
+        if (segments.Length != 3)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var payload = JsonDocument.Parse(WebEncoders.Base64UrlDecode(segments[1]));
+            if (!payload.RootElement.TryGetProperty("legacy_database_id", out var claim))
+            {
+                return null;
+            }
+
+            return claim.ValueKind switch
+            {
+                JsonValueKind.Number when claim.TryGetInt32(out var number) && number > 0 => number,
+                JsonValueKind.String when int.TryParse(
+                    claim.GetString(),
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var number) && number > 0 => number,
+                _ => null,
+            };
+        }
+        catch (Exception exception) when (exception is FormatException or JsonException)
+        {
+            return null;
+        }
+    }
+
     private sealed record LoginRequest(string UserName, string Password, int IdentityKind);
     private sealed record RefreshRequest(string RefreshToken);
     private sealed record RegisterRequest(int DatabaseId, string Email, string Password);
     private sealed record ActionRequest(string Email);
     private sealed record CompleteActionRequest(string Email, string Token);
     private sealed record CompletePasswordResetRequest(string Email, string Token, string Password);
+    private sealed record ChangeEmailRequest(string CurrentPassword, string NewEmail);
+    private sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
     private sealed record ChallengeResponse(bool Accepted, string? Token);
 }

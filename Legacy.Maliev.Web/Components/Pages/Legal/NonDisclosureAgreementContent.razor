@@ -1,0 +1,25 @@
+@inject IStringLocalizer<NonDisclosureAgreementContent> Localizer
+
+<main class="legal-page" data-migration-renderer="blazor-static-ssr">
+    <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@L("Legal and confidentiality")</p><h1>@L("Non-Disclosure Agreement")</h1><p>@L("Protect confidential manufacturing information before sharing project files.")</p></div></header>
+    <div class="legal-shell maliev-container">
+        <nav class="legal-toc" aria-label="@L("On this page")"><strong>@L("On this page")</strong><ul><li><a href="#overview">@L("Overview")</a></li><li><a href="#download">@L("Download agreement")</a></li></ul></nav>
+        <article class="legal-document">
+        <h2 id="overview">@L("Mutual Non-disclosure agreement")</h2>
+        <p>
+            @L("At Maliev, we take our customer's confidentiality very serious. Your work and all the information with us are safe. The agreement serves to protect individuals and companies to protect their intellectual property and confidentiality about their businesses.")<br />
+        </p>
+        <p>
+            @L("Download the template Confidentiality Agreement (NDA). Fill it with your personal data and send it to") <a href="mailto:nda@maliev.com">nda@maliev.com</a>
+        </p>
+        <a id="download" href="https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf" target="_blank" rel="noopener" class="maliev-button">
+            @L("Download Non-Disclosure Agreement")
+        </a>
+        </article>
+    </div>
+</main>
+
+
+@code {
+    private MarkupString L(string key) => new(Localizer[key].Value);
+}

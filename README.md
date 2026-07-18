@@ -32,6 +32,21 @@ recovery never reveals whether an account exists. The `legacy-web` service ident
 therefore requires only `legacy-auth.customer-self-service`,
 `legacy-customer.customers.create`, `legacy-customer.customers.delete`, and the
 previously documented contact, quotation, file, and notification permissions.
+Authenticated Member address management additionally uses the server-held
+`legacy_database_id` from the Auth-issued access token and requires only
+`legacy-customer.customers.read`, `legacy-customer.customers.update`,
+`legacy-customer.addresses.create`, and `legacy-customer.addresses.update`.
+The BFF reloads the customer and address IDs
+from CustomerService before every write; browser form data cannot select another
+customer or address record.
+Member profile management follows the same ownership rule and reloads customer,
+company, address, and relationship IDs before every write. Company operations
+use only the corresponding least-privilege CustomerService permissions. Email
+and password changes use the customer's short-lived access token, verify the
+current password in AuthService, revoke all refresh sessions, and return the
+browser to login; raw credentials never appear in logs or URLs. The legacy
+passwordless `CreatePassword` route redirects to the supported password-change
+flow because the migrated identity boundary has no external-login-only account.
 Runtime Redis and service credentials are projected from the single
 `maliev-legacy-secrets` secret; source configuration contains no credential. The
 same projection supplies `DataProtection__CertificatePfxBase64` and
@@ -50,6 +65,6 @@ dotnet test .\Legacy.Maliev.Web.slnx -c Release --no-build -p:MalievWorkspaceRoo
 
 ## Migration status
 
-The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All twenty-two indexed legacy routes, the public Account surface, login, signup, email confirmation, and password recovery are migrated, together with the localized XML sitemap. Authenticated change-email completion remains part of the Member-management migration. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
+The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All twenty-two indexed legacy routes, the public Account surface, login, signup, email confirmation, password recovery, and Member profile/address/credential routes are migrated, together with the localized XML sitemap. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
 
 Deployment is intentionally deferred until route compatibility, external credential rotation, live GTM malware review, and existing-cluster capacity gates are complete.

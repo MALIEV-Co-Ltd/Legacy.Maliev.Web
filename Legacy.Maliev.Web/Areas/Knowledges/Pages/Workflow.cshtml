@@ -1,18 +1,8 @@
 @page
 @model Legacy.Maliev.Web.Areas.Knowledges.Pages.WorkflowModel
+@inject IStringLocalizer<WorkflowContent> MetadataLocalizer
 @{
-    ViewData["Title"] = Localizer["Manufacturing workflow | MALIEV"];
-    ViewData["Description"] = Localizer["Understand the MALIEV workflow from file review and quotation to production and delivery."];
+    ViewData["Title"] = MetadataLocalizer["Manufacturing workflow | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Understand the MALIEV workflow from file review and quotation to production and delivery."];
 }
-<article class="knowledge-document">
-    <p class="maliev-eyebrow">@Localizer["Project workflow"]</p>
-    <h1>@Localizer["What happens after you request a quote"]</h1>
-    <p class="docs-lead">@Localizer["The exact checks vary by process and part complexity, but every project follows the same accountable path."]</p>
-    <div class="docs-step-list">
-        <section><span>1</span><div><h2>@Localizer["Engineering review"]</h2><p>@Localizer["We review files, requirements, manufacturability, available materials, and missing information."]</p></div></section>
-        <section><span>2</span><div><h2>@Localizer["Quotation"]</h2><p>@Localizer["You receive the proposed scope, price, lead time, and any assumptions that need approval."]</p></div></section>
-        <section><span>3</span><div><h2>@Localizer["Production preparation"]</h2><p>@Localizer["After approval, we source material, schedule capacity, prepare programs or process settings, and confirm the production plan."]</p></div></section>
-        <section><span>4</span><div><h2>@Localizer["Production and inspection"]</h2><p>@Localizer["Parts are produced and checked against the approved requirements and process-appropriate inspection plan."]</p></div></section>
-        <section><span>5</span><div><h2>@Localizer["Delivery"]</h2><p>@Localizer["Completed parts are packed for collection or shipment, with available project documents attached."]</p></div></section>
-    </div>
-</article>
+<component type="typeof(WorkflowContent)" render-mode="Static" />

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Quotation;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
@@ -71,6 +72,9 @@ public sealed class Index(
     public string RecaptchaSiteKey => recaptchaOptions.Value.SiteKey;
 
     [BindProperty]
+    public string ServiceContext { get; set; } = "custom_manufacturing";
+
+    [BindProperty]
     public Guid SubmissionId { get; set; }
 
     [BindProperty]
@@ -78,6 +82,32 @@ public sealed class Index(
     public string? TaxNumber { get; set; }
 
     public bool CountryServiceAvailable { get; private set; } = true;
+
+    public QuotationFormDisplayModel DisplayModel => new(
+        SubmissionId,
+        ServiceContext,
+        FirstName,
+        LastName,
+        Email,
+        Phone,
+        Company,
+        TaxNumber,
+        Country,
+        Message,
+        RecaptchaToken,
+        RecaptchaSiteKey,
+        CountryServiceAvailable,
+        Countries.Select(country => new QuotationCountryOption(country.Name)).ToArray(),
+        ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => entry.Key,
+                entry => (IReadOnlyList<string>)entry.Value!.Errors
+                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                        ? "The submitted value is invalid."
+                        : error.ErrorMessage)
+                    .ToArray(),
+                StringComparer.Ordinal));
 
     public async Task<IActionResult> OnGetAsync(
         string? culture,
@@ -88,6 +118,7 @@ public sealed class Index(
     {
         await LoadCountriesAsync(cancellationToken);
         SubmissionId = Guid.NewGuid();
+        ServiceContext = NormalizeServiceContext(item);
         Message = BuildInitialMessage(culture, item, process, material);
         return Page();
     }
@@ -138,10 +169,17 @@ public sealed class Index(
                 file.OpenReadStream))
             .ToArray();
 
+        var fileResult = await quotationFileClient.UploadAndLinkAsync(
+            referenceNumber,
+            SubmissionId,
+            uploads,
+            cancellationToken);
         if (!LeadAnalyticsEventQueue.TryQueueManualQuotation(
                 TempData,
                 referenceNumber,
+                NormalizeServiceContext(ServiceContext),
                 uploads.Length > 0,
+                uploads.Length > 0 && fileResult.Completed,
                 out var analyticsFailure))
         {
             logger.LogWarning(
@@ -150,11 +188,6 @@ public sealed class Index(
                 referenceNumber);
         }
 
-        var fileResult = await quotationFileClient.UploadAndLinkAsync(
-            referenceNumber,
-            SubmissionId,
-            uploads,
-            cancellationToken);
         var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
         Notification = fileResult.Completed && notificationsSent
             ? $"Thank you. Your quotation request reference is #{referenceNumber}."
@@ -287,6 +320,15 @@ public sealed class Index(
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string NormalizeServiceContext(string? service) => service?.Trim().ToLowerInvariant() switch
+    {
+        "3d-printing" or "3d_printing" => "3d_printing",
+        "3d-scanning" or "3d_scanning" => "3d_scanning",
+        "cnc-machining" or "cnc_machining" => "cnc_machining",
+        "injection-molding" or "injection_molding" => "injection_molding",
+        _ => "custom_manufacturing",
+    };
 
     private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Your trusted partner for CNC machining, 3D printing, and 3D scanning services." xml:space="preserve"><value>พันธมิตรที่คุณไว้วางใจสำหรับงาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ</value></data>
+  <data name="Services" xml:space="preserve"><value>บริการ</value></data>
+  <data name="CNC Machining" xml:space="preserve"><value>CNC ชิ้นงานตามแบบ</value></data>
+  <data name="3D Printing" xml:space="preserve"><value>พิมพ์ 3 มิติ</value></data>
+  <data name="3D Scanning" xml:space="preserve"><value>สแกน 3 มิติ</value></data>
+  <data name="Instant 3D Quotation" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3D ทันที</value></data>
+  <data name="Get a Quote" xml:space="preserve"><value>ขอใบเสนอราคา</value></data>
+  <data name="Online Shop" xml:space="preserve"><value>ร้านค้าออนไลน์</value></data>
+  <data name="Company" xml:space="preserve"><value>บริษัท</value></data>
+  <data name="About Us" xml:space="preserve"><value>เกี่ยวกับเรา</value></data>
+  <data name="Job Opportunities" xml:space="preserve"><value>ทำงานกับเรา</value></data>
+  <data name="Contact Us" xml:space="preserve"><value>ติดต่อเรา</value></data>
+  <data name="Terms and Conditions" xml:space="preserve"><value>ข้อกำหนดในการให้บริการ</value></data>
+  <data name="Privacy Policy" xml:space="preserve"><value>นโยบายความเป็นส่วนตัว</value></data>
+  <data name="Non-Disclosure Agreement" xml:space="preserve"><value>สัญญาปกปิดความลับ</value></data>
+  <data name="Maliev Co., Ltd." xml:space="preserve"><value>บริษัท มาลีฟ จำกัด</value></data>
+  <data name="36/1 Moo 3" xml:space="preserve"><value>36/1 หมู่ 3</value></data>
+  <data name="Khlong Khoi, Pak Kret" xml:space="preserve"><value>ตำบลคลองข่อย อำเภอปากเกร็ด</value></data>
+  <data name="Nonthaburi 11120" xml:space="preserve"><value>จังหวัดนนทบุรี 11120</value></data>
+  <data name="Thailand" xml:space="preserve"><value>ประเทศไทย</value></data>
+  <data name="Business hours" xml:space="preserve"><value>เวลาทำการ</value></data>
+  <data name="Monday-Friday: 09:00-18:00" xml:space="preserve"><value>จันทร์-ศุกร์: 09:00-18:00 น.</value></data>
+  <data name="Saturday-Sunday: Closed" xml:space="preserve"><value>เสาร์-อาทิตย์: ปิด</value></data>
+  <data name="All rights reserved." xml:space="preserve"><value>สงวนลิขสิทธิ์</value></data>
+  <data name="Secure" xml:space="preserve"><value>ปลอดภัย</value></data>
+  <data name="Confidential" xml:space="preserve"><value>รักษาความลับ</value></data>
+</root>

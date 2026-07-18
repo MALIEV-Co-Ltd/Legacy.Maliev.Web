@@ -1,0 +1,9 @@
+{
+  "scripts": [
+    "vendor.min.js",
+    "app.min.js"
+  ],
+  "styles": [
+    "site.min.css"
+  ]
+}

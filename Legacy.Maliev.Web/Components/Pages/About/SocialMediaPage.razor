@@ -1,0 +1,21 @@
+@page "/About/SocialMedia"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "โซเชียลมีเดีย | MALIEV" : "Social media | MALIEV";
+    var description = isThai
+        ? "ติดตามตัวอย่างงานผลิต ข่าวกระบวนการ และข่าวสารจาก MALIEV"
+        : "Follow MALIEV for manufacturing examples, process updates, and company news.";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<SocialMediaContent RouteOwner="blazor-static-ssr" />
