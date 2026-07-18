@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -107,15 +108,15 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         var source = ReadWorkflowSource();
 
         Assert.Contains("<label for=\"instant-quote-files\"", source, StringComparison.Ordinal);
-        Assert.Contains("<input id=\"instant-quote-files\"", source, StringComparison.Ordinal);
-        Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
+        Assert.Contains("<InputFile id=\"instant-quote-files\"", source, StringComparison.Ordinal);
+        Assert.Contains("accept=\".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges\"", source, StringComparison.Ordinal);
         Assert.Contains("multiple", source, StringComparison.Ordinal);
         Assert.Contains("aria-live=\"polite\"", source, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@IsBusy", source, StringComparison.Ordinal);
         Assert.Contains("<button type=\"button\"", source, StringComparison.Ordinal);
         Assert.Contains("disabled", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("onclick=", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@onclick", source, StringComparison.Ordinal);
         Assert.DoesNotContain("<div role=\"button\"", source, StringComparison.OrdinalIgnoreCase);
 
         foreach (var forbidden in new[]
@@ -298,6 +299,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         using var services = new ServiceCollection()
             .AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
+            .AddSingleton<IJSRuntime, NullJsRuntime>()
             .BuildServiceProvider();
         var loggerFactory = services.GetRequiredService<ILoggerFactory>();
         await using var renderer = new HtmlRenderer(services, loggerFactory);
@@ -322,5 +324,16 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         }
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
+    }
+
+    private sealed class NullJsRuntime : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            ValueTask.FromResult(default(TValue)!);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(
+            string identifier,
+            CancellationToken cancellationToken,
+            object?[]? args) => ValueTask.FromResult(default(TValue)!);
     }
 }

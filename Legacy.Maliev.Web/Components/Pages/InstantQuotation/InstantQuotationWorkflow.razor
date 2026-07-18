@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Components.Forms
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
 <section class="instant-quote__workflow"
@@ -14,13 +15,31 @@
             <h3 id="instant-quote-upload-heading">@Localizer["Start by uploading a file"]</h3>
             <p>@Localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."]</p>
             <label for="instant-quote-files">@Localizer["Add file"]</label>
-            <input id="instant-quote-files"
-                   name="files"
-                   type="file"
-                   multiple
-                   aria-describedby="instant-quote-upload-help instant-quote-status"
-                   disabled="@IsBusy" />
+            <InputFile id="instant-quote-files"
+                       name="files"
+                       OnChange="UploadFilesAsync"
+                       multiple
+                       accept=".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges"
+                       aria-describedby="instant-quote-upload-help instant-quote-status"
+                       disabled="@IsBusy" />
             <p id="instant-quote-upload-help">@Localizer["Drop your 3D file here"] — @Localizer["or click to browse"]</p>
+
+            @foreach (var upload in Uploads)
+            {
+                <article data-workflow-upload-item aria-labelledby="upload-name-@upload.LocalId">
+                    <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
+                    <p aria-live="polite">@UploadStatus(upload.Status)</p>
+                    @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
+                    {
+                        <progress aria-label="@Localizer["Upload progress"]"></progress>
+                        <button type="button" @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
+                    }
+                    else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
+                    {
+                        <button type="button" @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                    }
+                </article>
+            }
         </section>
     }
 
@@ -41,9 +60,15 @@
 
     @if (VisibleSections.Parts)
     {
-        <section data-workflow-parts aria-labelledby="instant-quote-parts-heading">
+        <section data-workflow-parts data-workflow-part-list aria-labelledby="instant-quote-parts-heading">
             <h3 id="instant-quote-parts-heading">@Localizer["Parts"]</h3>
-            <p>@Localizer["Uploaded parts will appear here."]</p>
+            @foreach (var part in Parts)
+            {
+                <article data-workflow-part data-part-id="@part.PartId">
+                    <h4>@part.DisplayFileName</h4>
+                    <button type="button" @onclick="() => RemovePartAsync(part.PartId)">@Localizer["Remove"]</button>
+                </article>
+            }
         </section>
     }
 
@@ -57,32 +82,70 @@
                 <p>@Localizer["You'll get a feedback from us if your design has potential problems."]</p>
             </section>
 
-            <fieldset data-workflow-material-color-quantity disabled>
-                <legend>@Localizer["Settings"]</legend>
-                <label for="instant-quote-material">@Localizer["Material"]</label>
-                <select id="instant-quote-material" name="material">
-                    <option>@Localizer["Material"]</option>
-                </select>
-                <label for="instant-quote-color">@Localizer["Color"]</label>
-                <select id="instant-quote-color" name="color">
-                    <option>@Localizer["Color"]</option>
-                </select>
-                <label for="instant-quote-quantity">@Localizer["Quantity"]</label>
-                <input id="instant-quote-quantity" name="quantity" type="number" min="1" value="1" />
-            </fieldset>
+            @foreach (var part in Parts)
+            {
+                <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
+                    <legend>@part.DisplayFileName — @Localizer["Settings"]</legend>
+                    <label for="material-@part.PartId">@Localizer["Material"]</label>
+                    <select id="material-@part.PartId"
+                            name="material"
+                            value="@part.Configuration.MaterialKey"
+                            @onchange="args => ChangeMaterialAsync(part.PartId, args)">
+                        @foreach (var material in Materials)
+                        {
+                            <option value="@material.Key">@material.DisplayName</option>
+                        }
+                    </select>
+                    <label for="color-@part.PartId">@Localizer["Color"]</label>
+                    <select id="color-@part.PartId"
+                            name="color"
+                            value="@part.Configuration.Color"
+                            @onchange="args => ChangeColorAsync(part.PartId, args)">
+                        @foreach (var color in GetColors(part.Configuration.MaterialKey))
+                        {
+                            <option value="@color">@color</option>
+                        }
+                    </select>
+                    <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
+                    <input id="quantity-@part.PartId"
+                           name="quantity"
+                           type="number"
+                           min="1"
+                           max="1000"
+                           value="@part.Configuration.Quantity"
+                           @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
+                </fieldset>
 
-            <dl>
-                <div data-workflow-part-price>
-                    <dt>@Localizer["Unit price"]</dt>
-                    <dd>—</dd>
-                </div>
-                <div data-workflow-order-summary>
-                    <dt>@Localizer["Total"]</dt>
-                    <dd>—</dd>
-                </div>
+                <dl data-workflow-part-price data-workflow-part-pricing>
+                    <div>
+                        <dt>@Localizer["Unit price"]</dt>
+                        <dd>@Money(part.Quote?.UnitPrice)</dd>
+                    </div>
+                    <div>
+                        <dt>@Localizer["Subtotal"]</dt>
+                        <dd>@Money(part.Quote?.Subtotal)</dd>
+                    </div>
+                    @if (part.Quote is not null)
+                    {
+                        @foreach (var tier in part.Quote.Tiers)
+                        {
+                            <div data-workflow-price-tier>
+                                <dt>@Localizer["Quantity"] @tier.MinQuantity</dt>
+                                <dd>@Money(tier.UnitPrice)</dd>
+                            </div>
+                        }
+                    }
+                </dl>
+            }
+
+            <dl data-workflow-order-summary data-workflow-order-total>
+                <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
+                <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
+                <div><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
+                <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
                 <div data-workflow-lead-time>
                     <dt>@Localizer["Lead time"]</dt>
-                    <dd>—</dd>
+                    <dd>@LeadTime</dd>
                 </div>
             </dl>
 
