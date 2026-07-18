@@ -45,12 +45,30 @@ function initializeApplication() {
 
     document.querySelectorAll('[data-recaptcha-enterprise-form]').forEach(function (form) {
         var responseInput = form.querySelector('[data-recaptcha-response]');
+        var uploadFiles = form.querySelector('[data-upload-files]');
+        var uploadService = form.querySelector('[data-upload-service]');
+        var uploadStartEmitted = false;
         if (!responseInput || !form.dataset.recaptchaSiteKey) {
             return;
         }
 
         form.addEventListener('submit', function (event) {
             if (form.dataset.recaptchaVerified === 'true') {
+                if (form.dataset.uploadAnalytics === 'true'
+                    && !uploadStartEmitted
+                    && uploadFiles
+                    && uploadFiles.files.length > 0
+                    && window.malievAnalytics
+                    && typeof window.malievAnalytics.emit === 'function') {
+                    uploadStartEmitted = true;
+                    window.malievAnalytics.emit({
+                        event: 'file_upload_start',
+                        service: uploadService ? uploadService.value : 'custom_manufacturing',
+                        file_count: uploadFiles.files.length
+                    });
+                    event.preventDefault();
+                    window.setTimeout(function () { form.submit(); }, 150);
+                }
                 return;
             }
 
@@ -61,7 +79,11 @@ function initializeApplication() {
                     { action: form.dataset.recaptchaAction }).then(function (token) {
                         responseInput.value = token;
                         form.dataset.recaptchaVerified = 'true';
-                        form.submit();
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
                     });
             });
         });

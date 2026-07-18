@@ -147,6 +147,46 @@ test('enterprise recaptcha form obtains a token before native submission', async
     assert.equal(nativeSubmissions, 1);
 });
 
+test('quotation upload emits the controlled analytics event before native submission', () => {
+    const listeners = new Map();
+    const responseInput = { value: 'browser-token' };
+    const filesInput = { files: [{ name: 'part.stl' }, { name: 'drawing.pdf' }] };
+    const serviceInput = { value: 'cnc_machining' };
+    const events = [];
+    let nativeSubmissions = 0;
+    const form = {
+        dataset: {
+            recaptchaSiteKey: 'site-key',
+            recaptchaAction: 'submit',
+            recaptchaVerified: 'true',
+            uploadAnalytics: 'true',
+        },
+        querySelector: selector => ({
+            '[data-recaptcha-response]': responseInput,
+            '[data-upload-files]': filesInput,
+            '[data-upload-service]': serviceInput,
+        })[selector] ?? null,
+        addEventListener: (event, handler) => listeners.set(event, handler),
+        submit: () => { nativeSubmissions += 1; },
+    };
+    const document = createDocument({ '[data-recaptcha-enterprise-form]': [form] });
+    const context = createBrowserContext(document, {
+        malievAnalytics: { emit: event => events.push(event) },
+        setTimeout: callback => callback(),
+    });
+
+    vm.runInContext(appSource, context);
+    let prevented = false;
+    listeners.get('submit')({ preventDefault: () => { prevented = true; } });
+
+    assert.equal(prevented, true);
+    assert.equal(nativeSubmissions, 1);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].event, 'file_upload_start');
+    assert.equal(events[0].service, 'cnc_machining');
+    assert.equal(events[0].file_count, 2);
+});
+
 function createBrowserContext(document, windowOverrides = {}) {
     const context = vm.createContext({
         console,
