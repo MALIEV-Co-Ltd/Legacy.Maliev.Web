@@ -343,11 +343,13 @@ builder.Services.AddRazorPages(options =>
     .AddDataAnnotationsLocalization();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
 builder.Services.AddScoped<
     IInstantQuotationWorkflowSessionIdentityAccessor,
-    ProtectedCookieInstantQuotationWorkflowSessionIdentityAccessor>();
+    AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor>();
 builder.Services.AddResponseCompression();
 builder.Services.AddOutputCache();
 builder.Services.Configure<CookieTempDataProviderOptions>(options =>
@@ -446,6 +448,7 @@ app.UseRouting();
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.UseOutputCache();

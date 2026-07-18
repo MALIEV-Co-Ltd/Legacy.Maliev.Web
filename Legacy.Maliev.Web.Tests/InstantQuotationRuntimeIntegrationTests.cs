@@ -1,10 +1,12 @@
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.RegularExpressions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -23,54 +25,104 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
 
         Assert.IsType<InstantQuotationPricingService>(
             scope.ServiceProvider.GetRequiredService<IInstantQuotationPricingService>());
-        Assert.IsType<ProtectedCookieInstantQuotationWorkflowSessionIdentityAccessor>(
+        Assert.IsType<AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor>(
             scope.ServiceProvider.GetRequiredService<IInstantQuotationWorkflowSessionIdentityAccessor>());
     }
 
     [Fact]
-    public async Task SessionIdentity_RoundTripsOnlyThroughProtectedHostCookie()
+    public async Task Route_FirstRequestEstablishesProtectedCookie_AndReloadDoesNotExtendIt()
     {
-        var firstContext = new DefaultHttpContext();
-        var firstAccessor = CreateAccessor(firstContext);
-        var identity = new string('A', 64);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
+        });
 
-        await firstAccessor.SetProtectedSessionIdentityAsync(identity, default);
+        using var first = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");
+        var setCookie = Assert.Single(
+            first.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
 
-        var setCookie = Assert.Single(firstContext.Response.Headers.SetCookie);
-        Assert.NotNull(setCookie);
         Assert.Contains("__Host-Maliev.InstantQuotation=", setCookie, StringComparison.Ordinal);
         Assert.Contains("httponly", setCookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("secure", setCookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=lax", setCookie, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(identity, setCookie, StringComparison.Ordinal);
+        Assert.Contains("path=/", setCookie, StringComparison.OrdinalIgnoreCase);
+        var maxAge = Regex.Match(setCookie, "max-age=(?<seconds>[0-9]+)", RegexOptions.IgnoreCase);
+        Assert.True(maxAge.Success);
+        Assert.InRange(int.Parse(maxAge.Groups["seconds"].Value), 86_390, 86_400);
+        Assert.DoesNotContain("domain=", setCookie, StringComparison.OrdinalIgnoreCase);
 
-        var secondContext = new DefaultHttpContext();
-        secondContext.Request.Headers.Cookie = setCookie!.Split(';', 2)[0];
-        var restored = await CreateAccessor(secondContext).GetProtectedSessionIdentityAsync(default);
+        using var second = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");
+        var secondCookies = second.Headers.TryGetValues("Set-Cookie", out var values) ? values : [];
 
-        Assert.Equal(identity, restored);
+        Assert.DoesNotContain(
+            secondCookies,
+            value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
     }
 
     [Theory]
     [InlineData("not-protected")]
-    [InlineData("AQAA-tampered")]
-    public async Task SessionIdentity_TamperingFailsClosed(string cookieValue)
+    [InlineData("%%%malformed%%%")]
+    public async Task Route_MalformedCookieIsReplacedWithoutRenderingIdentity(string cookieValue)
     {
-        var context = new DefaultHttpContext();
-        context.Request.Headers.Cookie = $"__Host-Maliev.InstantQuotation={cookieValue}";
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/InstantQuotation/3D-Printing?culture=en");
+        request.Headers.Add("Cookie", $"__Host-Maliev.InstantQuotation={cookieValue}");
 
-        var restored = await CreateAccessor(context).GetProtectedSessionIdentityAsync(default);
+        using var response = await client.SendAsync(request);
+        var source = await response.Content.ReadAsStringAsync();
+        var replacement = Assert.Single(
+            response.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
 
-        Assert.Null(restored);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.DoesNotContain(cookieValue, replacement, StringComparison.Ordinal);
+        Assert.DoesNotContain("instant-quotation-session", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(cookieValue, source, StringComparison.Ordinal);
     }
 
-    private static ProtectedCookieInstantQuotationWorkflowSessionIdentityAccessor CreateAccessor(
-        HttpContext context)
+    [Fact]
+    public async Task CircuitAccessor_ReadsIdentityFromAuthenticationState_AndCannotReplaceIt()
     {
-        var httpContextAccessor = new HttpContextAccessor { HttpContext = context };
-        return new ProtectedCookieInstantQuotationWorkflowSessionIdentityAccessor(
-            httpContextAccessor,
+        var identity = new string('A', 64);
+        var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            new[] { new System.Security.Claims.Claim(InstantQuotationSessionIdentityClaim.Type, identity) }));
+        var accessor = new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
+            new StaticAuthenticationStateProvider(principal));
+
+        Assert.Equal(identity, await accessor.GetProtectedSessionIdentityAsync(default));
+        await accessor.SetProtectedSessionIdentityAsync(identity, default);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await accessor.SetProtectedSessionIdentityAsync(new string('B', 64), default));
+    }
+
+    [Fact]
+    public void Cookie_ValidProtectedPayloadWithInvalidIdentityFailsClosed()
+    {
+        var context = new DefaultHttpContext();
+        var protectedValue = DataProtectionProvider
+            .CreateProtector(InstantQuotationSessionIdentityCookie.ProtectorPurpose)
+            .Protect("validly-protected-but-not-an-identity");
+        context.Request.Headers.Cookie = $"{InstantQuotationSessionIdentityCookie.CookieName}={protectedValue}";
+        var cookie = new InstantQuotationSessionIdentityCookie(
             DataProtectionProvider,
-            NullLogger<ProtectedCookieInstantQuotationWorkflowSessionIdentityAccessor>.Instance);
+            TimeProvider.System,
+            NullLogger<InstantQuotationSessionIdentityCookie>.Instance);
+
+        Assert.Null(cookie.TryRead(context));
+    }
+
+    private sealed class StaticAuthenticationStateProvider(System.Security.Claims.ClaimsPrincipal principal)
+        : AuthenticationStateProvider
+    {
+        public override Task<AuthenticationState> GetAuthenticationStateAsync() =>
+            Task.FromResult(new AuthenticationState(principal));
     }
 }
