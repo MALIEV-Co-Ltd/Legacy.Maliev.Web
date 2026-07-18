@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -17,8 +18,35 @@ public sealed class QuotationClientTests
             Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-token"), request.Headers.Authorization);
             Assert.Equal("quote-submit-123", Assert.Single(request.Headers.GetValues("Idempotency-Key")));
             var body = await request.Content!.ReadAsStringAsync();
-            Assert.Contains("\"taxIdentification\":\"0100000000000\"", body, StringComparison.Ordinal);
-            Assert.Contains("\"done\":null", body, StringComparison.Ordinal);
+            using var document = JsonDocument.Parse(body);
+            var payload = document.RootElement;
+            var properties = payload.EnumerateObject()
+                .ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
+
+            Assert.Equal(
+                [
+                    "companyName",
+                    "country",
+                    "done",
+                    "email",
+                    "firstName",
+                    "internalComment",
+                    "lastName",
+                    "message",
+                    "taxIdentification",
+                    "telephoneNumber"
+                ],
+                properties.Keys.Order(StringComparer.Ordinal));
+            Assert.Equal("Mali", properties["firstName"].GetString());
+            Assert.Equal("Ev", properties["lastName"].GetString());
+            Assert.Equal("mali@example.com", properties["email"].GetString());
+            Assert.Equal("020000000", properties["telephoneNumber"].GetString());
+            Assert.Equal("Thailand", properties["country"].GetString());
+            Assert.Equal("MALIEV", properties["companyName"].GetString());
+            Assert.Equal("0100000000000", properties["taxIdentification"].GetString());
+            Assert.Equal("Need CNC parts", properties["message"].GetString());
+            Assert.Equal(JsonValueKind.Null, properties["internalComment"].ValueKind);
+            Assert.Equal(JsonValueKind.Null, properties["done"].ValueKind);
             return JsonResponse("{\"id\":417}", HttpStatusCode.Created);
         });
         var client = new QuotationClient(

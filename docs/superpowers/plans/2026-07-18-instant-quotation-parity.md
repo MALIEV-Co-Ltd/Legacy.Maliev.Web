@@ -115,7 +115,7 @@
 
 **Interfaces:**
 - Submission consumes only server session state plus validated customer fields and stable `SubmissionId`.
-- It produces `{ requestId, submissionStatus }`, calls existing `IQuotationClient` with `legacy-web-instant-quotation-{SubmissionId:N}`, then calls FileService finalization.
+- It produces `{ requestId, submissionStatus }`, calls existing `IQuotationClient` with `legacy-web-instant-quotation-{SubmissionId.ToLowerInvariant()}` for the protected 64-hex submission identity, then calls FileService finalization.
 
 - [ ] Write failing tests for required customer fields, anonymous/member prefill, invalid/missing antiforgery, session mismatch, tampered totals, duplicate submit, quotation timeout, persisted-request partial finalization, and stable reference messaging.
 - [ ] Assert exact quotation-service camelCase JSON and that browser tokens/storage secrets never appear in rendered markup or JSON.
@@ -135,7 +135,7 @@
 - Create: `Legacy.Maliev.Web.Tests/InstantQuotationAccessibilityAnalyticsTests.cs`
 
 **Interfaces:**
-- Emits `file_upload_start`, `file_upload_complete`, `file_upload_failure`, `estimate_shown`, `review_reached`, and persisted `request_quote` through `malievAnalytics` only after consent.
+- Keeps the frozen `file_upload_start`, `file_upload_complete`, and persisted `request_quote` payloads exact. The pending `upload_failure`, `estimate_shown`, and `review_reached` emitters remain inactive until their exact tests and independent review pass; `file_upload_failure` is forbidden.
 - `request_quote.transaction_id` is the opaque persisted request identifier; payloads exclude filename, session ID, customer fields, and description.
 
 - [ ] Write failing tests for Thai/English metadata/copy/validation, localized THB formatting, native control labels/focus order/live regions, reduced motion, 760px mobile layout, consent queueing, event deduplication, and no PII.
