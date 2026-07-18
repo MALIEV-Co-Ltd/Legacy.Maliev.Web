@@ -1,0 +1,128 @@
+@page "/Quotation"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using Microsoft.Extensions.Options
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ICountryClient CountryClient
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IOptions<RecaptchaEnterpriseOptions> RecaptchaOptions
+@inject IStringLocalizer<QuotationContent> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = Localizer["Request a manufacturing quotation"];
+    var description = Localizer["Request a CNC machining, 3D printing, 3D scanning, or custom manufacturing quotation from MALIEV."];
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@Localizer["manufacturing quotation, CNC quote, 3D printing quote, 3D scanning quote"]" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    @if (!string.IsNullOrWhiteSpace(RecaptchaOptions.Value.SiteKey))
+    {
+        <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(RecaptchaOptions.Value.SiteKey)" async defer></script>
+    }
+</HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <QuotationHeroContent />
+    <main class="container maliev-section">
+        <section aria-labelledby="quotation-form-title">
+            <div class="row justify-content-center">
+                <div class="col-xl-9">
+                    <h2 id="quotation-form-title">@Localizer["Manual quotation request"]</h2>
+                    @if (!string.IsNullOrWhiteSpace(notification))
+                    {
+                        <div class="alert alert-info" role="status">@notification</div>
+                    }
+                    <form method="post"
+                          enctype="multipart/form-data"
+                          action="/Quotation?handler=SubmitRequest"
+                          id="quotation-form"
+                          data-recaptcha-enterprise-form
+                          data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey"
+                          data-recaptcha-action="submit"
+                          data-upload-analytics="true">
+                        @if (tokens is not null)
+                        {
+                            <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                        }
+                        <QuotationFormFields Model="model" />
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+@code {
+    private QuotationFormDisplayModel model = new(
+        Guid.Empty,
+        "custom_manufacturing",
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        null,
+        null,
+        null,
+        string.Empty,
+        string.Empty,
+        null,
+        string.Empty,
+        false,
+        [],
+        new Dictionary<string, IReadOnlyList<string>>());
+    private AntiforgeryTokenSet? tokens;
+    private string? notification;
+
+    [SupplyParameterFromQuery(Name = "culture")]
+    public string? Culture { get; set; }
+
+    [SupplyParameterFromQuery(Name = "item")]
+    public string? Item { get; set; }
+
+    [SupplyParameterFromQuery(Name = "process")]
+    public string? Process { get; set; }
+
+    [SupplyParameterFromQuery(Name = "material")]
+    public string? Material { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var countries = await CountryClient.GetCountriesAsync(context.RequestAborted);
+        var serviceAvailable = countries.ServiceAvailable;
+        IReadOnlyDictionary<string, IReadOnlyList<string>> errors = serviceAvailable
+            ? new Dictionary<string, IReadOnlyList<string>>()
+            : new Dictionary<string, IReadOnlyList<string>>
+            {
+                [string.Empty] = ["Could not retrieve countries from the server."]
+            };
+        var prefill = QuotationPrefill.Create(Culture, Item, Process, Material);
+        model = new QuotationFormDisplayModel(
+            Guid.NewGuid(),
+            prefill.ServiceContext,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            null,
+            null,
+            null,
+            string.Empty,
+            prefill.Message,
+            null,
+            RecaptchaOptions.Value.SiteKey,
+            serviceAvailable,
+            (countries.Value ?? []).Select(country => new QuotationCountryOption(country.Name)).ToArray(),
+            errors);
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}

@@ -15,7 +15,7 @@
     </div>
 
     <input type="hidden" id="SubmissionId" name="SubmissionId" value="@Model.SubmissionId" />
-    <input type="hidden" id="ServiceContext" name="ServiceContext" value="@Model.ServiceContext" />
+    <input type="hidden" id="ServiceContext" name="ServiceContext" value="@Model.ServiceContext" data-upload-service />
 
     <div class="row g-3">
         <div class="col-md-6">
@@ -66,13 +66,13 @@
         </div>
         <div class="col-12">
             <label for="Files" class="form-label">@Localizer["Drawings and reference files (optional)"]</label>
-            <input type="file" class="form-control" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" />
+            <input type="file" class="form-control" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files />
             <div id="quotation-files-help" class="form-text">@Localizer["Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage."]</div>
             <span id="Files-error" class="text-danger @(HasError("Files") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Files")</span>
         </div>
     </div>
 
-    <input type="hidden" name="g-recaptcha-response" id="quotation-recaptcha-response" value="@Model.RecaptchaToken" />
+    <input type="hidden" name="g-recaptcha-response" id="quotation-recaptcha-response" value="@Model.RecaptchaToken" data-recaptcha-response />
     <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
         @Localizer["Submit quotation request"]
     </button>

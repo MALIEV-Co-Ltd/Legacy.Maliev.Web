@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Quotation;
 using Legacy.Maliev.Web.Infrastructure;
@@ -118,8 +117,9 @@ public sealed class Index(
     {
         await LoadCountriesAsync(cancellationToken);
         SubmissionId = Guid.NewGuid();
-        ServiceContext = NormalizeServiceContext(item);
-        Message = BuildInitialMessage(culture, item, process, material);
+        var prefill = QuotationPrefill.Create(culture, item, process, material);
+        ServiceContext = prefill.ServiceContext;
+        Message = prefill.Message;
         return Page();
     }
 
@@ -177,7 +177,7 @@ public sealed class Index(
         if (!LeadAnalyticsEventQueue.TryQueueManualQuotation(
                 TempData,
                 referenceNumber,
-                NormalizeServiceContext(ServiceContext),
+                QuotationPrefill.NormalizeServiceContext(ServiceContext),
                 uploads.Length > 0,
                 uploads.Length > 0 && fileResult.Completed,
                 out var analyticsFailure))
@@ -271,64 +271,8 @@ public sealed class Index(
         }
     }
 
-    private static string BuildInitialMessage(
-        string? culture,
-        string? item,
-        string? process,
-        string? material)
-    {
-        var supportedItems = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "3d-scanning",
-            "3d-printing",
-            "cnc-machining"
-        };
-        if (string.IsNullOrWhiteSpace(item) || !supportedItems.Contains(item))
-        {
-            return string.Empty;
-        }
-
-        var thai = string.Equals(culture, "th", StringComparison.OrdinalIgnoreCase);
-        var builder = new StringBuilder();
-        builder.AppendLine(thai ? $"สินค้าที่ต้องการ: {item}" : $"I want: {item}");
-        if (!string.IsNullOrWhiteSpace(process))
-        {
-            builder.AppendLine(thai ? $"ระบบเทคโนโลยี: {process}" : $"Please use: {process}");
-        }
-
-        builder.AppendLine("---");
-        builder.AppendLine(thai ? "กรุณาทิ้งข้อความไว้ข้างล่าง:" : "Your message below:");
-        if (string.Equals(item, "3d-scanning", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.AppendLine(thai
-                ? "ขนาดชิ้นงาน (กว้าง x ยาว x สูง): 0 x 0 x 0 mm"
-                : "Dimensions (Length x Width x Height): 0 x 0 x 0 mm");
-            builder.AppendLine(thai ? "นามสกุลไฟล์งานที่ต้องการ: STL" : "Desired output format: STL");
-        }
-        else
-        {
-            if (!string.IsNullOrWhiteSpace(material))
-            {
-                builder.AppendLine(thai ? $"วัสดุ: {material}" : $"Material: {material}");
-            }
-
-            builder.AppendLine(thai ? "จำนวน: 1 ชิ้น" : "Quantity: 1 piece");
-        }
-
-        return builder.ToString();
-    }
-
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string NormalizeServiceContext(string? service) => service?.Trim().ToLowerInvariant() switch
-    {
-        "3d-printing" or "3d_printing" => "3d_printing",
-        "3d-scanning" or "3d_scanning" => "3d_scanning",
-        "cnc-machining" or "cnc_machining" => "cnc_machining",
-        "injection-molding" or "injection_molding" => "injection_molding",
-        _ => "custom_manufacturing",
-    };
 
     private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }

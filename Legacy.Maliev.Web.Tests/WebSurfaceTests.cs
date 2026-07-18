@@ -1735,8 +1735,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"cnc_machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("event: 'file_upload_start'", source, StringComparison.Ordinal);
-        Assert.Contains("window.malievAnalytics.emit", source, StringComparison.Ordinal);
+        Assert.Contains("data-upload-analytics=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-upload-files", source, StringComparison.Ordinal);
+        Assert.Contains("data-upload-service", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2816,6 +2817,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"quotation-hero-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("action=\"/Quotation?handler=SubmitRequest\"", source, StringComparison.Ordinal);
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
