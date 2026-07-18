@@ -301,6 +301,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-overview-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{ordersHeading}<", decodedSource, StringComparison.Ordinal);
@@ -330,6 +332,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-account-index-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{profileLabel}<", decodedSource, StringComparison.Ordinal);
@@ -361,6 +365,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-orders-index-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);

@@ -1,0 +1,35 @@
+@page "/Member"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAccountSessionManager SessionManager
+@inject ICustomerAccountClient AccountClient
+@inject ICustomerOrderClient OrderClient
+@inject ICustomerQuotationClient QuotationClient
+@inject IStringLocalizer<MemberOverviewContent> Localizer
+
+<PageTitle>@Localizer["Member overview | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <MemberWorkspaceShell><MemberOverviewContent Model="model" /></MemberWorkspaceShell>
+</div>
+
+@code {
+    private MemberOverviewDisplayModel model = MemberOverviewDisplayModel.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var loaded = await MemberOverviewLoader.LoadAsync(
+            context,
+            SessionManager,
+            AccountClient,
+            OrderClient,
+            QuotationClient,
+            context.RequestAborted);
+        model = loaded?.DisplayModel ?? MemberOverviewDisplayModel.Empty;
+    }
+}

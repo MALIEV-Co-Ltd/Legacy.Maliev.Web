@@ -34,6 +34,9 @@ var useBlazorChangeEmailConfirmationRoute = builder.Configuration.GetValue("Blaz
 var useBlazorContactRoute = builder.Configuration.GetValue("BlazorRouting:Contact", true);
 var useBlazorQuotationRoute = builder.Configuration.GetValue("BlazorRouting:Quotation", true);
 var useBlazorInstantQuotationRoute = builder.Configuration.GetValue("BlazorRouting:InstantQuotation", true);
+var useBlazorMemberOverviewRoute = builder.Configuration.GetValue("BlazorRouting:MemberOverview", true);
+var useBlazorMemberAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberAccountIndex", true);
+var useBlazorMemberOrdersIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrdersIndex", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -64,6 +67,9 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorContactRoute
     && useBlazorQuotationRoute
     && useBlazorInstantQuotationRoute
+    && useBlazorMemberOverviewRoute
+    && useBlazorMemberAccountIndexRoute
+    && useBlazorMemberOrdersIndexRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -232,6 +238,18 @@ builder.Services.AddRazorPages(options =>
 
     if (useBlazorRouteHost)
     {
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Account/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Orders/Index",
+            model => model.Selectors.Clear());
         options.Conventions.AddAreaPageRouteModelConvention(
             "Knowledges",
             "/Index",

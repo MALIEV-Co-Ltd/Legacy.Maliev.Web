@@ -1,0 +1,10 @@
+@page "/Member/Account"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IStringLocalizer<MemberAccountIndexContent> Localizer
+
+<PageTitle>@Localizer["Account settings | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <MemberWorkspaceShell><MemberAccountIndexContent /></MemberWorkspaceShell>
+</div>
