@@ -104,6 +104,7 @@ builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
 builder.AddStandardOpenApi(
     title: "Legacy MALIEV Web BFF",
     description: "Server-rendered compatibility frontend and BFF for the independently deployable legacy services.");
+builder.Services.AddSingleton(BuildIdentity.FromConfiguration(builder.Configuration));
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
@@ -422,6 +423,7 @@ else
 }
 
 var app = builder.Build();
+app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.UseStandardMiddleware();
 app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
 app.UseExceptionHandler("/Error");
@@ -448,6 +450,7 @@ if (useBlazorRouteHost)
         branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
 }
 app.MapDefaultEndpoints("web");
+app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
 if (useBlazorRouteHost)
