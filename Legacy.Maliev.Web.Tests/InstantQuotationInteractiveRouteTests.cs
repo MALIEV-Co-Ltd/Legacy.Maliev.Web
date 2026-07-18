@@ -1,10 +1,28 @@
+using System.Net;
 using System.Reflection;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests
+public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
+    private readonly HttpClient client;
+
+    public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
+    {
+        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+                BaseAddress = new Uri("https://localhost"),
+            });
+    }
 
     [Fact]
     public void Route_RemainsStaticSsr_WithExactlyOneInteractiveServerWorkflowIsland()
@@ -168,6 +186,91 @@ public sealed class InstantQuotationInteractiveRouteTests
         }
     }
 
+    [Theory]
+    [InlineData("/InstantQuotation/3D-Printing")]
+    [InlineData("/instantquotation/3d-printing?culture=en")]
+    [InlineData("/INSTANTQUOTATION/3D-PRINTING?culture=th&source=review")]
+    public async Task InstantQuotationRoute_LoadsScopedBlazorBootstrapAtBodyEnd(string requestPath)
+    {
+        using var response = await client.GetAsync(requestPath);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, Count(source, "_framework/blazor.web.js"));
+        Assert.True(
+            source.IndexOf("/dist/app.min.js", StringComparison.Ordinal) <
+            source.IndexOf("_framework/blazor.web.js", StringComparison.Ordinal));
+        Assert.True(
+            source.IndexOf("_framework/blazor.web.js", StringComparison.Ordinal) <
+            source.IndexOf("</body>", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task OtherStaticSsrRoute_DoesNotLoadBlazorBootstrap()
+    {
+        using var response = await client.GetAsync("/legal?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.DoesNotContain("_framework/blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationWorkflowState.Empty, "data-workflow-upload")]
+    [InlineData(InstantQuotationWorkflowState.Uploading, "data-workflow-upload")]
+    [InlineData(InstantQuotationWorkflowState.Uploaded, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Error, "data-workflow-upload|role=\"alert\"")]
+    [InlineData(InstantQuotationWorkflowState.MultiPart, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Configured, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Review, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration|data-workflow-review")]
+    [InlineData(InstantQuotationWorkflowState.CustomerDetails, "data-workflow-customer-details")]
+    [InlineData(InstantQuotationWorkflowState.Submitted, "data-workflow-submitted")]
+    public async Task WorkflowState_RendersOnlyItsMappedSections(
+        InstantQuotationWorkflowState state,
+        string expectedMarkers)
+    {
+        var html = await RenderWorkflowAsync(state);
+        var expected = expectedMarkers.Split('|');
+        var allMarkers = new[]
+        {
+            "data-workflow-upload",
+            "data-workflow-viewer",
+            "data-workflow-parts",
+            "data-workflow-configuration",
+            "data-workflow-review",
+            "data-workflow-customer-details",
+            "data-workflow-submitted",
+        };
+
+        Assert.Contains($"data-workflow-state=\"{state.ToString().ToLowerInvariant()}\"", html, StringComparison.Ordinal);
+        foreach (var marker in allMarkers)
+        {
+            if (expected.Contains(marker, StringComparer.Ordinal))
+            {
+                Assert.Contains(marker, html, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.DoesNotContain(marker, html, StringComparison.Ordinal);
+            }
+        }
+
+        Assert.Equal(state is InstantQuotationWorkflowState.Uploading, html.Contains("aria-busy=\"true\"", StringComparison.Ordinal));
+        Assert.Equal(state is InstantQuotationWorkflowState.Error, html.Contains("role=\"alert\"", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationWorkflowState.Uploaded)]
+    [InlineData(InstantQuotationWorkflowState.Review)]
+    [InlineData(InstantQuotationWorkflowState.CustomerDetails)]
+    public async Task UnwiredWorkflowActions_RenderDisabled(InstantQuotationWorkflowState state)
+    {
+        var html = await RenderWorkflowAsync(state);
+
+        Assert.Contains("<button", html, StringComparison.Ordinal);
+        Assert.DoesNotMatch("<button(?![^>]* disabled)[^>]*>", html);
+    }
+
     private static bool ReadBoolean(object target, string propertyName) =>
         (bool)(target.GetType().GetProperty(propertyName)?.GetValue(target)
             ?? throw new InvalidOperationException($"Visibility property {propertyName} was not found."));
@@ -189,6 +292,26 @@ public sealed class InstantQuotationInteractiveRouteTests
 
     private static int Count(string source, string value) =>
         source.Split(value, StringSplitOptions.None).Length - 1;
+
+    private static async Task<string> RenderWorkflowAsync(InstantQuotationWorkflowState state)
+    {
+        using var services = new ServiceCollection()
+            .AddLogging()
+            .AddLocalization(options => options.ResourcesPath = "Resources")
+            .BuildServiceProvider();
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        await using var renderer = new HtmlRenderer(services, loggerFactory);
+
+        return await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                ["InitialState"] = state,
+            });
+            var output = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(parameters);
+            return output.ToHtmlString();
+        });
+    }
 
     private static string FindRepositoryRoot()
     {

@@ -4,7 +4,10 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
 public partial class InstantQuotationWorkflow : ComponentBase
 {
-    private InstantQuotationWorkflowState State { get; } = InstantQuotationWorkflowState.Empty;
+    [Parameter]
+    public InstantQuotationWorkflowState InitialState { get; set; } = InstantQuotationWorkflowState.Empty;
+
+    private InstantQuotationWorkflowState State => InitialState;
 
     private WorkflowSectionVisibility VisibleSections => GetVisibleSections(State);
 

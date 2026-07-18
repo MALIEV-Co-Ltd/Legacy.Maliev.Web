@@ -3,7 +3,7 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class BlazorMigrationContractTests
 {
     [Fact]
-    public void LegalRoute_UsesStaticSsrComponentWithoutInteractiveServerInfrastructure()
+    public void LegalRoute_RemainsStaticSsrWhileHostSupportsOneScopedInteractiveIsland()
     {
         var root = FindRepositoryRoot();
         var program = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Program.cs"));
@@ -20,10 +20,14 @@ public sealed class BlazorMigrationContractTests
             "Pages",
             "Legal",
             "LegalContent.razor"));
+        var app = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "App.razor"));
 
         Assert.Contains("AddRazorComponents()", program, StringComparison.Ordinal);
-        Assert.DoesNotContain("AddInteractiveServerComponents", program, StringComparison.Ordinal);
+        Assert.Contains("AddInteractiveServerComponents", program, StringComparison.Ordinal);
+        Assert.Contains("AddInteractiveServerRenderMode", program, StringComparison.Ordinal);
         Assert.DoesNotContain("MapBlazorHub", program, StringComparison.Ordinal);
+        Assert.Contains("/InstantQuotation/3D-Printing", app, StringComparison.Ordinal);
+        Assert.Contains("_framework/blazor.web.js", app, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(LegalContent)\"", legalPage, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", legalPage, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", legalComponent, StringComparison.Ordinal);

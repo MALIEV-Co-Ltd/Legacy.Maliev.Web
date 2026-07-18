@@ -15,6 +15,11 @@
     var siteStyle = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/site.min.css");
     var vendorScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/vendor.min.js");
     var appScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/app.min.js");
+    var requiresInstantQuotationBootstrap = string.Equals(
+        context.Request.Path.Value,
+        "/InstantQuotation/3D-Printing",
+        StringComparison.OrdinalIgnoreCase);
+    var blazorBootstrap = $"{context.Request.PathBase}/_framework/blazor.web.js";
 }
 <!DOCTYPE html>
 <html lang="@CultureInfo.CurrentCulture.TwoLetterISOLanguageName">
@@ -47,5 +52,9 @@
     <PublicContactChannelAnalytics />
     <script src="@vendorScript"></script>
     <script src="@appScript"></script>
+    @if (requiresInstantQuotationBootstrap)
+    {
+        <script src="@blazorBootstrap"></script>
+    }
 </body>
 </html>
