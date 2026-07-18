@@ -1,0 +1,8 @@
+@page "/Account/AccessDenied"
+@inject IStringLocalizer<AccessDeniedContent> Localizer
+
+<PageTitle>@Localizer["Access denied | MALIEV"]</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+</HeadContent>
+<AccessDeniedContent RouteOwner="blazor-static-ssr" />

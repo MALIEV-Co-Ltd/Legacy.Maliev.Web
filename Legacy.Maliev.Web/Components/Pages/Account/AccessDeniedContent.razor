@@ -1,6 +1,6 @@
 @inject IStringLocalizer<AccessDeniedContent> Localizer
 
-<main class="maliev-page maliev-page-main" data-migration-component="access-denied-content" data-migration-renderer="blazor-static-ssr">
+<main class="maliev-page maliev-page-main" data-migration-component="access-denied-content" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <div class="maliev-container">
         <section class="maliev-panel maliev-status">
             <p class="maliev-eyebrow">@Localizer["Account access"]</p>
@@ -13,3 +13,8 @@
         </section>
     </div>
 </main>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}
