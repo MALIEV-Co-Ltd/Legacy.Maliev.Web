@@ -41,6 +41,7 @@ non-JavaScript fallback conversion.
 | `phone_click` | Stable | Business telephone click | Secondary only |
 | `email_click` | Stable | Business email click | Secondary only |
 | `line_click` | Stable | LINE Official Account click | Secondary only |
+| `messenger_click` | Stable when link exists | Facebook Messenger direct-contact click | Secondary only |
 | `whatsapp_click` | Stable when link exists | WhatsApp Business click | Secondary only |
 | `instagram_click` | Stable | Instagram profile click | Secondary only |
 | `youtube_click` | Stable | YouTube channel click | Secondary only |
@@ -54,9 +55,11 @@ conversion. Page views, service/product views, add-to-cart events, social clicks
 Google-hosted lead form submissions, LINE, Messenger, WhatsApp, telephone, and email clicks must
 not be primary conversions.
 
-Facebook and Messenger outbound integrations are retired and must not regain click events without
-a separately approved contract. Facebook may still appear as an inbound `lead_source` when GA4
-attributes a referral. The Instant Quotation names `upload_failure`, `estimate_shown`, and
+LINE is the primary visible contact CTA on high-intent Thai pages, while `messenger_click` and
+`whatsapp_click` remain separate secondary/non-biddable direct-contact diagnostics under issue
+#21. A Messenger outbound click is distinct from a Facebook inbound referral: Facebook may appear
+as an inbound `lead_source`, but this contract does not define a generic `facebook_click` event.
+The Instant Quotation names `upload_failure`, `estimate_shown`, and
 `review_reached` are pending under issue #152; their fail-closed maximum keys and rules below are
 frozen for validation, but the events remain inactive until #152 tests and #153 review pass. PR
 #156 commit `e7e6783bab2d3aa577f5e11b06a6316141663763` is validation evidence for the stable event
@@ -126,7 +129,7 @@ values, or full URLs as custom-dimension values.
 | --- | --- |
 | `service` | `general_contact`, `3d_printing`, `3d_scanning`, `cnc_machining`, `injection_molding`, or `custom_manufacturing`; use the event value when present, otherwise derive only from a recognized service route |
 | `locale` | `en` or `th`, derived from the rendered document language; never infer from a person's location |
-| `contact_channel` | `phone`, `email`, `line`, `whatsapp`, `instagram`, `tiktok`, `youtube`, `threads`, `google_maps`, or `google_business_profile_review`; set only for the matching diagnostic event |
+| `contact_channel` | `phone`, `email`, `line`, `messenger`, `whatsapp`, `instagram`, `tiktok`, `youtube`, `threads`, `google_maps`, or `google_business_profile_review`; set only for the matching diagnostic event |
 | `lead_source` | A controlled reporting-only acquisition bucket derived from consented GA4 acquisition context; its exact source/medium mapping remains unapproved, so do not emit it from the application or publish a GTM lookup until separately reviewed |
 | `landing_page_type` | `home`, `service`, `contact`, `quotation`, `instant_quotation`, `knowledge`, `about`, `career`, `legal`, `member`, or `other`; derive from the normalized route class, not the full URL |
 | `quote_flow_step` | `file_upload_started` for `file_upload_start`, `files_linked` for `file_upload_complete`, or `request_persisted` for `request_quote`; do not add pending Instant Quotation steps until issue #152 approves them |
@@ -144,9 +147,10 @@ registry above already defines them.
   Profile review links keep `maliev_review_link_click` with
   `contact_channel=google_business_profile_review`. Business Profile views, calls, direction
   requests, and website clicks remain aggregate Business Profile metrics.
-- Instagram, TikTok, YouTube, Threads, and LINE outbound links use their canonical click event once
-  application instrumentation exists. Facebook has no outbound event while its integration is
-  retired.
+- Instagram, TikTok, YouTube, Threads, LINE, Messenger, and WhatsApp outbound links use their
+  canonical click event once application instrumentation exists. Messenger direct-contact traffic
+  uses `messenger_click`; Facebook referral traffic uses native GA4 acquisition plus the controlled
+  reporting bucket and must not be collapsed into the Messenger click event.
 - Inbound social and Maps traffic is reported through GA4's native `source / medium` plus the
   controlled `lead_source` bucket. Do not treat an outbound click as a lead, and do not join a
   Search Console or Business Profile aggregate to an individual browser event.
@@ -181,6 +185,11 @@ The required columns are:
 | `search_clicks` | Aggregate Search Console clicks for the matching week and canonical landing-page group; never user-level joined |
 | `search_impressions` | Aggregate Search Console impressions for the matching week and canonical landing-page group |
 | `maps_actions` | Aggregate Google Business Profile website, call, and direction actions where the API/UI provides them; never inferred from browser clicks |
+| `qualified_inquiries` | Aggregate CRM/manual qualified-lead count by contact channel when available; never infer qualification from a click |
+| `won_leads` | Aggregate CRM/manual won outcome count by contact channel when available |
+| `lost_leads` | Aggregate CRM/manual lost outcome count by contact channel when available |
+| `ads_cost` | Aggregate Google Ads cost allocated by the approved reporting join, never a browser event field |
+| `cost_per_qualified_lead` | `ads_cost / qualified_inquiries`; leave blank when no qualified inquiries exist |
 
 The weekly review compares services, channels, and locales without promoting click-only behavior.
 Flag duplicate transaction IDs, completion counts greater than upload starts, Ads primary counts
@@ -237,10 +246,11 @@ Run this checklist in GTM Preview against the release candidate URL:
 4. Submit one quotation with a clean attachment. Confirm `file_upload_start` is secondary and
    `file_upload_complete` appears only after storage/link completion. Repeat with a rejected or
    failed attachment and confirm no completion event appears.
-5. Exercise LINE, WhatsApp (when a link is present), telephone, email, Instagram, and YouTube
-   links. Confirm each uses its separate secondary event and never fires the Ads primary tag.
-   Confirm retired Facebook/Messenger links and events remain absent, and reserved Maps, TikTok,
-   and Threads events do not fire until their application instrumentation is approved.
+5. Exercise LINE, Messenger and WhatsApp (when links are present), telephone, email, Instagram,
+   and YouTube links. Confirm each uses its separate secondary event and never fires the Ads
+   primary tag. Confirm a Messenger outbound click is not classified as a Facebook referral, and
+   reserved Maps, TikTok, and Threads events do not fire until their application instrumentation
+   is approved.
 6. Reject optional cookies and repeat all click checks. Confirm no analytics or Ads event fires.
 7. Inspect every event payload and browser request for PII, access tokens, refresh tokens, session
    identifiers, filenames, and free-form message content. The check fails if any are present.

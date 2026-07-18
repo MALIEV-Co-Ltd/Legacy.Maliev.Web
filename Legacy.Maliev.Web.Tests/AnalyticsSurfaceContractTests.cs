@@ -123,7 +123,8 @@ public sealed class AnalyticsSurfaceContractTests
                      "`tiktok_click`",
                      "`youtube_click`",
                      "`threads_click`",
-                     "`line_click`"
+                     "`line_click`",
+                     "`messenger_click`"
                  })
         {
             Assert.Contains(channel, runbook, StringComparison.Ordinal);
@@ -135,6 +136,8 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.Contains("No event is discarded solely because consent is initially denied", runbook, StringComparison.Ordinal);
         Assert.Contains("Rejecting or revoking consent clears the in-memory queue", runbook, StringComparison.Ordinal);
         Assert.Contains("`request_quote` remains the only primary", runbook, StringComparison.Ordinal);
+        Assert.Contains("A Messenger outbound click is distinct from a Facebook inbound referral", runbook, StringComparison.Ordinal);
+        Assert.DoesNotContain("Facebook and Messenger outbound integrations are retired", runbook, StringComparison.Ordinal);
         Assert.Contains("`file_upload_start` contains exactly `event`", runbook, StringComparison.Ordinal);
         Assert.Contains("`file_upload_complete` contains exactly `event`", runbook, StringComparison.Ordinal);
         Assert.Contains("The three stable payloads forbid", runbook, StringComparison.Ordinal);
