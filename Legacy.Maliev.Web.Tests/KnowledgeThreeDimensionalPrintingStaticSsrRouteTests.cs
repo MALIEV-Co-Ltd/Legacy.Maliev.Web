@@ -60,6 +60,7 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
                 "CncMachiningPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "CustomManufacturingPage.razor",
+                "ErrorPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
                 "KnowledgeIndexPage.razor",

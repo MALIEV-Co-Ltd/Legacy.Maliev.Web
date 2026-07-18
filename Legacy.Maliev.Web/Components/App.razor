@@ -11,6 +11,7 @@
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(context, TempDataDictionaryFactory);
+    var suppressIdentityNavigation = context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase);
     var siteStyle = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/site.min.css");
     var vendorScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/vendor.min.js");
     var appScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/app.min.js");
@@ -37,7 +38,7 @@
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
     <PublicGoogleTagManagerBody Model="googleTagManagerModel" />
     <PublicCookieConsent Model="@(PublicCookieConsentDisplayModel.Create(context))" />
-    <PublicNavigation Model="@(PublicNavigationDisplayModel.Create(context, suppressIdentityNavigation: false))" />
+    <PublicNavigation Model="@(PublicNavigationDisplayModel.Create(context, suppressIdentityNavigation))" />
     <PublicBrowserCompatibilityNotice Model="@(PublicBrowserCompatibilityNoticeDisplayModel.Create(context))" />
     <div id="main-content" tabindex="-1">
         <Routes />

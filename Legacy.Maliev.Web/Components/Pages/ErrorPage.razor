@@ -1,0 +1,26 @@
+@page "/Error"
+@using System.Diagnostics
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<ErrorContent> Localizer
+
+<PageTitle>@Localizer["Error | MALIEV"]</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex,nofollow" />
+</HeadContent>
+<ErrorContent Model="displayModel" RouteOwner="blazor-static-ssr" />
+
+@code {
+    private ErrorDisplayModel displayModel = new(false, null);
+
+    [SupplyParameterFromQuery(Name = "code")]
+    public int? Code { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+
+        var requestId = Activity.Current?.Id ?? context.TraceIdentifier;
+        displayModel = new(Code == StatusCodes.Status404NotFound, requestId);
+    }
+}
