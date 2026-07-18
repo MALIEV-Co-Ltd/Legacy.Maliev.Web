@@ -67,6 +67,7 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
                 "ServicesPage.razor",
                 "SocialMediaPage.razor",
                 "SpecificationsIndexPage.razor",
+                "TermsConditionsPage.razor",
                 "ThreeDimensionalPrintingPage.razor",
                 "ThreeDimensionalPrintingSpecificationPage.razor",
                 "ThreeDimensionalScanningPage.razor",

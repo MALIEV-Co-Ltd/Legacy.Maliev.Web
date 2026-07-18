@@ -1,7 +1,7 @@
 @using System.Globalization
 @inject IStringLocalizer<TermsConditionsContent> Localizer
 
-<main class="legal-page" data-migration-renderer="blazor-static-ssr">
+<main class="legal-page" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["Legal"]</p><h1>@Localizer["Terms and Conditions"]</h1></div></header>
     <div class="legal-shell maliev-container">
         <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#terms-overview">@T("Overview", "ภาพรวม")</a></li><li><a href="#cookies">@T("Cookies", "คุกกี้")</a></li><li><a href="#license">@T("License", "สิทธิการใช้งาน")</a></li><li><a href="#rights">@T("Reservation of rights", "การสงวนสิทธิ์")</a></li></ul></nav>
@@ -134,6 +134,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
     private static bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
     private static string T(string english, string thai) => IsThai ? thai : english;
 }
