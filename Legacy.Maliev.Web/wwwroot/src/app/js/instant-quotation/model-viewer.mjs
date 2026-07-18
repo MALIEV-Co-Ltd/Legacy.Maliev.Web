@@ -9,6 +9,7 @@ const bodyPalette = Object.freeze([
   '#2563eb', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d',
 ]);
 const maximumTopologyTriangles = 200000;
+const fallbackMaterialOwnership = new WeakMap();
 
 export function stableBodyColor(index) {
   const safeIndex = Number.isSafeInteger(index) && index >= 0 ? index : 0;
@@ -21,7 +22,16 @@ export function colorDisconnectedBodies(object) {
   object?.traverse?.(child => {
     if (child.isMesh && child.geometry?.getAttribute?.('position')) meshes.push(child);
   });
-  const analyses = meshes.map(mesh => analyzeMeshComponents(mesh.geometry));
+  const aggregateTriangles = meshes.reduce(
+    (sum, mesh) => sum + geometryTriangleCount(mesh.geometry), 0);
+  const analyses = aggregateTriangles > maximumTopologyTriangles
+    ? meshes.map(mesh => ({
+        count: geometryTriangleCount(mesh.geometry) > 0 ? 1 : 0,
+        componentByTriangle: [],
+        vertexIndices: [],
+        skipped: true,
+      }))
+    : meshes.map(mesh => analyzeMeshComponents(mesh.geometry));
   const bodyCount = analyses.reduce((sum, analysis) => sum + analysis.count, 0);
   if (bodyCount <= 1) return bodyCount;
 
@@ -379,16 +389,13 @@ function disposeObject(object) {
         child.geometry.dispose?.();
       }
       for (const material of asArray(child.material)) {
-        if (!material || disposedMaterials.has(material)) continue;
-        disposedMaterials.add(material);
-        for (const value of Object.values(material ?? {})) {
-          if (value?.isTexture && !disposedTextures.has(value)) {
-            disposedTextures.add(value);
-            value.dispose();
-          }
-        }
-        material.dispose?.();
+        disposeMaterial(material, disposedMaterials, disposedTextures);
       }
+      const ownership = fallbackMaterialOwnership.get(child);
+      for (const material of ownership?.originals ?? []) {
+        disposeMaterial(material, disposedMaterials, disposedTextures);
+      }
+      fallbackMaterialOwnership.delete(child);
     });
   }
   object?.dispose?.();
@@ -437,6 +444,13 @@ function analyzeMeshComponents(geometry) {
   return { count: componentIndex.size, componentByTriangle, vertexIndices, skipped: false };
 }
 
+function geometryTriangleCount(geometry) {
+  const position = geometry.getAttribute('position');
+  const index = geometry.getIndex?.();
+  const count = Number(index?.count ?? position?.count ?? 0);
+  return Number.isFinite(count) && count > 0 ? Math.floor(count / 3) : 0;
+}
+
 function applyComponentColors(mesh, analysis, bodyOffset) {
   const position = mesh.geometry.getAttribute('position');
   const colors = new Float32Array(position.count * 3);
@@ -457,11 +471,31 @@ function applyComponentColors(mesh, analysis, bodyOffset) {
 }
 
 function applyBoundedMeshColor(mesh, bodyIndex) {
-  for (const material of asArray(mesh.material)) {
+  let ownership = fallbackMaterialOwnership.get(mesh);
+  if (!ownership) {
+    const originals = asArray(mesh.material);
+    const replacements = originals.map(material => material.clone());
+    ownership = { originals, replacements };
+    fallbackMaterialOwnership.set(mesh, ownership);
+    mesh.material = replacements.length === 1 ? replacements[0] : replacements;
+  }
+  for (const material of ownership.replacements) {
     material.vertexColors = false;
     material.color?.set(stableBodyColor(bodyIndex));
     material.needsUpdate = true;
   }
+}
+
+function disposeMaterial(material, disposedMaterials, disposedTextures) {
+  if (!material || disposedMaterials.has(material)) return;
+  disposedMaterials.add(material);
+  for (const value of Object.values(material)) {
+    if (value?.isTexture && !disposedTextures.has(value)) {
+      disposedTextures.add(value);
+      value.dispose();
+    }
+  }
+  material.dispose?.();
 }
 
 function find(parents, value) {

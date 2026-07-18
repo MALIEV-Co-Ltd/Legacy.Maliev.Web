@@ -190,6 +190,44 @@ test('disconnected-body analysis skips vertex walking above the 200k topology ca
   assert.equal(vertexReads, 0);
 });
 
+test('aggregate topology cap skips every mesh when two 150k meshes exceed 200k together', () => {
+  let vertexReads = 0;
+  const first = fakeLargeMesh(150000, () => { vertexReads += 1; });
+  const second = fakeLargeMesh(150000, () => { vertexReads += 1; });
+  const root = { traverse: callback => { callback(first); callback(second); } };
+  assert.equal(colorDisconnectedBodies(root), 2);
+  assert.equal(vertexReads, 0);
+});
+
+test('aggregate fallback gives shared materials distinct colors and disposes every owner once', () => {
+  let originalDisposals = 0;
+  let replacementDisposals = 0;
+  let textureDisposals = 0;
+  const texture = new Texture();
+  texture.dispose = () => { textureDisposals += 1; };
+  const original = new MeshStandardMaterial({ color: '#ffffff', map: texture });
+  original.dispose = () => { originalDisposals += 1; };
+  const first = fakeLargeMesh(150000, () => {}, original);
+  const second = fakeLargeMesh(150000, () => {}, original);
+  const root = { traverse: callback => { callback(first); callback(second); } };
+
+  assert.equal(colorDisconnectedBodies(root), 2);
+  assert.notEqual(first.material, original);
+  assert.notEqual(second.material, original);
+  assert.notEqual(first.material, second.material);
+  assert.equal(`#${first.material.color.getHexString()}`, stableBodyColor(0));
+  assert.equal(`#${second.material.color.getHexString()}`, stableBodyColor(1));
+  first.material.dispose = () => { replacementDisposals += 1; };
+  second.material.dispose = () => { replacementDisposals += 1; };
+
+  const viewer = createModelViewer({ adapter: createAdapter() });
+  viewer.addPart('aggregate-fallback', root);
+  viewer.remove('aggregate-fallback');
+  assert.equal(originalDisposals, 1);
+  assert.equal(replacementDisposals, 2);
+  assert.equal(textureDisposals, 1);
+});
+
 test('shared original materials and textures remain owned and dispose exactly once', () => {
   let materialDisposals = 0;
   let textureDisposals = 0;
@@ -321,4 +359,22 @@ function singleTriangleGeometry(offset) {
     offset, 0, 0, offset + 1, 0, 0, offset, 1, 0,
   ], 3));
   return geometry;
+}
+
+function fakeLargeMesh(triangleCount, onVertexRead, material = new MeshStandardMaterial()) {
+  const position = {
+    count: triangleCount * 3,
+    getX() { onVertexRead(); throw new Error('aggregate topology walk exceeded cap'); },
+    getY() { onVertexRead(); throw new Error('aggregate topology walk exceeded cap'); },
+    getZ() { onVertexRead(); throw new Error('aggregate topology walk exceeded cap'); },
+  };
+  return {
+    isMesh: true,
+    material,
+    geometry: {
+      getAttribute: name => name === 'position' ? position : null,
+      getIndex: () => null,
+      dispose() {},
+    },
+  };
 }
