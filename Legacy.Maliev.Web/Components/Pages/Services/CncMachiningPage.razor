@@ -32,9 +32,9 @@
 <CncMachiningContent RouteOwner="blazor-static-ssr" />
 
 @code {
-    private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+    private static bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
-    private string CreateFaqJson()
+    public static string CreateFaqJson()
     {
         var schema = new Dictionary<string, object>
         {
@@ -45,18 +45,38 @@
                 CreateQuestion(
                     T("Can you machine only one piece?", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?"),
                     T(
-                        "Yes. MALIEV accepts feasible one-off CNC parts. Setup and programming are distributed across quantity, so unit price often improves with repeat quantities.",
-                        "รับงาน CNC ชิ้นเดียวเมื่อผลิตได้จริง โดยค่าเตรียมเครื่องและเขียนโปรแกรมเฉลี่ยตามจำนวน ทำให้ราคาต่อชิ้นมักดีขึ้นเมื่อผลิตหลายชิ้น")),
+                        "Yes. We accept one-off parts when the geometry, material, and project scope are feasible. Setup and programming are distributed across the quantity, so unit price usually improves with repeat quantities.",
+                        "รับงานชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง ค่าเตรียมเครื่องและเขียนโปรแกรมจะเฉลี่ยตามจำนวน ดังนั้นราคาต่อชิ้นมักลดลงเมื่อผลิตหลายชิ้น")),
                 CreateQuestion(
                     T("How much does CNC machining cost?", "งาน CNC ราคาเท่าไร?"),
                     T(
-                        "Cost depends on material, part size, machining time, setups, tooling, tolerances, finish, inspection, and quantity. Send CAD and a drawing for a quotation.",
-                        "ราคาขึ้นกับวัสดุ ขนาด เวลาเครื่อง การจับยึด เครื่องมือ ค่าคลาดเคลื่อน ผิว การตรวจสอบ และจำนวน ควรส่ง CAD และแบบงานเพื่อเสนอราคา")),
+                        "CNC machining starts at THB 2,500. The final price depends on material and stock, part size, machining time, number of setups, tooling, tolerances, finish, inspection, and quantity. Send CAD and a drawing for an accurate quotation.",
+                        "งาน CNC เริ่มต้น 2,500 บาท ราคาสุดท้ายขึ้นกับวัสดุและสต็อก ขนาดชิ้นงาน เวลาเครื่อง จำนวนครั้งจับยึด เครื่องมือ ค่าคลาดเคลื่อน ผิว การตรวจสอบ และจำนวน ควรส่ง CAD และแบบงานเพื่อประเมินราคาอย่างแม่นยำ")),
                 CreateQuestion(
-                    T("What files should I send for CNC machining?", "ควรส่งไฟล์อะไรสำหรับงาน CNC?"),
+                    T("What is the usual CNC machining lead time?", "งาน CNC ใช้เวลาผลิตเท่าไร?"),
                     T(
-                        "Send a usable solid CAD file such as STEP for geometry and a PDF drawing for critical dimensions, tolerances, threads, fits, finish, and inspection notes.",
-                        "ส่งไฟล์ solid CAD เช่น STEP สำหรับรูปทรง และแบบ PDF ระบุขนาดสำคัญ ค่าคลาดเคลื่อน เกลียว ฟิต ผิว และจุดตรวจสอบ"))
+                        "Lead time usually starts at about 14 days. The schedule includes material sourcing, CAM preparation and programming, machine setup and loading, machining, and final inspection—not only the time when material is being cut.",
+                        "ระยะเวลาผลิตโดยทั่วไปเริ่มต้นประมาณ 14 วัน เพราะรวมการจัดหาวัสดุ การเตรียม CAM และเขียนโปรแกรม การตั้งเครื่องและโหลดวัสดุ การผลิต และการตรวจสอบขั้นสุดท้าย ไม่ได้มีเฉพาะเวลาที่เครื่องกำลังตัดชิ้นงาน")),
+                CreateQuestion(
+                    T("Are rush CNC orders available?", "มีบริการเร่งด่วนสำหรับงาน CNC หรือไม่?"),
+                    T(
+                        "Rush orders may be possible when machine capacity, material availability, tooling, geometry, and inspection requirements allow. An additional markup applies because the job must be prioritized and the production plan adjusted. Ask us to confirm feasibility before relying on a rush date.",
+                        "อาจรับงานเร่งด่วนได้เมื่อกำลังการผลิต วัสดุ เครื่องมือ รูปทรง และข้อกำหนดการตรวจสอบเอื้ออำนวย โดยมีค่าบริการเพิ่มเนื่องจากต้องจัดลำดับงานและปรับแผนการผลิต กรุณาให้เรายืนยันก่อนวางแผนตามกำหนดเร่งด่วน")),
+                CreateQuestion(
+                    T("What file formats should I send?", "ควรส่งไฟล์อะไร?"),
+                    T(
+                        "A STEP or other usable solid CAD file is preferred for geometry, together with a PDF drawing for critical manufacturing requirements. Contact us if only a sample or legacy drawing is available.",
+                        "แนะนำไฟล์ STEP หรือไฟล์ solid CAD พร้อมแบบ PDF ระบุข้อกำหนดสำคัญ หากมีเพียงตัวอย่างหรือแบบเก่า โปรดปรึกษาเรา")),
+                CreateQuestion(
+                    T("Can you copy an existing part?", "สามารถลอกแบบชิ้นส่วนเดิมได้หรือไม่?"),
+                    T(
+                        "Often yes, but the correct route may include measurement or 3D scanning, reverse engineering, material identification, and a review of wear or damage. The original design intent cannot always be recovered from a worn sample.",
+                        "หลายกรณีทำได้ แต่อาจต้องวัดหรือสแกน 3D ทำ Reverse Engineering ตรวจชนิดวัสดุ และประเมินการสึกหรอ ไม่สามารถกู้เจตนาการออกแบบเดิมทั้งหมดจากชิ้นงานที่สึกได้เสมอ")),
+                CreateQuestion(
+                    T("Do you guarantee the same tolerance for every feature?", "ทุกฟีเจอร์ใช้ค่าคลาดเคลื่อนเดียวกันหรือไม่?"),
+                    T(
+                        "No. Achievable tolerance depends on geometry, size, material, setup, process, and inspection method. Critical tolerances must be identified and agreed before production.",
+                        "ไม่ใช่ ค่าที่ทำได้ขึ้นกับรูปทรง ขนาด วัสดุ การจับยึด กระบวนการ และวิธีตรวจ ต้องระบุและตกลงจุดสำคัญก่อนผลิต"))
             }
         };
 
@@ -74,5 +94,5 @@
         }
     };
 
-    private string T(string english, string thai) => IsThai ? thai : english;
+    private static string T(string english, string thai) => IsThai ? thai : english;
 }

@@ -8,14 +8,7 @@
     ViewData["Title"] = T("3D Scanning, Reverse Engineering & Deviation Analysis | Onsite Thailand", "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่");
     ViewData["Description"] = T("In-house and onsite 3D scanning in Thailand. Understand raw meshes, reverse-engineered CAD, deviation analysis, preparation, limitations, and deliverable files.", "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน");
     ViewData["Keywords"] = T("3D scanning service Thailand, onsite 3D scanning, reverse engineering Thailand, deviation analysis, 3D scan price", "รับสแกน 3D, สแกน 3D ราคา, สแกน 3D นอกสถานที่, Reverse Engineering, Deviation Analysis");
-    var faqSchema = new Dictionary<string, object> {
-        ["@context"] = "https://schema.org", ["@type"] = "FAQPage",
-        ["mainEntity"] = new object[] {
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("How much does 3D scanning cost?", "สแกน 3D ราคาเท่าไร?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Cost depends on object size and complexity, preparation, scan positions, site access, travel, cleanup, alignment, and whether the deliverable is a mesh, reverse-engineered CAD, or deviation report.", "ราคาขึ้นกับขนาดและความซับซ้อน การเตรียม จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเดินทาง การเก็บเมช การจัดแนว และผลลัพธ์ว่าเป็นเมช CAD หรือรายงาน") } },
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("Can every object be scanned?", "ทุกวัตถุสแกนได้หรือไม่?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("No. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, another method, partial results, or may not be feasible.", "ไม่ได้ทุกวัตถุ วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ใช้วิธีอื่น ได้ข้อมูลบางส่วน หรือทำไม่ได้") } },
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("Can MALIEV scan at our factory or site?", "MALIEV ไปสแกนที่โรงงานหรือหน้างานได้หรือไม่?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Yes. Onsite scanning is available when access, safety, environment, working space, schedule, and required deliverables are agreed.", "ได้ มีบริการสแกนนอกสถานที่เมื่อประเมินการเข้าถึง ความปลอดภัย สภาพแวดล้อม พื้นที่ ตาราง และผลลัพธ์แล้ว") } }
-        }
-    };
+    var faqJson = ThreeDimensionalScanningPage.CreateFaqJson();
 }
 
 @section Head {
@@ -24,4 +17,4 @@
 
 <component type="typeof(ThreeDimensionalScanningContent)" render-mode="Static" />
 
-@section Schema { <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Scanning"))" /><script type="application/ld+json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(faqSchema))</script> }
+@section Schema { <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Scanning"))" /><script type="application/ld+json">@Html.Raw(faqJson)</script> }

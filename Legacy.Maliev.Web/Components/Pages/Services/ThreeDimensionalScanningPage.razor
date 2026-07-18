@@ -32,9 +32,9 @@
 <ThreeDimensionalScanningContent RouteOwner="blazor-static-ssr" />
 
 @code {
-    private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+    private static bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
-    private string CreateFaqJson()
+    public static string CreateFaqJson()
     {
         var schema = new Dictionary<string, object>
         {
@@ -45,18 +45,63 @@
                 CreateQuestion(
                     T("How much does 3D scanning cost?", "สแกน 3D ราคาเท่าไร?"),
                     T(
-                        "Cost depends on object size and complexity, preparation, scan positions, site access, travel, cleanup, alignment, and whether the deliverable is a mesh, reverse-engineered CAD, or deviation report.",
-                        "ราคาขึ้นกับขนาดและความซับซ้อน การเตรียม จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเดินทาง การเก็บเมช การจัดแนว และผลลัพธ์ว่าเป็นเมช CAD หรือรายงาน")),
+                        "Raw 3D scanning with STL output starts at THB 2,500. Reverse-engineering output starts at THB 4,500. A deviation-analysis report adds THB 1,000. The final quotation depends on size, complexity, preparation, scan positions, site access, cleanup, alignment, and required deliverables.",
+                        "งานสแกน 3D พร้อมไฟล์ STL ดิบเริ่มต้น 2,500 บาท งาน Reverse Engineering เริ่มต้น 4,500 บาท และรายงาน Deviation Analysis เพิ่ม 1,000 บาท ราคาสุดท้ายขึ้นกับขนาด ความซับซ้อน การเตรียมผิว จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเก็บข้อมูล การจัดแนว และผลส่งมอบ")),
+                CreateQuestion(
+                    T("How long does 3D scanning take?", "งานสแกน 3D ใช้เวลานานเท่าไร?"),
+                    T(
+                        "Simple scanning work can be completed within the same day. Lead time increases with part complexity, surface preparation, the number of scan positions, mesh cleanup, reverse engineering, inspection, and reporting requirements.",
+                        "งานสแกนที่ไม่ซับซ้อนอาจเสร็จภายในวันเดียว ระยะเวลาจะเพิ่มตามความซับซ้อนของชิ้นงาน การเตรียมผิว จำนวนตำแหน่งสแกน การเก็บเมช งาน Reverse Engineering การตรวจสอบ และรูปแบบรายงาน")),
+                CreateQuestion(
+                    T("Which part should I bring for scanning, and can broken parts be repaired digitally?", "ควรนำชิ้นงานสภาพใดมาสแกน และซ่อมชิ้นงานที่แตกในโมเดลได้หรือไม่?"),
+                    T(
+                        "Bring the example in the best available condition because the scan captures the geometry that is physically present. Broken parts can still be scanned, and missing or damaged areas can often be reconstructed or modified in the 3D model when sufficient reference geometry and design intent are available.",
+                        "ควรนำชิ้นงานที่มีสภาพดีที่สุดเท่าที่มี เพราะการสแกนจะเก็บรูปทรงที่มีอยู่จริง ชิ้นงานแตกยังสามารถสแกนได้ และมักสร้างหรือแก้ไขส่วนที่หายหรือเสียหายในโมเดล 3D ได้เมื่อมีรูปทรงอ้างอิงและข้อมูลเจตนาการออกแบบเพียงพอ")),
+                CreateQuestion(
+                    T("What sizes and subjects can you scan?", "สแกนวัตถุขนาดและประเภทใดได้บ้าง?"),
+                    T(
+                        "Our optical scanners can capture subjects ranging from small gears to a 6-metre private aircraft when access and conditions are suitable. Sculptures, art pieces, and a stationary human can also be scanned. Scope, achievable detail, setup, and deliverables are assessed for each subject.",
+                        "เครื่องสแกนแบบออปติคัลของเรารองรับตั้งแต่เฟืองขนาดเล็กไปจนถึงเครื่องบินส่วนตัวขนาด 6 เมตรเมื่อพื้นที่และสภาพแวดล้อมเหมาะสม ประติมากรรม งานศิลปะ และบุคคลที่อยู่นิ่งก็สามารถสแกนได้ โดยจะประเมินขอบเขต รายละเอียดที่ทำได้ การตั้งเครื่อง และผลส่งมอบเป็นรายกรณี")),
+                CreateQuestion(
+                    T("Which scan files can you deliver?", "ส่งมอบไฟล์สแกนรูปแบบใดได้บ้าง?"),
+                    T(
+                        "Raw geometry is commonly delivered as STL. We can also provide OBJ with captured colour when the project and capture method support colour data. Reverse-engineering projects can add editable CAD deliverables such as STEP or IGES as agreed.",
+                        "ข้อมูลรูปทรงดิบโดยทั่วไปส่งเป็น STL และสามารถส่ง OBJ พร้อมสีได้เมื่อโครงการและวิธีเก็บข้อมูลรองรับสี งาน Reverse Engineering สามารถเพิ่มไฟล์ CAD ที่แก้ไขได้ เช่น STEP หรือ IGES ตามขอบเขตที่ตกลง")),
+                CreateQuestion(
+                    T("What is the scanner's volumetric accuracy?", "ความแม่นยำเชิงปริมาตรของเครื่องสแกนเท่าไร?"),
+                    T(
+                        "The scanner's volumetric accuracy specification is 0.02 mm + 0.06 mm/m. Actual project results also depend on object size and surface, preparation, access, environment, scanner setup, alignment strategy, and the requested deliverable.",
+                        "ข้อกำหนดความแม่นยำเชิงปริมาตรของเครื่องสแกนคือ 0.02 มม. + 0.06 มม./ม. ผลลัพธ์จริงของแต่ละโครงการยังขึ้นกับขนาดและผิวชิ้นงาน การเตรียม การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลส่งมอบที่ต้องการ")),
+                CreateQuestion(
+                    T("Can you scan outdoors, buildings, or factories?", "สแกนกลางแจ้ง อาคาร หรือโรงงานได้หรือไม่?"),
+                    T(
+                        "We cannot perform optical 3D scanning outdoors under direct sunlight because sunlight overwhelms the projected light used by this scanning technology. We also do not offer whole-building or whole-factory scanning because we do not have a LiDAR 3D scanner. Onsite scanning of suitable parts and equipment remains available in controlled lighting.",
+                        "เราไม่สามารถสแกน 3D แบบออปติคัลกลางแจ้งภายใต้แสงแดดโดยตรงได้ เพราะแสงแดดรบกวนแสงที่เครื่องฉายซึ่งเป็นข้อจำกัดของเทคโนโลยีนี้ และไม่รับสแกนอาคารหรือโรงงานทั้งพื้นที่เนื่องจากเราไม่มีเครื่องสแกน 3D แบบ LiDAR แต่ยังให้บริการสแกนชิ้นส่วนและอุปกรณ์นอกสถานที่ได้เมื่อควบคุมแสงอย่างเหมาะสม")),
                 CreateQuestion(
                     T("Can every object be scanned?", "ทุกวัตถุสแกนได้หรือไม่?"),
                     T(
-                        "No. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, another method, partial results, or may not be feasible.",
-                        "ไม่ได้ทุกวัตถุ วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ใช้วิธีอื่น ได้ข้อมูลบางส่วน หรือทำไม่ได้")),
+                        "No. The scanner needs line of sight and a stable optical response. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, partial results, another method, or may not be feasible.",
+                        "ไม่ได้ทุกวัตถุ เครื่องต้องมองเห็นผิวและรับแสงที่เสถียร วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ได้ข้อมูลบางส่วน ใช้วิธีอื่น หรือทำไม่ได้")),
                 CreateQuestion(
-                    T("Can MALIEV scan at our factory or site?", "MALIEV ไปสแกนที่โรงงานหรือหน้างานได้หรือไม่?"),
+                    T("Is an STL file editable CAD?", "ไฟล์ STL เป็น CAD ที่แก้ไขได้หรือไม่?"),
                     T(
-                        "Yes. Onsite scanning is available when access, safety, environment, working space, schedule, and required deliverables are agreed.",
-                        "ได้ มีบริการสแกนนอกสถานที่เมื่อประเมินการเข้าถึง ความปลอดภัย สภาพแวดล้อม พื้นที่ ตาราง และผลลัพธ์แล้ว"))
+                        "An STL is normally a triangular surface mesh. It can be measured and edited with mesh tools, but it does not contain the parametric features, sketches, dimensions, and design intent of a native CAD model. Reverse engineering adds that reconstruction work.",
+                        "STL เป็นผิวสามเหลี่ยม สามารถวัดและแก้ด้วยเครื่องมือเมช แต่ไม่มีฟีเจอร์พาราเมตริก สเก็ตช์ ขนาด และเจตนาการออกแบบแบบ CAD งาน Reverse Engineering คือการสร้างข้อมูลเหล่านี้ใหม่")),
+                CreateQuestion(
+                    T("Does reverse engineering recover the original CAD exactly?", "Reverse Engineering กู้ CAD ต้นฉบับได้เหมือนเดิมหรือไม่?"),
+                    T(
+                        "No. It reconstructs an engineering model from visible, measurable geometry and agreed design assumptions. Wear, damage, inaccessible areas, deformation, casting variation, and unknown original intent require judgment and may not reproduce original feature history.",
+                        "ไม่ใช่ เป็นการสร้างโมเดลวิศวกรรมจากรูปทรงที่มองเห็นและวัดได้ร่วมกับสมมติฐานที่ตกลง การสึก ความเสียหาย จุดที่เข้าไม่ถึง การเสียรูป ความแปรปรวนงานหล่อ และเจตนาเดิมที่ไม่ทราบต้องใช้วิจารณญาณ")),
+                CreateQuestion(
+                    T("What is needed for deviation analysis?", "Deviation Analysis ต้องใช้อะไร?"),
+                    T(
+                        "Usually the physical part, usable nominal CAD, a defined alignment method, critical regions, reporting needs, and an agreed interpretation of color limits. The result shows differences relative to that alignment; it is not automatically certified dimensional inspection.",
+                        "โดยทั่วไปต้องมีชิ้นงาน CAD ต้นแบบ วิธีจัดแนว จุดสำคัญ รูปแบบรายงาน และช่วงสีที่ตกลง ผลแสดงความต่างตามการจัดแนวนั้น ไม่ได้เป็นการตรวจมิติรับรองโดยอัตโนมัติ")),
+                CreateQuestion(
+                    T("Can you scan at our factory or site?", "ไปสแกนที่โรงงานหรือหน้างานได้หรือไม่?"),
+                    T(
+                        "Yes. We provide onsite scanning when feasibility, access, safety, environment, working space, and schedule are agreed. Send photos, approximate dimensions, location, restrictions, and required deliverables for planning.",
+                        "ได้ เรามีบริการนอกสถานที่เมื่อประเมินความเป็นไปได้ การเข้าถึง ความปลอดภัย สภาพแวดล้อม พื้นที่ และตารางแล้ว กรุณาส่งรูป ขนาดโดยประมาณ สถานที่ ข้อจำกัด และผลลัพธ์ที่ต้องการ"))
             }
         };
 
@@ -74,5 +119,5 @@
         }
     };
 
-    private string T(string english, string thai) => IsThai ? thai : english;
+    private static string T(string english, string thai) => IsThai ? thai : english;
 }

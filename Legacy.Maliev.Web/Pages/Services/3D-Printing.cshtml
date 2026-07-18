@@ -8,14 +8,7 @@
     ViewData["Title"] = T("3D Printing Services Bangkok & Nonthaburi | Instant Online Quote", "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี | ประเมินราคาออนไลน์");
     ViewData["Description"] = T("Order FDM and resin 3D printed parts in engineering materials. Compare material uses, prepare files, and upload CAD for instant 3D printing pricing.", "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซินสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์");
     ViewData["Keywords"] = T("3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing", "รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิน");
-    var faqSchema = new Dictionary<string, object> {
-        ["@context"] = "https://schema.org", ["@type"] = "FAQPage",
-        ["mainEntity"] = new object[] {
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("How much does 3D printing cost?", "พิมพ์ 3D ราคาเท่าไร?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Cost depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the model to MALIEV Instant Quotation for an estimate.", "ราคาขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน อัปโหลดโมเดลในหน้าประเมินราคา MALIEV เพื่อรับราคา") } },
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("Can you print only one part?", "รับพิมพ์เพียง 1 ชิ้นหรือไม่?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Yes. MALIEV has no minimum quantity for 3D printing.", "รับพิมพ์ตั้งแต่ 1 ชิ้น ไม่มีจำนวนขั้นต่ำ") } },
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("Which 3D printing material is strongest?", "วัสดุพิมพ์ 3D ใดแข็งแรงที่สุด?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("There is no single strongest material for every condition. Consider stiffness, impact, fatigue, heat, chemicals, moisture, UV, layer direction, and the required failure mode.", "ไม่มีวัสดุเดียวที่แข็งแรงที่สุดทุกสภาพ ต้องพิจารณาความแข็ง แรงกระแทก ความล้า ความร้อน สารเคมี ความชื้น UV ทิศทางชั้น และลักษณะการเสียหาย") } }
-        }
-    };
+    var faqJson = ThreeDimensionalPrintingPage.CreateFaqJson();
 }
 
 @section Head {
@@ -24,4 +17,4 @@
 
 <component type="typeof(ThreeDimensionalPrintingContent)" render-mode="Static" />
 
-@section Schema { <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Printing"))" /><script type="application/ld+json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(faqSchema))</script> }
+@section Schema { <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Printing"))" /><script type="application/ld+json">@Html.Raw(faqJson)</script> }

@@ -32,9 +32,9 @@
 <ThreeDimensionalPrintingContent RouteOwner="blazor-static-ssr" />
 
 @code {
-    private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+    private static bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
 
-    private string CreateFaqJson()
+    public static string CreateFaqJson()
     {
         var schema = new Dictionary<string, object>
         {
@@ -45,18 +45,38 @@
                 CreateQuestion(
                     T("How much does 3D printing cost?", "พิมพ์ 3D ราคาเท่าไร?"),
                     T(
-                        "Cost depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the model to MALIEV Instant Quotation for an estimate.",
-                        "ราคาขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน อัปโหลดโมเดลในหน้าประเมินราคา MALIEV เพื่อรับราคา")),
+                        "FDM printing starts at THB 100, while resin printing starts at THB 500. The final price depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the actual model to Instant Quotation for an estimate.",
+                        "งานพิมพ์ FDM เริ่มต้น 100 บาท ส่วนงานเรซินเริ่มต้น 500 บาท ราคาสุดท้ายขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน สามารถอัปโหลดโมเดลจริงในหน้าประเมินราคาทันที")),
+                CreateQuestion(
+                    T("Do you support MJF, SLS, SLM, and DMLS?", "รองรับ MJF, SLS, SLM และ DMLS หรือไม่?"),
+                    T(
+                        "Yes, but these processes require a manual quotation. MJF and SLS suit high-quality, durable, and production-volume polymer parts, so their process and batch costs differ significantly from desktop FDM. SLM and DMLS produce metal parts in materials such as aluminium, tool steel, and stainless steel; available alloys and feasibility are confirmed per project.",
+                        "รองรับ แต่ต้องประเมินราคาด้วยเจ้าหน้าที่ MJF และ SLS เหมาะกับชิ้นส่วนพอลิเมอร์คุณภาพสูง ทนทาน และงานระดับการผลิต ต้นทุนกระบวนการและการจัดแบตช์จึงต่างจาก FDM แบบตั้งโต๊ะอย่างมาก ส่วน SLM และ DMLS ใช้ผลิตชิ้นส่วนโลหะ เช่น อะลูมิเนียม เหล็กเครื่องมือ และสเตนเลส โดยต้องยืนยันเกรดวัสดุและความเป็นไปได้เป็นรายโครงการ")),
+                CreateQuestion(
+                    T("How long does 3D printing take?", "งานพิมพ์ 3D ใช้เวลากี่วัน?"),
+                    T(
+                        "FDM lead time usually starts at 1 day, and resin usually starts at 7 days. MJF, SLS, SLM, and DMLS typically require around 14 days. Geometry, material availability, finishing, quantity, quality checks, and production queue can extend these estimates.",
+                        "ระยะเวลางาน FDM โดยทั่วไปเริ่มต้น 1 วัน และงานเรซินเริ่มต้น 7 วัน ส่วน MJF, SLS, SLM และ DMLS โดยทั่วไปประมาณ 14 วัน รูปทรง วัสดุ การเก็บผิว จำนวน การตรวจคุณภาพ และคิวผลิตอาจทำให้ระยะเวลาเพิ่มขึ้น")),
+                CreateQuestion(
+                    T("Which material is strongest?", "วัสดุใดแข็งแรงที่สุด?"),
+                    T(
+                        "There is no single strongest choice for every condition. Stiffness, impact, fatigue, heat, chemicals, moisture, UV, layer direction, and failure mode matter. Describe the application so we can narrow the options.",
+                        "ไม่มีวัสดุเดียวที่แข็งแรงที่สุดทุกสภาพ ต้องพิจารณาความแข็ง แรงกระแทก ความล้า ความร้อน สารเคมี ความชื้น UV ทิศทางชั้น และลักษณะการเสียหาย")),
                 CreateQuestion(
                     T("Can you print only one part?", "รับพิมพ์เพียง 1 ชิ้นหรือไม่?"),
                     T(
-                        "Yes. MALIEV has no minimum quantity for 3D printing.",
-                        "รับพิมพ์ตั้งแต่ 1 ชิ้น ไม่มีจำนวนขั้นต่ำ")),
+                        "Yes. There is no minimum quantity. Multiple identical parts may use the machine more efficiently, which can improve unit price depending on geometry and process.",
+                        "รับพิมพ์ตั้งแต่ 1 ชิ้น ไม่มีจำนวนขั้นต่ำ ชิ้นงานเหมือนกันหลายชิ้นอาจจัดพื้นที่เครื่องได้คุ้มขึ้นและลดราคาต่อชิ้นตามรูปทรงและกระบวนการ")),
                 CreateQuestion(
-                    T("Which 3D printing material is strongest?", "วัสดุพิมพ์ 3D ใดแข็งแรงที่สุด?"),
+                    T("Why does orientation matter?", "ทำไมทิศทางการพิมพ์จึงสำคัญ?"),
                     T(
-                        "There is no single strongest material for every condition. Consider stiffness, impact, fatigue, heat, chemicals, moisture, UV, layer direction, and the required failure mode.",
-                        "ไม่มีวัสดุเดียวที่แข็งแรงที่สุดทุกสภาพ ต้องพิจารณาความแข็ง แรงกระแทก ความล้า ความร้อน สารเคมี ความชื้น UV ทิศทางชั้น และลักษณะการเสียหาย"))
+                        "Orientation affects layer-direction strength, support, visible surface quality, dimensional behavior, build time, and risk. The visually best orientation is not always the mechanically best one.",
+                        "ทิศทางมีผลต่อความแข็งแรงตามชั้น ซัพพอร์ต คุณภาพผิว พฤติกรรมขนาด เวลา และความเสี่ยง ทิศทางที่สวยที่สุดอาจไม่แข็งแรงที่สุด")),
+                CreateQuestion(
+                    T("Can a 3D print replace an injection-molded or machined part?", "ชิ้นงานพิมพ์แทนงานฉีดหรือ CNC ได้หรือไม่?"),
+                    T(
+                        "Sometimes, especially for prototypes, low quantity, custom geometry, and fixtures. Long-term loads, heat, chemicals, finish, tolerances, certification, and production volume may make another process more suitable.",
+                        "บางกรณีได้ โดยเฉพาะต้นแบบ จำนวนน้อย รูปทรงเฉพาะ และฟิกซ์เจอร์ แต่แรงระยะยาว ความร้อน สารเคมี ผิว ค่าคลาดเคลื่อน การรับรอง และจำนวนอาจเหมาะกับกระบวนการอื่น"))
             }
         };
 
@@ -74,5 +94,5 @@
         }
     };
 
-    private string T(string english, string thai) => IsThai ? thai : english;
+    private static string T(string english, string thai) => IsThai ? thai : english;
 }
