@@ -28,6 +28,7 @@ var useBlazorSignupRoute = builder.Configuration.GetValue("BlazorRouting:Signup"
 var useBlazorForgotPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ForgotPassword", true);
 var useBlazorResetPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ResetPassword", true);
 var useBlazorLogoutRoute = builder.Configuration.GetValue("BlazorRouting:Logout", true);
+var useBlazorEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:EmailConfirmation", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -53,6 +54,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorForgotPasswordRoute
     && useBlazorResetPasswordRoute
     && useBlazorLogoutRoute
+    && useBlazorEmailConfirmationRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -163,6 +165,9 @@ builder.Services.AddRazorPages(options =>
                     selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
                 }
             });
+        options.Conventions.AddPageRouteModelConvention(
+            "/Account/EmailConfirmation",
+            model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
             model => model.Selectors.Clear());

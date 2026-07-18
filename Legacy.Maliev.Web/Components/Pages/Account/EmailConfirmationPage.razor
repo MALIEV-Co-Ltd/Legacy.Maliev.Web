@@ -1,0 +1,56 @@
+@page "/Account/EmailConfirmation"
+@using Legacy.Maliev.Web.Application
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using Microsoft.AspNetCore.RateLimiting
+@using Microsoft.AspNetCore.WebUtilities
+@attribute [EnableRateLimiting("account")]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ICustomerAuthenticationClient AuthenticationClient
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IStringLocalizer<EmailConfirmationContent> Localizer
+
+@if (showInvalidResult)
+{
+    <PageTitle>@Localizer["Email Confirmation | MALIEV"]</PageTitle>
+    <HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+    <div data-migration-route-owner="blazor-static-ssr">
+        <EmailConfirmationContent Model="invalidModel" />
+    </div>
+}
+
+@code {
+    private static readonly EmailConfirmationDisplayModel invalidModel = new(
+        ["The confirmation link is invalid or expired."]);
+    private bool showInvalidResult;
+
+    [SupplyParameterFromQuery(Name = "email")]
+    public string? Email { get; set; }
+
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Token))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
+        if (await AuthenticationClient.CompleteEmailConfirmationAsync(
+            Email,
+            Token,
+            context.RequestAborted))
+        {
+            TempDataDictionaryFactory.GetTempData(context)["Notification"] = "Email confirmed. You can now sign in.";
+            context.Response.Redirect(QueryHelpers.AddQueryString("/Account/Login", "email", Email));
+            return;
+        }
+
+        showInvalidResult = true;
+    }
+}
