@@ -42,6 +42,8 @@ jobs:
         run: npm run ci
       - name: Verify committed browser assets
         run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
+      - name: Validate Instant Quotation parity harness
+        run: node --test tests/instant-quotation/*.test.mjs
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@6017816fa67f369d785ed30794f002cfd6299af7
         with:
