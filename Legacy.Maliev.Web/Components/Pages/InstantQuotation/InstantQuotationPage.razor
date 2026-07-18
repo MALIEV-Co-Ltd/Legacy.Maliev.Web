@@ -1,0 +1,20 @@
+@page "/InstantQuotation/3D-Printing"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = Localizer["Instant 3D Printing Estimate"];
+    var description = Localizer["Estimate 3D printing price and production time with MALIEV's deterministic pricing calculator."];
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <ThreeDimensionalPrintingEstimateContent Model="@InstantQuotationCalculator.CreateDisplayModel()" />
+</div>

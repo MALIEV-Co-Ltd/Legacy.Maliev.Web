@@ -99,11 +99,19 @@ public sealed class InstantQuotationPageTests
             "app",
             "js",
             "instant-quotation-controller.mjs");
+        var calculator = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "InstantQuotationCalculator.cs");
         var source = string.Join(
             '\n',
             File.ReadAllText(page),
             File.ReadAllText(model),
             File.ReadAllText(component),
+            File.ReadAllText(calculator),
             File.ReadAllText(browserModule),
             File.ReadAllText(controllerModule));
         Assert.Contains("@page", source, StringComparison.Ordinal);
@@ -127,7 +135,13 @@ public sealed class InstantQuotationPageTests
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
-        var page = File.ReadAllText(Path.Combine(web, "Pages", "InstantQuotation", "3D-Printing.cshtml"));
+        var fallback = File.ReadAllText(Path.Combine(web, "Pages", "InstantQuotation", "3D-Printing.cshtml"));
+        var page = File.ReadAllText(Path.Combine(
+            web,
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "InstantQuotationPage.razor"));
         var component = File.ReadAllText(Path.Combine(
             web,
             "Components",
@@ -136,10 +150,11 @@ public sealed class InstantQuotationPageTests
             "ThreeDimensionalPrintingEstimateContent.razor"));
         var model = File.ReadAllText(Path.Combine(web, "Pages", "InstantQuotation", "3D-Printing.cshtml.cs"));
 
+        Assert.Contains("@page \"/InstantQuotation/3D-Printing\"", page, StringComparison.Ordinal);
         Assert.Contains("IStringLocalizer<ThreeDimensionalPrintingEstimateContent>", page, StringComparison.Ordinal);
-        Assert.Contains("type=\"typeof(ThreeDimensionalPrintingEstimateContent)\"", page, StringComparison.Ordinal);
-        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
-        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", page, StringComparison.Ordinal);
+        Assert.Contains("<ThreeDimensionalPrintingEstimateContent", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ThreeDimensionalPrintingEstimateContent)\"", fallback, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"instant-quote\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<style>", page, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<script>", page, StringComparison.OrdinalIgnoreCase);
@@ -149,7 +164,7 @@ public sealed class InstantQuotationPageTests
         Assert.Contains("IStringLocalizer<ThreeDimensionalPrintingEstimateContent>", component, StringComparison.Ordinal);
         Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
         Assert.DoesNotContain("asp-page", component, StringComparison.Ordinal);
-        Assert.Contains("InstantQuotationDisplayModel DisplayModel", model, StringComparison.Ordinal);
+        Assert.Contains("InstantQuotationCalculator.CreateDisplayModel", model, StringComparison.Ordinal);
 
         Assert.True(File.Exists(Path.Combine(
             web,
