@@ -32,7 +32,8 @@
                   method="post"
                   class="maliev-form"
                   data-recaptcha-enterprise-form
-                  data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey">
+                  data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey"
+                  data-recaptcha-action="account_signup">
                 @if (tokens is not null)
                 {
                     <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />

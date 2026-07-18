@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="@Model.RecaptchaToken" />
+    <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="@Model.RecaptchaToken" data-recaptcha-response />
     <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
         @Localizer["Submit enquiry"]
     </button>

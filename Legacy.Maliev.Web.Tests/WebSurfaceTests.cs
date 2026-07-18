@@ -2739,6 +2739,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"contact-hero-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"contact-details-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);

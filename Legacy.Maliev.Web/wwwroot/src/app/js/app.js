@@ -58,7 +58,7 @@ function initializeApplication() {
             window.grecaptcha.enterprise.ready(function () {
                 window.grecaptcha.enterprise.execute(
                     form.dataset.recaptchaSiteKey,
-                    { action: 'account_signup' }).then(function (token) {
+                    { action: form.dataset.recaptchaAction }).then(function (token) {
                         responseInput.value = token;
                         form.dataset.recaptchaVerified = 'true';
                         form.submit();

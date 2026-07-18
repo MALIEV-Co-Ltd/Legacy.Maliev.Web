@@ -115,7 +115,7 @@ test('enterprise recaptcha form obtains a token before native submission', async
     const tokenInput = { value: '' };
     let nativeSubmissions = 0;
     const form = {
-        dataset: { recaptchaSiteKey: 'site-key' },
+        dataset: { recaptchaSiteKey: 'site-key', recaptchaAction: 'contact_submit' },
         querySelector: selector => selector === '[data-recaptcha-response]' ? tokenInput : null,
         addEventListener: (event, handler) => listeners.set(event, handler),
         submit: () => { nativeSubmissions += 1; },
@@ -129,7 +129,7 @@ test('enterprise recaptcha form obtains a token before native submission', async
                 ready: callback => callback(),
                 execute: async (siteKey, options) => {
                     assert.equal(siteKey, 'site-key');
-                    assert.equal(options.action, 'account_signup');
+                    assert.equal(options.action, 'contact_submit');
                     return 'browser-token';
                 },
             },
