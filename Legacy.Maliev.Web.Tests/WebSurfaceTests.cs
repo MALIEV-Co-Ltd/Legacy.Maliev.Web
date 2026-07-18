@@ -2671,6 +2671,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"forgot-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
