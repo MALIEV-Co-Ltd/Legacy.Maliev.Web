@@ -8,6 +8,7 @@
     <h2 id="instant-quote-workflow-heading">@Localizer["Instant Pricing"]</h2>
 
     <p id="instant-quote-status" aria-live="polite" aria-atomic="true">@StatusMessage</p>
+    <p @ref="previewStatus" data-workflow-preview-status role="status" aria-live="polite">@PreviewStatusMessage</p>
 
     @if (VisibleSections.Upload)
     {
@@ -16,6 +17,7 @@
             <p>@Localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."]</p>
             <label for="instant-quote-files">@Localizer["Add file"]</label>
             <InputFile id="instant-quote-files"
+                       @ref="fileInput"
                        name="files"
                        OnChange="UploadFilesAsync"
                        multiple
@@ -52,9 +54,14 @@
     {
         <section data-workflow-viewer aria-labelledby="instant-quote-viewer-heading">
             <h3 id="instant-quote-viewer-heading">@Localizer["3D preview"]</h3>
-            <p>@Localizer["The uploaded part preview will appear here."]</p>
-            <button type="button" disabled>@Localizer["Reset view"]</button>
-            <button type="button" disabled>@Localizer["Fit to view"]</button>
+            <p id="instant-quote-preview-help">@Localizer["The uploaded part preview will appear here."]</p>
+            <canvas @ref="previewCanvas"
+                    tabindex="0"
+                    aria-label="@Localizer["Interactive 3D part preview"]"
+                    aria-describedby="instant-quote-preview-help"></canvas>
+            <button type="button" @onclick="ResetPreviewAsync">@Localizer["Reset view"]</button>
+            <button type="button" @onclick="FitPreviewAsync">@Localizer["Fit to view"]</button>
+            <button type="button" @onclick="FullscreenPreviewAsync">@Localizer["Fullscreen"]</button>
         </section>
     }
 
@@ -66,6 +73,7 @@
             {
                 <article data-workflow-part data-part-id="@part.PartId">
                     <h4>@part.DisplayFileName</h4>
+                    <button type="button" @onclick="() => SelectPreviewAsync(part.PartId)">@Localizer["View"]</button>
                     <button type="button" @onclick="() => RemovePartAsync(part.PartId)">@Localizer["Remove"]</button>
                 </article>
             }

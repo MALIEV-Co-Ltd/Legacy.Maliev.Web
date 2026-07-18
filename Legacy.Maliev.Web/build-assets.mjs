@@ -33,6 +33,7 @@ await build({
 });
 
 const instantQuotationViewer = path.join(dist, 'instant-quotation-viewer.mjs');
+const instantQuotationWorkflow = path.join(dist, 'instant-quotation-workflow.mjs');
 
 await build({
   ...common,
@@ -46,6 +47,15 @@ const viewerSource = await readFile(instantQuotationViewer, 'utf8');
 await writeFile(
   instantQuotationViewer,
   viewerSource.replace(/[\t ]+$/gm, '').replace(/^ +\t/gm, '\t'));
+
+await build({
+  ...common,
+  entryPoints: [path.join(root, 'wwwroot', 'src', 'app', 'js', 'instant-quotation', 'workflow-interop.mjs')],
+  outfile: instantQuotationWorkflow,
+  platform: 'browser',
+  format: 'esm',
+  external: ['/dist/instant-quotation-viewer.mjs'],
+});
 
 await build({
   ...common,
@@ -69,6 +79,7 @@ await writeFile(
     scripts: ['vendor.min.js', 'app.min.js'],
     routeScopedModules: {
       instantQuotationViewer: 'instant-quotation-viewer.mjs',
+      instantQuotationWorkflow: 'instant-quotation-workflow.mjs',
     },
     styles: ['site.min.css'],
   }, null, 2)}\n`);

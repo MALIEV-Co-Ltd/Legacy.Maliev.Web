@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
@@ -10,11 +12,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [Inject]
     private IServiceProvider Services { get; set; } = null!;
 
+    [Inject]
+    private IJSRuntime JS { get; set; } = null!;
+
     [Parameter]
     public InstantQuotationWorkflowState InitialState { get; set; } = InstantQuotationWorkflowState.Empty;
 
     private InstantQuotationWorkflowCoordinator? workflow;
     private bool initializationFailed;
+    private InputFile? fileInput;
+    private ElementReference previewCanvas;
+    private ElementReference previewStatus;
+    private IJSObjectReference? previewModule;
+    private IJSObjectReference? previewInterop;
+    private readonly Dictionary<Guid, string> previewKeys = [];
+    private bool previewAttached;
+    private bool previewUnavailable;
 
     private InstantQuotationWorkflowState State => initializationFailed
         ? InstantQuotationWorkflowState.Error
@@ -53,6 +66,37 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         _ => throw new InvalidOperationException("Unknown instant quotation workflow state."),
     };
 
+    private string PreviewStatusMessage => previewUnavailable
+        ? Localizer["3D preview is unavailable. You can continue with your quotation."]
+        : Localizer["Use arrow keys to rotate, plus or minus to zoom, 0 to reset, and Home to fit."];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await EnsurePreviewInteropAsync();
+        }
+
+        if (VisibleSections.Viewer && !previewAttached && previewInterop is not null)
+        {
+            try
+            {
+                await previewInterop.InvokeVoidAsync(
+                    "attach",
+                    previewCanvas,
+                    previewStatus,
+                    Localizer["3D preview is unavailable. You can continue with your quotation."].Value);
+                previewAttached = true;
+                await ReconcilePreviewsAsync();
+            }
+            catch (JSException)
+            {
+                previewUnavailable = true;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         var sessionStore = Services.GetService<IInstantQuotationSessionStore>();
@@ -69,7 +113,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
-        var principal = Services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var authenticationStateProvider = Services.GetService<AuthenticationStateProvider>();
+        var principal = authenticationStateProvider is null
+            ? null
+            : (await authenticationStateProvider.GetAuthenticationStateAsync()).User;
         workflow = new InstantQuotationWorkflowCoordinator(
             sessionStore,
             uploadClient,
@@ -113,7 +160,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
-        var files = args.GetMultipleFiles(100)
+        var browserFiles = args.GetMultipleFiles(100);
+        var files = browserFiles
             .Select(file => new InstantQuotationWorkflowUploadFile(
                 file.Name,
                 file.ContentType,
@@ -122,16 +170,43 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     InstantQuotationWorkflowCoordinator.MaximumFileSize,
                     cancellationToken))))
             .ToArray();
-        await workflow.UploadAsync(files, default);
+        var existingIds = Uploads.Select(static upload => upload.LocalId).ToHashSet();
+        var keys = await BeginPreviewSelectionAsync();
+        var uploadTask = workflow.UploadAsync(files, default);
+        var addedUploads = Uploads.Where(upload => !existingIds.Contains(upload.LocalId)).ToArray();
+        for (var index = 0; index < Math.Min(keys.Length, addedUploads.Length); index++)
+        {
+            previewKeys[addedUploads[index].LocalId] = keys[index];
+        }
+
+        await uploadTask;
+        await ReconcilePreviewsAsync();
     }
 
-    private void CancelUpload(Guid localId) => workflow?.Cancel(localId);
+    private async Task CancelUpload(Guid localId)
+    {
+        workflow?.Cancel(localId);
+        await ReleasePreviewAsync(localId, forget: false);
+    }
 
     private async Task RetryUploadAsync(Guid localId)
     {
         if (workflow is not null)
         {
+            if (previewKeys.TryGetValue(localId, out var previousKey) && previewInterop is not null)
+            {
+                try
+                {
+                    previewKeys[localId] = await previewInterop.InvokeAsync<string>("retry", previousKey);
+                }
+                catch (JSException)
+                {
+                    previewUnavailable = true;
+                }
+            }
+
             await workflow.RetryAsync(localId, default);
+            await ReconcilePreviewsAsync();
         }
     }
 
@@ -139,7 +214,114 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         if (workflow is not null)
         {
+            var part = Parts.SingleOrDefault(item => item.PartId == partId);
             await workflow.RemoveAsync(partId, default);
+            if (part is not null && Parts.All(item => item.PartId != partId))
+            {
+                await InvokePreviewAsync("remove", partId.ToString("N"));
+                previewKeys.Remove(part.PreviewCorrelationId);
+            }
+        }
+    }
+
+    private async Task<string[]> BeginPreviewSelectionAsync()
+    {
+        await EnsurePreviewInteropAsync();
+        if (previewInterop is null || fileInput is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            return await previewInterop.InvokeAsync<string[]>("beginSelection", fileInput.Element);
+        }
+        catch (JSException)
+        {
+            previewUnavailable = true;
+            await InvokeAsync(StateHasChanged);
+            return [];
+        }
+    }
+
+    private async Task EnsurePreviewInteropAsync()
+    {
+        if (previewInterop is not null || previewUnavailable)
+        {
+            return;
+        }
+
+        try
+        {
+            previewModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "/dist/instant-quotation-workflow.mjs");
+            previewInterop = await previewModule.InvokeAsync<IJSObjectReference>(
+                "createInstantQuotationWorkflowInterop");
+        }
+        catch (JSException)
+        {
+            previewUnavailable = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ReconcilePreviewsAsync()
+    {
+        if (previewInterop is null)
+        {
+            return;
+        }
+
+        foreach (var (localId, key) in previewKeys.ToArray())
+        {
+            var upload = Uploads.SingleOrDefault(item => item.LocalId == localId);
+            var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
+            if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
+            {
+                await InvokePreviewAsync("admit", key, part.PartId.ToString("N"));
+            }
+            else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
+            {
+                await ReleasePreviewAsync(localId, forget: false);
+            }
+        }
+    }
+
+    private async Task ReleasePreviewAsync(Guid localId, bool forget)
+    {
+        if (previewKeys.TryGetValue(localId, out var key))
+        {
+            await InvokePreviewAsync("release", key);
+            if (forget)
+            {
+                previewKeys.Remove(localId);
+            }
+        }
+    }
+
+    private Task SelectPreviewAsync(Guid partId) => InvokePreviewAsync("select", partId.ToString("N"));
+
+    private Task ResetPreviewAsync() => InvokePreviewAsync("reset");
+
+    private Task FitPreviewAsync() => InvokePreviewAsync("fit");
+
+    private Task FullscreenPreviewAsync() => InvokePreviewAsync("fullscreen");
+
+    private async Task InvokePreviewAsync(string identifier, params object?[] arguments)
+    {
+        if (previewInterop is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await previewInterop.InvokeVoidAsync(identifier, arguments);
+        }
+        catch (JSException)
+        {
+            previewUnavailable = true;
         }
     }
 
@@ -194,6 +376,29 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (previewInterop is not null)
+        {
+            try
+            {
+                await previewInterop.InvokeVoidAsync("dispose");
+                await previewInterop.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        if (previewModule is not null)
+        {
+            try
+            {
+                await previewModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
         if (workflow is not null)
         {
             await workflow.DisposeAsync();

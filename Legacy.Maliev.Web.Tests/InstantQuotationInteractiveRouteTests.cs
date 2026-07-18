@@ -284,12 +284,25 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     [InlineData(InstantQuotationWorkflowState.Uploaded)]
     [InlineData(InstantQuotationWorkflowState.Review)]
     [InlineData(InstantQuotationWorkflowState.CustomerDetails)]
-    public async Task UnwiredWorkflowActions_RenderDisabled(InstantQuotationWorkflowState state)
+    public async Task OnlyWiredViewerActions_RenderEnabled(InstantQuotationWorkflowState state)
     {
         var html = await RenderWorkflowAsync(state);
 
         Assert.Contains("<button", html, StringComparison.Ordinal);
-        Assert.DoesNotMatch("<button(?![^>]* disabled)[^>]*>", html);
+        var enabledButtons = System.Text.RegularExpressions.Regex.Matches(
+            html,
+            "<button(?![^>]* disabled)[^>]*>.*?</button>",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (state is InstantQuotationWorkflowState.CustomerDetails)
+        {
+            Assert.Empty(enabledButtons);
+            return;
+        }
+
+        Assert.Equal(3, enabledButtons.Count);
+        Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
+        Assert.Contains(enabledButtons, match => match.Value.Contains("Fit to view", StringComparison.Ordinal));
+        Assert.Contains(enabledButtons, match => match.Value.Contains("Fullscreen", StringComparison.Ordinal));
     }
 
     private static bool ReadBoolean(object target, string propertyName) =>

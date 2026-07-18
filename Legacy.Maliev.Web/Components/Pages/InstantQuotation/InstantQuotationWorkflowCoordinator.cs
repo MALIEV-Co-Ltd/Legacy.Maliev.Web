@@ -28,6 +28,7 @@ public sealed record InstantQuotationWorkflowMaterialOption(string Key, string D
 
 public sealed record InstantQuotationWorkflowPartViewModel(
     Guid PartId,
+    Guid PreviewCorrelationId,
     string DisplayFileName,
     InstantQuotationPartConfiguration Configuration,
     InstantQuotationPartQuote? Quote);
@@ -95,12 +96,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         get
         {
             var quotes = OrderQuote?.Parts.ToDictionary(static part => part.PartId) ?? [];
-            return CurrentParts()
-                .Select(part => new InstantQuotationWorkflowPartViewModel(
-                    part.PartId,
-                    part.DisplayFileName,
-                    part.Configuration,
-                    quotes.GetValueOrDefault(part.PartId)))
+            return entries
+                .Where(static entry => entry.Part is not null)
+                .Select(entry => new InstantQuotationWorkflowPartViewModel(
+                    entry.Part!.PartId,
+                    entry.LocalId,
+                    entry.Part.DisplayFileName,
+                    entry.Part.Configuration,
+                    quotes.GetValueOrDefault(entry.Part.PartId)))
                 .ToArray();
         }
     }

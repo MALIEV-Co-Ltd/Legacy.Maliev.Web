@@ -4,7 +4,7 @@
   "scripts": {
     "build": "node build-assets.mjs",
     "ci": "node install-assets.mjs && npm run build && npm run test:browser-module",
-    "test:browser-module": "node --test tests/contact-channel-analytics.test.mjs tests/instant-quotation-controller.test.mjs tests/instant-quotation-upload-controller.test.mjs tests/instant-quotation-viewer.test.mjs tests/legacy-ui-without-jquery.test.mjs"
+    "test:browser-module": "node --test tests/contact-channel-analytics.test.mjs tests/instant-quotation-controller.test.mjs tests/instant-quotation-upload-controller.test.mjs tests/instant-quotation-viewer.test.mjs tests/instant-quotation-workflow-interop.test.mjs tests/legacy-ui-without-jquery.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "5.2.8",
