@@ -1,5 +1,6 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
+using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Middleware;
@@ -343,6 +344,10 @@ builder.Services.AddRazorPages(options =>
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddScoped<
+    IInstantQuotationWorkflowSessionIdentityAccessor,
+    ProtectedCookieInstantQuotationWorkflowSessionIdentityAccessor>();
 builder.Services.AddResponseCompression();
 builder.Services.AddOutputCache();
 builder.Services.Configure<CookieTempDataProviderOptions>(options =>
