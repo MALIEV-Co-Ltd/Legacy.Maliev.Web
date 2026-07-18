@@ -51,6 +51,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Equal(
             [
                 "AboutPage.razor",
+                "AccessDeniedPage.razor",
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "CncMachiningPage.razor",

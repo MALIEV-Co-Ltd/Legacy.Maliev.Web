@@ -60,6 +60,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Equal(
             [
                 "AboutPage.razor",
+                "AccessDeniedPage.razor",
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "CncMachiningPage.razor",

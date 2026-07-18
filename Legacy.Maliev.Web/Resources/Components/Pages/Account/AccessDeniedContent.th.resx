@@ -122,7 +122,7 @@
   </data>
   <data name="Account access" xml:space="preserve"><value>การเข้าถึงบัญชี</value></data>
   <data name="Access denied" xml:space="preserve"><value>ไม่สามารถเข้าถึงได้</value></data>
+  <data name="Access denied | MALIEV" xml:space="preserve"><value>ไม่สามารถเข้าถึงได้ | MALIEV</value></data>
   <data name="Back to the home page" xml:space="preserve"><value>กลับหน้าหลัก</value></data>
   <data name="Contact support" xml:space="preserve"><value>ติดต่อฝ่ายช่วยเหลือ</value></data>
 </root>
-
