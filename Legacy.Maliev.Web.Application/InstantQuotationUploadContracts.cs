@@ -1,3 +1,7 @@
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Legacy.Maliev.Web.Infrastructure")]
+
 namespace Legacy.Maliev.Web.Application;
 
 public enum InstantQuotationServiceStatus
@@ -89,7 +93,7 @@ public sealed record InstantQuotationUploadResult
 
     public AuthoritativeInstantQuotationGeometry? AuthoritativeGeometry { get; }
 
-    public static InstantQuotationUploadResult Succeeded(
+    internal static InstantQuotationUploadResult Succeeded(
         string operationId,
         InstantQuotationUploadReference uploadReference,
         InstantQuotationGeometry geometry) => new(

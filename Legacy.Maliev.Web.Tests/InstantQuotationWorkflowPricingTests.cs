@@ -118,6 +118,20 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Fact]
+    public void Catalog_PreservesExactMaterialAndColorKeySets()
+    {
+        var expected = new[]
+        {
+            "PLA", "PLA-CF", "PETG", "PETG-CF", "PETG-ESD", "PET-CF", "ABS", "ABS-FR",
+            "ASA", "ASA-CF", "HIPS", "PC", "PC-FR", "PC-ESD", "PA6", "PA12", "PA-CF",
+            "TPU", "PVA", "M68", "K", "G217", "F80", "CASTWAX",
+        };
+
+        Assert.Equal(expected.Order(StringComparer.Ordinal), PricingCatalog.Materials.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(expected.Order(StringComparer.Ordinal), PricingCatalog.MaterialColors.Keys.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Catalog_CollectionsCannotBeMutatedByCallers()
     {
         var materials = Assert.IsAssignableFrom<IDictionary<string, MaterialInfo>>(PricingCatalog.Materials);

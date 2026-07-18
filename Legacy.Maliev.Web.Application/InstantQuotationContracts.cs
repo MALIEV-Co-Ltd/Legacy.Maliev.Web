@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Legacy.Maliev.Web.Application.Pricing;
 
 namespace Legacy.Maliev.Web.Application;
@@ -15,7 +14,6 @@ public sealed record InstantQuotationGeometry(
 
 public sealed class AuthoritativeInstantQuotationGeometry
 {
-    [JsonConstructor]
     internal AuthoritativeInstantQuotationGeometry(
         double heightMm,
         double volumeMm3,
@@ -29,8 +27,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
         HeightMm = heightMm;
         VolumeMm3 = volumeMm3;
         FootprintMm2 = footprintMm2;
-        AreaProfileMm2 = areaProfileMm2;
-        PerimeterProfileMm = perimeterProfileMm;
+        AreaProfileMm2 = new ImmutableValueList<double>(areaProfileMm2);
+        PerimeterProfileMm = new ImmutableValueList<double>(perimeterProfileMm);
         FacetCount = facetCount;
         BodyCount = bodyCount;
         IsManifold = isManifold;
@@ -59,12 +57,30 @@ public sealed class AuthoritativeInstantQuotationGeometry
             geometry.HeightMm,
             geometry.VolumeMm3,
             geometry.FootprintMm2,
-            geometry.AreaProfileMm2.ToArray(),
-            geometry.PerimeterProfileMm.ToArray(),
+            geometry.AreaProfileMm2,
+            geometry.PerimeterProfileMm,
             geometry.FacetCount,
             geometry.BodyCount,
             geometry.IsManifold);
     }
+
+    internal static AuthoritativeInstantQuotationGeometry RestoreFromProtectedSession(
+        double heightMm,
+        double volumeMm3,
+        double footprintMm2,
+        IReadOnlyList<double> areaProfileMm2,
+        IReadOnlyList<double> perimeterProfileMm,
+        int facetCount,
+        int bodyCount,
+        bool isManifold) => new(
+            heightMm,
+            volumeMm3,
+            footprintMm2,
+            areaProfileMm2,
+            perimeterProfileMm,
+            facetCount,
+            bodyCount,
+            isManifold);
 }
 
 public sealed record InstantQuotationPartConfiguration(
@@ -105,3 +121,49 @@ public sealed record InstantQuotationOrderQuote(
     int LeadTimeMaximumDays);
 
 public sealed record InstantQuotationOrderState(IReadOnlyList<InstantQuotationPart> Parts);
+
+public sealed record InstantQuotationSessionState(
+    string SessionId,
+    string SubmissionId,
+    InstantQuotationOrderState RequestState,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt)
+{
+    public IReadOnlyList<InstantQuotationPart> Parts => RequestState.Parts;
+}
+
+public interface IInstantQuotationSessionStore
+{
+    Task<InstantQuotationSessionState> CreateAsync(
+        string? ownerIdentity,
+        InstantQuotationOrderState requestState,
+        CancellationToken cancellationToken);
+
+    Task<InstantQuotationSessionState?> GetAsync(
+        string sessionId,
+        string? ownerIdentity,
+        CancellationToken cancellationToken);
+
+    Task<bool> PutAsync(
+        InstantQuotationSessionState session,
+        string? ownerIdentity,
+        CancellationToken cancellationToken);
+
+    Task<bool> RemoveAsync(
+        string sessionId,
+        string? ownerIdentity,
+        CancellationToken cancellationToken);
+}
+
+internal sealed class ImmutableValueList<T>(IEnumerable<T> values) : IReadOnlyList<T>
+{
+    private readonly T[] values = values.ToArray();
+
+    public int Count => values.Length;
+
+    public T this[int index] => values[index];
+
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)values).GetEnumerator();
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => values.GetEnumerator();
+}

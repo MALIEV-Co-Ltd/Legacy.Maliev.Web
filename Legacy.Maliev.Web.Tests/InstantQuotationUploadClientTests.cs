@@ -1,4 +1,7 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Configuration;
@@ -100,6 +103,64 @@ public sealed class InstantQuotationUploadClientTests
             property => property.Name.Contains("Authoritative", StringComparison.OrdinalIgnoreCase));
         Assert.Empty(typeof(AuthoritativeInstantQuotationGeometry).GetConstructors(BindingFlags.Instance | BindingFlags.Public));
         Assert.Null(typeof(InstantQuotationGeometry).GetMethod("ToAuthoritative", BindingFlags.Instance | BindingFlags.Public));
+    }
+
+    [Fact]
+    public void GeometryProvenance_PublicApiCannotPromoteAdvisoryGeometry()
+    {
+        Assert.Null(
+            typeof(InstantQuotationUploadResult).GetMethod(
+                "Succeeded",
+                BindingFlags.Static | BindingFlags.Public));
+        Assert.Contains(
+            typeof(InstantQuotationUploadResult).Assembly.GetCustomAttributes<InternalsVisibleToAttribute>(),
+            attribute => attribute.AssemblyName == "Legacy.Maliev.Web.Infrastructure");
+    }
+
+    [Fact]
+    public void GeometryProvenance_JsonCannotConstructAuthoritativeGeometry()
+    {
+        var constructors = typeof(AuthoritativeInstantQuotationGeometry)
+            .GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        Assert.DoesNotContain(
+            constructors,
+            constructor => constructor.GetCustomAttribute<JsonConstructorAttribute>() is not null);
+        Assert.Throws<NotSupportedException>(() => JsonSerializer.Deserialize<AuthoritativeInstantQuotationGeometry>(
+            """
+            {
+              "HeightMm": 30,
+              "VolumeMm3": 20000,
+              "FootprintMm2": 400,
+              "AreaProfileMm2": [500],
+              "PerimeterProfileMm": [80],
+              "FacetCount": 1024,
+              "BodyCount": 1,
+              "IsManifold": true
+            }
+            """));
+    }
+
+    [Fact]
+    public void SuccessfulPromotion_DeepCopiesProfilesAndCannotBeMutatedByCallers()
+    {
+        var areas = new[] { 500.0, 501.0 };
+        var perimeters = new[] { 80.0, 81.0 };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "operation",
+            new InstantQuotationUploadReference("opaque"),
+            new InstantQuotationGeometry(30, 20_000, 400, areas, perimeters, 1_024, 1, true));
+
+        areas[0] = -1;
+        perimeters[0] = -1;
+
+        var geometry = Assert.IsType<AuthoritativeInstantQuotationGeometry>(upload.AuthoritativeGeometry);
+        Assert.Equal([500.0, 501.0], geometry.AreaProfileMm2);
+        Assert.Equal([80.0, 81.0], geometry.PerimeterProfileMm);
+        Assert.False(geometry.AreaProfileMm2 is IList<double>);
+        Assert.False(geometry.PerimeterProfileMm is IList<double>);
+        Assert.False(geometry.AreaProfileMm2 is double[]);
+        Assert.False(geometry.PerimeterProfileMm is double[]);
     }
 
     private static void AssertUnavailable(

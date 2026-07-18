@@ -93,11 +93,104 @@ public sealed class InstantQuotationSessionStoreTests
         var payload = fixture.Protector.Unprotect(raw);
         using var document = JsonDocument.Parse(payload);
         Assert.Equal(1, document.RootElement.GetProperty("Version").GetInt32());
-        var propertyNames = typeof(InstantQuotationSession).GetProperties().Select(property => property.Name).ToArray();
+        var propertyNames = typeof(InstantQuotationSessionState).GetProperties().Select(property => property.Name).ToArray();
         Assert.DoesNotContain(propertyNames, name => name.Contains("Token", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(propertyNames, name => name.Contains("Cookie", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(propertyNames, name => name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(propertyNames, name => name.Contains("Antiforgery", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task CreateAsync_SourceCollectionsMutate_PersistedSessionAndPricingRemainUnchanged()
+    {
+        var fixture = CreateFixture();
+        var areas = new[] { 500.0, 501.0 };
+        var perimeters = new[] { 80.0, 81.0 };
+        var originalPart = Part("PLA", areas, perimeters);
+        var sourceParts = new[] { originalPart };
+        var created = await fixture.Store.CreateAsync("customer-42", new InstantQuotationOrderState(sourceParts), default);
+        var pricing = new InstantQuotationPricingService();
+        var before = pricing.Quote(created.RequestState);
+
+        areas[0] = -1;
+        perimeters[0] = -1;
+        sourceParts[0] = Part("PETG", [1], [1]);
+
+        var found = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
+        var after = pricing.Quote(found!.RequestState);
+        Assert.NotSame(originalPart.Geometry, created.Parts.Single().Geometry);
+        Assert.NotSame(created.Parts.Single().Geometry, found.Parts.Single().Geometry);
+        Assert.Equal("PLA", found.Parts.Single().Configuration.MaterialKey);
+        Assert.Equal([500.0, 501.0], found.Parts.Single().Geometry.AreaProfileMm2);
+        Assert.Equal([80.0, 81.0], found.Parts.Single().Geometry.PerimeterProfileMm);
+        Assert.Equal(before.FinalOrderPrice, after.FinalOrderPrice);
+        Assert.Equal(before.Parts.Single().PrintTimeMinutesPerUnit, after.Parts.Single().PrintTimeMinutesPerUnit);
+        Assert.False(found.Parts is IList<InstantQuotationPart>);
+    }
+
+    [Fact]
+    public async Task GetAsync_VersionOnePayloadMissingRequestState_RejectsAndRemovesPayload()
+    {
+        var fixture = CreateFixture();
+        const string sessionId = "MISSING-STATE";
+        var invalidPayload = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Version = 1,
+            SessionId = sessionId,
+            OwnerIdentity = "customer-42",
+            SubmissionId = "submission",
+            CreatedAt = Now,
+            UpdatedAt = Now,
+        });
+        await fixture.Cache.SetAsync(
+            DistributedInstantQuotationSessionStore.CacheKeyPrefix + sessionId,
+            fixture.Protector.Protect(invalidPayload));
+
+        var result = await fixture.Store.GetAsync(sessionId, "customer-42", default);
+
+        Assert.Null(result);
+        Assert.Null(await fixture.Cache.GetAsync(DistributedInstantQuotationSessionStore.CacheKeyPrefix + sessionId));
+    }
+
+    [Fact]
+    public async Task GetAsync_VersionOnePayloadWithOverflowingExpiry_RejectsAndRemovesPayload()
+    {
+        var fixture = CreateFixture();
+        const string sessionId = "INVALID-EXPIRY";
+        var invalidPayload = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Version = 1,
+            SessionId = sessionId,
+            OwnerIdentity = "customer-42",
+            SubmissionId = "submission",
+            RequestState = new { Parts = Array.Empty<object>() },
+            CreatedAt = DateTimeOffset.MaxValue,
+            UpdatedAt = DateTimeOffset.MaxValue,
+        });
+        await fixture.Cache.SetAsync(
+            DistributedInstantQuotationSessionStore.CacheKeyPrefix + sessionId,
+            fixture.Protector.Protect(invalidPayload));
+
+        var result = await fixture.Store.GetAsync(sessionId, "customer-42", default);
+
+        Assert.Null(result);
+        Assert.Null(await fixture.Cache.GetAsync(DistributedInstantQuotationSessionStore.CacheKeyPrefix + sessionId));
+    }
+
+    [Fact]
+    public void Registration_ExposesPublicApplicationWorkflowSessionAbstraction()
+    {
+        var applicationType = typeof(InstantQuotationOrderState).Assembly.GetType(
+            "Legacy.Maliev.Web.Application.IInstantQuotationSessionStore");
+        var services = new ServiceCollection();
+        services.AddLegacyServiceClients(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+
+        Assert.NotNull(applicationType);
+        Assert.True(applicationType.IsPublic);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == applicationType
+                && descriptor.ImplementationType == typeof(DistributedInstantQuotationSessionStore));
     }
 
     private static Fixture CreateFixture()
@@ -124,30 +217,25 @@ public sealed class InstantQuotationSessionStoreTests
 
     private static InstantQuotationOrderState State(string materialKey = "PLA")
     {
-        var upload = InstantQuotationUploadResult.Succeeded(
-            "operation-1",
-            new InstantQuotationUploadReference("opaque-1"),
-            Geometry());
         return new InstantQuotationOrderState(
         [
-            new InstantQuotationPart(
-                Guid.NewGuid(),
-                "part.stl",
-                upload.UploadReference!,
-                upload.AuthoritativeGeometry!,
-                new InstantQuotationPartConfiguration(materialKey, "Black", 1)),
+            Part(materialKey, Enumerable.Repeat(500.0, 40).ToArray(), Enumerable.Repeat(80.0, 40).ToArray()),
         ]);
     }
 
-    private static InstantQuotationGeometry Geometry() => new(
-        30,
-        20_000,
-        400,
-        Enumerable.Repeat(500.0, 40).ToArray(),
-        Enumerable.Repeat(80.0, 40).ToArray(),
-        1_024,
-        1,
-        true);
+    private static InstantQuotationPart Part(string materialKey, double[] areas, double[] perimeters)
+    {
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "operation-1",
+            new InstantQuotationUploadReference("opaque-1"),
+            new InstantQuotationGeometry(30, 20_000, 400, areas, perimeters, 1_024, 1, true));
+        return new InstantQuotationPart(
+            Guid.NewGuid(),
+            "part.stl",
+            upload.UploadReference!,
+            upload.AuthoritativeGeometry!,
+            new InstantQuotationPartConfiguration(materialKey, "Black", 1));
+    }
 
     private sealed record Fixture(
         DistributedInstantQuotationSessionStore Store,
