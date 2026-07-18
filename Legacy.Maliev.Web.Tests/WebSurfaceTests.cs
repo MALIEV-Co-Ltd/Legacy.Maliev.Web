@@ -110,7 +110,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
         Assert.DoesNotContain("customer@example.com", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("REFERRER", content, StringComparison.OrdinalIgnoreCase);
+        // Match a leaked request-context token without rejecting the secure rel="noreferrer" footer attribute.
+        Assert.DoesNotMatch(new Regex(@"\bREFERRER\b", RegexOptions.IgnoreCase), content);
         Assert.DoesNotContain("blazor.web.js", content, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -1651,7 +1652,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("whatsapp_click", source, StringComparison.Ordinal);
         Assert.Contains("phone_click", source, StringComparison.Ordinal);
         Assert.Contains("email_click", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("messenger_click", source, StringComparison.Ordinal);
+        Assert.Contains("messenger_click", source, StringComparison.Ordinal);
         Assert.DoesNotContain("facebook_click", source, StringComparison.Ordinal);
         Assert.DoesNotContain("event: 'maliev_contact_click'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("analytics.js", source, StringComparison.OrdinalIgnoreCase);
@@ -2021,7 +2022,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [Theory]
     [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
     [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
-    public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookIntegration(
+    public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration(
         string culture,
         string heading,
         string foundedMilestone,
@@ -2036,7 +2037,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fb:app_id", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);

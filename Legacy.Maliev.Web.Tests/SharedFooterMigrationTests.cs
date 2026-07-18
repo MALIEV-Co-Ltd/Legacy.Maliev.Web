@@ -84,9 +84,18 @@ public sealed class SharedFooterMigrationTests : IClassFixture<WebApplicationFac
         Assert.Contains("href=\"tel:+66818030404\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66898950690\"", source, StringComparison.Ordinal);
         Assert.Contains($"href=\"{SocialNetworks.Line}\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("messenger", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"{SocialNetworks.Messenger}\"", source, StringComparison.Ordinal);
+        Assert.Contains(
+            $"href=\"{SocialNetworks.Messenger}\" target=\"_blank\" rel=\"noopener noreferrer\"",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Contact MALIEV through Messenger\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("href=\"https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
+        Assert.True(
+            source.IndexOf($"href=\"{SocialNetworks.Line}\"", StringComparison.Ordinal) <
+            source.IndexOf($"href=\"{SocialNetworks.Messenger}\"", StringComparison.Ordinal),
+            "LINE must remain ahead of the secondary Messenger link.");
         Assert.Contains("<footer class=\"landing-footer\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
