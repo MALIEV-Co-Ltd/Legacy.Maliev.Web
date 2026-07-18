@@ -340,7 +340,8 @@ builder.Services.AddRazorPages(options =>
 })
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
     .AddDataAnnotationsLocalization();
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddResponseCompression();
 builder.Services.AddOutputCache();
@@ -456,6 +457,7 @@ app.MapMemberCompatibilityEndpoints();
 if (useBlazorRouteHost)
 {
     app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode()
         .WithMetadata(new HttpMethodMetadata(["GET", "HEAD"]));
     app.MapPost(
             "/",

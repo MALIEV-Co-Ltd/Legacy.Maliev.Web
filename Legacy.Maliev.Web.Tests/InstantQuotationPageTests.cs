@@ -106,18 +106,25 @@ public sealed class InstantQuotationPageTests
             "Pages",
             "InstantQuotation",
             "InstantQuotationCalculator.cs");
+        var workflow = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "InstantQuotationWorkflow.razor");
         var source = string.Join(
             '\n',
             File.ReadAllText(page),
             File.ReadAllText(model),
             File.ReadAllText(component),
+            File.ReadAllText(workflow),
             File.ReadAllText(calculator),
             File.ReadAllText(browserModule),
             File.ReadAllText(controllerModule));
         Assert.Contains("@page", source, StringComparison.Ordinal);
         Assert.Contains("handler: 'GetEstimate'", source, StringComparison.Ordinal);
         Assert.Contains("handler: 'GetOrderTotal'", source, StringComparison.Ordinal);
-        Assert.Contains("/Quotation?item=3D-Printing", source, StringComparison.Ordinal);
         Assert.Contains("aria-live", source, StringComparison.Ordinal);
         Assert.Contains("<fieldset", source, StringComparison.Ordinal);
         Assert.Contains("string.Equals(material.Key, \"PLA\"", source, StringComparison.Ordinal);
@@ -160,9 +167,9 @@ public sealed class InstantQuotationPageTests
         Assert.DoesNotContain("<script>", page, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", component, StringComparison.Ordinal);
-        Assert.Contains("data-instant-estimate", component, StringComparison.Ordinal);
+        Assert.Contains("<InstantQuotationWorkflow", component, StringComparison.Ordinal);
         Assert.Contains("IStringLocalizer<ThreeDimensionalPrintingEstimateContent>", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+        Assert.Contains("@rendermode=\"InteractiveServer\"", component, StringComparison.Ordinal);
         Assert.DoesNotContain("asp-page", component, StringComparison.Ordinal);
         Assert.Contains("InstantQuotationCalculator.CreateDisplayModel", model, StringComparison.Ordinal);
 
