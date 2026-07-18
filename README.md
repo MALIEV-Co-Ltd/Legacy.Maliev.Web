@@ -4,7 +4,7 @@ Public clean-history migration of the MALIEV website from the private `maliev-we
 
 ## Architecture
 
-- `Legacy.Maliev.Web` — .NET 10 Razor Pages frontend and backend-for-frontend.
+- `Legacy.Maliev.Web` — .NET 10 Blazor Web App and same-origin backend-for-frontend. Public and read-only account routes use static SSR; narrowly scoped Razor POST handlers retain authoritative server-side writes, antiforgery, and rollback compatibility.
 - `Legacy.Maliev.Web.Application` — browser-facing contracts and service endpoint options.
 - `Legacy.Maliev.Web.Infrastructure` — resilient typed HTTP clients for independently deployed legacy services.
 - `Legacy.Maliev.Web.Tests` — route, security, SEO, analytics, auth, and architecture compatibility gates.
@@ -63,8 +63,10 @@ dotnet build .\Legacy.Maliev.Web.slnx -c Release --no-restore -p:MalievWorkspace
 dotnet test .\Legacy.Maliev.Web.slnx -c Release --no-build -p:MalievWorkspaceRoot=B:\maliev
 ```
 
+The reproducible local resource and latency measurement command and the Razor Pages/jQuery-to-Blazor comparison are recorded in [the migration performance evidence](docs/blazor-migration-performance.md). These checks use loopback/Aspire only and provision no cloud resources.
+
 ## Migration status
 
-The standalone .NET 10 BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All twenty-two indexed legacy routes, the public Account surface, login, signup, email confirmation, password recovery, and Member profile/address/credential routes are migrated, together with the localized XML sitemap. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
+The standalone .NET 10 Blazor Web App/BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All indexed public routes and authenticated Member GET routes are Blazor static SSR route owners; server-side write handlers remain isolated behind POST, authorization, antiforgery, and downstream ownership checks. The localized XML sitemap, consent-gated analytics bridge, and legacy URL aliases are covered by regression tests. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
 
-Deployment is intentionally deferred until route compatibility, external credential rotation, live GTM malware review, and existing-cluster capacity gates are complete.
+Production deployment is intentionally deferred for owner review in Aspire and explicit cutover approval. Live GTM/GA4/Ads/Search Console verification remains an external-console review item and is not inferred from local tests.
