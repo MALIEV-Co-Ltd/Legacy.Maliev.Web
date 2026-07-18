@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Routing;
 using StackExchange.Redis;
 using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
@@ -22,6 +23,7 @@ var useBlazorNonDisclosureAgreementRoute = builder.Configuration.GetValue("Blazo
 var useBlazorAccessDeniedRoute = builder.Configuration.GetValue("BlazorRouting:AccessDenied", true);
 var useBlazorErrorRoute = builder.Configuration.GetValue("BlazorRouting:Error", true);
 var useBlazorAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:AccountIndex", true);
+var useBlazorLoginRoute = builder.Configuration.GetValue("BlazorRouting:Login", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -42,6 +44,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorAccessDeniedRoute
     && useBlazorErrorRoute
     && useBlazorAccountIndexRoute
+    && useBlazorLoginRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -107,6 +110,15 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddPageRouteModelConvention(
             "/Account/Index",
             model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Account/Login",
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
             model => model.Selectors.Clear());
@@ -277,7 +289,8 @@ app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
 if (useBlazorRouteHost)
 {
-    app.MapRazorComponents<App>();
+    app.MapRazorComponents<App>()
+        .WithMetadata(new HttpMethodMetadata(["GET", "HEAD"]));
     app.MapPost(
             "/",
             ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>

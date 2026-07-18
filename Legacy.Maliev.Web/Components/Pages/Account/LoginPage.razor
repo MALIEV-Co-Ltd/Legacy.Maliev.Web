@@ -1,0 +1,73 @@
+@page "/Account/Login"
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IStringLocalizer<LoginContent> Localizer
+@inject NavigationManager Navigation
+
+<PageTitle>@Localizer["Login | MALIEV"]</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex, follow" />
+</HeadContent>
+<main class="auth-page" data-migration-route-owner="blazor-static-ssr">
+    <div class="maliev-container auth-shell">
+        <section class="auth-intro">
+            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
+            <h1>@Localizer["Manage your manufacturing projects"]</h1>
+            <p>@Localizer["Sign in to review quotations, orders, files, and account details in one secure place."]</p>
+        </section>
+        <section class="auth-card">
+            <header class="auth-card__header"><h1>@Localizer["Sign in"]</h1></header>
+            <form method="post" class="maliev-form">
+                @if (tokens is not null)
+                {
+                    <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                }
+                <LoginContent Model="model" />
+            </form>
+            <footer class="auth-card__footer">
+                <a href="/Account/Signup">@Localizer["Create your account"]</a>
+                <a href="/Account/ForgotPassword">@Localizer["Forgot your password?"]</a>
+            </footer>
+        </section>
+    </div>
+</main>
+
+@code {
+    private LoginFormDisplayModel model = new(string.Empty, false, null, null, new Dictionary<string, IReadOnlyList<string>>());
+    private AntiforgeryTokenSet? tokens;
+
+    [SupplyParameterFromQuery(Name = "email")]
+    public string? Email { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/Account");
+            return;
+        }
+
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        model = new LoginFormDisplayModel(
+            Email?.Trim() ?? string.Empty,
+            false,
+            IsLocalUrl(ReturnUrl) ? ReturnUrl : null,
+            notification,
+            new Dictionary<string, IReadOnlyList<string>>());
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+
+    private static bool IsLocalUrl(string? url) =>
+        !string.IsNullOrEmpty(url)
+        && ((url[0] == '/' && (url.Length == 1 || (url[1] != '/' && url[1] != '\\')))
+            || (url.Length > 1 && url[0] == '~' && url[1] == '/'));
+}
