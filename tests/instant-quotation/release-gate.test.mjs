@@ -64,29 +64,40 @@ test('request policy denies production and permits only local or intercepted ana
   assert.equal(classifyRequest('https://storage.googleapis.com/private-model.stl', 'http://127.0.0.1:5088'), 'deny');
 });
 
-test('analytics contract requires consent, one persisted conversion, and no PII', () => {
-  const events = [
-    { consent: 'granted', event: 'file_upload_start', file_count: 1 },
-    { consent: 'granted', event: 'file_upload_complete', file_count: 1 },
-    {
-      consent: 'granted',
-      event: 'request_quote',
-      transaction_id: 'quotation-local-153',
-      submission_status: 'persisted',
-    },
-  ];
+test('analytics contract uses external consent timing, one persisted conversion, and no PII', () => {
+  const observation = {
+    eventsBeforeConsent: [],
+    eventsAfterConsent: [
+      { event: 'file_upload_start', file_count: 1 },
+      { event: 'file_upload_complete', file_count: 1 },
+      {
+        event: 'request_quote',
+        transaction_id: 'quotation-local-153',
+        submission_status: 'persisted',
+      },
+    ],
+  };
 
-  assert.doesNotThrow(() => assertAnalyticsContract(events));
+  assert.doesNotThrow(() => assertAnalyticsContract(observation));
   assert.throws(
-    () => assertAnalyticsContract([{ consent: 'denied', event: 'file_upload_start' }]),
+    () => assertAnalyticsContract({
+      ...observation,
+      eventsBeforeConsent: [{ event: 'file_upload_start' }],
+    }),
     /before consent/,
   );
   assert.throws(
-    () => assertAnalyticsContract([...events, events[2]]),
+    () => assertAnalyticsContract({
+      ...observation,
+      eventsAfterConsent: [...observation.eventsAfterConsent, observation.eventsAfterConsent[2]],
+    }),
     /exactly once/,
   );
   assert.throws(
-    () => assertAnalyticsContract([{ ...events[2], email: 'customer@example.com' }]),
+    () => assertAnalyticsContract({
+      eventsBeforeConsent: [],
+      eventsAfterConsent: [{ ...observation.eventsAfterConsent[2], email: 'customer@example.com' }],
+    }),
     /forbidden analytics field/,
   );
 });

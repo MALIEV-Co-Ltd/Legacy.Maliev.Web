@@ -380,6 +380,8 @@
       "review_reached"
     ],
     "requiresConsentBeforeEmission": true,
+    "consentEvidenceModel": "external-state-and-timing",
+    "eventPayloadRequiresConsentField": false,
     "forbidsPii": true,
     "primaryAdsConversion": "request_quote",
     "deduplicationField": "transaction_id",

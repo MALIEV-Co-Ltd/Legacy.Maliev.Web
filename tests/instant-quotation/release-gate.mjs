@@ -100,12 +100,23 @@ export function classifyRequest(requestUrl, applicationBaseUrl) {
   return 'deny';
 }
 
-export function assertAnalyticsContract(events) {
-  for (const event of events) {
-    if (event.event && event.consent !== 'granted') {
-      throw new Error(`Analytics event ${event.event} was emitted before consent.`);
-    }
+export function assertAnalyticsContract(observation) {
+  if (
+    !observation
+    || !Array.isArray(observation.eventsBeforeConsent)
+    || !Array.isArray(observation.eventsAfterConsent)
+  ) {
+    throw new Error('Analytics consent observation is missing or invalid.');
+  }
 
+  assert.equal(
+    observation.eventsBeforeConsent.length,
+    0,
+    'Analytics events must not be emitted before consent.',
+  );
+
+  const events = observation.eventsAfterConsent;
+  for (const event of events) {
     for (const field of Object.keys(event)) {
       if (FORBIDDEN_ANALYTICS_FIELDS.has(field.toLowerCase())) {
         throw new Error(`Analytics event ${event.event ?? 'unknown'} contains forbidden analytics field ${field}.`);

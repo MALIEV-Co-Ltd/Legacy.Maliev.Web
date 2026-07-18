@@ -120,6 +120,10 @@ public sealed class InstantQuotationParityManifestTests
             ["upload_failure", "estimate_shown", "review_reached"],
             analytics.GetProperty("targetEventsOwnedByIssue152"));
         Assert.True(analytics.GetProperty("requiresConsentBeforeEmission").GetBoolean());
+        Assert.Equal(
+            "external-state-and-timing",
+            analytics.GetProperty("consentEvidenceModel").GetString());
+        Assert.False(analytics.GetProperty("eventPayloadRequiresConsentField").GetBoolean());
         Assert.True(analytics.GetProperty("forbidsPii").GetBoolean());
         Assert.Equal("request_quote", analytics.GetProperty("primaryAdsConversion").GetString());
 
