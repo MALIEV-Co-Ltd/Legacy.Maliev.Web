@@ -1,0 +1,116 @@
+using System.Reflection;
+using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Legacy.Maliev.Web.Tests;
+
+public sealed class InstantQuotationUploadClientTests
+{
+    [Fact]
+    public void Contract_UsesServerSessionOpaqueReferencesStableOperationsAndCancellation()
+    {
+        var methods = typeof(IInstantQuotationUploadClient).GetMethods().OrderBy(method => method.Name).ToArray();
+
+        Assert.Equal(["FinalizeAsync", "RemoveAsync", "UploadAsync"], methods.Select(method => method.Name));
+        Assert.All(methods, method => Assert.Equal(typeof(Task<>), method.ReturnType.GetGenericTypeDefinition()));
+        Assert.All(methods, method => Assert.Equal(typeof(string), method.GetParameters()[0].ParameterType));
+        Assert.All(methods, method => Assert.Contains(method.GetParameters(), parameter => parameter.Name == "operationId"));
+        Assert.All(methods, method => Assert.Equal(typeof(CancellationToken), method.GetParameters().Last().ParameterType));
+        Assert.Contains(typeof(IInstantQuotationUploadClient).GetMethod("UploadAsync")!.GetParameters(), parameter => parameter.ParameterType == typeof(Stream));
+        Assert.Contains(typeof(IInstantQuotationUploadClient).GetMethod("RemoveAsync")!.GetParameters(), parameter => parameter.ParameterType == typeof(InstantQuotationUploadReference));
+    }
+
+    [Fact]
+    public void PublicResults_AreOpaqueAndDoNotExposeStorageLocationsOrCredentials()
+    {
+        var publicProperties = new[]
+        {
+            typeof(InstantQuotationUploadReference),
+            typeof(InstantQuotationUploadResult),
+            typeof(InstantQuotationRemoveResult),
+            typeof(InstantQuotationFinalizationResult),
+        }.SelectMany(type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public)).ToArray();
+        var forbidden = new[]
+        {
+            "Bucket", "Object", "Path", "Uri", "Url", "Credential", "Token", "Cookie", "Secret", "AuthorizationHeader",
+        };
+
+        Assert.DoesNotContain(
+            publicProperties,
+            property => forbidden.Any(fragment => property.Name.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
+        Assert.Contains(publicProperties, property => property.Name == "ServiceStatus");
+        Assert.Contains(publicProperties, property => property.Name == "AuthorizationStatus");
+        Assert.Contains(publicProperties, property => property.Name == "Status");
+        Assert.Contains(publicProperties, property => property.Name == "ProblemCategory");
+        Assert.Contains(publicProperties, property => property.Name == "OperationId");
+        Assert.Equal([typeof(string)], typeof(InstantQuotationUploadReference).GetConstructors().Single().GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
+    public async Task UnavailableClient_AllOperationsFailClosedWithTypedUnavailableResults()
+    {
+        var client = new UnavailableInstantQuotationUploadClient();
+        using var stream = new MemoryStream([1, 2, 3]);
+
+        var upload = await client.UploadAsync("session", stream, "part.stl", "model/stl", 3, "upload-op", default);
+        var remove = await client.RemoveAsync("session", new InstantQuotationUploadReference("opaque"), "remove-op", default);
+        var finalize = await client.FinalizeAsync("session", [new InstantQuotationUploadReference("opaque")], "finalize-op", default);
+
+        AssertUnavailable(upload.ServiceStatus, upload.AuthorizationStatus, upload.Status, upload.ProblemCategory);
+        AssertUnavailable(remove.ServiceStatus, remove.AuthorizationStatus, remove.Status, remove.ProblemCategory);
+        AssertUnavailable(finalize.ServiceStatus, finalize.AuthorizationStatus, finalize.Status, finalize.ProblemCategory);
+        Assert.Equal("upload-op", upload.OperationId);
+        Assert.Equal("remove-op", remove.OperationId);
+        Assert.Equal("finalize-op", finalize.OperationId);
+        Assert.Null(upload.UploadReference);
+        Assert.Null(upload.AuthoritativeGeometry);
+        Assert.Equal(3, stream.Length);
+    }
+
+    [Fact]
+    public async Task UnavailableClient_Cancellation_IsObservedWithoutIo()
+    {
+        var client = new UnavailableInstantQuotationUploadClient();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.FinalizeAsync("session", [], "operation", cancellation.Token));
+    }
+
+    [Fact]
+    public void Registration_UsesOnlyUnavailableImplementationWithNoHttpDependency()
+    {
+        var services = new ServiceCollection();
+        services.AddLegacyServiceClients(new ConfigurationBuilder().Build());
+
+        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(IInstantQuotationUploadClient));
+
+        Assert.Equal(typeof(UnavailableInstantQuotationUploadClient), descriptor.ImplementationType);
+        Assert.Empty(typeof(UnavailableInstantQuotationUploadClient).GetConstructors().Single().GetParameters());
+    }
+
+    [Fact]
+    public void GeometryProvenance_BrowserGeometryCannotConstructAuthoritativeType()
+    {
+        Assert.DoesNotContain(
+            typeof(InstantQuotationGeometry).GetProperties(),
+            property => property.Name.Contains("Authoritative", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(typeof(AuthoritativeInstantQuotationGeometry).GetConstructors(BindingFlags.Instance | BindingFlags.Public));
+        Assert.Null(typeof(InstantQuotationGeometry).GetMethod("ToAuthoritative", BindingFlags.Instance | BindingFlags.Public));
+    }
+
+    private static void AssertUnavailable(
+        InstantQuotationServiceStatus serviceStatus,
+        InstantQuotationAuthorizationStatus authorizationStatus,
+        InstantQuotationOperationStatus status,
+        InstantQuotationProblemCategory problemCategory)
+    {
+        Assert.Equal(InstantQuotationServiceStatus.Unavailable, serviceStatus);
+        Assert.Equal(InstantQuotationAuthorizationStatus.NotEvaluated, authorizationStatus);
+        Assert.Equal(InstantQuotationOperationStatus.Failed, status);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, problemCategory);
+    }
+}

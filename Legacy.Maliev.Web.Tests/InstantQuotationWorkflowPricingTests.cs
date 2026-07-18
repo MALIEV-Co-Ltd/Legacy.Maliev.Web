@@ -36,6 +36,34 @@ public sealed class InstantQuotationWorkflowPricingTests
         { "CASTWAX", PrintProcess.Resin, "Green" },
     };
 
+    public static TheoryData<string, string[]> ExactMaterialColors => new()
+    {
+        { "PLA", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
+        { "PETG", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
+        { "ABS", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
+        { "ASA", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
+        { "HIPS", ["Black", "White"] },
+        { "TPU", ["Any", "Black", "White", "Clear", "Red", "Blue"] },
+        { "PC", ["Any", "Natural", "Black", "White", "Gray"] },
+        { "PC-FR", ["Any", "Natural", "Black", "White", "Gray"] },
+        { "PA6", ["Any", "Natural", "Black", "White", "Gray"] },
+        { "PA12", ["Any", "Natural", "Black", "White", "Gray"] },
+        { "ABS-FR", ["Any", "Natural", "Black", "White", "Gray"] },
+        { "PLA-CF", ["Black", "Natural"] },
+        { "PETG-CF", ["Black", "Natural"] },
+        { "PET-CF", ["Black", "Natural"] },
+        { "PA-CF", ["Black", "Natural"] },
+        { "ASA-CF", ["Black", "Natural"] },
+        { "PETG-ESD", ["Black", "Natural"] },
+        { "PC-ESD", ["Black"] },
+        { "PVA", ["Natural"] },
+        { "M68", ["Gray", "Black", "White"] },
+        { "K", ["Gray", "Black"] },
+        { "G217", ["Clear"] },
+        { "F80", ["Black", "Translucent"] },
+        { "CASTWAX", ["Green"] },
+    };
+
     [Theory]
     [MemberData(nameof(MaterialCompatibility))]
     public void Catalog_PreservesExactMaterialKeysProcessesAndCompatibleColors(
@@ -71,6 +99,37 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Theory]
+    [MemberData(nameof(ExactMaterialColors))]
+    public void Catalog_PreservesEveryExactMaterialColorList(string materialKey, string[] expectedColors)
+    {
+        Assert.Equal(expectedColors, PricingCatalog.MaterialColors[materialKey]);
+    }
+
+    [Fact]
+    public void Catalog_PreservesExactCustomCapableSet()
+    {
+        var expected = new[] { "PLA", "PETG", "ABS", "ASA", "TPU", "PC", "PC-FR", "PA6", "PA12", "ABS-FR" };
+        var actual = PricingCatalog.Materials.Keys
+            .Where(material => PricingCatalog.IsColorSupported(material, "#123ABC"))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expected.Order(StringComparer.Ordinal), actual);
+    }
+
+    [Fact]
+    public void Catalog_CollectionsCannotBeMutatedByCallers()
+    {
+        var materials = Assert.IsAssignableFrom<IDictionary<string, MaterialInfo>>(PricingCatalog.Materials);
+        var colors = Assert.IsAssignableFrom<IDictionary<string, IReadOnlyList<string>>>(PricingCatalog.MaterialColors);
+
+        Assert.Throws<NotSupportedException>(() => materials["PLA"] = materials["PETG"]);
+        Assert.Throws<NotSupportedException>(() => colors["PLA"] = ["Mutated"]);
+        Assert.All(PricingCatalog.MaterialColors.Values, colors => Assert.False(colors is IList<string>));
+        Assert.False(PricingCatalog.DiscountTiers is IList<DiscountTier>);
+    }
+
+    [Theory]
     [InlineData(1, 1)]
     [InlineData(9, 1)]
     [InlineData(10, 10)]
@@ -98,14 +157,21 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Fact]
-    public void Quote_RejectsNonFileServiceGeometry()
+    public void Quote_AcceptsOnlyGeometryFromSuccessfulUploadResult()
     {
-        var part = Part("PLA", "Black", 1) with
-        {
-            Geometry = Geometry() with { IsFileServiceAuthoritative = false },
-        };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "upload-operation",
+            new InstantQuotationUploadReference("opaque-upload"),
+            Geometry());
+        var id = Guid.NewGuid();
+        var part = new InstantQuotationPart(
+            id,
+            "part.stl",
+            upload.UploadReference!,
+            upload.AuthoritativeGeometry!,
+            new InstantQuotationPartConfiguration("PLA", "Black", 1));
 
-        Assert.Throws<InvalidOperationException>(() => PricingService.Quote(State(part)));
+        Assert.Single(PricingService.Quote(State(part)).Parts);
     }
 
     [Fact]
@@ -212,8 +278,11 @@ public sealed class InstantQuotationWorkflowPricingTests
         return new InstantQuotationPart(
             id,
             $"{id:N}.stl",
-            $"upload-{id:N}",
-            Geometry(heightMm, volumeMm3, footprintMm2),
+            new InstantQuotationUploadReference($"upload-{id:N}"),
+            InstantQuotationUploadResult.Succeeded(
+                $"operation-{id:N}",
+                new InstantQuotationUploadReference($"upload-{id:N}"),
+                Geometry(heightMm, volumeMm3, footprintMm2)).AuthoritativeGeometry!,
             new InstantQuotationPartConfiguration(materialKey, color, quantity));
     }
 
@@ -228,8 +297,7 @@ public sealed class InstantQuotationWorkflowPricingTests
             Enumerable.Repeat(80.0, 40).ToArray(),
             FacetCount: 1_024,
             BodyCount: 1,
-            IsManifold: true,
-            IsFileServiceAuthoritative: true);
+            IsManifold: true);
 
     private static (InstantQuotationPart Part, ItemQuote Quote) ExpectedLine(InstantQuotationPart part)
     {

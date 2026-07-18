@@ -49,11 +49,6 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         ArgumentNullException.ThrowIfNull(part.Geometry);
         ArgumentNullException.ThrowIfNull(part.Configuration);
 
-        if (!part.Geometry.IsFileServiceAuthoritative)
-        {
-            throw new InvalidOperationException("Instant quotation pricing requires FileService-authoritative geometry.");
-        }
-
         var configuration = part.Configuration;
         if (configuration.Quantity is < 1 or > 1_000)
         {
