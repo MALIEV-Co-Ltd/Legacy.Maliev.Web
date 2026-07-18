@@ -147,7 +147,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
         Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
         Assert.Equal("CNC Machining", service.RootElement.GetProperty("serviceType").GetString());
-        Assert.Equal(3, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
+        Assert.Equal(7, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
     }
 

@@ -199,7 +199,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
         Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
         Assert.Equal("3D Printing", service.RootElement.GetProperty("serviceType").GetString());
-        Assert.Equal(3, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
+        Assert.Equal(7, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
     }
 

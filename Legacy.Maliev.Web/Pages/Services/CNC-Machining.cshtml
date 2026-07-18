@@ -8,14 +8,7 @@
     ViewData["Title"] = T("CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts", "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต");
     ViewData["Description"] = T("CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.", "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม");
     ViewData["Keywords"] = T("CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi", "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC");
-    var faqSchema = new Dictionary<string, object> {
-        ["@context"] = "https://schema.org", ["@type"] = "FAQPage",
-        ["mainEntity"] = new object[] {
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("Can you machine only one piece?", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Yes. MALIEV accepts feasible one-off CNC parts. Setup and programming are distributed across quantity, so unit price often improves with repeat quantities.", "รับงาน CNC ชิ้นเดียวเมื่อผลิตได้จริง โดยค่าเตรียมเครื่องและเขียนโปรแกรมเฉลี่ยตามจำนวน ทำให้ราคาต่อชิ้นมักดีขึ้นเมื่อผลิตหลายชิ้น") } },
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("How much does CNC machining cost?", "งาน CNC ราคาเท่าไร?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Cost depends on material, part size, machining time, setups, tooling, tolerances, finish, inspection, and quantity. Send CAD and a drawing for a quotation.", "ราคาขึ้นกับวัสดุ ขนาด เวลาเครื่อง การจับยึด เครื่องมือ ค่าคลาดเคลื่อน ผิว การตรวจสอบ และจำนวน ควรส่ง CAD และแบบงานเพื่อเสนอราคา") } },
-            new Dictionary<string, object> { ["@type"] = "Question", ["name"] = T("What files should I send for CNC machining?", "ควรส่งไฟล์อะไรสำหรับงาน CNC?"), ["acceptedAnswer"] = new Dictionary<string, object> { ["@type"] = "Answer", ["text"] = T("Send a usable solid CAD file such as STEP for geometry and a PDF drawing for critical dimensions, tolerances, threads, fits, finish, and inspection notes.", "ส่งไฟล์ solid CAD เช่น STEP สำหรับรูปทรง และแบบ PDF ระบุขนาดสำคัญ ค่าคลาดเคลื่อน เกลียว ฟิต ผิว และจุดตรวจสอบ") } }
-        }
-    };
+    var faqJson = CncMachiningPage.CreateFaqJson();
 }
 
 @section Head {
@@ -24,4 +17,4 @@
 
 <component type="typeof(CncMachiningContent)" render-mode="Static" />
 
-@section Schema { <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("CNC Machining"))" /><script type="application/ld+json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(faqSchema))</script> }
+@section Schema { <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("CNC Machining"))" /><script type="application/ld+json">@Html.Raw(faqJson)</script> }

@@ -167,7 +167,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
-        Assert.Contains("FAQPage", page, StringComparison.Ordinal);
+        Assert.Contains("CncMachiningPage.CreateFaqJson()", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "CncMachiningContent.razor"));
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"CNC Machining\" />", body, StringComparison.Ordinal);
@@ -183,7 +183,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
-        Assert.Contains("FAQPage", page, StringComparison.Ordinal);
+        Assert.Contains("ThreeDimensionalPrintingPage.CreateFaqJson()", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"3D Printing\" />", body, StringComparison.Ordinal);
@@ -199,7 +199,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<main class=\"service-page\">", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(PublicServiceStructuredData)\"", page, StringComparison.Ordinal);
-        Assert.Contains("FAQPage", page, StringComparison.Ordinal);
+        Assert.Contains("ThreeDimensionalScanningPage.CreateFaqJson()", page, StringComparison.Ordinal);
 
         var body = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor"));
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"3D Scanning\" />", body, StringComparison.Ordinal);
