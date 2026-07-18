@@ -32,9 +32,22 @@ public sealed record InstantQuotationWorkflowPartViewModel(
     InstantQuotationPartConfiguration Configuration,
     InstantQuotationPartQuote? Quote);
 
+public interface IInstantQuotationWorkflowSessionIdentityAccessor
+{
+    ValueTask<string?> GetProtectedSessionIdentityAsync(CancellationToken cancellationToken);
+
+    ValueTask SetProtectedSessionIdentityAsync(
+        string protectedSessionIdentity,
+        CancellationToken cancellationToken);
+}
+
 public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 {
     public const long MaximumFileSize = 200 * 1024 * 1024;
+
+    private static readonly IReadOnlySet<string> AllowedExtensions = new HashSet<string>(
+        [".stl", ".obj", ".3mf", ".glb", ".gltf", ".stp", ".step", ".igs", ".iges"],
+        StringComparer.OrdinalIgnoreCase);
 
     private readonly IInstantQuotationSessionStore sessionStore;
     private readonly IInstantQuotationUploadClient uploadClient;
@@ -59,6 +72,15 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     }
 
     public InstantQuotationWorkflowState State { get; private set; } = InstantQuotationWorkflowState.Empty;
+
+    public string ProtectedSessionIdentity
+    {
+        get
+        {
+            EnsureInitialized();
+            return session!.SessionId;
+        }
+    }
 
     public IReadOnlyList<InstantQuotationWorkflowUploadViewModel> Uploads => entries
         .Select(static entry => new InstantQuotationWorkflowUploadViewModel(
@@ -92,7 +114,11 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     public IReadOnlyList<string> GetColors(string materialKey) =>
         PricingCatalog.MaterialColors.TryGetValue(materialKey, out var colors) ? colors : [];
 
-    public async Task InitializeAsync(CancellationToken cancellationToken)
+    public Task InitializeAsync(CancellationToken cancellationToken) => InitializeAsync(null, cancellationToken);
+
+    public async Task InitializeAsync(
+        string? protectedSessionIdentity,
+        CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
         if (session is not null)
@@ -100,10 +126,22 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             return;
         }
 
-        session = await sessionStore.CreateAsync(
-            ownerIdentity,
-            new InstantQuotationOrderState([]),
-            cancellationToken);
+        if (!string.IsNullOrWhiteSpace(protectedSessionIdentity))
+        {
+            var existing = await sessionStore.GetAsync(
+                protectedSessionIdentity,
+                ownerIdentity,
+                cancellationToken);
+            if (existing is not null && TryRestore(existing))
+            {
+                return;
+            }
+        }
+
+        session = await sessionStore.CreateAsync(ownerIdentity, new InstantQuotationOrderState([]), cancellationToken);
+        entries.Clear();
+        OrderQuote = null;
+        RefreshState();
     }
 
     public async Task UploadAsync(
@@ -281,6 +319,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             return;
         }
 
+        if (!AllowedExtensions.Contains(Path.GetExtension(entry.File.FileName)))
+        {
+            entry.Status = InstantQuotationWorkflowUploadStatus.Error;
+            entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
+            RefreshState();
+            return;
+        }
+
         try
         {
             await using var content = await entry.File.OpenReadStreamAsync(entry.OperationCancellation.Token);
@@ -336,6 +382,11 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
             if (result.OperationId != operationId || !IsAuthoritativeSuccess(result))
             {
+                if (result.OperationId != operationId && IsAuthoritativeSuccess(result))
+                {
+                    await RemoveStaleUploadAsync(result.UploadReference!);
+                }
+
                 entry.Status = InstantQuotationWorkflowUploadStatus.Error;
                 entry.ProblemCategory = result.ProblemCategory is InstantQuotationProblemCategory.None
                     ? InstantQuotationProblemCategory.Unexpected
@@ -362,15 +413,16 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task RemoveStaleUploadAsync(InstantQuotationUploadReference reference)
     {
+        using var cleanupCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
         {
             await uploadClient.RemoveAsync(
                 session!.SessionId,
                 reference,
                 NewOperationId(),
-                lifetimeCancellation.Token);
+                cleanupCancellation.Token);
         }
-        catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (cleanupCancellation.IsCancellationRequested)
         {
         }
         catch
@@ -386,6 +438,38 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         && result.ProblemCategory is InstantQuotationProblemCategory.None
         && result.UploadReference is not null
         && result.AuthoritativeGeometry is not null;
+
+    private bool TryRestore(InstantQuotationSessionState existing)
+    {
+        try
+        {
+            var parts = existing.RequestState?.Parts?.ToArray();
+            if (parts is null || parts.Any(static part =>
+                    part is null
+                    || part.PartId == Guid.Empty
+                    || string.IsNullOrWhiteSpace(part.DisplayFileName)
+                    || string.IsNullOrWhiteSpace(part.UploadReference?.Value)
+                    || part.Geometry is null
+                    || part.Configuration is null))
+            {
+                return false;
+            }
+
+            var restoredQuote = parts.Length == 0
+                ? null
+                : pricingService.Quote(new InstantQuotationOrderState(parts));
+            entries.Clear();
+            entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
+            session = existing;
+            OrderQuote = restoredQuote;
+            RefreshState();
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
 
     private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
     {
@@ -463,5 +547,16 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         public InstantQuotationPart? Part { get; set; }
 
         public bool HasConfigured { get; set; }
+
+        public static UploadEntry Restore(InstantQuotationPart part) => new(new InstantQuotationWorkflowUploadFile(
+            part.DisplayFileName,
+            "application/octet-stream",
+            1,
+            _ => throw new InvalidOperationException("A restored upload cannot be read again.")))
+        {
+            Part = part,
+            Status = InstantQuotationWorkflowUploadStatus.Uploaded,
+            HasConfigured = true,
+        };
     }
 }

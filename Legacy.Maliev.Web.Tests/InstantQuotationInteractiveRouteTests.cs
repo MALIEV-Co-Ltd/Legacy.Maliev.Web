@@ -106,6 +106,13 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     public void Workflow_UsesNativeAccessibleUploadAndFailClosedStatusSemantics()
     {
         var source = ReadWorkflowSource();
+        var markup = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "InstantQuotationWorkflow.razor"));
 
         Assert.Contains("<label for=\"instant-quote-files\"", source, StringComparison.Ordinal);
         Assert.Contains("<InputFile id=\"instant-quote-files\"", source, StringComparison.Ordinal);
@@ -130,7 +137,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             "credential",
         })
         {
-            Assert.DoesNotContain(forbidden, source, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(forbidden, markup, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -258,6 +265,19 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
         Assert.Equal(state is InstantQuotationWorkflowState.Uploading, html.Contains("aria-busy=\"true\"", StringComparison.Ordinal));
         Assert.Equal(state is InstantQuotationWorkflowState.Error, html.Contains("role=\"alert\"", StringComparison.Ordinal));
+        foreach (var forbidden in new[]
+        {
+            "protected-session",
+            "opaque-upload",
+            "storagePath",
+            "access_token",
+            "refresh_token",
+            "serviceToken",
+            "credential",
+        })
+        {
+            Assert.DoesNotContain(forbidden, html, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     [Theory]

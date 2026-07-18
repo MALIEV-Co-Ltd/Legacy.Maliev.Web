@@ -57,6 +57,108 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
+    public async Task Initialize_ExistingProtectedSession_RestoresPartsAndAuthoritativeQuote()
+    {
+        var store = new RecordingSessionStore
+        {
+            ExistingOwnerIdentity = "member-42",
+            ExistingSession = Session("protected-resume", PersistedPart("restored.stl", "opaque-restored")),
+        };
+        await using var workflow = CreateWorkflow(store: store, ownerIdentity: "member-42");
+
+        await workflow.InitializeAsync("protected-resume", default);
+
+        Assert.Equal("protected-resume", store.LastRequestedSessionId);
+        Assert.Equal("member-42", store.LastOwnerIdentity);
+        Assert.Equal(0, store.CreateCalls);
+        var restored = Assert.Single(workflow.Parts);
+        var restoredUpload = Assert.Single(workflow.Uploads);
+        Assert.Equal("restored.stl", restored.DisplayFileName);
+        Assert.Equal("restored.stl", restoredUpload.DisplayFileName);
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploaded, restoredUpload.Status);
+        Assert.NotNull(restored.Quote);
+        Assert.NotNull(workflow.OrderQuote);
+    }
+
+    [Fact]
+    public async Task Initialize_OwnerMismatch_DoesNotRestoreProtectedPartsAndCreatesFreshSession()
+    {
+        var store = new RecordingSessionStore
+        {
+            ExistingOwnerIdentity = "member-42",
+            ExistingSession = Session("protected-resume", PersistedPart("private.stl", "opaque-private")),
+        };
+        await using var workflow = CreateWorkflow(store: store, ownerIdentity: "member-99");
+
+        await workflow.InitializeAsync("protected-resume", default);
+
+        Assert.Equal(1, store.CreateCalls);
+        Assert.Empty(workflow.Parts);
+        Assert.Null(workflow.OrderQuote);
+        Assert.Equal(InstantQuotationWorkflowState.Empty, workflow.State);
+    }
+
+    [Fact]
+    public async Task Initialize_InvalidProtectedState_CreatesFreshSession()
+    {
+        var invalidPart = PersistedPart("invalid.stl", "opaque-invalid") with
+        {
+            Configuration = new InstantQuotationPartConfiguration("UNSUPPORTED", "Black", 1),
+        };
+        var store = new RecordingSessionStore
+        {
+            ExistingSession = Session("protected-invalid", invalidPart),
+        };
+        await using var workflow = CreateWorkflow(store: store);
+
+        await workflow.InitializeAsync("protected-invalid", default);
+
+        Assert.Equal(1, store.CreateCalls);
+        Assert.Empty(workflow.Parts);
+        Assert.Null(workflow.OrderQuote);
+    }
+
+    [Fact]
+    public async Task Initialize_MalformedProtectedState_CreatesFreshSession()
+    {
+        var store = new RecordingSessionStore
+        {
+            ExistingSession = new InstantQuotationSessionState(
+                "protected-malformed",
+                "submission",
+                null!,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow),
+        };
+        await using var workflow = CreateWorkflow(store: store);
+
+        await workflow.InitializeAsync("protected-malformed", default);
+
+        Assert.Equal(1, store.CreateCalls);
+        Assert.Empty(workflow.Parts);
+    }
+
+    [Fact]
+    public async Task CreatedSessionIdentity_IsPersistedServerSideAndRestoredByNextCoordinator()
+    {
+        var store = new RecordingSessionStore();
+        var accessor = new RecordingSessionIdentityAccessor();
+        await using (var first = CreateWorkflow(store: store))
+        {
+            await first.InitializeAsync(await accessor.GetProtectedSessionIdentityAsync(default), default);
+            await accessor.SetProtectedSessionIdentityAsync(first.ProtectedSessionIdentity, default);
+        }
+
+        await using var resumed = CreateWorkflow(store: store);
+        await resumed.InitializeAsync(await accessor.GetProtectedSessionIdentityAsync(default), default);
+
+        Assert.Equal(1, store.CreateCalls);
+        Assert.Equal("protected-session", accessor.Value);
+        Assert.Equal("protected-session", store.LastRequestedSessionId);
+        Assert.Equal(InstantQuotationWorkflowState.Empty, resumed.State);
+    }
+
+    [Fact]
     public void ResolveOwnerIdentity_UsesOnlyAuthenticatedNameIdentifier()
     {
         var member = new ClaimsPrincipal(new ClaimsIdentity(
@@ -107,6 +209,56 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, item.ProblemCategory);
         Assert.Empty(workflow.Parts);
         Assert.Equal(InstantQuotationWorkflowState.Error, workflow.State);
+    }
+
+    [Theory]
+    [InlineData("part.exe")]
+    [InlineData("part.stl.exe")]
+    [InlineData("part")]
+    public async Task UnsupportedExtension_IsRejectedBeforeUploadBoundary(string fileName)
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        await workflow.UploadAsync([UploadFile(fileName)], default);
+
+        Assert.Empty(client.UploadOperations);
+        var upload = Assert.Single(workflow.Uploads);
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, upload.Status);
+        Assert.Equal(InstantQuotationProblemCategory.Validation, upload.ProblemCategory);
+    }
+
+    [Fact]
+    public async Task SupportedExtension_IsMatchedCaseInsensitively()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var uploading = workflow.UploadAsync([UploadFile("PART.STL")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("PART.STL", "opaque-uppercase", Geometry());
+        await uploading;
+
+        Assert.Single(workflow.Parts);
+    }
+
+    [Fact]
+    public async Task MismatchedOperationAuthoritativeSuccess_IsQuarantinedAndRejected()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("part.stl", "opaque-mismatch", Geometry(), operationId: "wrong-operation");
+        await uploading;
+
+        Assert.Equal("opaque-mismatch", Assert.Single(client.RemovedReferences));
+        Assert.Empty(workflow.Parts);
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, Assert.Single(workflow.Uploads).Status);
     }
 
     [Fact]
@@ -166,6 +318,19 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         Assert.Contains("GetService<IInstantQuotationPricingService>()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new InstantQuotationPricingService", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Component_UsesServerSessionIdentityAccessorWithoutMarkupParameter()
+    {
+        var codeBehind = System.IO.File.ReadAllText(Path.Combine(WorkflowDirectory(), "InstantQuotationWorkflow.razor.cs"));
+        var markup = System.IO.File.ReadAllText(Path.Combine(WorkflowDirectory(), "InstantQuotationWorkflow.razor"));
+
+        Assert.Contains("GetService<IInstantQuotationWorkflowSessionIdentityAccessor>()", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("GetProtectedSessionIdentityAsync", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("SetProtectedSessionIdentityAsync", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("SessionIdentity", markup, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SessionId", markup, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -266,13 +431,16 @@ public sealed class InstantQuotationWorkflowUploadTests
         var client = new ControlledUploadClient(ignoreCancellation: true);
         var workflow = CreateWorkflow(client: client);
         await workflow.InitializeAsync(default);
-        _ = workflow.UploadAsync([UploadFile("part.stl")], default);
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
         await client.WaitForUploadsAsync(1);
 
         await workflow.DisposeAsync();
+        client.CompleteSuccess("part.stl", "opaque-after-dispose", Geometry());
+        await uploading;
 
         Assert.True(client.UploadCancellationTokens[0].IsCancellationRequested);
         Assert.Equal(InstantQuotationWorkflowUploadStatus.Cancelled, Assert.Single(workflow.Uploads).Status);
+        Assert.Equal("opaque-after-dispose", Assert.Single(client.RemovedReferences));
     }
 
     private static InstantQuotationWorkflowCoordinator CreateWorkflow(
@@ -293,6 +461,27 @@ public sealed class InstantQuotationWorkflowUploadTests
 
     private static InstantQuotationGeometry Geometry(double volume = 1_000) =>
         new(10, volume, 100, [100, 90], [40, 38], 100, 1, true);
+
+    private static InstantQuotationPart PersistedPart(string fileName, string reference)
+    {
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "persisted-operation",
+            new InstantQuotationUploadReference(reference),
+            Geometry());
+        return new InstantQuotationPart(
+            Guid.NewGuid(),
+            fileName,
+            upload.UploadReference!,
+            upload.AuthoritativeGeometry!,
+            new InstantQuotationPartConfiguration("PLA", "Black", 1));
+    }
+
+    private static InstantQuotationSessionState Session(string sessionId, params InstantQuotationPart[] parts) => new(
+        sessionId,
+        "submission",
+        new InstantQuotationOrderState(parts),
+        DateTimeOffset.UtcNow,
+        DateTimeOffset.UtcNow);
 
     private static string WorkflowDirectory() => Path.Combine(
         FindRepositoryRoot(), "Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation");
@@ -315,27 +504,66 @@ public sealed class InstantQuotationWorkflowUploadTests
 
     private sealed class RecordingSessionStore : IInstantQuotationSessionStore
     {
+        private InstantQuotationSessionState? createdSession;
+
+        public int CreateCalls { get; private set; }
+
         public string? LastOwnerIdentity { get; private set; }
 
         public InstantQuotationOrderState? LastSavedState { get; private set; }
 
+        public string? LastRequestedSessionId { get; private set; }
+
+        public InstantQuotationSessionState? ExistingSession { get; init; }
+
+        public string? ExistingOwnerIdentity { get; init; }
+
         public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken)
         {
+            CreateCalls++;
             LastOwnerIdentity = ownerIdentity;
             LastSavedState = requestState;
-            return Task.FromResult(new InstantQuotationSessionState("protected-session", "submission", requestState, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+            createdSession = new InstantQuotationSessionState("protected-session", "submission", requestState, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            return Task.FromResult(createdSession);
         }
 
-        public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) => Task.FromResult<InstantQuotationSessionState?>(null);
+        public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken)
+        {
+            LastRequestedSessionId = sessionId;
+            LastOwnerIdentity = ownerIdentity;
+            return Task.FromResult(
+                ExistingSession?.SessionId == sessionId && ExistingOwnerIdentity == ownerIdentity
+                    ? ExistingSession
+                    : createdSession?.SessionId == sessionId && ExistingOwnerIdentity == ownerIdentity
+                        ? createdSession
+                        : null);
+        }
 
         public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity, CancellationToken cancellationToken)
         {
             LastOwnerIdentity = ownerIdentity;
             LastSavedState = session.RequestState;
+            createdSession = session;
             return Task.FromResult(true);
         }
 
         public Task<bool> RemoveAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) => Task.FromResult(true);
+    }
+
+    private sealed class RecordingSessionIdentityAccessor : IInstantQuotationWorkflowSessionIdentityAccessor
+    {
+        public string? Value { get; private set; }
+
+        public ValueTask<string?> GetProtectedSessionIdentityAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(Value);
+
+        public ValueTask SetProtectedSessionIdentityAsync(
+            string protectedSessionIdentity,
+            CancellationToken cancellationToken)
+        {
+            Value = protectedSessionIdentity;
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class RecordingPricingService : IInstantQuotationPricingService
@@ -401,10 +629,17 @@ public sealed class InstantQuotationWorkflowUploadTests
         public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences, string operationId, CancellationToken cancellationToken) =>
             Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
 
-        public void CompleteSuccess(string fileName, string reference, InstantQuotationGeometry geometry)
+        public void CompleteSuccess(
+            string fileName,
+            string reference,
+            InstantQuotationGeometry geometry,
+            string? operationId = null)
         {
             var pending = completions[fileName].Dequeue();
-            pending.Completion.SetResult(InstantQuotationUploadResult.Succeeded(pending.OperationId, new InstantQuotationUploadReference(reference), geometry));
+            pending.Completion.SetResult(InstantQuotationUploadResult.Succeeded(
+                operationId ?? pending.OperationId,
+                new InstantQuotationUploadReference(reference),
+                geometry));
         }
 
         public void CompleteUnavailable(string fileName)

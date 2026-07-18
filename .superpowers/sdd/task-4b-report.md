@@ -11,6 +11,10 @@
 - Rendered catalog materials/colors, quantities, part tiers/prices, subtotal/shipping/VAT/final total, lead time, and required stable markers.
 - Preserved successful multipart parts and configuration access when another upload/remove is in recoverable error.
 - Derived member ownership only from an authenticated name-identifier claim; no session identity, opaque reference, storage path, token, credential, or manual geometry is rendered.
+- Restored valid protected sessions through `GetAsync`, rebuilt upload/part view state, and recomputed the authoritative order quote; owner mismatch or invalid protected state creates a fresh empty session.
+- Added a server-DI read/write identity accessor so a newly created opaque session identity can be persisted and supplied on reconnect without a Razor parameter or JavaScript value.
+- Enforced the exact supported extension set in C# before opening a stream or calling the upload boundary, with case-insensitive extension matching and suffix-trick rejection.
+- Quarantined authoritative results carrying mismatched operation IDs, and made late-success cleanup after disposal use a fresh bounded cleanup token rather than the disposed lifetime token.
 
 ## TDD Evidence
 
@@ -28,11 +32,15 @@ Additional focused REDs reproduced before their fixes:
 - The component instantiated the concrete pricing service instead of resolving its contract.
 - Multipart error lacked a combined safe UI path to successful parts.
 - Disposal against a non-cooperative upload client left the item `Uploading` instead of `Cancelled`.
+- Protected-session initialization had no resume overload or server-only read/write identity transport.
+- File acceptance depended only on the browser `accept` hint.
+- Active authoritative results with a mismatched operation ID were rejected but not removed.
+- Post-disposal late cleanup attempted to use the disposed lifetime cancellation source.
 
 ## Verification
 
-- Focused Task 4B class: 13 tests, all passing.
-- Release bounded regression lane (Task 1-3 contracts, Task 4B, route/host/architecture): 204 passed, 0 failed, 0 skipped.
+- Focused Task 4B class: 24 tests, all passing.
+- Release bounded regression lane (Task 1-3 contracts, Task 4B, route/host/architecture): 215 passed, 0 failed, 0 skipped.
 - `dotnet build Legacy.Maliev.Web.slnx --no-restore -c Release -p:MalievWorkspaceRoot=B:\maliev`: succeeded, 0 warnings, 0 errors.
 - Scoped `dotnet format` and `--verify-no-changes`: exit 0.
 - `git diff --check`: clean.
@@ -68,5 +76,6 @@ Workflow enum remains: `Empty`, `Uploading`, `Uploaded`, `Error`, `MultiPart`, `
 
 - Task 4A owns advisory viewer/upload JavaScript integration; this slice does not wire or modify those files.
 - The component resolves `IInstantQuotationPricingService` and fails closed when the application dependency set is incomplete; integration-owned DI registration remains outside this slice.
+- Root integration must register a protected server-side `IInstantQuotationWorkflowSessionIdentityAccessor` implementation; without one, the workflow safely creates a new protected session and never puts its identity in markup or JavaScript.
 - `IInstantQuotationUploadClient` remains fail-closed until FileService #7 publishes the exact upload/remove/finalization HTTP contract.
 - Submission/finalization, customer form, auth/CSRF submission, and analytics events remain later tasks.

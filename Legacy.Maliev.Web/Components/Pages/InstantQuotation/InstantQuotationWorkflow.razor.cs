@@ -77,7 +77,17 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             ResolveOwnerIdentity(principal));
         try
         {
-            await workflow.InitializeAsync(default);
+            var identityAccessor = Services.GetService<IInstantQuotationWorkflowSessionIdentityAccessor>();
+            var protectedSessionIdentity = identityAccessor is null
+                ? null
+                : await identityAccessor.GetProtectedSessionIdentityAsync(default);
+            await workflow.InitializeAsync(protectedSessionIdentity, default);
+            if (identityAccessor is not null)
+            {
+                await identityAccessor.SetProtectedSessionIdentityAsync(
+                    workflow.ProtectedSessionIdentity,
+                    default);
+            }
         }
         catch
         {
