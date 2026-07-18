@@ -94,7 +94,9 @@ public sealed class AboutPageContractTests : IClassFixture<WebApplicationFactory
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("facebook", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("https://www.facebook.com", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connect.facebook.net", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fb:app_id", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }

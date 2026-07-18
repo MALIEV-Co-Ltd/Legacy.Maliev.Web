@@ -38,15 +38,17 @@ public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<
         Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_ContactChannelAnalyticsPartial.cshtml")));
     }
 
-    [Fact]
-    public async Task PublicRoute_RendersCompleteConsentSafeContactAnalyticsContract()
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task PublicRoute_RendersCompleteConsentSafeContactAnalyticsContract(string culture)
     {
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             BaseAddress = new Uri("https://localhost")
         });
-        using var response = await client.GetAsync("/services/cnc-machining?culture=en");
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -56,10 +58,13 @@ public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<
         Assert.Contains("eventName: 'phone_click'", source, StringComparison.Ordinal);
         Assert.Contains("eventName: 'email_click'", source, StringComparison.Ordinal);
         Assert.Contains("eventName: 'line_click'", source, StringComparison.Ordinal);
+        Assert.Contains("eventName: 'messenger_click'", source, StringComparison.Ordinal);
         Assert.Contains("eventName: 'whatsapp_click'", source, StringComparison.Ordinal);
         Assert.Contains("eventName: 'instagram_click'", source, StringComparison.Ordinal);
         Assert.Contains("eventName: 'youtube_click'", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("eventName: 'messenger_click'", source, StringComparison.Ordinal);
+        Assert.Contains("channel: 'messenger', destination: 'facebook_messenger'", source, StringComparison.Ordinal);
+        Assert.Contains("data-maliev-contact-destination", source, StringComparison.Ordinal);
+        Assert.Contains("marker === 'whatsapp_business'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("eventName: 'facebook_click'", source, StringComparison.Ordinal);
         Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
         Assert.Contains("event: 'maliev_review_link_click'", source, StringComparison.Ordinal);

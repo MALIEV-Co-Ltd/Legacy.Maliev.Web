@@ -6,6 +6,7 @@ public static class SocialNetworks
     public const string Instagram = "https://www.instagram.com/maliev.manufacturing/";
     public const string Threads = "https://www.threads.com/@maliev.manufacturing";
     public const string Line = "https://line.me/ti/p/@maliev";
+    public const string Messenger = "https://m.me/maliev.manufacturing/";
     public const string TikTok = "https://www.tiktok.com/@maliev.marketing";
     public const string YouTube = "https://www.youtube.com/channel/UCCosquPSUed6UPlMcRCq0Ig";
 }
