@@ -5,7 +5,7 @@
   <ItemGroup>
     <PackageReference Include="Google.Cloud.RecaptchaEnterprise.V1" Version="2.20.0" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
-    <PackageReference Include="StackExchange.Redis" Version="2.13.17" />
+    <PackageReference Include="StackExchange.Redis" Version="3.0.17" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

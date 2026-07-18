@@ -216,6 +216,7 @@ else
     redisOptions.ConnectTimeout = 10_000;
     redisOptions.AsyncTimeout = 10_000;
     redisOptions.SyncTimeout = 10_000;
+    redisOptions.Protocol = RedisProtocol.Resp2;
     var redis = ConnectionMultiplexer.Connect(redisOptions);
     builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
     builder.Services.AddStackExchangeRedisCache(options =>
@@ -225,7 +226,7 @@ else
     });
     dataProtection.PersistKeysToStackExchangeRedis(redis, "legacy:web:data-protection-keys");
     builder.Services.AddHealthChecks().AddRedis(
-        redisConnectionString,
+        redis,
         name: "redis-sessions",
         tags: ["ready"],
         timeout: TimeSpan.FromSeconds(10));
