@@ -430,6 +430,20 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(10, invocation.PageSize);
     }
 
+    [Fact]
+    public async Task MemberQuotationsIndex_LegacyIndexUrlPreservesAuthenticatedBlazorRoute()
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync("/member/quotations/index?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"member-quotations-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("en", "One or more query values are invalid.")]
     [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
