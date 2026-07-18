@@ -1,0 +1,25 @@
+@page "/Legal/NonDisclosureAgreement"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "สัญญาปกปิดความลับ | MALIEV" : "Non-Disclosure Agreement | MALIEV";
+    var description = isThai
+        ? "เราให้ความสำคัญกับความลับของชิ้นงานอยู่มากที่สุด คุณสามารถขอสัญญาปกปิดความลับได้ที่นี่"
+        : "Your confidentiality at the Maliev is of the utmost importance.";
+    var keywords = isThai
+        ? "สัญญาปกปิดความลับ"
+        : "non-disclosure agreement, confidential agreement";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<NonDisclosureAgreementContent RouteOwner="blazor-static-ssr" />
