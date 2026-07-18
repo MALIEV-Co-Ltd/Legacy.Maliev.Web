@@ -51,7 +51,7 @@ public sealed class Login(IAccountSessionManager sessionManager) : PageModel
     {
         if (User.Identity?.IsAuthenticated == true)
         {
-            return RedirectToPage("/Account/Index");
+            return LocalRedirect("~/Account");
         }
 
         Email = email?.Trim() ?? string.Empty;
@@ -76,7 +76,7 @@ public sealed class Login(IAccountSessionManager sessionManager) : PageModel
         {
             return Url.IsLocalUrl(ReturnUrl)
                 ? LocalRedirect(ReturnUrl!)
-                : RedirectToPage("/Account/Index");
+                : LocalRedirect("~/Account");
         }
 
         ModelState.AddModelError(

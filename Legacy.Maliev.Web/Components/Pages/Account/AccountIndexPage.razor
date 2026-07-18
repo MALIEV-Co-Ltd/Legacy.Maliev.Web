@@ -1,0 +1,37 @@
+@page "/Account"
+@using Microsoft.AspNetCore.Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+@inject IStringLocalizer<AccountIndexContent> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var model = new AccountIndexDisplayModel(
+        context.User.Identity?.IsAuthenticated == true,
+        context.User.Identity?.Name);
+    var tokens = model.IsAuthenticated ? Antiforgery.GetAndStoreTokens(context) : null;
+}
+<PageTitle>@Localizer["Member account | MALIEV"]</PageTitle>
+<main class="auth-page" data-migration-route-owner="blazor-static-ssr">
+    <div class="maliev-container auth-shell">
+        <section class="auth-intro">
+            <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
+            <h1>@Localizer["Manage manufacturing projects in one place"]</h1>
+            <p>@Localizer["Review quotations, orders, project files, and account details."]</p>
+        </section>
+        <section class="auth-card">
+            <div class="auth-card__header"><h1>@Localizer["Choose an account action"]</h1></div>
+            <div class="maliev-actions">
+                <AccountIndexContent Model="model" />
+                @if (tokens is not null)
+                {
+                    <form method="post" action="/Account/Logout">
+                        <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                        <button type="submit" class="maliev-button">@Localizer["Sign out"]</button>
+                    </form>
+                }
+            </div>
+        </section>
+    </div>
+</main>

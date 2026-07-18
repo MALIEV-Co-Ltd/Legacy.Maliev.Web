@@ -118,4 +118,4 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Member account | MALIEV" xml:space="preserve"><value>บัญชีสมาชิก | MALIEV</value></data><data name="Member workspace" xml:space="preserve"><value>พื้นที่สมาชิก</value></data><data name="Manage manufacturing projects in one place" xml:space="preserve"><value>จัดการโครงการผลิตในที่เดียว</value></data><data name="Review quotations, orders, project files, and account details." xml:space="preserve"><value>ตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี</value></data><data name="Choose an account action" xml:space="preserve"><value>เลือกการทำงานของบัญชี</value></data><data name="Sign in" xml:space="preserve"><value>เข้าสู่ระบบ</value></data><data name="Create an account" xml:space="preserve"><value>สร้างบัญชี</value></data><data name="Reset password" xml:space="preserve"><value>รีเซ็ตรหัสผ่าน</value></data>
-</root>
+<data name="Sign out" xml:space="preserve"><value>ออกจากระบบ</value></data></root>

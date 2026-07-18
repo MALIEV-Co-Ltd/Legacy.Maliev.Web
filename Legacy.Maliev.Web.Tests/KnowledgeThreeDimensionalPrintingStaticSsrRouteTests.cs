@@ -55,6 +55,7 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
             [
                 "AboutPage.razor",
                 "AccessDeniedPage.razor",
+                "AccountIndexPage.razor",
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "CncMachiningPage.razor",
