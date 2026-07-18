@@ -71,7 +71,7 @@ public sealed class Signup(
                 StringComparer.Ordinal));
 
     public IActionResult OnGet() => User.Identity?.IsAuthenticated == true
-        ? RedirectToPage("/Account/Index")
+        ? LocalRedirect("~/Account")
         : Page();
 
     public async Task<IActionResult> OnPostSignUpAsync(CancellationToken cancellationToken)
