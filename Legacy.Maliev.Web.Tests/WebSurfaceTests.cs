@@ -2313,6 +2313,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"signup-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{lastNameLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);

@@ -24,6 +24,7 @@ var useBlazorAccessDeniedRoute = builder.Configuration.GetValue("BlazorRouting:A
 var useBlazorErrorRoute = builder.Configuration.GetValue("BlazorRouting:Error", true);
 var useBlazorAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:AccountIndex", true);
 var useBlazorLoginRoute = builder.Configuration.GetValue("BlazorRouting:Login", true);
+var useBlazorSignupRoute = builder.Configuration.GetValue("BlazorRouting:Signup", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -45,6 +46,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorErrorRoute
     && useBlazorAccountIndexRoute
     && useBlazorLoginRoute
+    && useBlazorSignupRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -112,6 +114,15 @@ builder.Services.AddRazorPages(options =>
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Account/Login",
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
+        options.Conventions.AddPageRouteModelConvention(
+            "/Account/Signup",
             model =>
             {
                 foreach (var selector in model.Selectors)

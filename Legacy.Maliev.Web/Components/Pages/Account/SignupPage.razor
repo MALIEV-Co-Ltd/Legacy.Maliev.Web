@@ -1,0 +1,70 @@
+@page "/Account/Signup"
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using Microsoft.Extensions.Options
+@using Legacy.Maliev.Web.Infrastructure
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IOptions<RecaptchaEnterpriseOptions> RecaptchaOptions
+@inject IStringLocalizer<SignupContent> Localizer
+@inject NavigationManager Navigation
+
+<PageTitle>@Localizer["Sign Up | MALIEV"]</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex, follow" />
+    <script src="https://www.google.com/recaptcha/enterprise.js?render=@RecaptchaOptions.Value.SiteKey"></script>
+</HeadContent>
+<main class="auth-page" data-migration-route-owner="blazor-static-ssr">
+    <div class="maliev-container auth-shell">
+        <section class="auth-intro">
+            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
+            <h1>@Localizer["Manufacturing project management, in one place"]</h1>
+            <p>@Localizer["Create an account to manage quotes, orders, projects, and files."]</p>
+        </section>
+        <section class="auth-card">
+            <header class="auth-card__header"><h1>@Localizer["Join now"]</h1></header>
+            @if (!string.IsNullOrWhiteSpace(notification))
+            {
+                <div class="maliev-alert maliev-alert--success" role="status">@notification</div>
+            }
+            <form id="customer-signup"
+                  method="post"
+                  class="maliev-form"
+                  data-recaptcha-enterprise-form
+                  data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey">
+                @if (tokens is not null)
+                {
+                    <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                }
+                <SignupContent Model="model" />
+            </form>
+            <footer class="auth-card__footer">@Localizer["Already have an account?"] <a href="/Account/Login">@Localizer["Sign in"]</a></footer>
+        </section>
+    </div>
+</main>
+
+@code {
+    private readonly SignupFormDisplayModel model = new(
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        new Dictionary<string, IReadOnlyList<string>>());
+    private AntiforgeryTokenSet? tokens;
+    private string? notification;
+
+    protected override void OnInitialized()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/Account");
+            return;
+        }
+
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}
