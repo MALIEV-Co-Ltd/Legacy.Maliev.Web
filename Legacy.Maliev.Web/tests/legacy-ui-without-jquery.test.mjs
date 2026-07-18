@@ -110,6 +110,39 @@ test('member sidebar preserves desktop, mobile open, and mobile close states wit
     assert.equal(footer.hidden, false);
 });
 
+test('member workspace drawer is keyboard accessible without inline scripts', () => {
+    const navigation = createElement();
+    const openButton = createInteractiveElement();
+    const closeButton = createInteractiveElement();
+    const backdrop = createInteractiveElement();
+    backdrop.hidden = true;
+    const workspace = {
+        querySelector: selector => ({
+            '#member-navigation': navigation,
+            '[data-member-navigation-open]': openButton,
+            '[data-member-navigation-close]': closeButton,
+            '[data-member-navigation-backdrop]': backdrop,
+        })[selector] ?? null,
+    };
+    const documentListeners = new Map();
+    const document = createDocument({ '[data-member-workspace]': [workspace] });
+    document.body.classList = createElement().classList;
+    document.addEventListener = (event, handler) => documentListeners.set(event, handler);
+
+    vm.runInContext(appSource, createBrowserContext(document));
+    openButton.listeners.get('click')();
+    assert.equal(navigation.classList.contains('is-open'), true);
+    assert.equal(openButton.attributes.get('aria-expanded'), 'true');
+    assert.equal(backdrop.hidden, false);
+    assert.equal(closeButton.focused, true);
+
+    documentListeners.get('keydown')({ key: 'Escape' });
+    assert.equal(navigation.classList.contains('is-open'), false);
+    assert.equal(openButton.attributes.get('aria-expanded'), 'false');
+    assert.equal(backdrop.hidden, true);
+    assert.equal(openButton.focused, true);
+});
+
 test('enterprise recaptcha form obtains a token before native submission', async () => {
     const listeners = new Map();
     const tokenInput = { value: '' };
@@ -221,6 +254,17 @@ function createElement() {
             contains: value => classes.has(value),
         },
     };
+}
+
+function createInteractiveElement() {
+    const element = createElement();
+    element.attributes = new Map();
+    element.listeners = new Map();
+    element.focused = false;
+    element.addEventListener = (event, handler) => element.listeners.set(event, handler);
+    element.setAttribute = (name, value) => element.attributes.set(name, value);
+    element.focus = () => { element.focused = true; };
+    return element;
 }
 
 function createPasswordInput(listeners) {

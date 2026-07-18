@@ -26,79 +26,23 @@ public sealed class Index(
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
-        if (customerId is null)
+        var loaded = await MemberOverviewLoader.LoadAsync(
+            HttpContext,
+            sessionManager,
+            accountClient,
+            orderClient,
+            quotationClient,
+            cancellationToken);
+        if (loaded is null)
         {
             return Challenge();
         }
 
-        var profileTask = accountClient.GetProfileAsync(customerId.Value, cancellationToken);
-        var ordersTask = orderClient.ListAsync(
-            customerId.Value,
-            "OrderCreatedDate_Descending",
-            null,
-            1,
-            5,
-            cancellationToken);
-        var quotationsTask = quotationClient.ListAsync(
-            customerId.Value,
-            "QuotationCreatedDate_Descending",
-            null,
-            1,
-            5,
-            cancellationToken);
-        await Task.WhenAll(profileTask, ordersTask, quotationsTask);
-
-        var profile = await profileTask;
-        var orders = await ordersTask;
-        var quotations = await quotationsTask;
-        Profile = profile.Profile;
-        RecentOrders = orders.Page?.Items ?? [];
-        RecentQuotations = quotations.Page?.Items ?? [];
-
-        var notices = new List<string>();
-        if (Profile is null)
-        {
-            notices.Add(profile.ServiceAvailable
-                ? "Your customer profile could not be loaded."
-                : "Customer service is temporarily unavailable.");
-        }
-        else
-        {
-            if (Profile.BillingAddress is null) notices.Add("Add a billing address to complete your account.");
-            if (Profile.ShippingAddress is null) notices.Add("Add a shipping address before an order is dispatched.");
-        }
-
-        if (orders.Page is null)
-        {
-            notices.Add(orders.ServiceAvailable
-                ? "Recent orders could not be loaded."
-                : "Order service is temporarily unavailable.");
-        }
-
-        if (quotations.Page is null)
-        {
-            notices.Add(quotations.ServiceAvailable
-                ? "Recent quotations could not be loaded."
-                : "Quotation service is temporarily unavailable.");
-        }
-        else if (RecentQuotations.Any(value => value.Accepted is null))
-        {
-            notices.Add("You have an open quotation to review.");
-        }
-
-        Notices = notices;
-        DisplayModel = new MemberOverviewDisplayModel(
-            Profile?.FirstName,
-            Notices,
-            RecentOrders.Select(order => new MemberOrderSummaryDisplayModel(
-                order.Id,
-                order.Name,
-                order.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")).ToArray(),
-            RecentQuotations.Select(quotation => new MemberQuotationSummaryDisplayModel(
-                quotation.Id,
-                quotation.Accepted,
-                quotation.ExpirationDate.ToString("yyyy-MM-dd"))).ToArray());
+        Profile = loaded.Profile;
+        RecentOrders = loaded.RecentOrders;
+        RecentQuotations = loaded.RecentQuotations;
+        Notices = loaded.Notices;
+        DisplayModel = loaded.DisplayModel;
         return Page();
     }
 }

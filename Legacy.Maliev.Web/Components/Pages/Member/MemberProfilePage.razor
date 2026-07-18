@@ -1,0 +1,29 @@
+@page "/Member/Account/Manage/Profile"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAccountSessionManager SessionManager
+@inject ICustomerAccountClient CustomerClient
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IStringLocalizer<MemberProfileContent> Localizer
+
+<PageTitle>@Localizer["Profile | MALIEV"]</PageTitle><HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><section class="maliev-section" aria-labelledby="member-profile-title"><form method="post" action="/member/account/manage/profile?handler=UpdateProfile" class="maliev-panel maliev-form">@if (tokens is not null) { <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" /> }<MemberProfileContent Model="model" /></form></section></MemberWorkspaceShell></div>
+
+@code {
+    private MemberProfileDisplayModel model = MemberProfileDisplayModel.Empty;
+    private AntiforgeryTokenSet? tokens;
+    protected override async Task OnInitializedAsync()
+    {
+        var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        model = await MemberAccountLoaders.LoadProfileAsync(context, SessionManager, CustomerClient, notification, context.RequestAborted);
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}

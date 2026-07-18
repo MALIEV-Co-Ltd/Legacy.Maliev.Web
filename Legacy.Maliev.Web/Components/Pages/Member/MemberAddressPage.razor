@@ -1,0 +1,30 @@
+@page "/Member/Account/Manage/Address"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAccountSessionManager SessionManager
+@inject ICustomerAccountClient CustomerClient
+@inject ICountryClient CountryClient
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IStringLocalizer<MemberAddressContent> Localizer
+
+<PageTitle>@Localizer["Addresses | MALIEV"]</PageTitle><HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><section class="maliev-section" aria-labelledby="member-address-title"><form method="post" action="/member/account/manage/address?handler=UpdateAddress" class="maliev-panel">@if (tokens is not null) { <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" /> }<MemberAddressContent Model="model" /></form></section></MemberWorkspaceShell></div>
+
+@code {
+    private MemberAddressDisplayModel model = MemberAddressDisplayModel.Empty;
+    private AntiforgeryTokenSet? tokens;
+    protected override async Task OnInitializedAsync()
+    {
+        var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        model = await MemberAccountLoaders.LoadAddressAsync(context, SessionManager, CustomerClient, CountryClient, notification, context.RequestAborted);
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}
