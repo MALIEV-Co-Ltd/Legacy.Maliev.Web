@@ -1,0 +1,78 @@
+@page "/services/cnc-machining"
+@using System.Globalization
+@using System.Text.Json
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Metadata
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T(
+        "CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts",
+        "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต");
+    var description = T(
+        "CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.",
+        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม");
+    var keywords = T(
+        "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi",
+        "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC");
+    var faqJson = CreateFaqJson();
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <link rel="preload" as="image" href="/src/images/services/cnc/cnc-hero.webp" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("CNC Machining"))" />
+    <script type="application/ld+json">@((MarkupString)faqJson)</script>
+</HeadContent>
+<CncMachiningContent RouteOwner="blazor-static-ssr" />
+
+@code {
+    private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+
+    private string CreateFaqJson()
+    {
+        var schema = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "FAQPage",
+            ["mainEntity"] = new object[]
+            {
+                CreateQuestion(
+                    T("Can you machine only one piece?", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?"),
+                    T(
+                        "Yes. MALIEV accepts feasible one-off CNC parts. Setup and programming are distributed across quantity, so unit price often improves with repeat quantities.",
+                        "รับงาน CNC ชิ้นเดียวเมื่อผลิตได้จริง โดยค่าเตรียมเครื่องและเขียนโปรแกรมเฉลี่ยตามจำนวน ทำให้ราคาต่อชิ้นมักดีขึ้นเมื่อผลิตหลายชิ้น")),
+                CreateQuestion(
+                    T("How much does CNC machining cost?", "งาน CNC ราคาเท่าไร?"),
+                    T(
+                        "Cost depends on material, part size, machining time, setups, tooling, tolerances, finish, inspection, and quantity. Send CAD and a drawing for a quotation.",
+                        "ราคาขึ้นกับวัสดุ ขนาด เวลาเครื่อง การจับยึด เครื่องมือ ค่าคลาดเคลื่อน ผิว การตรวจสอบ และจำนวน ควรส่ง CAD และแบบงานเพื่อเสนอราคา")),
+                CreateQuestion(
+                    T("What files should I send for CNC machining?", "ควรส่งไฟล์อะไรสำหรับงาน CNC?"),
+                    T(
+                        "Send a usable solid CAD file such as STEP for geometry and a PDF drawing for critical dimensions, tolerances, threads, fits, finish, and inspection notes.",
+                        "ส่งไฟล์ solid CAD เช่น STEP สำหรับรูปทรง และแบบ PDF ระบุขนาดสำคัญ ค่าคลาดเคลื่อน เกลียว ฟิต ผิว และจุดตรวจสอบ"))
+            }
+        };
+
+        return JsonSerializer.Serialize(schema);
+    }
+
+    private static Dictionary<string, object> CreateQuestion(string question, string answer) => new()
+    {
+        ["@type"] = "Question",
+        ["name"] = question,
+        ["acceptedAnswer"] = new Dictionary<string, object>
+        {
+            ["@type"] = "Answer",
+            ["text"] = answer
+        }
+    };
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

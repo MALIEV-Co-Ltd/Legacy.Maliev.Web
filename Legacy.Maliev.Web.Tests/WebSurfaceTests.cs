@@ -40,6 +40,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICustomerProfileClient>();
                     services.RemoveAll<ICustomerAccountClient>();
                     services.RemoveAll<ICustomerOrderClient>();
+                    services.RemoveAll<ICustomerQuotationClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -51,6 +52,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
                     services.AddSingleton<ICustomerAccountClient, StubCustomerAccountClient>();
                     services.AddSingleton<ICustomerOrderClient, StubCustomerOrderClient>();
+                    services.AddSingleton<ICustomerQuotationClient, StubCustomerQuotationClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
@@ -62,6 +64,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("/member")]
+    [InlineData("/member/account")]
     [InlineData("/member/account/manage/address")]
     [InlineData("/member/account/manage/changeemail")]
     [InlineData("/member/account/manage/changepassword")]
@@ -69,7 +73,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/member/account/manage/profile")]
     [InlineData("/member/orders")]
     [InlineData("/member/orders/history")]
+    [InlineData("/member/quotations/view?id=15")]
+    [InlineData("/member/orders/cnc-machining")]
+    [InlineData("/member/orders/3d-printing")]
+    [InlineData("/member/orders/3d-scanning")]
     [InlineData("/member/orders/view?itemID=7")]
+    [InlineData("/member/quotations")]
+    [InlineData("/member/quotations/paymentsuccess")]
     public async Task MemberRoutes_RedirectAnonymousUsersToLocalLogin(string route)
     {
         using var anonymous = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
@@ -94,10 +104,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var content = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("data-migration-component=\"error-content\"", content, StringComparison.Ordinal);
         Assert.Contains("<p class=\"maliev-eyebrow\">404</p>", content, StringComparison.Ordinal);
         Assert.Contains("noindex", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
         Assert.DoesNotContain("customer@example.com", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("REFERRER", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -122,8 +136,93 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("Something did not work properly", content, StringComparison.Ordinal);
         Assert.Contains("Request ID", content, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"error-content\"", content, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
         Assert.DoesNotContain("sensitive exception detail", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"statusCode\"", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", 404, "Error | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
+    [InlineData("th", 404, "ข้อผิดพลาด | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please try again. If the problem continues, contact support and include the request ID below.", "Back to the home page", "Contact support")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดลองอีกครั้ง หากยังพบปัญหา โปรดติดต่อฝ่ายช่วยเหลือพร้อมแจ้งรหัสคำขอด้านล่าง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    public async Task ErrorRoute_RendersLocalizedSafeStaticSsrForStatusCode(
+        string culture,
+        int statusCode,
+        string pageTitle,
+        string heading,
+        string description,
+        string homeLabel,
+        string supportLabel)
+    {
+        using var response = await client.GetAsync($"/error?code={statusCode}&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal((HttpStatusCode)statusCode, response.StatusCode);
+        Assert.Contains($"<title>{pageTitle}</title>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"error-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{homeLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{supportLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain("customer@example.com", decodedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/authenticated-missing-route?culture=en", HttpStatusCode.NotFound)]
+    [InlineData("/error?code=500&culture=en", HttpStatusCode.InternalServerError)]
+    public async Task ErrorRoute_SuppressesIdentityDependentNavigationForAuthenticatedCustomers(
+        string route,
+        HttpStatusCode expectedStatus)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(expectedStatus, response.StatusCode);
+        Assert.Contains("data-migration-component=\"error-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer@example.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy_session_id", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("href=\"/Member", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Logout")]
+    [InlineData("th", "ออกจากระบบ")]
+    public async Task PublicNavigation_RendersAuthenticatedIdentityAndProtectedLogout(
+        string culture,
+        string logoutLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/legal?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($">{logoutLabel}<", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -140,6 +239,25 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.Redirect, authenticated.StatusCode);
         Assert.Equal("/Member/Quotations", authenticated.Headers.Location?.OriginalString);
+        Assert.Equal(string.Empty, await authenticated.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData("/member/orders/cnc-machining?untrusted=discard", "/Quotation?item=CNC-Machining")]
+    [InlineData("/member/orders/3d-printing?untrusted=discard", "/Quotation?item=3D-Printing")]
+    [InlineData("/member/orders/3d-scanning?untrusted=discard", "/Quotation?item=3D-Scanning")]
+    [InlineData("/member/account/manage/createpassword?untrusted=discard", "/Member/Account/Manage/ChangePassword")]
+    public async Task AuthenticatedCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery(
+        string route,
+        string expectedLocation)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(expectedLocation, response.Headers.Location?.OriginalString);
+        Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -166,23 +284,412 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("Start or review an order", orders, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task SignedInMember_OrderHistoryDetailAndCancellationStayInsideOwnedBffBoundary()
+    [Theory]
+    [InlineData("en", "Welcome, Ada", "Recent orders", "Recent quotations", "Order history")]
+    [InlineData("th", "ยินดีต้อนรับ Ada", "คำสั่งซื้อล่าสุด", "ใบเสนอราคาล่าสุด", "ประวัติการสั่งงาน")]
+    public async Task MemberLanding_RendersLocalizedDisplayOnlyStaticSsrWithoutSecrets(
+        string culture,
+        string heading,
+        string ordersHeading,
+        string quotationsHeading,
+        string orderHistoryLabel)
     {
         await SignInAsync();
 
-        var history = await client.GetStringAsync("/member/orders/history?search=CNC");
-        var detail = await client.GetStringAsync("/member/orders/view?itemID=7");
+        using var response = await client.GetAsync($"/member?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
 
-        Assert.Contains("Part", history, StringComparison.Ordinal);
-        Assert.DoesNotContain("The Sort field is required.", history, StringComparison.Ordinal);
-        Assert.Contains("/Member/Orders/View?itemID=7", history, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CNC", detail, StringComparison.Ordinal);
-        Assert.Contains("Reviewing", detail, StringComparison.Ordinal);
-        Assert.Contains("orders/part.step", detail, StringComparison.Ordinal);
-        Assert.Contains("__RequestVerificationToken", detail, StringComparison.Ordinal);
-        Assert.DoesNotContain("sensitive-access-token", history, StringComparison.Ordinal);
-        Assert.DoesNotContain("service-token", detail, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-overview-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{ordersHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{quotationsHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{orderHistoryLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Account settings", "Profile", "Addresses", "Password")]
+    [InlineData("th", "ตั้งค่าบัญชี", "โปรไฟล์", "ที่อยู่", "รหัสผ่าน")]
+    public async Task MemberAccountIndex_RendersLocalizedDisplayOnlyStaticSsrWithoutSecrets(
+        string culture,
+        string heading,
+        string profileLabel,
+        string addressLabel,
+        string passwordLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member/account?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-account-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{profileLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{addressLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/account/manage/profile\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/account/manage/address\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/account/manage/changeemail\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/member/account/manage/changepassword\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Order management", "Start or review an order", "Order history", "CNC machining")]
+    [InlineData("th", "จัดการคำสั่งซื้อ", "เริ่มหรือตรวจสอบคำสั่งซื้อ", "ประวัติคำสั่งซื้อ", "งาน CNC")]
+    public async Task MemberOrdersIndex_RendersLocalizedDisplayOnlyStaticSsrWithCanonicalActions(
+        string culture,
+        string eyebrow,
+        string heading,
+        string historyLabel,
+        string cncLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member/orders?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-orders-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{historyLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{cncLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Quotation management", "Quotations", "Open", "Previous", "Next")]
+    [InlineData("th", "จัดการใบเสนอราคา", "ใบเสนอราคา", "ยังไม่ได้ตอบรับ", "ก่อนหน้า", "ถัดไป")]
+    public async Task MemberQuotationsIndex_RendersLocalizedStaticSsrWithQueryAndPaginationParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string status,
+        string previousLabel,
+        string nextLabel)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        using var response = await client.GetAsync(
+            $"/member/quotations?culture={culture}&index=2&size=10&sort=QuotationCreatedDate_Ascending&search=CNC");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-quotations-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{previousLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{nextLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\" value=\"QuotationCreatedDate_Ascending\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=1&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=3&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<QuotationListInvocation>(quotationClient.LastInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("QuotationCreatedDate_Ascending", invocation.Sort);
+        Assert.Equal("CNC", invocation.Search);
+        Assert.Equal(2, invocation.PageIndex);
+        Assert.Equal(10, invocation.PageSize);
+    }
+
+    [Theory]
+    [InlineData("en", "One or more query values are invalid.")]
+    [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
+    public async Task MemberQuotationsIndex_MalformedPagingRendersLocalizedSafeValidation(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(
+            $"/member/quotations?culture={culture}&index=not-a-number&size=also-invalid");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("class=\"validation-summary-errors\" role=\"alert\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{expectedMessage}<", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Input string was not in a correct format", decodedSource, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files")]
+    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา")]
+    public async Task MemberQuotationDetail_RendersLocalizedOwnedStaticSsr(
+        string culture,
+        string heading,
+        string status,
+        string itemsHeading,
+        string ordersHeading,
+        string filesHeading)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        using var response = await client.GetAsync($"/member/quotations/view?id=15&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-quotation-detail-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{itemsHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{ordersHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{filesHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("CNC bracket", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
+        Assert.Contains("drawing.pdf", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-private-quotations", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("customers/42/quotations/15", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<QuotationDetailInvocation>(quotationClient.LastDetailInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(15, invocation.QuotationId);
+    }
+
+    [Theory]
+    [InlineData("/member/quotations/view")]
+    [InlineData("/member/quotations/view?id=0")]
+    [InlineData("/member/quotations/view?id=-1")]
+    [InlineData("/member/quotations/view?id=999")]
+    public async Task MemberQuotationDetail_InvalidOrUnownedIdReturnsNotFound(string route)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "Quotation service is temporarily unavailable.")]
+    [InlineData("th", "ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberQuotationDetail_ServiceFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.DetailResultOverride = new CustomerQuotationDetailsResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/quotations/view?id=15&culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-private-quotations", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Order management", "Order history", "Previous", "Next")]
+    [InlineData("th", "จัดการคำสั่งซื้อ", "ประวัติคำสั่งซื้อ", "ก่อนหน้า", "ถัดไป")]
+    public async Task MemberOrderHistory_RendersLocalizedOwnedStaticSsrWithQueryAndPaginationParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string previousLabel,
+        string nextLabel)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
+
+        using var response = await client.GetAsync(
+            $"/member/orders/history?culture={culture}&index=2&size=10&sort=OrderCreatedDate_Ascending&search=CNC");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-order-history-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{previousLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{nextLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Part", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\" value=\"OrderCreatedDate_Ascending\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=1&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=3&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<OrderListInvocation>(orderClient.LastListInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("OrderCreatedDate_Ascending", invocation.Sort);
+        Assert.Equal("CNC", invocation.Search);
+        Assert.Equal(2, invocation.PageIndex);
+        Assert.Equal(10, invocation.PageSize);
+    }
+
+    [Theory]
+    [InlineData("en", "One or more query values are invalid.")]
+    [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
+    public async Task MemberOrderHistory_MalformedPagingRendersLocalizedSafeValidation(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(
+            $"/member/orders/history?culture={culture}&index=not-a-number&size=also-invalid");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Input string was not in a correct format", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Order service is temporarily unavailable.")]
+    [InlineData("th", "ระบบคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberOrderHistory_ServiceFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ListResultOverride = new CustomerOrderListResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/orders/history?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Order details", "Status history", "Order files", "Cancel order")]
+    [InlineData("th", "รายละเอียดคำสั่งซื้อ", "ประวัติสถานะ", "ไฟล์คำสั่งซื้อ", "ยกเลิกคำสั่งซื้อ")]
+    public async Task MemberOrderDetail_RendersLocalizedOwnedStaticSsrAndAntiforgeryForm(
+        string culture,
+        string heading,
+        string historyHeading,
+        string filesHeading,
+        string cancelLabel)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
+
+        using var response = await client.GetAsync($"/member/orders/view?itemID=7&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-order-detail-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{historyHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{filesHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{cancelLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("CNC", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Reviewing", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("part.step", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("orders/part.step", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-orders", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"orderId\" value=\"7\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var invocation = Assert.IsType<OrderInvocation>(orderClient.LastGetInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(7, invocation.OrderId);
+    }
+
+    [Theory]
+    [InlineData("/member/orders/view")]
+    [InlineData("/member/orders/view?itemID=0")]
+    [InlineData("/member/orders/view?itemID=-1")]
+    [InlineData("/member/orders/view?itemID=999")]
+    public async Task MemberOrderDetail_InvalidOrUnownedIdReturnsNotFound(string route)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "Order service is temporarily unavailable.")]
+    [InlineData("th", "ระบบคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberOrderDetail_ServiceFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.GetResultOverride = new CustomerOrderDetailsResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/orders/view?itemID=7&culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("legacy-orders", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MemberOrderDetail_CancellationRetainsOwnedAntiforgeryPostAndRedirect()
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
 
         var form = await GetAntiforgeryFormAsync("/member/orders/view?itemID=7");
         form["orderId"] = "7";
@@ -194,26 +701,329 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(
             "/Member/Orders/View?itemID=7",
             response.Headers.Location?.OriginalString);
+
+        var invocation = Assert.IsType<OrderInvocation>(orderClient.LastCancelInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(7, invocation.OrderId);
     }
 
     [Fact]
-    public async Task AddressUpdate_UsesAntiforgeryAndRedirectAfterPost()
+    public async Task MemberOrderDetail_CancellationWithoutAntiforgeryIsRejectedBeforeServiceCall()
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/address");
-        form["BillingAddress1"] = "1 Billing Rd";
-        form["BillingCity"] = "Bangkok";
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/orders/view?handler=CancelOrder",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["orderId"] = "7" }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(orderClient.LastCancelInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "This order can no longer be cancelled.")]
+    [InlineData("th", "ไม่สามารถยกเลิกคำสั่งซื้อนี้ได้อีก")]
+    public async Task MemberOrderDetail_CancellationConflictRendersLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        var form = await GetAntiforgeryFormAsync($"/member/orders/view?itemID=7&culture={culture}");
+        form["orderId"] = "7";
+        orderClient.CancelResultOverride = new CustomerOrderOperationResult(false, true, true, true);
+
+        using var response = await client.PostAsync(
+            $"/member/orders/view?handler=CancelOrder&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Customer account", "Addresses", "Billing address", "Shipping address", "Save addresses")]
+    [InlineData("th", "บัญชีลูกค้า", "ที่อยู่", "ที่อยู่ออกใบแจ้งหนี้", "ที่อยู่จัดส่ง", "บันทึกที่อยู่")]
+    public async Task MemberAddress_RendersLocalizedOwnedStaticSsrFields(
+        string culture,
+        string eyebrow,
+        string heading,
+        string billingLegend,
+        string shippingLegend,
+        string saveLabel)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+
+        using var response = await client.GetAsync($"/member/account/manage/address?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-address-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{billingLegend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{shippingLegend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{saveLabel}<", decodedSource, StringComparison.Ordinal);
+        foreach (var prefix in new[] { "Billing", "Shipping" })
+        {
+            foreach (var suffix in new[] { "Building", "Address1", "Address2", "City", "State", "PostalCode", "CountryId" })
+            {
+                Assert.Contains($"name=\"{prefix}{suffix}\"", source, StringComparison.Ordinal);
+            }
+        }
+        Assert.Contains("value=\"Existing Billing\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Existing Shipping\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"764\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(42, accountClient.LastAddressGetCustomerId);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task AddressUpdate_UsesExactOwnedDtoAntiforgeryAndRedirectAfterPost(string culture)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingBuilding"] = " Billing Tower ";
+        form["BillingAddress1"] = " 1 Billing Rd ";
+        form["BillingAddress2"] = "   ";
+        form["BillingCity"] = " Bangkok ";
+        form["BillingState"] = " ";
+        form["BillingPostalCode"] = " 10110 ";
         form["BillingCountryId"] = "764";
-        form["ShippingAddress1"] = "2 Shipping Rd";
-        form["ShippingCity"] = "Bangkok";
+        form["ShippingBuilding"] = "   ";
+        form["ShippingAddress1"] = " 2 Shipping Rd ";
+        form["ShippingAddress2"] = " Dock 3 ";
+        form["ShippingCity"] = " ";
+        form["ShippingState"] = " Bangkok ";
+        form["ShippingPostalCode"] = "   ";
         form["ShippingCountryId"] = "764";
 
         using var response = await client.PostAsync(
-            "/member/account/manage/address?handler=UpdateAddress",
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("/member/account/manage/address", response.Headers.Location?.OriginalString?.ToLowerInvariant());
+        var invocation = Assert.IsType<AddressUpdateInvocation>(accountClient.LastAddressUpdateInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(new CustomerAddressInput("Billing Tower", "1 Billing Rd", null, "Bangkok", null, "10110", 764), invocation.Update.Billing);
+        Assert.Equal(new CustomerAddressInput(null, "2 Shipping Rd", "Dock 3", null, "Bangkok", null, 764), invocation.Update.Shipping);
+    }
+
+    [Fact]
+    public async Task MemberAddress_WithoutAntiforgeryIsRejectedBeforeCustomerService()
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/address?handler=UpdateAddress",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["BillingAddress1"] = "1 Billing Rd",
+                ["BillingCountryId"] = "764",
+                ["ShippingAddress1"] = "2 Shipping Rd",
+                ["ShippingCountryId"] = "764",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(accountClient.LastAddressUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Address line 1 is required for the billing address.", "Country must be selected for the shipping address.")]
+    [InlineData("th", "กรุณากรอกที่อยู่บรรทัดที่ 1 สำหรับที่อยู่ออกใบแจ้งหนี้", "กรุณาเลือกประเทศสำหรับที่อยู่จัดส่ง")]
+    public async Task MemberAddress_InvalidOwnedFieldsRenderLocalizedSafeErrors(
+        string culture,
+        string billingError,
+        string shippingError)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingAddress1"] = string.Empty;
+        form["BillingCountryId"] = "764";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCountryId"] = "999";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var rawSource = await response.Content.ReadAsStringAsync();
+        var source = WebUtility.HtmlDecode(rawSource);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{billingError}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{shippingError}<", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"BillingAddress1\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"address-error-BillingAddress1\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("id=\"address-error-BillingAddress1\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"address-error-ShippingCountryId\"", rawSource, StringComparison.Ordinal);
+        Assert.Contains("id=\"address-error-ShippingCountryId\"", rawSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
+        Assert.Null(accountClient.LastAddressUpdateInvocation);
+    }
+
+    [Fact]
+    public async Task MemberAddress_HtmlEncodesOwnedPiiAndCountryLabels()
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        var countryClient = Assert.IsType<StubCountryClient>(
+            configuredFactory.Services.GetRequiredService<ICountryClient>());
+        accountClient.ResetAddressInvocations();
+        var hostileAddress = new CustomerAddress(
+            7,
+            "\"HQ\" <script>alert('building')</script>",
+            "<script>alert('address')</script>",
+            null,
+            null,
+            null,
+            null,
+            764,
+            null,
+            null);
+        accountClient.AddressGetResultOverride = new CustomerAddressProfileResult(
+            new CustomerAddressProfile(new CustomerAccountDetails(
+                42,
+                "Ada",
+                "Lovelace",
+                "Ada Lovelace",
+                null,
+                null,
+                null,
+                "customer@example.com",
+                null,
+                null,
+                hostileAddress.Id,
+                hostileAddress.Id,
+                null,
+                null,
+                hostileAddress,
+                null,
+                hostileAddress)),
+            true,
+            true);
+        countryClient.ResultOverride = new ServiceResponse<IReadOnlyList<Country>>(
+            [new Country(764, "<img src=x onerror=alert('country')>", null, null, null, null, null, null)],
+            true);
+
+        using var response = await client.GetAsync("/member/account/manage/address?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("&quot;HQ&quot; &lt;script&gt;alert(&#x27;building&#x27;)&lt;/script&gt;", source, StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;alert(&#x27;address&#x27;)&lt;/script&gt;", source, StringComparison.Ordinal);
+        Assert.Contains("&lt;img src=x onerror=alert(&#x27;country&#x27;)&gt;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>alert('building')</script>", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<script>alert('address')</script>", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<img src=x", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Country list is temporarily unavailable.")]
+    [InlineData("th", "รายการประเทศไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberAddress_EmptyCountryCatalogBlocksArbitraryCountryIds(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var countryClient = Assert.IsType<StubCountryClient>(
+            configuredFactory.Services.GetRequiredService<ICountryClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        countryClient.ResultOverride = new ServiceResponse<IReadOnlyList<Country>>([], true);
+        accountClient.ResetAddressInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingAddress1"] = "1 Billing Rd";
+        form["BillingCountryId"] = "999";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCountryId"] = "999";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Null(accountClient.LastAddressUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Address service is temporarily unavailable.")]
+    [InlineData("th", "ระบบที่อยู่ไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberAddress_LoadFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        accountClient.AddressGetResultOverride = new CustomerAddressProfileResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/account/manage/address?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "The address could not be updated.")]
+    [InlineData("th", "ไม่สามารถอัปเดตที่อยู่ได้")]
+    public async Task MemberAddress_UpdateFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetAddressInvocations();
+        accountClient.AddressUpdateResultOverride = new CustomerAddressOperationResult(false, true, true);
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/address?culture={culture}");
+        form["BillingAddress1"] = "1 Billing Rd";
+        form["BillingCountryId"] = "764";
+        form["ShippingAddress1"] = "2 Shipping Rd";
+        form["ShippingCountryId"] = "764";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/address?handler=UpdateAddress&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.NotNull(accountClient.LastAddressUpdateInvocation);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -242,61 +1052,531 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             createPassword.Headers.Location?.OriginalString);
     }
 
-    [Fact]
-    public async Task ChangePassword_PostsWithAntiforgeryThenClearsTheBffSession()
+    [Theory]
+    [InlineData("en", "Customer account", "Profile", "Personal information", "Save profile")]
+    [InlineData("th", "บัญชีลูกค้า", "ข้อมูลส่วนตัว", "ข้อมูลส่วนบุคคล", "บันทึกข้อมูลส่วนตัว")]
+    public async Task MemberProfile_RendersLocalizedStaticSsrFieldsInsideOwnedAntiforgeryForm(
+        string culture,
+        string eyebrow,
+        string heading,
+        string personalLegend,
+        string submitLabel)
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/changepassword");
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+
+        using var response = await client.GetAsync($"/member/account/manage/profile?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-profile-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{personalLegend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        foreach (var field in new[] { "FirstName", "LastName", "Telephone", "Mobile", "Fax", "DateOfBirth", "CompanyName", "TaxNumber", "Registrar" })
+        {
+            Assert.Contains($"name=\"{field}\"", source, StringComparison.Ordinal);
+        }
+        Assert.Contains("value=\"Ada\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Lovelace\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"date\" name=\"DateOfBirth\" value=\"1815-12-10\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"tel\" name=\"Telephone\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"tel\" name=\"Mobile\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"tel\" name=\"Fax\"", source, StringComparison.Ordinal);
+        Assert.Contains(">customer@example.com<", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Email\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/account/manage/changeemail\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(42, accountClient.LastProfileGetCustomerId);
+    }
+
+    [Theory]
+    [InlineData("en", "Customer account", "Change password", "All signed-in sessions will be revoked after this change.")]
+    [InlineData("th", "บัญชีลูกค้า", "เปลี่ยนรหัสผ่าน", "เซสชันที่เข้าสู่ระบบทั้งหมดจะถูกเพิกถอนหลังจากเปลี่ยนรหัสผ่าน")]
+    public async Task MemberChangePassword_RendersLocalizedPasswordFreeStaticSsrForm(
+        string culture,
+        string eyebrow,
+        string heading,
+        string explanation)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member/account/manage/changepassword?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-change-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{explanation}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"CurrentPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"NewPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"ConfirmPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"current-password\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"new-password\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ChangePassword_PostsExactCredentialsWithAntiforgeryThenClearsTheBffSession(string culture)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changepassword?culture={culture}");
         form["CurrentPassword"] = "current-password";
         form["NewPassword"] = "new-password";
         form["ConfirmPassword"] = "new-password";
 
         using var response = await client.PostAsync(
-            "/member/account/manage/changepassword?handler=ChangePassword",
+            $"/member/account/manage/changepassword?handler=ChangePassword&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        var invocation = Assert.IsType<PasswordChangeInvocation>(authentication.LastPasswordChangeInvocation);
+        Assert.Equal("sensitive-access-token", invocation.AccessToken);
+        Assert.Equal("current-password", invocation.CurrentPassword);
+        Assert.Equal("new-password", invocation.NewPassword);
         using var account = await client.GetAsync("/member/account/manage/changepassword");
         Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
     }
 
     [Fact]
-    public async Task ProfileUpdate_UsesAntiforgeryAndRedirectAfterPost()
+    public async Task MemberChangePassword_WithoutAntiforgeryIsRejectedBeforeCredentialService()
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/profile");
-        form["FirstName"] = "Ada";
-        form["LastName"] = "Lovelace";
-        form["CompanyName"] = "Analytical Engines";
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
 
         using var response = await client.PostAsync(
-            "/member/account/manage/profile?handler=UpdateProfile",
+            "/member/account/manage/changepassword?handler=ChangePassword",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["CurrentPassword"] = "current-password",
+                ["NewPassword"] = "new-password",
+                ["ConfirmPassword"] = "new-password",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(authentication.LastPasswordChangeInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Current password is required.", "New password is required.", "Passwords do not match.")]
+    [InlineData("th", "กรุณากรอกรหัสผ่านปัจจุบัน", "กรุณากรอกรหัสผ่านใหม่", "รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน")]
+    public async Task MemberChangePassword_InvalidFieldsRenderLocalizedAllowlistedErrorsWithoutPasswords(
+        string culture,
+        string currentRequired,
+        string newRequired,
+        string mismatch)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changepassword?culture={culture}");
+        form["CurrentPassword"] = string.Empty;
+        form["NewPassword"] = string.Empty;
+        form["ConfirmPassword"] = "must-not-render";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changepassword?handler=ChangePassword&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{currentRequired}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{newRequired}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{mismatch}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-render", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastPasswordChangeInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", false, "The current password is invalid or the new password was rejected.")]
+    [InlineData("th", false, "รหัสผ่านปัจจุบันไม่ถูกต้องหรือรหัสผ่านใหม่ถูกปฏิเสธ")]
+    [InlineData("en", true, "Account security is temporarily unavailable.")]
+    [InlineData("th", true, "ระบบความปลอดภัยของบัญชีไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberChangePassword_FailureRendersOnlyLocalizedSafeError(
+        string culture,
+        bool unavailable,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        authentication.ResetCredentialInvocations();
+        authentication.PasswordChangeResultOverride = new CustomerCredentialOperationResult(false, !unavailable, true);
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changepassword?culture={culture}");
+        form["CurrentPassword"] = "rejected-current-password";
+        form["NewPassword"] = "rejected-new-password";
+        form["ConfirmPassword"] = "rejected-new-password";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changepassword?handler=ChangePassword&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("rejected-current-password", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("rejected-new-password", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ProfileUpdate_UsesInvariantBrowserDateAntiforgeryAndRedirectAfterPost(string culture)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/profile?culture={culture}");
+        form["FirstName"] = "Ada";
+        form["LastName"] = "Lovelace";
+        form["Telephone"] = "021234567";
+        form["Mobile"] = "0812345678";
+        form["Fax"] = "021234568";
+        form["DateOfBirth"] = "1815-12-10";
+        form["CompanyName"] = "Analytical Engines";
+        form["TaxNumber"] = "0105550000000";
+        form["Registrar"] = "DBD";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/profile?handler=UpdateProfile&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal(
             "/member/account/manage/profile",
             response.Headers.Location?.OriginalString?.ToLowerInvariant());
+
+        var invocation = Assert.IsType<ProfileUpdateInvocation>(accountClient.LastProfileUpdateInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("Ada", invocation.Update.FirstName);
+        Assert.Equal("Lovelace", invocation.Update.LastName);
+        Assert.Equal("021234567", invocation.Update.Telephone);
+        Assert.Equal("0812345678", invocation.Update.Mobile);
+        Assert.Equal("021234568", invocation.Update.Fax);
+        Assert.Equal(new DateTime(1815, 12, 10), invocation.Update.DateOfBirth);
+        Assert.Equal("Analytical Engines", invocation.Update.CompanyName);
+        Assert.Equal("0105550000000", invocation.Update.TaxNumber);
+        Assert.Equal("DBD", invocation.Update.Registrar);
     }
 
     [Fact]
-    public async Task ChangeEmail_SynchronizesProfileThenClearsTheBffSession()
+    public async Task MemberProfile_UpdateWithoutAntiforgeryIsRejectedBeforeServiceCall()
     {
         await SignInAsync();
-        var form = await GetAntiforgeryFormAsync("/member/account/manage/changeemail");
-        form["CurrentPassword"] = "current-password";
-        form["NewEmail"] = "new@example.com";
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
 
         using var response = await client.PostAsync(
-            "/member/account/manage/changeemail?handler=ChangeEmail",
+            "/member/account/manage/profile?handler=UpdateProfile",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["FirstName"] = "Ada",
+                ["LastName"] = "Lovelace",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(accountClient.LastProfileUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "First name is required.", "Last name is required.", "One or more profile values are invalid.")]
+    [InlineData("th", "กรุณากรอกชื่อ", "กรุณากรอกนามสกุล", "ข้อมูลส่วนตัวอย่างน้อยหนึ่งรายการไม่ถูกต้อง")]
+    public async Task MemberProfile_InvalidFieldsRenderLocalizedAllowlistedErrors(
+        string culture,
+        string firstNameError,
+        string lastNameError,
+        string invalidValueError)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ResetProfileInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/profile?culture={culture}");
+        form["FirstName"] = string.Empty;
+        form["LastName"] = string.Empty;
+        form["DateOfBirth"] = "not-a-date";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/profile?handler=UpdateProfile&culture={culture}",
             new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{firstNameError}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lastNameError}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{invalidValueError}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
+        Assert.Null(accountClient.LastProfileUpdateInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", "Profile service is temporarily unavailable.")]
+    [InlineData("th", "ระบบข้อมูลส่วนตัวไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberProfile_LoadFailureRendersOnlyLocalizedSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        accountClient.ProfileGetResultOverride = new CustomerAccountProfileResult(null, false, false);
+
+        using var response = await client.GetAsync($"/member/account/manage/profile?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Customer account", "Change email", "You will need to confirm the new address and sign in again.")]
+    [InlineData("th", "บัญชีลูกค้า", "เปลี่ยนอีเมล", "คุณต้องยืนยันอีเมลใหม่และเข้าสู่ระบบอีกครั้ง")]
+    public async Task MemberChangeEmail_RendersLocalizedPasswordFreeStaticSsrForm(
+        string culture,
+        string eyebrow,
+        string heading,
+        string guidance)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/member/account/manage/changeemail?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"member-change-email-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{guidance}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\" name=\"NewEmail\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\" name=\"CurrentPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"email\"", source, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"current-password\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("confirmation-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ChangeEmail_SynchronizesExactProfileAndIdentityThenClearsTheBffSession(string culture)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        var notifications = Assert.IsType<StubNotificationClient>(
+            configuredFactory.Services.GetRequiredService<INotificationClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        notifications.Reset();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = "  new@example.com  ";
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}")
+        {
+            Content = new FormUrlEncodedContent(form),
+        };
+        request.Headers.Host = "attacker.example";
+        using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
         Assert.Contains("email=new@example.com", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
+        var profileUpdate = Assert.Single(accountClient.EmailUpdateInvocations);
+        Assert.Equal(42, profileUpdate.CustomerId);
+        Assert.Equal("new@example.com", profileUpdate.Email);
+        var identityUpdate = Assert.IsType<EmailChangeInvocation>(authentication.LastEmailChangeInvocation);
+        Assert.Equal("sensitive-access-token", identityUpdate.AccessToken);
+        Assert.Equal("current-password", identityUpdate.CurrentPassword);
+        Assert.Equal("new@example.com", identityUpdate.NewEmail);
+        var notification = Assert.IsType<EmailNotification>(notifications.LastNotification);
+        Assert.Equal("new@example.com", notification.To);
+        Assert.Contains("https://www.maliev.com/account/changeemailconfirmation", notification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("attacker.example", notification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("http://www.maliev.com", notification.Body, StringComparison.Ordinal);
+        Assert.Contains("confirmation-token", notification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("current-password", notification.Body, StringComparison.Ordinal);
         using var account = await client.GetAsync("/member/account/manage/changeemail");
         Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
+    }
+
+    [Fact]
+    public async Task MemberChangeEmail_WithoutAntiforgeryIsRejectedBeforeEitherService()
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+
+        using var response = await client.PostAsync(
+            "/member/account/manage/changeemail?handler=ChangeEmail",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["CurrentPassword"] = "current-password",
+                ["NewEmail"] = "new@example.com",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "Current password is required.", "Enter a valid email address.")]
+    [InlineData("th", "กรุณากรอกรหัสผ่านปัจจุบัน", "กรุณากรอกอีเมลที่ถูกต้อง")]
+    public async Task MemberChangeEmail_InvalidFieldsRenderLocalizedAllowlistedErrorsWithoutPassword(
+        string culture,
+        string passwordRequired,
+        string invalidEmail)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = string.Empty;
+        form["NewEmail"] = "not-an-email";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{passwordRequired}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{invalidEmail}<", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("value=\"current-password\"", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "Enter a different email address.")]
+    [InlineData("th", "กรุณากรอกอีเมลที่แตกต่างจากอีเมลปัจจุบัน")]
+    public async Task MemberChangeEmail_RejectsCurrentEmailBeforeEitherService(string culture, string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "The email address could not be changed.")]
+    [InlineData("th", "ไม่สามารถเปลี่ยนอีเมลได้")]
+    public async Task MemberChangeEmail_ProfileFailureStopsBeforeIdentityAndRendersSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        accountClient.EmailUpdateResults.Enqueue(new CustomerAddressOperationResult(false, false, true));
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "current-password";
+        form["NewEmail"] = "new@example.com";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Null(authentication.LastEmailChangeInvocation);
+        Assert.Single(accountClient.EmailUpdateInvocations);
+    }
+
+    [Theory]
+    [InlineData("en", "The current password is invalid or the email address is already in use.")]
+    [InlineData("th", "รหัสผ่านปัจจุบันไม่ถูกต้องหรืออีเมลนี้ถูกใช้งานแล้ว")]
+    public async Task MemberChangeEmail_IdentityRejectionRollsProfileBackBeforeSafeError(
+        string culture,
+        string expectedMessage)
+    {
+        await SignInAsync();
+        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+        var accountClient = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        authentication.ResetEmailChangeInvocations();
+        accountClient.ResetEmailInvocations();
+        authentication.EmailChangeResultOverride = new CustomerCredentialOperationResult(false, true, true);
+        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+        form["CurrentPassword"] = "rejected-password";
+        form["NewEmail"] = "new@example.com";
+
+        using var response = await client.PostAsync(
+            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+        Assert.Equal(["new@example.com", "customer@example.com"], accountClient.EmailUpdateInvocations.Select(item => item.Email));
+        Assert.DoesNotContain("rejected-password", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("confirmation-token", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -330,10 +1610,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("window.malievAnalytics.setConsent(state)", source, StringComparison.Ordinal);
         Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
         Assert.Contains("line_click", source, StringComparison.Ordinal);
-        Assert.Contains("messenger_click", source, StringComparison.Ordinal);
         Assert.Contains("whatsapp_click", source, StringComparison.Ordinal);
         Assert.Contains("phone_click", source, StringComparison.Ordinal);
         Assert.Contains("email_click", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("messenger_click", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook_click", source, StringComparison.Ordinal);
         Assert.DoesNotContain("event: 'maliev_contact_click'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("analytics.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("UA-133315708-1", source, StringComparison.Ordinal);
@@ -350,7 +1631,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("https://www.googletagmanager.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://www.google.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://www.gstatic.com", policy, StringComparison.Ordinal);
-        Assert.Contains("https://connect.facebook.net", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook", policy, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("https://tagmanager.google.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
@@ -362,6 +1643,73 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("frame-src", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("script-src *", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("frame-src *", policy, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Precision. Speed. Reliability.", "Manufacturing Services for Prototypes and Production Parts", "Why customers work with MALIEV")]
+    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "บริการผลิตชิ้นงานต้นแบบและชิ้นส่วนสำหรับการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
+    public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string valueLabel)
+    {
+        using var response = await client.GetAsync($"/?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"home-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(valueLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Get an instant manufacturing estimate", "Part configuration", "Calculate estimate", "Configure a part to see pricing")]
+    [InlineData("th", "ประเมินราคาการผลิตได้ทันที", "ตั้งค่าชิ้นงาน", "คำนวณราคา", "ตั้งค่าชิ้นงานเพื่อดูราคา")]
+    public async Task InstantQuotation_RendersLocalizedStaticSsrCalculatorContract(
+        string culture,
+        string heading,
+        string legend,
+        string calculateLabel,
+        string resultHeading)
+    {
+        using var response = await client.GetAsync($"/InstantQuotation/3D-Printing?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"instant-quotation-three-dimensional-printing\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{legend}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{calculateLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{resultHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-instant-estimate", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"material\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"PLA\" selected", source, StringComparison.Ordinal);
+        foreach (var field in new[] { "height", "volume", "footprint", "quantity", "areaProfile", "perimeterProfile" })
+        {
+            Assert.Contains($"name=\"{field}\"", source, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("aria-live=\"polite\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-calculating=", source, StringComparison.Ordinal);
+        Assert.Contains("data-calculated=", source, StringComparison.Ordinal);
+        Assert.Contains("data-failed=", source, StringComparison.Ordinal);
+        Assert.Contains("gtag('consent', 'default'", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"cookieConsent\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -479,6 +1827,318 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task KnowledgeGuidelines_NdaActionTargetsLiveCanonicalRoute()
+    {
+        using var guidelines = await client.GetAsync("/knowledges/guidelines?culture=en");
+        var source = await guidelines.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, guidelines.StatusCode);
+        Assert.Contains("href=\"/legal/nondisclosureagreement\"", source, StringComparison.Ordinal);
+
+        using var nda = await client.GetAsync("/legal/nondisclosureagreement?culture=en");
+        Assert.Equal(HttpStatusCode.OK, nda.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "Legal information", "Privacy Policy")]
+    [InlineData("th", "ข้อมูลทางกฎหมาย", "นโยบายความเป็นส่วนตัว")]
+    public async Task LegalRoute_RendersLocalizedBlazorStaticSsrContent(
+        string culture,
+        string heading,
+        string privacyLink)
+    {
+        using var response = await client.GetAsync($"/legal?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(privacyLink, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/services", "en", "Manufacturing services", "/services/cnc-machining")]
+    [InlineData("/services", "th", "บริการผลิตชิ้นส่วน", "/services/cnc-machining")]
+    [InlineData("/about/socialmedia", "en", "MALIEV on social media", "https://www.youtube.com")]
+    [InlineData("/about/socialmedia", "th", "MALIEV บนโซเชียลมีเดีย", "https://www.youtube.com")]
+    public async Task ReadOnlyPublicRoute_RendersLocalizedBlazorStaticSsrContent(
+        string route,
+        string culture,
+        string heading,
+        string expectedLinkPrefix)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"href=\"{expectedLinkPrefix}", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(
+        "/legal/privacypolicy",
+        "en",
+        "Privacy Policy",
+        "Information Collection And Use",
+        "Children's Privacy",
+        "id=\"contact\"",
+        null)]
+    [InlineData(
+        "/legal/privacypolicy",
+        "th",
+        "นโยบายความเป็นส่วนตัว",
+        "การเก็บรวบรวมและการใช้ข้อมูล",
+        "ความเป็นส่วนตัวของเด็ก",
+        "id=\"contact\"",
+        "Information Collection And Use")]
+    [InlineData(
+        "/legal/termsconditions",
+        "en",
+        "Terms and Conditions",
+        "Hyperlinking to our Content",
+        "Reservation of Rights",
+        "id=\"license\"",
+        null)]
+    [InlineData(
+        "/legal/termsconditions",
+        "th",
+        "ข้อกำหนดและเงื่อนไข",
+        "การเชื่อมโยงมายังเนื้อหาของเรา",
+        "การสงวนสิทธิ์",
+        "id=\"license\"",
+        "Hyperlinking to our Content")]
+    public async Task LegalDocumentRoute_PreservesLocalizedStaticSsrContent(
+        string route,
+        string culture,
+        string heading,
+        string firstSentinel,
+        string secondSentinel,
+        string anchorSentinel,
+        string? forbiddenSentinel)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(firstSentinel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(secondSentinel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(anchorSentinel, source, StringComparison.Ordinal);
+        if (forbiddenSentinel is not null)
+        {
+            Assert.DoesNotContain(forbiddenSentinel, decodedSource, StringComparison.Ordinal);
+        }
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
+        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Non-Disclosure Agreement", "Mutual Non-disclosure agreement", "Download Non-Disclosure Agreement")]
+    [InlineData("th", "สัญญาปกปิดความลับ", "สัญญาปกปิดความลับแบบสองฝ่าย", "ดาวน์โหลดสัญญาปกปิดความลับ")]
+    public async Task NonDisclosureAgreementRoute_RendersLocalizedStaticSsrContent(
+        string culture,
+        string heading,
+        string documentHeading,
+        string downloadLabel)
+    {
+        using var response = await client.GetAsync($"/legal/nondisclosureagreement?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(documentHeading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(downloadLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"mailto:nda@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
+    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
+    public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookIntegration(
+        string culture,
+        string heading,
+        string foundedMilestone,
+        string cncMilestone)
+    {
+        using var response = await client.GetAsync($"/about?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/services/custom-manufacturing", "en", "Custom manufacturing", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/custom-manufacturing", "th", "ผลิตชิ้นงานตามแบบ", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    [InlineData("/services/cnc-machining", "en", "CNC machining", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/cnc-machining", "th", "งาน CNC", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    [InlineData("/services/3d-printing", "en", "3D printing", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/3d-printing", "th", "พิมพ์ 3D", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    [InlineData("/services/3d-scanning", "en", "3D scanning", "Breadcrumb", "Manufacturing support from")]
+    [InlineData("/services/3d-scanning", "th", "สแกน 3D", "เส้นทางนำทาง", "บริการผลิตชิ้นงานจาก")]
+    public async Task ServiceDetailRoute_RendersSharedStaticSsrBreadcrumbAndLocation(
+        string route,
+        string culture,
+        string serviceName,
+        string breadcrumbLabel,
+        string locationHeading)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"service-breadcrumb\"", source, StringComparison.Ordinal);
+        Assert.Contains($"aria-label=\"{breadcrumbLabel}\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"aria-current=\"page\">{serviceName}</li>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"BreadcrumbList\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-location\"", source, StringComparison.Ordinal);
+        Assert.Contains(locationHeading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/quotation\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Made-to-order project intake", "Which path should your project start with?", "Which manufacturing process should I choose?")]
+    [InlineData("th", "เริ่มต้นงานผลิตตามแบบ", "โครงการของคุณควรเริ่มจากทางใด?", "ควรเลือกกระบวนการผลิตแบบใด?")]
+    public async Task CustomManufacturingRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string processHeading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/custom-manufacturing?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"custom-manufacturing-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(processHeading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=custom-manufacturing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "CNC Milling & Turning", "Precision CNC Machining for One-Off and Production Parts", "Can you machine only one piece?")]
+    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
+    public async Task CncMachiningRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "FDM & Resin 3D Printing", "Professional 3D Printing for Prototypes and Functional Parts", "How much does 3D printing cost?")]
+    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
+    public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "In-House & Onsite 3D Scanning", "3D Scanning, Reverse Engineering, and Deviation Analysis", "How much does 3D scanning cost?")]
+    [InlineData("th", "บริการสแกน 3D ในสถานที่และนอกสถานที่", "รับสแกน 3D, Reverse Engineering และ Deviation Analysis", "สแกน 3D ราคาเท่าไร?")]
+    public async Task ThreeDimensionalScanningRoute_RendersStaticBlazorBodyWithContractParity(
+        string culture,
+        string eyebrow,
+        string heading,
+        string faqQuestion)
+    {
+        using var response = await client.GetAsync($"/services/3d-scanning?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"three-dimensional-scanning-content\"", source, StringComparison.Ordinal);
+        Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("/account")]
     [InlineData("/account/accessdenied")]
@@ -496,6 +2156,209 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "Member workspace", "Review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
+    [InlineData("th", "พื้นที่สมาชิก", "ตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    public async Task AccountIndex_RendersLocalizedAnonymousStaticSsrActions(
+        string culture,
+        string workspaceLabel,
+        string description,
+        string signInLabel,
+        string createAccountLabel,
+        string resetPasswordLabel)
+    {
+        using var response = await client.GetAsync($"/account?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{workspaceLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{signInLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{createAccountLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{resetPasswordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/Login\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/Signup\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/ForgotPassword\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("action=\"/Account/Logout\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AccountIndex_SignedInActionsKeepLogoutInsideAntiforgeryBoundary()
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync("/account?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("Signed in as", source, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Member/Account/Manage/Profile\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Account/Manage/Address\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Account/Manage/ChangeEmail\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Account/Manage/ChangePassword\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Member/Orders\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Sign out | MALIEV", "Account security", "Sign out of your account?", "You will need to sign in again to access your member workspace.", "Sign out", "Keep me signed in")]
+    [InlineData("th", "ออกจากระบบ | MALIEV", "ความปลอดภัยของบัญชี", "ออกจากระบบบัญชีของคุณหรือไม่", "คุณจะต้องเข้าสู่ระบบอีกครั้งเพื่อเข้าถึงพื้นที่สมาชิก", "ออกจากระบบ", "คงการเข้าสู่ระบบไว้")]
+    public async Task Logout_RendersLocalizedStaticSsrConfirmationInsideServerPostBoundary(
+        string culture,
+        string pageTitle,
+        string eyebrow,
+        string heading,
+        string description,
+        string signOutLabel,
+        string cancelLabel)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"/account/logout?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<title>{pageTitle}</title>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"logout-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{signOutLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{cancelLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Account/Logout\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account\"", source, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Logout_PostRequiresAntiforgeryThenSignsOutAndClearsAuthentication()
+    {
+        await SignInAsync();
+
+        using var rejected = await client.PostAsync("/account/logout", new FormUrlEncodedContent([]));
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        using var stillAuthenticated = await client.GetAsync("/account/logout?culture=en");
+        Assert.Equal(HttpStatusCode.OK, stillAuthenticated.StatusCode);
+
+        var form = await GetAntiforgeryFormAsync("/account/logout?culture=en");
+        using var response = await client.PostAsync("/account/logout", new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/", response.Headers.Location?.OriginalString);
+        using var afterSignOut = await client.GetAsync("/account/logout");
+        Assert.Equal(HttpStatusCode.Redirect, afterSignOut.StatusCode);
+        Assert.Equal("/Account/Login", afterSignOut.Headers.Location?.AbsolutePath);
+    }
+
+    [Theory]
+    [InlineData("en", "Account access", "Access denied", "You are not authorized to see this content", "Back to the home page", "Contact support")]
+    [InlineData("th", "การเข้าถึงบัญชี", "ไม่สามารถเข้าถึงได้", "คุณไม่สามารถเข้าถึงส่วนนี้ได้", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    public async Task AccessDenied_RendersLocalizedStaticSsrWithoutSessionState(
+        string culture,
+        string eyebrow,
+        string heading,
+        string description,
+        string homeLabel,
+        string supportLabel)
+    {
+        using var response = await client.GetAsync($"/account/accessdenied?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"access-denied-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{homeLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{supportLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
+        Assert.Contains("<meta name=\"robots\" content=\"noindex, nofollow\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up", "Passwords do not match.")]
+    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
+    public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(
+        string culture,
+        string firstNameLabel,
+        string lastNameLabel,
+        string emailLabel,
+        string passwordLabel,
+        string confirmLabel,
+        string submitLabel,
+        string mismatchLabel)
+    {
+        using var response = await client.GetAsync($"/account/signup?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"signup-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{lastNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"data-password-mismatch=\"{mismatchLabel}\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-password-primary", source, StringComparison.Ordinal);
+        Assert.Contains("data-password-confirm", source, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/Signup?handler=SignUp\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\" id=\"signup-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"RecaptchaToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("recaptcha/enterprise.js?render=test-site-key", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Signup_InvalidPostPreservesIdentityFieldsWithoutEchoingPasswordsOrAntiBotToken()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/signup?culture=en");
+        var submittedPassword = new string('q', 12);
+        var submittedAntiBotToken = new string('r', 24);
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Password"] = submittedPassword;
+        form["ConfirmPassword"] = submittedPassword;
+        form["g-recaptcha-response"] = submittedAntiBotToken;
+
+        using var response = await client.PostAsync(
+            "/account/signup?handler=SignUp&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"signup-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Mali\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"Ev\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedPassword, source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedAntiBotToken, source, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("/account/changeemailconfirmation")]
     [InlineData("/account/emailconfirmation")]
     [InlineData("/account/resetpassword")]
@@ -504,6 +2367,88 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         using var response = await client.GetAsync(route);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "New Password", "Retype Password", "Change Password", "Passwords do not match.")]
+    [InlineData("th", "รหัสผ่านใหม่", "ยืนยันรหัสผ่าน", "เปลี่ยนรหัสผ่าน", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
+    public async Task ResetPassword_RendersLocalizedStaticSsrChallengeWithoutPasswordValues(
+        string culture,
+        string passwordLabel,
+        string confirmLabel,
+        string submitLabel,
+        string mismatchLabel)
+    {
+        const string token = "abcdefghijklmnopqrstuvwxyz123456";
+        using var response = await client.GetAsync(
+            $"/account/resetpassword?culture={culture}&email=user%40example.com&token={token}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
+        Assert.Contains("data-migration-component=\"reset-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"data-password-mismatch=\"{mismatchLabel}\"", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-password-primary", source, StringComparison.Ordinal);
+        Assert.Contains("data-password-confirm", source, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/ResetPassword?handler=ChangePassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
+        Assert.Contains($"name=\"Token\" value=\"{token}\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Password\" value=", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"ConfirmPassword\" value=", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResetPassword_MismatchedPostPreservesChallengeWithoutEchoingPasswords()
+    {
+        const string token = "abcdefghijklmnopqrstuvwxyz123456";
+        var form = await GetAntiforgeryFormAsync(
+            $"/account/resetpassword?culture=en&email=user%40example.com&token={token}");
+        form["Email"] = "user@example.com";
+        form["Token"] = token;
+        var submittedPassword = new string('x', 12);
+        var submittedConfirmation = new string('y', 12);
+        form["Password"] = submittedPassword;
+        form["ConfirmPassword"] = submittedConfirmation;
+
+        using var response = await client.PostAsync(
+            "/account/resetpassword?handler=ChangePassword&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"reset-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($"name=\"Token\" value=\"{token}\"", source, StringComparison.Ordinal);
+        Assert.Contains("Passwords do not match.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedPassword, source, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedConfirmation, source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken()
+    {
+        const string token = "abcdefghijklmnopqrstuvwxyz123456";
+        var form = await GetAntiforgeryFormAsync(
+            $"/account/resetpassword?email=user%40example.com&token={token}");
+        form["Email"] = "user@example.com";
+        form["Token"] = token;
+        var submittedPassword = new string('z', 12);
+        form["Password"] = submittedPassword;
+        form["ConfirmPassword"] = submittedPassword;
+
+        using var response = await client.PostAsync(
+            "/account/resetpassword?handler=ChangePassword",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account/Login?email=user@example.com", response.Headers.Location?.OriginalString);
+        Assert.DoesNotContain(token, response.Headers.Location?.OriginalString, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -516,6 +2461,83 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(
             "/Account/Login?email=new@example.com",
             response.Headers.Location?.OriginalString);
+    }
+
+    [Theory]
+    [InlineData("en", "Change Email Confirmation | MALIEV", "Email address", "Email change confirmation", "The email-change link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "ยืนยันการเปลี่ยนอีเมล | MALIEV", "อีเมล", "ยืนยันการเปลี่ยนอีเมล", "ลิงก์เปลี่ยนอีเมลไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    public async Task ChangeEmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
+        string culture,
+        string pageTitle,
+        string eyebrow,
+        string heading,
+        string errorMessage,
+        string backLabel)
+    {
+        const string email = "customer@example.com";
+        const string token = "invalid-token";
+        using var response = await client.GetAsync(
+            $"/account/changeemailconfirmation?email={WebUtility.UrlEncode(email)}&token={token}&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<title>{pageTitle}</title>", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"change-email-confirmation-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{errorMessage}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Account/Login\"", source, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain(email, decodedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(token, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "Email confirmation", "We could not confirm your email", "Request a new confirmation email or contact support.", "The confirmation link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "ขออีเมลยืนยันใหม่หรือติดต่อฝ่ายช่วยเหลือ", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    public async Task EmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
+        string culture,
+        string eyebrow,
+        string heading,
+        string description,
+        string errorMessage,
+        string backLabel)
+    {
+        const string email = "customer@example.com";
+        const string token = "invalid-token";
+        using var response = await client.GetAsync(
+            $"/account/emailconfirmation?email={WebUtility.UrlEncode(email)}&token={token}&culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"email-confirmation-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{errorMessage}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.DoesNotContain(email, decodedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(token, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EmailConfirmation_ValidChallengeRedirectsWithoutLeakingToken()
+    {
+        const string token = "confirmation-token";
+        using var response = await client.GetAsync(
+            $"/account/emailconfirmation?email=customer%40example.com&token={token}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account/Login?email=customer@example.com", response.Headers.Location?.OriginalString);
+        Assert.DoesNotContain(token, response.Headers.Location?.OriginalString, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -556,6 +2578,62 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("Send your password to support", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", "Email", "Password", "Remember me", "Sign in")]
+    [InlineData("th", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
+    public async Task Login_RendersLocalizedStaticSsrFormInsideHardenedSessionBoundary(
+        string culture,
+        string emailLabel,
+        string passwordLabel,
+        string rememberLabel,
+        string submitLabel)
+    {
+        using var response = await client.GetAsync(
+            $"/account/login?culture={culture}&email=user%40example.com&returnUrl=%2FMember%2FOrders");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"login-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(rememberLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/Login?handler=Login\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"ReturnUrl\" value=\"/Member/Orders\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"password\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"RememberMe\" value=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"RememberMe\" type=\"hidden\" value=\"false\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Login_InvalidPostPreservesEmailAndErrorsWithoutEchoingPassword()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/login?culture=en");
+        form["Email"] = "not-an-email";
+        form["Password"] = "do-not-echo";
+        form["RememberMe"] = "false";
+
+        using var response = await client.PostAsync(
+            "/account/login?handler=Login&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"login-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("do-not-echo", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ForgotPassword_UsesSamePublicResponseForUnknownEmail()
     {
@@ -576,6 +2654,52 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("not found", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", "Email", "Reset password", "Back to sign in")]
+    [InlineData("th", "อีเมล", "รีเซ็ตรหัสผ่าน", "กลับไปหน้าเข้าสู่ระบบ")]
+    public async Task ForgotPassword_RendersLocalizedStaticSsrFormWithoutEligibilityState(
+        string culture,
+        string emailLabel,
+        string submitLabel,
+        string backLabel)
+    {
+        using var response = await client.GetAsync($"/account/forgotpassword?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"forgot-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/ForgotPassword?handler=PasswordReset\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("reset-token", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("eligible-account", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_InvalidPostPreservesEmailAndValidationError()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/forgotpassword?culture=en");
+        form["Email"] = "not-an-email";
+
+        using var response = await client.PostAsync(
+            "/account/forgotpassword?handler=PasswordReset&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"forgot-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ContactPage_UsesConfiguredEnterpriseRecaptchaWithoutEmbeddedGoogleApiKey()
     {
@@ -587,6 +2711,69 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("AIza", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ServiceAuthentication", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ClientSecret", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Contact", "Let’s build something useful.", "Send an enquiry", "First name", "Submit enquiry")]
+    [InlineData("th", "Contact", "Let’s build something useful.", "Send an enquiry", "ชื่อ", "Submit enquiry")]
+    public async Task ContactPage_RendersLocalizedStaticSsrFieldsInsideRazorPostBoundary(
+        string culture,
+        string eyebrow,
+        string heading,
+        string formHeading,
+        string firstNameLabel,
+        string submitLabel)
+    {
+        using var response = await client.GetAsync($"/contact?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"contact-hero-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"contact-details-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Contact?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.Contains("required", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"FirstName-error\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-val", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ContactPage_InvalidPostPreservesInputAndFieldErrorsInStaticSsrComponent()
+    {
+        var form = await GetAntiforgeryFormAsync("/contact?culture=en");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Country"] = "Thailand";
+        form["Message"] = "Please contact me";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/contact?handler=SubmitRequest&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -605,6 +2792,65 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("PayPal", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", "First name", "I want: 3d-printing")]
+    [InlineData("th", "ชื่อ", "สินค้าที่ต้องการ: 3d-printing")]
+    public async Task QuotationPage_RendersLocalizedStaticSsrFieldsInsideRazorMultipartBoundary(
+        string culture,
+        string firstNameLabel,
+        string prefill)
+    {
+        using var response = await client.GetAsync(
+            $"/quotation?culture={culture}&item=3d-printing&process=sls&material=pa12");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"quotation-hero-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Quotation?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"SubmissionId\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"3d_printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"Files\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
+        Assert.Contains("multiple", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
+        Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QuotationPage_InvalidPostPreservesInputAndFieldErrorsInStaticSsrComponent()
+    {
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=en&item=cnc-machining");
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Country"] = "Thailand";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/quotation?handler=SubmitRequest&culture=en",
+            new FormUrlEncodedContent(form));
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
+        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates()
     {
@@ -617,11 +2863,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
         Assert.Equal(22, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
         Assert.DoesNotContain("/account", xml, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<!DOCTYPE html>", xml, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -633,6 +2881,73 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", source, StringComparison.Ordinal);
         Assert.DoesNotContain("<script>alert(1)</script>", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Urgent", "Responsibilities", "Qualifications", "What we offer", "Back to careers")]
+    [InlineData("th", "เร่งด่วน", "หน้าที่ความรับผิดชอบ", "คุณสมบัติ", "สิ่งที่เราเสนอ", "กลับหน้าตำแหน่งงาน")]
+    public async Task CareerDetail_RendersLocalizedServiceBackedStaticSsrContent(
+        string culture,
+        string status,
+        string responsibilities,
+        string qualifications,
+        string offerHeading,
+        string backLabel)
+    {
+        using var response = await client.GetAsync($"/career/view/1?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"career-detail-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{responsibilities}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{qualifications}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{offerHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"mailto:career@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("onclick=\"PrintJobDescription()\"", source, StringComparison.Ordinal);
+        Assert.Contains("function PrintJobDescription()", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Career\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/career/view/0", HttpStatusCode.BadRequest)]
+    [InlineData("/career/view/999", HttpStatusCode.NotFound)]
+    public async Task CareerDetail_PreservesInvalidAndMissingOfferStatusCodes(
+        string route,
+        HttpStatusCode expectedStatus)
+    {
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(expectedStatus, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("en", "Job Offers", "Manufacturing Engineer", "Engineer")]
+    [InlineData("th", "ตำแหน่งงาน", "Manufacturing Engineer", "Engineer")]
+    public async Task CareerListing_RendersLocalizedServiceBackedStaticSsrContent(
+        string culture,
+        string heading,
+        string offerTitle,
+        string levelName)
+    {
+        using var response = await client.GetAsync($"/career?culture={culture}&sort=JobCreatedDate_Descending&index=1&size=25");
+        var source = await response.Content.ReadAsStringAsync();
+        var decodedSource = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-component=\"career-index-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{offerTitle}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{levelName}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Career/View/1\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/career?sort=JobCreatedDate_Descending&amp;index=2&amp;size=25\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class StubCareerClient : ICareerClient
@@ -662,7 +2977,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             Task.FromResult(
                 new CareerListing(
                     [Level],
-                    new CareerOfferPage([Offer], pageIndex, 1, 1, false, false),
+                    new CareerOfferPage([Offer], pageIndex, 3, 3, pageIndex > 1, pageIndex < 3),
                     true));
 
         public Task<ServiceResponse<CareerOffer>> GetOfferAsync(
@@ -690,9 +3005,12 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubCountryClient : ICountryClient
     {
+        public ServiceResponse<IReadOnlyList<Country>>? ResultOverride { get; set; }
+
         public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(
             CancellationToken cancellationToken) =>
-            Task.FromResult(
+            Task.FromResult(ResultOverride
+                ??
                 new ServiceResponse<IReadOnlyList<Country>>(
                     [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)],
                     true));
@@ -736,11 +3054,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubNotificationClient : INotificationClient
     {
+        public EmailNotification? LastNotification { get; private set; }
+
+        public void Reset() => LastNotification = null;
+
         public Task<NotificationResult> SendAsync(
             NotificationChannel channel,
             EmailNotification notification,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new NotificationResult(true, true, true));
+            CancellationToken cancellationToken)
+        {
+            LastNotification = notification;
+            return Task.FromResult(new NotificationResult(true, true, true));
+        }
     }
 
     private async Task<Dictionary<string, string>> GetAntiforgeryFormAsync(string path)
@@ -829,6 +3154,26 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubCustomerAuthenticationClient : ICustomerAuthenticationClient
     {
+        public EmailChangeInvocation? LastEmailChangeInvocation { get; private set; }
+
+        public CustomerCredentialOperationResult? EmailChangeResultOverride { get; set; }
+
+        public PasswordChangeInvocation? LastPasswordChangeInvocation { get; private set; }
+
+        public CustomerCredentialOperationResult? PasswordChangeResultOverride { get; set; }
+
+        public void ResetCredentialInvocations()
+        {
+            LastPasswordChangeInvocation = null;
+            PasswordChangeResultOverride = null;
+        }
+
+        public void ResetEmailChangeInvocations()
+        {
+            LastEmailChangeInvocation = null;
+            EmailChangeResultOverride = null;
+        }
+
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerAuthenticationResult(
                 new CustomerTokenSet(
@@ -852,7 +3197,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             Task.FromResult(new CustomerActionChallenge(true, "confirmation-token", true, true));
 
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) =>
-            Task.FromResult(true);
+            Task.FromResult(!string.Equals(token, "invalid-token", StringComparison.Ordinal));
 
         public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerActionChallenge(true, null, true, true));
@@ -864,16 +3209,36 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             string accessToken,
             string currentPassword,
             string newEmail,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerCredentialOperationResult(true, true, true, "confirmation-token"));
+            CancellationToken cancellationToken)
+        {
+            LastEmailChangeInvocation = new(accessToken, currentPassword, newEmail);
+            return Task.FromResult(
+                EmailChangeResultOverride
+                ?? new CustomerCredentialOperationResult(true, true, true, "confirmation-token"));
+        }
 
         public Task<CustomerCredentialOperationResult> ChangePasswordAsync(
             string accessToken,
             string currentPassword,
             string newPassword,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerCredentialOperationResult(true, true, true));
+            CancellationToken cancellationToken)
+        {
+            LastPasswordChangeInvocation = new(accessToken, currentPassword, newPassword);
+            return Task.FromResult(
+                PasswordChangeResultOverride
+                ?? new CustomerCredentialOperationResult(true, true, true));
+        }
     }
+
+    private sealed record PasswordChangeInvocation(
+        string AccessToken,
+        string CurrentPassword,
+        string NewPassword);
+
+    private sealed record EmailChangeInvocation(
+        string AccessToken,
+        string CurrentPassword,
+        string NewEmail);
 
     private sealed class StubCustomerProfileClient : ICustomerProfileClient
     {
@@ -898,7 +3263,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             null,
             null,
             "customer@example.com",
-            null,
+            new DateTime(1815, 12, 10),
             null,
             Billing.Id,
             Shipping.Id,
@@ -908,49 +3273,129 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             null,
             Shipping);
 
+        public int? LastProfileGetCustomerId { get; private set; }
+
+        public ProfileUpdateInvocation? LastProfileUpdateInvocation { get; private set; }
+
+        public CustomerAccountProfileResult? ProfileGetResultOverride { get; set; }
+
+        public CustomerAddressOperationResult? ProfileUpdateResultOverride { get; set; }
+
+        public List<EmailUpdateInvocation> EmailUpdateInvocations { get; } = [];
+
+        public Queue<CustomerAddressOperationResult> EmailUpdateResults { get; } = [];
+
+        public int? LastAddressGetCustomerId { get; private set; }
+
+        public AddressUpdateInvocation? LastAddressUpdateInvocation { get; private set; }
+
+        public CustomerAddressProfileResult? AddressGetResultOverride { get; set; }
+
+        public CustomerAddressOperationResult? AddressUpdateResultOverride { get; set; }
+
+        public void ResetProfileInvocations()
+        {
+            LastProfileGetCustomerId = null;
+            LastProfileUpdateInvocation = null;
+            ProfileGetResultOverride = null;
+            ProfileUpdateResultOverride = null;
+        }
+
+        public void ResetEmailInvocations()
+        {
+            EmailUpdateInvocations.Clear();
+            EmailUpdateResults.Clear();
+        }
+
+        public void ResetAddressInvocations()
+        {
+            LastAddressGetCustomerId = null;
+            LastAddressUpdateInvocation = null;
+            AddressGetResultOverride = null;
+            AddressUpdateResultOverride = null;
+        }
+
         public Task<CustomerAddressProfileResult> GetAddressProfileAsync(
             int customerId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressProfileResult(
-                customerId == Customer.Id ? new CustomerAddressProfile(Customer) : null,
-                true,
-                customerId == Customer.Id));
+            CancellationToken cancellationToken)
+        {
+            LastAddressGetCustomerId = customerId;
+            return Task.FromResult(
+                AddressGetResultOverride
+                ?? new CustomerAddressProfileResult(
+                    customerId == Customer.Id ? new CustomerAddressProfile(Customer) : null,
+                    true,
+                    customerId == Customer.Id));
+        }
 
         public Task<CustomerAddressOperationResult> UpdateAddressesAsync(
             int customerId,
             CustomerAddressUpdate update,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressOperationResult(
-                customerId == Customer.Id,
-                true,
-                customerId == Customer.Id));
+            CancellationToken cancellationToken)
+        {
+            LastAddressUpdateInvocation = new(customerId, update);
+            return Task.FromResult(
+                AddressUpdateResultOverride
+                ?? new CustomerAddressOperationResult(
+                    customerId == Customer.Id,
+                    true,
+                    customerId == Customer.Id));
+        }
 
         public Task<CustomerAddressOperationResult> UpdateEmailAsync(
             int customerId,
             string email,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressOperationResult(
-                customerId == Customer.Id,
-                true,
-                customerId == Customer.Id));
+            CancellationToken cancellationToken)
+        {
+            EmailUpdateInvocations.Add(new(customerId, email));
+            return Task.FromResult(
+                EmailUpdateResults.Count > 0
+                    ? EmailUpdateResults.Dequeue()
+                    : new CustomerAddressOperationResult(
+                        customerId == Customer.Id,
+                        true,
+                        customerId == Customer.Id));
+        }
 
         public Task<CustomerAccountProfileResult> GetProfileAsync(
             int customerId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAccountProfileResult(
+            CancellationToken cancellationToken)
+        {
+            LastProfileGetCustomerId = customerId;
+            if (ProfileGetResultOverride is not null)
+            {
+                return Task.FromResult(ProfileGetResultOverride);
+            }
+
+            return Task.FromResult(new CustomerAccountProfileResult(
                 customerId == Customer.Id ? Customer : null,
                 true,
                 customerId == Customer.Id));
+        }
 
         public Task<CustomerAddressOperationResult> UpdateProfileAsync(
             int customerId,
             CustomerProfileUpdate update,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAddressOperationResult(
+            CancellationToken cancellationToken)
+        {
+            LastProfileUpdateInvocation = new(customerId, update);
+            if (ProfileUpdateResultOverride is not null)
+            {
+                return Task.FromResult(ProfileUpdateResultOverride);
+            }
+
+            return Task.FromResult(new CustomerAddressOperationResult(
                 customerId == Customer.Id,
                 true,
                 customerId == Customer.Id));
+        }
     }
+
+    private sealed record ProfileUpdateInvocation(int CustomerId, CustomerProfileUpdate Update);
+
+    private sealed record EmailUpdateInvocation(int CustomerId, string Email);
+
+    private sealed record AddressUpdateInvocation(int CustomerId, CustomerAddressUpdate Update);
 
     private sealed class StubCustomerOrderClient : ICustomerOrderClient
     {
@@ -966,35 +3411,171 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             [new CustomerOrderStatus(9, 7, 2, "Reviewing", null, null, null)],
             [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", null, null)]);
 
+        public OrderInvocation? LastGetInvocation { get; private set; }
+
+        public OrderInvocation? LastCancelInvocation { get; private set; }
+
+        public OrderListInvocation? LastListInvocation { get; private set; }
+
+        public CustomerOrderDetailsResult? GetResultOverride { get; set; }
+
+        public CustomerOrderOperationResult? CancelResultOverride { get; set; }
+
+        public CustomerOrderListResult? ListResultOverride { get; set; }
+
+        public void ResetInvocations()
+        {
+            LastGetInvocation = null;
+            LastCancelInvocation = null;
+            LastListInvocation = null;
+            GetResultOverride = null;
+            CancelResultOverride = null;
+            ListResultOverride = null;
+        }
+
         public Task<CustomerOrderListResult> ListAsync(
             int customerId,
             string? sort,
             string? search,
             int pageIndex,
             int pageSize,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderListResult(
-                customerId == 42 ? new CustomerOrderPage([Order], pageIndex, 1, 1) : null,
+            CancellationToken cancellationToken)
+        {
+            LastListInvocation = new(customerId, sort, search, pageIndex, pageSize);
+            if (ListResultOverride is not null)
+            {
+                return Task.FromResult(ListResultOverride);
+            }
+
+            return Task.FromResult(new CustomerOrderListResult(
+                customerId == 42 ? new CustomerOrderPage([Order], pageIndex, 3, 1) : null,
                 true,
                 customerId == 42));
+        }
 
         public Task<CustomerOrderDetailsResult> GetAsync(
             int customerId,
             int orderId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderDetailsResult(
+            CancellationToken cancellationToken)
+        {
+            LastGetInvocation = new(customerId, orderId);
+            if (GetResultOverride is not null)
+            {
+                return Task.FromResult(GetResultOverride);
+            }
+
+            return Task.FromResult(new CustomerOrderDetailsResult(
                 customerId == 42 && orderId == 7 ? Details : null,
                 true,
                 customerId == 42));
+        }
 
         public Task<CustomerOrderOperationResult> CancelAsync(
             int customerId,
             int orderId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderOperationResult(
+            CancellationToken cancellationToken)
+        {
+            LastCancelInvocation = new(customerId, orderId);
+            if (CancelResultOverride is not null)
+            {
+                return Task.FromResult(CancelResultOverride);
+            }
+
+            return Task.FromResult(new CustomerOrderOperationResult(
                 customerId == 42 && orderId == 7,
                 true,
                 customerId == 42,
                 false));
+        }
     }
+
+    private sealed record OrderInvocation(int CustomerId, int OrderId);
+
+    private sealed record OrderListInvocation(
+        int CustomerId,
+        string? Sort,
+        string? Search,
+        int PageIndex,
+        int PageSize);
+
+    private sealed class StubCustomerQuotationClient : ICustomerQuotationClient
+    {
+        private static readonly CustomerQuotation Quotation = new(
+            15,
+            42,
+            null,
+            30,
+            new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
+            100,
+            7,
+            107,
+            null,
+            null,
+            764,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc));
+
+        public QuotationListInvocation? LastInvocation { get; private set; }
+
+        public QuotationDetailInvocation? LastDetailInvocation { get; private set; }
+
+        public CustomerQuotationDetailsResult? DetailResultOverride { get; set; }
+
+        public void ResetInvocation()
+        {
+            LastInvocation = null;
+            LastDetailInvocation = null;
+            DetailResultOverride = null;
+        }
+
+        public Task<CustomerQuotationListResult> ListAsync(
+            int customerId,
+            string? sort,
+            string? search,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            LastInvocation = new(customerId, sort, search, pageIndex, pageSize);
+            return Task.FromResult(new CustomerQuotationListResult(
+                customerId == 42 ? new CustomerQuotationPage([Quotation], pageIndex, 3, 1) : null,
+                true,
+                customerId == 42));
+        }
+
+        public Task<CustomerQuotationDetailsResult> GetAsync(
+            int customerId,
+            int quotationId,
+            CancellationToken cancellationToken)
+        {
+            LastDetailInvocation = new(customerId, quotationId);
+            if (DetailResultOverride is not null)
+            {
+                return Task.FromResult(DetailResultOverride);
+            }
+
+            var details = customerId == 42 && quotationId == Quotation.Id
+                ? new CustomerQuotationDetails(
+                    Quotation,
+                    [new CustomerQuotationLine(1, Quotation.Id, 7, "CNC bracket", 2, 50, 100, null, null)],
+                    [new CustomerQuotationOrder(1, Quotation.Id, 7, null, null)],
+                    [new CustomerQuotationFile(1, Quotation.Id, "legacy-private-quotations", "customers/42/quotations/15/drawing.pdf", null, null)])
+                : null;
+            return Task.FromResult(new CustomerQuotationDetailsResult(details, true, customerId == 42));
+        }
+    }
+
+    private sealed record QuotationListInvocation(
+        int CustomerId,
+        string? Sort,
+        string? Search,
+        int PageIndex,
+        int PageSize);
+
+    private sealed record QuotationDetailInvocation(int CustomerId, int QuotationId);
 }

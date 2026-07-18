@@ -1,5 +1,6 @@
 using System.Globalization;
 using Legacy.Maliev.Web.Application.Pricing;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -13,6 +14,12 @@ public sealed class ThreeDimensionalPrinting : PageModel
         .OrderBy(material => material.Process)
         .ThenBy(material => material.DisplayName, StringComparer.Ordinal)
         .ToArray();
+
+    public InstantQuotationDisplayModel DisplayModel => new(
+        Materials.Select(material => new InstantQuotationMaterialOption(
+            material.Key,
+            material.DisplayName,
+            string.Equals(material.Key, "PLA", StringComparison.Ordinal))).ToArray());
 
     public void OnGet()
     {

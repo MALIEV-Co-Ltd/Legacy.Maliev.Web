@@ -1,40 +1,9 @@
 @page
 @model Legacy.Maliev.Web.Pages.Services.IndexModel
+@using Legacy.Maliev.Web.Components.Pages.Services
 @{
     ViewData["Title"] = Localizer["Manufacturing services | MALIEV"];
     ViewData["Description"] = Localizer["Custom part manufacturing, CNC machining, 3D printing, and 3D scanning services in Thailand."];
 }
 
-<main class="maliev-page maliev-page-main">
-    <header class="maliev-page-header">
-        <div class="maliev-container">
-            <p class="maliev-eyebrow">@Localizer["Our services"]</p>
-            <h1>@Localizer["Manufacturing services"]</h1>
-            <p>@Localizer["Choose a service to review capabilities, materials, workflows, pricing guidance, lead times, and frequently asked questions."]</p>
-        </div>
-    </header>
-    <div class="maliev-container public-content">
-        <div class="maliev-card-grid">
-            <a class="maliev-panel docs-link-card" asp-page="/Services/Custom-Manufacturing">
-                <i class="fas fa-route" aria-hidden="true"></i>
-                <strong>@Localizer["Custom manufacturing"]</strong>
-                <span>@Localizer["Not sure which process fits? Start from your drawing, sample, material, quantity, and use."]</span>
-            </a>
-            <a class="maliev-panel docs-link-card" asp-page="/Services/CNC-Machining">
-                <i class="fas fa-cog" aria-hidden="true"></i>
-                <strong>@Localizer["CNC machining"]</strong>
-                <span>@Localizer["Precision parts from engineering metals and plastics."]</span>
-            </a>
-            <a class="maliev-panel docs-link-card" asp-page="/Services/3D-Printing">
-                <i class="fas fa-cubes" aria-hidden="true"></i>
-                <strong>@Localizer["3D printing"]</strong>
-                <span>@Localizer["Prototypes and production parts across multiple additive processes."]</span>
-            </a>
-            <a class="maliev-panel docs-link-card" asp-page="/Services/3D-Scanning">
-                <i class="fas fa-cube" aria-hidden="true"></i>
-                <strong>@Localizer["3D scanning"]</strong>
-                <span>@Localizer["Raw scans, reverse engineering, deviation analysis, and onsite service."]</span>
-            </a>
-        </div>
-    </div>
-</main>
+<component type="typeof(ServicesContent)" render-mode="Static" />

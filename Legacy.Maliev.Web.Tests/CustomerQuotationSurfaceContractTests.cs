@@ -24,7 +24,8 @@ public sealed class CustomerQuotationSurfaceContractTests
             StringComparison.Ordinal);
         Assert.True(PageExists(repositoryRoot, "Index.cshtml"));
         Assert.True(PageExists(repositoryRoot, "View.cshtml"));
-        Assert.True(PageExists(repositoryRoot, "PaymentSuccess.cshtml"));
+        Assert.False(PageExists(repositoryRoot, "PaymentSuccess.cshtml"));
+        Assert.False(PageExists(repositoryRoot, "PaymentSuccess.cshtml.cs"));
         var indexModel = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Legacy.Maliev.Web",
@@ -46,26 +47,14 @@ public sealed class CustomerQuotationSurfaceContractTests
         Assert.Contains("[Authorize]", detailModel, StringComparison.Ordinal);
         Assert.Contains("GetCustomerDatabaseIdAsync", detailModel, StringComparison.Ordinal);
         Assert.DoesNotContain("OnPost", detailModel, StringComparison.Ordinal);
-        var retiredPaymentResult = string.Join('\n',
-            File.ReadAllText(Path.Combine(
-                repositoryRoot,
-                "Legacy.Maliev.Web",
-                "Areas",
-                "Member",
-                "Pages",
-                "Quotations",
-                "PaymentSuccess.cshtml")),
-            File.ReadAllText(Path.Combine(
-                repositoryRoot,
-                "Legacy.Maliev.Web",
-                "Areas",
-                "Member",
-                "Pages",
-                "Quotations",
-                "PaymentSuccess.cshtml.cs")));
-        Assert.Contains("[Authorize]", retiredPaymentResult, StringComparison.Ordinal);
-        Assert.Contains("RedirectToPage", retiredPaymentResult, StringComparison.Ordinal);
-        Assert.DoesNotContain("OnPost", retiredPaymentResult, StringComparison.Ordinal);
+        var retiredPaymentResult = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Legacy.Maliev.Web",
+            "MemberCompatibilityEndpointRouteBuilderExtensions.cs"));
+        Assert.Contains("/member/quotations/paymentsuccess", retiredPaymentResult, StringComparison.Ordinal);
+        Assert.Contains("/member/quotations", retiredPaymentResult, StringComparison.Ordinal);
+        Assert.Contains("RequireAuthorization", retiredPaymentResult, StringComparison.Ordinal);
+        Assert.DoesNotContain("MapPost", retiredPaymentResult, StringComparison.Ordinal);
         Assert.DoesNotContain("HttpClient", retiredPaymentResult, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("invoice", retiredPaymentResult, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("receipt", retiredPaymentResult, StringComparison.OrdinalIgnoreCase);

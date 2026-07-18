@@ -1,0 +1,132 @@
+.instant-quote {
+    width: min(1120px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 5rem) 0;
+}
+
+.instant-quote__header {
+    max-width: 760px;
+    margin-bottom: 2rem;
+}
+
+.instant-quote__header h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1;
+}
+
+.instant-quote .eyebrow {
+    color: #c62828;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.instant-quote__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.instant-quote__form fieldset,
+.instant-quote__result {
+    border: 1px solid #d8dde3;
+    border-radius: 1rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    background: #fff;
+}
+
+.instant-quote__form legend {
+    padding: 0 .5rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.instant-quote__form label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 650;
+}
+
+.instant-quote__form input,
+.instant-quote__form select,
+.instant-quote__form textarea {
+    width: 100%;
+    min-height: 44px;
+    margin-top: .35rem;
+    padding: .65rem .75rem;
+    border: 1px solid #98a2ad;
+    border-radius: .5rem;
+}
+
+.instant-quote__dimensions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1rem;
+}
+
+.instant-quote details {
+    margin: 1.25rem 0;
+}
+
+.instant-quote summary {
+    cursor: pointer;
+    font-weight: 650;
+}
+
+.instant-quote .button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: .7rem 1rem;
+    border: 1px solid transparent;
+    border-radius: .5rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.instant-quote .button--primary {
+    color: #fff;
+    background: #b71c1c;
+}
+
+.instant-quote .button--secondary {
+    color: #8e1111;
+    border-color: #b71c1c;
+    background: #fff;
+}
+
+.instant-quote__result {
+    position: sticky;
+    top: 1rem;
+}
+
+.instant-quote__result dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .65rem 0;
+    border-bottom: 1px solid #e7eaee;
+}
+
+.instant-quote__result dd {
+    margin: 0;
+    font-weight: 700;
+    text-align: right;
+}
+
+.instant-quote__total {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 760px) {
+    .instant-quote__grid,
+    .instant-quote__dimensions {
+        grid-template-columns: 1fr;
+    }
+
+    .instant-quote__result {
+        position: static;
+    }
+}

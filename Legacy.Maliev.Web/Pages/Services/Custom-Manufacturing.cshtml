@@ -1,5 +1,7 @@
 @page
 @model Legacy.Maliev.Web.Pages.Services.CustomManufacturingModel
+@using Legacy.Maliev.Web.Components.Pages.Services
+@using Legacy.Maliev.Web.Components.Metadata
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
@@ -91,118 +93,9 @@
     };
 }
 
-<main class="service-page">
-    <partial name="_SchemaBreadcrumb" model='"Custom Manufacturing"' />
-    <section class="service-hero" aria-labelledby="custom-manufacturing-title">
-        <div class="service-container service-hero-copy">
-            <p class="service-eyebrow">@T("Made-to-order project intake", "เริ่มต้นงานผลิตตามแบบ")</p>
-            <h1 id="custom-manufacturing-title">@T("Custom Part Manufacturing: Start with Your Drawing, Material, Quantity, and Use", "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน")</h1>
-            <p class="service-hero-lead">@T("If you are not sure whether CNC machining or 3D printing fits your part, send the drawing or sample, material, quantity, critical features, and intended use. MALIEV will route the request for an appropriate manufacturing review. Existing parts that need geometry capture may start with 3D scanning and reverse engineering.", "หากยังไม่แน่ใจว่าควรใช้ CNC หรือ 3D Printing ส่งแบบ ตัวอย่างชิ้นงาน วัสดุ จำนวน จุดสำคัญ และการใช้งานให้ MALIEV ช่วยกำหนดเส้นทางประเมินที่เหมาะสม งานที่ต้องสร้างแบบจากชิ้นงานเดิมจะถูกส่งต่อไปยังการสแกน 3D และ Reverse Engineering ตามความจำเป็น")</p>
-            <div class="service-actions">
-                <a class="service-button service-button-primary" asp-area="" asp-page="/Quotation/Index" asp-route-item="custom-manufacturing">@T("Send files for review", "ส่งไฟล์เพื่อประเมิน") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
-                <a class="service-button service-button-secondary" href="https://line.me/ti/p/@@maliev">@T("Discuss on LINE", "ปรึกษาทาง LINE")</a>
-            </div>
-        </div>
-    </section>
-
-    <section class="service-quick" aria-label="@T("Information needed for review", "ข้อมูลที่ใช้ในการประเมิน")">
-        <div class="service-container service-quick-grid">
-            <article><div><h2>@T("Drawing or sample", "แบบหรือตัวอย่าง")</h2><p>@T("CAD, a dimensioned drawing, clear photos, or an existing part.", "ไฟล์ CAD แบบระบุขนาด รูปถ่ายที่ชัดเจน หรือชิ้นงานเดิม")</p></div></article>
-            <article><div><h2>@T("Material or behavior", "วัสดุหรือคุณสมบัติ")</h2><p>@T("State the known material or how the part must perform.", "ระบุวัสดุที่ทราบหรือคุณสมบัติที่ชิ้นงานต้องมี")</p></div></article>
-            <article><div><h2>@T("Quantity", "จำนวน")</h2><p>@T("Share the first quantity and any expected repeat demand.", "แจ้งจำนวนครั้งแรกและความต้องการสั่งซ้ำที่คาดไว้")</p></div></article>
-            <article><div><h2>@T("Use and critical points", "การใช้งานและจุดสำคัญ")</h2><p>@T("Explain interfaces, fits, loads, environment, and important surfaces.", "อธิบายจุดประกอบ ฟิต แรง สภาพแวดล้อม และผิวสำคัญ")</p></div></article>
-        </div>
-    </section>
-
-    <section class="service-section" aria-labelledby="choose-process-title">
-        <div class="service-container">
-            <header class="service-heading center">
-                <p class="service-eyebrow">@T("Choose by starting evidence", "เลือกจากข้อมูลที่มี")</p>
-                <h2 id="choose-process-title">@T("Which path should your project start with?", "โครงการของคุณควรเริ่มจากทางใด?")</h2>
-                <p>@T("These routes answer different questions. Open the specialist guide when you already know the process, or send the project as custom manufacturing when the process is still unknown.", "แต่ละบริการตอบโจทย์ต่างกัน หากทราบกระบวนการแล้วให้เปิดคู่มือเฉพาะทาง หากยังไม่ทราบให้ส่งโครงการในหมวดผลิตชิ้นงานตามแบบ")</p>
-            </header>
-            <div class="service-card-grid">
-                <article class="service-card">
-                    <h3>@T("Start with CNC machining", "เริ่มจากงาน CNC")</h3>
-                    <p>@T("Use this route when you have CAD or a drawing and expect the part to be cut from solid engineering material. The CNC guide owns machining capability, materials, files, and quotation details.", "เลือกทางนี้เมื่อมีไฟล์ CAD หรือแบบ และคาดว่าชิ้นงานควรตัดจากวัสดุวิศวกรรมตัน คู่มือ CNC เป็นแหล่งรายละเอียดความสามารถ วัสดุ ไฟล์ และการขอราคา")</p>
-                    <p><a asp-page="/Services/CNC-Machining">@T("Review CNC machining", "ดูบริการ CNC")</a></p>
-                </article>
-                <article class="service-card">
-                    <h3>@T("Start with 3D printing", "เริ่มจากงานพิมพ์ 3D")</h3>
-                    <p>@T("Use this route when a 3D model exists and the project needs an additive prototype, fit check, or geometry suited to layer-by-layer production. The printing guide owns process and material details.", "เลือกทางนี้เมื่อมีไฟล์ 3D และต้องการต้นแบบ งานทดสอบประกอบ หรือรูปทรงที่เหมาะกับการผลิตแบบเติมเนื้อ คู่มืองานพิมพ์เป็นแหล่งรายละเอียดกระบวนการและวัสดุ")</p>
-                    <p><a asp-page="/Services/3D-Printing">@T("Review 3D printing", "ดูบริการพิมพ์ 3D")</a></p>
-                </article>
-                <article class="service-card">
-                    <h3>@T("Start with 3D scanning", "เริ่มจากงานสแกน 3D")</h3>
-                    <p>@T("Use this route when the physical part is the primary source and you need geometry capture, reverse-engineering input, or comparison data. Scanning is an input step and does not automatically create a production-ready design.", "เลือกทางนี้เมื่อชิ้นงานจริงเป็นข้อมูลหลัก และต้องเก็บรูปทรง สร้างข้อมูลสำหรับ Reverse Engineering หรือเปรียบเทียบกับแบบ การสแกนเป็นขั้นตอนสร้างข้อมูลและไม่ได้ทำให้แบบพร้อมผลิตโดยอัตโนมัติ")</p>
-                    <p><a asp-page="/Services/3D-Scanning">@T("Review 3D scanning", "ดูบริการสแกน 3D")</a></p>
-                </article>
-            </div>
-        </div>
-    </section>
-
-    <section class="service-section service-section-soft" aria-labelledby="review-process-title">
-        <div class="service-container">
-            <header class="service-heading center">
-                <p class="service-eyebrow">@T("Review workflow", "ขั้นตอนการประเมิน")</p>
-                <h2 id="review-process-title">@T("How a process-unknown request is reviewed", "ตรวจสอบงานที่ยังไม่ทราบกระบวนการอย่างไร")</h2>
-            </header>
-            <ol class="service-process">
-                <li><h3>@T("Receive the evidence", "รับข้อมูลที่มี")</h3><p>@T("We start from the available drawing, model, photos, sample details, material, quantity, and intended use.", "เริ่มจากแบบ โมเดล รูปถ่าย รายละเอียดตัวอย่าง วัสดุ จำนวน และการใช้งานที่มี")</p></li>
-                <li><h3>@T("Identify the evaluation route", "กำหนดเส้นทางประเมิน")</h3><p>@T("The request is routed toward CNC machining, 3D printing, or geometry capture based on the evidence—not a keyword alone.", "ส่งงานไปประเมินด้าน CNC, 3D Printing หรือการเก็บข้อมูลรูปทรงตามข้อมูลจริง ไม่ใช่จากคำเรียกเพียงอย่างเดียว")</p></li>
-                <li><h3>@T("Resolve missing decisions", "สอบถามข้อมูลที่ขาด")</h3><p>@T("Questions may cover material behavior, interfaces, critical dimensions, finish, quantity, or whether a physical sample must be reviewed.", "อาจต้องสอบถามคุณสมบัติวัสดุ จุดประกอบ ขนาดสำคัญ ผิว จำนวน หรือความจำเป็นต้องตรวจชิ้นงานจริง")</p></li>
-                <li><h3>@T("Confirm quotation scope", "ยืนยันขอบเขตเสนอราคา")</h3><p>@T("A quotation is prepared only after the process, inputs, deliverables, assumptions, and review boundaries are clear enough.", "จัดทำใบเสนอราคาเมื่อกระบวนการ ข้อมูลส่งมอบ สมมติฐาน และขอบเขตการตรวจสอบชัดเจนเพียงพอ")</p></li>
-            </ol>
-        </div>
-    </section>
-
-    <section class="service-section" aria-labelledby="intake-checklist-title">
-        <div class="service-container service-split">
-            <div class="service-copy">
-                <p class="service-eyebrow">@T("Project checklist", "รายการข้อมูลโครงการ")</p>
-                <h2 id="intake-checklist-title">@T("Send what is known; mark what still needs discussion", "ส่งข้อมูลที่ทราบ และระบุส่วนที่ยังต้องปรึกษา")</h2>
-                <ul>
-                    <li>@T("CAD model, dimensioned drawing, or available sample information", "ไฟล์ CAD แบบระบุขนาด หรือข้อมูลตัวอย่างที่มี")</li>
-                    <li>@T("Known material, required behavior, or operating environment", "วัสดุที่ทราบ คุณสมบัติที่ต้องการ หรือสภาพแวดล้อมใช้งาน")</li>
-                    <li>@T("First quantity and possible repeat quantity", "จำนวนครั้งแรกและจำนวนสั่งซ้ำที่เป็นไปได้")</li>
-                    <li>@T("Critical dimensions, interfaces, fits, threads, or appearance surfaces", "ขนาด จุดประกอบ ฟิต เกลียว หรือผิวรูปลักษณ์ที่สำคัญ")</li>
-                    <li>@T("Intended use, failure concern, and date the part is needed", "การใช้งาน ความเสี่ยงที่กังวล และวันที่ต้องการใช้ชิ้นงาน")</li>
-                </ul>
-                <aside class="service-note">@T("Do not guess missing specifications. Mark unknown items clearly so they can be resolved during review.", "ไม่ควรเดาข้อกำหนดที่ยังไม่ทราบ ให้ระบุส่วนที่ไม่แน่ใจอย่างชัดเจนเพื่อใช้สอบถามในขั้นประเมิน")</aside>
-            </div>
-            <div class="service-card">
-                <h3>@T("Ready to send the project?", "พร้อมส่งโครงการหรือยัง?")</h3>
-                <p>@T("Use the quotation form to attach available files and describe the part. The form creates one reviewable enquiry; it does not select a manufacturing process automatically.", "ใช้แบบฟอร์มขอราคาเพื่อแนบไฟล์และอธิบายชิ้นงาน แบบฟอร์มจะสร้างคำขอที่ตรวจสอบได้หนึ่งรายการ และไม่ได้เลือกกระบวนการผลิตโดยอัตโนมัติ")</p>
-                <div class="service-actions">
-                    <a class="service-button service-button-primary" asp-area="" asp-page="/Quotation/Index" asp-route-item="custom-manufacturing">@T("Open quotation form", "เปิดแบบฟอร์มขอราคา")</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="service-section service-section-soft" aria-labelledby="custom-faq-title">
-        <div class="service-container">
-            <header class="service-heading center"><p class="service-eyebrow">@T("Questions before sending files", "คำถามก่อนส่งไฟล์")</p><h2 id="custom-faq-title">@T("Custom manufacturing FAQ", "คำถามเรื่องผลิตชิ้นงานตามแบบ")</h2></header>
-            <div class="service-faq">
-                <details><summary>@faqProcessQuestion</summary><p>@faqProcessAnswer</p></details>
-                <details><summary>@faqPhotoQuestion</summary><p>@faqPhotoAnswer</p></details>
-                <details><summary>@faqExistingPartQuestion</summary><p>@faqExistingPartAnswer</p></details>
-                <details><summary>@faqInputQuestion</summary><p>@faqInputAnswer</p></details>
-            </div>
-        </div>
-    </section>
-
-    <partial name="_ServiceLocationPartial" />
-
-    <section class="service-cta-wrap" aria-labelledby="custom-cta-title">
-        <div class="service-container service-cta">
-            <div><h2 id="custom-cta-title">@T("Start from the evidence you already have", "เริ่มจากข้อมูลที่คุณมี")</h2><p>@T("Send the drawing, model, photos, or sample details together with material, quantity, critical points, and intended use.", "ส่งแบบ โมเดล รูปถ่าย หรือรายละเอียดตัวอย่าง พร้อมวัสดุ จำนวน จุดสำคัญ และการใช้งาน")</p></div>
-            <div class="service-actions"><a class="service-button service-button-yellow" asp-area="" asp-page="/Quotation/Index" asp-route-item="custom-manufacturing">@T("Send project", "ส่งโครงการ")</a></div>
-        </div>
-    </section>
-</main>
+<component type="typeof(CustomManufacturingContent)" render-mode="Static" />
 
 @section Schema {
-    <partial name="_SchemaService" model='"Custom Manufacturing"' />
+    <component type="typeof(PublicServiceStructuredData)" render-mode="Static" param-Model="@(PublicServiceStructuredDataDisplayModel.Create("Custom Manufacturing"))" />
     <script type="application/ld+json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(faqSchema))</script>
 }

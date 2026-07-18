@@ -71,6 +71,89 @@ public sealed class AssetDeliveryContractTests
         Assert.DoesNotContain("animate__", styles, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ObsoleteJqueryValidationStack_IsAbsentFromSourceAndBundles()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var package = File.ReadAllText(Path.Combine(web, "package.json"));
+        var packageLock = File.ReadAllText(Path.Combine(web, "package-lock.json"));
+        var vendorEntry = File.ReadAllText(Path.Combine(web, "assets", "vendor-entry.js"));
+        var applicationScripts = Directory.GetFiles(
+                Path.Combine(web, "wwwroot", "src", "app", "js"),
+                "*.js",
+                SearchOption.TopDirectoryOnly)
+            .Select(File.ReadAllText)
+            .ToArray();
+        var components = Directory.GetFiles(
+                Path.Combine(web, "Components"),
+                "*.razor",
+                SearchOption.AllDirectories)
+            .Select(File.ReadAllText)
+            .ToArray();
+        var vendorBundle = File.ReadAllText(Path.Combine(web, "wwwroot", "dist", "vendor.min.js"));
+        var applicationBundle = File.ReadAllText(Path.Combine(web, "wwwroot", "dist", "app.min.js"));
+
+        Assert.DoesNotContain("\"jquery\"", package, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("node_modules/jquery", packageLock, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("jquery", vendorEntry, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(applicationScripts, source => source.Contains("$(", StringComparison.Ordinal));
+        Assert.DoesNotContain(applicationScripts, source => source.Contains("jQuery", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(components, source => source.Contains("data-val", StringComparison.Ordinal));
+        Assert.DoesNotContain("jQuery requires a window with a document", vendorBundle, StringComparison.Ordinal);
+        Assert.DoesNotContain("3.7.1", vendorBundle, StringComparison.Ordinal);
+        Assert.DoesNotContain("jQuery", applicationBundle, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(applicationScripts, source => source.Contains("addEventListener", StringComparison.Ordinal));
+        Assert.Contains(applicationScripts, source => source.Contains("querySelectorAll", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void KnowledgeActionLinks_KeepAccessibleButtonTextContrast()
+    {
+        var stylesheet = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "css",
+            "application-shell.css"));
+
+        Assert.Contains(
+            ".docs-content a.maliev-button {\n    color: #fff;\n    text-decoration: none;\n}",
+            stylesheet,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InstantQuotationAssets_AreBundledAndKeepPricingOnServerEndpoints()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var appEntry = File.ReadAllText(Path.Combine(web, "assets", "app-entry.js"));
+        var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "site-entry.css"));
+        var browserModule = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "instant-quotation.js"));
+        var controllerModule = File.ReadAllText(Path.Combine(
+            web,
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            "instant-quotation-controller.mjs"));
+        var module = string.Join('\n', browserModule, controllerModule);
+
+        Assert.Contains("instant-quotation.js", appEntry, StringComparison.Ordinal);
+        Assert.Contains("instant-quotation.css", styleEntry, StringComparison.Ordinal);
+        Assert.Contains("[data-instant-estimate]", module, StringComparison.Ordinal);
+        Assert.Contains("handler: 'GetEstimate'", module, StringComparison.Ordinal);
+        Assert.Contains("handler: 'GetOrderTotal'", module, StringComparison.Ordinal);
+        Assert.Contains("window.fetch.bind(window)", module, StringComparison.Ordinal);
+        Assert.Contains("fetchImpl(", module, StringComparison.Ordinal);
+        Assert.Contains("AbortController", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("$(", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("jquery", module, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("unitPrice =", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("vat =", module, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

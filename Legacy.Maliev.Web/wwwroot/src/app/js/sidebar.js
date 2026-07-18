@@ -1,45 +1,55 @@
-﻿window.onload = function () {
-    CheckSidebar();
-};
-
-window.onresize = function () {
-    CheckSidebar();
-};
+window.addEventListener('load', CheckSidebar);
+window.addEventListener('resize', CheckSidebar);
 
 function CheckSidebar() {
-    if ($(window).outerWidth() >= 1200) {
-        if ($('.sidebar-hide-button').is(':visible')) {
-            $('.sidebar-hide-button').hide();
-        }
-
-        if ($('.sidebar').is(':hidden')) {
-            $('.sidebar').show();
-        }
-
-        if ($('.sidebar').hasClass('sidebar-mobile')) {
-            $('.sidebar').removeClass('sidebar-mobile');
-            $('.content-area').show();
-            $('.footer').show();
-        }
+    var sidebar = document.querySelector('.sidebar');
+    if (!sidebar) {
+        return;
     }
-    else {
-        $('.sidebar').hide();
-        $('.content-area').show();
+
+    if (window.innerWidth >= 1200) {
+        setHidden('.sidebar-hide-button', true);
+        sidebar.hidden = false;
+        if (sidebar.classList.contains('sidebar-mobile')) {
+            sidebar.classList.remove('sidebar-mobile');
+            setHidden('.content-area', false);
+            setHidden('.footer', false);
+        }
+        return;
     }
+
+    sidebar.hidden = true;
+    setHidden('.content-area', false);
 }
 
 function SidebarOpen() {
-    $('.sidebar').addClass('sidebar-mobile');
-    $('.sidebar').show();
-    $('.sidebar-hide-button').show();
-    $('.content-area').hide();
-    $('.footer').hide();
+    var sidebar = document.querySelector('.sidebar');
+    sidebar?.classList.add('sidebar-mobile');
+    if (sidebar) {
+        sidebar.hidden = false;
+    }
+    setHidden('.sidebar-hide-button', false);
+    setHidden('.content-area', true);
+    setHidden('.footer', true);
 }
 
 function SidebarClose() {
-    $('.sidebar').removeClass('sidebar-mobile');
-    $('.sidebar').hide();
-    $('.sidebar-hide-button').hide();
-    $('.content-area').show();
-    $('.footer').show();
+    var sidebar = document.querySelector('.sidebar');
+    sidebar?.classList.remove('sidebar-mobile');
+    if (sidebar) {
+        sidebar.hidden = true;
+    }
+    setHidden('.sidebar-hide-button', true);
+    setHidden('.content-area', false);
+    setHidden('.footer', false);
 }
+
+function setHidden(selector, hidden) {
+    document.querySelectorAll(selector).forEach(function (element) {
+        element.hidden = hidden;
+    });
+}
+
+window.CheckSidebar = CheckSidebar;
+window.SidebarOpen = SidebarOpen;
+window.SidebarClose = SidebarClose;

@@ -1,0 +1,79 @@
+@inject IStringLocalizer<MemberAddressContent> Localizer
+
+<div data-migration-component="member-address-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Customer account"]</p>
+        <h1 id="member-address-title">@Localizer["Addresses"]</h1>
+        <p>@Localizer["Keep billing and shipping details current before placing an order."]</p>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert" role="status">@Localizer[Model.Notification]</div>
+    }
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="field-validation-error" role="alert">
+            <ul>
+                @foreach (var error in Model.Errors)
+                {
+                    <li id="@ErrorId(error.Field)">@Localizer[error.Message]</li>
+                }
+            </ul>
+        </div>
+    }
+    <div class="maliev-card-grid">
+        <fieldset>
+            <legend>@Localizer["Billing address"]</legend>
+            <div class="form-group"><label for="BillingBuilding">@Localizer["Building"]</label><input id="BillingBuilding" name="BillingBuilding" value="@Model.Billing.Building" maxlength="256" aria-invalid="@AriaInvalid("BillingBuilding")" aria-describedby="@ErrorId("BillingBuilding")" /></div>
+            <div class="form-group"><label for="BillingAddress1">@Localizer["Address line 1"]</label><input id="BillingAddress1" name="BillingAddress1" value="@Model.Billing.AddressLine1" maxlength="256" autocomplete="billing address-line1" aria-invalid="@AriaInvalid("BillingAddress1")" aria-describedby="@ErrorId("BillingAddress1")" required /></div>
+            <div class="form-group"><label for="BillingAddress2">@Localizer["Address line 2"]</label><input id="BillingAddress2" name="BillingAddress2" value="@Model.Billing.AddressLine2" maxlength="256" autocomplete="billing address-line2" aria-invalid="@AriaInvalid("BillingAddress2")" aria-describedby="@ErrorId("BillingAddress2")" /></div>
+            <div class="form-group"><label for="BillingCity">@Localizer["City"]</label><input id="BillingCity" name="BillingCity" value="@Model.Billing.City" maxlength="128" autocomplete="billing address-level2" aria-invalid="@AriaInvalid("BillingCity")" aria-describedby="@ErrorId("BillingCity")" /></div>
+            <div class="form-group"><label for="BillingState">@Localizer["State or province"]</label><input id="BillingState" name="BillingState" value="@Model.Billing.State" maxlength="128" autocomplete="billing address-level1" aria-invalid="@AriaInvalid("BillingState")" aria-describedby="@ErrorId("BillingState")" /></div>
+            <div class="form-group"><label for="BillingPostalCode">@Localizer["Postal code"]</label><input id="BillingPostalCode" name="BillingPostalCode" value="@Model.Billing.PostalCode" maxlength="50" autocomplete="billing postal-code" aria-invalid="@AriaInvalid("BillingPostalCode")" aria-describedby="@ErrorId("BillingPostalCode")" /></div>
+            <div class="form-group">
+                <label for="BillingCountryId">@Localizer["Country"]</label>
+                <select id="BillingCountryId" name="BillingCountryId" autocomplete="billing country" aria-invalid="@AriaInvalid("BillingCountryId")" aria-describedby="@ErrorId("BillingCountryId")" required>
+                    <option value="0" selected="@(Model.Billing.CountryId == 0)">@Localizer["Select a country"]</option>
+                    @foreach (var country in Model.Countries)
+                    {
+                        <option value="@country.Id" selected="@(country.Id == Model.Billing.CountryId)">@country.Name</option>
+                    }
+                </select>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>@Localizer["Shipping address"]</legend>
+            <div class="form-group"><label for="ShippingBuilding">@Localizer["Building"]</label><input id="ShippingBuilding" name="ShippingBuilding" value="@Model.Shipping.Building" maxlength="256" aria-invalid="@AriaInvalid("ShippingBuilding")" aria-describedby="@ErrorId("ShippingBuilding")" /></div>
+            <div class="form-group"><label for="ShippingAddress1">@Localizer["Address line 1"]</label><input id="ShippingAddress1" name="ShippingAddress1" value="@Model.Shipping.AddressLine1" maxlength="256" autocomplete="shipping address-line1" aria-invalid="@AriaInvalid("ShippingAddress1")" aria-describedby="@ErrorId("ShippingAddress1")" required /></div>
+            <div class="form-group"><label for="ShippingAddress2">@Localizer["Address line 2"]</label><input id="ShippingAddress2" name="ShippingAddress2" value="@Model.Shipping.AddressLine2" maxlength="256" autocomplete="shipping address-line2" aria-invalid="@AriaInvalid("ShippingAddress2")" aria-describedby="@ErrorId("ShippingAddress2")" /></div>
+            <div class="form-group"><label for="ShippingCity">@Localizer["City"]</label><input id="ShippingCity" name="ShippingCity" value="@Model.Shipping.City" maxlength="128" autocomplete="shipping address-level2" aria-invalid="@AriaInvalid("ShippingCity")" aria-describedby="@ErrorId("ShippingCity")" /></div>
+            <div class="form-group"><label for="ShippingState">@Localizer["State or province"]</label><input id="ShippingState" name="ShippingState" value="@Model.Shipping.State" maxlength="128" autocomplete="shipping address-level1" aria-invalid="@AriaInvalid("ShippingState")" aria-describedby="@ErrorId("ShippingState")" /></div>
+            <div class="form-group"><label for="ShippingPostalCode">@Localizer["Postal code"]</label><input id="ShippingPostalCode" name="ShippingPostalCode" value="@Model.Shipping.PostalCode" maxlength="50" autocomplete="shipping postal-code" aria-invalid="@AriaInvalid("ShippingPostalCode")" aria-describedby="@ErrorId("ShippingPostalCode")" /></div>
+            <div class="form-group">
+                <label for="ShippingCountryId">@Localizer["Country"]</label>
+                <select id="ShippingCountryId" name="ShippingCountryId" autocomplete="shipping country" aria-invalid="@AriaInvalid("ShippingCountryId")" aria-describedby="@ErrorId("ShippingCountryId")" required>
+                    <option value="0" selected="@(Model.Shipping.CountryId == 0)">@Localizer["Select a country"]</option>
+                    @foreach (var country in Model.Countries)
+                    {
+                        <option value="@country.Id" selected="@(country.Id == Model.Shipping.CountryId)">@country.Name</option>
+                    }
+                </select>
+            </div>
+        </fieldset>
+    </div>
+    <button type="submit" class="maliev-button">@Localizer["Save addresses"]</button>
+</div>
+
+@code {
+    [Parameter]
+    public MemberAddressDisplayModel Model { get; set; } = MemberAddressDisplayModel.Empty;
+
+    private string? AriaInvalid(string field) => HasError(field) ? "true" : null;
+
+    private string? ErrorId(string? field) => field is not null && HasError(field)
+        ? $"address-error-{field}"
+        : null;
+
+    private bool HasError(string field) =>
+        Model.Errors.Any(error => string.Equals(error.Field, field, StringComparison.Ordinal));
+}

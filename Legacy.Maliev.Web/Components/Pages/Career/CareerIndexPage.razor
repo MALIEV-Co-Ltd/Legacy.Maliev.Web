@@ -1,0 +1,101 @@
+@page "/Career"
+@using System.Globalization
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Components.Layout
+@inject ICareerClient CareerClient
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ILogger<CareerIndexPage> Logger
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = loadFailed
+        ? (isThai ? "ข้อผิดพลาด | MALIEV" : "Error | MALIEV")
+        : (isThai ? "ตำแหน่งงาน | MALIEV" : "Career | MALIEV");
+    var description = isThai
+        ? "เข้ามาร่วมงานกับเรา เพื่ออิสระในการทำงานและการสนับสนุนที่จะผลักดันอาชีพคุณไปอีกระดับ"
+        : "Discover your perfect job match, and the freedom and support to take your career to the next level.";
+}
+<PageTitle>@title</PageTitle>
+@if (loadFailed)
+{
+    <HeadContent>
+        <meta name="robots" content="noindex,nofollow" />
+    </HeadContent>
+    <ErrorContent Model="@(new ErrorDisplayModel(false, context.TraceIdentifier))" />
+}
+else
+{
+    <HeadContent>
+        <meta name="description" content="@description" />
+        <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+        <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    </HeadContent>
+    <CareerIndexContent Model="@model" RouteOwner="blazor-static-ssr" />
+}
+
+@code {
+    private CareerIndexContentModel model = CareerIndexContentModel.Create(
+        serviceAvailable: true,
+        levels: [],
+        offers: CareerOfferPage.Empty(1),
+        currentSort: CareerSort.JobCreatedDate_Descending,
+        search: null,
+        pageSize: 25);
+    private bool loadFailed;
+
+    [SupplyParameterFromQuery(Name = "sort")]
+    public string? Sort { get; set; }
+
+    [SupplyParameterFromQuery(Name = "search")]
+    public string? Search { get; set; }
+
+    [SupplyParameterFromQuery(Name = "index")]
+    public int? PageIndex { get; set; }
+
+    [SupplyParameterFromQuery(Name = "size")]
+    public int PageSize { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var currentSort = Enum.TryParse<CareerSort>(Sort, out var parsedSort)
+            ? parsedSort
+            : CareerSort.JobCreatedDate_Descending;
+        var search = string.IsNullOrWhiteSpace(Search) ? null : Search.Trim();
+        var pageSize = Math.Clamp(PageSize > 0 ? PageSize : 25, 1, 100);
+        var pageIndex = search is null ? Math.Max(PageIndex ?? 1, 1) : 1;
+        var cancellationToken = HttpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+        try
+        {
+            var listing = await CareerClient.GetListingAsync(
+                currentSort,
+                search,
+                pageIndex,
+                pageSize,
+                cancellationToken);
+            var visibleOffers = listing.Offers with
+            {
+                Items = listing.Offers.Items.Where(offer => offer.IsFilled != true).ToArray()
+            };
+
+            model = CareerIndexContentModel.Create(
+                listing.ServiceAvailable,
+                listing.Levels,
+                visibleOffers,
+                currentSort,
+                search,
+                pageSize);
+            loadFailed = false;
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            Logger.LogError(exception, "An unexpected error occurred while rendering the career listing.");
+            loadFailed = true;
+            var response = HttpContextAccessor.HttpContext!.Response;
+            response.StatusCode = StatusCodes.Status500InternalServerError;
+            response.Headers.CacheControl = "no-store";
+            response.Headers["Referrer-Policy"] = "no-referrer";
+        }
+    }
+}

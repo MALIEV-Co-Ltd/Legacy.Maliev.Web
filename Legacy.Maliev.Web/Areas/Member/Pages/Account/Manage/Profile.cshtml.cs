@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,8 +31,8 @@ public sealed class Profile(
     [BindProperty, Phone, StringLength(250)]
     public string? Fax { get; set; }
 
-    [BindProperty, DataType(DataType.Date)]
-    public DateTime? DateOfBirth { get; set; }
+    [BindProperty]
+    public string? DateOfBirth { get; set; }
 
     [BindProperty, StringLength(250)]
     public string? CompanyName { get; set; }
@@ -44,13 +46,23 @@ public sealed class Profile(
     [TempData]
     public string? Notification { get; set; }
 
+    public MemberProfileDisplayModel DisplayModel { get; private set; } = MemberProfileDisplayModel.Empty;
+
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        var result = await LoadAsync(cancellationToken);
+        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
+        if (customerId is null)
+        {
+            return Challenge();
+        }
+
+        var result = await LoadAsync(customerId.Value, cancellationToken);
         if (result is not null)
         {
             Apply(result);
         }
+
+        BuildDisplayModel();
 
         return Page();
     }
@@ -63,10 +75,29 @@ public sealed class Profile(
             return Challenge();
         }
 
+        DateTime? parsedDateOfBirth = null;
+        if (!string.IsNullOrWhiteSpace(DateOfBirth))
+        {
+            if (DateOnly.TryParseExact(
+                DateOfBirth,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var date))
+            {
+                parsedDateOfBirth = date.ToDateTime(TimeOnly.MinValue);
+            }
+            else
+            {
+                ModelState.AddModelError(nameof(DateOfBirth), "One or more profile values are invalid.");
+            }
+        }
+
         if (!ModelState.IsValid)
         {
-            var existing = await LoadAsync(cancellationToken);
+            var existing = await LoadAsync(customerId.Value, cancellationToken);
             Email = existing?.Email ?? string.Empty;
+            BuildDisplayModel();
             return Page();
         }
 
@@ -78,7 +109,7 @@ public sealed class Profile(
                 Telephone,
                 Mobile,
                 Fax,
-                DateOfBirth,
+                parsedDateOfBirth,
                 CompanyName,
                 TaxNumber,
                 Registrar),
@@ -89,25 +120,22 @@ public sealed class Profile(
             return RedirectToPage();
         }
 
-        var profile = await LoadAsync(cancellationToken);
+        var profile = await LoadAsync(customerId.Value, cancellationToken);
         Email = profile?.Email ?? string.Empty;
         ModelState.AddModelError(
             string.Empty,
             result.ServiceAvailable
                 ? "Your profile could not be updated."
                 : "Profile service is temporarily unavailable.");
+        BuildDisplayModel();
         return Page();
     }
 
-    private async Task<CustomerAccountDetails?> LoadAsync(CancellationToken cancellationToken)
+    private async Task<CustomerAccountDetails?> LoadAsync(
+        int customerId,
+        CancellationToken cancellationToken)
     {
-        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
-        if (customerId is null)
-        {
-            return null;
-        }
-
-        var result = await customerClient.GetProfileAsync(customerId.Value, cancellationToken);
+        var result = await customerClient.GetProfileAsync(customerId, cancellationToken);
         if (result.Profile is null)
         {
             ModelState.AddModelError(
@@ -128,9 +156,38 @@ public sealed class Profile(
         Telephone = profile.Telephone;
         Mobile = profile.Mobile;
         Fax = profile.Fax;
-        DateOfBirth = profile.DateOfBirth;
+        DateOfBirth = profile.DateOfBirth?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         CompanyName = profile.Company?.Name;
         TaxNumber = profile.Company?.TaxNumber;
         Registrar = profile.Company?.Registrar;
     }
+
+    private void BuildDisplayModel()
+    {
+        DisplayModel = new MemberProfileDisplayModel(
+            FirstName,
+            LastName,
+            Email,
+            Telephone,
+            Mobile,
+            Fax,
+            DateOfBirth,
+            CompanyName,
+            TaxNumber,
+            Registrar,
+            Notification,
+            ProjectSafeErrors());
+    }
+
+    private IReadOnlyList<string> ProjectSafeErrors() => ModelState
+        .Where(entry => entry.Value is not null)
+        .SelectMany(entry => entry.Value!.Errors.Select(error => entry.Key switch
+        {
+            nameof(FirstName) when string.IsNullOrWhiteSpace(FirstName) => "First name is required.",
+            nameof(LastName) when string.IsNullOrWhiteSpace(LastName) => "Last name is required.",
+            "" when error.Exception is null && !string.IsNullOrWhiteSpace(error.ErrorMessage) => error.ErrorMessage,
+            _ => "One or more profile values are invalid.",
+        }))
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
 }

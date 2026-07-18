@@ -1,0 +1,49 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<LoginContent> Localizer
+
+<div data-migration-component="login-content" data-migration-renderer="blazor-static-ssr">
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert" role="status">@Model.Notification</div>
+    }
+
+    <div class="validation-summary-errors @(Model.AllErrors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
+        <ul>
+            @if (Model.AllErrors.Count == 0)
+            {
+                <li style="display:none"></li>
+            }
+            else
+            {
+                @foreach (var error in Model.AllErrors)
+                {
+                    <li>@error</li>
+                }
+            }
+        </ul>
+    </div>
+
+    <input type="hidden" id="ReturnUrl" name="ReturnUrl" value="@Model.ReturnUrl" />
+    <div class="maliev-form-field">
+        <label for="Email">@Localizer["Email"]</label>
+        <input autocomplete="email" autofocus type="email" id="Email" maxlength="320" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+        <span id="Email-error" class="maliev-form-error @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+    </div>
+    <div class="maliev-form-field">
+        <label for="Password">@Localizer["Password"]</label>
+        <input autocomplete="current-password" type="password" id="Password" maxlength="1024" name="Password" required aria-invalid="@AriaInvalid("Password")" aria-describedby="Password-error" />
+        <span id="Password-error" class="maliev-form-error @(HasError("Password") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Password")</span>
+    </div>
+    <label><input type="checkbox" id="RememberMe" name="RememberMe" value="true" checked="@Model.RememberMe" /> @Localizer["Remember me"]</label>
+    <button type="submit" formaction="/Account/Login?handler=Login">@Localizer["Sign in"]</button>
+    <input name="RememberMe" type="hidden" value="false" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public LoginFormDisplayModel Model { get; set; } = null!;
+
+    private bool HasError(string fieldName) => Model.ErrorsFor(fieldName).Count > 0;
+
+    private string? AriaInvalid(string fieldName) => HasError(fieldName) ? "true" : null;
+}

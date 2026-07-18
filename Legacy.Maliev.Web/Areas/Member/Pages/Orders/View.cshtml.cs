@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,7 @@ public sealed class View(
     IAccountSessionManager sessionManager,
     ICustomerOrderClient orderClient) : PageModel
 {
-    public CustomerOrderDetails? Details { get; private set; }
+    public MemberOrderDetailDisplayModel DisplayModel { get; private set; } = MemberOrderDetailDisplayModel.Empty;
 
     [TempData]
     public string? Notification { get; set; }
@@ -81,7 +82,52 @@ public sealed class View(
                     : "Order service is temporarily unavailable.");
         }
 
-        Details = result.Details;
+        DisplayModel = CreateDisplayModel(
+            result.Details,
+            Notification,
+            ModelState
+                .SelectMany(entry => entry.Value?.Errors ?? [])
+                .Where(error => error.Exception is null && !string.IsNullOrWhiteSpace(error.ErrorMessage))
+                .Select(error => error.ErrorMessage)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray());
         return Page();
     }
+
+    private static MemberOrderDetailDisplayModel CreateDisplayModel(
+        CustomerOrderDetails? details,
+        string? notification,
+        IReadOnlyList<string> errors)
+    {
+        if (details is null)
+        {
+            return MemberOrderDetailDisplayModel.Empty with
+            {
+                Notification = notification,
+                Errors = errors,
+            };
+        }
+
+        var order = details.Order;
+        return new MemberOrderDetailDisplayModel(
+            order.Id,
+            order.Name,
+            order.Description,
+            details.Process?.Name ?? "-",
+            order.Quantity,
+            order.Manufactured,
+            order.Remaining?.ToString() ?? "-",
+            order.Subtotal?.ToString("N2") ?? "-",
+            string.IsNullOrWhiteSpace(order.TrackingNumber) ? "-" : order.TrackingNumber,
+            order.AllowCancellation,
+            notification,
+            errors,
+            details.History.Select(status => new MemberOrderStatusDisplayModel(
+                status.Name,
+                status.CreatedDate?.ToString("yyyy-MM-dd HH:mm") ?? "-")).ToArray(),
+            details.Files.Select(file => GetDisplayFileName(file.ObjectName)).ToArray());
+    }
+
+    private static string GetDisplayFileName(string objectName) =>
+        objectName.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "-";
 }

@@ -1,0 +1,12 @@
+@inject IStringLocalizer<MemberOrdersIndexContent> Localizer
+
+<section class="maliev-section" aria-labelledby="member-orders-title" data-migration-component="member-orders-index-content">
+    <p class="maliev-eyebrow">@Localizer["Order management"]</p>
+    <h1 id="member-orders-title">@Localizer["Start or review an order"]</h1>
+    <div class="maliev-card-grid">
+        <a class="maliev-panel" href="/member/orders/history"><strong>@Localizer["Order history"]</strong></a>
+        <a class="maliev-panel" href="/quotation?item=CNC-Machining"><strong>@Localizer["CNC machining"]</strong></a>
+        <a class="maliev-panel" href="/quotation?item=3D-Printing"><strong>@Localizer["3D printing"]</strong></a>
+        <a class="maliev-panel" href="/quotation?item=3D-Scanning"><strong>@Localizer["3D scanning"]</strong></a>
+    </div>
+</section>

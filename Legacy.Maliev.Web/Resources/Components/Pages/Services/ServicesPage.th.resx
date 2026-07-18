@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Manufacturing services | MALIEV" xml:space="preserve"><value>บริการผลิตชิ้นส่วน | MALIEV</value></data>
+  <data name="Custom part manufacturing, CNC machining, 3D printing, and 3D scanning services in Thailand." xml:space="preserve"><value>บริการผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติในประเทศไทย</value></data>
+</root>

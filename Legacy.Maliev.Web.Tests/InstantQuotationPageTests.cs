@@ -76,11 +76,40 @@ public sealed class InstantQuotationPageTests
         Assert.True(File.Exists(page));
         Assert.True(File.Exists(model));
 
-        var source = string.Join('\n', File.ReadAllText(page), File.ReadAllText(model));
+        var component = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "ThreeDimensionalPrintingEstimateContent.razor");
+        var browserModule = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            "instant-quotation.js");
+        var controllerModule = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            "instant-quotation-controller.mjs");
+        var source = string.Join(
+            '\n',
+            File.ReadAllText(page),
+            File.ReadAllText(model),
+            File.ReadAllText(component),
+            File.ReadAllText(browserModule),
+            File.ReadAllText(controllerModule));
         Assert.Contains("@page", source, StringComparison.Ordinal);
         Assert.Contains("handler: 'GetEstimate'", source, StringComparison.Ordinal);
         Assert.Contains("handler: 'GetOrderTotal'", source, StringComparison.Ordinal);
-        Assert.Contains("/Quotation/Index", source, StringComparison.Ordinal);
+        Assert.Contains("/Quotation?item=3D-Printing", source, StringComparison.Ordinal);
         Assert.Contains("aria-live", source, StringComparison.Ordinal);
         Assert.Contains("<fieldset", source, StringComparison.Ordinal);
         Assert.Contains("string.Equals(material.Key, \"PLA\"", source, StringComparison.Ordinal);
@@ -91,6 +120,50 @@ public sealed class InstantQuotationPageTests
         Assert.DoesNotContain("Omise", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Barcode", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("access_token", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Route_UsesLocalizedStaticSsrComponentAndScopedBrowserModule()
+    {
+        var root = FindRepositoryRoot();
+        var web = Path.Combine(root, "Legacy.Maliev.Web");
+        var page = File.ReadAllText(Path.Combine(web, "Pages", "InstantQuotation", "3D-Printing.cshtml"));
+        var component = File.ReadAllText(Path.Combine(
+            web,
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "ThreeDimensionalPrintingEstimateContent.razor"));
+        var model = File.ReadAllText(Path.Combine(web, "Pages", "InstantQuotation", "3D-Printing.cshtml.cs"));
+
+        Assert.Contains("IStringLocalizer<ThreeDimensionalPrintingEstimateContent>", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(ThreeDimensionalPrintingEstimateContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
+        Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("<main class=\"instant-quote\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("<style>", page, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<script>", page, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", component, StringComparison.Ordinal);
+        Assert.Contains("data-instant-estimate", component, StringComparison.Ordinal);
+        Assert.Contains("IStringLocalizer<ThreeDimensionalPrintingEstimateContent>", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page", component, StringComparison.Ordinal);
+        Assert.Contains("InstantQuotationDisplayModel DisplayModel", model, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(
+            web,
+            "Resources",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "ThreeDimensionalPrintingEstimateContent.th.resx")));
+        Assert.False(File.Exists(Path.Combine(
+            web,
+            "Resources",
+            "Pages",
+            "InstantQuotation",
+            "3D-Printing.th.resx")));
     }
 
     private static string FindRepositoryRoot()

@@ -1,0 +1,61 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<SignupContent> Localizer
+
+<div data-migration-component="signup-content" data-migration-renderer="blazor-static-ssr">
+    <div class="validation-summary-errors @(Model.AllErrors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
+        <ul>
+            @if (Model.AllErrors.Count == 0)
+            {
+                <li style="display:none"></li>
+            }
+            else
+            {
+                @foreach (var error in Model.AllErrors)
+                {
+                    <li>@error</li>
+                }
+            }
+        </ul>
+    </div>
+
+    <div class="maliev-form-grid" data-password-confirmation data-password-mismatch="@Localizer["Passwords do not match."]">
+        <div class="maliev-form-field">
+            <label for="FirstName">@Localizer["First name"]</label>
+            <input autocomplete="given-name" type="text" id="FirstName" maxlength="100" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
+            <span id="FirstName-error" class="@(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
+        </div>
+        <div class="maliev-form-field">
+            <label for="LastName">@Localizer["Last name"]</label>
+            <input autocomplete="family-name" type="text" id="LastName" maxlength="100" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
+            <span id="LastName-error" class="@(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
+        </div>
+        <div class="maliev-form-field maliev-form-field--full">
+            <label for="Email">@Localizer["Email"]</label>
+            <input autocomplete="email" type="email" id="Email" maxlength="320" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+            <span id="Email-error" class="@(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+        </div>
+        <div class="maliev-form-field">
+            <label for="Password">@Localizer["Password"]</label>
+            <input autocomplete="new-password" type="password" id="Password" minlength="6" maxlength="1024" name="Password" required aria-invalid="@AriaInvalid("Password")" aria-describedby="Password-error" data-password-primary />
+            <span id="Password-error" class="@(HasError("Password") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Password")</span>
+        </div>
+        <div class="maliev-form-field">
+            <label for="ConfirmPassword">@Localizer["Retype Password"]</label>
+            <input autocomplete="new-password" type="password" id="ConfirmPassword" name="ConfirmPassword" required aria-invalid="@AriaInvalid("ConfirmPassword")" aria-describedby="ConfirmPassword-error" data-password-confirm />
+            <span id="ConfirmPassword-error" class="@(HasError("ConfirmPassword") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("ConfirmPassword")</span>
+        </div>
+    </div>
+
+    <input type="hidden" name="g-recaptcha-response" id="signup-recaptcha-response" value="" />
+    <p>@Localizer["By signing up, you agree to our"] <a href="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a> @Localizer["and"] <a href="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a>.</p>
+    <button type="submit" formaction="/Account/Signup?handler=SignUp" id="submit-button">@Localizer["Sign Up"]</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SignupFormDisplayModel Model { get; set; } = null!;
+
+    private bool HasError(string fieldName) => Model.ErrorsFor(fieldName).Count > 0;
+
+    private string? AriaInvalid(string fieldName) => HasError(fieldName) ? "true" : null;
+}

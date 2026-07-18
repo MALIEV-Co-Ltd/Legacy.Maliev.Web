@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,8 @@ public sealed class Index(
     public IReadOnlyList<CustomerQuotation> RecentQuotations { get; private set; } = [];
 
     public IReadOnlyList<string> Notices { get; private set; } = [];
+
+    public MemberOverviewDisplayModel DisplayModel { get; private set; } = MemberOverviewDisplayModel.Empty;
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -85,6 +88,17 @@ public sealed class Index(
         }
 
         Notices = notices;
+        DisplayModel = new MemberOverviewDisplayModel(
+            Profile?.FirstName,
+            Notices,
+            RecentOrders.Select(order => new MemberOrderSummaryDisplayModel(
+                order.Id,
+                order.Name,
+                order.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")).ToArray(),
+            RecentQuotations.Select(quotation => new MemberQuotationSummaryDisplayModel(
+                quotation.Id,
+                quotation.Accepted,
+                quotation.ExpirationDate.ToString("yyyy-MM-dd"))).ToArray());
         return Page();
     }
 }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true"><xsd:complexType><xsd:choice maxOccurs="unbounded">
+      <xsd:element name="data"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" /><xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" /><xsd:attribute ref="xml:space" /></xsd:complexType></xsd:element>
+      <xsd:element name="resheader"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" /></xsd:complexType></xsd:element>
+    </xsd:choice></xsd:complexType></xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Profile | MALIEV" xml:space="preserve"><value>ข้อมูลส่วนตัว | MALIEV</value></data>
+  <data name="Customer account" xml:space="preserve"><value>บัญชีลูกค้า</value></data>
+  <data name="Profile" xml:space="preserve"><value>ข้อมูลส่วนตัว</value></data>
+  <data name="Keep personal, contact, and company information current." xml:space="preserve"><value>ปรับปรุงข้อมูลส่วนบุคคล ข้อมูลติดต่อ และข้อมูลบริษัทให้เป็นปัจจุบัน</value></data>
+  <data name="Your profile was successfully updated." xml:space="preserve"><value>อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว</value></data>
+  <data name="Personal information" xml:space="preserve"><value>ข้อมูลส่วนบุคคล</value></data>
+  <data name="First name" xml:space="preserve"><value>ชื่อ</value></data>
+  <data name="Last name" xml:space="preserve"><value>นามสกุล</value></data>
+  <data name="Email" xml:space="preserve"><value>อีเมล</value></data>
+  <data name="Change email" xml:space="preserve"><value>เปลี่ยนอีเมล</value></data>
+  <data name="Date of birth" xml:space="preserve"><value>วันเกิด</value></data>
+  <data name="Contact information" xml:space="preserve"><value>ข้อมูลติดต่อ</value></data>
+  <data name="Telephone" xml:space="preserve"><value>โทรศัพท์</value></data>
+  <data name="Mobile" xml:space="preserve"><value>มือถือ</value></data>
+  <data name="Fax" xml:space="preserve"><value>โทรสาร</value></data>
+  <data name="Company information" xml:space="preserve"><value>ข้อมูลบริษัท</value></data>
+  <data name="Company name" xml:space="preserve"><value>ชื่อบริษัท</value></data>
+  <data name="Tax number" xml:space="preserve"><value>เลขประจำตัวผู้เสียภาษี</value></data>
+  <data name="Registrar" xml:space="preserve"><value>ผู้รับจดทะเบียน</value></data>
+  <data name="Save profile" xml:space="preserve"><value>บันทึกข้อมูลส่วนตัว</value></data>
+  <data name="First name is required." xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
+  <data name="Last name is required." xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
+  <data name="One or more profile values are invalid." xml:space="preserve"><value>ข้อมูลส่วนตัวอย่างน้อยหนึ่งรายการไม่ถูกต้อง</value></data>
+  <data name="Your profile could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดข้อมูลส่วนตัวของคุณได้</value></data>
+  <data name="Your profile could not be updated." xml:space="preserve"><value>ไม่สามารถอัปเดตข้อมูลส่วนตัวของคุณได้</value></data>
+  <data name="Profile service is temporarily unavailable." xml:space="preserve"><value>ระบบข้อมูลส่วนตัวไม่พร้อมใช้งานชั่วคราว</value></data>
+</root>
