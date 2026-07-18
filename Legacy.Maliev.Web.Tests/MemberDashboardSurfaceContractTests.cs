@@ -13,6 +13,10 @@ public sealed class MemberDashboardSurfaceContractTests
         var accountModel = Path.Combine(pages, "Account", "Index.cshtml.cs");
         var layout = Path.Combine(pages, "Shared", "_LayoutMember.cshtml");
         var navigation = Path.Combine(pages, "Shared", "_MemberNavigation.cshtml");
+        var components = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Member");
+        var overviewPage = Path.Combine(components, "MemberOverviewPage.razor");
+        var overviewLoader = Path.Combine(components, "MemberOverviewLoader.cs");
+        var workspaceShell = Path.Combine(components, "MemberWorkspaceShell.razor");
 
         Assert.True(File.Exists(dashboard));
         Assert.True(File.Exists(dashboardModel));
@@ -20,10 +24,18 @@ public sealed class MemberDashboardSurfaceContractTests
         Assert.True(File.Exists(accountModel));
         Assert.True(File.Exists(layout));
         Assert.True(File.Exists(navigation));
+        Assert.True(File.Exists(overviewPage));
+        Assert.True(File.Exists(overviewLoader));
+        Assert.True(File.Exists(workspaceShell));
 
         var dashboardSource = File.ReadAllText(dashboardModel);
+        var overviewPageSource = File.ReadAllText(overviewPage);
+        var overviewLoaderSource = File.ReadAllText(overviewLoader);
+        var workspaceShellSource = File.ReadAllText(workspaceShell);
         Assert.Contains("[Authorize]", dashboardSource, StringComparison.Ordinal);
-        Assert.Contains("GetCustomerDatabaseIdAsync", dashboardSource, StringComparison.Ordinal);
+        Assert.Contains("[Authorize]", overviewPageSource, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", overviewPageSource, StringComparison.Ordinal);
+        Assert.Contains("GetCustomerDatabaseIdAsync", overviewLoaderSource, StringComparison.Ordinal);
         Assert.Contains("ICustomerAccountClient", dashboardSource, StringComparison.Ordinal);
         Assert.Contains("ICustomerOrderClient", dashboardSource, StringComparison.Ordinal);
         Assert.Contains("ICustomerQuotationClient", dashboardSource, StringComparison.Ordinal);
@@ -40,8 +52,10 @@ public sealed class MemberDashboardSurfaceContractTests
         Assert.Contains("<nav", navigationSource, StringComparison.Ordinal);
         Assert.Contains("aria-label", navigationSource, StringComparison.Ordinal);
         Assert.DoesNotContain("UserManager", navigationSource, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", workspaceShellSource, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"member-navigation\"", workspaceShellSource, StringComparison.Ordinal);
 
-        var combined = string.Join('\n', dashboardSource, layoutSource, navigationSource);
+        var combined = string.Join('\n', dashboardSource, overviewPageSource, overviewLoaderSource, workspaceShellSource, layoutSource, navigationSource);
         Assert.DoesNotContain("access_token", combined, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("DbContext", combined, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("paypal", combined, StringComparison.OrdinalIgnoreCase);

@@ -1,0 +1,28 @@
+@page "/Member/Quotations/View"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAccountSessionManager SessionManager
+@inject ICustomerQuotationClient QuotationClient
+@inject IStringLocalizer<MemberQuotationDetailContent> Localizer
+
+<PageTitle>@Localizer["Quotation details | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><MemberQuotationDetailContent Model="model" /></MemberWorkspaceShell></div>
+
+@code {
+    private MemberQuotationDetailDisplayModel model = MemberQuotationDetailDisplayModel.Empty;
+    [SupplyParameterFromQuery(Name = "id")] public string? Id { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var id = int.TryParse(Id, out var parsed) ? parsed : 0;
+        var loaded = await MemberDetailLoaders.LoadQuotationAsync(
+            context, SessionManager, QuotationClient, id, context.RequestAborted);
+        if (loaded.IsNotFound) context.Response.StatusCode = StatusCodes.Status404NotFound;
+        model = loaded.Model;
+    }
+}

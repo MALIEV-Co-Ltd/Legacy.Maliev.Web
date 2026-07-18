@@ -1,0 +1,29 @@
+@page "/Member/Orders/History"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAccountSessionManager SessionManager
+@inject ICustomerOrderClient OrderClient
+@inject IStringLocalizer<MemberOrderHistoryContent> Localizer
+
+<PageTitle>@Localizer["Order history | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><MemberOrderHistoryContent Model="model" /></MemberWorkspaceShell></div>
+
+@code {
+    private MemberOrderHistoryDisplayModel model = MemberOrderHistoryDisplayModel.Empty;
+
+    [SupplyParameterFromQuery(Name = "search")] public string? Search { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")] public string? Sort { get; set; }
+    [SupplyParameterFromQuery(Name = "index")] public string? PageIndex { get; set; }
+    [SupplyParameterFromQuery(Name = "size")] public string? PageSize { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        model = await MemberListLoaders.LoadOrdersAsync(
+            context, SessionManager, OrderClient, Search, Sort, PageIndex, PageSize, context.RequestAborted);
+    }
+}

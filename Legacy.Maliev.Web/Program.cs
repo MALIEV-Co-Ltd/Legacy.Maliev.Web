@@ -37,6 +37,14 @@ var useBlazorInstantQuotationRoute = builder.Configuration.GetValue("BlazorRouti
 var useBlazorMemberOverviewRoute = builder.Configuration.GetValue("BlazorRouting:MemberOverview", true);
 var useBlazorMemberAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberAccountIndex", true);
 var useBlazorMemberOrdersIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrdersIndex", true);
+var useBlazorMemberOrderHistoryRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrderHistory", true);
+var useBlazorMemberQuotationsIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberQuotationsIndex", true);
+var useBlazorMemberOrderDetailRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrderDetail", true);
+var useBlazorMemberQuotationDetailRoute = builder.Configuration.GetValue("BlazorRouting:MemberQuotationDetail", true);
+var useBlazorMemberProfileRoute = builder.Configuration.GetValue("BlazorRouting:MemberProfile", true);
+var useBlazorMemberAddressRoute = builder.Configuration.GetValue("BlazorRouting:MemberAddress", true);
+var useBlazorMemberChangeEmailRoute = builder.Configuration.GetValue("BlazorRouting:MemberChangeEmail", true);
+var useBlazorMemberChangePasswordRoute = builder.Configuration.GetValue("BlazorRouting:MemberChangePassword", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -70,6 +78,14 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorMemberOverviewRoute
     && useBlazorMemberAccountIndexRoute
     && useBlazorMemberOrdersIndexRoute
+    && useBlazorMemberOrderHistoryRoute
+    && useBlazorMemberQuotationsIndexRoute
+    && useBlazorMemberOrderDetailRoute
+    && useBlazorMemberQuotationDetailRoute
+    && useBlazorMemberProfileRoute
+    && useBlazorMemberAddressRoute
+    && useBlazorMemberChangeEmailRoute
+    && useBlazorMemberChangePasswordRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -250,6 +266,47 @@ builder.Services.AddRazorPages(options =>
             "Member",
             "/Orders/Index",
             model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Orders/History",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Quotations/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Orders/View",
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Member",
+            "/Quotations/View",
+            model => model.Selectors.Clear());
+        foreach (var page in new[]
+        {
+            "/Account/Manage/Profile",
+            "/Account/Manage/Address",
+            "/Account/Manage/ChangeEmail",
+            "/Account/Manage/ChangePassword",
+        })
+        {
+            options.Conventions.AddAreaPageRouteModelConvention(
+                "Member",
+                page,
+                model =>
+                {
+                    foreach (var selector in model.Selectors)
+                    {
+                        selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                    }
+                });
+        }
         options.Conventions.AddAreaPageRouteModelConvention(
             "Knowledges",
             "/Index",

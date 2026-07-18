@@ -403,6 +403,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-quotations-index-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
@@ -470,6 +472,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-quotation-detail-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{status}<", decodedSource, StringComparison.Ordinal);
@@ -547,6 +551,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-order-history-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
@@ -632,6 +638,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-order-detail-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{historyHeading}<", decodedSource, StringComparison.Ordinal);
@@ -775,6 +783,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-address-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
@@ -1078,6 +1088,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-profile-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
@@ -1119,6 +1131,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-change-password-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
@@ -1376,6 +1390,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var decodedSource = WebUtility.HtmlDecode(source);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-member-workspace", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-change-email-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);

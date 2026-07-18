@@ -1,0 +1,52 @@
+@page "/Member/Orders/View"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAccountSessionManager SessionManager
+@inject ICustomerOrderClient OrderClient
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IStringLocalizer<MemberOrderDetailContent> Localizer
+
+<PageTitle>@Localizer["Order details | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <MemberWorkspaceShell>
+        <section class="maliev-section" aria-labelledby="member-order-detail-title">
+            <MemberOrderDetailContent Model="model" />
+            @if (model.AllowCancellation && tokens is not null)
+            {
+                <form method="post" action="/member/orders/view?handler=CancelOrder" class="maliev-panel maliev-form">
+                    <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                    <input type="hidden" name="orderId" value="@model.Id" />
+                    <p>@Localizer["Cancellation is available while this order remains eligible."]</p>
+                    <button type="submit" class="maliev-button maliev-button--danger">@Localizer["Cancel order"]</button>
+                </form>
+            }
+            <p><a class="maliev-button maliev-button--secondary" href="/Member/Orders/History">@Localizer["Back to order history"]</a></p>
+        </section>
+    </MemberWorkspaceShell>
+</div>
+
+@code {
+    private MemberOrderDetailDisplayModel model = MemberOrderDetailDisplayModel.Empty;
+    private AntiforgeryTokenSet? tokens;
+    [SupplyParameterFromQuery(Name = "itemID")] public string? ItemId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var id = int.TryParse(ItemId, out var parsed) ? parsed : 0;
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        var loaded = await MemberDetailLoaders.LoadOrderAsync(
+            context, SessionManager, OrderClient, id, notification, context.RequestAborted);
+        if (loaded.IsNotFound) context.Response.StatusCode = StatusCodes.Status404NotFound;
+        model = loaded.Model;
+        tokens = model.AllowCancellation ? Antiforgery.GetAndStoreTokens(context) : null;
+    }
+}
