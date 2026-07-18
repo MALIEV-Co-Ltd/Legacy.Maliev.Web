@@ -3,5 +3,6 @@
 .dependencies/
 .vs/
 TestResults/
+**/node_modules/
 *.user
 *.suo

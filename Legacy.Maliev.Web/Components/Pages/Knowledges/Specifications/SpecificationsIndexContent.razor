@@ -1,0 +1,17 @@
+@inject IStringLocalizer<SpecificationsIndexContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+    <p class="maliev-eyebrow">@Localizer["Technical guidance"]</p>
+    <h1>@Localizer["Service specifications"]</h1>
+    <p class="docs-lead">@Localizer["Choose a process for concise preparation guidance, then use the service page for current materials, pricing, lead-time, and FAQ information."]</p>
+    <div class="maliev-card-grid">
+        <a class="maliev-panel docs-link-card" href="/knowledges/specifications/cnc-machining"><i class="fas fa-cog" aria-hidden="true"></i><strong>@Localizer["CNC machining"]</strong><span>@Localizer["CAD, drawings, tolerances, threads, and finishes."]</span></a>
+        <a class="maliev-panel docs-link-card" href="/knowledges/specifications/3d-printing"><i class="fas fa-cubes" aria-hidden="true"></i><strong>@Localizer["3D printing"]</strong><span>@Localizer["Watertight models, process choice, orientation, and support considerations."]</span></a>
+        <a class="maliev-panel docs-link-card" href="/knowledges/specifications/3d-scanning"><i class="fas fa-cube" aria-hidden="true"></i><strong>@Localizer["3D scanning"]</strong><span>@Localizer["Part condition, surface preparation, access, and deliverables."]</span></a>
+    </div>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

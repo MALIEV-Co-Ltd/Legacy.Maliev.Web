@@ -1,0 +1,11 @@
+@page
+@model Legacy.Maliev.Web.Pages.InstantQuotation.ThreeDimensionalPrinting
+@using Legacy.Maliev.Web.Components.Pages.InstantQuotation
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Instant 3D Printing Estimate"];
+    ViewData["Description"] = MetadataLocalizer["Estimate 3D printing price and production time with MALIEV's deterministic pricing calculator."];
+}
+
+<component type="typeof(ThreeDimensionalPrintingEstimateContent)" render-mode="Static" param-Model="Model.DisplayModel" />

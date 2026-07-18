@@ -1,0 +1,75 @@
+@inject IStringLocalizer<MemberQuotationsIndexContent> Localizer
+
+<section class="maliev-section" aria-labelledby="member-quotations-title" data-migration-component="member-quotations-index-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Quotation management"]</p>
+        <h1 id="member-quotations-title">@Localizer["Quotations"]</h1>
+        <p>@Localizer["Review quotations associated with your signed-in customer account."]</p>
+    </div>
+    <form method="get" action="/member/quotations" class="maliev-panel maliev-form">
+        @if (Model.Errors.Count > 0)
+        {
+            <div class="validation-summary-errors" role="alert">
+                <ul>
+                    @foreach (var error in Model.Errors)
+                    {
+                        <li>@Localizer[error]</li>
+                    }
+                </ul>
+            </div>
+        }
+        <div class="maliev-form-field">
+            <label for="member-quotation-search">@Localizer["Search quotations"]</label>
+            <input id="member-quotation-search" name="search" value="@Model.Search" autocomplete="off" />
+        </div>
+        <input type="hidden" name="sort" value="@Model.Sort" />
+        <input type="hidden" name="size" value="@Model.PageSize" />
+        <button type="submit" class="maliev-button">@Localizer["Search"]</button>
+    </form>
+    @if (Model.Quotations.Count == 0)
+    {
+        <div class="maliev-panel">
+            <p>@Localizer["No quotations were found."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="maliev-card-grid">
+            @foreach (var quotation in Model.Quotations)
+            {
+                var status = quotation.Accepted switch
+                {
+                    true => Localizer["Accepted"],
+                    false => Localizer["Declined"],
+                    _ => Localizer["Open"],
+                };
+                <article class="maliev-panel">
+                    <p class="maliev-eyebrow">@Localizer["Quotation"] #@quotation.Id</p>
+                    <h2>@status</h2>
+                    <dl>
+                        <dt>@Localizer["Quoted amount"]</dt><dd>@quotation.QuotedAmount</dd>
+                        <dt>@Localizer["Currency ID"]</dt><dd>@quotation.CurrencyId</dd>
+                        <dt>@Localizer["Expiration date"]</dt><dd>@quotation.ExpirationDate</dd>
+                        <dt>@Localizer["Created"]</dt><dd>@quotation.CreatedDate</dd>
+                    </dl>
+                    <a class="maliev-button maliev-button--secondary" href="/member/quotations/view?id=@quotation.Id">@Localizer["View quotation"]</a>
+                </article>
+            }
+        </div>
+        <nav aria-label="@Localizer["Quotation pages"]">
+            @if (Model.PreviousHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.PreviousHref">@Localizer["Previous"]</a>
+            }
+            @if (Model.NextHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.NextHref">@Localizer["Next"]</a>
+            }
+        </nav>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public MemberQuotationsIndexDisplayModel Model { get; set; } = MemberQuotationsIndexDisplayModel.Empty;
+}

@@ -1,0 +1,82 @@
+@inject IStringLocalizer<HomeContent> Localizer
+
+<div data-migration-route-owner="@RouteOwner">
+<section class="landing-hero" data-migration-component="home-content" aria-labelledby="landing-hero-title">
+    <div class="landing-container landing-hero-grid">
+        <div class="landing-hero-copy">
+            <p class="landing-eyebrow">@L("Precision. Speed. Reliability.")</p>
+            <h1 id="landing-hero-title">@L("Manufacturing Services for Prototypes and Production Parts")</h1>
+            <p class="landing-hero-lead">@L("CNC machining, 3D printing, and 3D scanning under one roof. From rapid prototypes to end-use parts, we deliver precision manufacturing solutions that help you bring ideas to life faster.")</p>
+            <div class="landing-actions">
+                <a class="landing-button landing-button-primary" href="/InstantQuotation/3D-Printing">@L("Instant 3D Quotation") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                <a class="landing-button landing-button-secondary" href="/Contact">@L("Talk to Us") <i class="far fa-comment-dots" aria-hidden="true"></i></a>
+            </div>
+            <p class="landing-trust"><i class="fas fa-shield-alt" aria-hidden="true"></i> @L("Secure. Confidential. Trusted by engineers and product teams.")</p>
+        </div>
+        <div class="landing-hero-media" aria-label="@L("CNC machining, 3D printing, and 3D scanning")">
+            <figure class="landing-collage landing-collage-cnc"><img src="/src/images/landing/landing-hero-cnc.webp" alt="@L("Precision CNC machining")" /></figure>
+            <figure class="landing-collage landing-collage-print"><img src="/src/images/landing/landing-hero-printing.webp" alt="@L("Industrial 3D printing")" /></figure>
+            <figure class="landing-collage landing-collage-scan"><img src="/src/images/landing/landing-hero-scanning.webp" alt="@L("High-accuracy 3D scanning")" /></figure>
+        </div>
+    </div>
+</section>
+
+<section class="landing-value-wrap" aria-label="@L("Why customers work with MALIEV")">
+    <div class="landing-container landing-value-strip">
+        <article><i class="fas fa-bolt" aria-hidden="true"></i><div><h2>@L("Fast & Competitive Quotes")</h2><p>@L("Get an accurate quote in hours, not days.")</p></div></article>
+        <article><i class="fas fa-cube" aria-hidden="true"></i><div><h2>@L("Multiple Manufacturing Methods")</h2><p>@L("CNC machining, 3D printing, and 3D scanning solutions.")</p></div></article>
+        <article><i class="far fa-user" aria-hidden="true"></i><div><h2>@L("Engineering Support")</h2><p>@L("Expert guidance to optimize designs and reduce costs.")</p></div></article>
+        <article><i class="far fa-clock" aria-hidden="true"></i><div><h2>@L("Reliable Lead Times")</h2><p>@L("Clear production schedules you can count on.")</p></div></article>
+    </div>
+</section>
+
+<section id="landing-services" class="landing-section" aria-labelledby="landing-services-title">
+    <div class="landing-container">
+        <header class="landing-section-heading"><p>@L("Our Services")</p><h2 id="landing-services-title">@L("Precision Manufacturing Solutions")</h2><span>@L("End-to-end services for every stage of product development and production.")</span></header>
+        <div class="landing-service-grid">
+            <article class="landing-service-card"><img src="/src/images/landing/landing-service-cnc.webp" alt="@L("CNC-machined metal component")" /><div><span class="landing-card-icon"><i class="fas fa-drafting-compass" aria-hidden="true"></i></span><h3>@L("CNC Machining")</h3><p>@L("High-precision machining for metals and plastics with tight tolerances and excellent surface finishes.")</p><a href="/Services/CNC-Machining">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/landing/landing-service-printing.webp" alt="@L("Intricate 3D-printed component")" /><div><span class="landing-card-icon"><i class="fas fa-print" aria-hidden="true"></i></span><h3>@L("3D Printing")</h3><p>@L("Fast, flexible additive manufacturing for prototypes and functional parts in a variety of materials.")</p><a href="/Services/3D-Printing">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/landing/landing-service-scanning.webp" alt="@L("3D scanning a mechanical component")" /><div><span class="landing-card-icon"><i class="fas fa-cubes" aria-hidden="true"></i></span><h3>@L("3D Scanning")</h3><p>@L("High-accuracy scanning for reverse engineering, inspection, and quality control.")</p><a href="/Services/3D-Scanning">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+        </div>
+    </div>
+</section>
+
+<section id="landing-process" class="landing-section landing-process" aria-labelledby="landing-process-title">
+    <div class="landing-container">
+        <header class="landing-section-heading"><p>@L("How It Works")</p><h2 id="landing-process-title">@L("Simple. Fast. Reliable.")</h2></header>
+        <ol class="landing-process-grid">
+            <li><span class="landing-step-number">1</span><div class="landing-step-icon"><i class="fas fa-upload" aria-hidden="true"></i></div><h3>@L("Upload CAD files")</h3><p>@L("Submit your CAD files and project details through our secure portal.")</p></li>
+            <li><span class="landing-step-number">2</span><div class="landing-step-icon"><i class="far fa-file-alt" aria-hidden="true"></i></div><h3>@L("Review quotation")</h3><p>@L("Receive a detailed quote with price, lead time, and engineering feedback.")</p></li>
+            <li><span class="landing-step-number">3</span><div class="landing-step-icon"><i class="far fa-check-circle" aria-hidden="true"></i></div><h3>@L("Confirm order")</h3><p>@L("Approve the quote and we will start manufacturing your parts.")</p></li>
+            <li><span class="landing-step-number">4</span><div class="landing-step-icon"><i class="fas fa-box" aria-hidden="true"></i></div><h3>@L("Receive parts")</h3><p>@L("Parts are quality-checked and delivered safely to your doorstep.")</p></li>
+        </ol>
+    </div>
+</section>
+
+<section id="landing-reasons" class="landing-section landing-reasons" aria-labelledby="landing-reasons-title">
+    <div class="landing-container">
+        <header class="landing-section-heading"><p>@L("Why Choose MALIEV")</p><h2 id="landing-reasons-title">@L("Built for Quality. Driven by Engineering.")</h2></header>
+        <div class="landing-reason-grid">
+            <article><i class="fas fa-award" aria-hidden="true"></i><div><h3>@L("Prototype to Production")</h3><p>@L("From one-off prototypes to full-scale production, we grow with your project.")</p></div></article>
+            <article><i class="far fa-user" aria-hidden="true"></i><div><h3>@L("Engineering Support")</h3><p>@L("DFM analysis and practical advice improve your design and outcomes.")</p></div></article>
+            <article><i class="fas fa-shield-alt" aria-hidden="true"></i><div><h3>@L("Quality-Focused")</h3><p>@L("Strict quality control and careful inspection deliver consistent results.")</p></div></article>
+            <article><i class="far fa-comments" aria-hidden="true"></i><div><h3>@L("Responsive Communication")</h3><p>@L("Real people, clear updates, and practical support when you need us.")</p></div></article>
+        </div>
+    </div>
+</section>
+
+<section class="landing-cta-section">
+    <div class="landing-container landing-cta">
+        <div><h2>@L("Ready to bring your ideas to life?")</h2><p>@L("Get a fast, accurate 3D printing estimate for your project today.")</p><div class="landing-actions"><a class="landing-button landing-button-yellow" href="/InstantQuotation/3D-Printing">@L("Instant 3D Quotation") <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a class="landing-button landing-button-light" href="/Contact">@L("Talk to an Expert")</a></div></div>
+        <ul><li><i class="fas fa-check-circle" aria-hidden="true"></i> @L("Fast response")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i> @L("Competitive pricing")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i> @L("Confidential and secure")</li></ul>
+        <img src="/src/images/landing/landing-cta-part.webp" alt="@L("Precision-machined aluminum component")" />
+    </div>
+</section>
+</div>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
+    private MarkupString L(string key) => new(Localizer[key].Value);
+}

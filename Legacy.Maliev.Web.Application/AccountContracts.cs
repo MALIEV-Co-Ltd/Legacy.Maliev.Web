@@ -9,7 +9,8 @@ public sealed record CustomerTokenSet(
 
 public sealed record CustomerAuthenticationResult(
     CustomerTokenSet? Tokens,
-    bool ServiceAvailable);
+    bool ServiceAvailable,
+    int? DatabaseId = null);
 
 public sealed record CustomerIdentityRegistration(
     bool Succeeded,
@@ -22,6 +23,12 @@ public sealed record CustomerActionChallenge(
     string? Token,
     bool ServiceAvailable,
     bool Authorized);
+
+public sealed record CustomerCredentialOperationResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized,
+    string? Token = null);
 
 public interface ICustomerAuthenticationClient
 {
@@ -60,6 +67,18 @@ public interface ICustomerAuthenticationClient
         string token,
         string password,
         CancellationToken cancellationToken);
+
+    Task<CustomerCredentialOperationResult> ChangeEmailAsync(
+        string accessToken,
+        string currentPassword,
+        string newEmail,
+        CancellationToken cancellationToken);
+
+    Task<CustomerCredentialOperationResult> ChangePasswordAsync(
+        string accessToken,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken);
 }
 
 public sealed record CustomerProfile(
@@ -82,4 +101,110 @@ public interface ICustomerProfileClient
         CancellationToken cancellationToken);
 
     Task<bool> DeleteAsync(int customerId, CancellationToken cancellationToken);
+}
+
+public sealed record CustomerAddress(
+    int Id,
+    string? Building,
+    string AddressLine1,
+    string? AddressLine2,
+    string? City,
+    string? State,
+    string? PostalCode,
+    int CountryId,
+    DateTime? CreatedDate,
+    DateTime? ModifiedDate);
+
+public sealed record CustomerCompany(
+    int Id,
+    string Name,
+    string? TaxNumber,
+    string? Registrar,
+    DateTime? CreatedDate,
+    DateTime? ModifiedDate);
+
+public sealed record CustomerAccountDetails(
+    int Id,
+    string FirstName,
+    string LastName,
+    string FullName,
+    string? Telephone,
+    string? Mobile,
+    string? Fax,
+    string Email,
+    DateTime? DateOfBirth,
+    int? CompanyId,
+    int? BillingAddressId,
+    int? ShippingAddressId,
+    DateTime? CreatedDate,
+    DateTime? ModifiedDate,
+    CustomerAddress? BillingAddress,
+    CustomerCompany? Company,
+    CustomerAddress? ShippingAddress);
+
+public sealed record CustomerAddressProfile(CustomerAccountDetails Customer);
+
+public sealed record CustomerAddressProfileResult(
+    CustomerAddressProfile? Profile,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public sealed record CustomerAddressInput(
+    string? Building,
+    string AddressLine1,
+    string? AddressLine2,
+    string? City,
+    string? State,
+    string? PostalCode,
+    int CountryId);
+
+public sealed record CustomerAddressUpdate(
+    CustomerAddressInput Billing,
+    CustomerAddressInput Shipping);
+
+public sealed record CustomerAddressOperationResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public sealed record CustomerAccountProfileResult(
+    CustomerAccountDetails? Profile,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public sealed record CustomerProfileUpdate(
+    string FirstName,
+    string LastName,
+    string? Telephone,
+    string? Mobile,
+    string? Fax,
+    DateTime? DateOfBirth,
+    string? CompanyName,
+    string? TaxNumber,
+    string? Registrar);
+
+public interface ICustomerAccountClient
+{
+    Task<CustomerAddressProfileResult> GetAddressProfileAsync(
+        int customerId,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAddressOperationResult> UpdateAddressesAsync(
+        int customerId,
+        CustomerAddressUpdate update,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAddressOperationResult> UpdateEmailAsync(
+        int customerId,
+        string email,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAccountProfileResult> GetProfileAsync(
+        int customerId,
+        CancellationToken cancellationToken);
+
+    Task<CustomerAddressOperationResult> UpdateProfileAsync(
+        int customerId,
+        CustomerProfileUpdate update,
+        CancellationToken cancellationToken);
 }

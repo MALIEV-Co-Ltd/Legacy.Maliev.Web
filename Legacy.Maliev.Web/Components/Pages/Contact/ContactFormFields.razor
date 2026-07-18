@@ -1,0 +1,75 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<ContactContent> Localizer
+
+<div data-migration-component="contact-form-fields" data-migration-renderer="blazor-static-ssr">
+    <div class="text-danger @(Model.ErrorsFor(string.Empty).Count > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
+        @if (Model.ErrorsFor(string.Empty).Count > 0)
+        {
+            <ul>
+                @foreach (var error in Model.ErrorsFor(string.Empty))
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="FirstName" class="form-label">@Localizer["First name"]</label>
+            <input class="form-control" autocomplete="given-name" type="text" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
+            <span id="FirstName-error" class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
+        </div>
+        <div class="col-md-6">
+            <label for="LastName" class="form-label">@Localizer["Last name"]</label>
+            <input class="form-control" autocomplete="family-name" type="text" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
+            <span id="LastName-error" class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
+        </div>
+        <div class="col-md-6">
+            <label for="Email" class="form-label">@Localizer["Email"]</label>
+            <input class="form-control" autocomplete="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+            <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+        </div>
+        <div class="col-md-6">
+            <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
+            <input class="form-control" autocomplete="tel" type="tel" id="Phone" maxlength="50" name="Phone" value="@Model.Phone" aria-invalid="@AriaInvalid("Phone")" aria-describedby="Phone-error" />
+            <span id="Phone-error" class="text-danger @(HasError("Phone") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Phone")</span>
+        </div>
+        <div class="col-md-6">
+            <label for="Company" class="form-label">@Localizer["Company"]</label>
+            <input class="form-control" autocomplete="organization" type="text" id="Company" maxlength="50" name="Company" value="@Model.Company" aria-invalid="@AriaInvalid("Company")" aria-describedby="Company-error" />
+            <span id="Company-error" class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Company")</span>
+        </div>
+        <div class="col-md-6">
+            <label for="Country" class="form-label">@Localizer["Country"]</label>
+            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error">
+                <option value="">@Localizer["Select a country"]</option>
+                @foreach (var country in Model.Countries)
+                {
+                    <option value="@country.Name" selected="@(string.Equals(Model.Country, country.Name, StringComparison.Ordinal))">@country.Name</option>
+                }
+            </select>
+            <span id="Country-error" class="text-danger @(HasError("Country") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Country")</span>
+        </div>
+        <div class="col-12">
+            <label for="Message" class="form-label">@Localizer["How can we help?"]</label>
+            <textarea class="form-control" rows="7" id="Message" maxlength="5000" name="Message" required aria-invalid="@AriaInvalid("Message")" aria-describedby="Message-error">@Model.Message</textarea>
+            <span id="Message-error" class="text-danger @(HasError("Message") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Message")</span>
+        </div>
+    </div>
+
+    <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="@Model.RecaptchaToken" />
+    <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
+        @Localizer["Submit enquiry"]
+    </button>
+    <p class="small text-muted mt-3">@Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ContactFormDisplayModel Model { get; set; } = null!;
+
+    private bool HasError(string fieldName) => Model.ErrorsFor(fieldName).Count > 0;
+
+    private string? AriaInvalid(string fieldName) => HasError(fieldName) ? "true" : null;
+}

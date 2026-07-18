@@ -3,6 +3,8 @@ using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text.Json;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -24,6 +26,20 @@ public sealed class AccountClientTests
         Assert.Contains("\"userName\":\"customer@example.com\"", handler.Body, StringComparison.Ordinal);
         Assert.Contains("\"password\":\"correct-password\"", handler.Body, StringComparison.Ordinal);
         Assert.Contains("\"identityKind\":0", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Login_ExtractsPositiveCustomerDatabaseIdFromAuthIssuedAccessToken()
+    {
+        var accessToken = Jwt(new { legacy_database_id = "42" });
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            $$"""{"accessToken":"{{accessToken}}","refreshToken":"refresh","tokenType":"Bearer","expiresIn":900,"refreshExpiresAt":"2026-07-16T00:00:00Z"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.LoginAsync("customer@example.com", "correct-password", default);
+
+        Assert.Equal(42, result.DatabaseId);
     }
 
     [Fact]
@@ -60,6 +76,51 @@ public sealed class AccountClientTests
         Assert.False(result.Succeeded);
     }
 
+    [Fact]
+    public async Task ChangeEmail_UsesCustomerBearerAndJsonOnlyCredentials()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            """{"accepted":true,"token":"confirmation-token"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.ChangeEmailAsync(
+            "customer-access-token",
+            "current-password",
+            "new@example.com",
+            default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("confirmation-token", result.Token);
+        Assert.Equal("Bearer customer-access-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/email/change", handler.RequestUri);
+        Assert.DoesNotContain("current-password", handler.RequestUri, StringComparison.Ordinal);
+        Assert.Contains("\"currentPassword\":\"current-password\"", handler.Body, StringComparison.Ordinal);
+        Assert.Contains("\"newEmail\":\"new@example.com\"", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ChangePassword_UsesCustomerBearerAndReturnsSafeRejectedResult()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.BadRequest,
+            """{"title":"Credential change failed"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.ChangePasswordAsync(
+            "customer-access-token",
+            "wrong-password",
+            "new-password",
+            default);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Equal("Bearer customer-access-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/password/change", handler.RequestUri);
+        Assert.Contains("\"newPassword\":\"new-password\"", handler.Body, StringComparison.Ordinal);
+    }
+
     private static CustomerAuthenticationClient CreateClient(RecordingHandler handler) => new(
         new SingleClientFactory(new HttpClient(handler) { BaseAddress = new Uri("https://auth.test/") }),
         new StubServiceTokenProvider(),
@@ -69,6 +130,9 @@ public sealed class AccountClientTests
     {
         Content = new StringContent(body, Encoding.UTF8, "application/json"),
     };
+
+    private static string Jwt(object payload) =>
+        $"e30.{WebEncoders.Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(payload))}.signature";
 
     private sealed class RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage> response) : HttpMessageHandler
     {

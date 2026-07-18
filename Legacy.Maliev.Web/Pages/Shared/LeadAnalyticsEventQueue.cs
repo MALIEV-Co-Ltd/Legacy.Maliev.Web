@@ -26,7 +26,15 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// <returns><see langword="true" /> when the event was queued.</returns>
         internal static bool TryQueueContactMessage(ITempDataDictionary tempData, int messageId, out Exception? failure)
         {
-            return TryQueue(tempData, "contact", "general_contact", "message", messageId, false, out failure);
+            return TryQueue(
+                tempData,
+                "contact_request",
+                "general_contact",
+                "message",
+                messageId,
+                false,
+                false,
+                out failure);
         }
 
         /// <summary>
@@ -34,33 +42,28 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// </summary>
         /// <param name="tempData">The request TempData dictionary.</param>
         /// <param name="requestId">The persisted quotation-request identifier.</param>
+        /// <param name="service">The controlled MALIEV service context.</param>
         /// <param name="hasFiles">Whether the submitted request included files.</param>
+        /// <param name="fileUploadCompleted">Whether every submitted file was stored and linked.</param>
         /// <param name="failure">The validation, serialization, or TempData failure, when unsuccessful.</param>
         /// <returns><see langword="true" /> when the event was queued.</returns>
         internal static bool TryQueueManualQuotation(
             ITempDataDictionary tempData,
             int requestId,
+            string service,
             bool hasFiles,
+            bool fileUploadCompleted,
             out Exception? failure)
         {
-            return TryQueue(tempData, "manual_quote", "custom_manufacturing", "quotation", requestId, hasFiles, out failure);
-        }
-
-        /// <summary>
-        /// Attempts to queue a persisted instant 3D quotation event without allowing analytics failures to escape.
-        /// </summary>
-        /// <param name="tempData">The request TempData dictionary.</param>
-        /// <param name="requestId">The persisted quotation-request identifier.</param>
-        /// <param name="hasFiles">Whether the submitted request included files.</param>
-        /// <param name="failure">The validation, serialization, or TempData failure, when unsuccessful.</param>
-        /// <returns><see langword="true" /> when the event was queued.</returns>
-        internal static bool TryQueueInstantQuotation(
-            ITempDataDictionary tempData,
-            int requestId,
-            bool hasFiles,
-            out Exception? failure)
-        {
-            return TryQueue(tempData, "instant_3d_quote", "3d_printing", "quotation", requestId, hasFiles, out failure);
+            return TryQueue(
+                tempData,
+                "quotation_request",
+                service,
+                "quotation",
+                requestId,
+                hasFiles,
+                fileUploadCompleted,
+                out failure);
         }
 
         /// <summary>
@@ -110,11 +113,12 @@ namespace Legacy.Maliev.Web.Pages.Shared
 
         private static bool TryQueue(
             ITempDataDictionary tempData,
-            string leadType,
+            string intentType,
             string service,
             string transactionPrefix,
             int persistedId,
             bool hasFiles,
+            bool fileUploadCompleted,
             out Exception? failure)
         {
             try
@@ -122,10 +126,11 @@ namespace Legacy.Maliev.Web.Pages.Shared
                 Queue(
                     tempData,
                     new LeadAnalyticsEvent(
-                        leadType,
+                        intentType,
                         service,
                         CreateTransactionId(transactionPrefix, persistedId),
-                        hasFiles));
+                        hasFiles,
+                        fileUploadCompleted));
                 failure = null;
                 return true;
             }
@@ -155,30 +160,37 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// <summary>
         /// Initializes a new instance of the <see cref="LeadAnalyticsEvent" /> class.
         /// </summary>
-        /// <param name="leadType">The controlled lead type.</param>
+        /// <param name="intentType">The controlled request intent.</param>
         /// <param name="service">The controlled MALIEV service.</param>
         /// <param name="transactionId">The persisted-record transaction identifier.</param>
         /// <param name="hasFiles">Whether the lead included files.</param>
+        /// <param name="fileUploadCompleted">Whether every submitted file was stored and linked.</param>
         [JsonConstructor]
-        public LeadAnalyticsEvent(string leadType, string service, string transactionId, bool hasFiles)
+        public LeadAnalyticsEvent(
+            string intentType,
+            string service,
+            string transactionId,
+            bool hasFiles,
+            bool fileUploadCompleted)
         {
-            this.LeadType = leadType;
+            this.IntentType = intentType;
             this.Service = service;
             this.TransactionId = transactionId;
             this.HasFiles = hasFiles;
+            this.FileUploadCompleted = fileUploadCompleted;
         }
 
         /// <summary>
         /// Gets the application-owned event name.
         /// </summary>
         [JsonPropertyName("event")]
-        public string Event { get; } = "maliev_lead_submitted";
+        public string Event { get; } = "request_quote";
 
         /// <summary>
         /// Gets the controlled lead type.
         /// </summary>
-        [JsonPropertyName("lead_type")]
-        public string LeadType { get; }
+        [JsonPropertyName("intent_type")]
+        public string IntentType { get; }
 
         /// <summary>
         /// Gets the controlled MALIEV service.
@@ -195,8 +207,8 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// <summary>
         /// Gets the controlled persistence status.
         /// </summary>
-        [JsonPropertyName("lead_status")]
-        public string LeadStatus { get; } = "persisted";
+        [JsonPropertyName("submission_status")]
+        public string SubmissionStatus { get; } = "persisted";
 
         /// <summary>
         /// Gets a value indicating whether the lead included files.
@@ -204,24 +216,36 @@ namespace Legacy.Maliev.Web.Pages.Shared
         [JsonPropertyName("has_files")]
         public bool HasFiles { get; }
 
+        /// <summary>
+        /// Gets a value indicating whether every submitted file was stored and linked.
+        /// </summary>
+        [JsonPropertyName("file_upload_completed")]
+        public bool FileUploadCompleted { get; }
+
         internal bool IsAllowed()
         {
-            if (!string.Equals(this.Event, "maliev_lead_submitted", StringComparison.Ordinal)
-                || !string.Equals(this.LeadStatus, "persisted", StringComparison.Ordinal))
+            if (!string.Equals(this.Event, "request_quote", StringComparison.Ordinal)
+                || !string.Equals(this.SubmissionStatus, "persisted", StringComparison.Ordinal)
+                || (this.FileUploadCompleted && !this.HasFiles))
             {
                 return false;
             }
 
-            return (string.Equals(this.LeadType, "contact", StringComparison.Ordinal)
+            return (string.Equals(this.IntentType, "contact_request", StringComparison.Ordinal)
                     && string.Equals(this.Service, "general_contact", StringComparison.Ordinal)
+                    && !this.HasFiles
                     && HasPositiveId(this.TransactionId, "message"))
-                || (string.Equals(this.LeadType, "manual_quote", StringComparison.Ordinal)
-                    && string.Equals(this.Service, "custom_manufacturing", StringComparison.Ordinal)
-                    && HasPositiveId(this.TransactionId, "quotation"))
-                || (string.Equals(this.LeadType, "instant_3d_quote", StringComparison.Ordinal)
-                    && string.Equals(this.Service, "3d_printing", StringComparison.Ordinal)
+                || (string.Equals(this.IntentType, "quotation_request", StringComparison.Ordinal)
+                    && IsQuotationService(this.Service)
                     && HasPositiveId(this.TransactionId, "quotation"));
         }
+
+        private static bool IsQuotationService(string service) =>
+            service is "3d_printing"
+                or "3d_scanning"
+                or "cnc_machining"
+                or "injection_molding"
+                or "custom_manufacturing";
 
         private static bool HasPositiveId(string transactionId, string prefix)
         {

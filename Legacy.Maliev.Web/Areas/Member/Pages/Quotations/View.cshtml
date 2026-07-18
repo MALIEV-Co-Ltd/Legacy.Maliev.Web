@@ -1,0 +1,8 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Quotations.View
+@inject IStringLocalizer<MemberQuotationDetailContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Quotation details | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<component type="typeof(MemberQuotationDetailContent)" render-mode="Static" param-Model="Model.DisplayModel" />

@@ -1,0 +1,7 @@
+<script type="application/ld+json" data-migration-component="public-business-structured-data" data-migration-renderer="blazor-static-ssr">@((MarkupString)Model.OrganizationJson)</script>
+<script type="application/ld+json">@((MarkupString)Model.LocalBusinessJson)</script>
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicBusinessStructuredDataDisplayModel Model { get; set; }
+}

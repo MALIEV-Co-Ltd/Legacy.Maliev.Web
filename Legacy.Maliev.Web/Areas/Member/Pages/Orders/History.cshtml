@@ -1,0 +1,8 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Orders.History
+@inject IStringLocalizer<MemberOrderHistoryContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Order history | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<component type="typeof(MemberOrderHistoryContent)" render-mode="Static" param-Model="Model.DisplayModel" />

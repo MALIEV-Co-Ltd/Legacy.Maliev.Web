@@ -1,0 +1,25 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<ChangeEmailConfirmationContent> Localizer
+
+<main class="maliev-page maliev-page-main" data-migration-component="change-email-confirmation-content" data-migration-renderer="blazor-static-ssr">
+    <div class="maliev-container">
+        <section class="maliev-panel maliev-status">
+            <p class="maliev-eyebrow">@Localizer["Email address"]</p>
+            <h1>@Localizer["Email change confirmation"]</h1>
+            <div class="validation-summary-errors text-break @(Model.Errors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
+                <ul>
+                    @foreach (var error in Model.Errors)
+                    {
+                        <li>@Localizer[error]</li>
+                    }
+                </ul>
+            </div>
+            <a href="/Account/Login" class="maliev-button">@Localizer["Back to sign in"]</a>
+        </section>
+    </div>
+</main>
+
+@code {
+    [Parameter, EditorRequired]
+    public ChangeEmailConfirmationDisplayModel Model { get; set; } = null!;
+}

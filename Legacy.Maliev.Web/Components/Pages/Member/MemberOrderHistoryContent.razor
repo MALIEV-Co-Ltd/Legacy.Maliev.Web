@@ -1,0 +1,72 @@
+@inject IStringLocalizer<MemberOrderHistoryContent> Localizer
+
+<section class="maliev-section" aria-labelledby="member-order-history-title" data-migration-component="member-order-history-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Order management"]</p>
+        <h1 id="member-order-history-title">@Localizer["Order history"]</h1>
+        <p>@Localizer["Review orders associated with your signed-in customer account."]</p>
+    </div>
+    <form method="get" action="/member/orders/history" class="maliev-panel maliev-form">
+        @if (Model.Errors.Count > 0)
+        {
+            <div class="validation-summary-errors" role="alert">
+                <ul>
+                    @foreach (var error in Model.Errors)
+                    {
+                        <li>@Localizer[error]</li>
+                    }
+                </ul>
+            </div>
+        }
+        <div class="maliev-form-field">
+            <label for="member-order-search">@Localizer["Search orders"]</label>
+            <input id="member-order-search" name="search" value="@Model.Search" autocomplete="off" />
+        </div>
+        <input type="hidden" name="sort" value="@Model.Sort" />
+        <input type="hidden" name="size" value="@Model.PageSize" />
+        <button type="submit" class="maliev-button">@Localizer["Search"]</button>
+    </form>
+    @if (Model.Orders.Count == 0)
+    {
+        <div class="maliev-panel">
+            <p>@Localizer["No orders were found."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="maliev-card-grid">
+            @foreach (var order in Model.Orders)
+            {
+                <article class="maliev-panel">
+                    <p class="maliev-eyebrow">@Localizer["Order"] #@order.Id</p>
+                    <h2>@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</h2>
+                    @if (!string.IsNullOrWhiteSpace(order.Description))
+                    {
+                        <p>@order.Description</p>
+                    }
+                    <dl>
+                        <dt>@Localizer["Quantity"]</dt><dd>@order.Quantity</dd>
+                        <dt>@Localizer["Subtotal"]</dt><dd>@order.Subtotal</dd>
+                        <dt>@Localizer["Created"]</dt><dd>@order.CreatedDate</dd>
+                    </dl>
+                    <a class="maliev-button maliev-button--secondary" href="/member/orders/view?itemID=@order.Id">@Localizer["View order"]</a>
+                </article>
+            }
+        </div>
+        <nav aria-label="@Localizer["Order pages"]">
+            @if (Model.PreviousHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.PreviousHref">@Localizer["Previous"]</a>
+            }
+            @if (Model.NextHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.NextHref">@Localizer["Next"]</a>
+            }
+        </nav>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public MemberOrderHistoryDisplayModel Model { get; set; } = MemberOrderHistoryDisplayModel.Empty;
+}

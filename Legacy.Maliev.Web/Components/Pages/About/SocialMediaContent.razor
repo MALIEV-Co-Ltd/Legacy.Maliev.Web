@@ -1,0 +1,25 @@
+@inject IStringLocalizer<SocialMediaContent> Localizer
+
+<main class="maliev-page maliev-page-main" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+    <header class="maliev-page-header">
+        <div class="maliev-container">
+            <p class="maliev-eyebrow">@Localizer["Connect with us"]</p>
+            <h1>@Localizer["MALIEV on social media"]</h1>
+            <p>@Localizer["See production examples, 3D scanning projects, printed parts, and practical manufacturing updates."]</p>
+        </div>
+    </header>
+    <div class="maliev-container public-content">
+        <div class="maliev-card-grid">
+            <a class="maliev-panel social-link-card" href="@Legacy.Maliev.Web.Application.SocialNetworks.YouTube" target="_blank" rel="noopener"><i class="fab fa-youtube" aria-hidden="true"></i><strong>YouTube</strong><span>@Localizer["Process videos and project demonstrations"]</span></a>
+            <a class="maliev-panel social-link-card" href="@Legacy.Maliev.Web.Application.SocialNetworks.TikTok" target="_blank" rel="noopener"><i class="fab fa-tiktok" aria-hidden="true"></i><strong>TikTok</strong><span>@Localizer["Short manufacturing videos and process updates"]</span></a>
+            <a class="maliev-panel social-link-card" href="@Legacy.Maliev.Web.Application.SocialNetworks.Instagram" target="_blank" rel="noopener"><i class="fab fa-instagram" aria-hidden="true"></i><strong>Instagram</strong><span>@Localizer["Recent parts, equipment, and workshop updates"]</span></a>
+            <a class="maliev-panel social-link-card" href="@Legacy.Maliev.Web.Application.SocialNetworks.Threads" target="_blank" rel="noopener"><i class="fab fa-threads" aria-hidden="true"></i><strong>Threads</strong><span>@Localizer["Manufacturing conversations and company updates"]</span></a>
+            <a class="maliev-panel social-link-card" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener"><i class="fab fa-line" aria-hidden="true"></i><strong>LINE</strong><span>@Localizer["Chat with our team through LINE Official Account"]</span></a>
+        </div>
+    </div>
+</main>
+
+@code {
+    [Parameter]
+    public string RouteOwner { get; set; } = "razor-static-ssr";
+}

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Account;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
@@ -21,6 +22,20 @@ public sealed class ForgotPassword(
 
     [TempData]
     public string? Notification { get; set; }
+
+    public ForgotPasswordFormDisplayModel DisplayModel => new(
+        Email,
+        Notification,
+        ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => entry.Key,
+                entry => (IReadOnlyList<string>)entry.Value!.Errors
+                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                        ? "The submitted value is invalid."
+                        : error.ErrorMessage)
+                    .ToArray(),
+                StringComparer.Ordinal));
 
     public async Task<IActionResult> OnPostPasswordResetAsync(CancellationToken cancellationToken)
     {

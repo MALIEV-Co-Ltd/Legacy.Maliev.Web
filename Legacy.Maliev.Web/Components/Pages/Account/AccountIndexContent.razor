@@ -1,0 +1,25 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<AccountIndexContent> Localizer
+
+<div class="account-index-actions" data-migration-component="account-index-content" data-migration-renderer="blazor-static-ssr">
+    @if (Model.IsAuthenticated)
+    {
+        <p>@Localizer["Signed in as"] <strong>@Model.DisplayName</strong></p>
+        <a class="maliev-button" href="/Member/Account/Manage/Profile">@Localizer["Manage profile"]</a>
+        <a class="maliev-button" href="/Member/Account/Manage/Address">@Localizer["Manage addresses"]</a>
+        <a class="maliev-button maliev-button--secondary" href="/Member/Account/Manage/ChangeEmail">@Localizer["Change email"]</a>
+        <a class="maliev-button maliev-button--secondary" href="/Member/Account/Manage/ChangePassword">@Localizer["Change password"]</a>
+        <a class="maliev-button maliev-button--secondary" href="/Member/Orders">@Localizer["Orders"]</a>
+    }
+    else
+    {
+        <a class="maliev-button" href="/Account/Login">@Localizer["Sign in"]</a>
+        <a class="maliev-button maliev-button--secondary" href="/Account/Signup">@Localizer["Create an account"]</a>
+        <a href="/Account/ForgotPassword">@Localizer["Reset password"]</a>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public AccountIndexDisplayModel Model { get; set; } = null!;
+}

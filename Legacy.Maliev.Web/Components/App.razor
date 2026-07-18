@@ -1,0 +1,50 @@
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Analytics
+@using Legacy.Maliev.Web.Components.Layout
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IFileVersionProvider FileVersionProvider
+@inject IStringLocalizer<App> Localizer
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(context, TempDataDictionaryFactory);
+    var siteStyle = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/site.min.css");
+    var vendorScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/vendor.min.js");
+    var appScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/app.min.js");
+}
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentCulture.TwoLetterISOLanguageName">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+    <meta name="author" content="Maliev Company Limited" />
+    <meta name="language" content="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" />
+    <meta name="google-site-verification" content="VJpjseHYMhCHfLRtxeqveJrI5V_ToBH3gYeXydgJEeQ" />
+    <meta name="theme-color" content="#1A1A1A" />
+    <HeadOutlet />
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <PublicGoogleTagManagerHead Model="googleTagManagerModel" />
+    <link rel="stylesheet" href="@siteStyle" />
+    <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
+    <link rel="shortlink" href="https://www.maliev.com/" />
+</head>
+<body>
+    <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
+    <PublicGoogleTagManagerBody Model="googleTagManagerModel" />
+    <PublicCookieConsent Model="@(PublicCookieConsentDisplayModel.Create(context))" />
+    <PublicNavigation Model="@(PublicNavigationDisplayModel.Create(context, suppressIdentityNavigation: false))" />
+    <PublicBrowserCompatibilityNotice Model="@(PublicBrowserCompatibilityNoticeDisplayModel.Create(context))" />
+    <div id="main-content" tabindex="-1">
+        <Routes />
+    </div>
+    <PublicFooter />
+    <PublicContactChannelAnalytics />
+    <script src="@vendorScript"></script>
+    <script src="@appScript"></script>
+</body>
+</html>

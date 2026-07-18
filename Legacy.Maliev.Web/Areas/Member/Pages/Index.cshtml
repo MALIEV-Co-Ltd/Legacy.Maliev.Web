@@ -1,0 +1,8 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Index
+@inject IStringLocalizer<MemberOverviewContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Member overview | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<component type="typeof(MemberOverviewContent)" render-mode="Static" param-Model="Model.DisplayModel" />

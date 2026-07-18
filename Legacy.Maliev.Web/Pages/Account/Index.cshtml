@@ -1,28 +1,25 @@
 @page
 @model Legacy.Maliev.Web.Pages.Account.IndexModel
-@{ ViewData["Title"] = Localizer["Member account | MALIEV"]; }
+@using Legacy.Maliev.Web.Components.Pages.Account
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<AccountIndexContent> AccountIndexLocalizer
+@{ ViewData["Title"] = AccountIndexLocalizer["Member account | MALIEV"]; }
 <main class="auth-page">
     <div class="maliev-container auth-shell">
         <section class="auth-intro">
-            <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
-            <h1>@Localizer["Manage manufacturing projects in one place"]</h1>
-            <p>@Localizer["Review quotations, orders, project files, and account details."]</p>
+            <p class="maliev-eyebrow">@AccountIndexLocalizer["Member workspace"]</p>
+            <h1>@AccountIndexLocalizer["Manage manufacturing projects in one place"]</h1>
+            <p>@AccountIndexLocalizer["Review quotations, orders, project files, and account details."]</p>
         </section>
         <section class="auth-card">
-            <div class="auth-card__header"><h1>@Localizer["Choose an account action"]</h1></div>
+            <div class="auth-card__header"><h1>@AccountIndexLocalizer["Choose an account action"]</h1></div>
             <div class="maliev-actions">
-                @if (User.Identity?.IsAuthenticated == true)
+                <component type="typeof(AccountIndexContent)" render-mode="Static" param-Model="Model.DisplayModel" />
+                @if (Model.DisplayModel.IsAuthenticated)
                 {
-                    <p>@Localizer["Signed in as"] <strong>@User.Identity.Name</strong></p>
                     <form method="post" asp-page="/Account/Logout">
-                        <button type="submit" class="maliev-button">@Localizer["Sign out"]</button>
+                        <button type="submit" class="maliev-button">@AccountIndexLocalizer["Sign out"]</button>
                     </form>
-                }
-                else
-                {
-                    <a class="maliev-button" asp-page="/Account/Login">@Localizer["Sign in"]</a>
-                    <a class="maliev-button maliev-button--secondary" asp-page="/Account/Signup">@Localizer["Create an account"]</a>
-                    <a asp-page="/Account/ForgotPassword">@Localizer["Reset password"]</a>
                 }
             </div>
         </section>

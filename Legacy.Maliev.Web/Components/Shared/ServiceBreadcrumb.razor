@@ -1,0 +1,69 @@
+@using System.Globalization
+@using System.Text.Json
+
+<nav class="service-breadcrumb" aria-label="@BreadcrumbLabel" data-migration-component="service-breadcrumb">
+    <ol>
+        <li><a href="@HomeUrl">@HomeName</a></li>
+        <li><a href="@ServicesUrl">@ServicesName</a></li>
+        <li aria-current="page">@ServiceName</li>
+    </ol>
+</nav>
+<script type="application/ld+json">@((MarkupString)BreadcrumbJson)</script>
+
+@code {
+    private static readonly IReadOnlyDictionary<string, ServiceRoute> ServiceRoutes =
+        new Dictionary<string, ServiceRoute>(StringComparer.Ordinal)
+        {
+            ["3D Printing"] = new("พิมพ์ 3D", "3D printing", "/services/3d-printing"),
+            ["CNC Machining"] = new("งาน CNC", "CNC machining", "/services/cnc-machining"),
+            ["3D Scanning"] = new("สแกน 3D", "3D scanning", "/services/3d-scanning"),
+            ["Custom Manufacturing"] = new("ผลิตชิ้นงานตามแบบ", "Custom manufacturing", "/services/custom-manufacturing"),
+        };
+
+    [Parameter]
+    public string ServiceKey { get; set; } = "CNC Machining";
+
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string Language => IsThai ? "th" : "en";
+
+    private string BreadcrumbLabel => IsThai ? "เส้นทางนำทาง" : "Breadcrumb";
+
+    private string HomeName => IsThai ? "หน้าแรก" : "Home";
+
+    private string ServicesName => IsThai ? "บริการ" : "Services";
+
+    private ServiceRoute SelectedService => ServiceRoutes.TryGetValue(ServiceKey, out var service)
+        ? service
+        : throw new InvalidOperationException($"Unknown service breadcrumb key '{ServiceKey}'.");
+
+    private string ServiceName => IsThai ? SelectedService.NameTh : SelectedService.NameEn;
+
+    private string HomeUrl => CanonicalUrlPolicy.GetLocalizedUrl("/", Language);
+
+    private string ServicesUrl => CanonicalUrlPolicy.GetLocalizedUrl("/services", Language);
+
+    private string ServiceUrl => CanonicalUrlPolicy.GetLocalizedUrl(SelectedService.Path, Language);
+
+    private string BreadcrumbJson => JsonSerializer.Serialize(new Dictionary<string, object>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "BreadcrumbList",
+        ["itemListElement"] = new object[]
+        {
+            CreateListItem(1, HomeName, HomeUrl),
+            CreateListItem(2, ServicesName, ServicesUrl),
+            CreateListItem(3, ServiceName, ServiceUrl),
+        },
+    });
+
+    private static Dictionary<string, object> CreateListItem(int position, string name, string item) => new()
+    {
+        ["@type"] = "ListItem",
+        ["position"] = position,
+        ["name"] = name,
+        ["item"] = item,
+    };
+
+    private sealed record ServiceRoute(string NameTh, string NameEn, string Path);
+}

@@ -1,0 +1,23 @@
+@inject IStringLocalizer<PublicBrowserCompatibilityNotice> Localizer
+
+@if (Model.ShowNotice)
+{
+    <nav class="bg-light border-bottom small" data-migration-component="public-browser-compatibility-notice" data-migration-renderer="blazor-static-ssr">
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                    <p class="pt-1 mb-0 fw-semibold" style="font-size:1rem; color:#9a0000"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> @Localizer["Please change your browser for best experience."]</p>
+                    <div>@Localizer["You are current browsing with"]: @Model.UserAgent</div>
+                    <div class="mb-1">
+                        <span>@Localizer["We built our website using the latest technology. This make it faster and easier to use. Unfortunately, your browser doesn't support those technologies. Try"] <a href="https://www.mozilla.org/firefox" target="_blank" rel="noopener" style="color: royalblue;">Mozilla Firefox</a> @Localizer["or"] <a href="https://www.google.com/chrome" target="_blank" rel="noopener" style="color: royalblue;">Google Chrome</a>.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicBrowserCompatibilityNoticeDisplayModel Model { get; set; }
+}

@@ -1,6 +1,0 @@
-@{
-    var queryString = this.Context.Request.QueryString.HasValue ? this.Context.Request.QueryString.Value : string.Empty;
-    var uri = $"https://{this.Context.Request.Host}{this.Context.Request.Path}";
-}
-
-<div class="fb-like" data-href="@uri" data-layout="button" data-action="like" data-size="small" data-show-faces="false" data-share="true"></div>

@@ -225,6 +225,10 @@ body {
     align-items: center;
 }
 
+.account-index-actions {
+    display: contents;
+}
+
 .maliev-button,
 .maliev-form button,
 .maliev-form input[type="submit"] {
@@ -681,6 +685,11 @@ body {
 }
 
 .legal-document a.maliev-button {
+    color: #fff;
+    text-decoration: none;
+}
+
+.docs-content a.maliev-button {
     color: #fff;
     text-decoration: none;
 }

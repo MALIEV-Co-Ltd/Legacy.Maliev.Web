@@ -1,0 +1,12 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage.ChangeEmail
+@inject IStringLocalizer<MemberChangeEmailContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Change email | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section" aria-labelledby="member-change-email-title">
+    <form method="post" asp-page-handler="ChangeEmail" class="maliev-panel maliev-form">
+        <component type="typeof(MemberChangeEmailContent)" render-mode="Static" param-Model="Model.DisplayModel" />
+    </form>
+</section>

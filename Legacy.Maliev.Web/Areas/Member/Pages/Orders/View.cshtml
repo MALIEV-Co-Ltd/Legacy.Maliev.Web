@@ -1,0 +1,19 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Orders.View
+@inject IStringLocalizer<MemberOrderDetailContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Order details | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<section class="maliev-section" aria-labelledby="member-order-detail-title">
+    <component type="typeof(MemberOrderDetailContent)" render-mode="Static" param-Model="Model.DisplayModel" />
+    @if (Model.DisplayModel.AllowCancellation)
+    {
+        <form method="post" asp-page-handler="CancelOrder" class="maliev-panel maliev-form">
+            <input type="hidden" name="orderId" value="@Model.DisplayModel.Id" />
+            <p>@MetadataLocalizer["Cancellation is available while this order remains eligible."]</p>
+            <button type="submit" class="maliev-button maliev-button--danger">@MetadataLocalizer["Cancel order"]</button>
+        </form>
+    }
+    <p><a class="maliev-button maliev-button--secondary" asp-page="/Orders/History">@MetadataLocalizer["Back to order history"]</a></p>
+</section>
