@@ -1,6 +1,7 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
 using Legacy.Maliev.Web.Components;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
@@ -32,6 +33,7 @@ var useBlazorEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRout
 var useBlazorChangeEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:ChangeEmailConfirmation", true);
 var useBlazorContactRoute = builder.Configuration.GetValue("BlazorRouting:Contact", true);
 var useBlazorQuotationRoute = builder.Configuration.GetValue("BlazorRouting:Quotation", true);
+var useBlazorInstantQuotationRoute = builder.Configuration.GetValue("BlazorRouting:InstantQuotation", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -61,6 +63,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorChangeEmailConfirmationRoute
     && useBlazorContactRoute
     && useBlazorQuotationRoute
+    && useBlazorInstantQuotationRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -195,6 +198,9 @@ builder.Services.AddRazorPages(options =>
                     selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
                 }
             });
+        options.Conventions.AddPageRouteModelConvention(
+            "/InstantQuotation/3D-Printing",
+            model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
             model => model.Selectors.Clear());
@@ -360,6 +366,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.UseOutputCache();
+if (useBlazorRouteHost)
+{
+    app.UseWhen(
+        InstantQuotationCompatibilityEndpoint.Matches,
+        branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
+}
 app.MapDefaultEndpoints("web");
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
