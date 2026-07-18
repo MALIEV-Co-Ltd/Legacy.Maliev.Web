@@ -1,0 +1,133 @@
+@page "/Knowledges/Specifications/3D-Scanning"
+@using System.Globalization
+@using System.Text.Json
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<ThreeDimensionalScanningContent> ContentLocalizer
+@inject IStringLocalizer<ThreeDimensionalScanningSpecificationPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["3D scanning specifications | MALIEV"].Value;
+    var description = ContentLocalizer["Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+    var structuredData = CreateStructuredData(documentLinks.CanonicalUrl, title, description);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+    @foreach (var document in structuredData)
+    {
+        <script type="application/ld+json">@((MarkupString)document)</script>
+    }
+</HeadContent>
+<div class="docs-page" data-migration-route-owner="blazor-static-ssr">
+    <div class="workspace-shell docs-shell">
+        <aside id="knowledge-navigation" class="workspace-sidebar workspace-sidebar--knowledge" aria-label="@Localizer["Knowledge center"]">
+            <div class="workspace-sidebar__header">
+                <strong>@Localizer["Knowledge center"]</strong>
+                <button type="button" class="workspace-drawer-close" data-workspace-close aria-label="@Localizer["Close contents"]">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <nav aria-label="@Localizer["Knowledge sections"]">
+                <section class="workspace-nav-group" aria-labelledby="knowledge-services">
+                    <p id="knowledge-services" class="workspace-nav-group__label">@Localizer["Service specifications"]</p>
+                    <ul class="workspace-nav-list">
+                        <li><a class="workspace-nav-link" href="/knowledges/specifications/cnc-machining"><i class="fas fa-cog" aria-hidden="true"></i><span>@Localizer["CNC manufacturing"]</span></a></li>
+                        <li><a class="workspace-nav-link" href="/knowledges/specifications/3d-printing"><i class="fas fa-cubes" aria-hidden="true"></i><span>@Localizer["3D printing"]</span></a></li>
+                        <li><a class="workspace-nav-link" href="/knowledges/specifications/3d-scanning" aria-current="page"><i class="fas fa-cube" aria-hidden="true"></i><span>@Localizer["3D scanning"]</span></a></li>
+                    </ul>
+                </section>
+                <section class="workspace-nav-group" aria-labelledby="knowledge-process">
+                    <p id="knowledge-process" class="workspace-nav-group__label">@Localizer["Working with MALIEV"]</p>
+                    <ul class="workspace-nav-list">
+                        <li><a class="workspace-nav-link" href="/knowledges/guidelines"><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>@Localizer["Guidelines"]</span></a></li>
+                        <li><a class="workspace-nav-link" href="/knowledges/workflow"><i class="fas fa-project-diagram" aria-hidden="true"></i><span>@Localizer["Workflow"]</span></a></li>
+                    </ul>
+                </section>
+            </nav>
+        </aside>
+        <main id="knowledge-content" class="docs-content" tabindex="-1">
+            <div class="workspace-toolbar">
+                <button type="button" class="workspace-drawer-toggle" aria-controls="knowledge-navigation" aria-expanded="false" data-workspace-open>
+                    <i class="fas fa-bars" aria-hidden="true"></i>
+                    <span>@Localizer["Contents"]</span>
+                </button>
+            </div>
+            <ThreeDimensionalScanningContent RouteOwner="blazor-static-ssr" />
+        </main>
+    </div>
+    <button type="button" class="workspace-backdrop" data-workspace-backdrop hidden aria-label="@Localizer["Close contents"]"></button>
+</div>
+<script>
+    (() => {
+        const drawer = document.getElementById('knowledge-navigation');
+        const openButton = document.querySelector('[data-workspace-open]');
+        const closeButton = drawer?.querySelector('[data-workspace-close]');
+        const backdrop = document.querySelector('[data-workspace-backdrop]');
+        if (!drawer || !openButton || !backdrop) return;
+        const close = () => {
+            drawer.classList.remove('is-open');
+            document.body.classList.remove('workspace-drawer-open');
+            openButton.setAttribute('aria-expanded', 'false');
+            backdrop.hidden = true;
+            openButton.focus();
+        };
+        const open = () => {
+            drawer.classList.add('is-open');
+            document.body.classList.add('workspace-drawer-open');
+            openButton.setAttribute('aria-expanded', 'true');
+            backdrop.hidden = false;
+            closeButton?.focus();
+        };
+        openButton.addEventListener('click', open);
+        closeButton?.addEventListener('click', close);
+        backdrop.addEventListener('click', close);
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && drawer.classList.contains('is-open')) close();
+        });
+    })();
+</script>
+
+@code {
+    private static string CurrentLanguage => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private string[] CreateStructuredData(string canonicalUrl, string title, string description)
+    {
+        var webPage = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "WebPage",
+            ["name"] = title,
+            ["description"] = description,
+            ["url"] = canonicalUrl,
+            ["inLanguage"] = CurrentLanguage
+        };
+        var breadcrumb = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "BreadcrumbList",
+            ["itemListElement"] = new object[]
+            {
+                CreateBreadcrumbItem(1, Localizer["Home"].Value, CanonicalUrlPolicy.GetLocalizedUrl("/", CurrentLanguage)),
+                CreateBreadcrumbItem(2, Localizer["Knowledge center"].Value, CanonicalUrlPolicy.GetLocalizedUrl("/knowledges", CurrentLanguage)),
+                CreateBreadcrumbItem(3, Localizer["Service specifications"].Value, CanonicalUrlPolicy.GetLocalizedUrl("/knowledges/specifications", CurrentLanguage)),
+                CreateBreadcrumbItem(4, Localizer["3D scanning specifications"].Value, canonicalUrl)
+            }
+        };
+
+        return [JsonSerializer.Serialize(webPage), JsonSerializer.Serialize(breadcrumb)];
+    }
+
+    private static Dictionary<string, object> CreateBreadcrumbItem(int position, string name, string item) => new()
+    {
+        ["@type"] = "ListItem",
+        ["position"] = position,
+        ["name"] = name,
+        ["item"] = item
+    };
+}

@@ -27,21 +27,6 @@
     ViewData["Keywords"] = keywordResult;
 }
 
-<main class="legal-page">
-    <header class="maliev-page-header"><div class="maliev-container"><p class="maliev-eyebrow">@Localizer["Legal and confidentiality"]</p><h1>@Localizer["Non-Disclosure Agreement"]</h1><p>@Localizer["Protect confidential manufacturing information before sharing project files."]</p></div></header>
-    <div class="legal-shell maliev-container">
-        <nav class="legal-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul><li><a href="#overview">@Localizer["Overview"]</a></li><li><a href="#download">@Localizer["Download agreement"]</a></li></ul></nav>
-        <article class="legal-document">
-        <h2 id="overview">@Localizer["Mutual Non-disclosure agreement"]</h2>
-        <p>
-            @Localizer["At Maliev, we take our customer's confidentiality very serious. Your work and all the information with us are safe. The agreement serves to protect individuals and companies to protect their intellectual property and confidentiality about their businesses."]<br />
-        </p>
-        <p>
-            @Localizer["Download the template Confidentiality Agreement (NDA). Fill it with your personal data and send it to"] <a href="mailto:nda@maliev.com">nda@maliev.com</a>
-        </p>
-        <a id="download" href="https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf" target="_blank" rel="noopener" class="maliev-button">
-            @Localizer["Download Non-Disclosure Agreement"]
-        </a>
-        </article>
-    </div>
-</main>
+@using Legacy.Maliev.Web.Components.Pages.Legal
+
+<component type="typeof(NonDisclosureAgreementContent)" render-mode="Static" />

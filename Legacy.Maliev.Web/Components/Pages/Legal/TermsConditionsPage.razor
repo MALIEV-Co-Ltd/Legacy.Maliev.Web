@@ -1,0 +1,25 @@
+@page "/Legal/TermsConditions"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "ข้อกำหนดและเงื่อนไขการให้บริการ | MALIEV" : "Terms and Conditions | MALIEV";
+    var description = isThai
+        ? "ข้อกำหนดและเงื่อนไขการเก็บข้อมูลและใช้บริการต่างๆของเรา"
+        : "These terms and conditions outline the rules and regulations for the use of Maliev Co., Ltd.'s Website.";
+    var keywords = isThai
+        ? "นโยบายความเป็นส่วนตัว, cookies, license, hyperlink, terms, services, iframes, rights, liability, disclaimer"
+        : "cookies, license, hyperlink, terms and conditions, terms, services, iframes, rights, liability, disclaimer";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<TermsConditionsContent RouteOwner="blazor-static-ssr" />

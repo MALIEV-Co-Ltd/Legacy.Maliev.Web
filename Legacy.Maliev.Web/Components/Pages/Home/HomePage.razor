@@ -1,0 +1,20 @@
+@page "/"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<HomePage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = Localizer["Manufacturing Services Bangkok Nonthaburi: CNC Machining, 3D Printing & 3D Scanning"].Value;
+    var description = Localizer["Professional CNC machining, 3D printing, and 3D scanning services in Bangkok and Nonthaburi, Thailand. Upload your file for an instant quote."].Value;
+    var keywords = Localizer["3d printing thailand, 3d scanning thailand, cnc machining thailand, manufacturing services bangkok, cnc machining nonthaburi"].Value;
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<HomeContent RouteOwner="blazor-static-ssr" />

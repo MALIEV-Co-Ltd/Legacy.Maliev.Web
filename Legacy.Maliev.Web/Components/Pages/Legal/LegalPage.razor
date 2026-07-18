@@ -1,0 +1,21 @@
+@page "/Legal"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "ข้อมูลทางกฎหมาย | MALIEV" : "Legal information | MALIEV";
+    var description = isThai
+        ? "ตรวจสอบนโยบายของ MALIEV เกี่ยวกับการใช้เว็บไซต์ ความเป็นส่วนตัว และข้อมูลงานผลิตที่เป็นความลับ"
+        : "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<LegalContent RouteOwner="blazor-static-ssr" />

@@ -7,9 +7,33 @@ public sealed class AnalyticsSurfaceContractTests
     {
         var root = FindRepositoryRoot();
         var shared = Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Shared");
-        var google = File.ReadAllText(Path.Combine(shared, "_GoogleTagManagerPartial.cshtml"));
-        var consent = File.ReadAllText(Path.Combine(shared, "_CookieConsentPartial.cshtml"));
-        var contact = File.ReadAllText(Path.Combine(shared, "_ContactChannelAnalyticsPartial.cshtml"));
+        var googlePath = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Analytics",
+            "PublicGoogleTagManagerHead.razor");
+        Assert.True(File.Exists(googlePath));
+        var google = File.ReadAllText(googlePath) + File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Analytics",
+            "PublicGoogleTagManagerDisplayModel.cs"));
+        var consent = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Layout",
+            "PublicCookieConsent.razor"));
+        var contactPath = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Analytics",
+            "PublicContactChannelAnalytics.razor");
+        Assert.True(File.Exists(contactPath));
+        var contact = File.ReadAllText(contactPath);
         var quotation = File.ReadAllText(Path.Combine(
             root,
             "Legacy.Maliev.Web",

@@ -1,0 +1,9 @@
+<link rel="canonical" href="@Model.CanonicalUrl" data-migration-component="public-document-links" data-migration-renderer="blazor-static-ssr" />
+<link rel="alternate" href="@Model.EnglishUrl" hreflang="en" />
+<link rel="alternate" href="@Model.ThaiUrl" hreflang="th" />
+<link rel="alternate" href="@Model.ThaiUrl" hreflang="x-default" />
+
+@code {
+    [Parameter, EditorRequired]
+    public required PublicDocumentLinksDisplayModel Model { get; set; }
+}

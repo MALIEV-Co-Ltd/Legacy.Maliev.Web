@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Career;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -21,6 +22,14 @@ public sealed class Index(ICareerClient careerClient) : PageModel
     public int PageSize { get; private set; } = 25;
 
     public bool ServiceAvailable { get; private set; } = true;
+
+    public CareerIndexContentModel DisplayModel => CareerIndexContentModel.Create(
+        ServiceAvailable,
+        CareerLevels,
+        JobOffers,
+        CurrentSort,
+        JobSearch,
+        PageSize);
 
     public async Task<IActionResult> OnGetAsync(
         string? sort,

@@ -1,0 +1,15 @@
+@inject IStringLocalizer<MemberAccountIndexContent> Localizer
+
+<section class="workspace-content" aria-labelledby="account-settings-title" data-migration-component="member-account-index-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
+        <h1 id="account-settings-title">@Localizer["Account settings"]</h1>
+        <p>@Localizer["Keep your contact, delivery, and sign-in information current."]</p>
+    </div>
+    <div class="maliev-card-grid">
+        <a class="maliev-panel docs-link-card" href="/member/account/manage/profile"><strong>@Localizer["Profile"]</strong><span>@Localizer["Contact and company information"]</span></a>
+        <a class="maliev-panel docs-link-card" href="/member/account/manage/address"><strong>@Localizer["Addresses"]</strong><span>@Localizer["Billing and shipping addresses"]</span></a>
+        <a class="maliev-panel docs-link-card" href="/member/account/manage/changeemail"><strong>@Localizer["Email"]</strong><span>@Localizer["Change your account email address"]</span></a>
+        <a class="maliev-panel docs-link-card" href="/member/account/manage/changepassword"><strong>@Localizer["Password"]</strong><span>@Localizer["Update your sign-in password"]</span></a>
+    </div>
+</section>

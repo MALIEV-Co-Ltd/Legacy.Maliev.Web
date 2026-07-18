@@ -1,19 +1,12 @@
 @page
 @model Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage.ChangeEmail
+@inject IStringLocalizer<MemberChangeEmailContent> MetadataLocalizer
 @{
-    ViewData["Title"] = Localizer["Change email | MALIEV"];
+    ViewData["Title"] = MetadataLocalizer["Change email | MALIEV"];
     ViewData["Robots"] = "noindex,follow";
 }
-<section class="maliev-section">
-    <div class="maliev-section-header">
-        <p class="maliev-eyebrow">@Localizer["Customer account"]</p>
-        <h1>@Localizer["Change email"]</h1>
-        <p>@Localizer["You will need to confirm the new address and sign in again."]</p>
-    </div>
+<section class="maliev-section" aria-labelledby="member-change-email-title">
     <form method="post" asp-page-handler="ChangeEmail" class="maliev-panel maliev-form">
-        <div asp-validation-summary="All" class="field-validation-error" role="alert"></div>
-        <div class="maliev-form-field"><label asp-for="NewEmail"></label><input asp-for="NewEmail" autocomplete="email" /></div>
-        <div class="maliev-form-field"><label asp-for="CurrentPassword"></label><input asp-for="CurrentPassword" autocomplete="current-password" /></div>
-        <button type="submit" class="maliev-button">@Localizer["Change email"]</button>
+        <component type="typeof(MemberChangeEmailContent)" render-mode="Static" param-Model="Model.DisplayModel" />
     </form>
 </section>

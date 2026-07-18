@@ -1,0 +1,79 @@
+@inject IStringLocalizer<MemberOrderDetailContent> Localizer
+
+<div data-migration-component="member-order-detail-content">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Order management"]</p>
+        <h1 id="member-order-detail-title">@Localizer["Order details"]</h1>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert maliev-alert--success" role="status">@Localizer[Model.Notification]</div>
+    }
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="validation-summary-errors" role="alert">
+            <ul>
+                @foreach (var error in Model.Errors)
+                {
+                    <li>@Localizer[error]</li>
+                }
+            </ul>
+        </div>
+    }
+    @if (Model.Id > 0)
+    {
+        <article class="maliev-panel">
+            <p class="maliev-eyebrow">@Localizer["Order"] #@Model.Id</p>
+            <h2>@(string.IsNullOrWhiteSpace(Model.Name) ? Localizer["Unnamed order"] : Model.Name)</h2>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p>@Model.Description</p>
+            }
+            <dl>
+                <dt>@Localizer["Process"]</dt><dd>@Model.Process</dd>
+                <dt>@Localizer["Quantity"]</dt><dd>@Model.Quantity</dd>
+                <dt>@Localizer["Manufactured"]</dt><dd>@Model.Manufactured</dd>
+                <dt>@Localizer["Remaining"]</dt><dd>@Model.Remaining</dd>
+                <dt>@Localizer["Subtotal"]</dt><dd>@Model.Subtotal</dd>
+                <dt>@Localizer["Tracking number"]</dt><dd>@Model.TrackingNumber</dd>
+            </dl>
+        </article>
+        <section class="maliev-panel">
+            <h2>@Localizer["Status history"]</h2>
+            @if (Model.History.Count == 0)
+            {
+                <p>@Localizer["No status history is available."]</p>
+            }
+            else
+            {
+                <ol>
+                    @foreach (var status in Model.History)
+                    {
+                        <li><strong>@(status.Name ?? Localizer["Status"])</strong> @status.CreatedDate</li>
+                    }
+                </ol>
+            }
+        </section>
+        <section class="maliev-panel">
+            <h2>@Localizer["Order files"]</h2>
+            @if (Model.FileNames.Count == 0)
+            {
+                <p>@Localizer["No files are linked to this order."]</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var fileName in Model.FileNames)
+                    {
+                        <li>@fileName</li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public MemberOrderDetailDisplayModel Model { get; set; } = MemberOrderDetailDisplayModel.Empty;
+}

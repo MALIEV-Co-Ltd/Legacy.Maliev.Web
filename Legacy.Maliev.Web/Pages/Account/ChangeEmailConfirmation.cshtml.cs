@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Account;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
@@ -10,6 +11,14 @@ public sealed class ChangeEmailConfirmation(ICustomerAuthenticationClient authen
 {
     [TempData]
     public string? Notification { get; set; }
+
+    public ChangeEmailConfirmationDisplayModel DisplayModel => new(
+        ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                ? "The email-change link is invalid or expired."
+                : error.ErrorMessage)
+            .ToArray());
 
     public async Task<IActionResult> OnGetAsync(
         string? email,

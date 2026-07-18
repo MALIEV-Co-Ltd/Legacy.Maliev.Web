@@ -1,0 +1,37 @@
+@using Microsoft.AspNetCore.Components
+@inject IStringLocalizer<ErrorContent> Localizer
+
+<main class="maliev-page maliev-page-main" data-migration-component="error-content" data-migration-renderer="blazor-static-ssr">
+    <div class="maliev-container">
+        <section class="maliev-panel maliev-status" aria-labelledby="error-title">
+            @if (Model.IsNotFound)
+            {
+                <p class="maliev-eyebrow">404</p>
+                <h1 id="error-title">@Localizer["Page not found"]</h1>
+                <p>@Localizer["The page may have moved, or the address may be incorrect."]</p>
+            }
+            else
+            {
+                <p class="maliev-eyebrow">@Localizer["Application error"]</p>
+                <h1 id="error-title">@Localizer["Sorry. Something did not work properly."]</h1>
+                <p>@Localizer["Please try again. If the problem continues, contact support and include the request ID below."]</p>
+                @if (!string.IsNullOrWhiteSpace(Model.RequestId))
+                {
+                    <dl class="maliev-meta-list maliev-status__details">
+                        <dt>@Localizer["Request ID"]</dt>
+                        <dd><code>@Model.RequestId</code></dd>
+                    </dl>
+                }
+            }
+            <div class="maliev-actions">
+                <a href="/" class="maliev-button">@Localizer["Back to the home page"]</a>
+                <a href="/Contact" class="maliev-button maliev-button--secondary">@Localizer["Contact support"]</a>
+            </div>
+        </section>
+    </div>
+</main>
+
+@code {
+    [Parameter, EditorRequired]
+    public ErrorDisplayModel Model { get; set; } = null!;
+}

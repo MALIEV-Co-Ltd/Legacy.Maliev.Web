@@ -1,5 +1,11 @@
 @import 'bootstrap/dist/css/bootstrap.css';
 @import '@fortawesome/fontawesome-free/css/all.css';
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/noto-sans-thai/thai-400.css';
+@import '@fontsource/noto-sans-thai/thai-500.css';
+@import '@fontsource/noto-sans-thai/thai-600.css';
 @import '../wwwroot/src/app/css/app.css';
 @import '../wwwroot/src/app/css/typography.css';
 @import '../wwwroot/src/app/css/table.css';
@@ -7,9 +13,12 @@
 @import '../wwwroot/src/app/css/stepper.css';
 @import '../wwwroot/src/app/css/loader.css';
 @import '../wwwroot/src/app/css/toc.css';
-@import '../wwwroot/src/app/css/timeline.css';
+@import '../wwwroot/src/app/css/about-page.css';
 @import '../wwwroot/src/app/css/sprite.css';
 @import '../wwwroot/src/app/css/application-shell.css';
+@import '../wwwroot/src/app/css/public-navigation.css';
+@import '../wwwroot/src/app/css/public-footer.css';
 @import '../wwwroot/src/app/css/inquiry-pages.css';
+@import '../wwwroot/src/app/css/instant-quotation.css';
 @import '../wwwroot/src/app/css/landing.css';
 @import '../wwwroot/src/app/css/service-pages.css';
