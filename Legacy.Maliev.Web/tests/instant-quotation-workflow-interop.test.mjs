@@ -5,6 +5,7 @@ import {
   createWorkflowPreviewInterop,
   supportedPreviewExtensions,
 } from '../wwwroot/src/app/js/instant-quotation/workflow-interop.mjs';
+import { createModelViewer } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
 
 function deferred() {
   let resolve;
@@ -29,6 +30,7 @@ function disposableObject() {
 
 function harness(loadModel = async () => disposableObject()) {
   const calls = [];
+  const statuses = [];
   const viewer = {
     addPart: (...args) => calls.push(['add', ...args]),
     select: (...args) => calls.push(['select', ...args]),
@@ -40,7 +42,12 @@ function harness(loadModel = async () => disposableObject()) {
   };
   return {
     calls,
-    interop: createWorkflowPreviewInterop({ loadModel, createViewer: () => viewer }),
+    statuses,
+    interop: createWorkflowPreviewInterop({
+      loadModel,
+      createViewer: () => viewer,
+      reportStatus: status => statuses.push(status),
+    }),
   };
 }
 
@@ -53,18 +60,55 @@ test('supports the exact nine standalone quotation extensions', () => {
 test('starts duplicate-name previews in selection order without waiting for parsing', async () => {
   const first = deferred();
   const second = deferred();
+  const objectA = disposableObject();
+  const objectB = disposableObject();
   const files = [{ name: 'same.stl' }, { name: 'same.stl' }];
   let call = 0;
-  const { interop } = harness(() => [first.promise, second.promise][call++]);
+  const { calls, interop } = harness(() => [first.promise, second.promise][call++]);
+  interop.attach({});
   const keys = await interop.beginSelection({ files });
   assert.equal(keys.length, 2);
   assert.notEqual(keys[0], keys[1]);
   interop.admit(keys[0], 'part-a');
   interop.admit(keys[1], 'part-b');
-  second.resolve(disposableObject());
-  first.resolve(disposableObject());
+  second.resolve(objectB);
+  first.resolve(objectA);
   await Promise.all([first.promise, second.promise]);
   await Promise.resolve();
+  assert.deepEqual(calls.filter(item => item[0] === 'add').map(item => [item[1], item[2]]), [
+    ['part-b', objectB],
+    ['part-a', objectA],
+  ]);
+  assert.equal(objectB.disposed, false);
+  assert.equal(objectA.disposed, false);
+});
+
+test('capture listener snapshots each FileList before server interop and rejected batches are discarded', async () => {
+  let capture;
+  const input = {
+    files: [],
+    addEventListener(type, listener, options) {
+      assert.equal(type, 'change');
+      assert.equal(options.capture, true);
+      capture = listener;
+    },
+    removeEventListener() {},
+  };
+  const loaded = [];
+  const { interop } = harness(async file => { loaded.push(file); return disposableObject(); });
+  interop.bindInput(input);
+  const first = { name: 'first.stl' };
+  const rejected = { name: 'rejected.obj' };
+  input.files = [first];
+  capture();
+  input.files = [rejected];
+  capture();
+  const keys = interop.beginSelection(input);
+  interop.discardSelection();
+  await Promise.resolve();
+  assert.equal(keys.length, 1);
+  assert.deepEqual(loaded, [first]);
+  assert.deepEqual(interop.beginSelection({ files: [] }), []);
 });
 
 test('admits successful previews and releases failed, removed, cancelled, and stale previews', async () => {
@@ -93,7 +137,7 @@ test('retry creates a new key and stale completion cannot replace it', async () 
   const { calls, interop } = harness(() => invocation++ === 0 ? oldLoad.promise : newLoad.promise);
   interop.attach({});
   const [oldKey] = await interop.beginSelection({ files: [{ name: 'part.step' }] });
-  interop.release(oldKey);
+  interop.quarantine(oldKey);
   const newKey = interop.retry(oldKey);
   assert.notEqual(newKey, oldKey);
   interop.admit(newKey, 'part-new');
@@ -104,17 +148,75 @@ test('retry creates a new key and stale completion cannot replace it', async () 
   assert.deepEqual(calls.filter(call => call[0] === 'add').map(call => call[1]), ['part-new']);
 });
 
-test('parser and module-adapter failures stay advisory and controls remain callable', async () => {
-  const { calls, interop } = harness(async () => { throw new Error('parser detail'); });
+test('terminal release deletes correlation and clears retry access', async () => {
+  const { interop } = harness();
+  const [key] = await interop.beginSelection({ files: [{ name: 'released.stl' }] });
+  interop.release(key);
+  assert.throws(() => interop.retry(key), /Unknown preview correlation/);
+  assert.throws(() => interop.admit(key, 'part-released'), /Unknown preview correlation/);
+});
+
+test('parser failures report persistent advisory state without raw error details', async () => {
+  const { calls, statuses, interop } = harness(async () => { throw new Error('parser detail'); });
   interop.attach({});
   const [key] = await interop.beginSelection({ files: [{ name: 'bad.obj' }] });
   interop.admit(key, 'server-part');
   await Promise.resolve();
   assert.equal(interop.status(), 'unavailable');
+  assert.deepEqual(statuses, ['unavailable']);
   interop.reset();
   interop.fit();
   interop.fullscreen();
   assert.deepEqual(calls.slice(-3).map(call => call[0]), ['reset', 'fit', 'fullscreen']);
+});
+
+test('attached remove delegates disposal exactly once and wrapper disposal does not repeat it', async () => {
+  let removals = 0;
+  let viewerDisposals = 0;
+  const object = disposableObject();
+  const viewer = {
+    addPart() {},
+    remove(_partId) { removals += 1; object.traverse(item => item.geometry?.dispose?.()); },
+    dispose() { viewerDisposals += 1; },
+  };
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => object,
+    createViewer: () => viewer,
+    reportStatus() {},
+  });
+  interop.attach({});
+  const [key] = await interop.beginSelection({ files: [{ name: 'attached.stl' }] });
+  interop.admit(key, 'attached-part');
+  await Promise.resolve();
+  interop.remove('attached-part');
+  interop.dispose();
+  assert.equal(removals, 1);
+  assert.equal(viewerDisposals, 1);
+});
+
+test('attached parts with shared resources preserve Task4A identity-dedup across remove and disposal', async () => {
+  const counts = { geometry: 0, material: 0, texture: 0 };
+  const texture = { isTexture: true, dispose() { counts.texture += 1; } };
+  const material = { map: texture, dispose() { counts.material += 1; } };
+  const geometry = { dispose() { counts.geometry += 1; } };
+  const object = () => ({
+    traverse(visitor) { visitor({ isMesh: true, geometry, material }); },
+  });
+  const objects = [object(), object()];
+  const viewer = createModelViewer({ adapter: {} });
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => objects.shift(),
+    createViewer: () => viewer,
+    reportStatus() {},
+  });
+  interop.attach({});
+  const keys = await interop.beginSelection({ files: [{ name: 'a.stl' }, { name: 'b.stl' }] });
+  interop.admit(keys[0], 'part-a');
+  interop.admit(keys[1], 'part-b');
+  await Promise.resolve();
+  interop.remove('part-a');
+  interop.dispose();
+  assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });
 });
 
 test('dispose aborts pending parsing and disposes the viewer exactly once', async () => {

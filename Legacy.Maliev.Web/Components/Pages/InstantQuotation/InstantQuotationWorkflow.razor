@@ -8,7 +8,7 @@
     <h2 id="instant-quote-workflow-heading">@Localizer["Instant Pricing"]</h2>
 
     <p id="instant-quote-status" aria-live="polite" aria-atomic="true">@StatusMessage</p>
-    <p @ref="previewStatus" data-workflow-preview-status role="status" aria-live="polite">@PreviewStatusMessage</p>
+    <p data-workflow-preview-status role="status" aria-live="polite">@PreviewStatusMessage</p>
 
     @if (VisibleSections.Upload)
     {
@@ -23,7 +23,7 @@
                        multiple
                        accept=".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges"
                        aria-describedby="instant-quote-upload-help instant-quote-status"
-                       disabled="@IsBusy" />
+                       disabled="@InputDisabled" />
             <p id="instant-quote-upload-help">@Localizer["Drop your 3D file here"] — @Localizer["or click to browse"]</p>
 
             @foreach (var upload in Uploads)

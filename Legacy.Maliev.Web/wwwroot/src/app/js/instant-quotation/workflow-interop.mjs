@@ -4,15 +4,16 @@ export const supportedPreviewExtensions = Object.freeze([
 
 const supportedExtensions = new Set(supportedPreviewExtensions);
 
-export async function createInstantQuotationWorkflowInterop() {
+export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter = null) {
   const viewerModule = await import('/dist/instant-quotation-viewer.mjs');
   return createWorkflowPreviewInterop({
     loadModel: viewerModule.loadStandaloneModel,
     createViewer: viewerModule.createThreeModelViewer,
+    reportStatus: () => dotNetStatusReporter?.invokeMethodAsync('ReportPreviewUnavailableAsync'),
   });
 }
 
-export function createWorkflowPreviewInterop({ loadModel, createViewer }) {
+export function createWorkflowPreviewInterop({ loadModel, createViewer, reportStatus = () => {} }) {
   if (typeof loadModel !== 'function' || typeof createViewer !== 'function') {
     throw new TypeError('Preview loader and viewer factories are required.');
   }
@@ -24,21 +25,43 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer }) {
     materials: new WeakSet(),
     textures: new WeakSet(),
   };
+  const guardedResources = new WeakSet();
+  const viewerDisposedResources = new WeakSet();
   let viewer = null;
   let disposed = false;
   let availability = 'ready';
   let nextKey = 0;
-  let statusElement = null;
-  let unavailableMessage = '';
+  let inputElement = null;
+  let inputChangeHandler = null;
+  const selectionSnapshots = [];
+
+  function bindInput(input) {
+    assertActive();
+    if (inputElement === input) return;
+    unbindInput();
+    inputElement = input;
+    inputChangeHandler = () => selectionSnapshots.push(Array.from(input.files ?? []));
+    inputElement?.addEventListener?.('change', inputChangeHandler, { capture: true });
+  }
+
+  function unbindInput() {
+    inputElement?.removeEventListener?.('change', inputChangeHandler, { capture: true });
+    inputElement = null;
+    inputChangeHandler = null;
+  }
 
   function beginSelection(input) {
     assertActive();
-    const files = Array.from(input?.files ?? []);
+    const files = selectionSnapshots.shift() ?? Array.from(input?.files ?? []);
     return files.map(startPreview);
   }
 
+  function discardSelection() {
+    const files = selectionSnapshots.shift();
+    if (files) files.length = 0;
+  }
+
   function startPreview(file) {
-    const extension = extensionOf(file?.name);
     const key = `preview-${++nextKey}`;
     const controller = new AbortController();
     const entry = {
@@ -48,11 +71,12 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer }) {
       object: null,
       partId: null,
       released: false,
+      quarantined: false,
       attached: false,
     };
     previews.set(key, entry);
-    if (!supportedExtensions.has(extension)) {
-      availability = 'unavailable';
+    if (!supportedExtensions.has(extensionOf(file?.name))) {
+      setUnavailable();
       return key;
     }
 
@@ -63,62 +87,76 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer }) {
   }
 
   function completePreview(entry, object) {
-    if (disposed || entry.released || previews.get(entry.key) !== entry) {
+    if (disposed || entry.released || entry.quarantined || previews.get(entry.key) !== entry) {
       disposeModel(object, disposedResources);
       return;
     }
 
+    guardModelDisposal(object, guardedResources, viewerDisposedResources);
     entry.object = object;
     attachAdmittedPreview(entry);
   }
 
   function failPreview(entry, error) {
-    if (entry.released || isCancellation(error)) return;
-    availability = 'unavailable';
-    renderAvailability();
+    if (entry.released || entry.quarantined || isCancellation(error)) return;
+    setUnavailable();
   }
 
-  function attach(canvas, nextStatusElement = null, nextUnavailableMessage = '') {
+  function attach(canvas) {
     assertActive();
-    statusElement = nextStatusElement;
-    unavailableMessage = String(nextUnavailableMessage ?? '');
     if (!viewer) viewer = createViewer(canvas);
     for (const entry of previews.values()) attachAdmittedPreview(entry);
-    renderAvailability();
   }
 
   function admit(key, partId) {
     assertActive();
     const entry = requirePreview(key);
-    if (entry.released || !partId) return false;
+    if (entry.released || entry.quarantined || !partId) return false;
     entry.partId = partId;
+    entry.file = null;
     partKeys.set(partId, key);
     attachAdmittedPreview(entry);
     return true;
   }
 
   function attachAdmittedPreview(entry) {
-    if (!viewer || !entry.object || !entry.partId || entry.released || entry.attached) return;
+    if (!viewer || !entry.object || !entry.partId || entry.released || entry.quarantined || entry.attached) return;
     viewer.addPart(entry.partId, entry.object);
     entry.attached = true;
   }
 
+  function quarantine(key) {
+    const entry = previews.get(key);
+    if (!entry || entry.released || entry.quarantined) return;
+    entry.controller?.abort();
+    if (entry.attached && viewer) viewer.remove(entry.partId);
+    else if (entry.object) disposeModel(entry.object, disposedResources);
+    entry.object = null;
+    entry.attached = false;
+    entry.quarantined = true;
+  }
+
   function release(key) {
     const entry = previews.get(key);
-    if (!entry || entry.released) return;
+    if (!entry) return;
+    previews.delete(key);
     entry.released = true;
-    entry.controller.abort();
+    entry.controller?.abort();
     if (entry.partId) partKeys.delete(entry.partId);
     if (entry.attached && viewer) viewer.remove(entry.partId);
     else if (entry.object) disposeModel(entry.object, disposedResources);
     entry.object = null;
+    entry.file = null;
+    entry.controller = null;
   }
 
   function retry(key) {
     assertActive();
     const previous = requirePreview(key);
+    const file = previous.file;
+    if (!file) throw new Error('The preview source is no longer available.');
     release(key);
-    return startPreview(previous.file);
+    return startPreview(file);
   }
 
   function select(partId) {
@@ -138,26 +176,26 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer }) {
   function fullscreen() { return viewer?.fullscreen(); }
   function status() { return availability; }
 
-  function renderAvailability() {
-    if (availability === 'unavailable' && statusElement && unavailableMessage) {
-      statusElement.textContent = unavailableMessage;
+  function setUnavailable() {
+    if (availability === 'unavailable') return;
+    availability = 'unavailable';
+    try {
+      Promise.resolve(reportStatus('unavailable')).catch(() => {});
+    } catch {
+      // Status reporting is advisory and cannot affect server authority.
     }
   }
 
   function dispose() {
     if (disposed) return;
     disposed = true;
-    for (const entry of previews.values()) {
-      entry.controller.abort();
-      if (!entry.attached && entry.object) disposeModel(entry.object, disposedResources);
-      entry.object = null;
-      entry.released = true;
-    }
-    previews.clear();
+    for (const key of [...previews.keys()]) release(key);
+    for (const files of selectionSnapshots) files.length = 0;
+    selectionSnapshots.length = 0;
+    unbindInput();
     partKeys.clear();
     viewer?.dispose();
     viewer = null;
-    statusElement = null;
   }
 
   function assertActive() {
@@ -172,8 +210,11 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer }) {
 
   return Object.freeze({
     beginSelection,
+    bindInput,
+    discardSelection,
     attach,
     admit,
+    quarantine,
     release,
     retry,
     select,
@@ -213,4 +254,32 @@ function disposeOnce(resource, disposed) {
   if (!resource || disposed.has(resource)) return;
   disposed.add(resource);
   resource.dispose?.();
+}
+
+function guardModelDisposal(object, guarded, disposed) {
+  object?.traverse?.(child => {
+    guardResource(child.geometry, guarded, disposed);
+    for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+      if (!material) continue;
+      for (const value of Object.values(material)) {
+        if (value?.isTexture) guardResource(value, guarded, disposed);
+      }
+      guardResource(material, guarded, disposed);
+    }
+  });
+}
+
+function guardResource(resource, guarded, disposed) {
+  if (!resource || guarded.has(resource) || typeof resource.dispose !== 'function') return;
+  guarded.add(resource);
+  const originalDispose = resource.dispose;
+  try {
+    resource.dispose = function disposeResourceOnce(...args) {
+      if (disposed.has(resource)) return;
+      disposed.add(resource);
+      return originalDispose.apply(this, args);
+    };
+  } catch {
+    // Standard Three.js resources are mutable; immutable test doubles stay untouched.
+  }
 }

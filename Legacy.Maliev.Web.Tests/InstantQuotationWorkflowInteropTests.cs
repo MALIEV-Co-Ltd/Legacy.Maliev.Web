@@ -19,7 +19,8 @@ public sealed class InstantQuotationWorkflowInteropTests
         Assert.Contains("FitPreviewAsync", markup, StringComparison.Ordinal);
         Assert.Contains("FullscreenPreviewAsync", markup, StringComparison.Ordinal);
         Assert.Contains("/dist/instant-quotation-workflow.mjs", code, StringComparison.Ordinal);
-        Assert.Contains("InvokeAsync(StateHasChanged)", code, StringComparison.Ordinal);
+        Assert.Contains("ReportPreviewUnavailableAsync", code, StringComparison.Ordinal);
+        Assert.Contains("[JSInvokable]", code, StringComparison.Ordinal);
         Assert.Contains("DisposeAsync", code, StringComparison.Ordinal);
     }
 
@@ -69,6 +70,35 @@ public sealed class InstantQuotationWorkflowInteropTests
         Assert.Contains("GetAuthenticationStateAsync()", code, StringComparison.Ordinal);
         Assert.DoesNotContain("IHttpContextAccessor", code, StringComparison.Ordinal);
         Assert.Contains("ResolveOwnerIdentity(principal)", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workflow_serializes_batches_and_reserves_correlations_before_javascript()
+    {
+        var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");
+        var coordinator = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflowCoordinator.cs");
+        var reserve = code.IndexOf("ReserveUploads", StringComparison.Ordinal);
+        var beginPreview = code.IndexOf("BeginPreviewSelectionAsync", reserve, StringComparison.Ordinal);
+
+        Assert.Contains("SemaphoreSlim", code, StringComparison.Ordinal);
+        Assert.Contains("WaitAsync(0)", code, StringComparison.Ordinal);
+        Assert.Contains("bindInput", code, StringComparison.Ordinal);
+        Assert.Contains("discardSelection", code, StringComparison.Ordinal);
+        Assert.True(reserve >= 0 && beginPreview > reserve);
+        Assert.Contains("ReserveUploads", coordinator, StringComparison.Ordinal);
+        Assert.Contains("UploadReservedAsync", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workflow_cleanup_is_independent_and_expected_javascript_failures_are_suppressed()
+    {
+        var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");
+        var dispose = code[code.IndexOf("public async ValueTask DisposeAsync", StringComparison.Ordinal)..];
+
+        Assert.Contains("catch (JSException)", dispose, StringComparison.Ordinal);
+        Assert.Contains("catch (JSDisconnectedException)", dispose, StringComparison.Ordinal);
+        Assert.Contains("finally", dispose, StringComparison.Ordinal);
+        Assert.Contains("await workflow.DisposeAsync()", dispose, StringComparison.Ordinal);
     }
 
     private static string Read(params string[] segments) =>

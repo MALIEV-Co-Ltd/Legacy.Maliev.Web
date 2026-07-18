@@ -193,6 +193,29 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
+    public async Task ReservedUploadBatch_AllocatesStableOrderedLocalIdsBeforeTransportStarts()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var reserved = workflow.ReserveUploads([UploadFile("same.stl"), UploadFile("same.stl")]);
+
+        Assert.Equal(2, reserved.Count);
+        Assert.NotEqual(reserved[0], reserved[1]);
+        Assert.Equal(reserved, workflow.Uploads.Select(static upload => upload.LocalId));
+        Assert.Empty(client.UploadOperations);
+
+        var uploading = workflow.UploadReservedAsync(reserved, default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteSuccess("same.stl", "opaque-first", Geometry(volume: 10_000));
+        client.CompleteSuccess("same.stl", "opaque-second", Geometry(volume: 20_000));
+        await uploading;
+
+        Assert.Equal(reserved, workflow.Parts.Select(static part => part.PreviewCorrelationId));
+    }
+
+    [Fact]
     public async Task UnavailableUpload_ProducesRecoverableErrorWithoutCreatingPart()
     {
         var client = new ControlledUploadClient();

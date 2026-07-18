@@ -22,12 +22,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool initializationFailed;
     private InputFile? fileInput;
     private ElementReference previewCanvas;
-    private ElementReference previewStatus;
     private IJSObjectReference? previewModule;
     private IJSObjectReference? previewInterop;
+    private DotNetObjectReference<InstantQuotationWorkflow>? previewStatusReporter;
     private readonly Dictionary<Guid, string> previewKeys = [];
+    private readonly SemaphoreSlim uploadBatchGate = new(1, 1);
     private bool previewAttached;
     private bool previewUnavailable;
+    private bool batchInProgress;
 
     private InstantQuotationWorkflowState State => initializationFailed
         ? InstantQuotationWorkflowState.Error
@@ -39,6 +41,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             : GetVisibleSections(State);
 
     private bool IsBusy => State is InstantQuotationWorkflowState.Uploading;
+
+    private bool InputDisabled => IsBusy || batchInProgress;
 
     private IReadOnlyList<InstantQuotationWorkflowUploadViewModel> Uploads => workflow?.Uploads ?? [];
 
@@ -77,22 +81,19 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             await EnsurePreviewInteropAsync();
         }
 
+        await EnsurePreviewInputBoundAsync();
+
         if (VisibleSections.Viewer && !previewAttached && previewInterop is not null)
         {
             try
             {
-                await previewInterop.InvokeVoidAsync(
-                    "attach",
-                    previewCanvas,
-                    previewStatus,
-                    Localizer["3D preview is unavailable. You can continue with your quotation."].Value);
+                await previewInterop.InvokeVoidAsync("attach", previewCanvas);
                 previewAttached = true;
                 await ReconcilePreviewsAsync();
             }
             catch (JSException)
             {
-                previewUnavailable = true;
-                await InvokeAsync(StateHasChanged);
+                await ReportPreviewUnavailableAsync();
             }
         }
     }
@@ -160,40 +161,66 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
-        var browserFiles = args.GetMultipleFiles(100);
-        var files = browserFiles
-            .Select(file => new InstantQuotationWorkflowUploadFile(
-                file.Name,
-                file.ContentType,
-                file.Size,
-                cancellationToken => Task.FromResult<Stream>(file.OpenReadStream(
-                    InstantQuotationWorkflowCoordinator.MaximumFileSize,
-                    cancellationToken))))
-            .ToArray();
-        var existingIds = Uploads.Select(static upload => upload.LocalId).ToHashSet();
-        var keys = await BeginPreviewSelectionAsync();
-        var uploadTask = workflow.UploadAsync(files, default);
-        var addedUploads = Uploads.Where(upload => !existingIds.Contains(upload.LocalId)).ToArray();
-        for (var index = 0; index < Math.Min(keys.Length, addedUploads.Length); index++)
+        if (!await uploadBatchGate.WaitAsync(0))
         {
-            previewKeys[addedUploads[index].LocalId] = keys[index];
+            await InvokePreviewAsync("discardSelection");
+            return;
         }
 
-        await uploadTask;
-        await ReconcilePreviewsAsync();
+        batchInProgress = true;
+        try
+        {
+            var browserFiles = args.GetMultipleFiles(100).ToArray();
+            var files = browserFiles
+                .Select(file => new InstantQuotationWorkflowUploadFile(
+                    file.Name,
+                    file.ContentType,
+                    file.Size,
+                    cancellationToken => Task.FromResult<Stream>(file.OpenReadStream(
+                        InstantQuotationWorkflowCoordinator.MaximumFileSize,
+                        cancellationToken))))
+                .ToArray();
+            var reservedIds = workflow.ReserveUploads(files);
+
+            var previewTask = BeginPreviewSelectionAsync();
+            var uploadTask = workflow.UploadReservedAsync(reservedIds, default);
+            await InvokeAsync(StateHasChanged);
+            var keys = await previewTask;
+            for (var index = 0; index < Math.Min(keys.Length, reservedIds.Count); index++)
+            {
+                previewKeys[reservedIds[index]] = keys[index];
+            }
+
+            try
+            {
+                await uploadTask;
+            }
+            finally
+            {
+                await ReconcilePreviewsAsync();
+            }
+        }
+        finally
+        {
+            batchInProgress = false;
+            uploadBatchGate.Release();
+        }
     }
 
     private async Task CancelUpload(Guid localId)
     {
         workflow?.Cancel(localId);
-        await ReleasePreviewAsync(localId, forget: false);
+        await QuarantinePreviewAsync(localId);
     }
 
     private async Task RetryUploadAsync(Guid localId)
     {
         if (workflow is not null)
         {
-            if (previewKeys.TryGetValue(localId, out var previousKey) && previewInterop is not null)
+            var hasAuthoritativePart = Parts.Any(item => item.PreviewCorrelationId == localId);
+            if (!hasAuthoritativePart
+                && previewKeys.TryGetValue(localId, out var previousKey)
+                && previewInterop is not null)
             {
                 try
                 {
@@ -201,7 +228,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 }
                 catch (JSException)
                 {
-                    previewUnavailable = true;
+                    await ReportPreviewUnavailableAsync();
                 }
             }
 
@@ -218,8 +245,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             await workflow.RemoveAsync(partId, default);
             if (part is not null && Parts.All(item => item.PartId != partId))
             {
-                await InvokePreviewAsync("remove", partId.ToString("N"));
-                previewKeys.Remove(part.PreviewCorrelationId);
+                await ReleasePreviewAsync(part.PreviewCorrelationId);
             }
         }
     }
@@ -238,8 +264,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
         catch (JSException)
         {
-            previewUnavailable = true;
-            await InvokeAsync(StateHasChanged);
+            await ReportPreviewUnavailableAsync();
             return [];
         }
     }
@@ -256,13 +281,31 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             previewModule = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
                 "/dist/instant-quotation-workflow.mjs");
+            previewStatusReporter = DotNetObjectReference.Create(this);
             previewInterop = await previewModule.InvokeAsync<IJSObjectReference>(
-                "createInstantQuotationWorkflowInterop");
+                "createInstantQuotationWorkflowInterop",
+                previewStatusReporter);
         }
         catch (JSException)
         {
-            previewUnavailable = true;
-            await InvokeAsync(StateHasChanged);
+            await ReportPreviewUnavailableAsync();
+        }
+    }
+
+    private async Task EnsurePreviewInputBoundAsync()
+    {
+        if (previewInterop is null || fileInput is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await previewInterop.InvokeVoidAsync("bindInput", fileInput.Element);
+        }
+        catch (JSException)
+        {
+            await ReportPreviewUnavailableAsync();
         }
     }
 
@@ -283,20 +326,25 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
-                await ReleasePreviewAsync(localId, forget: false);
+                await QuarantinePreviewAsync(localId);
+            }
+            else if (upload is null)
+            {
+                await ReleasePreviewAsync(localId);
             }
         }
     }
 
-    private async Task ReleasePreviewAsync(Guid localId, bool forget)
+    private Task QuarantinePreviewAsync(Guid localId) =>
+        previewKeys.TryGetValue(localId, out var key)
+            ? InvokePreviewAsync("quarantine", key)
+            : Task.CompletedTask;
+
+    private async Task ReleasePreviewAsync(Guid localId)
     {
-        if (previewKeys.TryGetValue(localId, out var key))
+        if (previewKeys.Remove(localId, out var key))
         {
             await InvokePreviewAsync("release", key);
-            if (forget)
-            {
-                previewKeys.Remove(localId);
-            }
         }
     }
 
@@ -321,8 +369,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
         catch (JSException)
         {
-            previewUnavailable = true;
+            await ReportPreviewUnavailableAsync();
         }
+    }
+
+    [JSInvokable]
+    public Task ReportPreviewUnavailableAsync()
+    {
+        previewUnavailable = true;
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task ChangeMaterialAsync(Guid partId, ChangeEventArgs args)
@@ -376,32 +431,75 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (previewInterop is not null)
+        try
+        {
+            await DisposePreviewInteropAsync();
+        }
+        finally
         {
             try
             {
-                await previewInterop.InvokeVoidAsync("dispose");
-                await previewInterop.DisposeAsync();
+                await DisposePreviewModuleAsync();
             }
-            catch (JSDisconnectedException)
+            finally
             {
+                previewStatusReporter?.Dispose();
+                uploadBatchGate.Dispose();
+
+                if (workflow is not null)
+                {
+                    await workflow.DisposeAsync();
+                }
             }
         }
+    }
 
-        if (previewModule is not null)
+    private async Task DisposePreviewInteropAsync()
+    {
+        if (previewInterop is null)
         {
-            try
-            {
-                await previewModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
+            return;
         }
 
-        if (workflow is not null)
+        try
         {
-            await workflow.DisposeAsync();
+            await previewInterop.InvokeVoidAsync("dispose");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+
+        try
+        {
+            await previewInterop.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task DisposePreviewModuleAsync()
+    {
+        if (previewModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await previewModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
         }
     }
 

@@ -151,6 +151,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         IReadOnlyList<InstantQuotationWorkflowUploadFile> files,
         CancellationToken cancellationToken)
     {
+        var reserved = ReserveUploads(files);
+        await UploadReservedAsync(reserved, cancellationToken);
+    }
+
+    public IReadOnlyList<Guid> ReserveUploads(IReadOnlyList<InstantQuotationWorkflowUploadFile> files)
+    {
         ThrowIfDisposed();
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(files);
@@ -165,6 +171,29 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
 
         RefreshState();
+        return pending.Select(static entry => entry.LocalId).ToArray();
+    }
+
+    public async Task UploadReservedAsync(
+        IReadOnlyList<Guid> localIds,
+        CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(localIds);
+        if (localIds.Count != localIds.Distinct().Count())
+        {
+            throw new ArgumentException("Reserved upload identifiers must be unique.", nameof(localIds));
+        }
+
+        var pending = localIds.Select(localId => entries.SingleOrDefault(entry => entry.LocalId == localId)
+                ?? throw new ArgumentException("A reserved upload was not found.", nameof(localIds)))
+            .ToArray();
+        if (pending.Any(static entry => entry.Status is not InstantQuotationWorkflowUploadStatus.Pending))
+        {
+            throw new InvalidOperationException("Only pending reserved uploads can be started.");
+        }
+
         await Task.WhenAll(pending.Select(entry => StartUploadAsync(entry, cancellationToken)));
     }
 
