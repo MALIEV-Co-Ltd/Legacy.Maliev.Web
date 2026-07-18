@@ -148,6 +148,74 @@ public sealed class InstantQuotationParityManifestTests
     }
 
     [Fact]
+    public void AnalyticsContracts_FreezeNarrowStablePayloadsAndInactivePendingEvents()
+    {
+        using var manifest = LoadManifest();
+        var analytics = manifest.RootElement.GetProperty("analytics");
+        var stable = analytics.GetProperty("stableEventContracts");
+
+        AssertAnalyticsFields(stable, "file_upload_start", ["event", "service", "file_count"]);
+        AssertAnalyticsFields(stable, "file_upload_complete", ["event", "service", "transaction_id"]);
+        AssertAnalyticsFields(stable, "request_quote", [
+            "event", "intent_type", "service", "transaction_id", "submission_status", "has_files", "file_upload_completed",
+        ]);
+
+        var requestQuote = FindAnalyticsContract(stable, "request_quote");
+        var requestQuoteConstants = requestQuote.GetProperty("constants");
+        Assert.Equal("quotation_request", requestQuoteConstants.GetProperty("intent_type").GetString());
+        Assert.Equal("3d_printing", requestQuoteConstants.GetProperty("service").GetString());
+        Assert.Equal("persisted", requestQuoteConstants.GetProperty("submission_status").GetString());
+        Assert.True(requestQuote.GetProperty("exactOncePerTransactionId").GetBoolean());
+        Assert.True(requestQuote.GetProperty("requiresPersistence").GetBoolean());
+
+        AssertExactSet(
+            ["upload_failure", "estimate_shown", "review_reached"],
+            analytics.GetProperty("pendingEventContracts").EnumerateArray().Select(item => item.GetProperty("name").GetString()!));
+        AssertExactSet(["file_upload_failure"], analytics.GetProperty("forbiddenEventNames"));
+        AssertExactSet(
+            [
+                "locale", "landing_page_type", "quote_flow_step", "part_count", "lead_source", "source", "medium",
+                "campaign", "referrer", "utm_source", "utm_medium", "utm_campaign", "page_location", "currency",
+                "value", "contact_channel", "consent", "operation_id", "revision_id",
+            ],
+            analytics.GetProperty("forbiddenPayloadFields"));
+
+        var pending = analytics.GetProperty("pendingEventContracts");
+        var uploadFailure = FindAnalyticsContract(pending, "upload_failure");
+        Assert.Equal("inactive-pending-implementation-review", uploadFailure.GetProperty("status").GetString());
+        AssertExactSet(["event", "service", "failure_category", "file_count"], uploadFailure.GetProperty("exactFields"));
+        AssertExactSet(
+            ["validation", "authorization", "conflict", "dependency_unavailable", "unexpected"],
+            uploadFailure.GetProperty("failureCategories"));
+        var categoryMapping = uploadFailure.GetProperty("failureCategoryMapping");
+        AssertExactSet(
+            ["unsupported_extension", "missing_extension", "empty_input", "oversized_input", "malformed_model", "http_413", "http_415", "http_422"],
+            categoryMapping.GetProperty("validation"));
+        AssertExactSet(["http_401", "http_403"], categoryMapping.GetProperty("authorization"));
+        AssertExactSet(["http_409", "idempotency_conflict", "session_conflict"], categoryMapping.GetProperty("conflict"));
+        AssertExactSet(
+            ["adapter_unavailable", "http_503", "timeout", "transport_dependency_unavailable"],
+            categoryMapping.GetProperty("dependency_unavailable"));
+        AssertExactSet(["remaining_typed_failure", "typed_failure_without_category"], categoryMapping.GetProperty("unexpected"));
+        Assert.Equal(1, uploadFailure.GetProperty("fileCount").GetInt32());
+        Assert.True(uploadFailure.GetProperty("terminalNonCancellationOnly").GetBoolean());
+        Assert.True(uploadFailure.GetProperty("retryCreatesNewLogicalAttempt").GetBoolean());
+        Assert.False(uploadFailure.GetProperty("emitsInternalDedupeId").GetBoolean());
+
+        var estimateShown = FindAnalyticsContract(pending, "estimate_shown");
+        AssertExactSet(["event", "service"], estimateShown.GetProperty("exactFields"));
+        Assert.True(estimateShown.GetProperty("requiresCompleteAuthoritativeVisibleEstimate").GetBoolean());
+        Assert.True(estimateShown.GetProperty("deduplicatesPerAuthoritativeRevision").GetBoolean());
+        Assert.False(estimateShown.GetProperty("allowsAdvisoryOrIntermediateResults").GetBoolean());
+
+        var reviewReached = FindAnalyticsContract(pending, "review_reached");
+        AssertExactSet(["event", "service"], reviewReached.GetProperty("exactFields"));
+        Assert.True(reviewReached.GetProperty("requiresReviewTransitionWithCompleteAuthoritativeQuote").GetBoolean());
+        Assert.True(reviewReached.GetProperty("deduplicatesPerAuthoritativeRevision").GetBoolean());
+        Assert.False(reviewReached.GetProperty("refiresForUnchangedBackForwardNavigation").GetBoolean());
+    }
+
+    [Fact]
     public void ReviewedImplementationCheckpoint_FreezesOnlyApprovedWorkflowStatesAndMarkers()
     {
         using var manifest = LoadManifest();
@@ -214,11 +282,14 @@ public sealed class InstantQuotationParityManifestTests
 
     private static void AssertExactSet(IEnumerable<string> expected, JsonElement actual)
     {
+        AssertExactSet(expected, actual.EnumerateArray().Select(value => value.GetString()!));
+    }
+
+    private static void AssertExactSet(IEnumerable<string> expected, IEnumerable<string> actual) =>
         Assert.Equal(
             expected.Order(StringComparer.OrdinalIgnoreCase),
-            actual.EnumerateArray().Select(value => value.GetString()!).Order(StringComparer.OrdinalIgnoreCase),
+            actual.Order(StringComparer.OrdinalIgnoreCase),
             StringComparer.OrdinalIgnoreCase);
-    }
 
     private static void AssertWireFields(JsonElement boundaries, string boundaryName, string[] expectedFields)
     {
@@ -237,6 +308,14 @@ public sealed class InstantQuotationParityManifestTests
     private static void AssertStateSections(JsonElement stateSections, string state, string[] expectedMarkers)
     {
         AssertExactSet(expectedMarkers, stateSections.GetProperty(state));
+    }
+
+    private static JsonElement FindAnalyticsContract(JsonElement contracts, string name) =>
+        contracts.EnumerateArray().Single(value => value.GetProperty("name").GetString() == name);
+
+    private static void AssertAnalyticsFields(JsonElement contracts, string name, string[] expectedFields)
+    {
+        AssertExactSet(expectedFields, FindAnalyticsContract(contracts, name).GetProperty("exactFields"));
     }
 
     private static string FindRepositoryRoot()

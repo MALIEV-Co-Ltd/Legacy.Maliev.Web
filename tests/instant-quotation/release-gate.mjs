@@ -130,6 +130,59 @@ export function assertAnalyticsContract(observation) {
   assert.match(conversions[0].transaction_id ?? '', /^[a-z0-9][a-z0-9._-]+$/i);
 }
 
+export function assertAnalyticsPayloadContract(analytics, payload, options = {}) {
+  if (!analytics || !payload || typeof payload.event !== 'string') {
+    throw new Error('Analytics payload contract input is missing or invalid.');
+  }
+
+  if ((analytics.forbiddenEventNames ?? []).includes(payload.event)) {
+    throw new Error(`Analytics event ${payload.event} is a forbidden event name.`);
+  }
+
+  const stable = analytics.stableEventContracts ?? [];
+  const pending = analytics.pendingEventContracts ?? [];
+  const contract = [...stable, ...pending].find((item) => item.name === payload.event);
+  if (!contract) {
+    throw new Error(`Analytics event ${payload.event} has no approved payload contract.`);
+  }
+
+  if (contract.status?.startsWith('inactive') && options.allowInactive !== true) {
+    throw new Error(`Analytics event ${payload.event} is inactive pending implementation review.`);
+  }
+
+  const expectedFields = [...contract.exactFields].sort();
+  const actualFields = Object.keys(payload).sort();
+  try {
+    assert.deepEqual(actualFields, expectedFields);
+  } catch {
+    throw new Error(
+      `Analytics event ${payload.event} fields do not match the exact allowlist. `
+      + `Expected ${expectedFields.join(', ')}; received ${actualFields.join(', ')}.`,
+    );
+  }
+
+  for (const [field, expected] of Object.entries(contract.constants ?? {})) {
+    assert.equal(payload[field], expected, `Analytics event ${payload.event} requires ${field}=${expected}.`);
+  }
+
+  for (const field of contract.positiveIntegerFields ?? []) {
+    if (!Number.isInteger(payload[field]) || payload[field] <= 0) {
+      throw new Error(`Analytics event ${payload.event} requires positive integer ${field}.`);
+    }
+  }
+
+  if (contract.fileCount !== undefined && payload.file_count !== contract.fileCount) {
+    throw new Error(`Analytics event ${payload.event} requires file_count=${contract.fileCount}.`);
+  }
+
+  if (
+    contract.failureCategories
+    && !contract.failureCategories.includes(payload.failure_category)
+  ) {
+    throw new Error(`Analytics event ${payload.event} contains unapproved failure_category.`);
+  }
+}
+
 export function sanitizeEvidence(value) {
   if (Array.isArray(value)) {
     return value.map(sanitizeEvidence);

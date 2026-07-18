@@ -379,6 +379,180 @@
       "estimate_shown",
       "review_reached"
     ],
+    "stableEventContracts": [
+      {
+        "name": "file_upload_start",
+        "exactFields": [
+          "event",
+          "service",
+          "file_count"
+        ],
+        "constants": {
+          "event": "file_upload_start",
+          "service": "3d_printing"
+        },
+        "positiveIntegerFields": [
+          "file_count"
+        ]
+      },
+      {
+        "name": "file_upload_complete",
+        "exactFields": [
+          "event",
+          "service",
+          "transaction_id"
+        ],
+        "constants": {
+          "event": "file_upload_complete",
+          "service": "3d_printing"
+        },
+        "requiresAllFilesScannedStoredAndLinked": true,
+        "exactOncePerTransactionId": true
+      },
+      {
+        "name": "request_quote",
+        "exactFields": [
+          "event",
+          "intent_type",
+          "service",
+          "transaction_id",
+          "submission_status",
+          "has_files",
+          "file_upload_completed"
+        ],
+        "constants": {
+          "event": "request_quote",
+          "intent_type": "quotation_request",
+          "service": "3d_printing",
+          "submission_status": "persisted"
+        },
+        "requiresPersistence": true,
+        "exactOncePerTransactionId": true,
+        "solePrimaryAdsConversion": true
+      }
+    ],
+    "pendingEventContracts": [
+      {
+        "name": "upload_failure",
+        "status": "inactive-pending-implementation-review",
+        "exactFields": [
+          "event",
+          "service",
+          "failure_category",
+          "file_count"
+        ],
+        "constants": {
+          "event": "upload_failure",
+          "service": "3d_printing"
+        },
+        "failureCategories": [
+          "validation",
+          "authorization",
+          "conflict",
+          "dependency_unavailable",
+          "unexpected"
+        ],
+        "failureCategoryMapping": {
+          "validation": [
+            "unsupported_extension",
+            "missing_extension",
+            "empty_input",
+            "oversized_input",
+            "malformed_model",
+            "http_413",
+            "http_415",
+            "http_422"
+          ],
+          "authorization": [
+            "http_401",
+            "http_403"
+          ],
+          "conflict": [
+            "http_409",
+            "idempotency_conflict",
+            "session_conflict"
+          ],
+          "dependency_unavailable": [
+            "adapter_unavailable",
+            "http_503",
+            "timeout",
+            "transport_dependency_unavailable"
+          ],
+          "unexpected": [
+            "remaining_typed_failure",
+            "typed_failure_without_category"
+          ]
+        },
+        "fileCount": 1,
+        "terminalNonCancellationOnly": true,
+        "userCancellationEmits": false,
+        "disposedOrStaleCallbackEmits": false,
+        "cleanupOnlyFailureEmits": false,
+        "retryCreatesNewLogicalAttempt": true,
+        "dedupeScope": "logical-upload-operation",
+        "emitsInternalDedupeId": false
+      },
+      {
+        "name": "estimate_shown",
+        "status": "inactive-pending-implementation-review",
+        "exactFields": [
+          "event",
+          "service"
+        ],
+        "constants": {
+          "event": "estimate_shown",
+          "service": "3d_printing"
+        },
+        "requiresCompleteAuthoritativeVisibleEstimate": true,
+        "allowsAdvisoryOrIntermediateResults": false,
+        "dedupeScope": "authoritative-quote-revision",
+        "deduplicatesPerAuthoritativeRevision": true,
+        "materialChangeCreatesNewRevision": true,
+        "emitsInternalDedupeId": false
+      },
+      {
+        "name": "review_reached",
+        "status": "inactive-pending-implementation-review",
+        "exactFields": [
+          "event",
+          "service"
+        ],
+        "constants": {
+          "event": "review_reached",
+          "service": "3d_printing"
+        },
+        "requiresReviewTransitionWithCompleteAuthoritativeQuote": true,
+        "dedupeScope": "authoritative-quote-revision",
+        "deduplicatesPerAuthoritativeRevision": true,
+        "refiresForUnchangedBackForwardNavigation": false,
+        "materialChangeCreatesNewRevision": true,
+        "emitsInternalDedupeId": false
+      }
+    ],
+    "forbiddenEventNames": [
+      "file_upload_failure"
+    ],
+    "forbiddenPayloadFields": [
+      "locale",
+      "landing_page_type",
+      "quote_flow_step",
+      "part_count",
+      "lead_source",
+      "source",
+      "medium",
+      "campaign",
+      "referrer",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "page_location",
+      "currency",
+      "value",
+      "contact_channel",
+      "consent",
+      "operation_id",
+      "revision_id"
+    ],
     "requiresConsentBeforeEmission": true,
     "consentEvidenceModel": "external-state-and-timing",
     "eventPayloadRequiresConsentField": false,

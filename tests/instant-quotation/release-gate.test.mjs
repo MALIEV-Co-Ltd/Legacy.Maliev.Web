@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
   assertAnalyticsContract,
+  assertAnalyticsPayloadContract,
   assertBuildIdentityContract,
   assertExactBuildSha,
   classifyRequest,
   sanitizeEvidence,
 } from './release-gate.mjs';
+
+const parityManifest = JSON.parse(
+  await readFile(new URL('./production-parity-manifest.json', import.meta.url), 'utf8'),
+);
 
 test('build identity requires the exact endpoint and matching safe response headers', () => {
   const expected = 'b7174be9e3f9dbcce35d61c50248cff23e110196';
@@ -68,12 +74,16 @@ test('analytics contract uses external consent timing, one persisted conversion,
   const observation = {
     eventsBeforeConsent: [],
     eventsAfterConsent: [
-      { event: 'file_upload_start', file_count: 1 },
-      { event: 'file_upload_complete', file_count: 1 },
+      { event: 'file_upload_start', service: '3d_printing', file_count: 1 },
+      { event: 'file_upload_complete', service: '3d_printing', transaction_id: 'quotation-local-153' },
       {
         event: 'request_quote',
+        intent_type: 'quotation_request',
+        service: '3d_printing',
         transaction_id: 'quotation-local-153',
         submission_status: 'persisted',
+        has_files: true,
+        file_upload_completed: true,
       },
     ],
   };
@@ -99,6 +109,75 @@ test('analytics contract uses external consent timing, one persisted conversion,
       eventsAfterConsent: [{ ...observation.eventsAfterConsent[2], email: 'customer@example.com' }],
     }),
     /forbidden analytics field/,
+  );
+});
+
+test('analytics payload allowlists reject broader fields and keep pending events inactive', () => {
+  const analytics = parityManifest.analytics;
+  const persistedQuote = {
+    event: 'request_quote',
+    intent_type: 'quotation_request',
+    service: '3d_printing',
+    transaction_id: 'quotation-153',
+    submission_status: 'persisted',
+    has_files: true,
+    file_upload_completed: true,
+  };
+
+  assert.doesNotThrow(() => assertAnalyticsPayloadContract(analytics, {
+    event: 'file_upload_start',
+    service: '3d_printing',
+    file_count: 1,
+  }));
+  assert.doesNotThrow(() => assertAnalyticsPayloadContract(analytics, {
+    event: 'file_upload_complete',
+    service: '3d_printing',
+    transaction_id: 'quotation-153',
+  }));
+  assert.doesNotThrow(() => assertAnalyticsPayloadContract(analytics, persistedQuote));
+  assert.throws(
+    () => assertAnalyticsPayloadContract(analytics, { ...persistedQuote, locale: 'th' }),
+    /fields do not match/,
+  );
+  assert.throws(
+    () => assertAnalyticsPayloadContract(analytics, {
+      event: 'upload_failure',
+      service: '3d_printing',
+      failure_category: 'validation',
+      file_count: 1,
+    }),
+    /inactive/,
+  );
+  assert.doesNotThrow(() => assertAnalyticsPayloadContract(analytics, {
+    event: 'upload_failure',
+    service: '3d_printing',
+    failure_category: 'validation',
+    file_count: 1,
+  }, { allowInactive: true }));
+  assert.doesNotThrow(() => assertAnalyticsPayloadContract(analytics, {
+    event: 'estimate_shown',
+    service: '3d_printing',
+  }, { allowInactive: true }));
+  assert.doesNotThrow(() => assertAnalyticsPayloadContract(analytics, {
+    event: 'review_reached',
+    service: '3d_printing',
+  }, { allowInactive: true }));
+  assert.throws(
+    () => assertAnalyticsPayloadContract(analytics, {
+      event: 'upload_failure',
+      service: '3d_printing',
+      failure_category: 'raw-provider-error',
+      file_count: 1,
+    }, { allowInactive: true }),
+    /failure_category/,
+  );
+  assert.throws(
+    () => assertAnalyticsPayloadContract(analytics, {
+      event: 'file_upload_failure',
+      service: '3d_printing',
+      file_count: 1,
+    }, { allowInactive: true }),
+    /forbidden event name/,
   );
 });
 
