@@ -62,7 +62,7 @@ test('cancel and retry use new generations and suppress stale callbacks', async 
   assert.equal(calls[0].signal.aborted, true);
   assert.equal(controller.get(part.id).status, 'cancelled');
 
-  const retry = controller.retry(part.id);
+  const retry = await controller.retry(part.id);
   assert.notEqual(calls[0].operationId, calls[1].operationId);
   calls[0].onProgress({ loaded: 10, total: 10 });
   calls[0].resolve({ uploadReference: 'stale' });
@@ -112,6 +112,135 @@ test('transport boundary contains no endpoint, credentials, storage path, or aut
   assert.equal(controller.get(part.id).advisoryGeometry.isAuthoritative, false);
 });
 
+test('late stale success removes its remote upload and disposes its preview object', async () => {
+  const uploads = [];
+  const previews = [];
+  const removed = [];
+  let disposed = 0;
+  const controller = createUploadController({
+    transport: () => deferredInto(uploads),
+    preview: () => deferredInto(previews),
+    removeUpload: async reference => removed.push(reference),
+  });
+  const first = controller.add(file('stale.stl'));
+  controller.cancel(first.id);
+  const replacement = await controller.retry(first.id);
+  uploads[0].resolve({ uploadReference: 'stale-reference' });
+  previews[0].resolve({ object: { dispose: () => { disposed += 1; } }, geometry: {} });
+  await first.completion;
+  assert.deepEqual(removed, ['stale-reference']);
+  assert.equal(disposed, 1);
+
+  uploads[1].resolve({ uploadReference: 'fresh-reference' });
+  previews[1].resolve({ geometry: {} });
+  await replacement.completion;
+  assert.equal(controller.get(first.id).uploadReference, 'fresh-reference');
+});
+
+test('partial upload success is remotely cleaned when preview fails', async () => {
+  const removed = [];
+  const controller = createUploadController({
+    transport: async () => ({ uploadReference: 'partial-reference' }),
+    preview: async () => { throw new Error('preview failed'); },
+    removeUpload: async reference => removed.push(reference),
+  });
+  const part = controller.add(file('partial.obj'));
+  await part.completion;
+  assert.deepEqual(removed, ['partial-reference']);
+  assert.equal(controller.get(part.id).status, 'failed');
+  assert.equal(controller.get(part.id).uploadReference, null);
+});
+
+test('retrying a ready part cleans the replaced upload and preview first', async () => {
+  const removed = [];
+  let disposed = 0;
+  let uploadNumber = 0;
+  const controller = createUploadController({
+    transport: async () => ({ uploadReference: `reference-${++uploadNumber}` }),
+    preview: async () => ({ object: { dispose: () => { disposed += 1; } }, geometry: {} }),
+    removeUpload: async reference => removed.push(reference),
+  });
+  const part = controller.add(file('ready.glb'));
+  await part.completion;
+  const replacement = await controller.retry(part.id);
+  assert.deepEqual(removed, ['reference-1']);
+  assert.equal(disposed, 1);
+  await replacement.completion;
+  assert.equal(controller.get(part.id).uploadReference, 'reference-2');
+});
+
+test('failed remote removal keeps retryable state until cleanup succeeds', async () => {
+  let attempts = 0;
+  const controller = createUploadController({
+    transport: async () => ({ uploadReference: 'retry-removal' }),
+    preview: async () => ({ geometry: {} }),
+    removeUpload: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error('temporary cleanup failure');
+    },
+  });
+  const part = controller.add(file('cleanup.3mf'));
+  await part.completion;
+  await assert.rejects(controller.remove(part.id), /temporary cleanup failure/);
+  assert.equal(controller.get(part.id).status, 'cleanup-failed');
+  assert.equal(controller.get(part.id).uploadReference, 'retry-removal');
+  await controller.remove(part.id);
+  assert.equal(controller.get(part.id), null);
+});
+
+test('dispose cancels operations, cleans remote uploads, and deeply releases previews', async () => {
+  const removed = [];
+  const counts = { geometry: 0, material: 0, texture: 0 };
+  const controller = createUploadController({
+    transport: async ({ partId }) => ({ uploadReference: `reference-${partId}` }),
+    preview: async () => ({ object: previewResources(counts), geometry: {} }),
+    removeUpload: async reference => removed.push(reference),
+  });
+  const one = controller.add(file('one.stl'));
+  const two = controller.add(file('two.stl'));
+  await Promise.all([one.completion, two.completion]);
+  const result = await controller.dispose();
+  assert.deepEqual(removed.sort(), ['reference-part-1', 'reference-part-2']);
+  assert.deepEqual(counts, { geometry: 2, material: 2, texture: 2 });
+  assert.deepEqual(result.failures, []);
+  assert.deepEqual(controller.list(), []);
+});
+
+test('dispose waits for aborted in-flight work and cleans a late remote success', async () => {
+  const uploads = [];
+  const previews = [];
+  const removed = [];
+  let transportSignal;
+  const controller = createUploadController({
+    transport: ({ signal }) => { transportSignal = signal; return deferredInto(uploads); },
+    preview: () => deferredInto(previews),
+    removeUpload: async reference => removed.push(reference),
+  });
+  controller.add(file('pending.step'));
+  const disposal = controller.dispose();
+  assert.equal(transportSignal.aborted, true);
+  uploads[0].resolve({ uploadReference: 'late-dispose-reference' });
+  previews[0].resolve({ geometry: {} });
+  const result = await disposal;
+  assert.deepEqual(removed, ['late-dispose-reference']);
+  assert.deepEqual(result.failures, []);
+});
+
 function file(name) {
   return { name, size: 128, arrayBuffer: async () => new ArrayBuffer(8) };
+}
+
+function deferredInto(collection) {
+  let resolve;
+  let reject;
+  const promise = new Promise((accept, decline) => { resolve = accept; reject = decline; });
+  collection.push({ resolve, reject });
+  return promise;
+}
+
+function previewResources(counts) {
+  const texture = { isTexture: true, dispose: () => { counts.texture += 1; } };
+  const material = { map: texture, dispose: () => { counts.material += 1; } };
+  const child = { geometry: { dispose: () => { counts.geometry += 1; } }, material };
+  return { traverse: callback => callback(child) };
 }

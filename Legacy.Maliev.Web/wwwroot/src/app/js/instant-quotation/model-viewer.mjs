@@ -14,6 +14,94 @@ export function stableBodyColor(index) {
   return bodyPalette[safeIndex % bodyPalette.length];
 }
 
+/** Applies stable vertex colors to connected shells, including shells sharing one mesh. */
+export function colorDisconnectedBodies(object) {
+  const meshes = [];
+  object?.traverse?.(child => {
+    if (child.isMesh && child.geometry?.getAttribute?.('position')) meshes.push(child);
+  });
+  const analyses = meshes.map(mesh => analyzeMeshComponents(mesh.geometry));
+  const bodyCount = analyses.reduce((sum, analysis) => sum + analysis.count, 0);
+  if (bodyCount <= 1) return bodyCount;
+
+  let bodyOffset = 0;
+  analyses.forEach((analysis, meshIndex) => {
+    applyComponentColors(meshes[meshIndex], analysis, bodyOffset);
+    bodyOffset += analysis.count;
+  });
+  return bodyCount;
+}
+
+export function validateStandaloneGltfDocument(source) {
+  let document;
+  try {
+    document = JSON.parse(source);
+  } catch (error) {
+    throw new TypeError(`Malformed GLTF JSON: ${errorMessage(error)}`);
+  }
+  for (const resource of [...(document.buffers ?? []), ...(document.images ?? [])]) {
+    if (resource?.uri === undefined) continue;
+    if (typeof resource.uri !== 'string' || !/^data:/i.test(resource.uri.trim())) {
+      throw new TypeError('Standalone GLTF supports embedded data URIs only.');
+    }
+  }
+  return document;
+}
+
+export function createCanvasResizeController({ renderer, camera, canvas, devicePixelRatio }) {
+  let previousWidth = null;
+  let previousHeight = null;
+  let previousRatio = null;
+  return Object.freeze({
+    sync() {
+      const width = Math.max(1, Math.round(canvas.clientWidth));
+      const height = Math.max(1, Math.round(canvas.clientHeight));
+      const ratio = Math.max(1, Math.min(Number(devicePixelRatio?.()) || 1, 2));
+      if (width === previousWidth && height === previousHeight && ratio === previousRatio) return false;
+      if (ratio !== previousRatio) renderer.setPixelRatio(ratio);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      previousWidth = width;
+      previousHeight = height;
+      previousRatio = ratio;
+      return true;
+    },
+  });
+}
+
+export function createOcctLoader({ documentObject, globalObject }) {
+  let pending = null;
+  return Object.freeze({
+    load() {
+      if (pending) return pending;
+      const attempt = new Promise((resolve, reject) => {
+        const initialize = () => {
+          if (typeof globalObject.occtimportjs !== 'function') {
+            reject(new Error('CAD preview support failed to initialize.'));
+            return;
+          }
+          Promise.resolve(globalObject.occtimportjs({
+            locateFile: name => `/lib/occt/${name}`,
+          })).then(resolve, reject);
+        };
+        if (typeof globalObject.occtimportjs === 'function') { initialize(); return; }
+        const script = documentObject.createElement('script');
+        script.src = '/lib/occt/occt-import-js.js';
+        script.async = true;
+        script.addEventListener('load', initialize, { once: true });
+        script.addEventListener('error', () => reject(new Error('CAD preview support failed to load.')), { once: true });
+        documentObject.head.append(script);
+      });
+      pending = attempt.catch(error => {
+        pending = null;
+        throw error;
+      });
+      return pending;
+    },
+  });
+}
+
 /** Viewer state coordinator with an injected adapter for deterministic testing. */
 export function createModelViewer({ adapter, eventTarget = null }) {
   if (!adapter) throw new TypeError('A viewer adapter is required.');
@@ -26,12 +114,14 @@ export function createModelViewer({ adapter, eventTarget = null }) {
   function addPart(id, object, metadata = {}) {
     assertActive();
     if (!id || !object || parts.has(id)) throw new TypeError('A unique part and object are required.');
-    const bodyCount = Number.isSafeInteger(metadata.bodyCount) && metadata.bodyCount > 0
+    const declaredBodyCount = Number.isSafeInteger(metadata.bodyCount) && metadata.bodyCount > 0
       ? metadata.bodyCount
       : 1;
+    const detectedBodyCount = Number(adapter.colorDisconnectedBodies?.(object)) || 0;
+    const bodyCount = Math.max(declaredBodyCount, detectedBodyCount);
     parts.set(id, { object, bodyCount, camera: null });
     adapter.hide?.(object);
-    if (bodyCount > 1) {
+    if (bodyCount > 1 && detectedBodyCount <= 1) {
       adapter.setBodyColors?.(object, Array.from({ length: bodyCount }, (_, index) => stableBodyColor(index)));
     }
     if (activeId === null) select(id);
@@ -144,7 +234,6 @@ export function createThreeModelViewer(canvas) {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100000);
   camera.position.set(80, 80, 80);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2));
@@ -152,6 +241,12 @@ export function createThreeModelViewer(canvas) {
   keyLight.position.set(1, 2, 3);
   scene.add(keyLight);
   let frame = 0;
+  const resize = createCanvasResizeController({
+    renderer,
+    camera,
+    canvas,
+    devicePixelRatio: () => window.devicePixelRatio,
+  });
 
   const adapter = {
     show(object) { scene.add(object); object.visible = true; },
@@ -190,6 +285,7 @@ export function createThreeModelViewer(canvas) {
         index += 1;
       });
     },
+    colorDisconnectedBodies,
     disposeControls() { controls.dispose(); },
     disposeRenderer() { renderer.dispose(); },
     loseContext() { renderer.forceContextLoss(); },
@@ -198,13 +294,7 @@ export function createThreeModelViewer(canvas) {
   const viewer = createModelViewer({ adapter, eventTarget: canvas });
 
   function render() {
-    const width = Math.max(1, canvas.clientWidth);
-    const height = Math.max(1, canvas.clientHeight);
-    if (canvas.width !== width || canvas.height !== height) {
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    }
+    resize.sync();
     controls.update();
     renderer.render(scene, camera);
     frame = requestAnimationFrame(render);
@@ -226,6 +316,7 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   if (extension === '3mf') return new ThreeMFLoader().parse(buffer);
   if (extension === 'glb' || extension === 'gltf') {
     const input = extension === 'gltf' ? new TextDecoder().decode(buffer) : buffer;
+    if (extension === 'gltf') validateStandaloneGltfDocument(input);
     const result = await new GLTFLoader().parseAsync(input, '');
     return result.scene;
   }
@@ -251,20 +342,10 @@ async function loadCadModel(buffer, extension, signal) {
   return group;
 }
 
-let occtPromise;
+let productionOcctLoader;
 function ensureOcct() {
-  if (occtPromise) return occtPromise;
-  occtPromise = new Promise((resolve, reject) => {
-    const initialize = () => globalThis.occtimportjs({ locateFile: name => `/lib/occt/${name}` }).then(resolve, reject);
-    if (typeof globalThis.occtimportjs === 'function') { initialize(); return; }
-    const script = document.createElement('script');
-    script.src = '/lib/occt/occt-import-js.js';
-    script.async = true;
-    script.addEventListener('load', initialize, { once: true });
-    script.addEventListener('error', () => reject(new Error('CAD preview support failed to load.')), { once: true });
-    document.head.append(script);
-  });
-  return occtPromise;
+  productionOcctLoader ??= createOcctLoader({ documentObject: document, globalObject: globalThis });
+  return productionOcctLoader.load();
 }
 
 function frameObject(object, camera, controls) {
@@ -307,4 +388,79 @@ function asArray(value) {
 
 function clone(value) {
   return value === undefined ? null : structuredClone(value);
+}
+
+function analyzeMeshComponents(geometry) {
+  const position = geometry.getAttribute('position');
+  const index = geometry.getIndex?.();
+  const triangleCount = Math.floor((index?.count ?? position.count) / 3);
+  if (triangleCount === 0) return { count: 0, componentByTriangle: [] };
+  const parents = Array.from({ length: triangleCount }, (_, value) => value);
+  const firstTriangleByVertex = new Map();
+  const vertexIndices = [];
+
+  for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+    const vertices = [];
+    for (let corner = 0; corner < 3; corner += 1) {
+      const vertexIndex = index ? index.getX(triangle * 3 + corner) : triangle * 3 + corner;
+      vertices.push(vertexIndex);
+      const key = `${quantize(position.getX(vertexIndex))},${quantize(position.getY(vertexIndex))},${quantize(position.getZ(vertexIndex))}`;
+      const prior = firstTriangleByVertex.get(key);
+      if (prior === undefined) firstTriangleByVertex.set(key, triangle);
+      else union(parents, triangle, prior);
+    }
+    vertexIndices.push(vertices);
+  }
+
+  const componentIndex = new Map();
+  const componentByTriangle = parents.map((_, triangle) => {
+    const root = find(parents, triangle);
+    if (!componentIndex.has(root)) componentIndex.set(root, componentIndex.size);
+    return componentIndex.get(root);
+  });
+  return { count: componentIndex.size, componentByTriangle, vertexIndices };
+}
+
+function applyComponentColors(mesh, analysis, bodyOffset) {
+  const position = mesh.geometry.getAttribute('position');
+  const colors = new Float32Array(position.count * 3);
+  analysis.componentByTriangle.forEach((component, triangle) => {
+    const color = new THREE.Color(stableBodyColor(bodyOffset + component));
+    for (const vertexIndex of analysis.vertexIndices[triangle]) {
+      colors[vertexIndex * 3] = color.r;
+      colors[vertexIndex * 3 + 1] = color.g;
+      colors[vertexIndex * 3 + 2] = color.b;
+    }
+  });
+  mesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const materials = asArray(mesh.material).map(material => {
+    const colored = material.clone();
+    colored.vertexColors = true;
+    colored.color?.set(0xffffff);
+    return colored;
+  });
+  mesh.material = materials.length === 1 ? materials[0] : materials;
+}
+
+function find(parents, value) {
+  let current = value;
+  while (parents[current] !== current) {
+    parents[current] = parents[parents[current]];
+    current = parents[current];
+  }
+  return current;
+}
+
+function union(parents, left, right) {
+  const leftRoot = find(parents, left);
+  const rightRoot = find(parents, right);
+  if (leftRoot !== rightRoot) parents[rightRoot] = leftRoot;
+}
+
+function quantize(value) {
+  return Math.round(value * 1e6);
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
 }

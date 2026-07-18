@@ -27,6 +27,7 @@ export function createUploadController(options) {
   }
 
   const parts = new Map();
+  const deferredCleanup = new Set();
   let nextPartId = 1;
   let nextOperationId = 1;
 
@@ -85,7 +86,12 @@ export function createUploadController(options) {
       },
     });
 
-    const upload = callAsPromise(() => options.transport(request));
+    const upload = callAsPromise(() => options.transport(request)).then(uploaded => {
+      if (typeof uploaded?.uploadReference !== 'string' || uploaded.uploadReference.length === 0) {
+        throw new TypeError('Upload transport returned no opaque reference.');
+      }
+      return uploaded;
+    });
     const preview = callAsPromise(() => options.preview(Object.freeze({
       partId: part.id,
       operationId,
@@ -94,15 +100,44 @@ export function createUploadController(options) {
       signal: abortController.signal,
     })));
 
-    const completion = Promise.all([upload, preview]).then(([uploaded, previewed]) => {
-      if (!isCurrent()) return snapshot(part);
-      if (typeof uploaded?.uploadReference !== 'string' || uploaded.uploadReference.length === 0) {
-        throw new TypeError('Upload transport returned no opaque reference.');
+    const completion = Promise.allSettled([upload, preview]).then(async ([uploadResult, previewResult]) => {
+      const resource = {
+        uploadReference: uploadResult.status === 'fulfilled'
+          ? uploadResult.value.uploadReference
+          : null,
+        previewObject: previewResult.status === 'fulfilled'
+          ? previewResult.value?.object ?? null
+          : null,
+      };
+      const operationError = uploadResult.status === 'rejected'
+        ? uploadResult.reason
+        : previewResult.status === 'rejected'
+          ? previewResult.reason
+          : null;
+
+      if (operationError || !isCurrent()) {
+        try {
+          await cleanupResource(resource);
+        } catch (cleanupError) {
+          if (isCurrent()) {
+            assignResource(part, resource);
+            part.status = 'cleanup-failed';
+            part.error = errorMessage(cleanupError);
+          } else {
+            deferredCleanup.add(resource);
+          }
+          return snapshot(part);
+        }
+        if (isCurrent()) {
+          part.error = errorMessage(operationError);
+          part.status = 'failed';
+        }
+        return snapshot(part);
       }
-      part.uploadReference = uploaded.uploadReference;
-      part.previewObject = previewed?.object ?? null;
+
+      assignResource(part, resource);
       part.advisoryGeometry = Object.freeze({
-        ...(previewed?.geometry ?? {}),
+        ...(previewResult.value?.geometry ?? {}),
         authoritative: false,
         isAuthoritative: false,
         authority: 'browser-advisory',
@@ -110,12 +145,9 @@ export function createUploadController(options) {
       part.progress = 100;
       part.status = 'ready';
       return snapshot(part);
-    }).catch(error => {
-      if (!isCurrent()) return snapshot(part);
-      part.error = error instanceof Error ? error.message : String(error);
-      part.status = 'failed';
-      return snapshot(part);
     });
+
+    part.completion = completion;
 
     return Object.freeze({ id: part.id, operationId, completion });
   }
@@ -128,9 +160,20 @@ export function createUploadController(options) {
     return snapshot(part);
   }
 
-  function retry(id) {
+  async function retry(id) {
     const part = requirePart(id);
     part.abortController?.abort();
+    part.generation += 1;
+    if (part.uploadReference || part.previewObject) {
+      part.status = 'cleaning';
+      try {
+        await cleanupAssignedResource(part);
+      } catch (error) {
+        part.status = 'cleanup-failed';
+        part.error = errorMessage(error);
+        throw error;
+      }
+    }
     return start(part);
   }
 
@@ -138,11 +181,15 @@ export function createUploadController(options) {
     const part = requirePart(id);
     part.abortController?.abort();
     part.generation += 1;
-    parts.delete(id);
-    disposePreview(part.previewObject);
-    if (part.uploadReference && typeof options.removeUpload === 'function') {
-      await options.removeUpload(part.uploadReference);
+    part.status = 'removing';
+    try {
+      await cleanupAssignedResource(part);
+    } catch (error) {
+      part.status = 'cleanup-failed';
+      part.error = errorMessage(error);
+      throw error;
     }
+    parts.delete(id);
   }
 
   function get(id) {
@@ -154,12 +201,59 @@ export function createUploadController(options) {
     return Object.freeze([...parts.values()].map(snapshot));
   }
 
-  function dispose() {
-    for (const part of parts.values()) {
+  async function dispose() {
+    const failures = [];
+    const candidates = [...parts.values()];
+    for (const part of candidates) {
       part.abortController?.abort();
-      disposePreview(part.previewObject);
+      part.generation += 1;
     }
-    parts.clear();
+    await Promise.allSettled(candidates.map(part => part.completion).filter(Boolean));
+    for (const part of candidates) {
+      try {
+        await cleanupAssignedResource(part);
+        parts.delete(part.id);
+      } catch (error) {
+        part.status = 'cleanup-failed';
+        part.error = errorMessage(error);
+        failures.push(Object.freeze({ partId: part.id, error: part.error }));
+      }
+    }
+    for (const resource of [...deferredCleanup]) {
+      try {
+        await cleanupResource(resource);
+        deferredCleanup.delete(resource);
+      } catch (error) {
+        failures.push(Object.freeze({ partId: null, error: errorMessage(error) }));
+      }
+    }
+    return Object.freeze({ failures: Object.freeze(failures) });
+  }
+
+  async function cleanupAssignedResource(part) {
+    const resource = {
+      uploadReference: part.uploadReference,
+      previewObject: part.previewObject,
+    };
+    await cleanupResource(resource);
+    part.uploadReference = null;
+    part.previewObject = null;
+    part.advisoryGeometry = null;
+  }
+
+  async function cleanupResource(resource) {
+    if (resource.uploadReference) {
+      if (typeof options.removeUpload !== 'function') {
+        throw new Error('Remote upload cleanup is unavailable.');
+      }
+      await options.removeUpload(resource.uploadReference);
+    }
+    disposePreview(resource.previewObject);
+  }
+
+  function assignResource(part, resource) {
+    part.uploadReference = resource.uploadReference;
+    part.previewObject = resource.previewObject;
   }
 
   function requirePart(id) {
@@ -187,7 +281,18 @@ function snapshot(part) {
 }
 
 function disposePreview(object) {
-  if (typeof object?.dispose === 'function') object.dispose();
+  if (typeof object?.traverse === 'function') {
+    object.traverse(child => {
+      child.geometry?.dispose?.();
+      for (const material of asArray(child.material)) {
+        for (const value of Object.values(material ?? {})) {
+          if (value?.isTexture) value.dispose?.();
+        }
+        material?.dispose?.();
+      }
+    });
+  }
+  object?.dispose?.();
 }
 
 function callAsPromise(callback) {
@@ -196,4 +301,14 @@ function callAsPromise(callback) {
   } catch (error) {
     return Promise.reject(error);
   }
+}
+
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function errorMessage(error) {
+  if (error === null || error === undefined) return null;
+  return error instanceof Error ? error.message : String(error);
 }
