@@ -1,6 +1,6 @@
 @inject IStringLocalizer<CncMachiningContent> Localizer
 
-<article class="knowledge-document" data-migration-renderer="blazor-static-ssr">
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <p class="maliev-eyebrow">@Localizer["CNC machining preparation"]</p>
     <h1>@Localizer["Files and requirements for CNC machining"]</h1>
     <p class="docs-lead">@Localizer["A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe."]</p>
@@ -11,3 +11,8 @@
     </div>
     <div class="maliev-actions"><a class="maliev-button" href="/services/cnc-machining">@Localizer["View CNC machining service"]</a></div>
 </article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

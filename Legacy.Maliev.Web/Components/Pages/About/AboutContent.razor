@@ -1,6 +1,6 @@
 @using System.Globalization
 
-<main class="about-page" data-migration-renderer="blazor-static-ssr">
+<main class="about-page" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <section class="about-hero" aria-labelledby="about-hero-title">
         <div class="about-shell about-hero-grid">
             <div class="about-hero-copy">
@@ -141,6 +141,9 @@
 </main>
 
 @code {
+    [Parameter]
+    public string RouteOwner { get; set; } = "razor-static-ssr";
+
     private static string T(string english, string thai) =>
         CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? thai : english;
 }

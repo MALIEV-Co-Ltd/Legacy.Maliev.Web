@@ -14,7 +14,7 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
     }
 
     [Fact]
-    public void Host_DeclaresOneRoutedStaticSsrPageAndKeepsTheRazorRollbackSource()
+    public void Host_DeclaresTheApprovedStaticSsrPagesAndKeepsTheServicesRazorRollbackSource()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
@@ -40,8 +40,10 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
                 SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
             .ToArray();
-        Assert.Single(routedPages);
-        Assert.Equal("ServicesPage.razor", Path.GetFileName(routedPages[0]));
+        Assert.Equal(20, routedPages.Length);
+        Assert.Equal(
+            ["AboutPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "CustomManufacturingPage.razor", "GuidelinesPage.razor", "HomePage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "PrivacyPolicyPage.razor", "ServicesPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
     }
 
     [Theory]

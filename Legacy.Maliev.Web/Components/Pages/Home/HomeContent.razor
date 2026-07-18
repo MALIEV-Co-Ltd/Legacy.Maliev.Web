@@ -1,5 +1,6 @@
 @inject IStringLocalizer<HomeContent> Localizer
 
+<div data-migration-route-owner="@RouteOwner">
 <section class="landing-hero" data-migration-component="home-content" aria-labelledby="landing-hero-title">
     <div class="landing-container landing-hero-grid">
         <div class="landing-hero-copy">
@@ -71,7 +72,11 @@
         <img src="/src/images/landing/landing-cta-part.webp" alt="@L("Precision-machined aluminum component")" />
     </div>
 </section>
+</div>
 
 @code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
     private MarkupString L(string key) => new(Localizer[key].Value);
 }

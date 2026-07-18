@@ -1,0 +1,82 @@
+@page "/services/custom-manufacturing"
+@using System.Globalization
+@using System.Text.Json
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Metadata
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T(
+        "Custom Part Manufacturing with CNC and 3D Printing | MALIEV",
+        "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV");
+    var description = T(
+        "Not sure whether CNC machining, 3D printing, or 3D scanning fits your part? Send the drawing or sample, material, quantity, critical features, and intended use for a manufacturing review.",
+        "หากยังไม่แน่ใจว่าควรใช้ CNC, 3D Printing หรือ 3D Scanning ส่งแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน เพื่อให้ MALIEV ตรวจสอบเส้นทางประเมินที่เหมาะสม");
+    var keywords = T(
+        "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering",
+        "รับผลิตชิ้นงานตามแบบ, ผลิตชิ้นส่วนตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing");
+    var faqJson = CreateFaqJson();
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Custom Manufacturing"))" />
+    <script type="application/ld+json">@((MarkupString)faqJson)</script>
+</HeadContent>
+<CustomManufacturingContent RouteOwner="blazor-static-ssr" />
+
+@code {
+    private bool IsThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+
+    private string CreateFaqJson()
+    {
+        var schema = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "FAQPage",
+            ["mainEntity"] = new object[]
+            {
+                CreateQuestion(
+                    T("Which manufacturing process should I choose?", "ควรเลือกกระบวนการผลิตแบบใด?"),
+                    T(
+                        "Use CNC machining when the part should be cut from solid engineering material, 3D printing when an additive prototype or complex form can start from a 3D model, and 3D scanning when an existing physical part must first become usable geometry or comparison data. If the choice is unclear, send the project information for review.",
+                        "เลือก CNC เมื่อชิ้นงานควรตัดจากวัสดุตัน เลือก 3D Printing เมื่อต้องการต้นแบบหรือรูปทรงซับซ้อนจากไฟล์ 3D และเริ่มจาก 3D Scanning เมื่อมีเพียงชิ้นงานจริงที่ต้องแปลงเป็นข้อมูลรูปทรงหรือใช้เปรียบเทียบ หากยังไม่แน่ใจให้ส่งข้อมูลโครงการเพื่อตรวจสอบ")),
+                CreateQuestion(
+                    T("Can you quote from a photo alone?", "ขอราคาจากรูปถ่ายอย่างเดียวได้หรือไม่?"),
+                    T(
+                        "A photo can explain context, but it normally does not define scale, hidden geometry, material, fits, or critical dimensions. A production quotation may require CAD, a dimensioned drawing, or access to the physical sample after review.",
+                        "รูปถ่ายช่วยอธิบายบริบทได้ แต่โดยทั่วไปไม่ระบุสเกล รูปทรงที่มองไม่เห็น วัสดุ ฟิต หรือขนาดสำคัญ การเสนอราคาผลิตอาจต้องใช้ไฟล์ CAD แบบระบุขนาด หรือเข้าถึงชิ้นงานตัวอย่างหลังการตรวจสอบ")),
+                CreateQuestion(
+                    T("Can an existing part be reproduced without a drawing?", "ผลิตชิ้นงานเดิมซ้ำโดยไม่มีแบบได้หรือไม่?"),
+                    T(
+                        "The first step may be 3D scanning and reverse engineering, but scan data is not automatically a manufacturing-ready design. Material, intended use, interfaces, wear, damage, and critical dimensions still need review before a production scope can be confirmed.",
+                        "งานอาจเริ่มจาก 3D Scanning และ Reverse Engineering แต่ข้อมูลสแกนไม่ได้เป็นแบบพร้อมผลิตโดยอัตโนมัติ ยังต้องตรวจสอบวัสดุ การใช้งาน จุดประกอบ การสึกหรอ ความเสียหาย และขนาดสำคัญก่อนยืนยันขอบเขตการผลิต")),
+                CreateQuestion(
+                    T("What information should I send first?", "ควรส่งข้อมูลอะไรเป็นอันดับแรก?"),
+                    T(
+                        "Send the available CAD or drawing, photos or sample details, material or required behavior, quantity, intended use, critical dimensions or interfaces, finish expectations, and the date the part is needed. Unknown items can be marked for discussion.",
+                        "ส่งไฟล์ CAD หรือแบบที่มี รูปถ่ายหรือรายละเอียดตัวอย่าง วัสดุหรือคุณสมบัติที่ต้องการ จำนวน การใช้งาน ขนาดหรือจุดประกอบสำคัญ ความคาดหวังเรื่องผิว และวันที่ต้องการใช้งาน ส่วนที่ยังไม่ทราบสามารถระบุไว้เพื่อปรึกษาได้"))
+            }
+        };
+
+        return JsonSerializer.Serialize(schema);
+    }
+
+    private static Dictionary<string, object> CreateQuestion(string question, string answer) => new()
+    {
+        ["@type"] = "Question",
+        ["name"] = question,
+        ["acceptedAnswer"] = new Dictionary<string, object>
+        {
+            ["@type"] = "Answer",
+            ["text"] = answer
+        }
+    };
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}
