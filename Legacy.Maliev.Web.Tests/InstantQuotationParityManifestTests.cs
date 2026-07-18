@@ -128,6 +128,73 @@ public sealed class InstantQuotationParityManifestTests
         Assert.True(releaseGate.GetProperty("requiresHealthyAspireResources").GetBoolean());
         Assert.True(releaseGate.GetProperty("blocksProductionDeploymentWithoutOwnerApproval").GetBoolean());
         Assert.Equal(154, releaseGate.GetProperty("aspireDependencyIssue").GetInt32());
+
+        var buildIdentity = releaseGate.GetProperty("buildIdentity");
+        Assert.Equal(
+            "b7174be9e3f9dbcce35d61c50248cff23e110196",
+            buildIdentity.GetProperty("sourceCommit").GetString());
+        Assert.Equal("/web/build-identity", buildIdentity.GetProperty("endpoint").GetString());
+        AssertExactSet(
+            ["repository", "branch", "commit"],
+            buildIdentity.GetProperty("requiredResponseFields"));
+        AssertExactSet(
+            ["X-Maliev-Build-Repository", "X-Maliev-Build-Branch", "X-Maliev-Build-Commit"],
+            buildIdentity.GetProperty("requiredHeaders"));
+        Assert.Equal("no-store", buildIdentity.GetProperty("cacheControl").GetString());
+    }
+
+    [Fact]
+    public void ReviewedImplementationCheckpoint_FreezesOnlyApprovedWorkflowStatesAndMarkers()
+    {
+        using var manifest = LoadManifest();
+        var checkpoint = manifest.RootElement.GetProperty("reviewedImplementationCheckpoint");
+
+        Assert.Equal("approved", checkpoint.GetProperty("reviewStatus").GetString());
+        Assert.Equal(
+            "after-implementation-branch-or-pr-update",
+            checkpoint.GetProperty("activation").GetString());
+        AssertExactSet(
+            [
+                "fc73307cfd141f5239ac12b7a0a8ae8f7ec4a354",
+                "3a64bc264a1a9c114d248977c2dc2aeae6b6f843",
+            ],
+            checkpoint.GetProperty("sourceCommits"));
+        AssertExactSet(
+            ["Empty", "Uploading", "Uploaded", "Error", "MultiPart", "Configured", "Review", "CustomerDetails", "Submitted"],
+            checkpoint.GetProperty("states"));
+        Assert.Equal("data-workflow-state", checkpoint.GetProperty("stateAttribute").GetString());
+        Assert.Equal("lowercase-enum-name", checkpoint.GetProperty("stateValueFormat").GetString());
+        AssertExactSet(
+            [
+                "data-workflow-upload",
+                "data-workflow-viewer",
+                "data-workflow-parts",
+                "data-workflow-configuration",
+                "data-workflow-review",
+                "data-workflow-customer-details",
+                "data-workflow-submitted",
+            ],
+            checkpoint.GetProperty("sectionMarkers"));
+
+        var stateSections = checkpoint.GetProperty("stateSections");
+        AssertStateSections(stateSections, "Empty", ["data-workflow-upload"]);
+        AssertStateSections(stateSections, "Uploading", ["data-workflow-upload"]);
+        AssertStateSections(stateSections, "Uploaded", ["data-workflow-viewer", "data-workflow-parts", "data-workflow-configuration"]);
+        AssertStateSections(stateSections, "Error", ["data-workflow-upload"]);
+        AssertStateSections(stateSections, "MultiPart", ["data-workflow-viewer", "data-workflow-parts", "data-workflow-configuration"]);
+        AssertStateSections(stateSections, "Configured", ["data-workflow-viewer", "data-workflow-parts", "data-workflow-configuration"]);
+        AssertStateSections(stateSections, "Review", ["data-workflow-viewer", "data-workflow-parts", "data-workflow-configuration", "data-workflow-review"]);
+        AssertStateSections(stateSections, "CustomerDetails", ["data-workflow-customer-details"]);
+        AssertStateSections(stateSections, "Submitted", ["data-workflow-submitted"]);
+        Assert.True(checkpoint.GetProperty("errorStateRequiresAlertRole").GetBoolean());
+
+        var pending = manifest.RootElement.GetProperty("pendingImplementationContracts");
+        Assert.All(pending.EnumerateArray(), item =>
+        {
+            Assert.Equal("not-yet-reviewed", item.GetProperty("status").GetString());
+            Assert.False(item.TryGetProperty("marker", out _));
+            Assert.False(item.TryGetProperty("wireFields", out _));
+        });
     }
 
     private static JsonDocument LoadManifest()
@@ -161,6 +228,11 @@ public sealed class InstantQuotationParityManifestTests
         var boundary = boundaries.EnumerateArray().Single(
             value => value.GetProperty("name").GetString() == boundaryName);
         AssertExactSet(expectedFields, boundary.GetProperty("requiredRequestFields"));
+    }
+
+    private static void AssertStateSections(JsonElement stateSections, string state, string[] expectedMarkers)
+    {
+        AssertExactSet(expectedMarkers, stateSections.GetProperty(state));
     }
 
     private static string FindRepositoryRoot()

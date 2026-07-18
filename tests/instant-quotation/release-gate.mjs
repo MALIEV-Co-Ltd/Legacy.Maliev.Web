@@ -52,6 +52,40 @@ export function assertExactBuildSha(expectedSha, servedSha) {
   }
 }
 
+export function assertBuildIdentityContract(expectedSha, identity, responseHeaders) {
+  const hasIdentityValue = (value) => (
+    typeof value === 'string'
+    && value.trim().length > 0
+    && value.trim().toLowerCase() !== 'unknown'
+  );
+
+  if (
+    !identity
+    || !responseHeaders
+    || !hasIdentityValue(identity.repository)
+    || !hasIdentityValue(identity.branch)
+  ) {
+    throw new Error('Served build identity is missing or invalid.');
+  }
+
+  const headers = Object.fromEntries(
+    Object.entries(responseHeaders).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+
+  if (
+    !hasIdentityValue(headers['x-maliev-build-repository'])
+    || !hasIdentityValue(headers['x-maliev-build-branch'])
+  ) {
+    throw new Error('Served build identity is missing or invalid.');
+  }
+
+  assertExactBuildSha(expectedSha, identity.commit);
+  assertExactBuildSha(expectedSha, headers['x-maliev-build-commit']);
+  assert.equal(headers['x-maliev-build-repository'], identity.repository);
+  assert.equal(headers['x-maliev-build-branch'], identity.branch);
+  assert.match(headers['cache-control'] ?? '', /(?:^|,)\s*no-store\s*(?:,|$)/i, 'Build identity must be no-store.');
+}
+
 export function classifyRequest(requestUrl, applicationBaseUrl) {
   const request = new URL(requestUrl);
   const application = new URL(applicationBaseUrl);

@@ -3,10 +3,47 @@ import test from 'node:test';
 
 import {
   assertAnalyticsContract,
+  assertBuildIdentityContract,
   assertExactBuildSha,
   classifyRequest,
   sanitizeEvidence,
 } from './release-gate.mjs';
+
+test('build identity requires the exact endpoint and matching safe response headers', () => {
+  const expected = 'b7174be9e3f9dbcce35d61c50248cff23e110196';
+  const identity = {
+    repository: 'https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web.git',
+    branch: 'codex/instant-quotation-parity-validation',
+    commit: expected,
+  };
+  const headers = {
+    'cache-control': 'no-store',
+    'x-maliev-build-repository': identity.repository,
+    'x-maliev-build-branch': identity.branch,
+    'x-maliev-build-commit': expected,
+  };
+
+  assert.doesNotThrow(() => assertBuildIdentityContract(expected, identity, headers));
+  assert.throws(
+    () => assertBuildIdentityContract(expected, { ...identity, commit: 'unknown' }, headers),
+    /missing or invalid/,
+  );
+  assert.throws(
+    () => assertBuildIdentityContract(expected, { commit: expected }, {
+      'cache-control': 'no-store',
+      'x-maliev-build-commit': expected,
+    }),
+    /missing or invalid/,
+  );
+  assert.throws(
+    () => assertBuildIdentityContract(expected, identity, { ...headers, 'x-maliev-build-commit': 'unknown' }),
+    /missing or invalid/,
+  );
+  assert.throws(
+    () => assertBuildIdentityContract(expected, identity, { ...headers, 'cache-control': 'public' }),
+    /no-store/,
+  );
+});
 
 test('exact build identity fails closed when the served SHA differs', () => {
   const expected = '6e00796d263c45be73080fa292929a99dbb9af1d';

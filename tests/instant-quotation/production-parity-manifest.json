@@ -108,6 +108,112 @@
       "reduced motion is respected"
     ]
   },
+  "reviewedImplementationCheckpoint": {
+    "reviewStatus": "approved",
+    "activation": "after-implementation-branch-or-pr-update",
+    "sourceCommits": [
+      "fc73307cfd141f5239ac12b7a0a8ae8f7ec4a354",
+      "3a64bc264a1a9c114d248977c2dc2aeae6b6f843"
+    ],
+    "states": [
+      "Empty",
+      "Uploading",
+      "Uploaded",
+      "Error",
+      "MultiPart",
+      "Configured",
+      "Review",
+      "CustomerDetails",
+      "Submitted"
+    ],
+    "stateAttribute": "data-workflow-state",
+    "stateValueFormat": "lowercase-enum-name",
+    "sectionMarkers": [
+      "data-workflow-upload",
+      "data-workflow-viewer",
+      "data-workflow-parts",
+      "data-workflow-configuration",
+      "data-workflow-review",
+      "data-workflow-customer-details",
+      "data-workflow-submitted"
+    ],
+    "stateSections": {
+      "Empty": [
+        "data-workflow-upload"
+      ],
+      "Uploading": [
+        "data-workflow-upload"
+      ],
+      "Uploaded": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration"
+      ],
+      "Error": [
+        "data-workflow-upload"
+      ],
+      "MultiPart": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration"
+      ],
+      "Configured": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration"
+      ],
+      "Review": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration",
+        "data-workflow-review"
+      ],
+      "CustomerDetails": [
+        "data-workflow-customer-details"
+      ],
+      "Submitted": [
+        "data-workflow-submitted"
+      ]
+    },
+    "errorStateRequiresAlertRole": true
+  },
+  "pendingImplementationContracts": [
+    {
+      "semanticBoundary": "material picker marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "part pricing marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "order total marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "lead time marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "final estimate wire casing",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "final total wire casing",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "final submission wire casing",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 151
+    }
+  ],
   "customerFields": [
     "FirstName",
     "LastName",
@@ -302,7 +408,22 @@
     "requiresHealthyAspireResources": true,
     "blocksProductionDeploymentWithoutOwnerApproval": true,
     "aspireDependencyIssue": 154,
-    "executionStatus": "deferred-until-issue-154-and-issues-149-through-152-merge",
+    "buildIdentity": {
+      "sourceCommit": "b7174be9e3f9dbcce35d61c50248cff23e110196",
+      "endpoint": "/web/build-identity",
+      "requiredResponseFields": [
+        "repository",
+        "branch",
+        "commit"
+      ],
+      "requiredHeaders": [
+        "X-Maliev-Build-Repository",
+        "X-Maliev-Build-Branch",
+        "X-Maliev-Build-Commit"
+      ],
+      "cacheControl": "no-store"
+    },
+    "executionStatus": "deferred-until-issues-149-through-152-merge-and-owner-review",
     "productionDeploymentAuthorized": false
   },
   "knownCurrentSourceGaps": [
