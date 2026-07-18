@@ -1,0 +1,108 @@
+@page "/Contact"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using Microsoft.Extensions.Options
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ICountryClient CountryClient
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
+@inject IOptions<RecaptchaEnterpriseOptions> RecaptchaOptions
+@inject IStringLocalizer<ContactContent> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = Localizer["Contact MALIEV"];
+    var description = Localizer["Contact MALIEV for CNC machining, additive manufacturing, 3D scanning, and custom manufacturing support."];
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@Localizer["contact MALIEV, manufacturing enquiry, CNC quotation, 3D printing support"]" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    @if (!string.IsNullOrWhiteSpace(RecaptchaOptions.Value.SiteKey))
+    {
+        <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(RecaptchaOptions.Value.SiteKey)" async defer></script>
+    }
+</HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <ContactHeroContent />
+    <main class="container maliev-section">
+        <div class="row g-5">
+            <section class="col-lg-7" aria-labelledby="contact-form-title">
+                <h2 id="contact-form-title">@Localizer["Send an enquiry"]</h2>
+                @if (!string.IsNullOrWhiteSpace(notification))
+                {
+                    <div class="alert alert-success" role="status">@notification</div>
+                }
+                <form method="post"
+                      action="/Contact?handler=SubmitRequest"
+                      id="contact-form"
+                      data-recaptcha-enterprise-form
+                      data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey"
+                      data-recaptcha-action="submit">
+                    @if (tokens is not null)
+                    {
+                        <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                    }
+                    <ContactFormFields Model="model" />
+                </form>
+            </section>
+            <aside class="col-lg-5" aria-labelledby="contact-details-title">
+                <ContactDetailsContent />
+            </aside>
+        </div>
+    </main>
+</div>
+
+@code {
+    private ContactFormDisplayModel model = new(
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        null,
+        null,
+        string.Empty,
+        string.Empty,
+        null,
+        string.Empty,
+        false,
+        [],
+        new Dictionary<string, IReadOnlyList<string>>());
+    private AntiforgeryTokenSet? tokens;
+    private string? notification;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var countries = await CountryClient.GetCountriesAsync(context.RequestAborted);
+        var serviceAvailable = countries.ServiceAvailable;
+        IReadOnlyDictionary<string, IReadOnlyList<string>> errors = serviceAvailable
+            ? new Dictionary<string, IReadOnlyList<string>>()
+            : new Dictionary<string, IReadOnlyList<string>>
+            {
+                [string.Empty] = ["Could not retrieve countries from the server."]
+            };
+        model = new ContactFormDisplayModel(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            null,
+            null,
+            string.Empty,
+            string.Empty,
+            null,
+            RecaptchaOptions.Value.SiteKey,
+            serviceAvailable,
+            (countries.Value ?? []).Select(country => new ContactCountryOption(country.Name)).ToArray(),
+            errors);
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}

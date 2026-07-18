@@ -30,6 +30,7 @@ var useBlazorResetPasswordRoute = builder.Configuration.GetValue("BlazorRouting:
 var useBlazorLogoutRoute = builder.Configuration.GetValue("BlazorRouting:Logout", true);
 var useBlazorEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:EmailConfirmation", true);
 var useBlazorChangeEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:ChangeEmailConfirmation", true);
+var useBlazorContactRoute = builder.Configuration.GetValue("BlazorRouting:Contact", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -57,6 +58,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorLogoutRoute
     && useBlazorEmailConfirmationRoute
     && useBlazorChangeEmailConfirmationRoute
+    && useBlazorContactRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -173,6 +175,15 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddPageRouteModelConvention(
             "/Account/ChangeEmailConfirmation",
             model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Contact/Index",
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
             model => model.Selectors.Clear());
