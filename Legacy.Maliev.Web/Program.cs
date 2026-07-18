@@ -18,6 +18,7 @@ var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", tr
 var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
 var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
 var useBlazorLegalRoute = builder.Configuration.GetValue("BlazorRouting:Legal", true);
+var useBlazorNonDisclosureAgreementRoute = builder.Configuration.GetValue("BlazorRouting:NonDisclosureAgreement", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -34,6 +35,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorAboutRoute
     && useBlazorSocialMediaRoute
     && useBlazorLegalRoute
+    && useBlazorNonDisclosureAgreementRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -86,6 +88,9 @@ builder.Services.AddRazorPages(options =>
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/Index",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Legal/NonDisclosureAgreement",
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
