@@ -2390,6 +2390,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
         Assert.Contains("data-migration-component=\"reset-password-content\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{confirmLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
