@@ -42,6 +42,12 @@ public static class PricingCatalog
 
     public static readonly IReadOnlyDictionary<string, MaterialInfo> Materials = BuildMaterials();
 
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> MaterialColors = BuildMaterialColors();
+
+    private static readonly IReadOnlySet<string> CustomColorMaterials = new HashSet<string>(
+        ["PLA", "PETG", "ABS", "ASA", "TPU", "PC", "PC-FR", "PA6", "PA12", "ABS-FR"],
+        StringComparer.OrdinalIgnoreCase);
+
     public static double AvailablePrinterMinutes => PrinterCount * UtilizationRate * CalendarMinutesPerMonth;
 
     public static double FdmFlowRateMm3PerSecond(FdmFlowClass flowClass) => flowClass switch
@@ -86,6 +92,61 @@ public static class PricingCatalog
         return string.IsNullOrWhiteSpace(key)
             ? null
             : Materials.GetValueOrDefault(key.Trim());
+    }
+
+    public static bool IsColorSupported(string? materialKey, string? color)
+    {
+        if (string.IsNullOrWhiteSpace(materialKey)
+            || string.IsNullOrWhiteSpace(color)
+            || !Materials.ContainsKey(materialKey.Trim())
+            || !MaterialColors.TryGetValue(materialKey.Trim(), out var colors))
+        {
+            return false;
+        }
+
+        return colors.Contains(color, StringComparer.Ordinal)
+            || (CustomColorMaterials.Contains(materialKey.Trim()) && IsHexColor(color));
+    }
+
+    private static bool IsHexColor(string color) => color.Length == 7
+        && color[0] == '#'
+        && color[1..].All(character => character is >= '0' and <= '9'
+            or >= 'A' and <= 'F'
+            or >= 'a' and <= 'f');
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildMaterialColors()
+    {
+        string[] full = ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"];
+        string[] neutral = ["Any", "Natural", "Black", "White", "Gray"];
+        string[] carbon = ["Black", "Natural"];
+
+        return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PLA"] = full,
+            ["PETG"] = full,
+            ["ABS"] = full,
+            ["ASA"] = full,
+            ["HIPS"] = ["Black", "White"],
+            ["TPU"] = ["Any", "Black", "White", "Clear", "Red", "Blue"],
+            ["PC"] = neutral,
+            ["PC-FR"] = neutral,
+            ["PA6"] = neutral,
+            ["PA12"] = neutral,
+            ["ABS-FR"] = neutral,
+            ["PLA-CF"] = carbon,
+            ["PETG-CF"] = carbon,
+            ["PET-CF"] = carbon,
+            ["PA-CF"] = carbon,
+            ["ASA-CF"] = carbon,
+            ["PETG-ESD"] = carbon,
+            ["PC-ESD"] = ["Black"],
+            ["PVA"] = ["Natural"],
+            ["M68"] = ["Gray", "Black", "White"],
+            ["K"] = ["Gray", "Black"],
+            ["G217"] = ["Clear"],
+            ["F80"] = ["Black", "Translucent"],
+            ["CASTWAX"] = ["Green"],
+        };
     }
 
     private static IReadOnlyDictionary<string, MaterialInfo> BuildMaterials()
