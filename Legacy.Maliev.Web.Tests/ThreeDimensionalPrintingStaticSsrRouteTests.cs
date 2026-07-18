@@ -74,6 +74,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LoginPage.razor",
+                "LogoutPage.razor",
                 "NonDisclosureAgreementPage.razor",
                 "PrivacyPolicyPage.razor",
                 "ResetPasswordPage.razor",

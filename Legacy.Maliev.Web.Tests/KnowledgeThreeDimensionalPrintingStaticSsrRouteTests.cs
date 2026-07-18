@@ -68,6 +68,7 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LoginPage.razor",
+                "LogoutPage.razor",
                 "NonDisclosureAgreementPage.razor",
                 "PrivacyPolicyPage.razor",
                 "ResetPasswordPage.razor",

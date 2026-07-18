@@ -1,0 +1,42 @@
+@page "/Account/Logout"
+@using Microsoft.AspNetCore.Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+@inject IStringLocalizer<LogoutContent> Localizer
+@inject NavigationManager Navigation
+
+<PageTitle>@Localizer["Sign out | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+<main class="maliev-page maliev-page-main" data-migration-route-owner="blazor-static-ssr">
+    <div class="maliev-container">
+        <section class="maliev-panel maliev-status">
+            <LogoutContent />
+            <form method="post" action="/Account/Logout">
+                @if (tokens is not null)
+                {
+                    <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                }
+                <button type="submit" class="maliev-button">@Localizer["Sign out"]</button>
+            </form>
+        </section>
+    </div>
+</main>
+
+@code {
+    private AntiforgeryTokenSet? tokens;
+
+    protected override void OnInitialized()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            Navigation.NavigateTo("/Account/Login?ReturnUrl=%2FAccount%2FLogout");
+            return;
+        }
+
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}

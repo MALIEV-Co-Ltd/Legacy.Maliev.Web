@@ -27,6 +27,7 @@ var useBlazorLoginRoute = builder.Configuration.GetValue("BlazorRouting:Login", 
 var useBlazorSignupRoute = builder.Configuration.GetValue("BlazorRouting:Signup", true);
 var useBlazorForgotPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ForgotPassword", true);
 var useBlazorResetPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ResetPassword", true);
+var useBlazorLogoutRoute = builder.Configuration.GetValue("BlazorRouting:Logout", true);
 var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
 var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
 var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
@@ -51,6 +52,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorSignupRoute
     && useBlazorForgotPasswordRoute
     && useBlazorResetPasswordRoute
+    && useBlazorLogoutRoute
     && useBlazorPrivacyPolicyRoute
     && useBlazorTermsConditionsRoute
     && useBlazorCareerIndexRoute
@@ -145,6 +147,15 @@ builder.Services.AddRazorPages(options =>
             });
         options.Conventions.AddPageRouteModelConvention(
             "/Account/ResetPassword",
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
+        options.Conventions.AddPageRouteModelConvention(
+            "/Account/Logout",
             model =>
             {
                 foreach (var selector in model.Selectors)
