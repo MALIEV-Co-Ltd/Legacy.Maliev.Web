@@ -70,6 +70,7 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
                 "NonDisclosureAgreementPage.razor",
                 "PrivacyPolicyPage.razor",
                 "ServicesPage.razor",
+                "SignupPage.razor",
                 "SocialMediaPage.razor",
                 "SpecificationsIndexPage.razor",
                 "TermsConditionsPage.razor",

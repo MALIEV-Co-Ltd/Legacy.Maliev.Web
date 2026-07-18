@@ -42,6 +42,30 @@ function initializeApplication() {
         confirmation.addEventListener('input', validatePasswordConfirmation);
         validatePasswordConfirmation();
     });
+
+    document.querySelectorAll('[data-recaptcha-enterprise-form]').forEach(function (form) {
+        var responseInput = form.querySelector('[data-recaptcha-response]');
+        if (!responseInput || !form.dataset.recaptchaSiteKey) {
+            return;
+        }
+
+        form.addEventListener('submit', function (event) {
+            if (form.dataset.recaptchaVerified === 'true') {
+                return;
+            }
+
+            event.preventDefault();
+            window.grecaptcha.enterprise.ready(function () {
+                window.grecaptcha.enterprise.execute(
+                    form.dataset.recaptchaSiteKey,
+                    { action: 'account_signup' }).then(function (token) {
+                        responseInput.value = token;
+                        form.dataset.recaptchaVerified = 'true';
+                        form.submit();
+                    });
+            });
+        });
+    });
 }
 
 if (document.readyState === 'loading') {

@@ -110,6 +110,43 @@ test('member sidebar preserves desktop, mobile open, and mobile close states wit
     assert.equal(footer.hidden, false);
 });
 
+test('enterprise recaptcha form obtains a token before native submission', async () => {
+    const listeners = new Map();
+    const tokenInput = { value: '' };
+    let nativeSubmissions = 0;
+    const form = {
+        dataset: { recaptchaSiteKey: 'site-key' },
+        querySelector: selector => selector === '[data-recaptcha-response]' ? tokenInput : null,
+        addEventListener: (event, handler) => listeners.set(event, handler),
+        submit: () => { nativeSubmissions += 1; },
+    };
+    const document = createDocument({
+        '[data-recaptcha-enterprise-form]': [form],
+    });
+    const context = createBrowserContext(document, {
+        grecaptcha: {
+            enterprise: {
+                ready: callback => callback(),
+                execute: async (siteKey, options) => {
+                    assert.equal(siteKey, 'site-key');
+                    assert.equal(options.action, 'account_signup');
+                    return 'browser-token';
+                },
+            },
+        },
+    });
+
+    vm.runInContext(appSource, context);
+    let prevented = false;
+    listeners.get('submit')({ preventDefault: () => { prevented = true; } });
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(prevented, true);
+    assert.equal(tokenInput.value, 'browser-token');
+    assert.equal(form.dataset.recaptchaVerified, 'true');
+    assert.equal(nativeSubmissions, 1);
+});
+
 function createBrowserContext(document, windowOverrides = {}) {
     const context = vm.createContext({
         console,
