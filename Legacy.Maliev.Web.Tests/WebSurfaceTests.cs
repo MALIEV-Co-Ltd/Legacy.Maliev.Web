@@ -1619,10 +1619,12 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     {
         var source = await client.GetStringAsync("/");
         var consentIndex = source.IndexOf("gtag('consent', 'default'", StringComparison.Ordinal);
-        var loaderIndex = source.IndexOf("(function (w, d, s, l, i)", StringComparison.Ordinal);
+        var loaderIndex = source.IndexOf("window.malievLoadGoogleTagManager =", StringComparison.Ordinal);
+        var grantedLoadIndex = source.IndexOf("if (consentState === 'granted')", StringComparison.Ordinal);
 
         Assert.True(consentIndex >= 0, "Consent Mode v2 must be declared in the document head.");
-        Assert.True(loaderIndex > consentIndex, "Consent defaults must be queued before GTM loads.");
+        Assert.True(loaderIndex > consentIndex, "Consent defaults must be queued before the GTM loader is declared.");
+        Assert.True(grantedLoadIndex > loaderIndex, "GTM loading must remain conditional on granted consent.");
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("google-site-verification", source, StringComparison.Ordinal);
         Assert.Contains("data-consent-action=\"accept\"", source, StringComparison.Ordinal);

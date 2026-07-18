@@ -50,6 +50,9 @@
 
                 document.cookie = 'maliev_tracking_consent=; Path=/; Max-Age=0; SameSite=Lax; Secure';
                 updateGoogleConsent('granted');
+                if (typeof window.malievLoadGoogleTagManager === 'function') {
+                    window.malievLoadGoogleTagManager();
+                }
                 cookieConsent.remove();
             }, false);
 
