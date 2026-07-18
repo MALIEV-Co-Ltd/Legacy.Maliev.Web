@@ -44,7 +44,19 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.Contains("pendingEvents", google, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.emit", google, StringComparison.Ordinal);
         Assert.Contains("file_upload_complete", google, StringComparison.Ordinal);
+        Assert.Contains("window.malievLoadGoogleTagManager", google, StringComparison.Ordinal);
+        Assert.Contains("if (consentState === 'granted')", google, StringComparison.Ordinal);
+        Assert.Contains("data-maliev-gtm-loader", google, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "})(window, document, 'script', 'dataLayer', 'GTM-KHDDLVRR');",
+            google,
+            StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.setConsent(state)", consent, StringComparison.Ordinal);
+        Assert.Contains("window.malievLoadGoogleTagManager();", consent, StringComparison.Ordinal);
+        Assert.True(
+            consent.IndexOf("updateGoogleConsent('granted')", StringComparison.Ordinal) <
+            consent.IndexOf("window.malievLoadGoogleTagManager();", StringComparison.Ordinal),
+            "Google consent must be granted before the GTM network loader runs.");
         Assert.Contains("window.malievAnalytics.emit(contactEvent)", contact, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.emit(reviewEvent)", contact, StringComparison.Ordinal);
         Assert.DoesNotContain("window.dataLayer.push(contactEvent)", contact, StringComparison.Ordinal);
