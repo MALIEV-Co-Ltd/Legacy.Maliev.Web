@@ -127,7 +127,7 @@
     <value>ข้อมูลเพิ่มเติมเกี่ยวกับงาน</value>
   </data>
   <data name="Email" xml:space="preserve">
-    <value>Email</value>
+    <value>อีเมล</value>
   </data>
   <data name="Lead time" xml:space="preserve">
     <value>ระยะเวลา</value>
@@ -145,7 +145,7 @@
     <value>ราคาประเมิน</value>
   </data>
   <data name="Ready for manufacturing" xml:space="preserve">
-    <value>ส่งงานให้เราเริ่มตรวจสอบ</value>
+    <value>พร้อมเข้าสู่กระบวนการผลิต</value>
   </data>
   <data name="Start by uploading a file" xml:space="preserve">
     <value>เริ่มต้นด้วยการส่งไฟล์</value>
@@ -217,7 +217,7 @@
     <value>ยังไม่รวมค่าจัดส่งและภาษีมูลค่าเพิ่ม</value>
   </data>
   <data name="We will get back to you with a quotation" xml:space="preserve">
-    <value>ชำระเงินผ่านใบเสนอราคาก่อนเริ่มงาน</value>
+    <value>เราจะติดต่อกลับพร้อมใบเสนอราคา</value>
   </data>
   <data name="Reset view" xml:space="preserve">
     <value>รีเซ็ตมุมมอง</value>
@@ -326,4 +326,38 @@
   <data name="Estimate calculated. A formal quotation requires engineering review." xml:space="preserve"><value>คำนวณราคาแล้ว ใบเสนอราคาอย่างเป็นทางการต้องผ่านการตรวจสอบโดยวิศวกร</value></data>
   <data name="The estimate could not be calculated. Continue to the formal quotation form for assistance." xml:space="preserve"><value>ไม่สามารถคำนวณราคาได้ โปรดไปยังแบบฟอร์มขอใบเสนอราคาเพื่อรับความช่วยเหลือ</value></data>
   <data name="minutes" xml:space="preserve"><value>นาที</value></data>
+  <data name="{0}–{1} business days" xml:space="preserve"><value>{0}–{1} วันทำการ</value></data>
+  <data name="3D preview" xml:space="preserve"><value>ตัวอย่าง 3 มิติ</value></data>
+  <data name="3D preview is unavailable. You can continue with your quotation." xml:space="preserve"><value>ไม่สามารถแสดงตัวอย่าง 3 มิติได้ คุณยังสามารถดำเนินการขอใบเสนอราคาต่อได้</value></data>
+  <data name="Cancel" xml:space="preserve"><value>ยกเลิก</value></data>
+  <data name="Company" xml:space="preserve"><value>บริษัท</value></data>
+  <data name="Enter customer details to continue." xml:space="preserve"><value>กรอกข้อมูลลูกค้าเพื่อดำเนินการต่อ</value></data>
+  <data name="File uploaded. Configure the part to continue." xml:space="preserve"><value>อัปโหลดไฟล์แล้ว กรุณาตั้งค่าชิ้นงานเพื่อดำเนินการต่อ</value></data>
+  <data name="Fullscreen" xml:space="preserve"><value>เต็มหน้าจอ</value></data>
+  <data name="Interactive 3D part preview" xml:space="preserve"><value>ตัวอย่างชิ้นงาน 3 มิติแบบโต้ตอบ</value></data>
+  <data name="Multiple parts are ready to configure." xml:space="preserve"><value>ชิ้นงานหลายชิ้นพร้อมให้ตั้งค่าแล้ว</value></data>
+  <data name="Part configuration is ready for review." xml:space="preserve"><value>ตั้งค่าชิ้นงานเรียบร้อย พร้อมตรวจสอบรายการ</value></data>
+  <data name="Quotation steps" xml:space="preserve"><value>ขั้นตอนการขอใบเสนอราคา</value></data>
+  <data name="Remove" xml:space="preserve"><value>ลบ</value></data>
+  <data name="Request not submitted" xml:space="preserve"><value>ยังไม่ได้ส่งคำขอ</value></data>
+  <data name="Request reference" xml:space="preserve"><value>เลขอ้างอิงคำขอ</value></data>
+  <data name="Request saved" xml:space="preserve"><value>บันทึกคำขอแล้ว</value></data>
+  <data name="Return to your quotation" xml:space="preserve"><value>กลับไปยังรายการประเมินราคา</value></data>
+  <data name="Review" xml:space="preserve"><value>ตรวจสอบรายการ</value></data>
+  <data name="Review the order before entering customer details." xml:space="preserve"><value>ตรวจสอบรายการก่อนกรอกข้อมูลลูกค้า</value></data>
+  <data name="Subtotal" xml:space="preserve"><value>ยอดรวมย่อย</value></data>
+  <data name="Tax number" xml:space="preserve"><value>เลขประจำตัวผู้เสียภาษี</value></data>
+  <data name="The file could not be uploaded. Try again." xml:space="preserve"><value>ไม่สามารถอัปโหลดไฟล์ได้ โปรดลองอีกครั้ง</value></data>
+  <data name="The uploaded part preview will appear here." xml:space="preserve"><value>ตัวอย่างชิ้นงานที่อัปโหลดจะแสดงที่นี่</value></data>
+  <data name="Try again" xml:space="preserve"><value>ลองอีกครั้ง</value></data>
+  <data name="Upload cancelled" xml:space="preserve"><value>ยกเลิกการอัปโหลดแล้ว</value></data>
+  <data name="Uploading files…" xml:space="preserve"><value>กำลังอัปโหลดไฟล์…</value></data>
+  <data name="Upload progress" xml:space="preserve"><value>ความคืบหน้าการอัปโหลด</value></data>
+  <data name="Use arrow keys to rotate, plus or minus to zoom, 0 to reset, and Home to fit." xml:space="preserve"><value>ใช้ปุ่มลูกศรเพื่อหมุน ปุ่มบวกหรือลบเพื่อซูม ปุ่ม 0 เพื่อรีเซ็ต และปุ่ม Home เพื่อปรับมุมมองให้พอดี</value></data>
+  <data name="View" xml:space="preserve"><value>ดู</value></data>
+  <data name="Waiting" xml:space="preserve"><value>กำลังรอ</value></data>
+  <data name="Your quotation request was submitted." xml:space="preserve"><value>ส่งคำขอใบเสนอราคาแล้ว</value></data>
+  <data name="Your request could not be submitted. Please review the form and try again." xml:space="preserve"><value>ไม่สามารถส่งคำขอได้ กรุณาตรวจสอบแบบฟอร์มแล้วลองอีกครั้ง</value></data>
+  <data name="Your request was not submitted." xml:space="preserve"><value>ยังไม่ได้ส่งคำขอของคุณ</value></data>
+  <data name="Your request was saved. File processing is pending. Do not resubmit." xml:space="preserve"><value>บันทึกคำขอแล้ว ระบบกำลังประมวลผลไฟล์ กรุณาอย่าส่งซ้ำ</value></data>
 </root>
