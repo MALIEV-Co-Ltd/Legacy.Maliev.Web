@@ -2,21 +2,23 @@
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
 <section class="instant-quote__workflow"
+         @ref="workflowSection"
          aria-labelledby="instant-quote-workflow-heading"
          aria-busy="@IsBusy.ToString().ToLowerInvariant()"
          data-workflow-state="@State.ToString().ToLowerInvariant()">
-    <h2 id="instant-quote-workflow-heading">@Localizer["Instant Pricing"]</h2>
+    <h2 id="instant-quote-workflow-heading" class="instant-quote__sr-only">@Localizer["Instant Pricing"]</h2>
 
-    <p id="instant-quote-status" aria-live="polite" aria-atomic="true">@StatusMessage</p>
-    <p data-workflow-preview-status role="status">@PreviewStatusMessage</p>
+    <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
+    <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
 
     @if (VisibleSections.Upload)
     {
-        <section data-workflow-upload aria-labelledby="instant-quote-upload-heading">
-            <h3 id="instant-quote-upload-heading">@Localizer["Start by uploading a file"]</h3>
-            <p>@Localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."]</p>
-            <label for="instant-quote-files">@Localizer["Add file"]</label>
+        <section data-workflow-upload
+                 class="@(State is InstantQuotationWorkflowState.Empty ? null : "instant-quote__upload-control")"
+                 aria-labelledby="instant-quote-upload-heading">
+            <h3 id="instant-quote-upload-heading" class="instant-quote__sr-only">@Localizer["Start by uploading a file"]</h3>
             <InputFile id="instant-quote-files"
+                       class="iq-file-input--empty"
                        @ref="fileInput"
                        name="files"
                        OnChange="UploadFilesAsync"
@@ -24,30 +26,18 @@
                        accept=".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges"
                        aria-describedby="instant-quote-upload-help instant-quote-status"
                        disabled="@InputDisabled" />
-            <p id="instant-quote-upload-help">
-                @Localizer["Drop your 3D file here"] — @Localizer["or click to browse"]
+            <span id="instant-quote-upload-help" class="instant-quote__sr-only">
                 @Localizer["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each."]
-            </p>
-
-            @foreach (var upload in Uploads)
+            </span>
+            @if (State is InstantQuotationWorkflowState.Empty)
             {
-                <article data-workflow-upload-item aria-labelledby="upload-name-@upload.LocalId">
-                    <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
-                    <p>@UploadStatus(upload.Status)</p>
-                    @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
-                    {
-                        <progress aria-label="@Localizer["Upload progress"]"></progress>
-                        <button type="button"
-                                aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
-                                @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
-                    }
-                    else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
-                    {
-                        <button type="button"
-                                aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
-                                @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
-                    }
-                </article>
+                <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone>
+                    <span class="iq-empty-dropzone__icon" aria-hidden="true">📦</span>
+                    <strong>@Localizer["Drop your 3D file here"]</strong>
+                    <span>
+                        @Localizer["or click to browse"] · STL, OBJ, 3MF, STEP, IGES, GLB, GLTF
+                    </span>
+                </label>
             }
         </section>
     }
@@ -76,6 +66,33 @@
     {
         <section data-workflow-parts data-workflow-part-list aria-labelledby="instant-quote-parts-heading">
             <h3 id="instant-quote-parts-heading">@Localizer["Parts"]</h3>
+            <label for="instant-quote-files"
+                   class="iq-compact-dropzone"
+                   aria-disabled="@InputDisabled.ToString().ToLowerInvariant()">
+                <span aria-hidden="true">＋</span>
+                <strong>@Localizer["Add file"]</strong>
+                <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
+            </label>
+            @foreach (var upload in Uploads.Where(upload => Parts.All(part => part.PreviewCorrelationId != upload.LocalId)))
+            {
+                <article data-workflow-upload-item aria-labelledby="upload-name-@upload.LocalId">
+                    <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
+                    <p>@UploadStatus(upload.Status)</p>
+                    @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
+                    {
+                        <progress aria-label="@Localizer["Upload progress"]"></progress>
+                        <button type="button"
+                                aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
+                                @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
+                    }
+                    else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
+                    {
+                        <button type="button"
+                                aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
+                                @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                    }
+                </article>
+            }
             @foreach (var part in Parts)
             {
                 <article data-workflow-part data-part-id="@part.PartId">
@@ -103,7 +120,7 @@
             <section data-workflow-dfm-status aria-labelledby="instant-quote-dfm-heading">
                 <h4 id="instant-quote-dfm-heading">@Localizer["Design-for-manufacturing checks"]</h4>
                 <p>@Localizer["You'll get a feedback from us if your design has potential problems."]</p>
-                @foreach (var part in Parts)
+                @foreach (var part in ConfigurationParts)
                 {
                     var geometry = part.Geometry;
                     var oddlySmall = Math.Min(geometry.DimensionXmm, Math.Min(geometry.DimensionYmm, geometry.DimensionZmm)) is > 0 and < 3;
@@ -160,7 +177,7 @@
                 }
             </section>
 
-            @foreach (var part in Parts)
+            @foreach (var part in ConfigurationParts)
             {
                 <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
                     <legend>@part.DisplayFileName — @Localizer["Settings"]</legend>
@@ -216,19 +233,22 @@
                 </dl>
             }
 
-            <dl data-workflow-order-summary data-workflow-order-total aria-live="polite" aria-atomic="true">
-                <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
-                <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
-                <div><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
-                <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
-                <div data-workflow-lead-time>
-                    <dt>@Localizer["Lead time"]</dt>
-                    <dd>@LeadTime</dd>
-                </div>
-            </dl>
+            <div class="instant-quote__configuration-footer">
+                <dl data-workflow-order-summary data-workflow-order-total aria-live="polite" aria-atomic="true">
+                    <div class="instant-quote__summary-detail"><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
+                    <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
+                    <div class="instant-quote__summary-detail"><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
+                    <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
+                    <div data-workflow-lead-time>
+                        <dt>@Localizer["Lead time"]</dt>
+                        <dd>@LeadTime</dd>
+                    </div>
+                </dl>
 
-            <button type="button" disabled>@Localizer["Back"]</button>
-            <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
+                <div class="instant-quote__configuration-actions">
+                    <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
+                </div>
+            </div>
         </section>
     }
 
@@ -252,13 +272,16 @@
              @ref="customerDetailsSection"
              tabindex="-1"
              aria-labelledby="instant-quote-customer-heading">
-            <InstantQuotationCustomerForm Model="@CustomerModel" OnBack="ReturnToReview" />
+            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview" />
         </div>
     }
 
     @if (VisibleSections.Submitted)
     {
         <section data-workflow-submitted aria-labelledby="instant-quote-submitted-heading">
+            <span class="instant-quote__submission-icon @(CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus ? null : "instant-quote__submission-icon--warning")" aria-hidden="true">
+                @(CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus ? "✓" : "!")
+            </span>
             <h3 id="instant-quote-submitted-heading">@SubmittedHeading</h3>
             @if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.PartialStatus)
             {

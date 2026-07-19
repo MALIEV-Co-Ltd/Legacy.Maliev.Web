@@ -7,6 +7,7 @@ using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Components.Endpoints;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -473,9 +474,15 @@ app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
 if (useBlazorRouteHost)
 {
-    app.MapRazorComponents<App>()
-        .AddInteractiveServerRenderMode()
-        .WithMetadata(new HttpMethodMetadata(["GET", "HEAD"]));
+    var razorComponents = app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode();
+    razorComponents.Add(endpointBuilder =>
+    {
+        if (endpointBuilder.Metadata.OfType<ComponentTypeMetadata>().Any())
+        {
+            endpointBuilder.Metadata.Add(new HttpMethodMetadata(["GET", "HEAD"]));
+        }
+    });
     app.MapPost(
             "/",
             ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>

@@ -1712,8 +1712,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Start by uploading a file", "Instant Pricing", "Add file", "No file selected")]
-    [InlineData("th", "เริ่มต้นด้วยการส่งไฟล์", "ประเมินราคาพิมพ์ 3D", "เลือกไฟล์", "ยังไม่ได้เลือกไฟล์")]
+    [InlineData("en", "Start by uploading a file", "Instant Pricing", "or click to browse", "No file selected")]
+    [InlineData("th", "เริ่มต้นด้วยการส่งไฟล์", "ประเมินราคาพิมพ์ 3D", "หรือคลิกเพื่อเลือกไฟล์", "ยังไม่ได้เลือกไฟล์")]
     public async Task InstantQuotation_RendersLocalizedStaticSsrWorkflowShell(
         string culture,
         string heading,
@@ -1729,7 +1729,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"instant-quotation-three-dimensional-printing\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{workflowHeading}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{fileLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(fileLabel, decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{emptyStatus}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("data-workflow-state=\"empty\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workflow-upload", source, StringComparison.Ordinal);

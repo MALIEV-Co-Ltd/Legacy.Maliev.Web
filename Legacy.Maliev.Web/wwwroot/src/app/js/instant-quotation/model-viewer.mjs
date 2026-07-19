@@ -192,6 +192,15 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return adapter.fullscreen?.();
   }
 
+  function snapshot(id) {
+    assertActive();
+    const previousId = activeId;
+    select(id);
+    const image = adapter.snapshot?.() ?? null;
+    if (previousId !== null && previousId !== id) select(previousId);
+    return image;
+  }
+
   function handleKey(event) {
     if (disposed) return false;
     const actions = {
@@ -235,7 +244,7 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return part;
   }
 
-  return Object.freeze({ addPart, select, remove, setColor, reset, fit, fullscreen, handleKey, dispose });
+  return Object.freeze({ addPart, select, remove, setColor, reset, fit, fullscreen, snapshot, handleKey, dispose });
 }
 
 /** Creates the production Three.js viewer. Call only inside the quotation island. */
@@ -283,6 +292,12 @@ export function createThreeModelViewer(canvas) {
     reset(object) { frameObject(object, camera, controls); },
     fit(object) { frameObject(object, camera, controls); },
     fullscreen() { return canvas.requestFullscreen?.(); },
+    snapshot() {
+      resize.sync();
+      controls.update();
+      renderer.render(scene, camera);
+      return canvas.toDataURL('image/png');
+    },
     setColor(object, color) {
       object.traverse(child => {
         if (child.isMesh && child.material?.color) child.material.color.set(color);

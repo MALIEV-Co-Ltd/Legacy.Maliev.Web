@@ -99,9 +99,49 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("ReturnToReview", markup, StringComparison.Ordinal);
         Assert.Contains("<InstantQuotationReview", markup, StringComparison.Ordinal);
         Assert.Contains("<InstantQuotationCustomerForm", markup, StringComparison.Ordinal);
+        Assert.Contains("instant-quote__flow-step", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
+        Assert.Contains("instant-quote__review-thumbnail", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
+        Assert.Contains("data-review-thumbnail", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
+        Assert.DoesNotContain("📦", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
+        Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
+        Assert.Contains("instant-quote__flow-step", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
+        Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
+        Assert.Contains("Quote=\"@OrderQuote\"", markup, StringComparison.Ordinal);
         Assert.Contains(".EnterReview();", code, StringComparison.Ordinal);
         Assert.Contains(".EnterCustomerDetails();", code, StringComparison.Ordinal);
         Assert.DoesNotContain("pricingService.Quote", NavigationMethods(coordinator), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workflow_PreservesProductionUploadConfigureReviewCustomerSubmitProgression()
+    {
+        var markup = ReadComponent("InstantQuotationWorkflow.razor");
+        var customerForm = ReadComponent("InstantQuotationCustomerForm.razor");
+
+        var empty = markup.IndexOf("data-workflow-empty-dropzone", StringComparison.Ordinal);
+        var configuration = markup.IndexOf("data-workflow-configuration", StringComparison.Ordinal);
+        var review = markup.IndexOf("data-workflow-review", StringComparison.Ordinal);
+        var customer = markup.IndexOf("data-workflow-customer-details", StringComparison.Ordinal);
+        var submitted = markup.IndexOf("data-workflow-submitted", StringComparison.Ordinal);
+
+        Assert.True(empty >= 0);
+        Assert.True(configuration > empty);
+        Assert.True(review > configuration);
+        Assert.True(customer > review);
+        Assert.True(submitted > customer);
+        Assert.Contains("type=\"submit\"", customerForm, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReviewThumbnail_UsesTheExactViewerAdmissionPartKey()
+    {
+        var partId = Guid.Parse("31443317-b5c4-4a26-88bc-d2d065f66123");
+
+        Assert.Equal("31443317b5c44a2688bcd2d065f66123", InstantQuotationWorkflow.ViewerPartKey(partId));
+        Assert.Contains(
+            "InstantQuotationWorkflow.ViewerPartKey(part.PartId)",
+            ReadComponent("InstantQuotationReview.razor"),
+            StringComparison.Ordinal);
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -83,7 +84,10 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             "InstantQuotation",
             "ThreeDimensionalPrintingEstimateContent.razor"));
 
-        Assert.Contains("Start by uploading a file", document, StringComparison.Ordinal);
+        Assert.Contains("Start by uploading a file", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("instant-quote__header", document, StringComparison.Ordinal);
+        Assert.Contains("data-workflow-empty-dropzone", source, StringComparison.Ordinal);
+        Assert.Contains("iq-empty-dropzone__icon", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Height (mm)", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Solid volume", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Footprint", document, StringComparison.OrdinalIgnoreCase);
@@ -170,13 +174,13 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         Assert.NotNull(visibilityMethod);
 
         AssertVisibility("Empty", upload: true);
-        AssertVisibility("Uploading", upload: true);
-        AssertVisibility("Uploaded", viewer: true, parts: true, configuration: true);
+        AssertVisibility("Uploading", upload: true, viewer: true, parts: true, configuration: true);
+        AssertVisibility("Uploaded", upload: true, viewer: true, parts: true, configuration: true);
         AssertVisibility("Error", upload: true, error: true);
-        AssertVisibility("MultiPart", viewer: true, parts: true, configuration: true);
-        AssertVisibility("Configured", viewer: true, parts: true, configuration: true);
-        AssertVisibility("Review", review: true);
-        AssertVisibility("CustomerDetails", customerDetails: true);
+        AssertVisibility("MultiPart", upload: true, viewer: true, parts: true, configuration: true);
+        AssertVisibility("Configured", upload: true, viewer: true, parts: true, configuration: true);
+        AssertVisibility("Review", viewer: true, review: true);
+        AssertVisibility("CustomerDetails", viewer: true, customerDetails: true);
         AssertVisibility("Submitted", submitted: true);
 
         void AssertVisibility(
@@ -206,6 +210,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
     [Theory]
     [InlineData("/InstantQuotation/3D-Printing")]
+    [InlineData("/InstantQuotation/3D-Printing/")]
     [InlineData("/instantquotation/3d-printing?culture=en")]
     [InlineData("/INSTANTQUOTATION/3D-PRINTING?culture=th&source=review")]
     public async Task InstantQuotationRoute_LoadsScopedBlazorBootstrapAtBodyEnd(string requestPath)
@@ -214,6 +219,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<base href=\"/\" />", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Equal(1, Count(source, "_framework/blazor.web.js"));
         Assert.True(
             source.IndexOf("/dist/app.min.js", StringComparison.Ordinal) <
@@ -230,18 +237,64 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.DoesNotContain("<base href=", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BlazorNegotiation_PostRemainsAvailableForTheInteractiveWorkflow()
+    {
+        using var response = await client.PostAsync(
+            "/_blazor/negotiate?negotiateVersion=1",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task InstantQuotationQueryCulture_PersistsForTheInteractiveCircuit(string culture)
+    {
+        using var response = await client.GetAsync($"/InstantQuotation/3D-Printing?culture={culture}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var cookie = Assert.Single(
+            response.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith(
+                $"{CookieRequestCultureProvider.DefaultCookieName}=",
+                StringComparison.Ordinal));
+        Assert.Contains($"c%3D{culture}%7Cuic%3D{culture}", cookie, StringComparison.Ordinal);
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InstantQuotationUnknownQueryCulture_DoesNotPersistACookie()
+    {
+        using var response = await client.GetAsync("/InstantQuotation/3D-Printing?culture=unknown");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var cookies = response.Headers.TryGetValues("Set-Cookie", out var values) ? values : [];
+        Assert.DoesNotContain(
+            cookies,
+            value => value.StartsWith(
+                $"{CookieRequestCultureProvider.DefaultCookieName}=",
+                StringComparison.Ordinal));
     }
 
     [Theory]
     [InlineData(InstantQuotationWorkflowState.Empty, "data-workflow-upload")]
-    [InlineData(InstantQuotationWorkflowState.Uploading, "data-workflow-upload")]
-    [InlineData(InstantQuotationWorkflowState.Uploaded, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Uploading, "data-workflow-upload|data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Uploaded, "data-workflow-upload|data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
     [InlineData(InstantQuotationWorkflowState.Error, "data-workflow-upload|role=\"alert\"")]
-    [InlineData(InstantQuotationWorkflowState.MultiPart, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
-    [InlineData(InstantQuotationWorkflowState.Configured, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
-    [InlineData(InstantQuotationWorkflowState.Review, "data-workflow-review")]
-    [InlineData(InstantQuotationWorkflowState.CustomerDetails, "data-workflow-customer-details")]
+    [InlineData(InstantQuotationWorkflowState.MultiPart, "data-workflow-upload|data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Configured, "data-workflow-upload|data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
+    [InlineData(InstantQuotationWorkflowState.Review, "data-workflow-viewer|data-workflow-review")]
+    [InlineData(InstantQuotationWorkflowState.CustomerDetails, "data-workflow-viewer|data-workflow-customer-details")]
     [InlineData(InstantQuotationWorkflowState.Submitted, "data-workflow-submitted")]
     public async Task WorkflowState_RendersOnlyItsMappedSections(
         InstantQuotationWorkflowState state,
@@ -275,6 +328,22 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
         Assert.Equal(state is InstantQuotationWorkflowState.Uploading, html.Contains("aria-busy=\"true\"", StringComparison.Ordinal));
         Assert.Equal(state is InstantQuotationWorkflowState.Error, html.Contains("role=\"alert\"", StringComparison.Ordinal));
+        Assert.Equal(
+            state is InstantQuotationWorkflowState.Empty
+                or InstantQuotationWorkflowState.Uploading
+                or InstantQuotationWorkflowState.Uploaded
+                or InstantQuotationWorkflowState.Error
+                or InstantQuotationWorkflowState.MultiPart
+                or InstantQuotationWorkflowState.Configured
+                ? 1
+                : 0,
+            Count(html, "id=\"instant-quote-files\""));
+        Assert.Equal(
+            state is InstantQuotationWorkflowState.Uploading
+                or InstantQuotationWorkflowState.Uploaded
+                or InstantQuotationWorkflowState.MultiPart
+                or InstantQuotationWorkflowState.Configured,
+            html.Contains("iq-compact-dropzone", StringComparison.Ordinal));
         foreach (var forbidden in new[]
         {
             "protected-session",
@@ -305,7 +374,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             System.Text.RegularExpressions.RegexOptions.Singleline);
         if (state is InstantQuotationWorkflowState.CustomerDetails)
         {
-            Assert.Equal(2, enabledButtons.Count);
+            Assert.Equal(5, enabledButtons.Count);
+            Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
             Assert.Contains(enabledButtons, match => match.Value.Contains("Back", StringComparison.Ordinal));
             Assert.Contains(enabledButtons, match => match.Value.Contains("Submit", StringComparison.Ordinal));
             return;
@@ -313,7 +383,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
         if (state is InstantQuotationWorkflowState.Review)
         {
-            Assert.Equal(2, enabledButtons.Count);
+            Assert.Equal(5, enabledButtons.Count);
+            Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
             Assert.Contains(enabledButtons, match => match.Value.Contains("Back", StringComparison.Ordinal));
             Assert.Contains(enabledButtons, match => match.Value.Contains("Customer details", StringComparison.Ordinal));
             return;
@@ -344,6 +415,10 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
         Assert.Contains(expectedHeading, html, StringComparison.Ordinal);
         Assert.Contains(expectedStatus, html, StringComparison.Ordinal);
+        Assert.Contains("instant-quote__submission-icon", html, StringComparison.Ordinal);
+        Assert.Equal(
+            status is not "completed",
+            html.Contains("instant-quote__submission-icon--warning", StringComparison.Ordinal));
         if (status is not "completed")
         {
             Assert.DoesNotContain("Ready for manufacturing", html, StringComparison.Ordinal);

@@ -1,8 +1,21 @@
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
 <section data-workflow-customer-details-content aria-labelledby="instant-quote-customer-heading">
-    <h3 id="instant-quote-customer-heading">@Localizer["Customer details"]</h3>
+    <header class="instant-quote__panel-header">
+        <h3 id="instant-quote-customer-heading">@Localizer["Customer details"]</h3>
+    </header>
+    <span class="instant-quote__flow-step">@Localizer["Step 3 of 3"]</span>
     <p>@Localizer["Required fields are marked with an asterisk."]</p>
+    <section class="instant-quote__pricing-summary" aria-labelledby="instant-quote-customer-summary-heading">
+        <h4 id="instant-quote-customer-summary-heading">@Localizer["Order summary"]</h4>
+        <dl>
+            <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
+            <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
+            <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
+            <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>
+            <div><dt>@Localizer["Lead time"]</dt><dd>@LeadTime</dd></div>
+        </dl>
+    </section>
     @if (Model.InvalidFields.Count > 0)
     {
         <div class="instant-quote__validation-summary" role="alert" tabindex="-1" autofocus>
@@ -83,9 +96,18 @@
     public InstantQuotationCustomerDisplayModel Model { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
 
     [Parameter]
+    public Legacy.Maliev.Web.Application.InstantQuotationOrderQuote? Quote { get; set; }
+
+    [Parameter]
     public EventCallback OnBack { get; set; }
 
     private bool HasError(string field) => Model.InvalidFields.Contains(field, StringComparer.Ordinal);
+
+    private string LeadTime => Quote is null
+        ? "—"
+        : Localizer["{0}–{1} business days", Quote.LeadTimeMinimumDays, Quote.LeadTimeMaximumDays];
+
+    private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
 
     private string AriaInvalid(string field) => HasError(field) ? "true" : "false";
 

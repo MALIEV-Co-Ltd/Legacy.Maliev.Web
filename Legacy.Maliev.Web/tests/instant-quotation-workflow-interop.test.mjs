@@ -47,6 +47,11 @@ function harness(
     reset: () => calls.push(['reset']),
     fit: () => calls.push(['fit']),
     fullscreen: () => calls.push(['fullscreen']),
+    snapshot: id => {
+      calls.push(['snapshot', id]);
+      if (id === 'missing') throw new RangeError('Unknown viewer part.');
+      return `data:image/png;base64,${id}`;
+    },
     dispose: () => calls.push(['dispose']),
   };
   return {
@@ -86,6 +91,25 @@ test('returns a same-file upload-derived geometry claim with lowercase SHA-256',
     ...expectedGeometry,
     sha256: '52af3eb361bcd7105f22ad173ae6dadf1674de3201e79ba6f55e11f45dd06bcf',
   });
+});
+
+test('review thumbnails use admitted browser previews and preserve fallback when unavailable', async () => {
+  const { interop, calls } = harness();
+  const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+  await interop.getGeometryClaim(key);
+  interop.attach({});
+  interop.admit(key, 'part-a');
+  const admitted = { dataset: { partId: 'part-a' }, src: '/fallback.svg' };
+  const unavailable = { dataset: { partId: 'missing' }, src: '/fallback.svg' };
+  const root = { querySelectorAll: () => [admitted, unavailable] };
+
+  assert.equal(interop.renderReviewThumbnails(root), 1);
+  assert.equal(admitted.src, 'data:image/png;base64,part-a');
+  assert.equal(unavailable.src, '/fallback.svg');
+  assert.deepEqual(calls.filter(call => call[0] === 'snapshot'), [
+    ['snapshot', 'part-a'],
+    ['snapshot', 'missing'],
+  ]);
 });
 
 test('quarantined and released previews cannot yield stale geometry claims', async () => {

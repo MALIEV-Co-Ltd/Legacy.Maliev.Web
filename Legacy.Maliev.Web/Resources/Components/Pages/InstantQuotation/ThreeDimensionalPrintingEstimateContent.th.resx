@@ -430,4 +430,10 @@
   <data name="There are problems with the customer details." xml:space="preserve"><value>ข้อมูลลูกค้าบางช่องไม่ถูกต้อง</value></data>
   <data name="Please correct {0}." xml:space="preserve"><value>กรุณาแก้ไข{0}</value></data>
   <data name="Please correct this field." xml:space="preserve"><value>กรุณาแก้ไขช่องนี้</value></data>
+  <data name="Review order items" xml:space="preserve"><value>ตรวจสอบรายการ</value></data>
+  <data name="Step 2 of 3" xml:space="preserve"><value>ขั้นตอนที่ 2 จาก 3</value></data>
+  <data name="Review each item, the complete price, and estimated lead time before entering your contact details." xml:space="preserve"><value>โปรดตรวจสอบรายละเอียด ราคา และระยะเวลาผลิตโดยประมาณก่อนกรอกข้อมูลติดต่อ</value></data>
+  <data name="Price and lead-time summary" xml:space="preserve"><value>สรุปราคาและระยะเวลาผลิต</value></data>
+  <data name="Step 3 of 3" xml:space="preserve"><value>ขั้นตอนที่ 3 จาก 3</value></data>
+  <data name="Order summary" xml:space="preserve"><value>สรุปคำสั่งซื้อ</value></data>
 </root>

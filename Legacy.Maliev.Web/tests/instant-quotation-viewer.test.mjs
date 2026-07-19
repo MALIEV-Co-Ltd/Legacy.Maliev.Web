@@ -43,6 +43,19 @@ test('viewer retains camera state per part and exposes orbit keyboard alternativ
   assert.equal(adapter.fullscreens, 1);
 });
 
+test('review snapshot renders the requested part and restores the active part', () => {
+  const adapter = createAdapter();
+  const viewer = createModelViewer({ adapter });
+  viewer.addPart('a', disposableObject());
+  viewer.addPart('b', disposableObject());
+  viewer.select('a');
+
+  assert.equal(viewer.snapshot('b'), 'data:image/png;base64,preview');
+  assert.equal(adapter.snapshots, 1);
+  viewer.setColor('#123456');
+  assert.equal(adapter.colors.length, 1);
+});
+
 test('disconnected-body colors are stable and color lock prevents material changes', () => {
   assert.equal(stableBodyColor(0), stableBodyColor(0));
   assert.notEqual(stableBodyColor(0), stableBodyColor(1));
@@ -268,7 +281,7 @@ function createAdapter() {
   let cameraState = { position: [0, 0, 5], target: [0, 0, 0] };
   return {
     orbits: [], zooms: [], colors: [], bodyColors: [], resets: 0, fits: 0, fullscreens: 0,
-    controlsDisposed: 0, rendererDisposed: 0, contextLost: 0, rafCancelled: 0,
+    controlsDisposed: 0, rendererDisposed: 0, contextLost: 0, rafCancelled: 0, snapshots: 0,
     get cameraState() { return structuredClone(cameraState); },
     set cameraState(value) { cameraState = structuredClone(value); },
     getCameraState() { return this.cameraState; },
@@ -279,6 +292,7 @@ function createAdapter() {
     reset() { this.resets += 1; },
     fit() { this.fits += 1; },
     fullscreen() { this.fullscreens += 1; },
+    snapshot() { this.snapshots += 1; return 'data:image/png;base64,preview'; },
     setColor(value) { this.colors.push(value); },
     setBodyColors(_object, values) { this.bodyColors = values; },
     disposeControls() { this.controlsDisposed += 1; },

@@ -116,7 +116,7 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Thailand", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
         Assert.Contains("data-workflow-upload", source, StringComparison.Ordinal);
         Assert.Contains(

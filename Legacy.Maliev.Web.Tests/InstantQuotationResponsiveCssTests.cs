@@ -18,6 +18,13 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains(":focus-visible", css, StringComparison.Ordinal);
         Assert.Contains("outline: 3px solid", css, StringComparison.Ordinal);
         Assert.Contains("@media (min-width: 48rem)", css, StringComparison.Ordinal);
+        Assert.Contains("body.instant-quotation-shell", css, StringComparison.Ordinal);
+        Assert.Contains("[data-workflow-state=\"empty\"]", css, StringComparison.Ordinal);
+        Assert.Contains(".iq-empty-dropzone", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: calc(100dvh - 4.5625rem)", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: minmax(0, 44fr) minmax(0, 56fr)", css, StringComparison.Ordinal);
+        Assert.Contains("[data-workflow-state=\"review\"]", css, StringComparison.Ordinal);
+        Assert.Contains("height: 260px", css, StringComparison.Ordinal);
     }
 
     [Fact]

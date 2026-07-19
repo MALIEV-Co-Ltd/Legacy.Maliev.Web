@@ -227,6 +227,22 @@ export function createWorkflowPreviewInterop({
   function reset() { viewer?.reset(); }
   function fit() { viewer?.fit(); }
   function fullscreen() { return viewer?.fullscreen(); }
+  function renderReviewThumbnails(root) {
+    if (!viewer || !root?.querySelectorAll) return 0;
+    let rendered = 0;
+    for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id]')) {
+      let source = null;
+      try {
+        source = viewer.snapshot?.(image.dataset.partId);
+      } catch {
+        continue;
+      }
+      if (typeof source !== 'string' || !source.startsWith('data:image/')) continue;
+      image.src = source;
+      rendered += 1;
+    }
+    return rendered;
+  }
   function status() { return availability; }
 
   function setUnavailable() {
@@ -276,6 +292,7 @@ export function createWorkflowPreviewInterop({
     reset,
     fit,
     fullscreen,
+    renderReviewThumbnails,
     status,
     dispose,
   });

@@ -4,12 +4,6 @@
 <main class="instant-quote"
       data-migration-component="instant-quotation-three-dimensional-printing"
       data-migration-renderer="blazor-static-ssr">
-    <header class="instant-quote__header">
-        <p class="eyebrow">@Localizer["3D printing"]</p>
-        <h1>@Localizer["Start by uploading a file"]</h1>
-        <p>@Localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."]</p>
-    </header>
-
     <InstantQuotationWorkflow @rendermode="InteractiveServer"
                               InitialState="@InitialState"
                               CustomerModel="@CustomerModel" />

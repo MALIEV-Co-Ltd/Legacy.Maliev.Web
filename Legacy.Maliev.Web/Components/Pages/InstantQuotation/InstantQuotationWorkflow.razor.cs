@@ -25,6 +25,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private InstantQuotationWorkflowCoordinator? workflow;
     private bool initializationFailed;
     private InputFile? fileInput;
+    private ElementReference workflowSection;
     private ElementReference previewCanvas;
     private ElementReference configurationSection;
     private ElementReference reviewSection;
@@ -60,6 +61,17 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IReadOnlyList<InstantQuotationWorkflowUploadViewModel> Uploads => workflow?.Uploads ?? [];
 
     private IReadOnlyList<InstantQuotationWorkflowPartViewModel> Parts => workflow?.Parts ?? [];
+
+    private IReadOnlyList<InstantQuotationWorkflowPartViewModel> ConfigurationParts
+    {
+        get
+        {
+            var selected = selectedPreviewPartId is { } selectedId
+                ? Parts.FirstOrDefault(part => part.PartId == selectedId)
+                : null;
+            return selected is null ? Parts.Take(1).ToArray() : [selected];
+        }
+    }
 
     private IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials => workflow?.Materials ?? [];
 
@@ -140,6 +152,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             if (milestones.ReviewReached)
             {
                 await analytics.RecordReviewReachedAsync(workflow.AuthoritativeQuoteRevision);
+            }
+        }
+
+        if (VisibleSections.Review && previewInterop is not null)
+        {
+            try
+            {
+                await previewInterop.InvokeVoidAsync("renderReviewThumbnails", workflowSection);
+            }
+            catch (JSException)
+            {
+                await ReportPreviewUnavailableAsync();
             }
         }
 
@@ -345,7 +369,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     selectedPreviewPartId = Parts.FirstOrDefault()?.PartId;
                     if (selectedPreviewPartId is { } nextPartId)
                     {
-                        await InvokePreviewAsync("select", nextPartId.ToString("N"));
+                        await InvokePreviewAsync("select", ViewerPartKey(nextPartId));
                     }
                 }
             }
@@ -424,7 +448,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
             if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
             {
-                await InvokePreviewAsync("admit", key, part.PartId.ToString("N"));
+                await InvokePreviewAsync("admit", key, ViewerPartKey(part.PartId));
                 selectedPreviewPartId ??= part.PartId;
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
@@ -454,7 +478,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private async Task SelectPreviewAsync(Guid partId)
     {
         selectedPreviewPartId = partId;
-        await InvokePreviewAsync("select", partId.ToString("N"));
+        await InvokePreviewAsync("select", ViewerPartKey(partId));
     }
 
     private bool IsPreviewSelected(Guid partId) => selectedPreviewPartId == partId;
@@ -668,16 +692,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     internal static WorkflowSectionVisibility GetVisibleSections(InstantQuotationWorkflowState state) => state switch
     {
         InstantQuotationWorkflowState.Empty => new(Upload: true),
-        InstantQuotationWorkflowState.Uploading => new(Upload: true),
-        InstantQuotationWorkflowState.Uploaded => new(Viewer: true, Parts: true, Configuration: true),
+        InstantQuotationWorkflowState.Uploading => new(Upload: true, Viewer: true, Parts: true, Configuration: true),
+        InstantQuotationWorkflowState.Uploaded => new(Upload: true, Viewer: true, Parts: true, Configuration: true),
         InstantQuotationWorkflowState.Error => new(Upload: true, Error: true),
-        InstantQuotationWorkflowState.MultiPart => new(Viewer: true, Parts: true, Configuration: true),
-        InstantQuotationWorkflowState.Configured => new(Viewer: true, Parts: true, Configuration: true),
-        InstantQuotationWorkflowState.Review => new(Review: true),
-        InstantQuotationWorkflowState.CustomerDetails => new(CustomerDetails: true),
+        InstantQuotationWorkflowState.MultiPart => new(Upload: true, Viewer: true, Parts: true, Configuration: true),
+        InstantQuotationWorkflowState.Configured => new(Upload: true, Viewer: true, Parts: true, Configuration: true),
+        InstantQuotationWorkflowState.Review => new(Viewer: true, Review: true),
+        InstantQuotationWorkflowState.CustomerDetails => new(Viewer: true, CustomerDetails: true),
         InstantQuotationWorkflowState.Submitted => new(Submitted: true),
         _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown instant quotation workflow state."),
     };
+
+    public static string ViewerPartKey(Guid partId) => partId.ToString("N");
 
     public static VisibleAnalyticsMilestones GetVisibleAnalyticsMilestones(
         bool configurationVisible,

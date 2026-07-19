@@ -2,14 +2,26 @@
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
 <section data-workflow-review-content aria-labelledby="instant-quote-review-heading">
-    <h3 id="instant-quote-review-heading">@Localizer["Review"]</h3>
+    <header class="instant-quote__panel-header">
+        <h3 id="instant-quote-review-heading">@Localizer["Review order items"]</h3>
+    </header>
+    <span class="instant-quote__flow-step">@Localizer["Step 2 of 3"]</span>
+    <p class="instant-quote__panel-intro">@Localizer["Review each item, the complete price, and estimated lead time before entering your contact details."]</p>
 
     <div class="instant-quote__review-parts">
         @foreach (var part in Parts)
         {
             var quote = Quote?.Parts.SingleOrDefault(item => item.PartId == part.PartId);
             <article data-workflow-review-part aria-labelledby="instant-quote-review-part-@part.PartId">
-                <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
+                <img class="instant-quote__review-thumbnail"
+                     data-review-thumbnail
+                     data-part-id="@InstantQuotationWorkflow.ViewerPartKey(part.PartId)"
+                     src="/src/images/3d-canvas-placeholder.svg"
+                     alt="" />
+                <div class="instant-quote__review-identity">
+                    <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
+                    <small>@Measurement(part.Geometry.DimensionXmm) × @Measurement(part.Geometry.DimensionYmm) × @Measurement(part.Geometry.DimensionZmm) mm</small>
+                </div>
                 <dl>
                     <div><dt>@Localizer["Material"]</dt><dd>@Localizer[MaterialName(part.Configuration.MaterialKey)]</dd></div>
                     <div><dt>@Localizer["Color"]</dt><dd>@Localizer[part.Configuration.Color]</dd></div>
@@ -21,16 +33,19 @@
         }
     </div>
 
-    <dl data-workflow-review-total>
-        <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
-        <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
-        <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
-        <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>
-        <div data-workflow-lead-time>
-            <dt>@Localizer["Lead time"]</dt>
-            <dd>@(Quote is null ? "—" : Localizer["{0}–{1} business days", Quote.LeadTimeMinimumDays, Quote.LeadTimeMaximumDays])</dd>
-        </div>
-    </dl>
+    <section class="instant-quote__pricing-summary" aria-labelledby="instant-quote-review-summary-heading">
+        <h4 id="instant-quote-review-summary-heading">@Localizer["Price and lead-time summary"]</h4>
+        <dl data-workflow-review-total>
+            <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
+            <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
+            <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
+            <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>
+            <div data-workflow-lead-time>
+                <dt>@Localizer["Lead time"]</dt>
+                <dd>@(Quote is null ? "—" : Localizer["{0}–{1} business days", Quote.LeadTimeMinimumDays, Quote.LeadTimeMaximumDays])</dd>
+            </div>
+        </dl>
+    </section>
 
     <p role="note">@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
     <div class="instant-quote__actions" role="group" aria-label="@Localizer["Quotation steps"]">
@@ -56,6 +71,8 @@
     public EventCallback OnContinue { get; set; }
 
     private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
+
+    private static string Measurement(double amount) => amount.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
 
     private string MaterialName(string key) => Materials
         .SingleOrDefault(item => string.Equals(item.Key, key, StringComparison.Ordinal))?.DisplayName ?? key;

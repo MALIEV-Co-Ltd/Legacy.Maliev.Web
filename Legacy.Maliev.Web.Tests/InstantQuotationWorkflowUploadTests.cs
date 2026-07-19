@@ -182,6 +182,9 @@ public sealed class InstantQuotationWorkflowUploadTests
             [UploadFile("first.stl"), UploadFile("second.obj")],
             default);
         await client.WaitForUploadsAsync(2);
+        Assert.Equal(InstantQuotationWorkflowState.Uploading, workflow.State);
+        Assert.Empty(workflow.Parts);
+        Assert.All(workflow.Uploads, upload => Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploading, upload.Status));
         client.CompleteSuccess("second.obj", "opaque-second", Geometry(volume: 20_000));
         client.CompleteSuccess("first.stl", "opaque-first", Geometry(volume: 10_000));
         await uploading;
@@ -191,6 +194,39 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal(InstantQuotationWorkflowState.MultiPart, workflow.State);
         Assert.NotNull(workflow.OrderQuote);
         Assert.Equal(["member-42", "member-42"], client.UploadOwners);
+    }
+
+    [Fact]
+    public async Task SuccessfulSelection_ProgressesThroughConfigurationReviewAndCustomerDetails()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        Assert.Equal(InstantQuotationWorkflowState.Uploading, workflow.State);
+        client.CompleteSuccess("part.stl", "opaque-part", Geometry());
+        await uploading;
+
+        var part = Assert.Single(workflow.Parts);
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, workflow.State);
+        await workflow.UpdateConfigurationAsync(
+            part.PartId,
+            part.Configuration.MaterialKey,
+            part.Configuration.Color,
+            part.Configuration.Quantity,
+            default);
+        Assert.Equal(InstantQuotationWorkflowState.Configured, workflow.State);
+
+        workflow.EnterReview();
+        Assert.Equal(InstantQuotationWorkflowState.Review, workflow.State);
+        workflow.EnterCustomerDetails();
+        Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, workflow.State);
+        workflow.ReturnToReview();
+        Assert.Equal(InstantQuotationWorkflowState.Review, workflow.State);
+        workflow.ReturnToConfiguration();
+        Assert.Equal(InstantQuotationWorkflowState.Configured, workflow.State);
     }
 
     [Fact]
