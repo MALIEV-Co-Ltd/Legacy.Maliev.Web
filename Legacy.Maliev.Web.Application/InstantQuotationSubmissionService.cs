@@ -16,13 +16,14 @@ public sealed class InstantQuotationSubmissionService(
 
     public async Task<InstantQuotationSubmissionResult> SubmitAsync(
         string sessionId,
-        string ownerIdentity,
+        string? ownerIdentity,
         InstantQuotationCustomerSubmission customer,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(customer);
 
-        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(ownerIdentity))
+        if (string.IsNullOrWhiteSpace(sessionId)
+            || (ownerIdentity is not null && string.IsNullOrWhiteSpace(ownerIdentity)))
         {
             return Rejected(InstantQuotationProblemCategory.Authorization);
         }
@@ -54,11 +55,12 @@ public sealed class InstantQuotationSubmissionService(
         }
 
         IInstantQuotationSubmissionLease? submissionLease;
+        var checkpointOwnerIdentity = ownerIdentity ?? CreateAnonymousCheckpointOwnerIdentity(sessionId);
         try
         {
             submissionLease = await submissionStore.TryAcquireAsync(
                 session.SubmissionId,
-                ownerIdentity,
+                checkpointOwnerIdentity,
                 cancellationToken);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -505,6 +507,12 @@ public sealed class InstantQuotationSubmissionService(
     private static string CreateFinalizationOperationId(string submissionId)
     {
         var value = Encoding.UTF8.GetBytes($"instant-quotation-finalize:{submissionId.ToLowerInvariant()}");
+        return Convert.ToHexStringLower(SHA256.HashData(value));
+    }
+
+    private static string CreateAnonymousCheckpointOwnerIdentity(string sessionId)
+    {
+        var value = Encoding.UTF8.GetBytes($"instant-quotation-anonymous-checkpoint-owner:{sessionId}");
         return Convert.ToHexStringLower(SHA256.HashData(value));
     }
 

@@ -26,6 +26,7 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Equal(
             [null, InstantQuotationSubmissionCheckpointStatus.Persisted],
             persisted.ExpectedPriorStatuses);
+        Assert.Equal(Owner, Assert.Single(persisted.OwnerIdentities));
         var call = Assert.Single(quotation.Calls);
         Assert.Equal($"legacy-web-instant-quotation-{SubmissionId.ToLowerInvariant()}", call.IdempotencyKey);
         Assert.Contains("Orders", call.Submission.Message, StringComparison.Ordinal);
@@ -455,6 +456,108 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Empty(upload.OperationIds);
     }
 
+    [Fact]
+    public async Task Submit_AnonymousProtectedSession_CompletesWithServerOnlyCheckpointOwner()
+    {
+        var quotation = new RecordingQuotationClient(_ =>
+            new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var persisted = new RecordingSubmissionStore();
+        var upload = new RecordingUploadClient(null, SuccessfulFinalization());
+        var sessions = new RecordingSessionStore(Session(Part()), owner: null);
+        var service = new InstantQuotationSubmissionService(
+            sessions,
+            new InstantQuotationPricingService(),
+            quotation,
+            persisted,
+            upload);
+
+        var result = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        Assert.Equal(417, result.RequestReference);
+        Assert.Null(Assert.Single(sessions.RequestedOwners));
+        var checkpointOwner = Assert.Single(persisted.OwnerIdentities);
+        Assert.False(string.IsNullOrWhiteSpace(checkpointOwner));
+        Assert.NotEqual(SessionId, checkpointOwner);
+        var quotationCall = Assert.Single(quotation.Calls);
+        Assert.DoesNotContain(checkpointOwner, quotationCall.Submission.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(checkpointOwner, quotationCall.IdempotencyKey, StringComparison.Ordinal);
+        Assert.DoesNotContain(checkpointOwner, result.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(checkpointOwner, Assert.Single(upload.OperationIds), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Submit_AnonymousRetry_ReusesOnlyMatchingProtectedSessionCheckpointOwner()
+    {
+        var quotation = new RecordingQuotationClient(_ =>
+            new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var persisted = new RecordingSubmissionStore();
+        var upload = new RecordingUploadClient(
+            null,
+            InstantQuotationFinalizationResult.Unavailable("ignored"),
+            SuccessfulFinalization());
+        var sessions = new RecordingSessionStore(Session(Part()), owner: null);
+        var service = new InstantQuotationSubmissionService(
+            sessions,
+            new InstantQuotationPricingService(),
+            quotation,
+            persisted,
+            upload);
+
+        var first = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
+        var retry = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, first.Outcome);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, retry.Outcome);
+        Assert.Single(quotation.Calls);
+        Assert.Equal(2, persisted.OwnerIdentities.Count);
+        Assert.Single(persisted.OwnerIdentities.Distinct(StringComparer.Ordinal));
+
+        sessions.CurrentSession = Session(Part()) with { SessionId = "other-protected-session" };
+        var wrongSession = await service.SubmitAsync(
+            "other-protected-session",
+            ownerIdentity: null,
+            Customer(),
+            CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Rejected, wrongSession.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.Conflict, wrongSession.ProblemCategory);
+        Assert.NotEqual(persisted.OwnerIdentities[0], persisted.OwnerIdentities[2]);
+        Assert.Single(quotation.Calls);
+    }
+
+    [Fact]
+    public async Task Submit_AnonymousSessionWithAuthenticatedOrWhitespaceOwner_FailsClosed()
+    {
+        var quotation = new RecordingQuotationClient(_ => throw new InvalidOperationException());
+        var persisted = new RecordingSubmissionStore();
+        var upload = new RecordingUploadClient(null, SuccessfulFinalization());
+        var sessions = new RecordingSessionStore(Session(Part()), owner: null);
+        var pricing = new RecordingPricingService();
+        var service = new InstantQuotationSubmissionService(sessions, pricing, quotation, persisted, upload);
+
+        var wrongOwner = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+        var whitespaceOwner = await service.SubmitAsync(SessionId, " ", Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Authorization, wrongOwner.ProblemCategory);
+        Assert.Equal(InstantQuotationProblemCategory.Authorization, whitespaceOwner.ProblemCategory);
+        Assert.Equal(0, pricing.CallCount);
+        Assert.Empty(persisted.OwnerIdentities);
+        Assert.Empty(quotation.Calls);
+        Assert.Empty(upload.OperationIds);
+    }
+
+    [Fact]
+    public void SubmitAsync_OwnerIdentityContract_IsNullable()
+    {
+        var method = typeof(IInstantQuotationSubmissionService).GetMethod(
+            nameof(IInstantQuotationSubmissionService.SubmitAsync));
+        var ownerParameter = Assert.Single(method!.GetParameters(), parameter => parameter.Name == "ownerIdentity");
+        var nullability = new System.Reflection.NullabilityInfoContext().Create(ownerParameter);
+
+        Assert.Equal(System.Reflection.NullabilityState.Nullable, nullability.ReadState);
+    }
+
     private static InstantQuotationSubmissionService Service(
         RecordingQuotationClient quotation,
         RecordingSubmissionStore persisted,
@@ -515,16 +618,21 @@ public sealed class InstantQuotationSubmissionTests
 
     private sealed class RecordingSessionStore(
         InstantQuotationSessionState session,
-        string owner) : IInstantQuotationSessionStore
+        string? owner) : IInstantQuotationSessionStore
     {
         public InstantQuotationSessionState CurrentSession { get; set; } = session;
+
+        public List<string?> RequestedOwners { get; } = [];
 
         public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
-            Task.FromResult<InstantQuotationSessionState?>(
+        public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken)
+        {
+            RequestedOwners.Add(ownerIdentity);
+            return Task.FromResult<InstantQuotationSessionState?>(
                 sessionId == CurrentSession.SessionId && ownerIdentity == owner ? CurrentSession : null);
+        }
 
         public Task<bool> PutAsync(InstantQuotationSessionState value, string? ownerIdentity, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
@@ -596,6 +704,8 @@ public sealed class InstantQuotationSubmissionTests
 
         public List<InstantQuotationSubmissionCheckpointStatus?> ExpectedPriorStatuses { get; } = [];
 
+        public List<string> OwnerIdentities { get; } = [];
+
         public Task<IInstantQuotationSubmissionLease?> TryAcquireAsync(
             string submissionId,
             string ownerIdentity,
@@ -603,6 +713,7 @@ public sealed class InstantQuotationSubmissionTests
         {
             lock (sync)
             {
+                OwnerIdentities.Add(ownerIdentity);
                 if (leased)
                 {
                     return Task.FromResult<IInstantQuotationSubmissionLease?>(null);

@@ -63,7 +63,7 @@ public interface IInstantQuotationSubmissionService
 {
     Task<InstantQuotationSubmissionResult> SubmitAsync(
         string sessionId,
-        string ownerIdentity,
+        string? ownerIdentity,
         InstantQuotationCustomerSubmission customer,
         CancellationToken cancellationToken);
 }
