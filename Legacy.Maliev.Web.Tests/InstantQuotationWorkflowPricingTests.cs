@@ -176,13 +176,13 @@ public sealed class InstantQuotationWorkflowPricingTests
         var upload = InstantQuotationUploadResult.Succeeded(
             "upload-operation",
             new InstantQuotationUploadReference("opaque-upload"),
-            Geometry());
+            Claim().Sha256);
         var id = Guid.NewGuid();
         var part = new InstantQuotationPart(
             id,
             "part.stl",
             upload.UploadReference!,
-            upload.AuthoritativeGeometry!,
+            AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, Claim())!,
             new InstantQuotationPartConfiguration("PLA", "Black", 1));
 
         Assert.Single(PricingService.Quote(State(part)).Parts);
@@ -293,10 +293,7 @@ public sealed class InstantQuotationWorkflowPricingTests
             id,
             $"{id:N}.stl",
             new InstantQuotationUploadReference($"upload-{id:N}"),
-            InstantQuotationUploadResult.Succeeded(
-                $"operation-{id:N}",
-                new InstantQuotationUploadReference($"upload-{id:N}"),
-                Geometry(heightMm, volumeMm3, footprintMm2)).AuthoritativeGeometry!,
+            Promote(heightMm, volumeMm3, footprintMm2),
             new InstantQuotationPartConfiguration(materialKey, color, quantity));
     }
 
@@ -312,6 +309,44 @@ public sealed class InstantQuotationWorkflowPricingTests
             FacetCount: 1_024,
             BodyCount: 1,
             IsManifold: true);
+
+    private static InstantQuotationGeometryClaim Claim(
+        double heightMm = 30,
+        double volumeMm3 = 20_000,
+        double footprintMm2 = 400)
+    {
+        var physicallyValidFootprintMm2 = Math.Max(footprintMm2, volumeMm3 / heightMm);
+        var side = Math.Sqrt(physicallyValidFootprintMm2);
+        return new InstantQuotationGeometryClaim(
+            1,
+            new string('a', 64),
+            side,
+            side,
+            heightMm,
+            volumeMm3,
+            2 * footprintMm2 + (4 * side * heightMm),
+            Enumerable.Repeat(volumeMm3 / heightMm, 64).ToArray(),
+            Enumerable.Repeat(side * 4, 64).ToArray(),
+            1_024,
+            1,
+            true,
+            false,
+            false,
+            0.8);
+    }
+
+    private static AuthoritativeInstantQuotationGeometry Promote(
+        double heightMm,
+        double volumeMm3,
+        double footprintMm2)
+    {
+        var claim = Claim(heightMm, volumeMm3, footprintMm2);
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "operation",
+            new InstantQuotationUploadReference("opaque"),
+            claim.Sha256);
+        return AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!;
+    }
 
     private static (InstantQuotationPart Part, ItemQuote Quote) ExpectedLine(InstantQuotationPart part)
     {

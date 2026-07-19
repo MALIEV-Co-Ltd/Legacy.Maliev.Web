@@ -228,26 +228,59 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         try
         {
             var browserFiles = args.GetMultipleFiles(100).ToArray();
-            var files = browserFiles
-                .Select(file => new InstantQuotationWorkflowUploadFile(
-                    file.Name,
-                    file.ContentType,
-                    file.Size,
-                    cancellationToken => Task.FromResult<Stream>(file.OpenReadStream(
+            var keys = await BeginPreviewSelectionAsync();
+            if (keys.Length != browserFiles.Length)
+            {
+                foreach (var key in keys)
+                {
+                    await InvokePreviewAsync("release", key);
+                }
+
+                await ReportPreviewUnavailableAsync();
+                return;
+            }
+
+            var analyzed = new List<(IBrowserFile File, string PreviewKey, InstantQuotationGeometryClaim Claim)>();
+            for (var index = 0; index < browserFiles.Length; index++)
+            {
+                try
+                {
+                    var claim = await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>(
+                        "getGeometryClaim",
+                        keys[index]);
+                    analyzed.Add((browserFiles[index], keys[index], claim));
+                }
+                catch (JSException)
+                {
+                    await InvokePreviewAsync("quarantine", keys[index]);
+                    await ReportPreviewUnavailableAsync();
+                }
+            }
+
+            if (analyzed.Count == 0)
+            {
+                return;
+            }
+
+            var files = analyzed
+                .Select(item => new InstantQuotationWorkflowUploadFile(
+                    item.File.Name,
+                    item.File.ContentType,
+                    item.File.Size,
+                    item.Claim,
+                    cancellationToken => Task.FromResult<Stream>(item.File.OpenReadStream(
                         InstantQuotationWorkflowCoordinator.MaximumFileSize,
                         cancellationToken))))
                 .ToArray();
             var reservedIds = workflow.ReserveUploads(files);
 
-            var previewTask = BeginPreviewSelectionAsync();
-            var uploadTask = workflow.UploadReservedAsync(reservedIds, default);
-            await InvokeAsync(StateHasChanged);
-            var keys = await previewTask;
-            for (var index = 0; index < Math.Min(keys.Length, reservedIds.Count); index++)
+            for (var index = 0; index < reservedIds.Count; index++)
             {
-                previewKeys[reservedIds[index]] = keys[index];
+                previewKeys[reservedIds[index]] = analyzed[index].PreviewKey;
             }
 
+            var uploadTask = workflow.UploadReservedAsync(reservedIds, default);
+            await InvokeAsync(StateHasChanged);
             try
             {
                 await uploadTask;
@@ -551,6 +584,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     };
 
     private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
+
+    private static string Measurement(double value) => value.ToString("N2");
 
     public async ValueTask DisposeAsync()
     {

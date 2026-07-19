@@ -16,7 +16,7 @@ public sealed class InstantQuotationSubmissionTests
             new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
         var persisted = new RecordingSubmissionStore(events);
         var upload = new RecordingUploadClient(events, SuccessfulFinalization());
-        var service = Service(quotation, persisted, upload, Session(Part(quantity: 2)));
+        var service = Service(quotation, persisted, upload, Session(PartWithDfm(quantity: 2)));
 
         var result = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
 
@@ -33,6 +33,10 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Contains("1 - bracket.stl", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Material: ABS", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Quantity: 2 piece(s)", call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "Geometry warning: Non-watertight mesh; Non-manifold edges; Multi-body mesh (2 bodies); Dimension below 3 mm",
+            call.Submission.Message,
+            StringComparison.Ordinal);
         Assert.Contains("Total price:", call.Submission.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("opaque-upload-reference", call.Submission.Message, StringComparison.Ordinal);
         Assert.Equal(["opaque-upload-reference"], upload.UploadReferences.Select(item => item.Value));
@@ -611,6 +615,28 @@ public sealed class InstantQuotationSubmissionTests
             true),
         new InstantQuotationPartConfiguration("ABS", "Black", quantity));
 
+    private static InstantQuotationPart PartWithDfm(int quantity = 1) => new(
+        Guid.Parse("11111111-2222-3333-4444-555555555555"),
+        "bracket.stl",
+        new InstantQuotationUploadReference("opaque-upload-reference"),
+        AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+            1,
+            new string('a', 64),
+            2,
+            20,
+            10,
+            100,
+            700,
+            Enumerable.Repeat(40.0, 64).ToArray(),
+            Enumerable.Repeat(44.0, 64).ToArray(),
+            12,
+            2,
+            true,
+            true,
+            true,
+            0.5),
+        new InstantQuotationPartConfiguration("ABS", "Black", quantity));
+
     private static InstantQuotationFinalizationResult SuccessfulFinalization() => new(
         "ignored",
         InstantQuotationServiceStatus.Available,
@@ -816,7 +842,15 @@ public sealed class InstantQuotationSubmissionTests
 
         public bool PreserveResultOperationId { get; init; }
 
-        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, Stream content, string fileName, string contentType, long contentLength, string operationId, CancellationToken cancellationToken) =>
+        public Task<InstantQuotationUploadResult> UploadAsync(
+            string sessionId,
+            Stream content,
+            string fileName,
+            string contentType,
+            long contentLength,
+            InstantQuotationGeometryClaim geometryClaim,
+            string operationId,
+            CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>

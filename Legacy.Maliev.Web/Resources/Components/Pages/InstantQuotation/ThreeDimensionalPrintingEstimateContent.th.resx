@@ -261,6 +261,27 @@
   <data name="Design-for-manufacturing checks" xml:space="preserve">
     <value>การตรวจสอบความเหมาะสมในการผลิต (DFM)</value>
   </data>
+  <data name="Detailed topology checks were skipped for this large mesh. Engineering review is required." xml:space="preserve">
+    <value>ข้ามการตรวจสอบโทโพโลยีโดยละเอียดสำหรับเมชชิ้นใหญ่นี้ จำเป็นต้องให้วิศวกรตรวจสอบ</value>
+  </data>
+  <data name="Non-watertight mesh" xml:space="preserve">
+    <value>เมชมีผิวไม่ปิดสนิท</value>
+  </data>
+  <data name="Non-manifold edges" xml:space="preserve">
+    <value>พบขอบที่ไม่เป็นแมนิโฟลด์</value>
+  </data>
+  <data name="Multi-body mesh ({0} bodies)" xml:space="preserve">
+    <value>เมชมีหลายชิ้นส่วน ({0} ชิ้น)</value>
+  </data>
+  <data name="A dimension is below 3 mm." xml:space="preserve">
+    <value>มีขนาดอย่างน้อยหนึ่งด้านต่ำกว่า 3 มม.</value>
+  </data>
+  <data name="A dimension exceeds 350 mm." xml:space="preserve">
+    <value>มีขนาดอย่างน้อยหนึ่งด้านเกิน 350 มม.</value>
+  </data>
+  <data name="No automatic DFM warnings were found. Engineering review is still required." xml:space="preserve">
+    <value>ไม่พบคำเตือน DFM อัตโนมัติ แต่ยังต้องให้วิศวกรตรวจสอบ</value>
+  </data>
   <data name="Settings" xml:space="preserve">
     <value>การตั้งค่า</value>
   </data>

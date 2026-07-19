@@ -7,6 +7,7 @@ public sealed record InstantQuotationWorkflowUploadFile(
     string FileName,
     string ContentType,
     long Length,
+    InstantQuotationGeometryClaim GeometryClaim,
     Func<CancellationToken, Task<Stream>> OpenReadStreamAsync);
 
 public enum InstantQuotationWorkflowUploadStatus
@@ -30,6 +31,7 @@ public sealed record InstantQuotationWorkflowPartViewModel(
     Guid PartId,
     Guid PreviewCorrelationId,
     string DisplayFileName,
+    AuthoritativeInstantQuotationGeometry Geometry,
     InstantQuotationPartConfiguration Configuration,
     InstantQuotationPartQuote? Quote);
 
@@ -106,6 +108,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     entry.Part!.PartId,
                     entry.LocalId,
                     entry.Part.DisplayFileName,
+                    entry.Part.Geometry,
                     entry.Part.Configuration,
                     quotes.GetValueOrDefault(entry.Part.PartId)))
                 .ToArray();
@@ -418,6 +421,18 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             return;
         }
 
+        if (entry.File.GeometryClaim is null || !entry.File.GeometryClaim.IsValid())
+        {
+            entry.Status = InstantQuotationWorkflowUploadStatus.Error;
+            entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
+            RefreshState();
+            await analytics.RecordUploadFailureAsync(
+                operationId,
+                InstantQuotationProblemCategory.Validation,
+                1);
+            return;
+        }
+
         try
         {
             await using var content = await entry.File.OpenReadStreamAsync(entry.OperationCancellation.Token);
@@ -427,6 +442,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.File.FileName,
                 entry.File.ContentType,
                 entry.File.Length,
+                entry.File.GeometryClaim,
                 operationId,
                 entry.OperationCancellation.Token);
             await ApplyUploadResultAsync(entry, operationId, result, cancellationToken);
@@ -468,7 +484,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             if (entry.OperationId != operationId
                 || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading)
             {
-                if (IsAuthoritativeSuccess(result))
+                if (IsPersistedSuccess(result))
                 {
                     await RemoveStaleUploadAsync(result.UploadReference!);
                 }
@@ -478,7 +494,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
             if (result.OperationId != operationId || !IsAuthoritativeSuccess(result))
             {
-                if (result.OperationId != operationId && IsAuthoritativeSuccess(result))
+                if (result.OperationId != operationId && IsPersistedSuccess(result))
                 {
                     await RemoveStaleUploadAsync(result.UploadReference!);
                 }
@@ -492,15 +508,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
             else
             {
-                entry.Part = new InstantQuotationPart(
-                    Guid.NewGuid(),
-                    entry.File.FileName,
-                    result.UploadReference!,
-                    result.AuthoritativeGeometry!,
-                    new InstantQuotationPartConfiguration("PLA", "Black", 1));
-                entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
-                entry.ProblemCategory = InstantQuotationProblemCategory.None;
-                await PersistAndPriceAsync(cancellationToken);
+                var geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                    result,
+                    entry.File.GeometryClaim);
+                if (geometry is null)
+                {
+                    if (IsPersistedSuccess(result))
+                    {
+                        await RemoveStaleUploadAsync(result.UploadReference!);
+                    }
+
+                    entry.Status = InstantQuotationWorkflowUploadStatus.Error;
+                    entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
+                    terminalFailure = entry.ProblemCategory;
+                    RefreshState();
+                }
+                else
+                {
+                    entry.Part = new InstantQuotationPart(
+                        Guid.NewGuid(),
+                        entry.File.FileName,
+                        result.UploadReference!,
+                        geometry,
+                        new InstantQuotationPartConfiguration("PLA", "Black", 1));
+                    entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
+                    entry.ProblemCategory = InstantQuotationProblemCategory.None;
+                    await PersistAndPriceAsync(cancellationToken);
+                }
             }
         }
         finally
@@ -535,12 +569,15 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     }
 
     private static bool IsAuthoritativeSuccess(InstantQuotationUploadResult result) =>
+        IsPersistedSuccess(result)
+        && result.ContentSha256 is { Length: 64 };
+
+    private static bool IsPersistedSuccess(InstantQuotationUploadResult result) =>
         result.ServiceStatus is InstantQuotationServiceStatus.Available
         && result.AuthorizationStatus is InstantQuotationAuthorizationStatus.Authorized
         && result.Status is InstantQuotationOperationStatus.Succeeded
         && result.ProblemCategory is InstantQuotationProblemCategory.None
-        && result.UploadReference is not null
-        && result.AuthoritativeGeometry is not null;
+        && result.UploadReference is not null;
 
     private bool TryRestore(InstantQuotationSessionState existing)
     {
@@ -657,11 +694,19 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private static string NewOperationId() => Guid.NewGuid().ToString("N");
 
-    private sealed class UploadEntry(InstantQuotationWorkflowUploadFile file)
+    private sealed class UploadEntry
     {
+        public UploadEntry(InstantQuotationWorkflowUploadFile file)
+        {
+            File = file with
+            {
+                GeometryClaim = file.GeometryClaim?.Snapshot()!,
+            };
+        }
+
         public Guid LocalId { get; } = Guid.NewGuid();
 
-        public InstantQuotationWorkflowUploadFile File { get; } = file;
+        public InstantQuotationWorkflowUploadFile File { get; }
 
         public string? OperationId { get; set; }
 
@@ -679,11 +724,29 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             part.DisplayFileName,
             "application/octet-stream",
             1,
+            RestoredClaim(part.Geometry),
             _ => throw new InvalidOperationException("A restored upload cannot be read again.")))
         {
             Part = part,
             Status = InstantQuotationWorkflowUploadStatus.Uploaded,
             HasConfigured = true,
         };
+
+        private static InstantQuotationGeometryClaim RestoredClaim(AuthoritativeInstantQuotationGeometry geometry) => new(
+            geometry.ClaimVersion,
+            geometry.Sha256,
+            geometry.DimensionXmm,
+            geometry.DimensionYmm,
+            geometry.DimensionZmm,
+            geometry.VolumeMm3,
+            geometry.SurfaceAreaMm2,
+            geometry.AreaProfileMm2,
+            geometry.PerimeterProfileMm,
+            geometry.FacetCount,
+            geometry.BodyCount,
+            geometry.TopologyChecked,
+            geometry.NonWatertight,
+            geometry.NonManifold,
+            geometry.MinThicknessMm);
     }
 }

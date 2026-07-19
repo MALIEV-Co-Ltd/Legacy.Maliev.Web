@@ -28,6 +28,30 @@ public sealed class InstantQuotationUploadClientTests
             finalizationParameters,
             parameter => parameter.Name == "quotationRequestId");
         Assert.Equal(typeof(int), quotationRequestId.ParameterType);
+        var uploadParameters = typeof(IInstantQuotationUploadClient).GetMethod("UploadAsync")!.GetParameters();
+        Assert.Contains(uploadParameters, parameter => parameter.ParameterType == typeof(InstantQuotationGeometryClaim));
+        Assert.True(Array.FindIndex(uploadParameters, parameter => parameter.Name == "geometryClaim")
+            < Array.FindIndex(uploadParameters, parameter => parameter.Name == "operationId"));
+    }
+
+    [Fact]
+    public void GeometryClaim_UsesVersionedExactByteDigestAndCompleteLegacyEvidence()
+    {
+        var claim = Claim();
+
+        Assert.Equal(1, claim.Version);
+        Assert.Equal(64, claim.Sha256.Length);
+        Assert.Equal(10, claim.DimensionXmm);
+        Assert.Equal(20, claim.DimensionYmm);
+        Assert.Equal(30, claim.DimensionZmm);
+        Assert.Equal(64, claim.AreaProfileMm2!.Count);
+        Assert.All(claim.AreaProfileMm2, value => Assert.Equal(100.0, value));
+        Assert.Equal(64, claim.PerimeterProfileMm!.Count);
+        Assert.All(claim.PerimeterProfileMm, value => Assert.Equal(40.0, value));
+        Assert.True(claim.TopologyChecked);
+        Assert.False(claim.NonWatertight);
+        Assert.False(claim.NonManifold);
+        Assert.Equal(0.8, claim.MinThicknessMm);
     }
 
     [Fact]
@@ -62,7 +86,7 @@ public sealed class InstantQuotationUploadClientTests
         var client = new UnavailableInstantQuotationUploadClient();
         using var stream = new MemoryStream([1, 2, 3]);
 
-        var upload = await client.UploadAsync("session", stream, "part.stl", "model/stl", 3, "upload-op", default);
+        var upload = await client.UploadAsync("session", stream, "part.stl", "model/stl", 3, Claim(), "upload-op", default);
         var remove = await client.RemoveAsync("session", new InstantQuotationUploadReference("opaque"), "remove-op", default);
         var finalize = await client.FinalizeAsync("session", 417, [new InstantQuotationUploadReference("opaque")], "finalize-op", default);
 
@@ -73,7 +97,7 @@ public sealed class InstantQuotationUploadClientTests
         Assert.Equal("remove-op", remove.OperationId);
         Assert.Equal("finalize-op", finalize.OperationId);
         Assert.Null(upload.UploadReference);
-        Assert.Null(upload.AuthoritativeGeometry);
+        Assert.Null(upload.ContentSha256);
         Assert.Equal(3, stream.Length);
     }
 
@@ -134,13 +158,122 @@ public sealed class InstantQuotationUploadClientTests
     }
 
     [Fact]
-    public void GeometryProvenance_BrowserGeometryCannotConstructAuthoritativeType()
+    public void GeometryProvenance_LegacyClaimRequiresMatchingSuccessfulPersistedUpload()
     {
-        Assert.DoesNotContain(
-            typeof(InstantQuotationGeometry).GetProperties(),
-            property => property.Name.Contains("Authoritative", StringComparison.OrdinalIgnoreCase));
+        var areas = Enumerable.Range(0, 64).Select(index => 100.0 - index).ToArray();
+        var perimeters = Enumerable.Range(0, 64).Select(index => 40.0 - (index * 0.25)).ToArray();
+        var claim = Claim() with { AreaProfileMm2 = areas, PerimeterProfileMm = perimeters };
+        var unavailable = InstantQuotationUploadResult.Unavailable("failed-operation");
+        var persisted = InstantQuotationUploadResult.Succeeded(
+            "persisted-operation",
+            new InstantQuotationUploadReference("opaque"),
+            claim.Sha256);
+
+        Assert.Null(AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(unavailable, claim));
+        var admitted = Assert.IsType<AuthoritativeInstantQuotationGeometry>(
+            AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(persisted, claim));
+
+        areas[0] = -1;
+        perimeters[0] = -1;
+        Assert.Equal(30, admitted.HeightMm);
+        Assert.Equal(200, admitted.FootprintMm2);
+        Assert.Equal(100.0, admitted.AreaProfileMm2[0]);
+        Assert.Equal(99.0, admitted.AreaProfileMm2[1]);
+        Assert.Equal(40.0, admitted.PerimeterProfileMm[0]);
+        Assert.Equal(39.75, admitted.PerimeterProfileMm[1]);
+        Assert.Equal(2_200, admitted.SurfaceAreaMm2);
+        Assert.Equal(0.8, admitted.MinThicknessMm);
+        Assert.True(admitted.TopologyChecked);
+        Assert.True(admitted.IsManifold);
         Assert.Empty(typeof(AuthoritativeInstantQuotationGeometry).GetConstructors(BindingFlags.Instance | BindingFlags.Public));
-        Assert.Null(typeof(InstantQuotationGeometry).GetMethod("ToAuthoritative", BindingFlags.Instance | BindingFlags.Public));
+        Assert.DoesNotContain(
+            typeof(InstantQuotationUploadResult).GetProperties(),
+            property => property.Name.Contains("Geometry", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidGeometryClaims))]
+    public void GeometryProvenance_InvalidOrUnboundClaimCannotBePromoted(InstantQuotationGeometryClaim claim)
+    {
+        var persisted = InstantQuotationUploadResult.Succeeded(
+            "persisted-operation",
+            new InstantQuotationUploadReference("opaque"),
+            new string('a', 64));
+
+        Assert.Null(AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(persisted, claim));
+    }
+
+    public static TheoryData<InstantQuotationGeometryClaim> InvalidGeometryClaims() => new()
+    {
+        Claim() with { Version = 2 },
+        Claim() with { Sha256 = new string('A', 64) },
+        Claim() with { Sha256 = new string('b', 64) },
+        Claim() with { DimensionXmm = double.NaN },
+        Claim() with { DimensionYmm = 0 },
+        Claim() with { DimensionZmm = double.PositiveInfinity },
+        Claim() with { DimensionXmm = 1e200, DimensionYmm = 1e-100, DimensionZmm = 1e300 },
+        Claim() with { VolumeMm3 = -1 },
+        Claim() with { SurfaceAreaMm2 = 0 },
+        Claim() with { VolumeMm3 = 7_000 },
+        Claim() with { AreaProfileMm2 = [] },
+        Claim() with { AreaProfileMm2 = [100] },
+        Claim() with { PerimeterProfileMm = [40] },
+        Claim() with { FacetCount = 0 },
+        Claim() with { BodyCount = 0 },
+        Claim() with { BodyCount = 2_000 },
+        Claim() with { TopologyChecked = false, BodyCount = 2 },
+        Claim() with { TopologyChecked = false, NonWatertight = true },
+        Claim() with { AreaProfileMm2 = null, PerimeterProfileMm = null },
+        Claim() with { MinThicknessMm = -1 },
+    };
+
+    [Fact]
+    public void GeometryProvenance_LegacyFallbackWithoutProfilesOrExpensiveTopologyCheckIsAdmittedForManualReview()
+    {
+        var claim = Claim() with
+        {
+            AreaProfileMm2 = null,
+            PerimeterProfileMm = null,
+            TopologyChecked = true,
+            BodyCount = 1,
+            NonWatertight = true,
+            NonManifold = false,
+            MinThicknessMm = 0,
+        };
+        var persisted = InstantQuotationUploadResult.Succeeded(
+            "persisted-operation",
+            new InstantQuotationUploadReference("opaque"),
+            claim.Sha256);
+
+        var admitted = Assert.IsType<AuthoritativeInstantQuotationGeometry>(
+            AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(persisted, claim));
+
+        Assert.Empty(admitted.AreaProfileMm2);
+        Assert.Empty(admitted.PerimeterProfileMm);
+        Assert.True(admitted.TopologyChecked);
+        Assert.False(admitted.IsManifold);
+    }
+
+    [Fact]
+    public void GeometryProvenance_LargeMeshUsesExactTwentyFourProfilesAndConservativeTopologyState()
+    {
+        var claim = Claim() with
+        {
+            AreaProfileMm2 = Enumerable.Repeat(100.0, 24).ToArray(),
+            PerimeterProfileMm = Enumerable.Repeat(40.0, 24).ToArray(),
+            FacetCount = 250_001,
+            TopologyChecked = false,
+        };
+        var persisted = InstantQuotationUploadResult.Succeeded(
+            "persisted-operation",
+            new InstantQuotationUploadReference("opaque"),
+            claim.Sha256);
+
+        var admitted = Assert.IsType<AuthoritativeInstantQuotationGeometry>(
+            AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(persisted, claim));
+
+        Assert.Equal(24, admitted.AreaProfileMm2.Count);
+        Assert.False(admitted.TopologyChecked);
     }
 
     [Fact]
@@ -179,28 +312,6 @@ public sealed class InstantQuotationUploadClientTests
             """));
     }
 
-    [Fact]
-    public void SuccessfulPromotion_DeepCopiesProfilesAndCannotBeMutatedByCallers()
-    {
-        var areas = new[] { 500.0, 501.0 };
-        var perimeters = new[] { 80.0, 81.0 };
-        var upload = InstantQuotationUploadResult.Succeeded(
-            "operation",
-            new InstantQuotationUploadReference("opaque"),
-            new InstantQuotationGeometry(30, 20_000, 400, areas, perimeters, 1_024, 1, true));
-
-        areas[0] = -1;
-        perimeters[0] = -1;
-
-        var geometry = Assert.IsType<AuthoritativeInstantQuotationGeometry>(upload.AuthoritativeGeometry);
-        Assert.Equal([500.0, 501.0], geometry.AreaProfileMm2);
-        Assert.Equal([80.0, 81.0], geometry.PerimeterProfileMm);
-        Assert.False(geometry.AreaProfileMm2 is IList<double>);
-        Assert.False(geometry.PerimeterProfileMm is IList<double>);
-        Assert.False(geometry.AreaProfileMm2 is double[]);
-        Assert.False(geometry.PerimeterProfileMm is double[]);
-    }
-
     private static void AssertUnavailable(
         InstantQuotationServiceStatus serviceStatus,
         InstantQuotationAuthorizationStatus authorizationStatus,
@@ -212,4 +323,21 @@ public sealed class InstantQuotationUploadClientTests
         Assert.Equal(InstantQuotationOperationStatus.Failed, status);
         Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, problemCategory);
     }
+
+    private static InstantQuotationGeometryClaim Claim() => new(
+        Version: 1,
+        Sha256: new string('a', 64),
+        DimensionXmm: 10,
+        DimensionYmm: 20,
+        DimensionZmm: 30,
+        VolumeMm3: 1_000,
+        SurfaceAreaMm2: 2_200,
+        AreaProfileMm2: Enumerable.Repeat(100.0, 64).ToArray(),
+        PerimeterProfileMm: Enumerable.Repeat(40.0, 64).ToArray(),
+        FacetCount: 1_024,
+        BodyCount: 1,
+        TopologyChecked: true,
+        NonWatertight: false,
+        NonManifold: false,
+        MinThicknessMm: 0.8);
 }

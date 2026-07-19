@@ -156,20 +156,29 @@ internal sealed class DistributedInstantQuotationSessionStore(
     {
         var geometry = part?.Geometry;
         var configuration = part?.Configuration;
+        var claim = geometry is null
+            ? null
+            : new InstantQuotationGeometryClaim(
+                geometry.ClaimVersion,
+                geometry.Sha256 ?? string.Empty,
+                geometry.DimensionXmm,
+                geometry.DimensionYmm,
+                geometry.DimensionZmm,
+                geometry.VolumeMm3,
+                geometry.SurfaceAreaMm2,
+                geometry.AreaProfileMm2 is { Count: 0 } ? null : geometry.AreaProfileMm2,
+                geometry.PerimeterProfileMm is { Count: 0 } ? null : geometry.PerimeterProfileMm,
+                geometry.FacetCount,
+                geometry.BodyCount,
+                geometry.TopologyChecked,
+                geometry.NonWatertight,
+                geometry.NonManifold,
+                geometry.MinThicknessMm);
         return part is not null
             && part.PartId != Guid.Empty
             && !string.IsNullOrWhiteSpace(part.DisplayFileName)
             && !string.IsNullOrWhiteSpace(part.UploadReference)
-            && geometry is not null
-            && double.IsFinite(geometry.HeightMm)
-            && double.IsFinite(geometry.VolumeMm3)
-            && double.IsFinite(geometry.FootprintMm2)
-            && geometry.AreaProfileMm2 is not null
-            && geometry.AreaProfileMm2.All(double.IsFinite)
-            && geometry.PerimeterProfileMm is not null
-            && geometry.PerimeterProfileMm.All(double.IsFinite)
-            && geometry.FacetCount >= 0
-            && geometry.BodyCount >= 1
+            && claim?.IsValid() is true
             && configuration is not null
             && !string.IsNullOrWhiteSpace(configuration.MaterialKey)
             && !string.IsNullOrWhiteSpace(configuration.Color)
@@ -195,14 +204,21 @@ internal sealed class DistributedInstantQuotationSessionStore(
             part.DisplayFileName,
             part.UploadReference.Value,
             new PersistedGeometry(
-                geometry.HeightMm,
+                geometry.ClaimVersion,
+                geometry.Sha256,
+                geometry.DimensionXmm,
+                geometry.DimensionYmm,
+                geometry.DimensionZmm,
                 geometry.VolumeMm3,
-                geometry.FootprintMm2,
+                geometry.SurfaceAreaMm2,
                 geometry.AreaProfileMm2.ToArray(),
                 geometry.PerimeterProfileMm.ToArray(),
                 geometry.FacetCount,
                 geometry.BodyCount,
-                geometry.IsManifold),
+                geometry.TopologyChecked,
+                geometry.NonWatertight,
+                geometry.NonManifold,
+                geometry.MinThicknessMm),
             new PersistedConfiguration(
                 part.Configuration.MaterialKey,
                 part.Configuration.Color,
@@ -226,14 +242,21 @@ internal sealed class DistributedInstantQuotationSessionStore(
             persisted.DisplayFileName!,
             new InstantQuotationUploadReference(persisted.UploadReference!),
             AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
-                geometry.HeightMm,
+                geometry.ClaimVersion,
+                geometry.Sha256!,
+                geometry.DimensionXmm,
+                geometry.DimensionYmm,
+                geometry.DimensionZmm,
                 geometry.VolumeMm3,
-                geometry.FootprintMm2,
+                geometry.SurfaceAreaMm2,
                 geometry.AreaProfileMm2!,
                 geometry.PerimeterProfileMm!,
                 geometry.FacetCount,
                 geometry.BodyCount,
-                geometry.IsManifold),
+                geometry.TopologyChecked,
+                geometry.NonWatertight,
+                geometry.NonManifold,
+                geometry.MinThicknessMm),
             new InstantQuotationPartConfiguration(
                 configuration.MaterialKey!,
                 configuration.Color!,
@@ -257,14 +280,21 @@ internal sealed class DistributedInstantQuotationSessionStore(
             part.DisplayFileName,
             new InstantQuotationUploadReference(part.UploadReference.Value),
             AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
-                geometry.HeightMm,
+                geometry.ClaimVersion,
+                geometry.Sha256,
+                geometry.DimensionXmm,
+                geometry.DimensionYmm,
+                geometry.DimensionZmm,
                 geometry.VolumeMm3,
-                geometry.FootprintMm2,
+                geometry.SurfaceAreaMm2,
                 geometry.AreaProfileMm2,
                 geometry.PerimeterProfileMm,
                 geometry.FacetCount,
                 geometry.BodyCount,
-                geometry.IsManifold),
+                geometry.TopologyChecked,
+                geometry.NonWatertight,
+                geometry.NonManifold,
+                geometry.MinThicknessMm),
             part.Configuration with { });
     }
 
@@ -294,14 +324,21 @@ internal sealed class DistributedInstantQuotationSessionStore(
         PersistedConfiguration? Configuration);
 
     private sealed record PersistedGeometry(
-        double HeightMm,
+        int ClaimVersion,
+        string? Sha256,
+        double DimensionXmm,
+        double DimensionYmm,
+        double DimensionZmm,
         double VolumeMm3,
-        double FootprintMm2,
+        double SurfaceAreaMm2,
         IReadOnlyList<double>? AreaProfileMm2,
         IReadOnlyList<double>? PerimeterProfileMm,
         int FacetCount,
         int BodyCount,
-        bool IsManifold);
+        bool TopologyChecked,
+        bool NonWatertight,
+        bool NonManifold,
+        double MinThicknessMm);
 
     private sealed record PersistedConfiguration(
         string? MaterialKey,

@@ -104,8 +104,10 @@ public sealed class InstantQuotationSessionStoreTests
     public async Task CreateAsync_SourceCollectionsMutate_PersistedSessionAndPricingRemainUnchanged()
     {
         var fixture = CreateFixture();
-        var areas = new[] { 500.0, 501.0 };
-        var perimeters = new[] { 80.0, 81.0 };
+        var areas = Enumerable.Repeat(500.0, 64).ToArray();
+        var perimeters = Enumerable.Repeat(80.0, 64).ToArray();
+        areas[1] = 501;
+        perimeters[1] = 81;
         var originalPart = Part("PLA", areas, perimeters);
         var sourceParts = new[] { originalPart };
         var created = await fixture.Store.CreateAsync("customer-42", new InstantQuotationOrderState(sourceParts), default);
@@ -121,8 +123,13 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.NotSame(originalPart.Geometry, created.Parts.Single().Geometry);
         Assert.NotSame(created.Parts.Single().Geometry, found.Parts.Single().Geometry);
         Assert.Equal("PLA", found.Parts.Single().Configuration.MaterialKey);
-        Assert.Equal([500.0, 501.0], found.Parts.Single().Geometry.AreaProfileMm2);
-        Assert.Equal([80.0, 81.0], found.Parts.Single().Geometry.PerimeterProfileMm);
+        Assert.Equal([500.0, 501.0], found.Parts.Single().Geometry.AreaProfileMm2.Take(2));
+        Assert.Equal([80.0, 81.0], found.Parts.Single().Geometry.PerimeterProfileMm.Take(2));
+        Assert.Equal(20, found.Parts.Single().Geometry.DimensionXmm);
+        Assert.Equal(25, found.Parts.Single().Geometry.DimensionYmm);
+        Assert.Equal(2_200, found.Parts.Single().Geometry.SurfaceAreaMm2);
+        Assert.Equal(0.8, found.Parts.Single().Geometry.MinThicknessMm);
+        Assert.True(found.Parts.Single().Geometry.TopologyChecked);
         Assert.Equal(before.FinalOrderPrice, after.FinalOrderPrice);
         Assert.Equal(before.Parts.Single().PrintTimeMinutesPerUnit, after.Parts.Single().PrintTimeMinutesPerUnit);
         Assert.False(found.Parts is IList<InstantQuotationPart>);
@@ -219,21 +226,37 @@ public sealed class InstantQuotationSessionStoreTests
     {
         return new InstantQuotationOrderState(
         [
-            Part(materialKey, Enumerable.Repeat(500.0, 40).ToArray(), Enumerable.Repeat(80.0, 40).ToArray()),
+            Part(materialKey, Enumerable.Repeat(500.0, 64).ToArray(), Enumerable.Repeat(80.0, 64).ToArray()),
         ]);
     }
 
     private static InstantQuotationPart Part(string materialKey, double[] areas, double[] perimeters)
     {
+        var claim = new InstantQuotationGeometryClaim(
+            1,
+            new string('a', 64),
+            20,
+            25,
+            30,
+            1_000,
+            2_200,
+            areas,
+            perimeters,
+            1_024,
+            1,
+            true,
+            false,
+            false,
+            0.8);
         var upload = InstantQuotationUploadResult.Succeeded(
             "operation-1",
             new InstantQuotationUploadReference("opaque-1"),
-            new InstantQuotationGeometry(30, 20_000, 400, areas, perimeters, 1_024, 1, true));
+            claim.Sha256);
         return new InstantQuotationPart(
             Guid.NewGuid(),
             "part.stl",
             upload.UploadReference!,
-            upload.AuthoritativeGeometry!,
+            AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
             new InstantQuotationPartConfiguration(materialKey, "Black", 1));
     }
 

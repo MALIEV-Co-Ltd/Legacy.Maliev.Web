@@ -193,6 +193,89 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
+    public async Task Upload_PassesExactValidatedClaimAndPromotesItOnlyAfterMatchingPersistedDigest()
+    {
+        var client = new ControlledUploadClient();
+        var areas = Enumerable.Range(0, 64).Select(index => 80.0 - index).ToArray();
+        var perimeters = Enumerable.Range(0, 64).Select(index => 36.0 - (index * 0.25)).ToArray();
+        var claim = Geometry() with
+        {
+            DimensionXmm = 8,
+            DimensionYmm = 12.5,
+            DimensionZmm = 10,
+            SurfaceAreaMm2 = 550,
+            AreaProfileMm2 = areas,
+            PerimeterProfileMm = perimeters,
+            MinThicknessMm = 0.6,
+        };
+        var file = UploadFile("bound.stl") with { GeometryClaim = claim };
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var uploading = workflow.UploadAsync([file], default);
+        await client.WaitForUploadsAsync(1);
+
+        Assert.Empty(workflow.Parts);
+        areas[0] = -1;
+        perimeters[0] = -1;
+        var passedClaim = Assert.Single(client.UploadClaims);
+        Assert.NotSame(claim, passedClaim);
+        Assert.Equal(claim.Sha256, passedClaim.Sha256);
+        Assert.Equal(64, passedClaim.AreaProfileMm2!.Count);
+        Assert.Equal(80.0, passedClaim.AreaProfileMm2[0]);
+        Assert.Equal(79.0, passedClaim.AreaProfileMm2[1]);
+        Assert.Equal(64, passedClaim.PerimeterProfileMm!.Count);
+        Assert.Equal(36.0, passedClaim.PerimeterProfileMm[0]);
+        Assert.Equal(35.75, passedClaim.PerimeterProfileMm[1]);
+        client.CompleteSuccess("bound.stl", "opaque-bound", claim);
+        await uploading;
+
+        var geometry = Assert.Single(workflow.Parts).Geometry;
+        Assert.Equal(8, geometry.DimensionXmm);
+        Assert.Equal(12.5, geometry.DimensionYmm);
+        Assert.Equal(10, geometry.HeightMm);
+        Assert.Equal(100, geometry.FootprintMm2);
+        Assert.Equal(550, geometry.SurfaceAreaMm2);
+        Assert.Equal(0.6, geometry.MinThicknessMm);
+    }
+
+    [Fact]
+    public async Task InvalidClaim_IsRejectedBeforeUploadBoundary()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        await workflow.UploadAsync(
+            [UploadFile("invalid.stl") with { GeometryClaim = Geometry() with { Sha256 = new string('A', 64) } }],
+            default);
+
+        Assert.Empty(client.UploadOperations);
+        Assert.Empty(workflow.Parts);
+        Assert.Equal(InstantQuotationProblemCategory.Validation, Assert.Single(workflow.Uploads).ProblemCategory);
+    }
+
+    [Fact]
+    public async Task PersistedDigestMismatch_IsQuarantinedAndCannotPromoteClaim()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var uploading = workflow.UploadAsync([UploadFile("mismatch.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess(
+            "mismatch.stl",
+            "opaque-mismatch",
+            Geometry() with { Sha256 = new string('b', 64) });
+        await uploading;
+
+        Assert.Empty(workflow.Parts);
+        Assert.Equal("opaque-mismatch", Assert.Single(client.RemovedReferences));
+        Assert.Equal(InstantQuotationProblemCategory.Validation, Assert.Single(workflow.Uploads).ProblemCategory);
+    }
+
+    [Fact]
     public async Task ReservedUploadBatch_AllocatesStableOrderedLocalIdsBeforeTransportStarts()
     {
         var client = new ControlledUploadClient();
@@ -511,7 +594,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         await workflow.InitializeAsync(default);
 
         await workflow.UploadAsync(
-            [new InstantQuotationWorkflowUploadFile("empty.stl", "application/octet-stream", 0, _ => Task.FromResult<Stream>(Stream.Null))],
+            [new InstantQuotationWorkflowUploadFile("empty.stl", "application/octet-stream", 0, Geometry(), _ => Task.FromResult<Stream>(Stream.Null))],
             default);
         var reserved = workflow.ReserveUploads([UploadFile("cancelled.stl")]);
         var uploading = workflow.UploadReservedAsync(reserved, default);
@@ -569,22 +652,37 @@ public sealed class InstantQuotationWorkflowUploadTests
         name,
         "application/octet-stream",
         4,
+        Geometry(),
         _ => Task.FromResult<Stream>(new MemoryStream([1, 2, 3, 4], writable: false)));
 
-    private static InstantQuotationGeometry Geometry(double volume = 1_000) =>
-        new(10, volume, 100, [100, 90], [40, 38], 100, 1, true);
+    private static InstantQuotationGeometryClaim Geometry(double volume = 1_000) => new(
+        1,
+        new string('a', 64),
+        10,
+        10,
+        10,
+        volume,
+        600,
+        Enumerable.Repeat(100.0, 64).ToArray(),
+        Enumerable.Repeat(40.0, 64).ToArray(),
+        100,
+        1,
+        true,
+        false,
+        false,
+        0.8);
 
     private static InstantQuotationPart PersistedPart(string fileName, string reference)
     {
         var upload = InstantQuotationUploadResult.Succeeded(
             "persisted-operation",
             new InstantQuotationUploadReference(reference),
-            Geometry());
+            Geometry().Sha256);
         return new InstantQuotationPart(
             Guid.NewGuid(),
             fileName,
             upload.UploadReference!,
-            upload.AuthoritativeGeometry!,
+            AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, Geometry())!,
             new InstantQuotationPartConfiguration("PLA", "Black", 1));
     }
 
@@ -720,16 +818,19 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         public List<CancellationToken> UploadCancellationTokens { get; } = [];
 
+        public List<InstantQuotationGeometryClaim> UploadClaims { get; } = [];
+
         public List<string> RemovedReferences { get; } = [];
 
         public List<string> RemoveOperations { get; } = [];
 
         public Queue<InstantQuotationProblemCategory> RemoveResults { get; } = [];
 
-        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, Stream content, string fileName, string contentType, long contentLength, string operationId, CancellationToken cancellationToken)
+        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, Stream content, string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim geometryClaim, string operationId, CancellationToken cancellationToken)
         {
             UploadOperations.Add(operationId);
             UploadCancellationTokens.Add(cancellationToken);
+            UploadClaims.Add(geometryClaim);
             var completion = new TaskCompletionSource<InstantQuotationUploadResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (!completions.TryGetValue(fileName, out var queue))
             {
@@ -765,14 +866,14 @@ public sealed class InstantQuotationWorkflowUploadTests
         public void CompleteSuccess(
             string fileName,
             string reference,
-            InstantQuotationGeometry geometry,
+            InstantQuotationGeometryClaim geometry,
             string? operationId = null)
         {
             var pending = completions[fileName].Dequeue();
             pending.Completion.SetResult(InstantQuotationUploadResult.Succeeded(
                 operationId ?? pending.OperationId,
                 new InstantQuotationUploadReference(reference),
-                geometry));
+                geometry.Sha256));
         }
 
         public void CompleteUnavailable(string fileName)

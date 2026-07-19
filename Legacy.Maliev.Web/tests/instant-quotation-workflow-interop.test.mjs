@@ -28,7 +28,16 @@ function disposableObject() {
   };
 }
 
-function harness(loadModel = async () => disposableObject()) {
+function modelFile(name, bytes = [1, 2, 3]) {
+  return {
+    name,
+    arrayBuffer: async () => new Uint8Array(bytes).buffer,
+  };
+}
+
+function harness(
+  loadModel = async () => disposableObject(),
+  analyzeGeometry = () => ({ version: 1, dimensionZMm: 10, volumeMm3: 1000 })) {
   const calls = [];
   const statuses = [];
   const viewer = {
@@ -45,6 +54,7 @@ function harness(loadModel = async () => disposableObject()) {
     statuses,
     interop: createWorkflowPreviewInterop({
       loadModel,
+      analyzeGeometry,
       createViewer: () => viewer,
       reportStatus: status => statuses.push(status),
     }),
@@ -57,12 +67,48 @@ test('supports the exact nine standalone quotation extensions', () => {
   ]);
 });
 
+test('returns a same-file upload-derived geometry claim with lowercase SHA-256', async () => {
+  const bytes = new TextEncoder().encode('legacy-geometry-source');
+  const file = {
+    name: 'claim.stl',
+    arrayBuffer: async () => bytes.buffer.slice(0),
+  };
+  const expectedGeometry = {
+    version: 1,
+    dimensionXmm: 10,
+    dimensionYmm: 20,
+    dimensionZmm: 30,
+    volumeMm3: 6000,
+  };
+  const { interop } = harness(async () => disposableObject(), () => expectedGeometry);
+  const [key] = interop.beginSelection({ files: [file] });
+  assert.deepEqual(await interop.getGeometryClaim(key), {
+    ...expectedGeometry,
+    sha256: '52af3eb361bcd7105f22ad173ae6dadf1674de3201e79ba6f55e11f45dd06bcf',
+  });
+});
+
+test('quarantined and released previews cannot yield stale geometry claims', async () => {
+  const pending = deferred();
+  const file = {
+    name: 'stale.stl',
+    arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+  };
+  const { interop } = harness(() => pending.promise);
+  const [key] = interop.beginSelection({ files: [file] });
+  interop.quarantine(key);
+  pending.resolve(disposableObject());
+  await assert.rejects(interop.getGeometryClaim(key), /Geometry analysis is unavailable/);
+  interop.release(key);
+  await assert.rejects(interop.getGeometryClaim(key), /Unknown preview correlation/);
+});
+
 test('starts duplicate-name previews in selection order without waiting for parsing', async () => {
   const first = deferred();
   const second = deferred();
   const objectA = disposableObject();
   const objectB = disposableObject();
-  const files = [{ name: 'same.stl' }, { name: 'same.stl' }];
+  const files = [modelFile('same.stl'), modelFile('same.stl')];
   let call = 0;
   const { calls, interop } = harness(() => [first.promise, second.promise][call++]);
   interop.attach({});
@@ -74,11 +120,12 @@ test('starts duplicate-name previews in selection order without waiting for pars
   second.resolve(objectB);
   first.resolve(objectA);
   await Promise.all([first.promise, second.promise]);
-  await Promise.resolve();
-  assert.deepEqual(calls.filter(item => item[0] === 'add').map(item => [item[1], item[2]]), [
-    ['part-b', objectB],
-    ['part-a', objectA],
-  ]);
+  await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+  assert.deepEqual(
+    calls.filter(item => item[0] === 'add')
+      .map(item => [item[1], item[2]])
+      .sort(([left], [right]) => left.localeCompare(right)),
+    [['part-a', objectA], ['part-b', objectB]]);
   assert.equal(objectB.disposed, false);
   assert.equal(objectA.disposed, false);
 });
@@ -97,8 +144,8 @@ test('capture listener snapshots each FileList before server interop and rejecte
   const loaded = [];
   const { interop } = harness(async file => { loaded.push(file); return disposableObject(); });
   interop.bindInput(input);
-  const first = { name: 'first.stl' };
-  const rejected = { name: 'rejected.obj' };
+  const first = modelFile('first.stl');
+  const rejected = modelFile('rejected.obj');
   input.files = [first];
   capture();
   input.files = [rejected];
@@ -119,12 +166,12 @@ test('admits successful previews and releases failed, removed, cancelled, and st
   });
   interop.attach({});
   const [ok, failed, cancelled] = await interop.beginSelection({
-    files: [{ name: 'a.stl' }, { name: 'b.stl' }, { name: 'c.stl' }],
+    files: [modelFile('a.stl'), modelFile('b.stl'), modelFile('c.stl')],
   });
   interop.admit(ok, 'part-a');
   interop.release(failed);
   interop.release(cancelled);
-  await Promise.resolve();
+  await interop.getGeometryClaim(ok);
   assert.deepEqual(calls.filter(call => call[0] === 'add').map(call => call[1]), ['part-a']);
   interop.remove('part-a');
   assert.ok(calls.some(call => call[0] === 'remove' && call[1] === 'part-a'));
@@ -136,7 +183,7 @@ test('retry creates a new key and stale completion cannot replace it', async () 
   let invocation = 0;
   const { calls, interop } = harness(() => invocation++ === 0 ? oldLoad.promise : newLoad.promise);
   interop.attach({});
-  const [oldKey] = await interop.beginSelection({ files: [{ name: 'part.step' }] });
+  const [oldKey] = await interop.beginSelection({ files: [modelFile('part.step')] });
   interop.quarantine(oldKey);
   const newKey = interop.retry(oldKey);
   assert.notEqual(newKey, oldKey);
@@ -144,13 +191,13 @@ test('retry creates a new key and stale completion cannot replace it', async () 
   oldLoad.resolve(disposableObject());
   newLoad.resolve(disposableObject());
   await Promise.all([oldLoad.promise, newLoad.promise]);
-  await Promise.resolve();
+  await interop.getGeometryClaim(newKey);
   assert.deepEqual(calls.filter(call => call[0] === 'add').map(call => call[1]), ['part-new']);
 });
 
 test('terminal release deletes correlation and clears retry access', async () => {
   const { interop } = harness();
-  const [key] = await interop.beginSelection({ files: [{ name: 'released.stl' }] });
+  const [key] = await interop.beginSelection({ files: [modelFile('released.stl')] });
   interop.release(key);
   assert.throws(() => interop.retry(key), /Unknown preview correlation/);
   assert.throws(() => interop.admit(key, 'part-released'), /Unknown preview correlation/);
@@ -159,9 +206,9 @@ test('terminal release deletes correlation and clears retry access', async () =>
 test('parser failures report persistent advisory state without raw error details', async () => {
   const { calls, statuses, interop } = harness(async () => { throw new Error('parser detail'); });
   interop.attach({});
-  const [key] = await interop.beginSelection({ files: [{ name: 'bad.obj' }] });
+  const [key] = await interop.beginSelection({ files: [modelFile('bad.obj')] });
   interop.admit(key, 'server-part');
-  await Promise.resolve();
+  await assert.rejects(interop.getGeometryClaim(key), /Geometry analysis is unavailable/);
   assert.equal(interop.status(), 'unavailable');
   assert.deepEqual(statuses, ['unavailable']);
   interop.reset();
@@ -181,13 +228,14 @@ test('attached remove delegates disposal exactly once and wrapper disposal does 
   };
   const interop = createWorkflowPreviewInterop({
     loadModel: async () => object,
+    analyzeGeometry: () => ({ version: 1 }),
     createViewer: () => viewer,
     reportStatus() {},
   });
   interop.attach({});
-  const [key] = await interop.beginSelection({ files: [{ name: 'attached.stl' }] });
+  const [key] = await interop.beginSelection({ files: [modelFile('attached.stl')] });
   interop.admit(key, 'attached-part');
-  await Promise.resolve();
+  await interop.getGeometryClaim(key);
   interop.remove('attached-part');
   interop.dispose();
   assert.equal(removals, 1);
@@ -206,14 +254,15 @@ test('attached parts with shared resources preserve Task4A identity-dedup across
   const viewer = createModelViewer({ adapter: {} });
   const interop = createWorkflowPreviewInterop({
     loadModel: async () => objects.shift(),
+    analyzeGeometry: () => ({ version: 1 }),
     createViewer: () => viewer,
     reportStatus() {},
   });
   interop.attach({});
-  const keys = await interop.beginSelection({ files: [{ name: 'a.stl' }, { name: 'b.stl' }] });
+  const keys = await interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
   interop.admit(keys[0], 'part-a');
   interop.admit(keys[1], 'part-b');
-  await Promise.resolve();
+  await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
   interop.remove('part-a');
   interop.dispose();
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });
@@ -223,7 +272,7 @@ test('dispose aborts pending parsing and disposes the viewer exactly once', asyn
   const pending = deferred();
   const { calls, interop } = harness(() => pending.promise);
   interop.attach({});
-  await interop.beginSelection({ files: [{ name: 'pending.3mf' }] });
+  await interop.beginSelection({ files: [modelFile('pending.3mf')] });
   interop.dispose();
   interop.dispose();
   assert.equal(calls.filter(call => call[0] === 'dispose').length, 1);
@@ -239,8 +288,8 @@ test('unadmitted cleanup disposes shared geometry, materials, and textures once 
   });
   const objects = [object(), object()];
   const { interop } = harness(async () => objects.shift());
-  const keys = await interop.beginSelection({ files: [{ name: 'a.stl' }, { name: 'b.stl' }] });
-  await Promise.resolve();
+  const keys = await interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
+  await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
   interop.release(keys[0]);
   interop.release(keys[1]);
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });

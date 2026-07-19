@@ -1,3 +1,5 @@
+import { analyzeUploadDerivedGeometry } from './geometry-analysis.mjs';
+
 export const supportedPreviewExtensions = Object.freeze([
   'stl', 'obj', '3mf', 'glb', 'gltf', 'stp', 'step', 'igs', 'iges',
 ]);
@@ -8,14 +10,22 @@ export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter
   const viewerModule = await import('/dist/instant-quotation-viewer.mjs');
   return createWorkflowPreviewInterop({
     loadModel: viewerModule.loadStandaloneModel,
+    analyzeGeometry: analyzeUploadDerivedGeometry,
     createViewer: viewerModule.createThreeModelViewer,
     reportStatus: () => dotNetStatusReporter?.invokeMethodAsync('ReportPreviewUnavailableAsync'),
   });
 }
 
-export function createWorkflowPreviewInterop({ loadModel, createViewer, reportStatus = () => {} }) {
-  if (typeof loadModel !== 'function' || typeof createViewer !== 'function') {
-    throw new TypeError('Preview loader and viewer factories are required.');
+export function createWorkflowPreviewInterop({
+  loadModel,
+  analyzeGeometry,
+  createViewer,
+  reportStatus = () => {},
+}) {
+  if (typeof loadModel !== 'function'
+      || typeof analyzeGeometry !== 'function'
+      || typeof createViewer !== 'function') {
+    throw new TypeError('Preview loader, geometry analysis, and viewer factories are required.');
   }
 
   const previews = new Map();
@@ -69,6 +79,8 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer, reportSt
       file,
       controller,
       object: null,
+      geometryClaim: null,
+      completion: null,
       partId: null,
       released: false,
       quarantined: false,
@@ -80,10 +92,49 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer, reportSt
       return key;
     }
 
-    Promise.resolve(loadModel(file, { signal: controller.signal }))
-      .then(object => completePreview(entry, object))
-      .catch(error => failPreview(entry, error));
+    entry.completion = Promise.all([
+      Promise.resolve(loadModel(file, { signal: controller.signal })),
+      sha256(file, controller.signal),
+    ]).then(([object, hash]) => {
+      if (!isCurrent(entry)) {
+        disposeModel(object, disposedResources);
+        return null;
+      }
+      try {
+        entry.geometryClaim = Object.freeze({
+          ...analyzeGeometry(object),
+          sha256: hash,
+        });
+      } catch (error) {
+        disposeModel(object, disposedResources);
+        failPreview(entry, error);
+        return null;
+      }
+      completePreview(entry, object);
+      return entry.geometryClaim;
+    }).catch(error => {
+      failPreview(entry, error);
+      return null;
+    });
     return key;
+  }
+
+  async function getGeometryClaim(key) {
+    assertActive();
+    const entry = requirePreview(key);
+    const claim = await entry.completion;
+    if (!claim || !isCurrent(entry)) {
+      throw new Error('Geometry analysis is unavailable.');
+    }
+    return claim;
+  }
+
+  function isCurrent(entry) {
+    return !disposed
+      && !entry.released
+      && !entry.quarantined
+      && previews.get(entry.key) === entry
+      && !entry.controller?.signal.aborted;
   }
 
   function completePreview(entry, object) {
@@ -132,6 +183,7 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer, reportSt
     if (entry.attached && viewer) viewer.remove(entry.partId);
     else if (entry.object) disposeModel(entry.object, disposedResources);
     entry.object = null;
+    entry.geometryClaim = null;
     entry.attached = false;
     entry.quarantined = true;
   }
@@ -146,6 +198,7 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer, reportSt
     if (entry.attached && viewer) viewer.remove(entry.partId);
     else if (entry.object) disposeModel(entry.object, disposedResources);
     entry.object = null;
+    entry.geometryClaim = null;
     entry.file = null;
     entry.controller = null;
   }
@@ -210,6 +263,7 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer, reportSt
 
   return Object.freeze({
     beginSelection,
+    getGeometryClaim,
     bindInput,
     discardSelection,
     attach,
@@ -225,6 +279,16 @@ export function createWorkflowPreviewInterop({ loadModel, createViewer, reportSt
     status,
     dispose,
   });
+}
+
+async function sha256(file, signal) {
+  if (typeof file?.arrayBuffer !== 'function') {
+    throw new TypeError('The selected file cannot be hashed.');
+  }
+  const bytes = await file.arrayBuffer();
+  if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
 }
 
 function extensionOf(name) {

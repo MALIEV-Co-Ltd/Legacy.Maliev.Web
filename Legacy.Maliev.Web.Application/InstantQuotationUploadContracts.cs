@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Legacy.Maliev.Web.Infrastructure")]
+[assembly: InternalsVisibleTo("Legacy.Maliev.Web")]
 
 namespace Legacy.Maliev.Web.Application;
 
@@ -43,6 +44,7 @@ public interface IInstantQuotationUploadClient
         string fileName,
         string contentType,
         long contentLength,
+        InstantQuotationGeometryClaim geometryClaim,
         string operationId,
         CancellationToken cancellationToken);
 
@@ -69,7 +71,7 @@ public sealed record InstantQuotationUploadResult
         InstantQuotationOperationStatus status,
         InstantQuotationProblemCategory problemCategory,
         InstantQuotationUploadReference? uploadReference,
-        AuthoritativeInstantQuotationGeometry? authoritativeGeometry)
+        string? contentSha256)
     {
         OperationId = operationId;
         ServiceStatus = serviceStatus;
@@ -77,7 +79,7 @@ public sealed record InstantQuotationUploadResult
         Status = status;
         ProblemCategory = problemCategory;
         UploadReference = uploadReference;
-        AuthoritativeGeometry = authoritativeGeometry;
+        ContentSha256 = contentSha256;
     }
 
     public string OperationId { get; }
@@ -92,19 +94,19 @@ public sealed record InstantQuotationUploadResult
 
     public InstantQuotationUploadReference? UploadReference { get; }
 
-    public AuthoritativeInstantQuotationGeometry? AuthoritativeGeometry { get; }
+    public string? ContentSha256 { get; }
 
     internal static InstantQuotationUploadResult Succeeded(
         string operationId,
         InstantQuotationUploadReference uploadReference,
-        InstantQuotationGeometry geometry) => new(
+        string contentSha256) => new(
             operationId,
             InstantQuotationServiceStatus.Available,
             InstantQuotationAuthorizationStatus.Authorized,
             InstantQuotationOperationStatus.Succeeded,
             InstantQuotationProblemCategory.None,
             uploadReference,
-            AuthoritativeInstantQuotationGeometry.FromSuccessfulUpload(geometry));
+            contentSha256);
 
     public static InstantQuotationUploadResult Unavailable(string operationId) => new(
         operationId,

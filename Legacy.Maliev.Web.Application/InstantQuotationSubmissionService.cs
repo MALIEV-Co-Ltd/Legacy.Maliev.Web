@@ -361,6 +361,12 @@ public sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Color: {SingleLine(partQuote.Color)}");
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
             message.AppendLine($"Volume: {part.Geometry.VolumeMm3.ToString("0.###", CultureInfo.InvariantCulture)} mm3");
+            var geometryWarnings = GeometryWarnings(part.Geometry);
+            if (geometryWarnings.Count > 0)
+            {
+                message.AppendLine($"Geometry warning: {string.Join("; ", geometryWarnings)}");
+            }
+
             message.AppendLine($"Quantity: {partQuote.Quantity.ToString(CultureInfo.InvariantCulture)} piece(s)");
             message.AppendLine($"Cost per unit: {partQuote.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB");
             message.AppendLine($"Print time per unit: {partQuote.PrintTimeMinutesPerUnit.ToString("0.##", CultureInfo.InvariantCulture)} minute(s)");
@@ -385,6 +391,45 @@ public sealed class InstantQuotationSubmissionService(
             $"Due date: {quote.LeadTimeMinimumDays.ToString(CultureInfo.InvariantCulture)}-{quote.LeadTimeMaximumDays.ToString(CultureInfo.InvariantCulture)} business day(s)");
         message.AppendLine($"Total price: {quote.FinalOrderPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB");
         return message.ToString();
+    }
+
+    private static IReadOnlyList<string> GeometryWarnings(AuthoritativeInstantQuotationGeometry geometry)
+    {
+        var warnings = new List<string>();
+        if (!geometry.TopologyChecked)
+        {
+            warnings.Add("Detailed topology not checked");
+        }
+
+        if (geometry.NonWatertight)
+        {
+            warnings.Add("Non-watertight mesh");
+        }
+
+        if (geometry.NonManifold)
+        {
+            warnings.Add("Non-manifold edges");
+        }
+
+        if (geometry.BodyCount > 1)
+        {
+            warnings.Add($"Multi-body mesh ({geometry.BodyCount.ToString(CultureInfo.InvariantCulture)} bodies)");
+        }
+
+        var minimumDimension = Math.Min(
+            geometry.DimensionXmm,
+            Math.Min(geometry.DimensionYmm, geometry.DimensionZmm));
+        if (minimumDimension is > 0 and < 3)
+        {
+            warnings.Add("Dimension below 3 mm");
+        }
+
+        if (Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm)) > 350)
+        {
+            warnings.Add("Dimension exceeds 350 mm");
+        }
+
+        return warnings;
     }
 
     private static bool IsValidCustomer(InstantQuotationCustomerSubmission customer)

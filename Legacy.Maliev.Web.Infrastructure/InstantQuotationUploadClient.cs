@@ -10,6 +10,7 @@ internal sealed class UnavailableInstantQuotationUploadClient : IInstantQuotatio
         string fileName,
         string contentType,
         long contentLength,
+        InstantQuotationGeometryClaim geometryClaim,
         string operationId,
         CancellationToken cancellationToken)
     {

@@ -330,7 +330,7 @@ export async function loadStandaloneModel(file, { signal } = {}) {
     const input = extension === 'gltf' ? new TextDecoder().decode(buffer) : buffer;
     if (extension === 'gltf') validateStandaloneGltfDocument(input);
     const result = await new GLTFLoader().parseAsync(input, '');
-    return result.scene;
+    return orientGltfForPrinting(result.scene);
   }
   if (['stp', 'step', 'igs', 'iges'].includes(extension)) return loadCadModel(buffer, extension, signal);
   throw new TypeError('Unsupported standalone model file.');
@@ -340,9 +340,9 @@ async function loadCadModel(buffer, extension, signal) {
   const occt = await ensureOcct();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
   const bytes = new Uint8Array(buffer);
-  const result = extension === 'igs' || extension === 'iges'
+  const result = validateCadTessellation(extension === 'igs' || extension === 'iges'
     ? occt.ReadIgesFile(bytes, null)
-    : occt.ReadStepFile(bytes, null);
+    : occt.ReadStepFile(bytes, null));
   const group = new THREE.Group();
   for (const mesh of result.meshes ?? []) {
     const geometry = new THREE.BufferGeometry();
@@ -352,6 +352,17 @@ async function loadCadModel(buffer, extension, signal) {
     group.add(new THREE.Mesh(geometry, defaultMaterial()));
   }
   return group;
+}
+
+export function orientGltfForPrinting(scene) {
+  if (!scene?.rotation) throw new TypeError('Unable to read this glTF/GLB file.');
+  scene.rotation.x = Math.PI / 2;
+  return scene;
+}
+
+export function validateCadTessellation(result) {
+  if (!result?.success) throw new TypeError('Unable to tessellate this CAD file.');
+  return result;
 }
 
 let productionOcctLoader;

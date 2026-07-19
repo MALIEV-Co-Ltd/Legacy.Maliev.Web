@@ -105,6 +105,37 @@ public sealed class InstantQuotationReviewCustomerTests
     }
 
     [Fact]
+    public void Workflow_RendersUploadDerivedGeometryAndExactFiniteDfmCodes()
+    {
+        var markup = ReadComponent("InstantQuotationWorkflow.razor");
+
+        foreach (var marker in new[]
+        {
+            "data-workflow-dfm-status",
+            "data-workflow-dfm-part",
+            "DimensionXmm",
+            "DimensionYmm",
+            "DimensionZmm",
+            "VolumeMm3",
+            "SurfaceAreaMm2",
+            "MinThicknessMm",
+            "FacetCount",
+            "topology-not-checked",
+            "non-watertight",
+            "non-manifold",
+            "multiple-bodies",
+            "dimension-too-small",
+            "dimension-too-large",
+        })
+        {
+            Assert.Contains(marker, markup, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("Sha256", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UploadReference", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SubmissionOutcome_UsesControlledStableStatusAndPartialNoResubmitCopy()
     {
         var model = ReadComponent("InstantQuotationCustomerDisplayModel.cs");

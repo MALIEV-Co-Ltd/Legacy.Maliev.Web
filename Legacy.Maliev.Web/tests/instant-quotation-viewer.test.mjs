@@ -7,7 +7,9 @@ import {
   createModelViewer,
   createOcctLoader,
   loadStandaloneModel,
+  orientGltfForPrinting,
   stableBodyColor,
+  validateCadTessellation,
   validateStandaloneGltfDocument,
 } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
 import {
@@ -17,68 +19,6 @@ import {
   MeshStandardMaterial,
   Texture,
 } from 'three';
-import {
-  analyzeAdvisoryGeometry,
-  geometryAnalysisLimits,
-} from '../wwwroot/src/app/js/instant-quotation/geometry-analysis.mjs';
-
-test('geometry analysis preserves production sampling, topology, and DFM limits', () => {
-  assert.deepEqual(geometryAnalysisLimits, {
-    normalProfileSamples: 64,
-    highFacetProfileSamples: 24,
-    highFacetThreshold: 250000,
-    topologyTriangleLimit: 200000,
-    minimumDimensionMm: 3,
-    maximumDimensionMm: 350,
-  });
-  const small = analyzeAdvisoryGeometry({
-    facets: 200000,
-    dimensions: { x: 2.99, y: 20, z: 20 },
-    watertight: false,
-    bodyCount: 2,
-  });
-  const large = analyzeAdvisoryGeometry({
-    facets: 250001,
-    dimensions: { x: 351, y: 20, z: 20 },
-    watertight: true,
-    bodyCount: 1,
-  });
-  assert.equal(small.profileSamples, 64);
-  assert.equal(large.profileSamples, 24);
-  assert.equal(small.topologyChecked, true);
-  assert.equal(large.topologyChecked, false);
-  assert.equal(small.isAuthoritative, false);
-  assert.equal(small.volumeMethod, 'bounding-box-fallback');
-  assert.deepEqual(small.dfm.map(item => item.code), ['dimension-too-small', 'non-watertight', 'multiple-bodies']);
-  assert.deepEqual(large.dfm.map(item => item.code), ['dimension-too-large']);
-});
-
-test('non-watertight advisory volume uses the production half-bounding-box fallback', () => {
-  const result = analyzeAdvisoryGeometry({
-    facets: 12,
-    dimensions: { x: 10, y: 10, z: 10 },
-    watertight: false,
-  });
-  assert.equal(result.volumeMethod, 'bounding-box-fallback');
-  assert.equal(result.volume, 500);
-});
-
-test('oriented triangle-plane sampling derives tapered area and perimeter profiles', () => {
-  const result = analyzeAdvisoryGeometry({
-    facets: 6,
-    dimensions: { x: 10, y: 10, z: 10 },
-    watertight: true,
-    volume: 1000 / 3,
-    triangles: squarePyramidTriangles(),
-  });
-  assert.equal(result.areaProfile.length, 64);
-  assert.equal(result.perimeterProfile.length, 64);
-  assert.ok(result.areaProfile[32] > 20 && result.areaProfile[32] < 30);
-  assert.ok(result.perimeterProfile[32] > 18 && result.perimeterProfile[32] < 22);
-  assert.notEqual(result.areaProfile[32], 100);
-  assert.notEqual(result.perimeterProfile[32], 40);
-});
-
 test('viewer retains camera state per part and exposes orbit keyboard alternatives', () => {
   const adapter = createAdapter();
   const viewer = createModelViewer({ adapter });
@@ -263,6 +203,19 @@ test('standalone textual GLTF permits embedded data only and rejects external UR
       () => validateStandaloneGltfDocument(JSON.stringify({ images: [{ uri }] })),
       /embedded data URIs/i);
   }
+});
+
+test('glTF uses the production Y-up to printing Z-up rotation before geometry analysis', () => {
+  const scene = { rotation: { x: 0 } };
+  assert.equal(orientGltfForPrinting(scene), scene);
+  assert.equal(scene.rotation.x, Math.PI / 2);
+});
+
+test('CAD loading rejects missing or unsuccessful OCCT tessellation results', () => {
+  assert.throws(() => validateCadTessellation(null), /Unable to tessellate/i);
+  assert.throws(() => validateCadTessellation({ success: false, meshes: [] }), /Unable to tessellate/i);
+  const result = { success: true, meshes: [] };
+  assert.equal(validateCadTessellation(result), result);
 });
 
 test('textual GLTF loading rejects an external resource before invoking the loader', async () => {
