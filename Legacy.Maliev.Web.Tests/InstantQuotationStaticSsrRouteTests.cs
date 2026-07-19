@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text.Json;
+using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -50,8 +53,15 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
     [Fact]
     public async Task DisabledRoute_UsesRetainedRazorPageAndHandlers()
     {
-        await using var fallbackFactory = factory.WithWebHostBuilder(
-            builder => builder.UseSetting("BlazorRouting:InstantQuotation", "false"));
+        await using var fallbackFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:InstantQuotation", "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationSubmissionService, UnusedSubmissionService>();
+            });
+        });
         using var client = CreateClient(fallbackFactory);
 
         var page = await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en");
@@ -70,4 +80,14 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
             AllowAutoRedirect = false,
             BaseAddress = new Uri("https://localhost"),
         });
+
+    private sealed class UnusedSubmissionService : IInstantQuotationSubmissionService
+    {
+        public Task<InstantQuotationSubmissionResult> SubmitAsync(
+            string sessionId,
+            string? ownerIdentity,
+            InstantQuotationCustomerSubmission customer,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The fallback route GET must not submit an instant quotation.");
+    }
 }

@@ -75,7 +75,8 @@ public sealed class InstantQuotationReviewCustomerTests
         var content = ReadComponent("ThreeDimensionalPrintingEstimateContent.razor");
 
         Assert.Contains("GetAndStoreTokens(context)", page, StringComparison.Ordinal);
-        Assert.Contains("GetCountriesAsync(context.RequestAborted)", page, StringComparison.Ordinal);
+        Assert.Contains("CreateLinkedTokenSource(context.RequestAborted)", page, StringComparison.Ordinal);
+        Assert.Contains("GetCountriesAsync(timeout.Token).WaitAsync(timeout.Token)", page, StringComparison.Ordinal);
         Assert.Contains("GetCustomerDatabaseIdAsync(context", page, StringComparison.Ordinal);
         Assert.Contains("GetProfileAsync", page, StringComparison.Ordinal);
         Assert.Contains("InstantQuotationSubmissionStatus", page, StringComparison.Ordinal);
