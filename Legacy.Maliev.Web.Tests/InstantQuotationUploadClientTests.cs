@@ -19,6 +19,14 @@ public sealed class InstantQuotationUploadClientTests
         Assert.Equal(["FinalizeAsync", "RemoveAsync", "UploadAsync"], methods.Select(method => method.Name));
         Assert.All(methods, method => Assert.Equal(typeof(Task<>), method.ReturnType.GetGenericTypeDefinition()));
         Assert.All(methods, method => Assert.Equal(typeof(string), method.GetParameters()[0].ParameterType));
+        Assert.All(methods, method =>
+        {
+            var owner = Assert.Single(method.GetParameters(), parameter => parameter.Name == "ownerIdentity");
+            Assert.Equal(typeof(string), owner.ParameterType);
+            Assert.Equal(
+                System.Reflection.NullabilityState.Nullable,
+                new NullabilityInfoContext().Create(owner).ReadState);
+        });
         Assert.All(methods, method => Assert.Contains(method.GetParameters(), parameter => parameter.Name == "operationId"));
         Assert.All(methods, method => Assert.Equal(typeof(CancellationToken), method.GetParameters().Last().ParameterType));
         Assert.Contains(typeof(IInstantQuotationUploadClient).GetMethod("UploadAsync")!.GetParameters(), parameter => parameter.ParameterType == typeof(Stream));
@@ -86,9 +94,9 @@ public sealed class InstantQuotationUploadClientTests
         var client = new UnavailableInstantQuotationUploadClient();
         using var stream = new MemoryStream([1, 2, 3]);
 
-        var upload = await client.UploadAsync("session", stream, "part.stl", "model/stl", 3, Claim(), "upload-op", default);
-        var remove = await client.RemoveAsync("session", new InstantQuotationUploadReference("opaque"), "remove-op", default);
-        var finalize = await client.FinalizeAsync("session", 417, [new InstantQuotationUploadReference("opaque")], "finalize-op", default);
+        var upload = await client.UploadAsync("session", null, stream, "part.stl", "model/stl", 3, Claim(), "upload-op", default);
+        var remove = await client.RemoveAsync("session", null, new InstantQuotationUploadReference("opaque"), "remove-op", default);
+        var finalize = await client.FinalizeAsync("session", null, 417, [new InstantQuotationUploadReference("opaque")], "finalize-op", default);
 
         AssertUnavailable(upload.ServiceStatus, upload.AuthorizationStatus, upload.Status, upload.ProblemCategory);
         AssertUnavailable(remove.ServiceStatus, remove.AuthorizationStatus, remove.Status, remove.ProblemCategory);
@@ -109,7 +117,7 @@ public sealed class InstantQuotationUploadClientTests
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => client.FinalizeAsync("session", 417, [], "operation", cancellation.Token));
+            () => client.FinalizeAsync("session", null, 417, [], "operation", cancellation.Token));
     }
 
     [Fact]

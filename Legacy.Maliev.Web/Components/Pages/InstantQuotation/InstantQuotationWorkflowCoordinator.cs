@@ -219,8 +219,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
 
         entry.Status = InstantQuotationWorkflowUploadStatus.Cancelled;
+        entry.RetryDisposition = InstantQuotationUploadRetryDisposition.RetryIdentical;
         entry.OperationCancellation?.Cancel();
-        entry.OperationId = null;
         RefreshState();
     }
 
@@ -253,6 +253,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         var operationId = NewOperationId();
         var result = await uploadClient.RemoveAsync(
             session!.SessionId,
+            ownerIdentity,
             entry.Part!.UploadReference,
             operationId,
             cancellationToken);
@@ -392,8 +393,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             lifetimeCancellation.Token);
-        var operationId = NewOperationId();
+        var operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
+            && entry.OperationId is { Length: > 0 } retainedOperationId
+                ? retainedOperationId
+                : NewOperationId();
         entry.OperationId = operationId;
+        entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
         entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
         RefreshState();
 
@@ -438,6 +443,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             await using var content = await entry.File.OpenReadStreamAsync(entry.OperationCancellation.Token);
             var result = await uploadClient.UploadAsync(
                 session!.SessionId,
+                ownerIdentity,
                 content,
                 entry.File.FileName,
                 entry.File.ContentType,
@@ -452,7 +458,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             if (entry.OperationId == operationId)
             {
                 entry.Status = InstantQuotationWorkflowUploadStatus.Cancelled;
-                entry.OperationId = null;
+                entry.RetryDisposition = InstantQuotationUploadRetryDisposition.RetryIdentical;
                 RefreshState();
             }
         }
@@ -481,12 +487,27 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await stateGate.WaitAsync(cancellationToken);
         try
         {
-            if (entry.OperationId != operationId
-                || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading)
+            var reconcilesRetainedOperation = entry.OperationId == operationId
+                && entry.Part is null
+                && entry.Status is InstantQuotationWorkflowUploadStatus.Error
+                && IsAuthoritativeSuccess(result);
+            if ((entry.OperationId != operationId
+                    || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading)
+                && !reconcilesRetainedOperation)
             {
                 if (IsPersistedSuccess(result))
                 {
-                    await RemoveStaleUploadAsync(result.UploadReference!);
+                    var matchesPromotedPart = entry.Part is not null
+                        && string.Equals(
+                            entry.Part.UploadReference.Value,
+                            result.UploadReference!.Value,
+                            StringComparison.Ordinal);
+                    if (!matchesPromotedPart)
+                    {
+                        await RemoveStaleUploadAsync(result.UploadReference!);
+                    }
+
+                    entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
                 }
 
                 return;
@@ -503,6 +524,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.ProblemCategory = result.ProblemCategory is InstantQuotationProblemCategory.None
                     ? InstantQuotationProblemCategory.Unexpected
                     : result.ProblemCategory;
+                entry.RetryDisposition = result.OperationId == operationId
+                    ? result.RetryDisposition
+                    : InstantQuotationUploadRetryDisposition.None;
                 terminalFailure = entry.ProblemCategory;
                 RefreshState();
             }
@@ -520,6 +544,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
                     entry.Status = InstantQuotationWorkflowUploadStatus.Error;
                     entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
+                    entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
                     terminalFailure = entry.ProblemCategory;
                     RefreshState();
                 }
@@ -533,6 +558,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                         new InstantQuotationPartConfiguration("PLA", "Black", 1));
                     entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
+                    entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
                     await PersistAndPriceAsync(cancellationToken);
                 }
             }
@@ -555,6 +581,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         {
             await uploadClient.RemoveAsync(
                 session!.SessionId,
+                ownerIdentity,
                 reference,
                 NewOperationId(),
                 cleanupCancellation.Token);
@@ -715,6 +742,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         public InstantQuotationWorkflowUploadStatus Status { get; set; } = InstantQuotationWorkflowUploadStatus.Pending;
 
         public InstantQuotationProblemCategory ProblemCategory { get; set; }
+
+        public InstantQuotationUploadRetryDisposition RetryDisposition { get; set; }
 
         public InstantQuotationPart? Part { get; set; }
 

@@ -34,12 +34,44 @@ public enum InstantQuotationProblemCategory
     Unexpected,
 }
 
+internal enum InstantQuotationUploadRetryDisposition
+{
+    None,
+    RetryIdentical,
+    RetryWithBackoff,
+}
+
 public sealed record InstantQuotationUploadReference(string Value);
+
+internal sealed record InstantQuotationFinalizedFile(
+    Guid FileId,
+    string Bucket,
+    string ObjectName,
+    string FileName,
+    string ContentType,
+    long SizeBytes,
+    string Sha256);
+
+internal sealed record InstantQuotationRequestFileLinkResult(
+    InstantQuotationServiceStatus ServiceStatus,
+    InstantQuotationAuthorizationStatus AuthorizationStatus,
+    InstantQuotationOperationStatus Status,
+    InstantQuotationProblemCategory ProblemCategory);
+
+internal interface IInstantQuotationRequestFileClient
+{
+    Task<InstantQuotationRequestFileLinkResult> LinkAsync(
+        int quotationRequestId,
+        InstantQuotationFinalizedFile file,
+        string idempotencyKey,
+        CancellationToken cancellationToken);
+}
 
 public interface IInstantQuotationUploadClient
 {
     Task<InstantQuotationUploadResult> UploadAsync(
         string sessionId,
+        string? ownerIdentity,
         Stream content,
         string fileName,
         string contentType,
@@ -50,12 +82,14 @@ public interface IInstantQuotationUploadClient
 
     Task<InstantQuotationRemoveResult> RemoveAsync(
         string sessionId,
+        string? ownerIdentity,
         InstantQuotationUploadReference uploadReference,
         string operationId,
         CancellationToken cancellationToken);
 
     Task<InstantQuotationFinalizationResult> FinalizeAsync(
         string sessionId,
+        string? ownerIdentity,
         int quotationRequestId,
         IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
         string operationId,
@@ -71,7 +105,8 @@ public sealed record InstantQuotationUploadResult
         InstantQuotationOperationStatus status,
         InstantQuotationProblemCategory problemCategory,
         InstantQuotationUploadReference? uploadReference,
-        string? contentSha256)
+        string? contentSha256,
+        InstantQuotationUploadRetryDisposition retryDisposition)
     {
         OperationId = operationId;
         ServiceStatus = serviceStatus;
@@ -80,6 +115,7 @@ public sealed record InstantQuotationUploadResult
         ProblemCategory = problemCategory;
         UploadReference = uploadReference;
         ContentSha256 = contentSha256;
+        RetryDisposition = retryDisposition;
     }
 
     public string OperationId { get; }
@@ -96,6 +132,8 @@ public sealed record InstantQuotationUploadResult
 
     public string? ContentSha256 { get; }
 
+    internal InstantQuotationUploadRetryDisposition RetryDisposition { get; }
+
     internal static InstantQuotationUploadResult Succeeded(
         string operationId,
         InstantQuotationUploadReference uploadReference,
@@ -106,7 +144,23 @@ public sealed record InstantQuotationUploadResult
             InstantQuotationOperationStatus.Succeeded,
             InstantQuotationProblemCategory.None,
             uploadReference,
-            contentSha256);
+            contentSha256,
+            InstantQuotationUploadRetryDisposition.None);
+
+    internal static InstantQuotationUploadResult Failed(
+        string operationId,
+        InstantQuotationServiceStatus serviceStatus,
+        InstantQuotationAuthorizationStatus authorizationStatus,
+        InstantQuotationProblemCategory problemCategory,
+        InstantQuotationUploadRetryDisposition retryDisposition = InstantQuotationUploadRetryDisposition.None) => new(
+            operationId,
+            serviceStatus,
+            authorizationStatus,
+            InstantQuotationOperationStatus.Failed,
+            problemCategory,
+            null,
+            null,
+            retryDisposition);
 
     public static InstantQuotationUploadResult Unavailable(string operationId) => new(
         operationId,
@@ -115,7 +169,8 @@ public sealed record InstantQuotationUploadResult
         InstantQuotationOperationStatus.Failed,
         InstantQuotationProblemCategory.DependencyUnavailable,
         null,
-        null);
+        null,
+        InstantQuotationUploadRetryDisposition.None);
 }
 
 public sealed record InstantQuotationRemoveResult(
@@ -125,6 +180,17 @@ public sealed record InstantQuotationRemoveResult(
     InstantQuotationOperationStatus Status,
     InstantQuotationProblemCategory ProblemCategory)
 {
+    internal static InstantQuotationRemoveResult Failed(
+        string operationId,
+        InstantQuotationServiceStatus serviceStatus,
+        InstantQuotationAuthorizationStatus authorizationStatus,
+        InstantQuotationProblemCategory problemCategory) => new(
+            operationId,
+            serviceStatus,
+            authorizationStatus,
+            InstantQuotationOperationStatus.Failed,
+            problemCategory);
+
     public static InstantQuotationRemoveResult Unavailable(string operationId) => new(
         operationId,
         InstantQuotationServiceStatus.Unavailable,
@@ -140,6 +206,31 @@ public sealed record InstantQuotationFinalizationResult(
     InstantQuotationOperationStatus Status,
     InstantQuotationProblemCategory ProblemCategory)
 {
+    internal IReadOnlyList<InstantQuotationFinalizedFile> Files { get; init; } = [];
+
+    internal static InstantQuotationFinalizationResult Succeeded(
+        string operationId,
+        IReadOnlyList<InstantQuotationFinalizedFile> files) => new(
+            operationId,
+            InstantQuotationServiceStatus.Available,
+            InstantQuotationAuthorizationStatus.Authorized,
+            InstantQuotationOperationStatus.Succeeded,
+            InstantQuotationProblemCategory.None)
+        {
+            Files = files,
+        };
+
+    internal static InstantQuotationFinalizationResult Failed(
+        string operationId,
+        InstantQuotationServiceStatus serviceStatus,
+        InstantQuotationAuthorizationStatus authorizationStatus,
+        InstantQuotationProblemCategory problemCategory) => new(
+            operationId,
+            serviceStatus,
+            authorizationStatus,
+            InstantQuotationOperationStatus.Failed,
+            problemCategory);
+
     public static InstantQuotationFinalizationResult Unavailable(string operationId) => new(
         operationId,
         InstantQuotationServiceStatus.Unavailable,

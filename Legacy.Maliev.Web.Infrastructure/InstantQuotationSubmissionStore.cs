@@ -99,6 +99,29 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
     {
         private int disposed;
 
+        public async Task<bool> RenewAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Volatile.Read(ref disposed) != 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                return await storage.RenewAsync(
+                    leaseKey,
+                    token,
+                    LeaseLifetime,
+                    cancellationToken);
+            }
+            catch (Exception exception) when (IsStorageFailure(exception))
+            {
+                logger.LogWarning(exception, "Instant quotation submission lease renewal failed.");
+                return false;
+            }
+        }
+
         public async Task<InstantQuotationSubmissionCheckpointRead> ReadAsync(
             CancellationToken cancellationToken)
         {
@@ -249,6 +272,12 @@ internal interface IInstantQuotationSubmissionAtomicStorage
         TimeSpan lifetime,
         CancellationToken cancellationToken);
 
+    Task<bool> RenewAsync(
+        string leaseKey,
+        string token,
+        TimeSpan lifetime,
+        CancellationToken cancellationToken);
+
     Task<InstantQuotationSubmissionAtomicRead> ReadAsync(
         string leaseKey,
         string checkpointKey,
@@ -326,6 +355,16 @@ internal sealed class RedisInstantQuotationSubmissionAtomicStorage(IConnectionMu
         cancellationToken.ThrowIfCancellationRequested();
         var acquired = await database.LockTakeAsync(leaseKey, token, lifetime);
         return acquired;
+    }
+
+    public async Task<bool> RenewAsync(
+        string leaseKey,
+        string token,
+        TimeSpan lifetime,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await database.LockExtendAsync(leaseKey, token, lifetime);
     }
 
     public async Task<InstantQuotationSubmissionAtomicRead> ReadAsync(

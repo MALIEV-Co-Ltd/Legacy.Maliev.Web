@@ -28,6 +28,8 @@ public sealed record InstantQuotationSubmissionCheckpointRead(
 
 public interface IInstantQuotationSubmissionLease : IAsyncDisposable
 {
+    Task<bool> RenewAsync(CancellationToken cancellationToken);
+
     Task<InstantQuotationSubmissionCheckpointRead> ReadAsync(
         CancellationToken cancellationToken);
 

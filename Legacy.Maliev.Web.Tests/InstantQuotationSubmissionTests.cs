@@ -7,6 +7,7 @@ public sealed class InstantQuotationSubmissionTests
     private const string SessionId = "protected-session";
     private const string Owner = "protected-owner";
     private const string SubmissionId = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
+    private const string UploadFileIdText = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
     [Fact]
     public async Task Submit_ValidCustomer_PersistsAuthoritativeRequestBeforeFinalizingUploads()
@@ -16,7 +17,13 @@ public sealed class InstantQuotationSubmissionTests
             new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
         var persisted = new RecordingSubmissionStore(events);
         var upload = new RecordingUploadClient(events, SuccessfulFinalization());
-        var service = Service(quotation, persisted, upload, Session(PartWithDfm(quantity: 2)));
+        var requestFiles = new RecordingRequestFileClient();
+        var service = Service(
+            quotation,
+            persisted,
+            upload,
+            Session(PartWithDfm(quantity: 2)),
+            requestFiles);
 
         var result = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
 
@@ -26,6 +33,7 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Equal(
             [null, InstantQuotationSubmissionCheckpointStatus.Persisted],
             persisted.ExpectedPriorStatuses);
+        Assert.Equal(4, persisted.RenewalCount);
         Assert.Equal(Owner, Assert.Single(persisted.OwnerIdentities));
         var call = Assert.Single(quotation.Calls);
         Assert.Equal($"legacy-web-instant-quotation-{SubmissionId.ToLowerInvariant()}", call.IdempotencyKey);
@@ -38,10 +46,35 @@ public sealed class InstantQuotationSubmissionTests
             call.Submission.Message,
             StringComparison.Ordinal);
         Assert.Contains("Total price:", call.Submission.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain("opaque-upload-reference", call.Submission.Message, StringComparison.Ordinal);
-        Assert.Equal(["opaque-upload-reference"], upload.UploadReferences.Select(item => item.Value));
+        Assert.DoesNotContain(UploadFileIdText, call.Submission.Message, StringComparison.Ordinal);
+        Assert.Equal([UploadFileIdText], upload.UploadReferences.Select(item => item.Value));
         Assert.Equal([417], upload.QuotationRequestIds);
+        Assert.Equal([Owner], upload.OwnerIdentities);
+        var link = Assert.Single(requestFiles.Calls);
+        Assert.Equal(417, link.QuotationRequestId);
+        Assert.Equal(Guid.Parse(UploadFileIdText), link.File.FileId);
+        Assert.Matches("^[0-9a-f]{64}$", link.IdempotencyKey);
         Assert.DoesNotContain(upload.OperationIds.Single(), call.Submission.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Submit_LeaseRenewalFailure_FailsClosedBeforeCreatingRequest()
+    {
+        var quotation = new RecordingQuotationClient(_ =>
+            new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var persisted = new RecordingSubmissionStore { AcceptRenewals = false };
+        var upload = new RecordingUploadClient(null, SuccessfulFinalization());
+        var requestFiles = new RecordingRequestFileClient();
+        var service = Service(quotation, persisted, upload, Session(Part()), requestFiles);
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Rejected, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.Conflict, result.ProblemCategory);
+        Assert.Equal(1, persisted.RenewalCount);
+        Assert.Empty(quotation.Calls);
+        Assert.Empty(upload.OperationIds);
+        Assert.Empty(requestFiles.Calls);
     }
 
     [Fact]
@@ -67,6 +100,63 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Equal(upload.OperationIds[0], upload.OperationIds[1]);
         Assert.Equal([417, 417], upload.QuotationRequestIds);
         Assert.DoesNotContain(upload.OperationIds[0], retry.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Submit_RequestFileLinkRetry_ReusesExactServerOnlyTupleAndIdempotencyKey()
+    {
+        var quotation = new RecordingQuotationClient(_ =>
+            new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var persisted = new RecordingSubmissionStore();
+        var upload = new RecordingUploadClient(
+            null,
+            SuccessfulFinalization(),
+            SuccessfulFinalization());
+        var requestFiles = new RecordingRequestFileClient(
+            new InstantQuotationRequestFileLinkResult(
+                InstantQuotationServiceStatus.Unavailable,
+                InstantQuotationAuthorizationStatus.NotEvaluated,
+                InstantQuotationOperationStatus.Failed,
+                InstantQuotationProblemCategory.DependencyUnavailable),
+            SuccessfulRequestFileClient.Success);
+        var service = Service(quotation, persisted, upload, Session(Part()), requestFiles);
+
+        var first = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+        var retry = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, first.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, first.ProblemCategory);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, retry.Outcome);
+        Assert.Single(quotation.Calls);
+        Assert.Equal(2, upload.OperationIds.Count);
+        Assert.Equal(2, requestFiles.Calls.Count);
+        Assert.Equal(requestFiles.Calls[0], requestFiles.Calls[1]);
+        Assert.DoesNotContain(requestFiles.Calls[0].File.Bucket, retry.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(requestFiles.Calls[0].File.ObjectName, retry.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Submit_FinalizedDigestMustMatchProtectedUploadGeometryBeforeLinking()
+    {
+        var finalization = SuccessfulFinalization() with
+        {
+            Files = SuccessfulFinalization().Files
+                .Select(file => file with { Sha256 = new string('b', 64) })
+                .ToArray(),
+        };
+        var requestFiles = new RecordingRequestFileClient();
+        var service = Service(
+            new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true)),
+            new RecordingSubmissionStore(),
+            new RecordingUploadClient(null, finalization),
+            Session(Part()),
+            requestFiles);
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Empty(requestFiles.Calls);
     }
 
     [Fact]
@@ -312,7 +402,8 @@ public sealed class InstantQuotationSubmissionTests
             new InstantQuotationPricingService(),
             quotation,
             persisted,
-            upload);
+            upload,
+            SuccessfulRequestFileClient.Instance);
 
         var initial = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
         sessions.CurrentSession = Session(Part(quantity: 3) with
@@ -451,7 +542,13 @@ public sealed class InstantQuotationSubmissionTests
         var upload = new RecordingUploadClient(null, SuccessfulFinalization());
         var sessions = new RecordingSessionStore(Session(Part()), Owner);
         var pricing = new RecordingPricingService();
-        var service = new InstantQuotationSubmissionService(sessions, pricing, quotation, persisted, upload);
+        var service = new InstantQuotationSubmissionService(
+            sessions,
+            pricing,
+            quotation,
+            persisted,
+            upload,
+            SuccessfulRequestFileClient.Instance);
 
         var result = await service.SubmitAsync(SessionId, "different-owner", Customer(), CancellationToken.None);
 
@@ -475,7 +572,8 @@ public sealed class InstantQuotationSubmissionTests
             new InstantQuotationPricingService(),
             quotation,
             persisted,
-            upload);
+            upload,
+            SuccessfulRequestFileClient.Instance);
 
         var result = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
 
@@ -490,6 +588,7 @@ public sealed class InstantQuotationSubmissionTests
         Assert.DoesNotContain(checkpointOwner, quotationCall.IdempotencyKey, StringComparison.Ordinal);
         Assert.DoesNotContain(checkpointOwner, result.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain(checkpointOwner, Assert.Single(upload.OperationIds), StringComparison.Ordinal);
+        Assert.Null(Assert.Single(upload.OwnerIdentities));
     }
 
     [Fact]
@@ -508,7 +607,8 @@ public sealed class InstantQuotationSubmissionTests
             new InstantQuotationPricingService(),
             quotation,
             persisted,
-            upload);
+            upload,
+            SuccessfulRequestFileClient.Instance);
 
         var first = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
         var retry = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
@@ -540,7 +640,13 @@ public sealed class InstantQuotationSubmissionTests
         var upload = new RecordingUploadClient(null, SuccessfulFinalization());
         var sessions = new RecordingSessionStore(Session(Part()), owner: null);
         var pricing = new RecordingPricingService();
-        var service = new InstantQuotationSubmissionService(sessions, pricing, quotation, persisted, upload);
+        var service = new InstantQuotationSubmissionService(
+            sessions,
+            pricing,
+            quotation,
+            persisted,
+            upload,
+            SuccessfulRequestFileClient.Instance);
 
         var wrongOwner = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
         var whitespaceOwner = await service.SubmitAsync(SessionId, " ", Customer(), CancellationToken.None);
@@ -568,12 +674,14 @@ public sealed class InstantQuotationSubmissionTests
         RecordingQuotationClient quotation,
         RecordingSubmissionStore persisted,
         RecordingUploadClient upload,
-        InstantQuotationSessionState session) => new(
+        InstantQuotationSessionState session,
+        IInstantQuotationRequestFileClient? requestFileClient = null) => new(
             new RecordingSessionStore(session, Owner),
             new InstantQuotationPricingService(),
             quotation,
             persisted,
-            upload);
+            upload,
+            requestFileClient ?? SuccessfulRequestFileClient.Instance);
 
     private static InstantQuotationCustomerSubmission Customer(
         string firstName = "Mali",
@@ -603,22 +711,29 @@ public sealed class InstantQuotationSubmissionTests
     private static InstantQuotationPart Part(int quantity = 1) => new(
         Guid.Parse("11111111-2222-3333-4444-555555555555"),
         "bracket.stl",
-        new InstantQuotationUploadReference("opaque-upload-reference"),
+        new InstantQuotationUploadReference(UploadFileIdText),
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+            1,
+            new string('a', 64),
+            10,
+            20,
             10,
             1_000,
-            200,
-            [200, 200],
-            [60, 60],
+            700,
+            Enumerable.Repeat(100.0, 64).ToArray(),
+            Enumerable.Repeat(60.0, 64).ToArray(),
             12,
             1,
-            true),
+            true,
+            false,
+            false,
+            0.8),
         new InstantQuotationPartConfiguration("ABS", "Black", quantity));
 
     private static InstantQuotationPart PartWithDfm(int quantity = 1) => new(
         Guid.Parse("11111111-2222-3333-4444-555555555555"),
         "bracket.stl",
-        new InstantQuotationUploadReference("opaque-upload-reference"),
+        new InstantQuotationUploadReference(UploadFileIdText),
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
             1,
             new string('a', 64),
@@ -637,12 +752,17 @@ public sealed class InstantQuotationSubmissionTests
             0.5),
         new InstantQuotationPartConfiguration("ABS", "Black", quantity));
 
-    private static InstantQuotationFinalizationResult SuccessfulFinalization() => new(
-        "ignored",
-        InstantQuotationServiceStatus.Available,
-        InstantQuotationAuthorizationStatus.Authorized,
-        InstantQuotationOperationStatus.Succeeded,
-        InstantQuotationProblemCategory.None);
+    private static InstantQuotationFinalizationResult SuccessfulFinalization() =>
+        InstantQuotationFinalizationResult.Succeeded(
+            "ignored",
+            [new InstantQuotationFinalizedFile(
+                Guid.Parse(UploadFileIdText),
+                "private-quotation-files",
+                $"instant-quotation/417/{UploadFileIdText.Replace("-", string.Empty, StringComparison.Ordinal)}.stl",
+                "bracket.stl",
+                "model/stl",
+                1_000,
+                new string('a', 64))]);
 
     private sealed class RecordingSessionStore(
         InstantQuotationSessionState session,
@@ -717,6 +837,10 @@ public sealed class InstantQuotationSubmissionTests
 
         public bool AcceptWrites { get; init; } = true;
 
+        public bool AcceptRenewals { get; init; } = true;
+
+        public int RenewalCount { get; private set; }
+
         public InstantQuotationSubmissionCheckpoint? ReadOverride { get; init; }
 
         public InstantQuotationSubmissionCheckpoint? Checkpoint
@@ -776,6 +900,19 @@ public sealed class InstantQuotationSubmissionTests
             }
         }
 
+        private Task<bool> RenewAsync(
+            long leaseGeneration,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            lock (sync)
+            {
+                RenewalCount++;
+                return Task.FromResult(
+                    AcceptRenewals && leased && generation == leaseGeneration);
+            }
+        }
+
         private Task<bool> TryPutAsync(
             long leaseGeneration,
             InstantQuotationSubmissionCheckpoint value,
@@ -804,6 +941,9 @@ public sealed class InstantQuotationSubmissionTests
             RecordingSubmissionStore store,
             long leaseGeneration) : IInstantQuotationSubmissionLease
         {
+            public Task<bool> RenewAsync(CancellationToken cancellationToken) =>
+                store.RenewAsync(leaseGeneration, cancellationToken);
+
             public Task<InstantQuotationSubmissionCheckpointRead> ReadAsync(CancellationToken cancellationToken) =>
                 store.ReadAsync(leaseGeneration, cancellationToken);
 
@@ -828,6 +968,43 @@ public sealed class InstantQuotationSubmissionTests
         }
     }
 
+    private sealed class SuccessfulRequestFileClient : IInstantQuotationRequestFileClient
+    {
+        public static SuccessfulRequestFileClient Instance { get; } = new();
+
+        public static InstantQuotationRequestFileLinkResult Success { get; } = new(
+            InstantQuotationServiceStatus.Available,
+            InstantQuotationAuthorizationStatus.Authorized,
+            InstantQuotationOperationStatus.Succeeded,
+            InstantQuotationProblemCategory.None);
+
+        public Task<InstantQuotationRequestFileLinkResult> LinkAsync(
+            int quotationRequestId,
+            InstantQuotationFinalizedFile file,
+            string idempotencyKey,
+            CancellationToken cancellationToken) => Task.FromResult(Success);
+    }
+
+    private sealed class RecordingRequestFileClient(
+        params InstantQuotationRequestFileLinkResult[] results) : IInstantQuotationRequestFileClient
+    {
+        private readonly Queue<InstantQuotationRequestFileLinkResult> results = new(results);
+
+        public List<(int QuotationRequestId, InstantQuotationFinalizedFile File, string IdempotencyKey)> Calls { get; } = [];
+
+        public Task<InstantQuotationRequestFileLinkResult> LinkAsync(
+            int quotationRequestId,
+            InstantQuotationFinalizedFile file,
+            string idempotencyKey,
+            CancellationToken cancellationToken)
+        {
+            Calls.Add((quotationRequestId, file, idempotencyKey));
+            return Task.FromResult(results.TryDequeue(out var result)
+                ? result
+                : SuccessfulRequestFileClient.Success);
+        }
+    }
+
     private sealed class RecordingUploadClient(
         List<string>? events,
         params InstantQuotationFinalizationResult[] results) : IInstantQuotationUploadClient
@@ -838,12 +1015,15 @@ public sealed class InstantQuotationSubmissionTests
 
         public List<int> QuotationRequestIds { get; } = [];
 
+        public List<string?> OwnerIdentities { get; } = [];
+
         public IReadOnlyList<InstantQuotationUploadReference> UploadReferences { get; private set; } = [];
 
         public bool PreserveResultOperationId { get; init; }
 
         public Task<InstantQuotationUploadResult> UploadAsync(
             string sessionId,
+            string? ownerIdentity,
             Stream content,
             string fileName,
             string contentType,
@@ -853,11 +1033,12 @@ public sealed class InstantQuotationSubmissionTests
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity, InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<InstantQuotationFinalizationResult> FinalizeAsync(
             string sessionId,
+            string? ownerIdentity,
             int quotationRequestId,
             IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
             string operationId,
@@ -866,6 +1047,7 @@ public sealed class InstantQuotationSubmissionTests
             events?.Add("finalize");
             OperationIds.Add(operationId);
             QuotationRequestIds.Add(quotationRequestId);
+            OwnerIdentities.Add(ownerIdentity);
             UploadReferences = uploadReferences;
             var result = results.Dequeue();
             return Task.FromResult(PreserveResultOperationId ? result : result with { OperationId = operationId });

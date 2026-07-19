@@ -25,29 +25,33 @@ public sealed class QuotationClientTests
 
             Assert.Equal(
                 [
-                    "companyName",
-                    "country",
-                    "done",
-                    "email",
-                    "firstName",
-                    "internalComment",
-                    "lastName",
-                    "message",
-                    "taxIdentification",
-                    "telephoneNumber"
+                    "CompanyName",
+                    "Country",
+                    "Done",
+                    "Email",
+                    "FirstName",
+                    "LastName",
+                    "Message",
+                    "TaxIdentification",
+                    "TelephoneNumber"
                 ],
                 properties.Keys.Order(StringComparer.Ordinal));
-            Assert.Equal("Mali", properties["firstName"].GetString());
-            Assert.Equal("Ev", properties["lastName"].GetString());
-            Assert.Equal("mali@example.com", properties["email"].GetString());
-            Assert.Equal("020000000", properties["telephoneNumber"].GetString());
-            Assert.Equal("Thailand", properties["country"].GetString());
-            Assert.Equal("MALIEV", properties["companyName"].GetString());
-            Assert.Equal("0100000000000", properties["taxIdentification"].GetString());
-            Assert.Equal("Need CNC parts", properties["message"].GetString());
-            Assert.Equal(JsonValueKind.Null, properties["internalComment"].ValueKind);
-            Assert.Equal(JsonValueKind.Null, properties["done"].ValueKind);
-            return JsonResponse("{\"id\":417}", HttpStatusCode.Created);
+            Assert.Equal("Mali", properties["FirstName"].GetString());
+            Assert.Equal("Ev", properties["LastName"].GetString());
+            Assert.Equal("mali@example.com", properties["Email"].GetString());
+            Assert.Equal("020000000", properties["TelephoneNumber"].GetString());
+            Assert.Equal("Thailand", properties["Country"].GetString());
+            Assert.Equal("MALIEV", properties["CompanyName"].GetString());
+            Assert.Equal("0100000000000", properties["TaxIdentification"].GetString());
+            Assert.Equal("Need CNC parts", properties["Message"].GetString());
+            Assert.False(properties["Done"].GetBoolean());
+            var response = JsonResponse(
+                """
+                {"Id":417,"FirstName":"Mali","LastName":"Ev","Email":"mali@example.com","TelephoneNumber":"020000000","Country":"Thailand","CompanyName":"MALIEV","TaxIdentification":"0100000000000","Message":"Need CNC parts","Done":false,"CreatedDate":"2026-07-19T08:00:00Z"}
+                """,
+                HttpStatusCode.Created);
+            response.Headers.Location = new Uri("/quotationrequests/417", UriKind.Relative);
+            return response;
         });
         var client = new QuotationClient(
             new NamedHttpClientFactory("quotations", new HttpClient(handler) { BaseAddress = new Uri("http://quotations/") }),
@@ -64,7 +68,7 @@ public sealed class QuotationClientTests
         Assert.True(result.Authorized);
         var request = Assert.Single(handler.Requests);
         Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Equal("/QuotationRequests", request.RequestUri?.AbsolutePath);
+        Assert.Equal("/quotationrequests/", request.RequestUri?.AbsolutePath);
     }
 
     [Fact]
@@ -83,6 +87,28 @@ public sealed class QuotationClientTests
         Assert.False(result.ServiceAvailable);
         Assert.False(result.Authorized);
         Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task CreateRequest_ResilienceTimeoutFailsClosedAsUnavailable()
+    {
+        var handler = new RecordingHandler(_ => Task.FromException<HttpResponseMessage>(
+            new Polly.Timeout.TimeoutRejectedException("timeout")));
+        var client = new QuotationClient(
+            new NamedHttpClientFactory(
+                "quotations",
+                new HttpClient(handler) { BaseAddress = new Uri("http://quotations/") }),
+            new StubTokenProvider("service-token"),
+            NullLogger<QuotationClient>.Instance);
+
+        var result = await client.CreateRequestAsync(
+            Submission(),
+            "quote-submit-123",
+            CancellationToken.None);
+
+        Assert.False(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Null(result.ReferenceNumber);
     }
 
     [Fact]

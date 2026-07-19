@@ -5,12 +5,13 @@ using System.Text;
 
 namespace Legacy.Maliev.Web.Application;
 
-public sealed class InstantQuotationSubmissionService(
+internal sealed class InstantQuotationSubmissionService(
     IInstantQuotationSessionStore sessionStore,
     IInstantQuotationPricingService pricingService,
     IQuotationClient quotationClient,
     IInstantQuotationSubmissionStore submissionStore,
-    IInstantQuotationUploadClient uploadClient) : IInstantQuotationSubmissionService
+    IInstantQuotationUploadClient uploadClient,
+    IInstantQuotationRequestFileClient requestFileClient) : IInstantQuotationSubmissionService
 {
     private const int SubmissionIdLength = 64;
 
@@ -160,7 +161,12 @@ public sealed class InstantQuotationSubmissionService(
             checkpoint = creation.Checkpoint!;
         }
 
-        return await FinalizeAsync(session, acquiredSubmissionLease, checkpoint, cancellationToken);
+        return await FinalizeAsync(
+            session,
+            ownerIdentity,
+            acquiredSubmissionLease,
+            checkpoint,
+            cancellationToken);
     }
 
     private async Task<(InstantQuotationSubmissionCheckpoint? Checkpoint, InstantQuotationSubmissionResult? Result)>
@@ -172,6 +178,11 @@ public sealed class InstantQuotationSubmissionService(
             InstantQuotationCustomerSubmission customer,
             CancellationToken cancellationToken)
     {
+        if (!await RenewLeaseAsync(submissionLease, cancellationToken))
+        {
+            return (null, Rejected(InstantQuotationProblemCategory.Conflict));
+        }
+
         var submission = new QuotationRequestSubmission(
             customer.FirstName.Trim(),
             customer.LastName.Trim(),
@@ -247,6 +258,7 @@ public sealed class InstantQuotationSubmissionService(
 
     private async Task<InstantQuotationSubmissionResult> FinalizeAsync(
         InstantQuotationSessionState session,
+        string? ownerIdentity,
         IInstantQuotationSubmissionLease submissionLease,
         InstantQuotationSubmissionCheckpoint checkpoint,
         CancellationToken cancellationToken)
@@ -270,12 +282,18 @@ public sealed class InstantQuotationSubmissionService(
             return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
         }
 
+        if (!await RenewLeaseAsync(submissionLease, cancellationToken))
+        {
+            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+        }
+
         var expectedOperationId = CreateFinalizationOperationId(session.SubmissionId);
         InstantQuotationFinalizationResult finalization;
         try
         {
             finalization = await uploadClient.FinalizeAsync(
                 session.SessionId,
+                ownerIdentity,
                 checkpoint.RequestReference,
                 session.Parts.Select(part => part.UploadReference).ToArray(),
                 expectedOperationId,
@@ -319,10 +337,86 @@ public sealed class InstantQuotationSubmissionService(
                     : finalization.ProblemCategory);
         }
 
+        var expectedFiles = new Dictionary<Guid, InstantQuotationPart>();
+        foreach (var part in session.Parts)
+        {
+            if (!Guid.TryParseExact(part.UploadReference.Value, "D", out var fileId)
+                || fileId == Guid.Empty
+                || !expectedFiles.TryAdd(fileId, part))
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected);
+            }
+        }
+
+        if (finalization.Files.Count != expectedFiles.Count
+            || finalization.Files.Any(file => !IsValidFinalizedFile(file))
+            || !expectedFiles.Keys.ToHashSet().SetEquals(finalization.Files.Select(file => file.FileId))
+            || finalization.Files.Any(file => !string.Equals(
+                file.Sha256,
+                expectedFiles[file.FileId].Geometry.Sha256,
+                StringComparison.Ordinal)))
+        {
+            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected);
+        }
+
+        foreach (var file in finalization.Files.OrderBy(file => file.FileId))
+        {
+            if (!await RenewLeaseAsync(submissionLease, cancellationToken))
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+            }
+
+            InstantQuotationRequestFileLinkResult link;
+            try
+            {
+                link = await requestFileClient.LinkAsync(
+                    checkpoint.RequestReference,
+                    file,
+                    CreateRequestFileOperationId(
+                        session.SubmissionId,
+                        checkpoint.RequestReference,
+                        file.FileId),
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            }
+            catch (Exception exception) when (exception is TimeoutException or HttpRequestException)
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            }
+
+            if (link.ServiceStatus != InstantQuotationServiceStatus.Available)
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            }
+
+            if (link.AuthorizationStatus != InstantQuotationAuthorizationStatus.Authorized)
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Authorization);
+            }
+
+            if (link.Status != InstantQuotationOperationStatus.Succeeded
+                || link.ProblemCategory != InstantQuotationProblemCategory.None)
+            {
+                return Partial(
+                    checkpoint.RequestReference,
+                    link.ProblemCategory == InstantQuotationProblemCategory.None
+                        ? InstantQuotationProblemCategory.Unexpected
+                        : link.ProblemCategory);
+            }
+        }
+
         var completedCheckpoint = checkpoint with
         {
             Status = InstantQuotationSubmissionCheckpointStatus.Completed,
         };
+        if (!await RenewLeaseAsync(submissionLease, cancellationToken))
+        {
+            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+        }
+
         bool stored;
         try
         {
@@ -554,6 +648,44 @@ public sealed class InstantQuotationSubmissionService(
     {
         var value = Encoding.UTF8.GetBytes($"instant-quotation-finalize:{submissionId.ToLowerInvariant()}");
         return Convert.ToHexStringLower(SHA256.HashData(value));
+    }
+
+    private static string CreateRequestFileOperationId(
+        string submissionId,
+        int quotationRequestId,
+        Guid fileId)
+    {
+        var value = Encoding.UTF8.GetBytes(
+            $"instant-quotation-request-file:{submissionId.ToLowerInvariant()}:{quotationRequestId}:{fileId:D}");
+        return Convert.ToHexStringLower(SHA256.HashData(value));
+    }
+
+    private static bool IsValidFinalizedFile(InstantQuotationFinalizedFile file) =>
+        file.FileId != Guid.Empty
+        && file.Bucket is { Length: > 0 and <= 50 }
+        && file.ObjectName is { Length: > 0 and <= 2_048 }
+        && file.FileName is { Length: > 0 and <= 512 }
+        && file.ContentType is { Length: > 0 and <= 256 }
+        && file.SizeBytes > 0
+        && file.Sha256 is { Length: 64 }
+        && file.Sha256.All(static character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
+
+    private static async Task<bool> RenewLeaseAsync(
+        IInstantQuotationSubmissionLease submissionLease,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await submissionLease.RenewAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception exception) when (exception is TimeoutException or HttpRequestException)
+        {
+            return false;
+        }
     }
 
     private static string CreateAnonymousCheckpointOwnerIdentity(string sessionId)

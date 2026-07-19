@@ -175,7 +175,7 @@ public sealed class InstantQuotationWorkflowUploadTests
     public async Task SuccessfulUploads_UseOnlyAuthoritativeResultsAndPreserveSelectionOrder()
     {
         var client = new ControlledUploadClient();
-        await using var workflow = CreateWorkflow(client: client);
+        await using var workflow = CreateWorkflow(client: client, ownerIdentity: "member-42");
         await workflow.InitializeAsync(default);
 
         var uploading = workflow.UploadAsync(
@@ -190,6 +190,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.All(workflow.Parts, part => Assert.NotNull(part.Quote));
         Assert.Equal(InstantQuotationWorkflowState.MultiPart, workflow.State);
         Assert.NotNull(workflow.OrderQuote);
+        Assert.Equal(["member-42", "member-42"], client.UploadOwners);
     }
 
     [Fact]
@@ -577,12 +578,114 @@ public sealed class InstantQuotationWorkflowUploadTests
         await retry;
 
         Assert.Equal(2, analytics.UploadFailures.Count);
+        Assert.NotEqual(client.UploadOperations[0], client.UploadOperations[1]);
         Assert.Equal(client.UploadOperations, analytics.UploadFailures.Select(item => item.OperationId));
         Assert.All(analytics.UploadFailures, item =>
         {
             Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, item.Category);
             Assert.Equal(1, item.FileCount);
         });
+    }
+
+    [Fact]
+    public async Task RetryIdenticalFailure_ReusesOriginalUploadOperationIdAndContent()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var firstAttempt = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteUnavailable(
+            "part.stl",
+            InstantQuotationUploadRetryDisposition.RetryIdentical);
+        await firstAttempt;
+        var upload = Assert.Single(workflow.Uploads);
+
+        var retry = workflow.RetryAsync(upload.LocalId, default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteSuccess("part.stl", "opaque-part", Geometry());
+        await retry;
+
+        Assert.Equal(client.UploadOperations[0], client.UploadOperations[1]);
+        Assert.Single(workflow.Parts);
+    }
+
+    [Fact]
+    public async Task CallerCancellation_RetryReusesOriginalUploadOperationId()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+        using var cancellation = new CancellationTokenSource();
+
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], cancellation.Token);
+        await client.WaitForUploadsAsync(1);
+        cancellation.Cancel();
+        await uploading;
+        var upload = Assert.Single(workflow.Uploads);
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Cancelled, upload.Status);
+
+        var retry = workflow.RetryAsync(upload.LocalId, default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteSuccess("part.stl", "opaque-part", Geometry());
+        await retry;
+
+        Assert.Equal(client.UploadOperations[0], client.UploadOperations[1]);
+        Assert.Single(workflow.Parts);
+    }
+
+    [Fact]
+    public async Task CancelAndOverlappingIdenticalRetry_DoesNotDeletePromotedFileReference()
+    {
+        var client = new ControlledUploadClient(ignoreCancellation: true);
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var reserved = Assert.Single(workflow.ReserveUploads([UploadFile("part.stl")]));
+        var original = workflow.UploadReservedAsync([reserved], default);
+        await client.WaitForUploadsAsync(1);
+        workflow.Cancel(reserved);
+        var retry = workflow.RetryAsync(reserved, default);
+        await client.WaitForUploadsAsync(2);
+
+        client.CompleteSuccess("part.stl", "opaque-shared", Geometry());
+        await original;
+        client.CompleteSuccess("part.stl", "opaque-shared", Geometry());
+        await retry;
+
+        Assert.Equal(client.UploadOperations[0], client.UploadOperations[1]);
+        Assert.Single(workflow.Parts);
+        Assert.DoesNotContain("opaque-shared", client.RemovedReferences);
+    }
+
+    [Theory]
+    [InlineData((int)InstantQuotationUploadRetryDisposition.RetryIdentical)]
+    [InlineData((int)InstantQuotationUploadRetryDisposition.RetryWithBackoff)]
+    public async Task OverlappingRetryFailureThenOriginalSuccess_PromotesReconciledFile(
+        int retryFailureDisposition)
+    {
+        var client = new ControlledUploadClient(ignoreCancellation: true);
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        var reserved = Assert.Single(workflow.ReserveUploads([UploadFile("part.stl")]));
+        var original = workflow.UploadReservedAsync([reserved], default);
+        await client.WaitForUploadsAsync(1);
+        workflow.Cancel(reserved);
+        var retry = workflow.RetryAsync(reserved, default);
+        await client.WaitForUploadsAsync(2);
+
+        client.CompleteLatestUnavailable(
+            "part.stl",
+            (InstantQuotationUploadRetryDisposition)retryFailureDisposition);
+        await retry;
+        client.CompleteSuccess("part.stl", "opaque-reconciled", Geometry());
+        await original;
+
+        Assert.Equal(client.UploadOperations[0], client.UploadOperations[1]);
+        Assert.Single(workflow.Parts);
+        Assert.DoesNotContain("opaque-reconciled", client.RemovedReferences);
     }
 
     [Fact]
@@ -820,17 +923,20 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         public List<InstantQuotationGeometryClaim> UploadClaims { get; } = [];
 
+        public List<string?> UploadOwners { get; } = [];
+
         public List<string> RemovedReferences { get; } = [];
 
         public List<string> RemoveOperations { get; } = [];
 
         public Queue<InstantQuotationProblemCategory> RemoveResults { get; } = [];
 
-        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, Stream content, string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim geometryClaim, string operationId, CancellationToken cancellationToken)
+        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content, string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim geometryClaim, string operationId, CancellationToken cancellationToken)
         {
             UploadOperations.Add(operationId);
             UploadCancellationTokens.Add(cancellationToken);
             UploadClaims.Add(geometryClaim);
+            UploadOwners.Add(ownerIdentity);
             var completion = new TaskCompletionSource<InstantQuotationUploadResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (!completions.TryGetValue(fileName, out var queue))
             {
@@ -847,7 +953,7 @@ public sealed class InstantQuotationWorkflowUploadTests
             return completion.Task;
         }
 
-        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken)
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity, InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken)
         {
             RemovedReferences.Add(uploadReference.Value);
             RemoveOperations.Add(operationId);
@@ -860,7 +966,7 @@ public sealed class InstantQuotationWorkflowUploadTests
                 problem));
         }
 
-        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences, string operationId, CancellationToken cancellationToken) =>
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity, int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences, string operationId, CancellationToken cancellationToken) =>
             Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
 
         public void CompleteSuccess(
@@ -869,17 +975,53 @@ public sealed class InstantQuotationWorkflowUploadTests
             InstantQuotationGeometryClaim geometry,
             string? operationId = null)
         {
-            var pending = completions[fileName].Dequeue();
+            var pending = NextPending(fileName);
             pending.Completion.SetResult(InstantQuotationUploadResult.Succeeded(
                 operationId ?? pending.OperationId,
                 new InstantQuotationUploadReference(reference),
                 geometry.Sha256));
         }
 
-        public void CompleteUnavailable(string fileName)
+        public void CompleteUnavailable(
+            string fileName,
+            InstantQuotationUploadRetryDisposition retryDisposition = InstantQuotationUploadRetryDisposition.None)
         {
-            var pending = completions[fileName].Dequeue();
-            pending.Completion.SetResult(InstantQuotationUploadResult.Unavailable(pending.OperationId));
+            var pending = NextPending(fileName);
+            pending.Completion.SetResult(InstantQuotationUploadResult.Failed(
+                pending.OperationId,
+                InstantQuotationServiceStatus.Unavailable,
+                InstantQuotationAuthorizationStatus.NotEvaluated,
+                InstantQuotationProblemCategory.DependencyUnavailable,
+                retryDisposition));
+        }
+
+        public void CompleteLatestUnavailable(
+            string fileName,
+            InstantQuotationUploadRetryDisposition retryDisposition)
+        {
+            var pending = completions[fileName]
+                .Last(item => !item.Completion.Task.IsCompleted);
+            pending.Completion.SetResult(InstantQuotationUploadResult.Failed(
+                pending.OperationId,
+                InstantQuotationServiceStatus.Unavailable,
+                InstantQuotationAuthorizationStatus.NotEvaluated,
+                InstantQuotationProblemCategory.DependencyUnavailable,
+                retryDisposition));
+        }
+
+        private PendingUpload NextPending(string fileName)
+        {
+            var queue = completions[fileName];
+            while (queue.Count > 0)
+            {
+                var pending = queue.Dequeue();
+                if (!pending.Completion.Task.IsCompleted)
+                {
+                    return pending;
+                }
+            }
+
+            throw new InvalidOperationException($"No pending upload exists for {fileName}.");
         }
 
         public async Task WaitForUploadsAsync(int count)

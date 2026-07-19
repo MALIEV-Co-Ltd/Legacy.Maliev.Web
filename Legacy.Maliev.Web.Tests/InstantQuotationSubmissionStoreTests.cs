@@ -48,6 +48,41 @@ public sealed class InstantQuotationSubmissionStoreTests
     }
 
     [Fact]
+    public async Task RenewAsync_ExtendsOnlyTheCurrentLeaseForTheConfiguredLifetime()
+    {
+        var storage = new FakeAtomicStorage();
+        var store = CreateStore(storage);
+        await using var lease = await store.TryAcquireAsync("submission-a", "owner-a", default);
+        Assert.NotNull(lease);
+
+        storage.Advance(LeaseLifetime - TimeSpan.FromSeconds(1));
+        Assert.True(await lease.RenewAsync(default));
+        storage.Advance(LeaseLifetime - TimeSpan.FromSeconds(1));
+
+        Assert.True((await lease.ReadAsync(default)).LeaseValid);
+        Assert.Equal(1, storage.RenewCount);
+        Assert.Equal(LeaseLifetime, storage.LastRenewLifetime);
+        Assert.Equal(storage.LastToken, storage.LastRenewToken);
+    }
+
+    [Fact]
+    public async Task RenewAsync_StorageFailureOrStaleToken_FailsClosed()
+    {
+        var storage = new FakeAtomicStorage();
+        var store = CreateStore(storage);
+        await using var stale = await store.TryAcquireAsync("submission-a", "owner-a", default);
+        Assert.NotNull(stale);
+
+        storage.Advance(LeaseLifetime);
+        await using var current = await store.TryAcquireAsync("submission-a", "owner-a", default);
+        Assert.NotNull(current);
+        Assert.False(await stale.RenewAsync(default));
+
+        storage.ThrowOnRenew = true;
+        Assert.False(await current.RenewAsync(default));
+    }
+
+    [Fact]
     public async Task TryPutAsync_AllowsOnlyAbsentToPersistedToCompleted()
     {
         var store = CreateStore(new FakeAtomicStorage());
@@ -164,6 +199,7 @@ public sealed class InstantQuotationSubmissionStoreTests
             "InstantQuotationSubmissionStore.cs"));
 
         AssertCancellationOnlyBeforeFirstAwait(source, "public async Task<bool> TryAcquireAsync(");
+        AssertCancellationOnlyBeforeFirstAwait(source, "public async Task<bool> RenewAsync(");
         AssertCancellationOnlyBeforeFirstAwait(source, "public async Task<bool> TryPutAsync(");
         AssertCancellationOnlyBeforeFirstAwait(source, "public async Task ReleaseAsync(");
     }
@@ -300,6 +336,12 @@ public sealed class InstantQuotationSubmissionStoreTests
 
         public string? LastToken { get; private set; }
 
+        public string? LastRenewToken { get; private set; }
+
+        public TimeSpan? LastRenewLifetime { get; private set; }
+
+        public int RenewCount { get; private set; }
+
         public Action? AfterAcquireCommit { get; init; }
 
         public Action? AfterPutCommit { get; set; }
@@ -309,6 +351,8 @@ public sealed class InstantQuotationSubmissionStoreTests
         public bool ThrowOnAcquire { get; init; }
 
         public bool ThrowOnRead { get; set; }
+
+        public bool ThrowOnRenew { get; set; }
 
         public bool ThrowOnPut { get; set; }
 
@@ -363,6 +407,26 @@ public sealed class InstantQuotationSubmissionStoreTests
 
             checkpoints.TryGetValue(checkpointKey, out var checkpoint);
             return Task.FromResult(new InstantQuotationSubmissionAtomicRead(true, checkpoint?.Payload));
+        }
+
+        public Task<bool> RenewAsync(
+            string leaseKey,
+            string token,
+            TimeSpan lifetime,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfUnavailable(ThrowOnRenew);
+            RenewCount++;
+            LastRenewToken = token;
+            LastRenewLifetime = lifetime;
+            if (!Owns(leaseKey, token))
+            {
+                return Task.FromResult(false);
+            }
+
+            leases[leaseKey] = new LeaseEntry(token, now.Add(lifetime));
+            return Task.FromResult(true);
         }
 
         public Task<bool> TryPutAsync(

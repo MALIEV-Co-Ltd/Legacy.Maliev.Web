@@ -6,6 +6,7 @@ internal sealed class UnavailableInstantQuotationUploadClient : IInstantQuotatio
 {
     public Task<InstantQuotationUploadResult> UploadAsync(
         string sessionId,
+        string? ownerIdentity,
         Stream content,
         string fileName,
         string contentType,
@@ -20,6 +21,7 @@ internal sealed class UnavailableInstantQuotationUploadClient : IInstantQuotatio
 
     public Task<InstantQuotationRemoveResult> RemoveAsync(
         string sessionId,
+        string? ownerIdentity,
         InstantQuotationUploadReference uploadReference,
         string operationId,
         CancellationToken cancellationToken)
@@ -30,6 +32,7 @@ internal sealed class UnavailableInstantQuotationUploadClient : IInstantQuotatio
 
     public Task<InstantQuotationFinalizationResult> FinalizeAsync(
         string sessionId,
+        string? ownerIdentity,
         int quotationRequestId,
         IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
         string operationId,
