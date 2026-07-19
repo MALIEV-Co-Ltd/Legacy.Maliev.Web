@@ -18,6 +18,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [Parameter]
     public InstantQuotationWorkflowState InitialState { get; set; } = InstantQuotationWorkflowState.Empty;
 
+    [Parameter]
+    public InstantQuotationCustomerDisplayModel CustomerModel { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
+
     private InstantQuotationWorkflowCoordinator? workflow;
     private bool initializationFailed;
     private InputFile? fileInput;
@@ -44,6 +47,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private bool InputDisabled => IsBusy || batchInProgress;
 
+    private bool CanEnterReview => workflow?.State is InstantQuotationWorkflowState.Configured
+        && workflow.OrderQuote is not null;
+
     private IReadOnlyList<InstantQuotationWorkflowUploadViewModel> Uploads => workflow?.Uploads ?? [];
 
     private IReadOnlyList<InstantQuotationWorkflowPartViewModel> Parts => workflow?.Parts ?? [];
@@ -66,13 +72,27 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         InstantQuotationWorkflowState.Configured => Localizer["Part configuration is ready for review."],
         InstantQuotationWorkflowState.Review => Localizer["Review the order before entering customer details."],
         InstantQuotationWorkflowState.CustomerDetails => Localizer["Enter customer details to continue."],
-        InstantQuotationWorkflowState.Submitted => Localizer["Your quotation request was submitted."],
+        InstantQuotationWorkflowState.Submitted => CustomerModel.SubmissionStatus switch
+        {
+            InstantQuotationCustomerDisplayModel.PartialStatus =>
+                Localizer["Your request was saved. File processing is pending. Do not resubmit."],
+            InstantQuotationCustomerDisplayModel.RejectedStatus =>
+                Localizer["Your request was not submitted."],
+            _ => Localizer["Your quotation request was submitted."],
+        },
         _ => throw new InvalidOperationException("Unknown instant quotation workflow state."),
     };
 
     private string PreviewStatusMessage => previewUnavailable
         ? Localizer["3D preview is unavailable. You can continue with your quotation."]
         : Localizer["Use arrow keys to rotate, plus or minus to zoom, 0 to reset, and Home to fit."];
+
+    private string SubmittedHeading => CustomerModel.SubmissionStatus switch
+    {
+        InstantQuotationCustomerDisplayModel.PartialStatus => Localizer["Request saved"],
+        InstantQuotationCustomerDisplayModel.RejectedStatus => Localizer["Request not submitted"],
+        _ => Localizer["Ready for manufacturing"],
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -100,6 +120,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        if (InitialState is InstantQuotationWorkflowState.Submitted)
+        {
+            return;
+        }
+
         var sessionStore = Services.GetService<IInstantQuotationSessionStore>();
         var uploadClient = Services.GetService<IInstantQuotationUploadClient>();
         var pricingService = Services.GetService<IInstantQuotationPricingService>();
@@ -415,6 +440,26 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         int quantity) => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
             ?? Task.CompletedTask;
 
+    private void EnterReview()
+    {
+        workflow?.EnterReview();
+    }
+
+    private void EnterCustomerDetails()
+    {
+        workflow?.EnterCustomerDetails();
+    }
+
+    private void ReturnToConfiguration()
+    {
+        workflow?.ReturnToConfiguration();
+    }
+
+    private void ReturnToReview()
+    {
+        workflow?.ReturnToReview();
+    }
+
     private IReadOnlyList<string> GetColors(string material) => workflow?.GetColors(material) ?? [];
 
     private string UploadStatus(InstantQuotationWorkflowUploadStatus status) => status switch
@@ -511,7 +556,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         InstantQuotationWorkflowState.Error => new(Upload: true, Error: true),
         InstantQuotationWorkflowState.MultiPart => new(Viewer: true, Parts: true, Configuration: true),
         InstantQuotationWorkflowState.Configured => new(Viewer: true, Parts: true, Configuration: true),
-        InstantQuotationWorkflowState.Review => new(Viewer: true, Parts: true, Configuration: true, Review: true),
+        InstantQuotationWorkflowState.Review => new(Review: true),
         InstantQuotationWorkflowState.CustomerDetails => new(CustomerDetails: true),
         InstantQuotationWorkflowState.Submitted => new(Submitted: true),
         _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown instant quotation workflow state."),

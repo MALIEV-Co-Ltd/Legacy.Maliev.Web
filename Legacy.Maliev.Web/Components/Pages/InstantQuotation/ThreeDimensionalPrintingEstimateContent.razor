@@ -10,10 +10,18 @@
         <p>@Localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."]</p>
     </header>
 
-    <InstantQuotationWorkflow @rendermode="InteractiveServer" />
+    <InstantQuotationWorkflow @rendermode="InteractiveServer"
+                              InitialState="@InitialState"
+                              CustomerModel="@CustomerModel" />
 </main>
 
 @code {
     [Parameter]
     public InstantQuotationDisplayModel Model { get; set; } = InstantQuotationDisplayModel.Empty;
+
+    [Parameter]
+    public InstantQuotationWorkflowState InitialState { get; set; } = InstantQuotationWorkflowState.Empty;
+
+    [Parameter]
+    public InstantQuotationCustomerDisplayModel CustomerModel { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
 }

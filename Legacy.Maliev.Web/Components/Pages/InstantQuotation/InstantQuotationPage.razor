@@ -1,6 +1,16 @@
 @page "/InstantQuotation/3D-Printing"
+@using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Infrastructure
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+@inject ICountryClient CountryClient
+@inject IAccountSessionManager AccountSessionManager
+@inject ICustomerAccountClient CustomerAccountClient
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
 @{
@@ -16,5 +26,189 @@
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
 </HeadContent>
 <div data-migration-route-owner="blazor-static-ssr">
-    <ThreeDimensionalPrintingEstimateContent Model="@InstantQuotationCalculator.CreateDisplayModel()" />
+    <ThreeDimensionalPrintingEstimateContent Model="@InstantQuotationCalculator.CreateDisplayModel()"
+                                               InitialState="@initialState"
+                                               CustomerModel="@customerModel" />
 </div>
+
+@code {
+    private InstantQuotationCustomerDisplayModel customerModel = InstantQuotationCustomerDisplayModel.Empty;
+    private InstantQuotationWorkflowState initialState = InstantQuotationWorkflowState.Empty;
+    private static readonly TimeSpan DependencyBudget = TimeSpan.FromSeconds(2);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var context = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var tokens = Antiforgery.GetAndStoreTokens(context);
+        var countriesResult = await LoadCountriesAsync(context);
+        var countries = (countriesResult.Value ?? [])
+            .Where(static country => !string.IsNullOrWhiteSpace(country.Name))
+            .Select(static country => new InstantQuotationCountryOption(country.Name))
+            .DistinctBy(static country => country.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static country => country.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (countries.Length == 0)
+        {
+            countries = [new InstantQuotationCountryOption("Thailand")];
+        }
+
+        var firstName = SafeClaim(context.User, ClaimTypes.GivenName);
+        var lastName = SafeClaim(context.User, ClaimTypes.Surname);
+        var email = SafeClaim(context.User, ClaimTypes.Email);
+        var telephone = SafeClaim(context.User, ClaimTypes.MobilePhone);
+        var company = string.Empty;
+        var taxNumber = string.Empty;
+        var country = countries.FirstOrDefault(static item =>
+                string.Equals(item.Name, "Thailand", StringComparison.OrdinalIgnoreCase))?.Name
+            ?? countries[0].Name;
+
+        if (context.User.Identity?.IsAuthenticated is true)
+        {
+            var customerId = await LoadCustomerIdAsync(context);
+            if (customerId is not null)
+            {
+                var profileResult = await LoadCustomerProfileAsync(customerId.Value, context);
+                if (profileResult.ServiceAvailable && profileResult.Authorized && profileResult.Profile is not null)
+                {
+                    var profile = profileResult.Profile;
+                    firstName = profile.FirstName;
+                    lastName = profile.LastName;
+                    email = profile.Email;
+                    telephone = profile.Telephone ?? profile.Mobile ?? string.Empty;
+                    company = profile.Company?.Name ?? string.Empty;
+                    taxNumber = profile.Company?.TaxNumber ?? string.Empty;
+                    var countryId = profile.BillingAddress?.CountryId ?? profile.ShippingAddress?.CountryId;
+                    var matchedCountry = countryId is null
+                        ? null
+                        : (countriesResult.Value ?? []).SingleOrDefault(item => item.Id == countryId.Value)?.Name;
+                    if (!string.IsNullOrWhiteSpace(matchedCountry))
+                    {
+                        country = matchedCountry;
+                    }
+                }
+            }
+        }
+
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        var submissionStatus = ControlledSubmissionStatus(tempData["InstantQuotationSubmissionStatus"]?.ToString());
+        var requestReference = PositiveReference(tempData["InstantQuotationRequestReference"]);
+        var problemCategory = ControlledProblemCategory(tempData["InstantQuotationProblemCategory"]?.ToString());
+        if (submissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
+        {
+            requestReference = null;
+        }
+        else if (submissionStatus is not null)
+        {
+            problemCategory = null;
+        }
+
+        initialState = submissionStatus is null
+            ? InstantQuotationWorkflowState.Empty
+            : InstantQuotationWorkflowState.Submitted;
+        customerModel = new InstantQuotationCustomerDisplayModel(
+            tokens.FormFieldName,
+            tokens.RequestToken ?? string.Empty,
+            firstName,
+            lastName,
+            email,
+            telephone,
+            country,
+            company,
+            taxNumber,
+            string.Empty,
+            countries,
+            submissionStatus,
+            requestReference,
+            problemCategory);
+    }
+
+    private static string? ControlledSubmissionStatus(string? status) => status switch
+    {
+        InstantQuotationCustomerDisplayModel.CompletedStatus => status,
+        InstantQuotationCustomerDisplayModel.PartialStatus => status,
+        InstantQuotationCustomerDisplayModel.RejectedStatus => status,
+        _ => null,
+    };
+
+    private static string? ControlledProblemCategory(string? category) => category switch
+    {
+        "dependency_unavailable" or "authorization" or "validation" or "conflict" or "unexpected" => category,
+        _ => null,
+    };
+
+    private static int? PositiveReference(object? value) =>
+        int.TryParse(value?.ToString(), out var reference) && reference > 0 ? reference : null;
+
+    private async Task<ServiceResponse<IReadOnlyList<Country>>> LoadCountriesAsync(HttpContext context)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+            timeout.CancelAfter(DependencyBudget);
+            return await CountryClient.GetCountriesAsync(timeout.Token).WaitAsync(timeout.Token);
+        }
+        catch (HttpRequestException)
+        {
+            return new(null, false);
+        }
+        catch (TimeoutException)
+        {
+            return new(null, false);
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            return new(null, false);
+        }
+    }
+
+    private async Task<int?> LoadCustomerIdAsync(HttpContext context)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+            timeout.CancelAfter(DependencyBudget);
+            return await AccountSessionManager.GetCustomerDatabaseIdAsync(context, timeout.Token).WaitAsync(timeout.Token);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    private async Task<CustomerAccountProfileResult> LoadCustomerProfileAsync(int customerId, HttpContext context)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+            timeout.CancelAfter(DependencyBudget);
+            return await CustomerAccountClient.GetProfileAsync(customerId, timeout.Token).WaitAsync(timeout.Token);
+        }
+        catch (HttpRequestException)
+        {
+            return new(null, false, false);
+        }
+        catch (TimeoutException)
+        {
+            return new(null, false, false);
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            return new(null, false, false);
+        }
+    }
+
+    private static string SafeClaim(ClaimsPrincipal principal, string claimType)
+    {
+        var value = principal.FindFirstValue(claimType)?.Trim();
+        return string.IsNullOrEmpty(value) ? string.Empty : value[..Math.Min(value.Length, 50)];
+    }
+}

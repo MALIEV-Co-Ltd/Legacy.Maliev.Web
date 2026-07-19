@@ -1,0 +1,59 @@
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+<section data-workflow-customer-details-content aria-labelledby="instant-quote-customer-heading">
+    <h3 id="instant-quote-customer-heading">@Localizer["Customer details"]</h3>
+    <form method="post" action="/InstantQuotation/3D-Printing?handler=SubmitRequest">
+        <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryRequestToken" />
+
+        <div>
+            <label for="instant-quote-firstname">@Localizer["First name"]</label>
+            <input id="instant-quote-firstname" name="FirstName" value="@Model.FirstName" autocomplete="given-name" maxlength="50" required />
+        </div>
+        <div>
+            <label for="instant-quote-lastname">@Localizer["Last name"]</label>
+            <input id="instant-quote-lastname" name="LastName" value="@Model.LastName" autocomplete="family-name" maxlength="50" required />
+        </div>
+        <div>
+            <label for="instant-quote-email">@Localizer["Email"]</label>
+            <input id="instant-quote-email" name="Email" value="@Model.Email" type="email" autocomplete="email" maxlength="50" required />
+        </div>
+        <div>
+            <label for="instant-quote-telephone">@Localizer["Telephone"]</label>
+            <input id="instant-quote-telephone" name="Telephone" value="@Model.Telephone" type="tel" autocomplete="tel" maxlength="50" required />
+        </div>
+        <div>
+            <label for="instant-quote-country">@Localizer["Country"]</label>
+            <select id="instant-quote-country" name="Country" autocomplete="country-name" required>
+                @foreach (var country in Model.Countries)
+                {
+                    <option value="@country.Name" selected="@(string.Equals(country.Name, Model.Country, StringComparison.OrdinalIgnoreCase))">@country.Name</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label for="instant-quote-company">@Localizer["Company"]</label>
+            <input id="instant-quote-company" name="Company" value="@Model.Company" autocomplete="organization" maxlength="50" />
+        </div>
+        <div>
+            <label for="instant-quote-taxnumber">@Localizer["Tax number"]</label>
+            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" maxlength="50" />
+        </div>
+        <div>
+            <label for="instant-quote-description">@Localizer["Description"]</label>
+            <textarea id="instant-quote-description" name="Description" maxlength="512">@Model.Description</textarea>
+        </div>
+
+        <nav aria-label="@Localizer["Quotation steps"]">
+            <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
+            <button type="submit">@Localizer["Submit"]</button>
+        </nav>
+    </form>
+</section>
+
+@code {
+    [Parameter]
+    public InstantQuotationCustomerDisplayModel Model { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
+
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+}

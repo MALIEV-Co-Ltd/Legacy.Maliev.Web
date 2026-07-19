@@ -307,6 +307,47 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    public void EnterReview()
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        if (State is not InstantQuotationWorkflowState.Configured || !HasCompleteAuthoritativeQuote())
+        {
+            throw new InvalidOperationException("A complete authoritative quotation is required before review.");
+        }
+
+        State = InstantQuotationWorkflowState.Review;
+    }
+
+    public void EnterCustomerDetails()
+    {
+        ThrowIfDisposed();
+        if (State is not InstantQuotationWorkflowState.Review || !HasCompleteAuthoritativeQuote())
+        {
+            throw new InvalidOperationException("The authoritative quotation must be reviewed before customer details.");
+        }
+
+        State = InstantQuotationWorkflowState.CustomerDetails;
+    }
+
+    public void ReturnToConfiguration()
+    {
+        ThrowIfDisposed();
+        if (State is InstantQuotationWorkflowState.Review)
+        {
+            RefreshState();
+        }
+    }
+
+    public void ReturnToReview()
+    {
+        ThrowIfDisposed();
+        if (State is InstantQuotationWorkflowState.CustomerDetails && HasCompleteAuthoritativeQuote())
+        {
+            State = InstantQuotationWorkflowState.Review;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (disposed)
@@ -544,10 +585,21 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         State = parts.Length switch
         {
             0 => InstantQuotationWorkflowState.Empty,
+            _ when entries.Where(static entry => entry.Part is not null).All(static entry => entry.HasConfigured) =>
+                InstantQuotationWorkflowState.Configured,
             > 1 => InstantQuotationWorkflowState.MultiPart,
-            _ when entries.Any(static entry => entry.HasConfigured) => InstantQuotationWorkflowState.Configured,
             _ => InstantQuotationWorkflowState.Uploaded,
         };
+    }
+
+    private bool HasCompleteAuthoritativeQuote()
+    {
+        var parts = CurrentParts();
+        return parts.Length > 0
+            && OrderQuote is not null
+            && OrderQuote.Parts.Count == parts.Length
+            && entries.Where(static entry => entry.Part is not null).All(static entry => entry.HasConfigured)
+            && OrderQuote.Parts.All(static quote => quote.Quantity > 0 && quote.UnitPrice >= 0 && quote.Subtotal >= 0);
     }
 
     private void EnsureInitialized()

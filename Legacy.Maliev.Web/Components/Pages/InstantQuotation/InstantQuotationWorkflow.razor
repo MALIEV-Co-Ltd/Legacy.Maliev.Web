@@ -158,39 +158,49 @@
             </dl>
 
             <button type="button" disabled>@Localizer["Back"]</button>
-            <button type="button" disabled>@Localizer["Review"]</button>
+            <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
         </section>
     }
 
     @if (VisibleSections.Review)
     {
-        <section data-workflow-review aria-labelledby="instant-quote-review-heading">
-            <h3 id="instant-quote-review-heading">@Localizer["Review"]</h3>
-            <p>@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
-            <button type="button" disabled>@Localizer["Back"]</button>
-            <button type="button" disabled>@Localizer["Customer details"]</button>
-        </section>
+        <div data-workflow-review>
+            <InstantQuotationReview Parts="@Parts"
+                                    Quote="@OrderQuote"
+                                    Materials="@Materials"
+                                    OnBack="ReturnToConfiguration"
+                                    OnContinue="EnterCustomerDetails" />
+        </div>
     }
 
     @if (VisibleSections.CustomerDetails)
     {
-        <section data-workflow-customer-details aria-labelledby="instant-quote-customer-heading">
-            <h3 id="instant-quote-customer-heading">@Localizer["Customer details"]</h3>
-            <fieldset disabled>
-                <legend>@Localizer["Your information is safe"]</legend>
-                <label for="instant-quote-email">@Localizer["Email"]</label>
-                <input id="instant-quote-email" name="email" type="email" autocomplete="email" />
-            </fieldset>
-            <button type="button" disabled>@Localizer["Back"]</button>
-            <button type="button" disabled>@Localizer["Submit"]</button>
-        </section>
+        <div data-workflow-customer-details>
+            <InstantQuotationCustomerForm Model="@CustomerModel" OnBack="ReturnToReview" />
+        </div>
     }
 
     @if (VisibleSections.Submitted)
     {
         <section data-workflow-submitted aria-labelledby="instant-quote-submitted-heading">
-            <h3 id="instant-quote-submitted-heading">@Localizer["Ready for manufacturing"]</h3>
-            <p>@Localizer["We will get back to you with a quotation"]</p>
+            <h3 id="instant-quote-submitted-heading">@SubmittedHeading</h3>
+            @if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.PartialStatus)
+            {
+                <p role="status">@Localizer["Your request was saved. File processing is pending. Do not resubmit."]</p>
+            }
+            else if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
+            {
+                <p role="alert">@Localizer["Your request could not be submitted. Please review the form and try again."]</p>
+                <p><a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a></p>
+            }
+            else
+            {
+                <p role="status">@Localizer["We will get back to you with a quotation"]</p>
+            }
+            @if (CustomerModel.RequestReference is not null)
+            {
+                <p>@Localizer["Request reference"]: <strong>@CustomerModel.RequestReference</strong></p>
+            }
         </section>
     }
 </section>

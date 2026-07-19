@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.RegularExpressions;
 
@@ -16,7 +17,15 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
     private readonly WebApplicationFactory<Program> factory;
 
     public InstantQuotationRuntimeIntegrationTests(WebApplicationFactory<Program> factory) =>
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("environment", "Testing");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
 
     [Fact]
     public void Runtime_RegistersAuthoritativePricingAndServerOnlySessionIdentity()
@@ -89,6 +98,34 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
     }
 
     [Fact]
+    public async Task Route_ThrowingCountryDependencyFallsBackWithoutBlockingCookieOrAntiforgery()
+    {
+        using var resilientFactory = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<ICountryClient>();
+            services.AddSingleton<ICountryClient, ThrowingCountryClient>();
+        }));
+        using var client = resilientFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+
+        using var response = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Thailand", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.Contains("data-workflow-upload", source, StringComparison.Ordinal);
+        Assert.Contains(
+            response.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
+        Assert.DoesNotContain("country dependency failed", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task CircuitAccessor_ReadsIdentityFromAuthenticationState_AndCannotReplaceIt()
     {
         var identity = new string('A', 64);
@@ -124,5 +161,19 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
     {
         public override Task<AuthenticationState> GetAuthenticationStateAsync() =>
             Task.FromResult(new AuthenticationState(principal));
+    }
+
+    private sealed class ThrowingCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            throw new HttpRequestException("country dependency failed");
+    }
+
+    private sealed class StubCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "TH", "TH", "THA", null, null)],
+                true));
     }
 }

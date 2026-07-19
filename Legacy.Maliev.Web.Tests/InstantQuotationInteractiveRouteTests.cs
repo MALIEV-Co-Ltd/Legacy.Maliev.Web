@@ -1,10 +1,12 @@
 using System.Net;
 using System.Reflection;
+using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
@@ -17,7 +19,15 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
     public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
+        client = factory.WithWebHostBuilder(builder =>
+            {
+                builder.UseSetting("environment", "Testing");
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<ICountryClient>();
+                    services.AddSingleton<ICountryClient, StubCountryClient>();
+                });
+            })
             .CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
@@ -165,7 +175,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         AssertVisibility("Error", upload: true, error: true);
         AssertVisibility("MultiPart", viewer: true, parts: true, configuration: true);
         AssertVisibility("Configured", viewer: true, parts: true, configuration: true);
-        AssertVisibility("Review", viewer: true, parts: true, configuration: true, review: true);
+        AssertVisibility("Review", review: true);
         AssertVisibility("CustomerDetails", customerDetails: true);
         AssertVisibility("Submitted", submitted: true);
 
@@ -230,7 +240,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     [InlineData(InstantQuotationWorkflowState.Error, "data-workflow-upload|role=\"alert\"")]
     [InlineData(InstantQuotationWorkflowState.MultiPart, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
     [InlineData(InstantQuotationWorkflowState.Configured, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration")]
-    [InlineData(InstantQuotationWorkflowState.Review, "data-workflow-viewer|data-workflow-parts|data-workflow-configuration|data-workflow-review")]
+    [InlineData(InstantQuotationWorkflowState.Review, "data-workflow-review")]
     [InlineData(InstantQuotationWorkflowState.CustomerDetails, "data-workflow-customer-details")]
     [InlineData(InstantQuotationWorkflowState.Submitted, "data-workflow-submitted")]
     public async Task WorkflowState_RendersOnlyItsMappedSections(
@@ -295,7 +305,17 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             System.Text.RegularExpressions.RegexOptions.Singleline);
         if (state is InstantQuotationWorkflowState.CustomerDetails)
         {
-            Assert.Empty(enabledButtons);
+            Assert.Equal(2, enabledButtons.Count);
+            Assert.Contains(enabledButtons, match => match.Value.Contains("Back", StringComparison.Ordinal));
+            Assert.Contains(enabledButtons, match => match.Value.Contains("Submit", StringComparison.Ordinal));
+            return;
+        }
+
+        if (state is InstantQuotationWorkflowState.Review)
+        {
+            Assert.Equal(2, enabledButtons.Count);
+            Assert.Contains(enabledButtons, match => match.Value.Contains("Back", StringComparison.Ordinal));
+            Assert.Contains(enabledButtons, match => match.Value.Contains("Customer details", StringComparison.Ordinal));
             return;
         }
 
@@ -303,6 +323,32 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
         Assert.Contains(enabledButtons, match => match.Value.Contains("Fit to view", StringComparison.Ordinal));
         Assert.Contains(enabledButtons, match => match.Value.Contains("Fullscreen", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("completed", "Ready for manufacturing", "Your quotation request was submitted.")]
+    [InlineData("partial", "Request saved", "File processing is pending")]
+    [InlineData("rejected", "Request not submitted", "Your request was not submitted.")]
+    public async Task SubmittedOutcome_RendersTruthfulHeadingAndLiveStatus(
+        string status,
+        string expectedHeading,
+        string expectedStatus)
+    {
+        var model = InstantQuotationCustomerDisplayModel.Empty with
+        {
+            SubmissionStatus = status,
+            RequestReference = status is "rejected" ? null : 720,
+            ProblemCategory = status is "rejected" ? "validation" : null,
+        };
+        var html = await RenderWorkflowAsync(InstantQuotationWorkflowState.Submitted, model);
+
+        Assert.Contains(expectedHeading, html, StringComparison.Ordinal);
+        Assert.Contains(expectedStatus, html, StringComparison.Ordinal);
+        if (status is not "completed")
+        {
+            Assert.DoesNotContain("Ready for manufacturing", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("Your quotation request was submitted.", html, StringComparison.Ordinal);
+        }
     }
 
     private static bool ReadBoolean(object target, string propertyName) =>
@@ -327,7 +373,9 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     private static int Count(string source, string value) =>
         source.Split(value, StringSplitOptions.None).Length - 1;
 
-    private static async Task<string> RenderWorkflowAsync(InstantQuotationWorkflowState state)
+    private static async Task<string> RenderWorkflowAsync(
+        InstantQuotationWorkflowState state,
+        InstantQuotationCustomerDisplayModel? customerModel = null)
     {
         using var services = new ServiceCollection()
             .AddLogging()
@@ -342,6 +390,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
             {
                 ["InitialState"] = state,
+                ["CustomerModel"] = customerModel ?? InstantQuotationCustomerDisplayModel.Empty,
             });
             var output = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(parameters);
             return output.ToHtmlString();
@@ -368,5 +417,13 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             string identifier,
             CancellationToken cancellationToken,
             object?[]? args) => ValueTask.FromResult(default(TValue)!);
+    }
+
+    private sealed class StubCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "TH", "TH", "THA", null, null)],
+                true));
     }
 }

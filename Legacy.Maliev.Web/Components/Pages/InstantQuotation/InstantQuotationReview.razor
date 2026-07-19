@@ -1,0 +1,62 @@
+@using Legacy.Maliev.Web.Application
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+<section data-workflow-review-content aria-labelledby="instant-quote-review-heading">
+    <h3 id="instant-quote-review-heading">@Localizer["Review"]</h3>
+
+    <div class="instant-quote__review-parts">
+        @foreach (var part in Parts)
+        {
+            var quote = Quote?.Parts.SingleOrDefault(item => item.PartId == part.PartId);
+            <article data-workflow-review-part aria-labelledby="instant-quote-review-part-@part.PartId">
+                <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
+                <dl>
+                    <div><dt>@Localizer["Material"]</dt><dd>@MaterialName(part.Configuration.MaterialKey)</dd></div>
+                    <div><dt>@Localizer["Color"]</dt><dd>@part.Configuration.Color</dd></div>
+                    <div><dt>@Localizer["Quantity"]</dt><dd>@part.Configuration.Quantity</dd></div>
+                    <div><dt>@Localizer["Unit price"]</dt><dd>@Money(quote?.UnitPrice)</dd></div>
+                    <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(quote?.Subtotal)</dd></div>
+                </dl>
+            </article>
+        }
+    </div>
+
+    <dl data-workflow-review-total>
+        <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
+        <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
+        <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
+        <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>
+        <div data-workflow-lead-time>
+            <dt>@Localizer["Lead time"]</dt>
+            <dd>@(Quote is null ? "—" : Localizer["{0}–{1} business days", Quote.LeadTimeMinimumDays, Quote.LeadTimeMaximumDays])</dd>
+        </div>
+    </dl>
+
+    <p role="note">@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
+    <nav aria-label="@Localizer["Quotation steps"]">
+        <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
+        <button type="button" @onclick="OnContinue">@Localizer["Customer details"]</button>
+    </nav>
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<InstantQuotationWorkflowPartViewModel> Parts { get; set; } = [];
+
+    [Parameter]
+    public InstantQuotationOrderQuote? Quote { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; set; } = [];
+
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    [Parameter]
+    public EventCallback OnContinue { get; set; }
+
+    private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
+
+    private string MaterialName(string key) => Materials
+        .SingleOrDefault(item => string.Equals(item.Key, key, StringComparison.Ordinal))?.DisplayName ?? key;
+}
