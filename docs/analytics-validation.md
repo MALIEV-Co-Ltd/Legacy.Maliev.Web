@@ -38,6 +38,9 @@ non-JavaScript fallback conversion.
 | `request_quote` | Stable | Backend-persisted contact or quotation request | Primary Ads conversion |
 | `file_upload_start` | Stable | A positive attachment count enters the verified submission path | Secondary only |
 | `file_upload_complete` | Stable | Every attachment was scanned, stored, and linked to the persisted request | Secondary only |
+| `upload_failure` | Stable | A terminal non-cancellation upload failure | Secondary only |
+| `estimate_shown` | Stable | A complete authoritative estimate becomes visible | Secondary only |
+| `review_reached` | Stable | A complete authoritative quote enters Review | Secondary only |
 | `phone_click` | Stable | Business telephone click | Secondary only |
 | `email_click` | Stable | Business email click | Secondary only |
 | `line_click` | Stable | LINE Official Account click | Secondary only |
@@ -59,11 +62,11 @@ LINE is the primary visible contact CTA on high-intent Thai pages, while `messen
 `whatsapp_click` remain separate secondary/non-biddable direct-contact diagnostics under issue
 #21. A Messenger outbound click is distinct from a Facebook inbound referral: Facebook may appear
 as an inbound `lead_source`, but this contract does not define a generic `facebook_click` event.
-The Instant Quotation names `upload_failure`, `estimate_shown`, and
-`review_reached` are pending under issue #152; their fail-closed maximum keys and rules below are
-frozen for validation, but the events remain inactive until #152 tests and #153 review pass. PR
-#156 commit `e7e6783bab2d3aa577f5e11b06a6316141663763` is validation evidence for the stable event
-and consent boundary, not authorization to publish tags or deploy.
+The Instant Quotation names `upload_failure`, `estimate_shown`, and `review_reached` are active
+application events after issue #152 tests and independent review passed. Their exact fail-closed
+keys and firing rules below remain frozen. PR #156 commit
+`e7e6783bab2d3aa577f5e11b06a6316141663763` is validation evidence for the event and consent
+boundary; application activation is not authorization to publish GTM tags or deploy.
 
 The `request_quote` data-layer payload is non-PII and contains only:
 
@@ -95,7 +98,7 @@ The three stable payloads forbid `locale`, `landing_page_type`, `quote_flow_step
 `contact_channel`, synthetic consent fields, PII, session data, upload/storage details, and
 credentials. Reporting enrichment happens after consent outside the application payload.
 
-Pending Instant Quotation events remain inactive and fail-closed. Their maximum proposed keys are
+The additional Instant Quotation events remain schema-restricted and fail-closed. Their exact keys are
 `upload_failure` (`event`, `service`, `failure_category`, `file_count`), `estimate_shown` (`event`,
 `service`), and `review_reached` (`event`, `service`). `failure_category` must be a finite non-PII
 enum: `validation`, `authorization`, `conflict`, `dependency_unavailable`, or `unexpected`. Map
@@ -105,14 +108,14 @@ adapter unavailability, typed 503, dependency timeouts, and dependency transport
 `dependency_unavailable`; and remaining typed failures to `unexpected`. Never expose raw text,
 codes, status/body content, exceptions, filenames, file metadata, or internal identifiers.
 
-The proposed fail-closed firing rules are also pending: `upload_failure` fires once per independent
+The fail-closed firing rules are: `upload_failure` fires once per independent
 file attempt with `file_count=1`, does not fire for cancel/stale/cleanup, and treats a retry as a new
 attempt; `estimate_shown` fires once per complete authoritative visible estimate revision, never an
 advisory/partial/error result; `review_reached` fires the first time an authoritative revision
 enters Review and unchanged navigation does not refire it. Internal attempt/revision identifiers
-are deduplication state only and are never emitted. These events remain inactive until issue #152
-tests prove unknown fields/categories fail, identifiers never emit, and the firing/deduplication
-rules pass independent issue #153 review.
+are deduplication state only and are never emitted. Issue #152 tests prove unknown fields and
+categories cannot enter payloads, identifiers never emit, and the firing/deduplication rules pass
+independent review against issue #153's frozen contract.
 
 Do not add names, email addresses, telephone numbers, company names, message text, filenames,
 full URLs, user IDs, or authentication/session values to any analytics payload.
@@ -220,7 +223,7 @@ the verification token must never be copied into events or reports.
 2. Create one Custom Event trigger named `CE - request_quote - persisted` with event name
    `request_quote` and the condition `submission_status equals persisted`.
 3. Create one Custom Event trigger for each stable secondary event listed above. Do not create
-   triggers for reserved or pending events, and do not combine a click trigger with the primary
+   triggers for reserved events, and do not combine a click trigger with the primary
    trigger.
 4. Configure the GA4 event tag to preserve the exact event name and controlled parameters. Set
    `transaction_id` as the deduplication identifier for the persisted request.

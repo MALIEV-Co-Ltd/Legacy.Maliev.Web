@@ -397,6 +397,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             && entry.OperationId is { Length: > 0 } retainedOperationId
                 ? retainedOperationId
                 : NewOperationId();
+        var analyticsAttemptId = NewAnalyticsAttemptId();
         entry.OperationId = operationId;
         entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
         entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
@@ -408,7 +409,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
             RefreshState();
             await analytics.RecordUploadFailureAsync(
-                operationId,
+                analyticsAttemptId,
                 InstantQuotationProblemCategory.Validation,
                 1);
             return;
@@ -420,7 +421,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
             RefreshState();
             await analytics.RecordUploadFailureAsync(
-                operationId,
+                analyticsAttemptId,
                 InstantQuotationProblemCategory.Validation,
                 1);
             return;
@@ -432,7 +433,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
             RefreshState();
             await analytics.RecordUploadFailureAsync(
-                operationId,
+                analyticsAttemptId,
                 InstantQuotationProblemCategory.Validation,
                 1);
             return;
@@ -451,7 +452,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.File.GeometryClaim,
                 operationId,
                 entry.OperationCancellation.Token);
-            await ApplyUploadResultAsync(entry, operationId, result, cancellationToken);
+            await ApplyUploadResultAsync(
+                entry,
+                operationId,
+                analyticsAttemptId,
+                result,
+                cancellationToken);
         }
         catch (OperationCanceledException) when (entry.OperationCancellation.IsCancellationRequested)
         {
@@ -470,7 +476,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.ProblemCategory = InstantQuotationProblemCategory.Unexpected;
                 RefreshState();
                 await analytics.RecordUploadFailureAsync(
-                    operationId,
+                    analyticsAttemptId,
                     InstantQuotationProblemCategory.Unexpected,
                     1);
             }
@@ -480,6 +486,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private async Task ApplyUploadResultAsync(
         UploadEntry entry,
         string operationId,
+        string analyticsAttemptId,
         InstantQuotationUploadResult result,
         CancellationToken cancellationToken)
     {
@@ -527,7 +534,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.RetryDisposition = result.OperationId == operationId
                     ? result.RetryDisposition
                     : InstantQuotationUploadRetryDisposition.None;
-                terminalFailure = entry.ProblemCategory;
+                if (result.OperationId == operationId)
+                {
+                    terminalFailure = entry.ProblemCategory;
+                }
                 RefreshState();
             }
             else
@@ -570,7 +580,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         if (terminalFailure is { } failure)
         {
-            await analytics.RecordUploadFailureAsync(operationId, failure, 1);
+            await analytics.RecordUploadFailureAsync(analyticsAttemptId, failure, 1);
         }
     }
 
@@ -720,6 +730,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(disposed, this);
 
     private static string NewOperationId() => Guid.NewGuid().ToString("N");
+
+    private static string NewAnalyticsAttemptId() => $"analytics-{Guid.NewGuid():N}";
 
     private sealed class UploadEntry
     {

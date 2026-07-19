@@ -11,12 +11,54 @@ public sealed class InstantQuotationAnalyticsCoreTests
     {
         var tracker = NoOpInstantQuotationAnalyticsTracker.Instance;
 
+        await tracker.RecordUploadStartAsync("batch-1", 1);
         await tracker.RecordUploadFailureAsync(
             "operation-1",
             InstantQuotationProblemCategory.Validation,
             1);
         await tracker.RecordEstimateShownAsync(1);
         await tracker.RecordReviewReachedAsync(1);
+    }
+
+    [Fact]
+    public async Task UploadStart_EmitsExactApprovedPayloadOncePerAnalyzedBatch()
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordUploadStartAsync("batch-1", 2);
+        await tracker.RecordUploadStartAsync("batch-1", 2);
+        await tracker.RecordUploadStartAsync("batch-2", 1);
+
+        Assert.Equal(2, sink.Payloads.Count);
+        AssertJson(sink.Payloads[0], new Dictionary<string, object>
+        {
+            ["event"] = "file_upload_start",
+            ["service"] = "3d_printing",
+            ["file_count"] = 2,
+        });
+        AssertJson(sink.Payloads[1], new Dictionary<string, object>
+        {
+            ["event"] = "file_upload_start",
+            ["service"] = "3d_printing",
+            ["file_count"] = 1,
+        });
+    }
+
+    [Theory]
+    [InlineData(null, 1)]
+    [InlineData("", 1)]
+    [InlineData("batch-1", 0)]
+    [InlineData("batch-1", -1)]
+    [InlineData("batch-1", 101)]
+    public async Task UploadStart_InvalidContractInputFailsClosed(string? batchId, int fileCount)
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordUploadStartAsync(batchId!, fileCount);
+
+        Assert.Empty(sink.Payloads);
     }
 
     [Theory]

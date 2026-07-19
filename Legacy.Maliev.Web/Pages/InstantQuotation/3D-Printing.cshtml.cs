@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
@@ -186,6 +187,13 @@ public sealed class ThreeDimensionalPrinting : PageModel
         {
             TempData[SubmissionStatusTempDataKey] = SubmissionStatusCompleted;
             TempData[RequestReferenceTempDataKey] = result.RequestReference.Value;
+            _ = LeadAnalyticsEventQueue.TryQueueManualQuotation(
+                TempData,
+                result.RequestReference.Value,
+                "3d_printing",
+                hasFiles: true,
+                fileUploadCompleted: true,
+                out _);
             return;
         }
 
@@ -194,6 +202,13 @@ public sealed class ThreeDimensionalPrinting : PageModel
         {
             TempData[SubmissionStatusTempDataKey] = SubmissionStatusPartial;
             TempData[RequestReferenceTempDataKey] = result.RequestReference.Value;
+            _ = LeadAnalyticsEventQueue.TryQueueManualQuotation(
+                TempData,
+                result.RequestReference.Value,
+                "3d_printing",
+                hasFiles: true,
+                fileUploadCompleted: false,
+                out _);
             return;
         }
 

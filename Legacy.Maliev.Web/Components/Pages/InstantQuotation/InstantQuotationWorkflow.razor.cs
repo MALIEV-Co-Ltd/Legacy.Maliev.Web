@@ -262,6 +262,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 return;
             }
 
+            await analytics.RecordUploadStartAsync(
+                $"batch-{Guid.NewGuid():N}",
+                analyzed.Count);
+
             var files = analyzed
                 .Select(item => new InstantQuotationWorkflowUploadFile(
                     item.File.Name,

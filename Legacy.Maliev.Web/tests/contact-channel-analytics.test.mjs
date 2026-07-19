@@ -93,6 +93,44 @@ test('reject clears a denied-consent queue so a later grant cannot flush it', ()
     assert.equal(findEvents(context.dataLayer, 'line_click').length, 0);
 });
 
+test('instant quotation events retain exact payloads through consent queue, flush, and rejection', () => {
+    const payloads = [
+        { event: 'file_upload_start', service: '3d_printing', file_count: 2 },
+        { event: 'upload_failure', service: '3d_printing', failure_category: 'validation', file_count: 1 },
+        { event: 'estimate_shown', service: '3d_printing' },
+        { event: 'review_reached', service: '3d_printing' },
+        { event: 'request_quote', intent_type: 'quotation_request', service: '3d_printing', transaction_id: 'quotation-724', submission_status: 'persisted', has_files: true, file_upload_completed: true },
+        { event: 'file_upload_complete', service: '3d_printing', transaction_id: 'quotation-724' },
+    ];
+    const granted = createConsentContext('denied');
+    for (const payload of payloads) {
+        granted.malievAnalytics.emit(payload);
+        assert.equal(findEvents(granted.dataLayer, payload.event).length, 0);
+    }
+
+    granted.gtag('consent', 'update', deniedOrGranted('granted'));
+    granted.malievAnalytics.setConsent('granted');
+    granted.malievAnalytics.setConsent('granted');
+    for (const payload of payloads) {
+        const emitted = findEvents(granted.dataLayer, payload.event);
+        assert.equal(emitted.length, 1);
+        assert.deepEqual({ ...emitted[0] }, payload);
+        assert.deepEqual(Object.keys(emitted[0]).sort(), Object.keys(payload).sort());
+    }
+
+    const rejected = createConsentContext('denied');
+    for (const payload of payloads) {
+        rejected.malievAnalytics.emit(payload);
+    }
+    rejected.gtag('consent', 'update', deniedOrGranted('denied'));
+    rejected.malievAnalytics.setConsent('denied');
+    rejected.gtag('consent', 'update', deniedOrGranted('granted'));
+    rejected.malievAnalytics.setConsent('granted');
+    for (const payload of payloads) {
+        assert.equal(findEvents(rejected.dataLayer, payload.event).length, 0);
+    }
+});
+
 function createContactHarness(pathname) {
     const events = [];
     const listeners = new Map();

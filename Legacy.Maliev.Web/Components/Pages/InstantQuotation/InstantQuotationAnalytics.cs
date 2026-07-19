@@ -5,6 +5,11 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
 public interface IInstantQuotationAnalyticsTracker
 {
+    ValueTask RecordUploadStartAsync(
+        string batchId,
+        int fileCount,
+        CancellationToken cancellationToken = default);
+
     ValueTask RecordUploadFailureAsync(
         string operationId,
         InstantQuotationProblemCategory category,
@@ -57,6 +62,18 @@ public sealed class InstantQuotationUploadFailurePayload : InstantQuotationAnaly
     public int FileCount { get; }
 }
 
+public sealed class InstantQuotationUploadStartPayload : InstantQuotationAnalyticsPayload
+{
+    internal InstantQuotationUploadStartPayload(int fileCount)
+        : base("file_upload_start")
+    {
+        FileCount = fileCount;
+    }
+
+    [JsonPropertyName("file_count")]
+    public int FileCount { get; }
+}
+
 public sealed class InstantQuotationEstimateShownPayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationEstimateShownPayload()
@@ -81,6 +98,11 @@ public sealed class NoOpInstantQuotationAnalyticsTracker : IInstantQuotationAnal
 
     public static NoOpInstantQuotationAnalyticsTracker Instance { get; } = new();
 
+    public ValueTask RecordUploadStartAsync(
+        string batchId,
+        int fileCount,
+        CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
     public ValueTask RecordUploadFailureAsync(
         string operationId,
         InstantQuotationProblemCategory category,
@@ -100,6 +122,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
 {
     private readonly IInstantQuotationAnalyticsSink sink;
     private readonly Lock synchronization = new();
+    private readonly HashSet<string> uploadBatches = new(StringComparer.Ordinal);
     private readonly HashSet<string> uploadFailureOperations = new(StringComparer.Ordinal);
     private readonly HashSet<long> estimateRevisions = [];
     private readonly HashSet<long> reviewRevisions = [];
@@ -107,6 +130,23 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
     public InstantQuotationAnalyticsTracker(IInstantQuotationAnalyticsSink sink)
     {
         this.sink = sink ?? throw new ArgumentNullException(nameof(sink));
+    }
+
+    public ValueTask RecordUploadStartAsync(
+        string batchId,
+        int fileCount,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(batchId)
+            || fileCount is <= 0 or > 100
+            || !TryReserve(uploadBatches, batchId))
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return EmitWithoutBreakingFlowAsync(
+            new InstantQuotationUploadStartPayload(fileCount),
+            cancellationToken);
     }
 
     public ValueTask RecordUploadFailureAsync(

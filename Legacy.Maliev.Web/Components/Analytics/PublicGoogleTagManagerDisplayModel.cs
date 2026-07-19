@@ -20,6 +20,16 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         var canTrack = context.Features.Get<ITrackingConsentFeature>()?.CanTrack == true;
         var tempData = tempDataDictionaryFactory.GetTempData(context);
         var queuedEventScript = BuildQueuedEventScript(tempData);
+        try
+        {
+            tempData.Save();
+        }
+        catch
+        {
+            // Do not emit an event whose removal could not be persisted: that
+            // would make a later request replay the same conversion event.
+            queuedEventScript = string.Empty;
+        }
 
         return new PublicGoogleTagManagerDisplayModel(
             canTrack ? "granted" : "denied",

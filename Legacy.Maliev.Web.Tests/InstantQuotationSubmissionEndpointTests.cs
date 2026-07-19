@@ -119,11 +119,14 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         Assert.Equal(service.Calls[0].SessionId, service.Calls[1].SessionId);
     }
 
-    [Fact]
-    public async Task PartialPost_StoresOnlySafeDoNotResubmitState()
+    [Theory]
+    [InlineData(InstantQuotationSubmissionOutcome.Partial)]
+    [InlineData(InstantQuotationSubmissionOutcome.Persisted)]
+    public async Task PersistedOrPartialPost_StoresSafeDoNotResubmitStateAndPersistedAnalytics(
+        InstantQuotationSubmissionOutcome outcome)
     {
         var service = new RecordingSubmissionService(new(
-            InstantQuotationSubmissionOutcome.Partial,
+            outcome,
             720,
             InstantQuotationProblemCategory.DependencyUnavailable));
         var tempData = new RecordingTempDataProvider();
@@ -141,7 +144,29 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             ThreeDimensionalPrinting.SubmissionStatusPartial,
             tempData.Values[ThreeDimensionalPrinting.SubmissionStatusTempDataKey]);
         Assert.Equal(720, tempData.Values[ThreeDimensionalPrinting.RequestReferenceTempDataKey]);
-        Assert.Equal(2, tempData.Values.Count);
+        AssertRequestQuoteAnalytics(tempData.Values, 720, fileUploadCompleted: false);
+        Assert.Equal(3, tempData.Values.Count);
+    }
+
+    [Fact]
+    public async Task CompletedPost_RendersRequestAndFileCompletionOnceAfterRedirect()
+    {
+        var service = new RecordingSubmissionService(Completed(724));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var post = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new() { ["__RequestVerificationToken"] = token }));
+        var firstGet = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+        var secondGet = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+        Assert.Contains("\"event\":\"request_quote\"", firstGet, StringComparison.Ordinal);
+        Assert.Contains("\"event\":\"file_upload_complete\"", firstGet, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"event\":\"request_quote\"", secondGet, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"event\":\"file_upload_complete\"", secondGet, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -364,7 +389,30 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     {
         Assert.Equal(ThreeDimensionalPrinting.SubmissionStatusCompleted, values[ThreeDimensionalPrinting.SubmissionStatusTempDataKey]);
         Assert.Equal(reference, values[ThreeDimensionalPrinting.RequestReferenceTempDataKey]);
-        Assert.Equal(2, values.Count);
+        AssertRequestQuoteAnalytics(values, reference, fileUploadCompleted: true);
+        Assert.Equal(3, values.Count);
+    }
+
+    private static void AssertRequestQuoteAnalytics(
+        IReadOnlyDictionary<string, object> values,
+        int reference,
+        bool fileUploadCompleted)
+    {
+        var serialized = Assert.Single(
+            values.Values.OfType<string>(),
+            value => value.Contains("\"event\":\"request_quote\"", StringComparison.Ordinal));
+        using var document = JsonDocument.Parse(serialized);
+        var root = document.RootElement;
+        Assert.Equal(
+            ["event", "file_upload_completed", "has_files", "intent_type", "service", "submission_status", "transaction_id"],
+            root.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+        Assert.Equal("request_quote", root.GetProperty("event").GetString());
+        Assert.Equal("quotation_request", root.GetProperty("intent_type").GetString());
+        Assert.Equal("3d_printing", root.GetProperty("service").GetString());
+        Assert.Equal($"quotation-{reference}", root.GetProperty("transaction_id").GetString());
+        Assert.Equal("persisted", root.GetProperty("submission_status").GetString());
+        Assert.True(root.GetProperty("has_files").GetBoolean());
+        Assert.Equal(fileUploadCompleted, root.GetProperty("file_upload_completed").GetBoolean());
     }
 
     private static string FindRepositoryRoot()

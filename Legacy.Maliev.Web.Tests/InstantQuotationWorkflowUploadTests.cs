@@ -367,9 +367,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal("opaque-mismatch", Assert.Single(client.RemovedReferences));
         Assert.Empty(workflow.Parts);
         Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, Assert.Single(workflow.Uploads).Status);
-        var failure = Assert.Single(analytics.UploadFailures);
-        Assert.Equal(Assert.Single(client.UploadOperations), failure.OperationId);
-        Assert.Equal(InstantQuotationProblemCategory.Unexpected, failure.Category);
+        Assert.Empty(analytics.UploadFailures);
     }
 
     [Fact]
@@ -579,12 +577,46 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         Assert.Equal(2, analytics.UploadFailures.Count);
         Assert.NotEqual(client.UploadOperations[0], client.UploadOperations[1]);
-        Assert.Equal(client.UploadOperations, analytics.UploadFailures.Select(item => item.OperationId));
+        Assert.Equal(2, analytics.UploadFailures.Select(item => item.OperationId).Distinct().Count());
+        Assert.DoesNotContain(
+            analytics.UploadFailures,
+            item => client.UploadOperations.Contains(item.OperationId, StringComparer.Ordinal));
         Assert.All(analytics.UploadFailures, item =>
         {
             Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, item.Category);
             Assert.Equal(1, item.FileCount);
         });
+    }
+
+    [Fact]
+    public async Task RetryIdenticalTerminalFailures_RecordEachLogicalAttemptOnce()
+    {
+        var client = new ControlledUploadClient();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
+        await workflow.InitializeAsync(default);
+
+        var firstAttempt = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteUnavailable(
+            "part.stl",
+            InstantQuotationUploadRetryDisposition.RetryIdentical);
+        await firstAttempt;
+        var upload = Assert.Single(workflow.Uploads);
+
+        var retry = workflow.RetryAsync(upload.LocalId, default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteUnavailable(
+            "part.stl",
+            InstantQuotationUploadRetryDisposition.RetryIdentical);
+        await retry;
+
+        Assert.Equal(client.UploadOperations[0], client.UploadOperations[1]);
+        Assert.Equal(2, analytics.UploadFailures.Count);
+        Assert.Equal(2, analytics.UploadFailures.Select(item => item.OperationId).Distinct().Count());
+        Assert.All(
+            analytics.UploadFailures,
+            item => Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, item.Category));
     }
 
     [Fact]
@@ -894,6 +926,11 @@ public sealed class InstantQuotationWorkflowUploadTests
 
     private sealed class RecordingAnalyticsTracker : IInstantQuotationAnalyticsTracker
     {
+        public ValueTask RecordUploadStartAsync(
+            string batchId,
+            int fileCount,
+            CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
         public List<(string OperationId, InstantQuotationProblemCategory Category, int FileCount)> UploadFailures { get; } = [];
 
         public ValueTask RecordUploadFailureAsync(
