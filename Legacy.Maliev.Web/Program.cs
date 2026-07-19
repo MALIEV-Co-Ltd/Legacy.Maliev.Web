@@ -224,7 +224,13 @@ builder.Services.AddRazorPages(options =>
             });
         options.Conventions.AddPageRouteModelConvention(
             "/InstantQuotation/3D-Printing",
-            model => model.Selectors.Clear());
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
             model => model.Selectors.Clear());
@@ -346,6 +352,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
 builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
 builder.Services.AddScoped<
     IInstantQuotationWorkflowSessionIdentityAccessor,
