@@ -8,7 +8,7 @@
     <h2 id="instant-quote-workflow-heading">@Localizer["Instant Pricing"]</h2>
 
     <p id="instant-quote-status" aria-live="polite" aria-atomic="true">@StatusMessage</p>
-    <p data-workflow-preview-status role="status" aria-live="polite">@PreviewStatusMessage</p>
+    <p data-workflow-preview-status role="status">@PreviewStatusMessage</p>
 
     @if (VisibleSections.Upload)
     {
@@ -24,21 +24,28 @@
                        accept=".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges"
                        aria-describedby="instant-quote-upload-help instant-quote-status"
                        disabled="@InputDisabled" />
-            <p id="instant-quote-upload-help">@Localizer["Drop your 3D file here"] — @Localizer["or click to browse"]</p>
+            <p id="instant-quote-upload-help">
+                @Localizer["Drop your 3D file here"] — @Localizer["or click to browse"]
+                @Localizer["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each."]
+            </p>
 
             @foreach (var upload in Uploads)
             {
                 <article data-workflow-upload-item aria-labelledby="upload-name-@upload.LocalId">
                     <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
-                    <p aria-live="polite">@UploadStatus(upload.Status)</p>
+                    <p>@UploadStatus(upload.Status)</p>
                     @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
                     {
                         <progress aria-label="@Localizer["Upload progress"]"></progress>
-                        <button type="button" @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
+                        <button type="button"
+                                aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
+                                @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
                     }
                     else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
                     {
-                        <button type="button" @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                        <button type="button"
+                                aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
+                                @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
                     }
                 </article>
             }
@@ -73,8 +80,13 @@
             {
                 <article data-workflow-part data-part-id="@part.PartId">
                     <h4>@part.DisplayFileName</h4>
-                    <button type="button" @onclick="() => SelectPreviewAsync(part.PartId)">@Localizer["View"]</button>
-                    <button type="button" @onclick="() => RemovePartAsync(part.PartId)">@Localizer["Remove"]</button>
+                    <button type="button"
+                            aria-label="@Localizer["View {0}", part.DisplayFileName]"
+                            aria-pressed="@IsPreviewSelected(part.PartId).ToString().ToLowerInvariant()"
+                            @onclick="() => SelectPreviewAsync(part.PartId)">@Localizer["View"]</button>
+                    <button type="button"
+                            aria-label="@Localizer["Remove {0}", part.DisplayFileName]"
+                            @onclick="() => RemovePartAsync(part.PartId)">@Localizer["Remove"]</button>
                 </article>
             }
         </section>
@@ -82,7 +94,10 @@
 
     @if (VisibleSections.Configuration)
     {
-        <section data-workflow-configuration aria-labelledby="instant-quote-configuration-heading">
+        <section data-workflow-configuration
+                 @ref="configurationSection"
+                 tabindex="-1"
+                 aria-labelledby="instant-quote-configuration-heading">
             <h3 id="instant-quote-configuration-heading">@Localizer["Part configuration"]</h3>
 
             <section data-workflow-dfm-status aria-labelledby="instant-quote-dfm-heading">
@@ -101,7 +116,7 @@
                             @onchange="args => ChangeMaterialAsync(part.PartId, args)">
                         @foreach (var material in Materials)
                         {
-                            <option value="@material.Key">@material.DisplayName</option>
+                            <option value="@material.Key">@Localizer[material.DisplayName]</option>
                         }
                     </select>
                     <label for="color-@part.PartId">@Localizer["Color"]</label>
@@ -111,7 +126,7 @@
                             @onchange="args => ChangeColorAsync(part.PartId, args)">
                         @foreach (var color in GetColors(part.Configuration.MaterialKey))
                         {
-                            <option value="@color">@color</option>
+                            <option value="@color">@Localizer[color]</option>
                         }
                     </select>
                     <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
@@ -146,7 +161,7 @@
                 </dl>
             }
 
-            <dl data-workflow-order-summary data-workflow-order-total>
+            <dl data-workflow-order-summary data-workflow-order-total aria-live="polite" aria-atomic="true">
                 <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
                 <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
                 <div><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
@@ -164,7 +179,10 @@
 
     @if (VisibleSections.Review)
     {
-        <div data-workflow-review>
+        <div data-workflow-review
+             @ref="reviewSection"
+             tabindex="-1"
+             aria-labelledby="instant-quote-review-heading">
             <InstantQuotationReview Parts="@Parts"
                                     Quote="@OrderQuote"
                                     Materials="@Materials"
@@ -175,7 +193,10 @@
 
     @if (VisibleSections.CustomerDetails)
     {
-        <div data-workflow-customer-details>
+        <div data-workflow-customer-details
+             @ref="customerDetailsSection"
+             tabindex="-1"
+             aria-labelledby="instant-quote-customer-heading">
             <InstantQuotationCustomerForm Model="@CustomerModel" OnBack="ReturnToReview" />
         </div>
     }

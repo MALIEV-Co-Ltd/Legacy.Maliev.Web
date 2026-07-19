@@ -360,4 +360,53 @@
   <data name="Your request could not be submitted. Please review the form and try again." xml:space="preserve"><value>ไม่สามารถส่งคำขอได้ กรุณาตรวจสอบแบบฟอร์มแล้วลองอีกครั้ง</value></data>
   <data name="Your request was not submitted." xml:space="preserve"><value>ยังไม่ได้ส่งคำขอของคุณ</value></data>
   <data name="Your request was saved. File processing is pending. Do not resubmit." xml:space="preserve"><value>บันทึกคำขอแล้ว ระบบกำลังประมวลผลไฟล์ กรุณาอย่าส่งซ้ำ</value></data>
+  <data name="Cancel upload for {0}" xml:space="preserve"><value>ยกเลิกการอัปโหลด {0}</value></data>
+  <data name="Try upload again for {0}" xml:space="preserve"><value>ลองอัปโหลด {0} อีกครั้ง</value></data>
+  <data name="View {0}" xml:space="preserve"><value>ดู {0}</value></data>
+  <data name="Remove {0}" xml:space="preserve"><value>ลบ {0}</value></data>
+  <data name="Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each." xml:space="preserve"><value>ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 200 MB</value></data>
+  <data name="Thailand" xml:space="preserve"><value>ประเทศไทย</value></data>
+  <data name="Any" xml:space="preserve"><value>สีใดก็ได้</value></data>
+  <data name="Black" xml:space="preserve"><value>ดำ</value></data>
+  <data name="White" xml:space="preserve"><value>ขาว</value></data>
+  <data name="Gray" xml:space="preserve"><value>เทา</value></data>
+  <data name="Silver" xml:space="preserve"><value>เงิน</value></data>
+  <data name="Red" xml:space="preserve"><value>แดง</value></data>
+  <data name="Orange" xml:space="preserve"><value>ส้ม</value></data>
+  <data name="Yellow" xml:space="preserve"><value>เหลือง</value></data>
+  <data name="Green" xml:space="preserve"><value>เขียว</value></data>
+  <data name="Blue" xml:space="preserve"><value>น้ำเงิน</value></data>
+  <data name="Purple" xml:space="preserve"><value>ม่วง</value></data>
+  <data name="Pink" xml:space="preserve"><value>ชมพู</value></data>
+  <data name="Natural" xml:space="preserve"><value>สีธรรมชาติ</value></data>
+  <data name="Clear" xml:space="preserve"><value>ใส</value></data>
+  <data name="Translucent" xml:space="preserve"><value>โปร่งแสง</value></data>
+  <data name="PLA — Polylactic Acid" xml:space="preserve"><value>PLA — กรดโพลิแลกติก</value></data>
+  <data name="PLA-CF — PLA + Carbon Fiber" xml:space="preserve"><value>PLA-CF — PLA ผสมเส้นใยคาร์บอน</value></data>
+  <data name="PETG — PET Glycol-modified" xml:space="preserve"><value>PETG — PET ดัดแปรด้วยไกลคอล</value></data>
+  <data name="PETG-CF — PETG + Carbon Fiber" xml:space="preserve"><value>PETG-CF — PETG ผสมเส้นใยคาร์บอน</value></data>
+  <data name="PETG-ESD — Electrostatic Discharge Safe" xml:space="preserve"><value>PETG-ESD — ป้องกันการคายประจุไฟฟ้าสถิต</value></data>
+  <data name="PET-CF — PET + Carbon Fiber" xml:space="preserve"><value>PET-CF — PET ผสมเส้นใยคาร์บอน</value></data>
+  <data name="ABS — Acrylonitrile Butadiene Styrene" xml:space="preserve"><value>ABS — อะคริโลไนไตรล์ บิวทาไดอีน สไตรีน</value></data>
+  <data name="ABS-FR — Flame-Retardant ABS" xml:space="preserve"><value>ABS-FR — ABS ชนิดหน่วงการลามไฟ</value></data>
+  <data name="ASA — Acrylonitrile Styrene Acrylate" xml:space="preserve"><value>ASA — อะคริโลไนไตรล์ สไตรีน อะคริเลต</value></data>
+  <data name="ASA-CF — ASA + Carbon Fiber" xml:space="preserve"><value>ASA-CF — ASA ผสมเส้นใยคาร์บอน</value></data>
+  <data name="HIPS — High Impact Polystyrene" xml:space="preserve"><value>HIPS — โพลิสไตรีนทนแรงกระแทกสูง</value></data>
+  <data name="PC — Polycarbonate" xml:space="preserve"><value>PC — โพลีคาร์บอเนต</value></data>
+  <data name="PC-FR — Flame-Retardant Polycarbonate" xml:space="preserve"><value>PC-FR — โพลีคาร์บอเนตชนิดหน่วงการลามไฟ</value></data>
+  <data name="PC-ESD — ESD-Safe Polycarbonate (3DXTech)" xml:space="preserve"><value>PC-ESD — โพลีคาร์บอเนตป้องกันไฟฟ้าสถิต (3DXTech)</value></data>
+  <data name="PA6 — Nylon 6" xml:space="preserve"><value>PA6 — ไนลอน 6</value></data>
+  <data name="PA12 — Nylon 12" xml:space="preserve"><value>PA12 — ไนลอน 12</value></data>
+  <data name="PA-CF — Nylon + Carbon Fiber" xml:space="preserve"><value>PA-CF — ไนลอนผสมเส้นใยคาร์บอน</value></data>
+  <data name="TPU — Flexible Thermoplastic Polyurethane" xml:space="preserve"><value>TPU — เทอร์โมพลาสติกโพลียูรีเทนชนิดยืดหยุ่น</value></data>
+  <data name="PVA — Water-Soluble Support" xml:space="preserve"><value>PVA — วัสดุรองรับชนิดละลายน้ำ</value></data>
+  <data name="Standard Resin (M68)" xml:space="preserve"><value>เรซินมาตรฐาน (M68)</value></data>
+  <data name="Tough Resin (K)" xml:space="preserve"><value>เรซินเหนียว (K)</value></data>
+  <data name="Transparent Resin (G217)" xml:space="preserve"><value>เรซินใส (G217)</value></data>
+  <data name="Flexible Resin (F80)" xml:space="preserve"><value>เรซินยืดหยุ่น (F80)</value></data>
+  <data name="Castable Wax Resin" xml:space="preserve"><value>เรซินแวกซ์สำหรับงานหล่อ</value></data>
+  <data name="Required fields are marked with an asterisk." xml:space="preserve"><value>ช่องที่จำเป็นมีเครื่องหมายดอกจัน</value></data>
+  <data name="There are problems with the customer details." xml:space="preserve"><value>ข้อมูลลูกค้าบางช่องไม่ถูกต้อง</value></data>
+  <data name="Please correct {0}." xml:space="preserve"><value>กรุณาแก้ไข{0}</value></data>
+  <data name="Please correct this field." xml:space="preserve"><value>กรุณาแก้ไขช่องนี้</value></data>
 </root>

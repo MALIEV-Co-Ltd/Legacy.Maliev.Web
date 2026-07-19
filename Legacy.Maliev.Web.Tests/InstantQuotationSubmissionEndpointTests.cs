@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -193,7 +194,20 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         Assert.Empty(service.Calls);
         Assert.Equal(ThreeDimensionalPrinting.SubmissionStatusRejected, tempData.Values[ThreeDimensionalPrinting.SubmissionStatusTempDataKey]);
         Assert.Equal("validation", tempData.Values[ThreeDimensionalPrinting.ProblemCategoryTempDataKey]);
-        Assert.Equal(2, tempData.Values.Count);
+        var fields = JsonSerializer.Deserialize<string[]>(
+            Assert.IsType<string>(tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.Equal(["Description", "FirstName"], fields);
+        Assert.Equal(3, tempData.Values.Count);
+
+        using var correctionResponse = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");
+        var correctionSource = WebUtility.HtmlDecode(await correctionResponse.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, correctionResponse.StatusCode);
+        Assert.Contains("data-workflow-customer-details", correctionSource, StringComparison.Ordinal);
+        Assert.Contains("There are problems with the customer details.", correctionSource, StringComparison.Ordinal);
+        Assert.Matches("id=\"instant-quote-firstname\"[^>]*aria-invalid=\"true\"", correctionSource);
+        Assert.Matches("id=\"instant-quote-description\"[^>]*aria-invalid=\"true\"", correctionSource);
     }
 
     [Fact]

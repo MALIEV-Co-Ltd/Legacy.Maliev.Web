@@ -3,6 +3,7 @@ using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -25,6 +26,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool initializationFailed;
     private InputFile? fileInput;
     private ElementReference previewCanvas;
+    private ElementReference configurationSection;
+    private ElementReference reviewSection;
+    private ElementReference customerDetailsSection;
     private IJSObjectReference? previewModule;
     private IJSObjectReference? previewInterop;
     private DotNetObjectReference<InstantQuotationWorkflow>? previewStatusReporter;
@@ -34,6 +38,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool previewAttached;
     private bool previewUnavailable;
     private bool batchInProgress;
+    private Guid? selectedPreviewPartId;
+    private PendingWorkflowFocus pendingFocus;
 
     private InstantQuotationWorkflowState State => initializationFailed
         ? InstantQuotationWorkflowState.Error
@@ -136,11 +142,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 await analytics.RecordReviewReachedAsync(workflow.AuthoritativeQuoteRevision);
             }
         }
+
+        await FocusPendingSectionAsync();
     }
 
     protected override async Task OnInitializedAsync()
     {
-        if (InitialState is InstantQuotationWorkflowState.Submitted)
+        if (InitialState is InstantQuotationWorkflowState.Submitted
+            or InstantQuotationWorkflowState.CustomerDetails)
         {
             return;
         }
@@ -294,6 +303,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             if (part is not null && Parts.All(item => item.PartId != partId))
             {
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
+                if (selectedPreviewPartId == partId)
+                {
+                    selectedPreviewPartId = Parts.FirstOrDefault()?.PartId;
+                    if (selectedPreviewPartId is { } nextPartId)
+                    {
+                        await InvokePreviewAsync("select", nextPartId.ToString("N"));
+                    }
+                }
             }
         }
     }
@@ -371,6 +388,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
             {
                 await InvokePreviewAsync("admit", key, part.PartId.ToString("N"));
+                selectedPreviewPartId ??= part.PartId;
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
@@ -396,7 +414,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private Task SelectPreviewAsync(Guid partId) => InvokePreviewAsync("select", partId.ToString("N"));
+    private async Task SelectPreviewAsync(Guid partId)
+    {
+        selectedPreviewPartId = partId;
+        await InvokePreviewAsync("select", partId.ToString("N"));
+    }
+
+    private bool IsPreviewSelected(Guid partId) => selectedPreviewPartId == partId;
 
     private Task ResetPreviewAsync() => InvokePreviewAsync("reset");
 
@@ -466,21 +490,52 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private void EnterReview()
     {
         workflow?.EnterReview();
+        pendingFocus = PendingWorkflowFocus.Review;
     }
 
     private void EnterCustomerDetails()
     {
         workflow?.EnterCustomerDetails();
+        pendingFocus = PendingWorkflowFocus.CustomerDetails;
     }
 
     private void ReturnToConfiguration()
     {
         workflow?.ReturnToConfiguration();
+        pendingFocus = PendingWorkflowFocus.Configuration;
     }
 
     private void ReturnToReview()
     {
         workflow?.ReturnToReview();
+        pendingFocus = PendingWorkflowFocus.Review;
+    }
+
+    private async Task FocusPendingSectionAsync()
+    {
+        var target = pendingFocus switch
+        {
+            PendingWorkflowFocus.Configuration => configurationSection,
+            PendingWorkflowFocus.Review => reviewSection,
+            PendingWorkflowFocus.CustomerDetails => customerDetailsSection,
+            _ => default,
+        };
+        if (pendingFocus is PendingWorkflowFocus.None)
+        {
+            return;
+        }
+
+        pendingFocus = PendingWorkflowFocus.None;
+        try
+        {
+            await target.FocusAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
     }
 
     private IReadOnlyList<string> GetColors(string material) => workflow?.GetColors(material) ?? [];
@@ -597,6 +652,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             : new(false, false);
 
     public readonly record struct VisibleAnalyticsMilestones(bool EstimateShown, bool ReviewReached);
+
+    private enum PendingWorkflowFocus
+    {
+        None,
+        Configuration,
+        Review,
+        CustomerDetails,
+    }
 
     internal sealed record WorkflowSectionVisibility(
         bool Upload = false,

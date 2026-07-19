@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public const string SubmissionStatusPartial = "partial";
     public const string SubmissionStatusRejected = "rejected";
     public const string SubmissionStatusTempDataKey = "InstantQuotationSubmissionStatus";
+    public const string ValidationFieldsTempDataKey = "InstantQuotationValidationFields";
 
     [BindProperty]
     [StringLength(50)]
@@ -111,6 +113,12 @@ public sealed class ThreeDimensionalPrinting : PageModel
     {
         if (!ModelState.IsValid)
         {
+            var invalidFields = ModelState
+                .Where(static item => item.Value?.Errors.Count > 0 && ControlledValidationFields.Contains(item.Key))
+                .Select(static item => item.Key)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            TempData[ValidationFieldsTempDataKey] = JsonSerializer.Serialize(invalidFields);
             StoreRejected(InstantQuotationProblemCategory.Validation);
             return LocalRedirect("/InstantQuotation/3D-Printing");
         }
@@ -206,4 +214,8 @@ public sealed class ThreeDimensionalPrinting : PageModel
             _ => "unexpected",
         };
     }
+
+    private static readonly IReadOnlySet<string> ControlledValidationFields = new HashSet<string>(
+        [nameof(FirstName), nameof(LastName), nameof(Email), nameof(Telephone), nameof(Country), nameof(Company), nameof(TaxNumber), nameof(Description)],
+        StringComparer.Ordinal);
 }

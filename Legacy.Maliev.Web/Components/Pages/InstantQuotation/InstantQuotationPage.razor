@@ -2,7 +2,10 @@
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
 @using Legacy.Maliev.Web.Infrastructure
+@using Legacy.Maliev.Web.Pages.InstantQuotation
 @using System.Security.Claims
+@using System.Globalization
+@using System.Text.Json
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IHttpContextAccessor HttpContextAccessor
@@ -44,13 +47,13 @@
         var countriesResult = await LoadCountriesAsync(context);
         var countries = (countriesResult.Value ?? [])
             .Where(static country => !string.IsNullOrWhiteSpace(country.Name))
-            .Select(static country => new InstantQuotationCountryOption(country.Name))
+            .Select(country => new InstantQuotationCountryOption(country.Name, LocalizedCountryName(country)))
             .DistinctBy(static country => country.Name, StringComparer.OrdinalIgnoreCase)
             .OrderBy(static country => country.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (countries.Length == 0)
         {
-            countries = [new InstantQuotationCountryOption("Thailand")];
+            countries = [new InstantQuotationCountryOption("Thailand", Localizer["Thailand"])];
         }
 
         var firstName = SafeClaim(context.User, ClaimTypes.GivenName);
@@ -94,6 +97,7 @@
         var submissionStatus = ControlledSubmissionStatus(tempData["InstantQuotationSubmissionStatus"]?.ToString());
         var requestReference = PositiveReference(tempData["InstantQuotationRequestReference"]);
         var problemCategory = ControlledProblemCategory(tempData["InstantQuotationProblemCategory"]?.ToString());
+        var invalidFields = ControlledValidationFields(tempData[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]?.ToString());
         if (submissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
         {
             requestReference = null;
@@ -103,9 +107,11 @@
             problemCategory = null;
         }
 
-        initialState = submissionStatus is null
-            ? InstantQuotationWorkflowState.Empty
-            : InstantQuotationWorkflowState.Submitted;
+        initialState = submissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus && invalidFields.Count > 0
+            ? InstantQuotationWorkflowState.CustomerDetails
+            : submissionStatus is null
+                ? InstantQuotationWorkflowState.Empty
+                : InstantQuotationWorkflowState.Submitted;
         customerModel = new InstantQuotationCustomerDisplayModel(
             tokens.FormFieldName,
             tokens.RequestToken ?? string.Empty,
@@ -120,8 +126,14 @@
             countries,
             submissionStatus,
             requestReference,
-            problemCategory);
+            problemCategory)
+        {
+            InvalidFields = invalidFields,
+        };
     }
+
+    private string LocalizedCountryName(Country country)
+        => InstantQuotationCountryLabels.DisplayName(country, CultureInfo.CurrentUICulture);
 
     private static string? ControlledSubmissionStatus(string? status) => status switch
     {
@@ -136,6 +148,23 @@
         "dependency_unavailable" or "authorization" or "validation" or "conflict" or "unexpected" => category,
         _ => null,
     };
+
+    public static IReadOnlyList<string> ControlledValidationFields(string? json)
+    {
+        try
+        {
+            var fields = JsonSerializer.Deserialize<string[]>(json ?? string.Empty) ?? [];
+            return fields
+                .Where(static field => field is "FirstName" or "LastName" or "Email" or "Telephone" or "Country" or "Company" or "TaxNumber" or "Description")
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 
     private static int? PositiveReference(object? value) =>
         int.TryParse(value?.ToString(), out var reference) && reference > 0 ? reference : null;

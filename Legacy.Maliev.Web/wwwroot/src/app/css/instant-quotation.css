@@ -1,17 +1,57 @@
+.instant-quote,
+.instant-quote *,
+.instant-quote *::before,
+.instant-quote *::after {
+    box-sizing: border-box;
+}
+
 .instant-quote {
-    width: min(1120px, calc(100% - 2rem));
+    width: min(70rem, calc(100% - 2rem));
     margin: 0 auto;
     padding: clamp(2rem, 5vw, 5rem) 0;
+    overflow-wrap: anywhere;
+}
+
+.instant-quote__header,
+.instant-quote__workflow,
+.instant-quote__workflow > *,
+.instant-quote__workflow section,
+.instant-quote__workflow article,
+.instant-quote__workflow fieldset,
+.instant-quote__workflow form,
+.instant-quote__workflow dl,
+.instant-quote__actions {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.instant-quote__validation-summary,
+.instant-quote__field-error {
+    color: #8e1111;
+}
+
+.instant-quote__validation-summary {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 2px solid #b71c1c;
+    border-radius: .5rem;
+    background: #fff3f3;
+}
+
+.instant-quote__field-error {
+    display: block;
+    margin-top: .35rem;
+    font-weight: 650;
 }
 
 .instant-quote__header {
-    max-width: 760px;
+    max-width: 47.5rem;
     margin-bottom: 2rem;
 }
 
 .instant-quote__header h1 {
     font-size: clamp(2rem, 5vw, 4rem);
-    line-height: 1;
+    line-height: 1.1;
 }
 
 .instant-quote .eyebrow {
@@ -21,112 +61,192 @@
     text-transform: uppercase;
 }
 
-.instant-quote__grid {
+.instant-quote__workflow {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
-    align-items: start;
 }
 
-.instant-quote__form fieldset,
-.instant-quote__result {
+.instant-quote__workflow section,
+.instant-quote__workflow [data-workflow-review-content],
+.instant-quote__workflow [data-workflow-customer-details-content] {
+    padding: clamp(1rem, 3vw, 2rem);
     border: 1px solid #d8dde3;
     border-radius: 1rem;
-    padding: clamp(1.25rem, 3vw, 2rem);
     background: #fff;
 }
 
-.instant-quote__form legend {
-    padding: 0 .5rem;
-    font-size: 1.3rem;
-    font-weight: 700;
+.instant-quote__workflow fieldset {
+    margin: 1.25rem 0;
+    padding: 1rem;
+    border: 1px solid #d8dde3;
+    border-radius: .75rem;
 }
 
-.instant-quote__form label {
+.instant-quote__workflow legend {
+    max-width: 100%;
+    padding: 0 .5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: normal;
+}
+
+.instant-quote__workflow label {
     display: block;
     margin-top: 1rem;
     font-weight: 650;
 }
 
-.instant-quote__form input,
-.instant-quote__form select,
-.instant-quote__form textarea {
+.instant-quote__workflow input,
+.instant-quote__workflow select,
+.instant-quote__workflow textarea,
+.instant-quote__workflow button {
     width: 100%;
+    min-width: 0;
     min-height: 44px;
-    margin-top: .35rem;
-    padding: .65rem .75rem;
-    border: 1px solid #98a2ad;
-    border-radius: .5rem;
+    font: inherit;
 }
 
-.instant-quote__dimensions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 1rem;
-}
-
-.instant-quote details {
-    margin: 1.25rem 0;
-}
-
-.instant-quote summary {
-    cursor: pointer;
-    font-weight: 650;
-}
-
-.instant-quote .button {
+.instant-quote__actions a {
     display: inline-flex;
     min-height: 44px;
     align-items: center;
     justify-content: center;
     padding: .7rem 1rem;
-    border: 1px solid transparent;
+    border: 1px solid #b71c1c;
     border-radius: .5rem;
-    font-weight: 700;
-    text-decoration: none;
-}
-
-.instant-quote .button--primary {
-    color: #fff;
-    background: #b71c1c;
-}
-
-.instant-quote .button--secondary {
     color: #8e1111;
-    border-color: #b71c1c;
+    font-weight: 700;
+    text-align: center;
+}
+
+.instant-quote__workflow input,
+.instant-quote__workflow select,
+.instant-quote__workflow textarea {
+    margin-top: .35rem;
+    padding: .65rem .75rem;
+    border: 1px solid #687583;
+    border-radius: .5rem;
     background: #fff;
 }
 
-.instant-quote__result {
-    position: sticky;
-    top: 1rem;
+.instant-quote__workflow textarea {
+    min-height: 8rem;
+    resize: vertical;
 }
 
-.instant-quote__result dl div {
-    display: flex;
-    justify-content: space-between;
+.instant-quote__workflow button {
+    margin-top: .75rem;
+    padding: .7rem 1rem;
+    border: 1px solid #b71c1c;
+    border-radius: .5rem;
+    color: #8e1111;
+    background: #fff;
+    font-weight: 700;
+    white-space: normal;
+}
+
+.instant-quote__workflow button:not(:disabled):hover {
+    background: #fff3f3;
+}
+
+.instant-quote__workflow button:disabled {
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+.instant-quote__workflow :focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 3px;
+}
+
+.instant-quote__workflow progress {
+    width: 100%;
+    min-height: 1rem;
+}
+
+.instant-quote__workflow [data-workflow-upload-item],
+.instant-quote__workflow [data-workflow-part],
+.instant-quote__workflow [data-workflow-review-part] {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #e0e4e8;
+    border-radius: .75rem;
+}
+
+.instant-quote__workflow [data-workflow-viewer] canvas {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border: 1px solid #687583;
+    border-radius: .5rem;
+    background: #f4f6f8;
+}
+
+.instant-quote__review-parts,
+.instant-quote__workflow form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
+}
+
+.instant-quote__workflow dl {
+    margin: 1.25rem 0;
+}
+
+.instant-quote__workflow dl > div,
+.instant-quote__workflow [data-workflow-order-total] > div,
+.instant-quote__workflow [data-workflow-review-total] > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .35rem 1rem;
     padding: .65rem 0;
     border-bottom: 1px solid #e7eaee;
 }
 
-.instant-quote__result dd {
+.instant-quote__workflow dt,
+.instant-quote__workflow dd {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.instant-quote__workflow dd {
     margin: 0;
     font-weight: 700;
-    text-align: right;
+    text-align: end;
 }
 
-.instant-quote__total {
-    font-size: 1.2rem;
+.instant-quote__actions {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-top: 1.25rem;
 }
 
-@media (max-width: 760px) {
-    .instant-quote__grid,
-    .instant-quote__dimensions {
-        grid-template-columns: 1fr;
+@media (min-width: 48rem) {
+    .instant-quote__review-parts,
+    .instant-quote__workflow form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .instant-quote__result {
-        position: static;
+    .instant-quote__workflow form > .instant-quote__actions {
+        grid-column: 1 / -1;
+    }
+
+    .instant-quote__workflow button {
+        width: auto;
+    }
+
+    .instant-quote__actions {
+        flex-direction: row;
+        align-items: stretch;
+    }
+
+    .instant-quote__actions button {
+        min-width: 8rem;
     }
 }

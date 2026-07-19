@@ -20,6 +20,8 @@ public sealed record InstantQuotationCustomerDisplayModel(
     public const string PartialStatus = "partial";
     public const string RejectedStatus = "rejected";
 
+    public IReadOnlyList<string> InvalidFields { get; init; } = [];
+
     public static InstantQuotationCustomerDisplayModel Empty { get; } = new(
         string.Empty,
         string.Empty,
@@ -37,4 +39,7 @@ public sealed record InstantQuotationCustomerDisplayModel(
         null);
 }
 
-public sealed record InstantQuotationCountryOption(string Name);
+public sealed record InstantQuotationCountryOption(string Name, string? LocalizedName = null)
+{
+    public string DisplayName => string.IsNullOrWhiteSpace(LocalizedName) ? Name : LocalizedName;
+}

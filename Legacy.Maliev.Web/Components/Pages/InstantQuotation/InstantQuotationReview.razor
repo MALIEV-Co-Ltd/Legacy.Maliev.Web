@@ -11,8 +11,8 @@
             <article data-workflow-review-part aria-labelledby="instant-quote-review-part-@part.PartId">
                 <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
                 <dl>
-                    <div><dt>@Localizer["Material"]</dt><dd>@MaterialName(part.Configuration.MaterialKey)</dd></div>
-                    <div><dt>@Localizer["Color"]</dt><dd>@part.Configuration.Color</dd></div>
+                    <div><dt>@Localizer["Material"]</dt><dd>@Localizer[MaterialName(part.Configuration.MaterialKey)]</dd></div>
+                    <div><dt>@Localizer["Color"]</dt><dd>@Localizer[part.Configuration.Color]</dd></div>
                     <div><dt>@Localizer["Quantity"]</dt><dd>@part.Configuration.Quantity</dd></div>
                     <div><dt>@Localizer["Unit price"]</dt><dd>@Money(quote?.UnitPrice)</dd></div>
                     <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(quote?.Subtotal)</dd></div>
@@ -33,10 +33,10 @@
     </dl>
 
     <p role="note">@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
-    <nav aria-label="@Localizer["Quotation steps"]">
+    <div class="instant-quote__actions" role="group" aria-label="@Localizer["Quotation steps"]">
         <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
         <button type="button" @onclick="OnContinue">@Localizer["Customer details"]</button>
-    </nav>
+    </div>
 </section>
 
 @code {
