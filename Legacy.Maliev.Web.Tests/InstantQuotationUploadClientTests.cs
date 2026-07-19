@@ -101,6 +101,28 @@ public sealed class InstantQuotationUploadClientTests
     }
 
     [Fact]
+    public void FileServiceTransport_IsInternalAndKeptBehindUnavailableRuntimeAdapter()
+    {
+        var transport = typeof(UnavailableInstantQuotationUploadClient).Assembly.GetType(
+            "Legacy.Maliev.Web.Infrastructure.InstantQuotationFileServiceTransport");
+
+        Assert.NotNull(transport);
+        Assert.False(transport.IsPublic);
+
+        var finalize = Assert.Single(transport.GetMethods(
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly));
+        Assert.Equal("FinalizeAsync", finalize.Name);
+        Assert.Equal(
+            ["capability", "quotationRequestId", "fileIds", "operationId", "cancellationToken"],
+            finalize.GetParameters().Select(parameter => parameter.Name));
+        Assert.Equal(typeof(int), finalize.GetParameters()[1].ParameterType);
+
+        var services = new ServiceCollection();
+        services.AddLegacyServiceClients(new ConfigurationBuilder().Build());
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == transport);
+    }
+
+    [Fact]
     public void GeometryProvenance_BrowserGeometryCannotConstructAuthoritativeType()
     {
         Assert.DoesNotContain(
