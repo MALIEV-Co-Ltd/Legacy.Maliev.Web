@@ -649,7 +649,7 @@ public sealed class InstantQuotationWorkflowUploadTests
                 problem));
         }
 
-        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences, string operationId, CancellationToken cancellationToken) =>
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences, string operationId, CancellationToken cancellationToken) =>
             Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
 
         public void CompleteSuccess(

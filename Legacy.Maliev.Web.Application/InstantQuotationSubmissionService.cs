@@ -276,6 +276,7 @@ public sealed class InstantQuotationSubmissionService(
         {
             finalization = await uploadClient.FinalizeAsync(
                 session.SessionId,
+                checkpoint.RequestReference,
                 session.Parts.Select(part => part.UploadReference).ToArray(),
                 expectedOperationId,
                 cancellationToken);

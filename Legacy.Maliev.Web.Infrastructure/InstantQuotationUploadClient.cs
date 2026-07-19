@@ -29,6 +29,7 @@ internal sealed class UnavailableInstantQuotationUploadClient : IInstantQuotatio
 
     public Task<InstantQuotationFinalizationResult> FinalizeAsync(
         string sessionId,
+        int quotationRequestId,
         IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
         string operationId,
         CancellationToken cancellationToken)

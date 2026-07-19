@@ -23,6 +23,11 @@ public sealed class InstantQuotationUploadClientTests
         Assert.All(methods, method => Assert.Equal(typeof(CancellationToken), method.GetParameters().Last().ParameterType));
         Assert.Contains(typeof(IInstantQuotationUploadClient).GetMethod("UploadAsync")!.GetParameters(), parameter => parameter.ParameterType == typeof(Stream));
         Assert.Contains(typeof(IInstantQuotationUploadClient).GetMethod("RemoveAsync")!.GetParameters(), parameter => parameter.ParameterType == typeof(InstantQuotationUploadReference));
+        var finalizationParameters = typeof(IInstantQuotationUploadClient).GetMethod("FinalizeAsync")!.GetParameters();
+        var quotationRequestId = Assert.Single(
+            finalizationParameters,
+            parameter => parameter.Name == "quotationRequestId");
+        Assert.Equal(typeof(int), quotationRequestId.ParameterType);
     }
 
     [Fact]
@@ -59,7 +64,7 @@ public sealed class InstantQuotationUploadClientTests
 
         var upload = await client.UploadAsync("session", stream, "part.stl", "model/stl", 3, "upload-op", default);
         var remove = await client.RemoveAsync("session", new InstantQuotationUploadReference("opaque"), "remove-op", default);
-        var finalize = await client.FinalizeAsync("session", [new InstantQuotationUploadReference("opaque")], "finalize-op", default);
+        var finalize = await client.FinalizeAsync("session", 417, [new InstantQuotationUploadReference("opaque")], "finalize-op", default);
 
         AssertUnavailable(upload.ServiceStatus, upload.AuthorizationStatus, upload.Status, upload.ProblemCategory);
         AssertUnavailable(remove.ServiceStatus, remove.AuthorizationStatus, remove.Status, remove.ProblemCategory);
@@ -80,7 +85,7 @@ public sealed class InstantQuotationUploadClientTests
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => client.FinalizeAsync("session", [], "operation", cancellation.Token));
+            () => client.FinalizeAsync("session", 417, [], "operation", cancellation.Token));
     }
 
     [Fact]

@@ -54,6 +54,7 @@ public interface IInstantQuotationUploadClient
 
     Task<InstantQuotationFinalizationResult> FinalizeAsync(
         string sessionId,
+        int quotationRequestId,
         IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
         string operationId,
         CancellationToken cancellationToken);

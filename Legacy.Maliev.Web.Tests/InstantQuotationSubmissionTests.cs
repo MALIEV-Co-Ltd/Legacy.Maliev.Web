@@ -36,6 +36,7 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Contains("Total price:", call.Submission.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("opaque-upload-reference", call.Submission.Message, StringComparison.Ordinal);
         Assert.Equal(["opaque-upload-reference"], upload.UploadReferences.Select(item => item.Value));
+        Assert.Equal([417], upload.QuotationRequestIds);
         Assert.DoesNotContain(upload.OperationIds.Single(), call.Submission.Message, StringComparison.Ordinal);
     }
 
@@ -60,6 +61,7 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Single(quotation.Calls);
         Assert.Equal(2, upload.OperationIds.Count);
         Assert.Equal(upload.OperationIds[0], upload.OperationIds[1]);
+        Assert.Equal([417, 417], upload.QuotationRequestIds);
         Assert.DoesNotContain(upload.OperationIds[0], retry.ToString(), StringComparison.Ordinal);
     }
 
@@ -808,6 +810,8 @@ public sealed class InstantQuotationSubmissionTests
 
         public List<string> OperationIds { get; } = [];
 
+        public List<int> QuotationRequestIds { get; } = [];
+
         public IReadOnlyList<InstantQuotationUploadReference> UploadReferences { get; private set; } = [];
 
         public bool PreserveResultOperationId { get; init; }
@@ -820,12 +824,14 @@ public sealed class InstantQuotationSubmissionTests
 
         public Task<InstantQuotationFinalizationResult> FinalizeAsync(
             string sessionId,
+            int quotationRequestId,
             IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
             string operationId,
             CancellationToken cancellationToken)
         {
             events?.Add("finalize");
             OperationIds.Add(operationId);
+            QuotationRequestIds.Add(quotationRequestId);
             UploadReferences = uploadReferences;
             var result = results.Dequeue();
             return Task.FromResult(PreserveResultOperationId ? result : result with { OperationId = operationId });
