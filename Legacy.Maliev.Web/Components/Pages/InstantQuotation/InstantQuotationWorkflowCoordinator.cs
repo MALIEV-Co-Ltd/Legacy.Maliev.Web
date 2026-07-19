@@ -53,23 +53,27 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly IInstantQuotationSessionStore sessionStore;
     private readonly IInstantQuotationUploadClient uploadClient;
     private readonly IInstantQuotationPricingService pricingService;
+    private readonly IInstantQuotationAnalyticsTracker analytics;
     private readonly string? ownerIdentity;
     private readonly SemaphoreSlim stateGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly List<UploadEntry> entries = [];
     private InstantQuotationSessionState? session;
+    private long authoritativeQuoteRevision;
     private bool disposed;
 
     public InstantQuotationWorkflowCoordinator(
         IInstantQuotationSessionStore sessionStore,
         IInstantQuotationUploadClient uploadClient,
         IInstantQuotationPricingService pricingService,
-        string? ownerIdentity)
+        string? ownerIdentity,
+        IInstantQuotationAnalyticsTracker? analytics = null)
     {
         this.sessionStore = sessionStore;
         this.uploadClient = uploadClient;
         this.pricingService = pricingService;
         this.ownerIdentity = ownerIdentity;
+        this.analytics = analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance;
     }
 
     public InstantQuotationWorkflowState State { get; private set; } = InstantQuotationWorkflowState.Empty;
@@ -109,6 +113,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     }
 
     public InstantQuotationOrderQuote? OrderQuote { get; private set; }
+
+    public long AuthoritativeQuoteRevision => authoritativeQuoteRevision;
+
+    public bool HasCompleteAuthoritativeQuote => IsCompleteAuthoritativeQuote();
+
+    public bool HasCompleteAuthoritativeEstimate => IsCompleteAuthoritativeEstimate();
 
     public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; } = PricingCatalog.Materials.Values
         .Select(static material => new InstantQuotationWorkflowMaterialOption(material.Key, material.DisplayName))
@@ -311,7 +321,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     {
         ThrowIfDisposed();
         EnsureInitialized();
-        if (State is not InstantQuotationWorkflowState.Configured || !HasCompleteAuthoritativeQuote())
+        if (State is not InstantQuotationWorkflowState.Configured || !IsCompleteAuthoritativeQuote())
         {
             throw new InvalidOperationException("A complete authoritative quotation is required before review.");
         }
@@ -322,7 +332,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     public void EnterCustomerDetails()
     {
         ThrowIfDisposed();
-        if (State is not InstantQuotationWorkflowState.Review || !HasCompleteAuthoritativeQuote())
+        if (State is not InstantQuotationWorkflowState.Review || !IsCompleteAuthoritativeQuote())
         {
             throw new InvalidOperationException("The authoritative quotation must be reviewed before customer details.");
         }
@@ -342,7 +352,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     public void ReturnToReview()
     {
         ThrowIfDisposed();
-        if (State is InstantQuotationWorkflowState.CustomerDetails && HasCompleteAuthoritativeQuote())
+        if (State is InstantQuotationWorkflowState.CustomerDetails && IsCompleteAuthoritativeQuote())
         {
             State = InstantQuotationWorkflowState.Review;
         }
@@ -389,6 +399,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.Status = InstantQuotationWorkflowUploadStatus.Error;
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
             RefreshState();
+            await analytics.RecordUploadFailureAsync(
+                operationId,
+                InstantQuotationProblemCategory.Validation,
+                1);
             return;
         }
 
@@ -397,6 +411,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.Status = InstantQuotationWorkflowUploadStatus.Error;
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
             RefreshState();
+            await analytics.RecordUploadFailureAsync(
+                operationId,
+                InstantQuotationProblemCategory.Validation,
+                1);
             return;
         }
 
@@ -429,6 +447,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.Status = InstantQuotationWorkflowUploadStatus.Error;
                 entry.ProblemCategory = InstantQuotationProblemCategory.Unexpected;
                 RefreshState();
+                await analytics.RecordUploadFailureAsync(
+                    operationId,
+                    InstantQuotationProblemCategory.Unexpected,
+                    1);
             }
         }
     }
@@ -439,6 +461,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         InstantQuotationUploadResult result,
         CancellationToken cancellationToken)
     {
+        InstantQuotationProblemCategory? terminalFailure = null;
         await stateGate.WaitAsync(cancellationToken);
         try
         {
@@ -464,23 +487,30 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.ProblemCategory = result.ProblemCategory is InstantQuotationProblemCategory.None
                     ? InstantQuotationProblemCategory.Unexpected
                     : result.ProblemCategory;
+                terminalFailure = entry.ProblemCategory;
                 RefreshState();
-                return;
             }
-
-            entry.Part = new InstantQuotationPart(
-                Guid.NewGuid(),
-                entry.File.FileName,
-                result.UploadReference!,
-                result.AuthoritativeGeometry!,
-                new InstantQuotationPartConfiguration("PLA", "Black", 1));
-            entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
-            entry.ProblemCategory = InstantQuotationProblemCategory.None;
-            await PersistAndPriceAsync(cancellationToken);
+            else
+            {
+                entry.Part = new InstantQuotationPart(
+                    Guid.NewGuid(),
+                    entry.File.FileName,
+                    result.UploadReference!,
+                    result.AuthoritativeGeometry!,
+                    new InstantQuotationPartConfiguration("PLA", "Black", 1));
+                entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
+                entry.ProblemCategory = InstantQuotationProblemCategory.None;
+                await PersistAndPriceAsync(cancellationToken);
+            }
         }
         finally
         {
             stateGate.Release();
+        }
+
+        if (terminalFailure is { } failure)
+        {
+            await analytics.RecordUploadFailureAsync(operationId, failure, 1);
         }
     }
 
@@ -535,6 +565,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
             session = existing;
             OrderQuote = restoredQuote;
+            if (restoredQuote is not null)
+            {
+                authoritativeQuoteRevision++;
+            }
             RefreshState();
             return true;
         }
@@ -559,6 +593,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         session = updated;
         OrderQuote = state.Parts.Count == 0 ? null : pricingService.Quote(state);
+        if (OrderQuote is not null)
+        {
+            authoritativeQuoteRevision++;
+        }
         RefreshState();
     }
 
@@ -592,13 +630,18 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         };
     }
 
-    private bool HasCompleteAuthoritativeQuote()
+    private bool IsCompleteAuthoritativeQuote()
+    {
+        return IsCompleteAuthoritativeEstimate()
+            && entries.Where(static entry => entry.Part is not null).All(static entry => entry.HasConfigured);
+    }
+
+    private bool IsCompleteAuthoritativeEstimate()
     {
         var parts = CurrentParts();
         return parts.Length > 0
             && OrderQuote is not null
             && OrderQuote.Parts.Count == parts.Length
-            && entries.Where(static entry => entry.Part is not null).All(static entry => entry.HasConfigured)
             && OrderQuote.Parts.All(static quote => quote.Quantity > 0 && quote.UnitPrice >= 0 && quote.Subtotal >= 0);
     }
 

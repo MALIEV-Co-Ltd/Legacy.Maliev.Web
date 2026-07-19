@@ -352,6 +352,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddSingleton<IInstantQuotationAnalyticsTracker>(NoOpInstantQuotationAnalyticsTracker.Instance);
 builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
 builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
 builder.Services.AddScoped<

@@ -30,6 +30,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private DotNetObjectReference<InstantQuotationWorkflow>? previewStatusReporter;
     private readonly Dictionary<Guid, string> previewKeys = [];
     private readonly SemaphoreSlim uploadBatchGate = new(1, 1);
+    private IInstantQuotationAnalyticsTracker analytics = NoOpInstantQuotationAnalyticsTracker.Instance;
     private bool previewAttached;
     private bool previewUnavailable;
     private bool batchInProgress;
@@ -116,6 +117,25 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 await ReportPreviewUnavailableAsync();
             }
         }
+
+        if (workflow is not null)
+        {
+            var milestones = GetVisibleAnalyticsMilestones(
+                VisibleSections.Configuration,
+                VisibleSections.Review,
+                workflow.HasCompleteAuthoritativeEstimate,
+                workflow.HasCompleteAuthoritativeQuote,
+                workflow.AuthoritativeQuoteRevision);
+            if (milestones.EstimateShown)
+            {
+                await analytics.RecordEstimateShownAsync(workflow.AuthoritativeQuoteRevision);
+            }
+
+            if (milestones.ReviewReached)
+            {
+                await analytics.RecordReviewReachedAsync(workflow.AuthoritativeQuoteRevision);
+            }
+        }
     }
 
     protected override async Task OnInitializedAsync()
@@ -125,6 +145,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
+        analytics = Services.GetService<IInstantQuotationAnalyticsTracker>()
+            ?? NoOpInstantQuotationAnalyticsTracker.Instance;
         var sessionStore = Services.GetService<IInstantQuotationSessionStore>();
         var uploadClient = Services.GetService<IInstantQuotationUploadClient>();
         var pricingService = Services.GetService<IInstantQuotationPricingService>();
@@ -147,7 +169,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             sessionStore,
             uploadClient,
             pricingService,
-            ResolveOwnerIdentity(principal));
+            ResolveOwnerIdentity(principal),
+            analytics);
         try
         {
             var identityAccessor = Services.GetService<IInstantQuotationWorkflowSessionIdentityAccessor>();
@@ -561,6 +584,19 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         InstantQuotationWorkflowState.Submitted => new(Submitted: true),
         _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown instant quotation workflow state."),
     };
+
+    public static VisibleAnalyticsMilestones GetVisibleAnalyticsMilestones(
+        bool configurationVisible,
+        bool reviewVisible,
+        bool estimateComplete,
+        bool reviewQuoteComplete,
+        long authoritativeQuoteRevision) => authoritativeQuoteRevision > 0
+            ? new(
+                configurationVisible && estimateComplete,
+                reviewVisible && reviewQuoteComplete)
+            : new(false, false);
+
+    public readonly record struct VisibleAnalyticsMilestones(bool EstimateShown, bool ReviewReached);
 
     internal sealed record WorkflowSectionVisibility(
         bool Upload = false,

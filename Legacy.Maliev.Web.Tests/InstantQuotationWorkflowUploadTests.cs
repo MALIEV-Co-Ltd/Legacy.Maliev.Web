@@ -271,7 +271,8 @@ public sealed class InstantQuotationWorkflowUploadTests
     public async Task MismatchedOperationAuthoritativeSuccess_IsQuarantinedAndRejected()
     {
         var client = new ControlledUploadClient();
-        await using var workflow = CreateWorkflow(client: client);
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
         await workflow.InitializeAsync(default);
 
         var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
@@ -282,13 +283,17 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal("opaque-mismatch", Assert.Single(client.RemovedReferences));
         Assert.Empty(workflow.Parts);
         Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, Assert.Single(workflow.Uploads).Status);
+        var failure = Assert.Single(analytics.UploadFailures);
+        Assert.Equal(Assert.Single(client.UploadOperations), failure.OperationId);
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, failure.Category);
     }
 
     [Fact]
     public async Task CancelThenLateSuccess_DoesNotMutateState_AndRetryUsesFreshOperationId()
     {
         var client = new ControlledUploadClient(ignoreCancellation: true);
-        await using var workflow = CreateWorkflow(client: client);
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
         await workflow.InitializeAsync(default);
 
         var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
@@ -310,6 +315,7 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         Assert.Single(workflow.Parts);
         Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploaded, Assert.Single(workflow.Uploads).Status);
+        Assert.Empty(analytics.UploadFailures);
     }
 
     [Fact]
@@ -380,9 +386,10 @@ public sealed class InstantQuotationWorkflowUploadTests
     public async Task FailedRemove_RetryUsesFreshOperationAndDoesNotReuploadPart()
     {
         var client = new ControlledUploadClient();
+        var analytics = new RecordingAnalyticsTracker();
         client.RemoveResults.Enqueue(InstantQuotationProblemCategory.Conflict);
         client.RemoveResults.Enqueue(InstantQuotationProblemCategory.None);
-        await using var workflow = CreateWorkflow(client: client);
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
         await workflow.InitializeAsync(default);
         var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
         await client.WaitForUploadsAsync(1);
@@ -402,6 +409,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.NotEqual(firstRemoveOperation, client.RemoveOperations[1]);
         Assert.Single(client.UploadOperations);
         Assert.Empty(workflow.Parts);
+        Assert.Empty(analytics.UploadFailures);
     }
 
     [Fact]
@@ -466,15 +474,96 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal("opaque-after-dispose", Assert.Single(client.RemovedReferences));
     }
 
+    [Fact]
+    public async Task TerminalUploadFailures_RecordExactLogicalOperationAndRetrySeparately()
+    {
+        var client = new ControlledUploadClient();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
+        await workflow.InitializeAsync(default);
+
+        var firstAttempt = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteUnavailable("part.stl");
+        await firstAttempt;
+        var upload = Assert.Single(workflow.Uploads);
+
+        var retry = workflow.RetryAsync(upload.LocalId, default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteUnavailable("part.stl");
+        await retry;
+
+        Assert.Equal(2, analytics.UploadFailures.Count);
+        Assert.Equal(client.UploadOperations, analytics.UploadFailures.Select(item => item.OperationId));
+        Assert.All(analytics.UploadFailures, item =>
+        {
+            Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, item.Category);
+            Assert.Equal(1, item.FileCount);
+        });
+    }
+
+    [Fact]
+    public async Task ValidationFailureRecordsOnceButCancellationRecordsNothing()
+    {
+        var analytics = new RecordingAnalyticsTracker();
+        var client = new ControlledUploadClient(ignoreCancellation: true);
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
+        await workflow.InitializeAsync(default);
+
+        await workflow.UploadAsync(
+            [new InstantQuotationWorkflowUploadFile("empty.stl", "application/octet-stream", 0, _ => Task.FromResult<Stream>(Stream.Null))],
+            default);
+        var reserved = workflow.ReserveUploads([UploadFile("cancelled.stl")]);
+        var uploading = workflow.UploadReservedAsync(reserved, default);
+        await client.WaitForUploadsAsync(1);
+        workflow.Cancel(Assert.Single(reserved));
+        client.CompleteSuccess("cancelled.stl", "opaque-cancelled", Geometry());
+        await uploading;
+
+        var failure = Assert.Single(analytics.UploadFailures);
+        Assert.Equal(InstantQuotationProblemCategory.Validation, failure.Category);
+        Assert.Equal(1, failure.FileCount);
+    }
+
+    [Fact]
+    public async Task AuthoritativeQuoteRevisionAdvancesOnlyWhenCurrentServerQuoteIsStored()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        Assert.Equal(0, workflow.AuthoritativeQuoteRevision);
+        Assert.False(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.False(workflow.HasCompleteAuthoritativeQuote);
+
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("part.stl", "opaque", Geometry());
+        await uploading;
+
+        Assert.Equal(1, workflow.AuthoritativeQuoteRevision);
+        Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.False(workflow.HasCompleteAuthoritativeQuote);
+
+        var part = Assert.Single(workflow.Parts);
+        await workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 2, default);
+
+        Assert.Equal(2, workflow.AuthoritativeQuoteRevision);
+        Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.True(workflow.HasCompleteAuthoritativeQuote);
+    }
+
     private static InstantQuotationWorkflowCoordinator CreateWorkflow(
         ControlledUploadClient? client = null,
         RecordingSessionStore? store = null,
         IInstantQuotationPricingService? pricing = null,
-        string? ownerIdentity = null) => new(
+        string? ownerIdentity = null,
+        IInstantQuotationAnalyticsTracker? analytics = null) => new(
             store ?? new RecordingSessionStore(),
             client ?? new ControlledUploadClient(),
             pricing ?? new InstantQuotationPricingService(),
-            ownerIdentity);
+            ownerIdentity,
+            analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance);
 
     private static InstantQuotationWorkflowUploadFile UploadFile(string name) => new(
         name,
@@ -600,6 +689,27 @@ public sealed class InstantQuotationWorkflowUploadTests
             QuoteCalls++;
             return inner.Quote(state);
         }
+    }
+
+    private sealed class RecordingAnalyticsTracker : IInstantQuotationAnalyticsTracker
+    {
+        public List<(string OperationId, InstantQuotationProblemCategory Category, int FileCount)> UploadFailures { get; } = [];
+
+        public ValueTask RecordUploadFailureAsync(
+            string operationId,
+            InstantQuotationProblemCategory category,
+            int fileCount,
+            CancellationToken cancellationToken = default)
+        {
+            UploadFailures.Add((operationId, category, fileCount));
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask RecordEstimateShownAsync(long revision, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask RecordReviewReachedAsync(long revision, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
     }
 
     private sealed class ControlledUploadClient(bool ignoreCancellation = false) : IInstantQuotationUploadClient
