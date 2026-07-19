@@ -14,6 +14,299 @@ public sealed class InstantQuotationFileServiceTransportTests
     private static readonly Guid FileId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
     [Fact]
+    public async Task CreateSession_SendsOnlyServiceJwtAndAcceptsExactCreatedContract()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("/file/v1/instant-quotation/sessions", request.RequestUri?.AbsolutePath);
+            Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-jwt"), request.Headers.Authorization);
+            Assert.DoesNotContain(
+                request.Headers,
+                header => header.Key.StartsWith("X-", StringComparison.OrdinalIgnoreCase));
+            Assert.Null(request.Content);
+
+            var response = Json(
+                HttpStatusCode.Created,
+                $$"""
+                {
+                  "sessionId":"{{SessionId}}",
+                  "sessionToken":"opaque-capability-000000000000000",
+                  "expiresAt":"2026-07-20T12:00:00+00:00",
+                  "maxUploadBytes":209715200,
+                  "maxFilesPerSession":100,
+                  "supportedExtensions":[".stl",".obj",".3mf",".step",".stp",".iges",".igs",".glb",".gltf"]
+                }
+                """);
+            response.Headers.Location = new Uri($"/file/v1/instant-quotation/sessions/{SessionId}", UriKind.Relative);
+            return Task.FromResult(response);
+        });
+
+        var result = await Create(handler, "service-jwt").CreateSessionAsync(CancellationToken.None);
+
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal(SessionId, result.Capability?.SessionId);
+        Assert.Equal("opaque-capability-000000000000000", result.Capability?.SessionToken);
+        Assert.Equal(209715200, result.Capability?.MaxUploadBytes);
+        Assert.Equal(100, result.Capability?.MaxFilesPerSession);
+        Assert.Equal([".stl", ".obj", ".3mf", ".step", ".stp", ".iges", ".igs", ".glb", ".gltf"], result.Capability?.SupportedExtensions);
+    }
+
+    [Fact]
+    public async Task CreateSession_RejectsUnknownFieldsOrWrongLocation()
+    {
+        var response = Json(
+            HttpStatusCode.Created,
+            $$"""{"sessionId":"{{SessionId}}","sessionToken":"opaque-capability-000000000000000","expiresAt":"2026-07-20T12:00:00Z","maxUploadBytes":209715200,"maxFilesPerSession":100,"supportedExtensions":[".stl",".obj",".3mf",".step",".stp",".iges",".igs",".glb",".gltf"],"storageCredential":"forbidden"}""");
+        response.Headers.Location = new Uri("/file/v1/instant-quotation/sessions/wrong", UriKind.Relative);
+
+        var result = await Create(new RecordingHandler(_ => Task.FromResult(response)), "service-jwt")
+            .CreateSessionAsync(CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Null(result.Capability);
+    }
+
+    [Fact]
+    public async Task CreateSession_RejectsAbsoluteLocationEvenWhenPathMatches()
+    {
+        var response = Json(
+            HttpStatusCode.Created,
+            $$"""{"sessionId":"{{SessionId}}","sessionToken":"opaque-capability-000000000000000","expiresAt":"2026-07-20T12:00:00Z","maxUploadBytes":209715200,"maxFilesPerSession":100,"supportedExtensions":[".stl",".obj",".3mf",".step",".stp",".iges",".igs",".glb",".gltf"]}""");
+        response.Headers.Location = new Uri(
+            $"https://attacker.invalid/file/v1/instant-quotation/sessions/{SessionId}?token=forbidden#fragment");
+
+        var result = await Create(new RecordingHandler(_ => Task.FromResult(response)), "service-jwt")
+            .CreateSessionAsync(CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Null(result.Capability);
+    }
+
+    [Fact]
+    public async Task Upload_HashesBoundedRepeatableInputAndSendsExactMultipartContract()
+    {
+        var bytes = Encoding.UTF8.GetBytes("solid example\nendsolid example\n");
+        var opens = 0;
+        var upload = new InstantQuotationFileServiceUpload(
+            "customer-part.stl",
+            "model/stl",
+            bytes.Length,
+            _ =>
+            {
+                opens++;
+                return ValueTask.FromResult<Stream>(new MemoryStream(bytes, writable: false));
+            });
+        var handler = new RecordingHandler(async request =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal($"/file/v1/instant-quotation/sessions/{SessionId}/files", request.RequestUri?.AbsolutePath);
+            Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-jwt"), request.Headers.Authorization);
+            Assert.Equal("opaque-capability-000000000000000", Assert.Single(request.Headers.GetValues("X-Quote-Session-Token")));
+            Assert.Equal("upload-2222222222222222", Assert.Single(request.Headers.GetValues("Idempotency-Key")));
+            Assert.Equal("dd75bf848e9a50028634377f2fad2b571fdd40b0461ee62359a95e27bbc62498", Assert.Single(request.Headers.GetValues("X-Content-SHA256")));
+            var multipart = Assert.IsType<MultipartFormDataContent>(request.Content);
+            var part = Assert.Single(multipart);
+            Assert.Equal("files", part.Headers.ContentDisposition?.Name?.Trim('"'));
+            Assert.Equal("customer-part.stl", part.Headers.ContentDisposition?.FileName?.Trim('"'));
+            Assert.Equal("model/stl", part.Headers.ContentType?.MediaType);
+            Assert.Equal(bytes, await part.ReadAsByteArrayAsync());
+
+            var response = Json(
+                HttpStatusCode.Created,
+                $$"""{"fileId":"{{FileId}}","fileName":"customer-part.stl","contentType":"model/stl","sizeBytes":{{bytes.Length}},"sha256":"dd75bf848e9a50028634377f2fad2b571fdd40b0461ee62359a95e27bbc62498","status":"clean"}""");
+            response.Headers.Location = new Uri($"/file/v1/instant-quotation/sessions/{SessionId}/files/{FileId}", UriKind.Relative);
+            return response;
+        });
+
+        var result = await Create(handler, "service-jwt").UploadAsync(
+            Capability(), upload, "upload-2222222222222222", CancellationToken.None);
+
+        Assert.Equal(2, opens);
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal(FileId, result.File?.FileId);
+        Assert.Equal("clean", result.File?.Status);
+    }
+
+    [Fact]
+    public async Task Upload_NormalizesParameterizedDeclaredMediaTypeToFileServiceResponse()
+    {
+        var response = Json(
+            HttpStatusCode.Created,
+            $$"""{"fileId":"{{FileId}}","fileName":"customer-part.stl","contentType":"model/stl","sizeBytes":3,"sha256":"039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81","status":"clean"}""");
+        response.Headers.Location = new Uri(
+            $"/file/v1/instant-quotation/sessions/{SessionId}/files/{FileId}",
+            UriKind.Relative);
+        var upload = new InstantQuotationFileServiceUpload(
+            "customer-part.stl",
+            "model/stl; charset=utf-8",
+            3,
+            _ => ValueTask.FromResult<Stream>(new MemoryStream([1, 2, 3], writable: false)));
+
+        var result = await Create(new RecordingHandler(_ => Task.FromResult(response)), "service-jwt")
+            .UploadAsync(Capability(), upload, "upload-2222222222222222", CancellationToken.None);
+
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal("model/stl", result.File?.ContentType);
+    }
+
+    [Fact]
+    public async Task Upload_RejectsLengthMismatchBeforeHttpIo()
+    {
+        var bytes = Encoding.UTF8.GetBytes("short");
+        var handler = new RecordingHandler(_ => throw new InvalidOperationException("FileService must not be called."));
+        var upload = new InstantQuotationFileServiceUpload(
+            "customer-part.stl",
+            "model/stl",
+            bytes.Length + 1,
+            _ => ValueTask.FromResult<Stream>(new MemoryStream(bytes, writable: false)));
+
+        var result = await Create(handler, "service-jwt").UploadAsync(
+            Capability(), upload, "upload-2222222222222222", CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Validation, result.ProblemCategory);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Upload_RejectsChangedSecondReadBeforeHttpIo()
+    {
+        var first = true;
+        var handler = new RecordingHandler(_ => throw new InvalidOperationException("FileService must not be called."));
+        var upload = new InstantQuotationFileServiceUpload(
+            "customer-part.stl",
+            "model/stl",
+            3,
+            _ =>
+            {
+                var bytes = first ? new byte[] { 1, 2, 3 } : new byte[] { 1, 2, 4 };
+                first = false;
+                return ValueTask.FromResult<Stream>(new MemoryStream(bytes, writable: false));
+            });
+
+        var result = await Create(handler, "service-jwt").UploadAsync(
+            Capability(), upload, "upload-2222222222222222", CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Validation, result.ProblemCategory);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.OK, "/file/v1/instant-quotation/sessions/11111111-1111-1111-1111-111111111111/files/22222222-2222-2222-2222-222222222222", false)]
+    [InlineData(HttpStatusCode.Created, "/file/v1/instant-quotation/sessions/11111111-1111-1111-1111-111111111111/files/wrong", false)]
+    [InlineData(HttpStatusCode.Created, "/file/v1/instant-quotation/sessions/11111111-1111-1111-1111-111111111111/files/22222222-2222-2222-2222-222222222222", true)]
+    public async Task Upload_RejectsNonContractStatusLocationOrUnknownSuccessField(
+        HttpStatusCode status,
+        string location,
+        bool includeUnknownField)
+    {
+        var body = $$"""
+            {"fileId":"{{FileId}}","fileName":"customer-part.stl","contentType":"application/octet-stream","sizeBytes":3,"sha256":"039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81","status":"clean"{{(includeUnknownField ? ",\"bucket\":\"forbidden\"" : string.Empty)}}}
+            """;
+        var response = Json(status, body);
+        response.Headers.Location = new Uri(location, UriKind.Relative);
+
+        var result = await Create(new RecordingHandler(_ => Task.FromResult(response)), "service-jwt")
+            .UploadAsync(Capability(), Upload([1, 2, 3]), "upload-2222222222222222", CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Null(result.File);
+    }
+
+    [Fact]
+    public async Task Remove_SendsTokenOnlyAndAcceptsExactNoContent()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Delete, request.Method);
+            Assert.Equal($"/file/v1/instant-quotation/sessions/{SessionId}/files/{FileId}", request.RequestUri?.AbsolutePath);
+            Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-jwt"), request.Headers.Authorization);
+            Assert.Equal("opaque-capability-000000000000000", Assert.Single(request.Headers.GetValues("X-Quote-Session-Token")));
+            Assert.False(request.Headers.Contains("Idempotency-Key"));
+            Assert.False(request.Headers.Contains("X-Content-SHA256"));
+            Assert.Null(request.Content);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+        });
+
+        var result = await Create(handler, "service-jwt").RemoveAsync(
+            Capability(), FileId, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal(InstantQuotationProblemCategory.None, result.ProblemCategory);
+    }
+
+    [Fact]
+    public async Task Remove_RejectsSuccessfulStatusWithBody()
+    {
+        var response = Json(HttpStatusCode.OK, "{}");
+        var result = await Create(new RecordingHandler(_ => Task.FromResult(response)), "service-jwt")
+            .RemoveAsync(Capability(), FileId, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Equal(InstantQuotationOperationStatus.Failed, result.Status);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.RequestEntityTooLarge, "payload_too_large", InstantQuotationProblemCategory.Validation, 0)]
+    [InlineData(HttpStatusCode.UnsupportedMediaType, "unsupported_media_type", InstantQuotationProblemCategory.Validation, 0)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, "unsafe_content", InstantQuotationProblemCategory.Validation, 0)]
+    [InlineData(HttpStatusCode.Conflict, "upload_in_progress", InstantQuotationProblemCategory.Conflict, 1)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "outcome_unknown", InstantQuotationProblemCategory.DependencyUnavailable, 1)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "dependency_unavailable", InstantQuotationProblemCategory.DependencyUnavailable, 2)]
+    public async Task Upload_MapsExactProblemAndKeepsRetryMetadataInternal(
+        HttpStatusCode status,
+        string code,
+        InstantQuotationProblemCategory expectedCategory,
+        int expectedRetry)
+    {
+        var upload = Upload([1, 2, 3]);
+        var result = await Create(
+                new RecordingHandler(_ => Task.FromResult(Problem(status, code))),
+                "service-jwt")
+            .UploadAsync(Capability(), upload, "upload-2222222222222222", CancellationToken.None);
+
+        Assert.Equal(expectedCategory, result.ProblemCategory);
+        Assert.Equal(code, result.InternalProblemCode);
+        Assert.Equal(expectedRetry, (int)result.RetryDisposition);
+    }
+
+    [Fact]
+    public async Task Operations_RejectValidProblemPairsNotAdvertisedForThatOperation()
+    {
+        var create = await Create(
+                new RecordingHandler(_ => Task.FromResult(Problem(HttpStatusCode.Conflict, "upload_in_progress"))),
+                "service-jwt")
+            .CreateSessionAsync(CancellationToken.None);
+        AssertRejectedCrossOperationProblem(
+            create.ProblemCategory,
+            create.InternalProblemCode,
+            create.RetryDisposition);
+
+        var finalization = await Create(
+                new RecordingHandler(_ => Task.FromResult(Problem(HttpStatusCode.RequestEntityTooLarge, "payload_too_large"))),
+                "service-jwt")
+            .FinalizeAsync(
+                Capability(),
+                417,
+                [FileId],
+                "finalize-2222222222222222",
+                CancellationToken.None);
+        AssertRejectedCrossOperationProblem(
+            finalization.ProblemCategory,
+            finalization.InternalProblemCode,
+            finalization.RetryDisposition);
+
+        var remove = await Create(
+                new RecordingHandler(_ => Task.FromResult(Problem(HttpStatusCode.Conflict, "idempotency_conflict"))),
+                "service-jwt")
+            .RemoveAsync(Capability(), FileId, CancellationToken.None);
+        AssertRejectedCrossOperationProblem(
+            remove.ProblemCategory,
+            remove.InternalProblemCode,
+            remove.RetryDisposition);
+    }
+
+    [Fact]
     public async Task Finalize_SendsExactAuthenticatedContractAndAcceptsMatchingLegacyRequestId()
     {
         var handler = new RecordingHandler(async request =>
@@ -404,9 +697,29 @@ public sealed class InstantQuotationFileServiceTransportTests
         Assert.Equal(InstantQuotationOperationStatus.Failed, result.Status);
     }
 
-    private static InstantQuotationFileServiceCapability Capability() => new(
+    private static InstantQuotationFileCapability Capability() => new(
         SessionId,
-        "opaque-capability-000000000000000");
+        "opaque-capability-000000000000000",
+        DateTimeOffset.Parse("2026-07-20T12:00:00Z"),
+        209715200,
+        100,
+        [".stl", ".obj", ".3mf", ".step", ".stp", ".iges", ".igs", ".glb", ".gltf"]);
+
+    private static InstantQuotationFileServiceUpload Upload(byte[] bytes) => new(
+        "customer-part.stl",
+        "application/octet-stream",
+        bytes.Length,
+        _ => ValueTask.FromResult<Stream>(new MemoryStream(bytes, writable: false)));
+
+    private static void AssertRejectedCrossOperationProblem(
+        InstantQuotationProblemCategory category,
+        string? code,
+        InstantQuotationFileServiceRetryDisposition retryDisposition)
+    {
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, category);
+        Assert.Null(code);
+        Assert.Equal(InstantQuotationFileServiceRetryDisposition.None, retryDisposition);
+    }
 
     private static InstantQuotationFileServiceTransport Create(RecordingHandler handler, string? token) => Create(
         handler,
@@ -433,6 +746,9 @@ public sealed class InstantQuotationFileServiceTransportTests
             "session_forbidden" => ("Upload session is not accessible", "The upload session could not be authorized."),
             "idempotency_conflict" => ("Idempotency replay conflict", "The idempotency key is already associated with a different request."),
             "upload_in_progress" => ("Instant quotation operation is in progress", "Retry the identical request with the same idempotency key."),
+            "payload_too_large" => ("Upload is too large", "The uploaded file exceeds 209715200 bytes."),
+            "unsupported_media_type" => ("Upload media type is unsupported", "The declared media type or file extension is not supported."),
+            "unsafe_content" => ("Uploaded content is unsafe", "The uploaded content could not be accepted."),
             "dependency_unavailable" => ("Instant quotation upload is unavailable", "A required upload dependency is temporarily unavailable."),
             "outcome_unknown" => ("Instant quotation outcome is unknown", "Retry the identical request with the same idempotency key."),
             _ => ("Safe title", "Safe detail"),

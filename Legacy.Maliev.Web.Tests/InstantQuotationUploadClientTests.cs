@@ -109,13 +109,24 @@ public sealed class InstantQuotationUploadClientTests
         Assert.NotNull(transport);
         Assert.False(transport.IsPublic);
 
-        var finalize = Assert.Single(transport.GetMethods(
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly));
-        Assert.Equal("FinalizeAsync", finalize.Name);
+        var methods = transport.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .ToDictionary(method => method.Name, StringComparer.Ordinal);
+        Assert.Equal(
+            ["CreateSessionAsync", "FinalizeAsync", "RemoveAsync", "UploadAsync"],
+            methods.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(
+            ["cancellationToken"],
+            methods["CreateSessionAsync"].GetParameters().Select(parameter => parameter.Name));
+        Assert.Equal(
+            ["capability", "upload", "operationId", "cancellationToken"],
+            methods["UploadAsync"].GetParameters().Select(parameter => parameter.Name));
+        Assert.Equal(
+            ["capability", "fileId", "cancellationToken"],
+            methods["RemoveAsync"].GetParameters().Select(parameter => parameter.Name));
         Assert.Equal(
             ["capability", "quotationRequestId", "fileIds", "operationId", "cancellationToken"],
-            finalize.GetParameters().Select(parameter => parameter.Name));
-        Assert.Equal(typeof(int), finalize.GetParameters()[1].ParameterType);
+            methods["FinalizeAsync"].GetParameters().Select(parameter => parameter.Name));
+        Assert.Equal(typeof(int), methods["FinalizeAsync"].GetParameters()[1].ParameterType);
 
         var services = new ServiceCollection();
         services.AddLegacyServiceClients(new ConfigurationBuilder().Build());
