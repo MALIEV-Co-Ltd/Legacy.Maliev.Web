@@ -3,7 +3,7 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class FontDeliveryContractTests
 {
     [Fact]
-    public void SiteAssets_SelfHostRequestedLanguageFontsWithoutGenericFallback()
+    public void SiteAssets_SelfHostRequestedLanguageFontsWithOrderedFallback()
     {
         var root = FindRepositoryRoot();
         var webRoot = Path.Combine(root, "Legacy.Maliev.Web");
@@ -18,10 +18,9 @@ public sealed class FontDeliveryContractTests
         Assert.Contains("@fontsource/inter/latin-400.css", entry, StringComparison.Ordinal);
         Assert.Contains("@fontsource/noto-sans-thai/thai-400.css", entry, StringComparison.Ordinal);
         Assert.Contains("html[lang=\"en\"]", appCss, StringComparison.Ordinal);
-        Assert.Contains("font-family: 'Inter';", appCss, StringComparison.Ordinal);
+        Assert.Contains("font-family: 'Inter', 'Noto Sans Thai', sans-serif;", appCss, StringComparison.Ordinal);
         Assert.Contains("html[lang=\"th\"]", appCss, StringComparison.Ordinal);
-        Assert.Contains("font-family: 'Noto Sans Thai';", appCss, StringComparison.Ordinal);
-        Assert.DoesNotContain("sans-serif", appCss, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("font-family: 'Noto Sans Thai', 'Inter', sans-serif;", appCss, StringComparison.Ordinal);
         Assert.DoesNotContain("fonts.googleapis.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", blazorShell, StringComparison.OrdinalIgnoreCase);
@@ -37,6 +36,8 @@ public sealed class FontDeliveryContractTests
 
         Assert.Contains("font-family:Inter", builtCss, StringComparison.Ordinal);
         Assert.Contains("font-family:Noto Sans Thai", builtCss, StringComparison.Ordinal);
+        Assert.Contains("font-family:Inter,Noto Sans Thai,sans-serif", builtCss, StringComparison.Ordinal);
+        Assert.Contains("font-family:Noto Sans Thai,Inter,sans-serif", builtCss, StringComparison.Ordinal);
         Assert.DoesNotContain("fonts.googleapis.com", builtCss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", builtCss, StringComparison.OrdinalIgnoreCase);
     }
