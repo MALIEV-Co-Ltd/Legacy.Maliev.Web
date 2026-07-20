@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "baselineKind": "production-observation-and-current-source",
+  "capturedAtUtc": "2026-07-18T12:05:34Z",
+  "capturedFromCommit": "6e00796d263c45be73080fa292929a99dbb9af1d",
+  "productionRoute": "https://www.maliev.com/instantquotation/3d-printing",
+  "currentSourceRoute": "/InstantQuotation/3D-Printing",
+  "allowsProductionWrites": false,
+  "evidenceSources": [
+    {
+      "kind": "production-read-only-get",
+      "location": "https://www.maliev.com/instantquotation/3d-printing?culture=en"
+    },
+    {
+      "kind": "production-read-only-get",
+      "location": "https://www.maliev.com/instantquotation/3d-printing?culture=th"
+    },
+    {
+      "kind": "legacy-source-read-only",
+      "location": "R:/maliev-web/Maliev.Web/Pages/InstantQuotation/3D-Printing.cshtml",
+      "sha256": "cb1adf1495754cafc81de89b63bbe05dcc1b555ad208f830dac382a3ce4c37a8"
+    },
+    {
+      "kind": "legacy-source-read-only",
+      "location": "R:/maliev-web/Maliev.Web/Pages/InstantQuotation/3D-Printing.cshtml.cs",
+      "sha256": "54964cf38be94572a5b21ab4d24cd8f16586faaa39cd6f500783a6327302c11b"
+    },
+    {
+      "kind": "legacy-source-read-only",
+      "location": "R:/maliev-web/Maliev.Web/wwwroot/src/app/js/model-viewer/model-viewer.js",
+      "sha256": "8d0c043abe34c70c49db18388171a381e86caca45b6c4c10c53f20bb428a0675"
+    },
+    {
+      "kind": "migrated-source",
+      "location": "Legacy.Maliev.Web/Components/Pages/InstantQuotation"
+    }
+  ],
+  "supportedFileExtensions": [
+    ".stl",
+    ".obj",
+    ".3mf",
+    ".glb",
+    ".gltf",
+    ".stp",
+    ".step",
+    ".igs",
+    ".iges"
+  ],
+  "criticalControls": [
+    "upload",
+    "viewer",
+    "part-list",
+    "material-picker",
+    "part-pricing",
+    "order-total",
+    "lead-time",
+    "review",
+    "customer-form",
+    "submit-confirmation"
+  ],
+  "visibleStates": [
+    "empty",
+    "uploading",
+    "uploaded",
+    "error",
+    "multi-part",
+    "configured",
+    "review",
+    "submitted"
+  ],
+  "browserMatrix": {
+    "locales": [
+      "en",
+      "th"
+    ],
+    "viewports": [
+      {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1
+      },
+      {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 1
+      },
+      {
+        "name": "responsive-breakpoint-below",
+        "width": 760,
+        "height": 900,
+        "deviceScaleFactor": 1
+      },
+      {
+        "name": "responsive-breakpoint-above",
+        "width": 761,
+        "height": 900,
+        "deviceScaleFactor": 1
+      }
+    ],
+    "keyboardRequirements": [
+      "upload control has an accessible name and is keyboard operable",
+      "focus order follows upload, parts, configuration, review, customer, submit",
+      "upload and calculation status are announced through a live region",
+      "errors are associated with controls and focus moves to the first invalid field",
+      "viewer has keyboard controls or an equivalent non-pointer interaction",
+      "reduced motion is respected"
+    ]
+  },
+  "reviewedImplementationCheckpoint": {
+    "reviewStatus": "approved",
+    "activation": "after-implementation-branch-or-pr-update",
+    "sourceCommits": [
+      "fc73307cfd141f5239ac12b7a0a8ae8f7ec4a354",
+      "3a64bc264a1a9c114d248977c2dc2aeae6b6f843"
+    ],
+    "states": [
+      "Empty",
+      "Uploading",
+      "Uploaded",
+      "Error",
+      "MultiPart",
+      "Configured",
+      "Review",
+      "CustomerDetails",
+      "Submitted"
+    ],
+    "stateAttribute": "data-workflow-state",
+    "stateValueFormat": "lowercase-enum-name",
+    "sectionMarkers": [
+      "data-workflow-upload",
+      "data-workflow-viewer",
+      "data-workflow-parts",
+      "data-workflow-configuration",
+      "data-workflow-review",
+      "data-workflow-customer-details",
+      "data-workflow-submitted"
+    ],
+    "stateSections": {
+      "Empty": [
+        "data-workflow-upload"
+      ],
+      "Uploading": [
+        "data-workflow-upload"
+      ],
+      "Uploaded": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration"
+      ],
+      "Error": [
+        "data-workflow-upload"
+      ],
+      "MultiPart": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration"
+      ],
+      "Configured": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration"
+      ],
+      "Review": [
+        "data-workflow-viewer",
+        "data-workflow-parts",
+        "data-workflow-configuration",
+        "data-workflow-review"
+      ],
+      "CustomerDetails": [
+        "data-workflow-customer-details"
+      ],
+      "Submitted": [
+        "data-workflow-submitted"
+      ]
+    },
+    "errorStateRequiresAlertRole": true
+  },
+  "pendingImplementationContracts": [
+    {
+      "semanticBoundary": "material picker marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "part pricing marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "order total marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "lead time marker",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "final estimate wire casing",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "final total wire casing",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 150
+    },
+    {
+      "semanticBoundary": "final submission wire casing",
+      "status": "not-yet-reviewed",
+      "ownerIssue": 151
+    }
+  ],
+  "customerFields": [
+    "FirstName",
+    "LastName",
+    "Email",
+    "Telephone",
+    "Company",
+    "TaxNumber",
+    "Country",
+    "Description"
+  ],
+  "wireBoundaries": [
+    {
+      "name": "estimate",
+      "method": "GET",
+      "handler": "GetEstimate",
+      "requiredRequestFields": [
+        "material",
+        "dimensionZ",
+        "volume",
+        "footprint",
+        "areaProfile",
+        "perimeterProfile",
+        "currency",
+        "quantity"
+      ],
+      "requiredResponseFields": [
+        "success",
+        "process",
+        "unitPrice",
+        "subtotal",
+        "subtotalThb",
+        "weightGrams",
+        "boundingCm3",
+        "printTimeMinutes",
+        "materialPerUnit",
+        "tiers",
+        "currency"
+      ],
+      "ownerIssue": 150
+    },
+    {
+      "name": "orderTotal",
+      "method": "GET",
+      "handler": "GetOrderTotal",
+      "requiredRequestFields": [
+        "processes",
+        "subtotals",
+        "totalWeightGrams",
+        "totalBoundingCm3",
+        "currency"
+      ],
+      "requiredResponseFields": [
+        "success",
+        "printing",
+        "shipping",
+        "vat",
+        "finalOrderPrice",
+        "currency"
+      ],
+      "ownerIssue": 150
+    },
+    {
+      "name": "upload",
+      "method": "POST",
+      "handler": "UploadFile",
+      "requiredRequestFields": [
+        "file",
+        "sessionId",
+        "__RequestVerificationToken"
+      ],
+      "requiredResponseFields": [
+        "success",
+        "path"
+      ],
+      "securityRequirements": [
+        "server-mediated storage",
+        "safe filename",
+        "session isolation",
+        "anti-forgery",
+        "no service credential in browser"
+      ],
+      "ownerIssue": 149
+    },
+    {
+      "name": "submission",
+      "method": "POST",
+      "handler": "SubmitRequest",
+      "requiredRequestFields": [
+        "OrderItems.Index",
+        "OrderItems[i].FileName",
+        "OrderItems[i].Material",
+        "OrderItems[i].Color",
+        "OrderItems[i].Dimension",
+        "OrderItems[i].Quantity",
+        "OrderItems[i].EstimatedUnitCost",
+        "OrderItems[i].EstimatedUnitPrintTime",
+        "OrderItems[i].EstimatedTotalCost",
+        "OrderItems[i].EstimatedTotalPrintTime",
+        "OrderItems[i].StoragePath",
+        "OrderItems[i].GeometryWarning",
+        "FirstName",
+        "LastName",
+        "Email",
+        "Telephone",
+        "Company",
+        "TaxNumber",
+        "Country",
+        "Description",
+        "EstimatedLeadTime",
+        "EstimatedTotalPrice",
+        "__RequestVerificationToken"
+      ],
+      "responseKind": "post-redirect-get-html",
+      "requiredResponseSemantics": [
+        "persisted request confirmation",
+        "opaque request reference",
+        "recoverable file-link failure state"
+      ],
+      "securityRequirements": [
+        "anonymous and member session continuity",
+        "anti-forgery",
+        "idempotency",
+        "no duplicate request or file on retry",
+        "no production write from CI"
+      ],
+      "ownerIssue": 151
+    }
+  ],
+  "downstreamEffects": [
+    {
+      "name": "upload-object-stored",
+      "required": true,
+      "safeAspireOnly": true,
+      "ownerIssue": 149
+    },
+    {
+      "name": "quotation-request-persisted",
+      "required": true,
+      "safeAspireOnly": true,
+      "ownerIssue": 151
+    },
+    {
+      "name": "uploaded-files-linked-to-request",
+      "required": true,
+      "safeAspireOnly": true,
+      "ownerIssue": 151
+    },
+    {
+      "name": "opaque-request-identifier-visible",
+      "required": true,
+      "safeAspireOnly": true,
+      "ownerIssue": 151
+    }
+  ],
+  "analytics": {
+    "observedEvents": [
+      "file_upload_start",
+      "file_upload_complete",
+      "request_quote"
+    ],
+    "targetEventsOwnedByIssue152": [
+      "upload_failure",
+      "estimate_shown",
+      "review_reached"
+    ],
+    "stableEventContracts": [
+      {
+        "name": "file_upload_start",
+        "exactFields": [
+          "event",
+          "service",
+          "file_count"
+        ],
+        "constants": {
+          "event": "file_upload_start",
+          "service": "3d_printing"
+        },
+        "positiveIntegerFields": [
+          "file_count"
+        ]
+      },
+      {
+        "name": "file_upload_complete",
+        "exactFields": [
+          "event",
+          "service",
+          "transaction_id"
+        ],
+        "constants": {
+          "event": "file_upload_complete",
+          "service": "3d_printing"
+        },
+        "requiresAllFilesScannedStoredAndLinked": true,
+        "exactOncePerTransactionId": true
+      },
+      {
+        "name": "request_quote",
+        "exactFields": [
+          "event",
+          "intent_type",
+          "service",
+          "transaction_id",
+          "submission_status",
+          "has_files",
+          "file_upload_completed"
+        ],
+        "constants": {
+          "event": "request_quote",
+          "intent_type": "quotation_request",
+          "service": "3d_printing",
+          "submission_status": "persisted"
+        },
+        "requiresPersistence": true,
+        "exactOncePerTransactionId": true,
+        "solePrimaryAdsConversion": true
+      }
+    ],
+    "pendingEventContracts": [
+      {
+        "name": "upload_failure",
+        "status": "inactive-pending-implementation-review",
+        "exactFields": [
+          "event",
+          "service",
+          "failure_category",
+          "file_count"
+        ],
+        "constants": {
+          "event": "upload_failure",
+          "service": "3d_printing"
+        },
+        "failureCategories": [
+          "validation",
+          "authorization",
+          "conflict",
+          "dependency_unavailable",
+          "unexpected"
+        ],
+        "failureCategoryMapping": {
+          "validation": [
+            "unsupported_extension",
+            "missing_extension",
+            "empty_input",
+            "oversized_input",
+            "malformed_model",
+            "http_413",
+            "http_415",
+            "http_422"
+          ],
+          "authorization": [
+            "http_401",
+            "http_403"
+          ],
+          "conflict": [
+            "http_409",
+            "idempotency_conflict",
+            "session_conflict"
+          ],
+          "dependency_unavailable": [
+            "adapter_unavailable",
+            "http_503",
+            "timeout",
+            "transport_dependency_unavailable"
+          ],
+          "unexpected": [
+            "remaining_typed_failure",
+            "typed_failure_without_category"
+          ]
+        },
+        "fileCount": 1,
+        "terminalNonCancellationOnly": true,
+        "userCancellationEmits": false,
+        "disposedOrStaleCallbackEmits": false,
+        "cleanupOnlyFailureEmits": false,
+        "retryCreatesNewLogicalAttempt": true,
+        "dedupeScope": "logical-upload-operation",
+        "emitsInternalDedupeId": false
+      },
+      {
+        "name": "estimate_shown",
+        "status": "inactive-pending-implementation-review",
+        "exactFields": [
+          "event",
+          "service"
+        ],
+        "constants": {
+          "event": "estimate_shown",
+          "service": "3d_printing"
+        },
+        "requiresCompleteAuthoritativeVisibleEstimate": true,
+        "allowsAdvisoryOrIntermediateResults": false,
+        "dedupeScope": "authoritative-quote-revision",
+        "deduplicatesPerAuthoritativeRevision": true,
+        "materialChangeCreatesNewRevision": true,
+        "emitsInternalDedupeId": false
+      },
+      {
+        "name": "review_reached",
+        "status": "inactive-pending-implementation-review",
+        "exactFields": [
+          "event",
+          "service"
+        ],
+        "constants": {
+          "event": "review_reached",
+          "service": "3d_printing"
+        },
+        "requiresReviewTransitionWithCompleteAuthoritativeQuote": true,
+        "dedupeScope": "authoritative-quote-revision",
+        "deduplicatesPerAuthoritativeRevision": true,
+        "refiresForUnchangedBackForwardNavigation": false,
+        "materialChangeCreatesNewRevision": true,
+        "emitsInternalDedupeId": false
+      }
+    ],
+    "forbiddenEventNames": [
+      "file_upload_failure"
+    ],
+    "forbiddenPayloadFields": [
+      "locale",
+      "landing_page_type",
+      "quote_flow_step",
+      "part_count",
+      "lead_source",
+      "source",
+      "medium",
+      "campaign",
+      "referrer",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "page_location",
+      "currency",
+      "value",
+      "contact_channel",
+      "consent",
+      "operation_id",
+      "revision_id"
+    ],
+    "requiresConsentBeforeEmission": true,
+    "consentEvidenceModel": "external-state-and-timing",
+    "eventPayloadRequiresConsentField": false,
+    "forbidsPii": true,
+    "primaryAdsConversion": "request_quote",
+    "deduplicationField": "transaction_id",
+    "ownerIssue": 152
+  },
+  "networkAndConsole": {
+    "forbiddenRequestDestinations": [
+      "production upload service",
+      "production quotation service",
+      "production storage"
+    ],
+    "forbiddenAnalyticsOrThirdPartyData": [
+      "access token",
+      "refresh token",
+      "session identifier",
+      "customer PII",
+      "filename in analytics",
+      "free-form description in analytics"
+    ],
+    "failsOnConsoleError": true,
+    "failsOnUnhandledPageError": true,
+    "failsOnUnexpectedHttpStatus": true
+  },
+  "releaseGate": {
+    "requiresExactBuildSha": true,
+    "requiresHealthyAspireResources": true,
+    "blocksProductionDeploymentWithoutOwnerApproval": true,
+    "aspireDependencyIssue": 154,
+    "buildIdentity": {
+      "sourceCommit": "b7174be9e3f9dbcce35d61c50248cff23e110196",
+      "endpoint": "/web/build-identity",
+      "requiredResponseFields": [
+        "repository",
+        "branch",
+        "commit"
+      ],
+      "requiredHeaders": [
+        "X-Maliev-Build-Repository",
+        "X-Maliev-Build-Branch",
+        "X-Maliev-Build-Commit"
+      ],
+      "cacheControl": "no-store"
+    },
+    "executionStatus": "deferred-until-issues-149-through-152-merge-and-owner-review",
+    "productionDeploymentAuthorized": false
+  },
+  "knownCurrentSourceGaps": [
+    {
+      "ownerIssue": 149,
+      "summary": "No upload, viewer, multi-part, retry, file metadata, or DFM workflow exists on current main."
+    },
+    {
+      "ownerIssue": 150,
+      "summary": "Manual geometry entry remains primary, the page lacks per-part configuration, color, mixed-part totals, and visible lead time, and the migrated calculator normalizes every display currency to THB instead of preserving the production session-selected display currency."
+    },
+    {
+      "ownerIssue": 151,
+      "summary": "The page links to a separate quotation form and has no in-flow review, customer/session, CSRF submission, idempotency, or request confirmation."
+    },
+    {
+      "ownerIssue": 152,
+      "summary": "Responsive state coverage, Thai number formatting, full accessibility, and Instant Quotation analytics events are not automated."
+    },
+    {
+      "ownerIssue": 154,
+      "summary": "Final Aspire execution is blocked until current-main build identity and stale-process detection are available."
+    }
+  ]
+}

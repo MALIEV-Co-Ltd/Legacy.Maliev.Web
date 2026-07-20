@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": 1,
+  "generatorCommand": "poetry --directory <GeometryService> run python <web-worktree>/tests/instant-quotation/fixtures/generate-fixtures.py",
+  "generatorRuntime": "CadQuery 2.7.0 with OpenCascade 7.8.1.1",
+  "origin": "MALIEV-authored",
+  "containsThirdPartyContent": false,
+  "containsCustomerData": false,
+  "containsProductionData": false,
+  "license": "LicenseRef-MALIEV-Internal-Test-Fixture",
+  "geometry": "axis-aligned 10 mm cube at origin",
+  "fixtures": [
+    {
+      "path": "valid/cube-10mm.stl",
+      "extension": ".stl",
+      "mimeType": "model/stl",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 1711,
+      "sha256": "bf25b2df0d0576c49a6f5c11d19a670d51c46f440a9fdaa7e31ed55909f7ecea",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.obj",
+      "extension": ".obj",
+      "mimeType": "model/obj",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 263,
+      "sha256": "be7a56b8b9234a7f736ae3f69068bb3691b064377c62067effb2449704ded8fc",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.3mf",
+      "extension": ".3mf",
+      "mimeType": "application/vnd.ms-package.3dmanufacturing-3dmodel+xml",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 1073,
+      "sha256": "9dc74699d66180b273e123b9363850ad2ff4a26c967b69b30396b681ebe990fc",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.step",
+      "extension": ".step",
+      "mimeType": "model/step",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 15377,
+      "sha256": "7145ba691b83b1260a35423f96f4e6ff0b955cb5ec4ccbdfe81733fc901df005",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.stp",
+      "extension": ".stp",
+      "mimeType": "model/step",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 15377,
+      "sha256": "7145ba691b83b1260a35423f96f4e6ff0b955cb5ec4ccbdfe81733fc901df005",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.iges",
+      "extension": ".iges",
+      "mimeType": "model/iges",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 12393,
+      "sha256": "d353d0b308da5c592f4fedd0e1b82038563ccc56c3c10277972d1c9a662a0378",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.igs",
+      "extension": ".igs",
+      "mimeType": "model/iges",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 12393,
+      "sha256": "d353d0b308da5c592f4fedd0e1b82038563ccc56c3c10277972d1c9a662a0378",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.glb",
+      "extension": ".glb",
+      "mimeType": "model/gltf-binary",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 780,
+      "sha256": "839a3859a3f579584d3b679da9d03070e7bfb63b45b9d230fd1468a1399b9c54",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    },
+    {
+      "path": "valid/cube-10mm.gltf",
+      "extension": ".gltf",
+      "mimeType": "model/gltf+json",
+      "alternateAcceptedMimeType": "application/octet-stream",
+      "bytes": 854,
+      "sha256": "1176366b9d8849db010f5a6a0db24a0c7718cd9dfb093891e8099e62d1d16c55",
+      "expectedBoundingBoxMm": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "expectedPartCount": 1
+    }
+  ]
+}
