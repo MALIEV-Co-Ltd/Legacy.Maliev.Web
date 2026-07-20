@@ -114,6 +114,27 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void QueuedEvent_SaveFailureSuppressesEmissionWithoutBreakingThePage()
+    {
+        var leadEvent = new LeadAnalyticsEvent(
+            "quotation_request",
+            "3d_printing",
+            "quotation-724",
+            hasFiles: true,
+            fileUploadCompleted: true);
+        var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
+        {
+            ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(leadEvent)
+        }, throwOnSave: true);
+
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            new DefaultHttpContext(),
+            new TempDataDictionaryFactory(provider));
+
+        Assert.Empty(model.QueuedEventScript);
+    }
+
     private HttpClient CreateClient() => factory.CreateClient(new WebApplicationFactoryClientOptions
     {
         AllowAutoRedirect = false,
@@ -134,12 +155,18 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
     [GeneratedRegex("data-cookie-string=\"(?<cookie>[^\"]+)\"", RegexOptions.CultureInvariant)]
     private static partial Regex ConsentCookieRegex();
 
-    private sealed class PreloadedTempDataProvider(Dictionary<string, object> values) : ITempDataProvider
+    private sealed class PreloadedTempDataProvider(
+        Dictionary<string, object> values,
+        bool throwOnSave = false) : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => values;
 
         public void SaveTempData(HttpContext context, IDictionary<string, object> values)
         {
+            if (throwOnSave)
+            {
+                throw new InvalidOperationException("Test TempData unavailable.");
+            }
         }
     }
 }

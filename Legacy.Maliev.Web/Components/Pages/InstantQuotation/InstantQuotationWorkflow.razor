@@ -1,0 +1,305 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+<section class="instant-quote__workflow"
+         @ref="workflowSection"
+         aria-labelledby="instant-quote-workflow-heading"
+         aria-busy="@IsBusy.ToString().ToLowerInvariant()"
+         data-workflow-state="@State.ToString().ToLowerInvariant()">
+    <h2 id="instant-quote-workflow-heading" class="instant-quote__sr-only">@Localizer["Instant Pricing"]</h2>
+
+    <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
+    <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
+
+    @if (VisibleSections.Upload)
+    {
+        <section data-workflow-upload
+                 class="@(State is InstantQuotationWorkflowState.Empty ? null : "instant-quote__upload-control")"
+                 aria-labelledby="instant-quote-upload-heading">
+            <h3 id="instant-quote-upload-heading" class="instant-quote__sr-only">@Localizer["Start by uploading a file"]</h3>
+            <InputFile id="instant-quote-files"
+                       class="iq-file-input--empty"
+                       @ref="fileInput"
+                       name="files"
+                       OnChange="UploadFilesAsync"
+                       multiple
+                       accept=".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges"
+                       aria-describedby="instant-quote-upload-help instant-quote-status"
+                       disabled="@InputDisabled" />
+            <span id="instant-quote-upload-help" class="instant-quote__sr-only">
+                @Localizer["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each."]
+            </span>
+            @if (State is InstantQuotationWorkflowState.Empty)
+            {
+                <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone>
+                    <span class="iq-empty-dropzone__icon" aria-hidden="true">📦</span>
+                    <strong>@Localizer["Drop your 3D file here"]</strong>
+                    <span>
+                        @Localizer["or click to browse"] · STL, OBJ, 3MF, STEP, IGES, GLB, GLTF
+                    </span>
+                </label>
+            }
+        </section>
+    }
+
+    @if (VisibleSections.Error)
+    {
+        <p role="alert">@Localizer["The file could not be uploaded. Try again."]</p>
+    }
+
+    @if (VisibleSections.Viewer)
+    {
+        <section data-workflow-viewer aria-labelledby="instant-quote-viewer-heading">
+            <h3 id="instant-quote-viewer-heading">@Localizer["3D preview"]</h3>
+            <p id="instant-quote-preview-help">@Localizer["The uploaded part preview will appear here."]</p>
+            <canvas @ref="previewCanvas"
+                    tabindex="0"
+                    aria-label="@Localizer["Interactive 3D part preview"]"
+                    aria-describedby="instant-quote-preview-help"></canvas>
+            <button type="button" @onclick="ResetPreviewAsync">@Localizer["Reset view"]</button>
+            <button type="button" @onclick="FitPreviewAsync">@Localizer["Fit to view"]</button>
+            <button type="button" @onclick="FullscreenPreviewAsync">@Localizer["Fullscreen"]</button>
+        </section>
+    }
+
+    @if (VisibleSections.Parts)
+    {
+        <section data-workflow-parts data-workflow-part-list aria-labelledby="instant-quote-parts-heading">
+            <h3 id="instant-quote-parts-heading">@Localizer["Parts"]</h3>
+            <label for="instant-quote-files"
+                   class="iq-compact-dropzone"
+                   aria-disabled="@InputDisabled.ToString().ToLowerInvariant()">
+                <span aria-hidden="true">＋</span>
+                <strong>@Localizer["Add file"]</strong>
+                <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
+            </label>
+            @foreach (var upload in Uploads.Where(upload => Parts.All(part => part.PreviewCorrelationId != upload.LocalId)))
+            {
+                <article data-workflow-upload-item aria-labelledby="upload-name-@upload.LocalId">
+                    <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
+                    <p>@UploadStatus(upload.Status)</p>
+                    @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
+                    {
+                        <progress aria-label="@Localizer["Upload progress"]"></progress>
+                        <button type="button"
+                                aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
+                                @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
+                    }
+                    else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
+                    {
+                        <button type="button"
+                                aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
+                                @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                    }
+                </article>
+            }
+            @foreach (var part in Parts)
+            {
+                <article data-workflow-part data-part-id="@part.PartId">
+                    <h4>@part.DisplayFileName</h4>
+                    <button type="button"
+                            aria-label="@Localizer["View {0}", part.DisplayFileName]"
+                            aria-pressed="@IsPreviewSelected(part.PartId).ToString().ToLowerInvariant()"
+                            @onclick="() => SelectPreviewAsync(part.PartId)">@Localizer["View"]</button>
+                    <button type="button"
+                            aria-label="@Localizer["Remove {0}", part.DisplayFileName]"
+                            @onclick="() => RemovePartAsync(part.PartId)">@Localizer["Remove"]</button>
+                </article>
+            }
+        </section>
+    }
+
+    @if (VisibleSections.Configuration)
+    {
+        <section data-workflow-configuration
+                 @ref="configurationSection"
+                 tabindex="-1"
+                 aria-labelledby="instant-quote-configuration-heading">
+            <h3 id="instant-quote-configuration-heading">@Localizer["Part configuration"]</h3>
+
+            <section data-workflow-dfm-status aria-labelledby="instant-quote-dfm-heading">
+                <h4 id="instant-quote-dfm-heading">@Localizer["Design-for-manufacturing checks"]</h4>
+                <p>@Localizer["You'll get a feedback from us if your design has potential problems."]</p>
+                @foreach (var part in ConfigurationParts)
+                {
+                    var geometry = part.Geometry;
+                    var oddlySmall = Math.Min(geometry.DimensionXmm, Math.Min(geometry.DimensionYmm, geometry.DimensionZmm)) is > 0 and < 3;
+                    var oddlyLarge = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm)) > 350;
+                    var hasWarning = !geometry.TopologyChecked
+                        || geometry.NonWatertight
+                        || geometry.NonManifold
+                        || geometry.BodyCount > 1
+                        || oddlySmall
+                        || oddlyLarge;
+                    <article data-workflow-dfm-part data-part-id="@part.PartId">
+                        <h5>@part.DisplayFileName</h5>
+                        <dl>
+                            <div><dt>@Localizer["Dimensions"]</dt><dd>@Measurement(geometry.DimensionXmm) × @Measurement(geometry.DimensionYmm) × @Measurement(geometry.DimensionZmm) mm</dd></div>
+                            <div><dt>@Localizer["Volume"]</dt><dd>@Measurement(geometry.VolumeMm3 / 1_000) cm³</dd></div>
+                            <div><dt>@Localizer["Surface area"]</dt><dd>@Measurement(geometry.SurfaceAreaMm2 / 100) cm²</dd></div>
+                            <div><dt>@Localizer["Min. thickness"]</dt><dd>@Measurement(geometry.MinThicknessMm) mm</dd></div>
+                            <div><dt>@Localizer["Triangle count"]</dt><dd>@geometry.FacetCount.ToString("N0")</dd></div>
+                        </dl>
+                        @if (hasWarning)
+                        {
+                            <ul data-workflow-dfm-warnings>
+                                @if (!geometry.TopologyChecked)
+                                {
+                                    <li data-dfm-code="topology-not-checked">@Localizer["Detailed topology checks were skipped for this large mesh. Engineering review is required."]</li>
+                                }
+                                @if (geometry.NonWatertight)
+                                {
+                                    <li data-dfm-code="non-watertight">@Localizer["Non-watertight mesh"]</li>
+                                }
+                                @if (geometry.NonManifold)
+                                {
+                                    <li data-dfm-code="non-manifold">@Localizer["Non-manifold edges"]</li>
+                                }
+                                @if (geometry.BodyCount > 1)
+                                {
+                                    <li data-dfm-code="multiple-bodies">@Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount]</li>
+                                }
+                                @if (oddlySmall)
+                                {
+                                    <li data-dfm-code="dimension-too-small">@Localizer["A dimension is below 3 mm."]</li>
+                                }
+                                @if (oddlyLarge)
+                                {
+                                    <li data-dfm-code="dimension-too-large">@Localizer["A dimension exceeds 350 mm."]</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p data-workflow-dfm-clear>@Localizer["No automatic DFM warnings were found. Engineering review is still required."]</p>
+                        }
+                    </article>
+                }
+            </section>
+
+            @foreach (var part in ConfigurationParts)
+            {
+                <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
+                    <legend>@part.DisplayFileName — @Localizer["Settings"]</legend>
+                    <label for="material-@part.PartId">@Localizer["Material"]</label>
+                    <select id="material-@part.PartId"
+                            name="material"
+                            value="@part.Configuration.MaterialKey"
+                            @onchange="args => ChangeMaterialAsync(part.PartId, args)">
+                        @foreach (var material in Materials)
+                        {
+                            <option value="@material.Key">@Localizer[material.DisplayName]</option>
+                        }
+                    </select>
+                    <label for="color-@part.PartId">@Localizer["Color"]</label>
+                    <select id="color-@part.PartId"
+                            name="color"
+                            value="@part.Configuration.Color"
+                            @onchange="args => ChangeColorAsync(part.PartId, args)">
+                        @foreach (var color in GetColors(part.Configuration.MaterialKey))
+                        {
+                            <option value="@color">@Localizer[color]</option>
+                        }
+                    </select>
+                    <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
+                    <input id="quantity-@part.PartId"
+                           name="quantity"
+                           type="number"
+                           min="1"
+                           max="1000"
+                           value="@part.Configuration.Quantity"
+                           @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
+                </fieldset>
+
+                <dl data-workflow-part-price data-workflow-part-pricing>
+                    <div>
+                        <dt>@Localizer["Unit price"]</dt>
+                        <dd>@Money(part.Quote?.UnitPrice)</dd>
+                    </div>
+                    <div>
+                        <dt>@Localizer["Subtotal"]</dt>
+                        <dd>@Money(part.Quote?.Subtotal)</dd>
+                    </div>
+                    @if (part.Quote is not null)
+                    {
+                        @foreach (var tier in part.Quote.Tiers)
+                        {
+                            <div data-workflow-price-tier>
+                                <dt>@Localizer["Quantity"] @tier.MinQuantity</dt>
+                                <dd>@Money(tier.UnitPrice)</dd>
+                            </div>
+                        }
+                    }
+                </dl>
+            }
+
+            <div class="instant-quote__configuration-footer">
+                <dl data-workflow-order-summary data-workflow-order-total aria-live="polite" aria-atomic="true">
+                    <div class="instant-quote__summary-detail"><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
+                    <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
+                    <div class="instant-quote__summary-detail"><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
+                    <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
+                    <div data-workflow-lead-time>
+                        <dt>@Localizer["Lead time"]</dt>
+                        <dd>@LeadTime</dd>
+                    </div>
+                </dl>
+
+                <div class="instant-quote__configuration-actions">
+                    <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
+                </div>
+            </div>
+        </section>
+    }
+
+    @if (VisibleSections.Review)
+    {
+        <div data-workflow-review
+             @ref="reviewSection"
+             tabindex="-1"
+             aria-labelledby="instant-quote-review-heading">
+            <InstantQuotationReview Parts="@Parts"
+                                    Quote="@OrderQuote"
+                                    Materials="@Materials"
+                                    OnBack="ReturnToConfiguration"
+                                    OnContinue="EnterCustomerDetails" />
+        </div>
+    }
+
+    @if (VisibleSections.CustomerDetails)
+    {
+        <div data-workflow-customer-details
+             @ref="customerDetailsSection"
+             tabindex="-1"
+             aria-labelledby="instant-quote-customer-heading">
+            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview" />
+        </div>
+    }
+
+    @if (VisibleSections.Submitted)
+    {
+        <section data-workflow-submitted aria-labelledby="instant-quote-submitted-heading">
+            <span class="instant-quote__submission-icon @(CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus ? null : "instant-quote__submission-icon--warning")" aria-hidden="true">
+                @(CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus ? "✓" : "!")
+            </span>
+            <h3 id="instant-quote-submitted-heading">@SubmittedHeading</h3>
+            @if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.PartialStatus)
+            {
+                <p role="status">@Localizer["Your request was saved. File processing is pending. Do not resubmit."]</p>
+            }
+            else if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
+            {
+                <p role="alert">@Localizer["Your request could not be submitted. Please review the form and try again."]</p>
+                <p><a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a></p>
+            }
+            else
+            {
+                <p role="status">@Localizer["We will get back to you with a quotation"]</p>
+            }
+            @if (CustomerModel.RequestReference is not null)
+            {
+                <p>@Localizer["Request reference"]: <strong>@CustomerModel.RequestReference</strong></p>
+            }
+        </section>
+    }
+</section>

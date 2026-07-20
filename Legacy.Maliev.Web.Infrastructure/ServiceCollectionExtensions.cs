@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICountryClient, CountryClient>();
         services.AddScoped<IContactClient, ContactClient>();
         services.AddScoped<IQuotationClient, QuotationClient>();
+        services.AddScoped<IInstantQuotationRequestFileClient, InstantQuotationRequestFileClient>();
         services.AddScoped<ICustomerQuotationClient, CustomerQuotationClient>();
         services.AddScoped<IQuotationFileClient, QuotationFileClient>();
         services.AddScoped<INotificationClient, NotificationClient>();
@@ -64,6 +65,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerAccountClient, CustomerAccountClient>();
         services.AddScoped<ICustomerOrderClient, CustomerOrderClient>();
         services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
+        services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
+        services.AddSingleton<IInstantQuotationFileCapabilityStore, InstantQuotationFileCapabilityStore>();
+        services.AddSingleton<IInstantQuotationSubmissionStore, InstantQuotationSubmissionStore>();
+        services.AddScoped<InstantQuotationFileServiceTransport>();
+        services.AddScoped<IInstantQuotationUploadClient, InstantQuotationFileServiceUploadClient>();
         services.AddScoped<IAccountSessionManager, AccountSessionManager>();
         services.AddScoped<AccountCookieEvents>();
         services.AddSingleton(TimeProvider.System);

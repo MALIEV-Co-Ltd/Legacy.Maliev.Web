@@ -85,7 +85,7 @@ public sealed class PublicBrowserCompatibilityNoticeMigrationTests : IClassFixtu
     }
 
     [Fact]
-    public async Task InstantQuotationLayout_TridentUserAgentRendersEnglishNoticeExactlyOnceWithoutBlazorRuntime()
+    public async Task InstantQuotationLayout_TridentUserAgentRendersNoticeAndScopedBlazorBootstrap()
     {
         var html = await GetSourceAsync(
             "/instantquotation/3d-printing?culture=en",
@@ -96,7 +96,7 @@ public sealed class PublicBrowserCompatibilityNoticeMigrationTests : IClassFixtu
         Assert.Contains("You are current browsing with: Mozilla/5.0 Trident/7.0; rv:11.0", html, StringComparison.Ordinal);
         Assert.Contains("href=\"https://www.mozilla.org/firefox\"", html, StringComparison.Ordinal);
         Assert.Contains("href=\"https://www.google.com/chrome\"", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("blazor.web.js", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/_framework/blazor.web.js", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

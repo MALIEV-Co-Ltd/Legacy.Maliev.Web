@@ -1,83 +1,21 @@
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
 
 <main class="instant-quote"
       data-migration-component="instant-quotation-three-dimensional-printing"
       data-migration-renderer="blazor-static-ssr">
-    <header class="instant-quote__header">
-        <p class="eyebrow">@Localizer["3D printing"]</p>
-        <h1>@Localizer["Get an instant manufacturing estimate"]</h1>
-        <p>@Localizer["Enter the measurements reported by your CAD tool. The estimate uses deterministic production formulas and is reviewed by an engineer before it becomes a formal quotation."]</p>
-    </header>
-
-    <div class="instant-quote__grid">
-        <form id="instant-estimate-form"
-              class="instant-quote__form"
-              data-instant-estimate
-              data-calculating="@Localizer["Calculating estimate…"]"
-              data-calculated="@Localizer["Estimate calculated. A formal quotation requires engineering review."]"
-              data-failed="@Localizer["The estimate could not be calculated. Continue to the formal quotation form for assistance."]"
-              data-quantity-label="@Localizer["Quantity"]"
-              data-minutes-label="@Localizer["minutes"]">
-            <fieldset>
-                <legend>@Localizer["Part configuration"]</legend>
-
-                <label for="material">@Localizer["Material"]</label>
-                <select id="material" name="material" required>
-                    @foreach (var material in Model.Materials)
-                    {
-                        <option value="@material.Key" selected="@material.Selected">@material.DisplayName</option>
-                    }
-                </select>
-
-                <div class="instant-quote__dimensions">
-                    <div>
-                        <label for="height">@Localizer["Height (mm)"]</label>
-                        <input id="height" name="height" type="number" min="0.01" step="0.01" value="30" inputmode="decimal" required />
-                    </div>
-                    <div>
-                        <label for="volume">@Localizer["Solid volume (mm³)"]</label>
-                        <input id="volume" name="volume" type="number" min="0.01" step="0.01" value="20000" inputmode="decimal" required />
-                    </div>
-                    <div>
-                        <label for="footprint">@Localizer["Footprint area (mm²)"]</label>
-                        <input id="footprint" name="footprint" type="number" min="0" step="0.01" value="400" inputmode="decimal" required />
-                    </div>
-                    <div>
-                        <label for="quantity">@Localizer["Quantity"]</label>
-                        <input id="quantity" name="quantity" type="number" min="1" max="1000" step="1" value="1" inputmode="numeric" required />
-                    </div>
-                </div>
-
-                <details>
-                    <summary>@Localizer["Optional advanced geometry profiles"]</summary>
-                    <label for="area-profile">@Localizer["Cross-sectional areas, comma-separated (mm²)"]</label>
-                    <textarea id="area-profile" name="areaProfile" rows="3"></textarea>
-                    <label for="perimeter-profile">@Localizer["Cross-sectional perimeters, comma-separated (mm)"]</label>
-                    <textarea id="perimeter-profile" name="perimeterProfile" rows="3"></textarea>
-                </details>
-
-                <button type="submit" class="button button--primary">@Localizer["Calculate estimate"]</button>
-            </fieldset>
-        </form>
-
-        <section class="instant-quote__result" aria-labelledby="estimate-heading" aria-live="polite" aria-atomic="true">
-            <p class="eyebrow">@Localizer["Estimate"]</p>
-            <h2 id="estimate-heading">@Localizer["Configure a part to see pricing"]</h2>
-            <dl id="estimate-breakdown" hidden>
-                <div><dt>@Localizer["Unit price"]</dt><dd id="unit-price">—</dd></div>
-                <div><dt>@Localizer["Part subtotal"]</dt><dd id="subtotal">—</dd></div>
-                <div><dt>@Localizer["Estimated time per unit"]</dt><dd id="print-time">—</dd></div>
-                <div><dt>@Localizer["Shipping"]</dt><dd id="shipping">—</dd></div>
-                <div><dt>@Localizer["VAT"]</dt><dd id="vat">—</dd></div>
-                <div class="instant-quote__total"><dt>@Localizer["Estimated total"]</dt><dd id="grand-total">—</dd></div>
-            </dl>
-            <p id="estimate-status">@Localizer["Prices are shown in THB and are estimates until engineering review."]</p>
-            <a class="button button--secondary" href="/Quotation?item=3D-Printing">@Localizer["Continue with files and request a formal quotation"]</a>
-        </section>
-    </div>
+    <InstantQuotationWorkflow @rendermode="InteractiveServer"
+                              InitialState="@InitialState"
+                              CustomerModel="@CustomerModel" />
 </main>
 
 @code {
     [Parameter]
     public InstantQuotationDisplayModel Model { get; set; } = InstantQuotationDisplayModel.Empty;
+
+    [Parameter]
+    public InstantQuotationWorkflowState InitialState { get; set; } = InstantQuotationWorkflowState.Empty;
+
+    [Parameter]
+    public InstantQuotationCustomerDisplayModel CustomerModel { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
 }

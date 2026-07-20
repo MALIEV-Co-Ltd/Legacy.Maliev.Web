@@ -3,6 +3,10 @@
     "vendor.min.js",
     "app.min.js"
   ],
+  "routeScopedModules": {
+    "instantQuotationViewer": "instant-quotation-viewer.mjs",
+    "instantQuotationWorkflow": "instant-quotation-workflow.mjs"
+  },
   "styles": [
     "site.min.css"
   ]

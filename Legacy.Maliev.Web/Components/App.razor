@@ -1,6 +1,7 @@
 @using System.Globalization
 @using Legacy.Maliev.Web.Components.Analytics
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Pages.InstantQuotation
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IFileVersionProvider FileVersionProvider
@@ -15,6 +16,23 @@
     var siteStyle = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/site.min.css");
     var vendorScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/vendor.min.js");
     var appScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/app.min.js");
+    var requestPath = context.Request.Path.Value;
+    var requiresInstantQuotationBootstrap = string.Equals(
+            requestPath,
+            "/InstantQuotation/3D-Printing",
+            StringComparison.OrdinalIgnoreCase)
+        || string.Equals(
+            requestPath,
+            "/InstantQuotation/3D-Printing/",
+            StringComparison.OrdinalIgnoreCase);
+    var baseHref = context.Request.PathBase.HasValue
+        ? $"{context.Request.PathBase.Value!.TrimEnd('/')}/"
+        : "/";
+    var blazorBootstrap = $"{context.Request.PathBase}/_framework/blazor.web.js";
+    if (requiresInstantQuotationBootstrap)
+    {
+        InstantQuotationCircuitCultureCookie.PersistControlledQueryCulture(context);
+    }
 }
 <!DOCTYPE html>
 <html lang="@CultureInfo.CurrentCulture.TwoLetterISOLanguageName">
@@ -26,6 +44,10 @@
     <meta name="language" content="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" />
     <meta name="google-site-verification" content="VJpjseHYMhCHfLRtxeqveJrI5V_ToBH3gYeXydgJEeQ" />
     <meta name="theme-color" content="#1A1A1A" />
+    @if (requiresInstantQuotationBootstrap)
+    {
+        <base href="@baseHref" />
+    }
     <HeadOutlet />
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
@@ -34,7 +56,7 @@
     <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
     <link rel="shortlink" href="https://www.maliev.com/" />
 </head>
-<body>
+<body class="@(requiresInstantQuotationBootstrap ? "instant-quotation-shell" : null)">
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
     <PublicGoogleTagManagerBody Model="googleTagManagerModel" />
     <PublicCookieConsent Model="@(PublicCookieConsentDisplayModel.Create(context))" />
@@ -43,9 +65,16 @@
     <div id="main-content" tabindex="-1">
         <Routes />
     </div>
-    <PublicFooter />
+    @if (!requiresInstantQuotationBootstrap)
+    {
+        <PublicFooter />
+    }
     <PublicContactChannelAnalytics />
     <script src="@vendorScript"></script>
     <script src="@appScript"></script>
+    @if (requiresInstantQuotationBootstrap)
+    {
+        <script src="@blazorBootstrap"></script>
+    }
 </body>
 </html>

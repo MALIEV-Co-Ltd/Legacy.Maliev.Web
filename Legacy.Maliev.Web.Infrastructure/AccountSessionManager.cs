@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Globalization;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -67,6 +68,9 @@ internal sealed class AccountSessionManager(
             [
                 new Claim(ClaimTypes.Name, session.Email),
                 new Claim(ClaimTypes.Email, session.Email),
+                new Claim(
+                    ClaimTypes.NameIdentifier,
+                    $"customer:{session.CustomerDatabaseId.ToString(CultureInfo.InvariantCulture)}"),
                 new Claim("identity_kind", "customer"),
                 new Claim("legacy_database_id", session.CustomerDatabaseId.ToString()),
                 new Claim(SessionIdClaim, sessionId),
@@ -186,8 +190,17 @@ internal sealed class AccountCookieEvents(IAccountSessionStore store) : CookieAu
     public override async Task ValidatePrincipal(CookieValidatePrincipalContext context)
     {
         var sessionId = context.Principal?.FindFirstValue(AccountSessionManager.SessionIdClaim);
-        if (string.IsNullOrWhiteSpace(sessionId)
-            || await store.GetAsync(sessionId, context.HttpContext.RequestAborted) is null)
+        var session = string.IsNullOrWhiteSpace(sessionId)
+            ? null
+            : await store.GetAsync(sessionId, context.HttpContext.RequestAborted);
+        var expectedOwner = session is { CustomerDatabaseId: > 0 }
+            ? $"customer:{session.CustomerDatabaseId.ToString(CultureInfo.InvariantCulture)}"
+            : null;
+        if (expectedOwner is null
+            || !string.Equals(
+                context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier),
+                expectedOwner,
+                StringComparison.Ordinal))
         {
             context.RejectPrincipal();
         }

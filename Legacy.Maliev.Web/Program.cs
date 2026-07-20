@@ -1,11 +1,13 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
+using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Middleware;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Components.Endpoints;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -223,7 +225,13 @@ builder.Services.AddRazorPages(options =>
             });
         options.Conventions.AddPageRouteModelConvention(
             "/InstantQuotation/3D-Printing",
-            model => model.Selectors.Clear());
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/PrivacyPolicy",
             model => model.Selectors.Clear());
@@ -340,8 +348,18 @@ builder.Services.AddRazorPages(options =>
 })
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
     .AddDataAnnotationsLocalization();
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddScoped<IInstantQuotationAnalyticsSink, JsInstantQuotationAnalyticsSink>();
+builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAnalyticsTracker>();
+builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
+builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
+builder.Services.AddScoped<
+    IInstantQuotationWorkflowSessionIdentityAccessor,
+    AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor>();
 builder.Services.AddResponseCompression();
 builder.Services.AddOutputCache();
 builder.Services.Configure<CookieTempDataProviderOptions>(options =>
@@ -440,6 +458,7 @@ app.UseRouting();
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.UseOutputCache();
@@ -455,8 +474,15 @@ app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
 if (useBlazorRouteHost)
 {
-    app.MapRazorComponents<App>()
-        .WithMetadata(new HttpMethodMetadata(["GET", "HEAD"]));
+    var razorComponents = app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode();
+    razorComponents.Add(endpointBuilder =>
+    {
+        if (endpointBuilder.Metadata.OfType<ComponentTypeMetadata>().Any())
+        {
+            endpointBuilder.Metadata.Add(new HttpMethodMetadata(["GET", "HEAD"]));
+        }
+    });
     app.MapPost(
             "/",
             ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>

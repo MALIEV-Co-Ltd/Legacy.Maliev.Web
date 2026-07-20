@@ -1712,14 +1712,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Get an instant manufacturing estimate", "Part configuration", "Calculate estimate", "Configure a part to see pricing")]
-    [InlineData("th", "ประเมินราคาการผลิตได้ทันที", "ตั้งค่าชิ้นงาน", "คำนวณราคา", "ตั้งค่าชิ้นงานเพื่อดูราคา")]
-    public async Task InstantQuotation_RendersLocalizedStaticSsrCalculatorContract(
+    [InlineData("en", "Start by uploading a file", "Instant Pricing", "or click to browse", "No file selected")]
+    [InlineData("th", "เริ่มต้นด้วยการส่งไฟล์", "ประเมินราคาพิมพ์ 3D", "หรือคลิกเพื่อเลือกไฟล์", "ยังไม่ได้เลือกไฟล์")]
+    public async Task InstantQuotation_RendersLocalizedStaticSsrWorkflowShell(
         string culture,
         string heading,
-        string legend,
-        string calculateLabel,
-        string resultHeading)
+        string workflowHeading,
+        string fileLabel,
+        string emptyStatus)
     {
         using var response = await client.GetAsync($"/InstantQuotation/3D-Printing?culture={culture}");
         var source = await response.Content.ReadAsStringAsync();
@@ -1728,27 +1728,25 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"instant-quotation-three-dimensional-printing\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{legend}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{calculateLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{resultHeading}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("data-instant-estimate", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"material\"", source, StringComparison.Ordinal);
-        Assert.Contains("value=\"PLA\" selected", source, StringComparison.Ordinal);
-        foreach (var field in new[] { "height", "volume", "footprint", "quantity", "areaProfile", "perimeterProfile" })
+        Assert.Contains($">{workflowHeading}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(fileLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains($">{emptyStatus}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("data-workflow-state=\"empty\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-workflow-upload", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
+        foreach (var field in new[] { "height", "volume", "footprint", "areaProfile", "perimeterProfile" })
         {
-            Assert.Contains($"name=\"{field}\"", source, StringComparison.Ordinal);
+            Assert.DoesNotContain($"name=\"{field}\"", source, StringComparison.Ordinal);
         }
 
         Assert.Contains("aria-live=\"polite\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-calculating=", source, StringComparison.Ordinal);
-        Assert.Contains("data-calculated=", source, StringComparison.Ordinal);
-        Assert.Contains("data-failed=", source, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"false\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-instant-estimate", source, StringComparison.Ordinal);
         Assert.Contains("gtag('consent', 'default'", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("id=\"cookieConsent\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("_framework/blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

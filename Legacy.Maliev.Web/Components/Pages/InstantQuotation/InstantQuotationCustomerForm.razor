@@ -1,0 +1,155 @@
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+<section data-workflow-customer-details-content aria-labelledby="instant-quote-customer-heading">
+    <header class="instant-quote__panel-header">
+        <h3 id="instant-quote-customer-heading">@Localizer["Customer details"]</h3>
+    </header>
+    <span class="instant-quote__flow-step">@Localizer["Step 3 of 3"]</span>
+    <p>@Localizer["Required fields are marked with an asterisk."]</p>
+    <section class="instant-quote__pricing-summary" aria-labelledby="instant-quote-customer-summary-heading">
+        <h4 id="instant-quote-customer-summary-heading">@Localizer["Order summary"]</h4>
+        <dl>
+            <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
+            <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
+            <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
+            <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>
+            <div><dt>@Localizer["Lead time"]</dt><dd>@LeadTime</dd></div>
+        </dl>
+    </section>
+    @if (Model.InvalidFields.Count > 0)
+    {
+        <div class="instant-quote__validation-summary" role="alert" tabindex="-1" autofocus>
+            <h4>@Localizer["There are problems with the customer details."]</h4>
+            <ul>
+                @foreach (var field in Model.InvalidFields)
+                {
+                    <li><a href="#@FieldId(field)">@Localizer["Please correct {0}.", FieldLabel(field)]</a></li>
+                }
+            </ul>
+        </div>
+    }
+    <form method="post" action="/InstantQuotation/3D-Printing?handler=SubmitRequest">
+        <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryRequestToken" />
+
+        <div>
+            <label for="instant-quote-firstname">@Localizer["First name"] <span aria-hidden="true">*</span></label>
+            <input id="instant-quote-firstname" name="FirstName" value="@Model.FirstName" autocomplete="given-name" maxlength="50" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="@ErrorId("FirstName")" />
+            @FieldError("FirstName")
+        </div>
+        <div>
+            <label for="instant-quote-lastname">@Localizer["Last name"] <span aria-hidden="true">*</span></label>
+            <input id="instant-quote-lastname" name="LastName" value="@Model.LastName" autocomplete="family-name" maxlength="50" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="@ErrorId("LastName")" />
+            @FieldError("LastName")
+        </div>
+        <div>
+            <label for="instant-quote-email">@Localizer["Email"] <span aria-hidden="true">*</span></label>
+            <input id="instant-quote-email" name="Email" value="@Model.Email" type="email" autocomplete="email" maxlength="50" required aria-invalid="@AriaInvalid("Email")" aria-describedby="@ErrorId("Email")" />
+            @FieldError("Email")
+        </div>
+        <div>
+            <label for="instant-quote-telephone">@Localizer["Telephone"] <span aria-hidden="true">*</span></label>
+            <input id="instant-quote-telephone" name="Telephone" value="@Model.Telephone" type="tel" autocomplete="tel" maxlength="50" required aria-invalid="@AriaInvalid("Telephone")" aria-describedby="@ErrorId("Telephone")" />
+            @FieldError("Telephone")
+        </div>
+        <div>
+            <label for="instant-quote-country">@Localizer["Country"] <span aria-hidden="true">*</span></label>
+            <select id="instant-quote-country" name="Country" autocomplete="country-name" required aria-invalid="@AriaInvalid("Country")" aria-describedby="@ErrorId("Country")">
+                @foreach (var country in Model.Countries)
+                {
+                    <option value="@country.Name" selected="@(string.Equals(country.Name, Model.Country, StringComparison.OrdinalIgnoreCase))">@country.DisplayName</option>
+                }
+            </select>
+            @FieldError("Country")
+        </div>
+        <div>
+            <label for="instant-quote-company">@Localizer["Company"]</label>
+            <input id="instant-quote-company" name="Company" value="@Model.Company" autocomplete="organization" maxlength="50" aria-invalid="@AriaInvalid("Company")" aria-describedby="@ErrorId("Company")" />
+            @FieldError("Company")
+        </div>
+        <div>
+            <label for="instant-quote-taxnumber">@Localizer["Tax number"]</label>
+            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" maxlength="50" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" />
+            @FieldError("TaxNumber")
+        </div>
+        <div>
+            <label for="instant-quote-description">@Localizer["Description"]</label>
+            <textarea id="instant-quote-description" name="Description" maxlength="512" aria-invalid="@AriaInvalid("Description")" aria-describedby="@ErrorId("Description")">@Model.Description</textarea>
+            @FieldError("Description")
+        </div>
+
+        <div class="instant-quote__actions" role="group" aria-label="@Localizer["Quotation steps"]">
+            @if (Model.InvalidFields.Count > 0)
+            {
+                <a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a>
+            }
+            else
+            {
+                <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
+            }
+            <button type="submit">@Localizer["Submit"]</button>
+        </div>
+    </form>
+</section>
+
+@code {
+    [Parameter]
+    public InstantQuotationCustomerDisplayModel Model { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
+
+    [Parameter]
+    public Legacy.Maliev.Web.Application.InstantQuotationOrderQuote? Quote { get; set; }
+
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    private bool HasError(string field) => Model.InvalidFields.Contains(field, StringComparer.Ordinal);
+
+    private string LeadTime => Quote is null
+        ? "—"
+        : Localizer["{0}–{1} business days", Quote.LeadTimeMinimumDays, Quote.LeadTimeMaximumDays];
+
+    private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
+
+    private string AriaInvalid(string field) => HasError(field) ? "true" : "false";
+
+    private string? ErrorId(string field) => HasError(field) ? $"{FieldId(field)}-error" : null;
+
+    private RenderFragment FieldError(string field) => builder =>
+    {
+        if (!HasError(field))
+        {
+            return;
+        }
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "id", $"{FieldId(field)}-error");
+        builder.AddAttribute(2, "class", "instant-quote__field-error");
+        builder.AddContent(3, Localizer["Please correct this field."]);
+        builder.CloseElement();
+    };
+
+    private static string FieldId(string field) => field switch
+    {
+        "FirstName" => "instant-quote-firstname",
+        "LastName" => "instant-quote-lastname",
+        "Email" => "instant-quote-email",
+        "Telephone" => "instant-quote-telephone",
+        "Country" => "instant-quote-country",
+        "Company" => "instant-quote-company",
+        "TaxNumber" => "instant-quote-taxnumber",
+        "Description" => "instant-quote-description",
+        _ => "instant-quote-customer-heading",
+    };
+
+    private string FieldLabel(string field) => field switch
+    {
+        "FirstName" => Localizer["First name"],
+        "LastName" => Localizer["Last name"],
+        "Email" => Localizer["Email"],
+        "Telephone" => Localizer["Telephone"],
+        "Country" => Localizer["Country"],
+        "Company" => Localizer["Company"],
+        "TaxNumber" => Localizer["Tax number"],
+        "Description" => Localizer["Description"],
+        _ => Localizer["Customer details"],
+    };
+}

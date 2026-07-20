@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingCatalog
@@ -32,15 +34,21 @@ public static class PricingCatalog
     public const double PaymentFeeRate = 0.03;
     public const double VatRate = 0.07;
 
-    public static readonly IReadOnlyList<DiscountTier> DiscountTiers =
+    public static readonly IReadOnlyList<DiscountTier> DiscountTiers = new FrozenList<DiscountTier>(
     [
         new(1, 0.00, 0.50),
         new(10, 0.05, 0.35),
         new(50, 0.10, 0.25),
         new(100, 0.15, 0.20),
-    ];
+    ]);
 
     public static readonly IReadOnlyDictionary<string, MaterialInfo> Materials = BuildMaterials();
+
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> MaterialColors = BuildMaterialColors();
+
+    private static readonly IReadOnlySet<string> CustomColorMaterials = new HashSet<string>(
+        ["PLA", "PETG", "ABS", "ASA", "TPU", "PC", "PC-FR", "PA6", "PA12", "ABS-FR"],
+        StringComparer.OrdinalIgnoreCase);
 
     public static double AvailablePrinterMinutes => PrinterCount * UtilizationRate * CalendarMinutesPerMonth;
 
@@ -86,6 +94,61 @@ public static class PricingCatalog
         return string.IsNullOrWhiteSpace(key)
             ? null
             : Materials.GetValueOrDefault(key.Trim());
+    }
+
+    public static bool IsColorSupported(string? materialKey, string? color)
+    {
+        if (string.IsNullOrWhiteSpace(materialKey)
+            || string.IsNullOrWhiteSpace(color)
+            || !Materials.ContainsKey(materialKey.Trim())
+            || !MaterialColors.TryGetValue(materialKey.Trim(), out var colors))
+        {
+            return false;
+        }
+
+        return colors.Contains(color, StringComparer.Ordinal)
+            || (CustomColorMaterials.Contains(materialKey.Trim()) && IsHexColor(color));
+    }
+
+    private static bool IsHexColor(string color) => color.Length == 7
+        && color[0] == '#'
+        && color[1..].All(character => character is >= '0' and <= '9'
+            or >= 'A' and <= 'F'
+            or >= 'a' and <= 'f');
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildMaterialColors()
+    {
+        string[] full = ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"];
+        string[] neutral = ["Any", "Natural", "Black", "White", "Gray"];
+        string[] carbon = ["Black", "Natural"];
+
+        return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PLA"] = new FrozenList<string>(full),
+            ["PETG"] = new FrozenList<string>(full),
+            ["ABS"] = new FrozenList<string>(full),
+            ["ASA"] = new FrozenList<string>(full),
+            ["HIPS"] = new FrozenList<string>(["Black", "White"]),
+            ["TPU"] = new FrozenList<string>(["Any", "Black", "White", "Clear", "Red", "Blue"]),
+            ["PC"] = new FrozenList<string>(neutral),
+            ["PC-FR"] = new FrozenList<string>(neutral),
+            ["PA6"] = new FrozenList<string>(neutral),
+            ["PA12"] = new FrozenList<string>(neutral),
+            ["ABS-FR"] = new FrozenList<string>(neutral),
+            ["PLA-CF"] = new FrozenList<string>(carbon),
+            ["PETG-CF"] = new FrozenList<string>(carbon),
+            ["PET-CF"] = new FrozenList<string>(carbon),
+            ["PA-CF"] = new FrozenList<string>(carbon),
+            ["ASA-CF"] = new FrozenList<string>(carbon),
+            ["PETG-ESD"] = new FrozenList<string>(carbon),
+            ["PC-ESD"] = new FrozenList<string>(["Black"]),
+            ["PVA"] = new FrozenList<string>(["Natural"]),
+            ["M68"] = new FrozenList<string>(["Gray", "Black", "White"]),
+            ["K"] = new FrozenList<string>(["Gray", "Black"]),
+            ["G217"] = new FrozenList<string>(["Clear"]),
+            ["F80"] = new FrozenList<string>(["Black", "Translucent"]),
+            ["CASTWAX"] = new FrozenList<string>(["Green"]),
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyDictionary<string, MaterialInfo> BuildMaterials()
@@ -143,6 +206,19 @@ public static class PricingCatalog
             Resin("CASTWAX", "Castable Wax Resin", 3.50),
         ];
 
-        return materials.ToDictionary(material => material.Key, StringComparer.OrdinalIgnoreCase);
+        return materials.ToFrozenDictionary(material => material.Key, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class FrozenList<T>(IEnumerable<T> values) : IReadOnlyList<T>
+    {
+        private readonly T[] values = values.ToArray();
+
+        public int Count => values.Length;
+
+        public T this[int index] => values[index];
+
+        public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)values).GetEnumerator();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => values.GetEnumerator();
     }
 }

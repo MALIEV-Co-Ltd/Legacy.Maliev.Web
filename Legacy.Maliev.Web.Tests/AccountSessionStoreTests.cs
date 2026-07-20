@@ -2,6 +2,8 @@ using System.Text;
 using System.Security.Claims;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
@@ -12,6 +14,97 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class AccountSessionStoreTests
 {
+    [Fact]
+    public async Task SignIn_SuccessIssuesCustomerOwnerNameIdentifierWithoutSessionSecrets()
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "existing@example.com",
+            7,
+            "old-access",
+            "old-refresh",
+            now.AddMinutes(10),
+            now.AddDays(1)));
+        var authentication = new RefreshingAuthenticationClient(
+            now,
+            new CustomerAuthenticationResult(
+                new CustomerTokenSet("access-secret", "refresh-secret", "Bearer", 900, now.AddDays(1)),
+                true,
+                42));
+        var manager = new AccountSessionManager(authentication, store, new FixedTimeProvider(now));
+        var authenticationService = new CapturingAuthenticationService();
+        var context = CreateHttpContext(authenticationService);
+
+        var status = await manager.SignInAsync(
+            context,
+            "customer@example.com",
+            "correct-password",
+            false,
+            default);
+
+        Assert.Equal(AccountSignInStatus.Succeeded, status);
+        var principal = Assert.IsType<ClaimsPrincipal>(authenticationService.SignedInPrincipal);
+        var ownerClaim = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        Assert.Equal("customer:42", ownerClaim);
+        Assert.DoesNotContain("access-secret", ownerClaim, StringComparison.Ordinal);
+        Assert.DoesNotContain("refresh-secret", ownerClaim, StringComparison.Ordinal);
+        Assert.NotEqual(principal.FindFirstValue(AccountSessionManager.SessionIdClaim), ownerClaim);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("customer:not-a-number")]
+    [InlineData("customer:0")]
+    [InlineData("customer:41")]
+    public async Task CookieValidation_RejectsMalformedOrMismatchedCustomerOwner(string? ownerClaim)
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "customer@example.com",
+            42,
+            "access",
+            "refresh",
+            now.AddMinutes(10),
+            now.AddDays(1)));
+        var claims = new List<Claim>
+        {
+            new(AccountSessionManager.SessionIdClaim, "session-id"),
+        };
+        if (ownerClaim is not null)
+        {
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, ownerClaim));
+        }
+
+        var validationContext = CreateCookieValidationContext(claims);
+
+        await new AccountCookieEvents(store).ValidatePrincipal(validationContext);
+
+        Assert.Null(validationContext.Principal);
+    }
+
+    [Fact]
+    public async Task CookieValidation_AcceptsOwnerMatchingPersistedCustomerDatabaseId()
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "customer@example.com",
+            42,
+            "access",
+            "refresh",
+            now.AddMinutes(10),
+            now.AddDays(1)));
+        var validationContext = CreateCookieValidationContext(
+            [
+                new Claim(AccountSessionManager.SessionIdClaim, "session-id"),
+                new Claim(ClaimTypes.NameIdentifier, "customer:42"),
+            ]);
+
+        await new AccountCookieEvents(store).ValidatePrincipal(validationContext);
+
+        Assert.NotNull(validationContext.Principal);
+    }
+
     [Fact]
     public async Task SignIn_RejectsAccessTokenWithoutPositiveCustomerDatabaseId()
     {
@@ -29,9 +122,10 @@ public sealed class AccountSessionStoreTests
                 new CustomerTokenSet("access", "refresh", "Bearer", 900, now.AddDays(1)),
                 true));
         var manager = new AccountSessionManager(authentication, store, new FixedTimeProvider(now));
+        var authenticationService = new CapturingAuthenticationService();
 
         var status = await manager.SignInAsync(
-            new DefaultHttpContext(),
+            CreateHttpContext(authenticationService),
             "customer@example.com",
             "correct-password",
             false,
@@ -39,6 +133,36 @@ public sealed class AccountSessionStoreTests
 
         Assert.Equal(AccountSignInStatus.InvalidCredentials, status);
         Assert.Equal(0, store.SetCalls);
+        Assert.Null(authenticationService.SignedInPrincipal);
+    }
+
+    [Fact]
+    public async Task SignIn_ServiceUnavailableDoesNotIssueIdentity()
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "existing@example.com",
+            7,
+            "old-access",
+            "old-refresh",
+            now.AddMinutes(10),
+            now.AddDays(1)));
+        var authentication = new RefreshingAuthenticationClient(
+            now,
+            new CustomerAuthenticationResult(null, false));
+        var manager = new AccountSessionManager(authentication, store, new FixedTimeProvider(now));
+        var authenticationService = new CapturingAuthenticationService();
+
+        var status = await manager.SignInAsync(
+            CreateHttpContext(authenticationService),
+            "customer@example.com",
+            "correct-password",
+            false,
+            default);
+
+        Assert.Equal(AccountSignInStatus.ServiceUnavailable, status);
+        Assert.Equal(0, store.SetCalls);
+        Assert.Null(authenticationService.SignedInPrincipal);
     }
 
     [Fact]
@@ -107,6 +231,64 @@ public sealed class AccountSessionStoreTests
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private static DefaultHttpContext CreateHttpContext(IAuthenticationService authenticationService)
+    {
+        var services = new ServiceCollection()
+            .AddSingleton(authenticationService)
+            .BuildServiceProvider();
+        return new DefaultHttpContext { RequestServices = services };
+    }
+
+    private static CookieValidatePrincipalContext CreateCookieValidationContext(
+        IReadOnlyCollection<Claim> claims)
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+            claims,
+            CookieAuthenticationDefaults.AuthenticationScheme));
+        var scheme = new AuthenticationScheme(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            typeof(CookieAuthenticationHandler));
+        return new CookieValidatePrincipalContext(
+            new DefaultHttpContext(),
+            scheme,
+            new CookieAuthenticationOptions(),
+            new AuthenticationTicket(principal, scheme.Name));
+    }
+
+    private sealed class CapturingAuthenticationService : IAuthenticationService
+    {
+        public ClaimsPrincipal? SignedInPrincipal { get; private set; }
+
+        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
+            Task.FromResult(AuthenticateResult.NoResult());
+
+        public Task ChallengeAsync(
+            HttpContext context,
+            string? scheme,
+            AuthenticationProperties? properties) => Task.CompletedTask;
+
+        public Task ForbidAsync(
+            HttpContext context,
+            string? scheme,
+            AuthenticationProperties? properties) => Task.CompletedTask;
+
+        public Task SignInAsync(
+            HttpContext context,
+            string? scheme,
+            ClaimsPrincipal principal,
+            AuthenticationProperties? properties)
+        {
+            SignedInPrincipal = principal;
+            return Task.CompletedTask;
+        }
+
+        public Task SignOutAsync(
+            HttpContext context,
+            string? scheme,
+            AuthenticationProperties? properties) => Task.CompletedTask;
     }
 
     private sealed class LockingStore(AccountSession session) : IAccountSessionStore

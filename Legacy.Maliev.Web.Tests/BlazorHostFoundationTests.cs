@@ -18,7 +18,7 @@ public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFact
     }
 
     [Fact]
-    public void Program_RegistersStaticSsrHostWithoutInteractiveInfrastructureAndOnlyTheApprovedRoute()
+    public void Program_RegistersStaticSsrHostWithScopedInteractiveServerInfrastructureAndOnlyTheApprovedRoute()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
@@ -27,8 +27,9 @@ public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFact
         var routes = File.ReadAllText(Path.Combine(web, "Components", "Routes.razor"));
 
         Assert.Contains("builder.Services.AddRazorComponents()", program, StringComparison.Ordinal);
+        Assert.Contains("AddInteractiveServerComponents", program, StringComparison.Ordinal);
         Assert.Contains("app.MapRazorComponents<App>()", program, StringComparison.Ordinal);
-        Assert.DoesNotContain("AddInteractiveServerComponents", program, StringComparison.Ordinal);
+        Assert.Contains("AddInteractiveServerRenderMode", program, StringComparison.Ordinal);
         Assert.DoesNotContain("AddInteractiveWebAssemblyComponents", program, StringComparison.Ordinal);
         Assert.DoesNotContain("MapBlazorHub", program, StringComparison.Ordinal);
         Assert.Contains("<!DOCTYPE html>", app, StringComparison.OrdinalIgnoreCase);

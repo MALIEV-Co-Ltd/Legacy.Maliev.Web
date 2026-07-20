@@ -18,7 +18,14 @@ public sealed class WebContentSecurityPolicyMiddleware(RequestDelegate next)
 
     public Task InvokeAsync(HttpContext context)
     {
-        context.Response.Headers.ContentSecurityPolicy = Policy;
+        context.Response.OnStarting(
+            static state =>
+            {
+                var response = (HttpResponse)state;
+                response.Headers.ContentSecurityPolicy = Policy;
+                return Task.CompletedTask;
+            },
+            context.Response);
         return next(context);
     }
 }

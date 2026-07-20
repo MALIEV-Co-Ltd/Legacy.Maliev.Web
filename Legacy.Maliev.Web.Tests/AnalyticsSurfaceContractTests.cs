@@ -146,7 +146,8 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.Contains("`estimate_shown` (`event`, `service`)", normalizedRunbook, StringComparison.Ordinal);
         Assert.Contains("`review_reached` (`event`, `service`)", normalizedRunbook, StringComparison.Ordinal);
         Assert.Contains("`dependency_unavailable`", runbook, StringComparison.Ordinal);
-        Assert.Contains("remain inactive", runbook, StringComparison.Ordinal);
+        Assert.Contains("are active application events after issue #152 tests and independent review passed", normalizedRunbook, StringComparison.Ordinal);
+        Assert.Contains("not authorization to publish GTM tags or deploy", normalizedRunbook, StringComparison.Ordinal);
         Assert.DoesNotContain("`file_upload_failure`", runbook, StringComparison.Ordinal);
     }
 
