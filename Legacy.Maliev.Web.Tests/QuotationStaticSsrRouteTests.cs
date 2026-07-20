@@ -27,6 +27,8 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<WebApplicationF
         Assert.Contains("\"/Quotation/Index\"", program, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(QuotationFormFields)\"", fallback, StringComparison.Ordinal);
         Assert.Contains("ICountryClient", route, StringComparison.Ordinal);
+        Assert.Contains("IAccountSessionManager", route, StringComparison.Ordinal);
+        Assert.Contains("ICustomerAccountClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("IQuotationClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("IQuotationFileClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("INotificationClient", route, StringComparison.Ordinal);

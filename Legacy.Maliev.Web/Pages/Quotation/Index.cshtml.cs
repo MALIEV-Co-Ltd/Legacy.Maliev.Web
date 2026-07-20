@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Net;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Quotation;
@@ -14,6 +15,8 @@ public sealed class Index(
     ICountryClient countryClient,
     IQuotationClient quotationClient,
     IQuotationFileClient quotationFileClient,
+    IAccountSessionManager sessionManager,
+    ICustomerAccountClient customerAccountClient,
     INotificationClient notificationClient,
     IAntiBotVerifier antiBotVerifier,
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
@@ -82,6 +85,10 @@ public sealed class Index(
 
     public bool CountryServiceAvailable { get; private set; } = true;
 
+    public bool IsAuthenticatedCustomer { get; private set; }
+
+    public bool CustomerProfileAvailable { get; private set; } = true;
+
     public QuotationFormDisplayModel DisplayModel => new(
         SubmissionId,
         ServiceContext,
@@ -96,6 +103,8 @@ public sealed class Index(
         RecaptchaToken,
         RecaptchaSiteKey,
         CountryServiceAvailable,
+        IsAuthenticatedCustomer,
+        CustomerProfileAvailable,
         Countries.Select(country => new QuotationCountryOption(country.Name)).ToArray(),
         ModelState
             .Where(entry => entry.Value?.Errors.Count > 0)
@@ -116,6 +125,7 @@ public sealed class Index(
         CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
+        await ApplyTrustedCustomerAsync(cancellationToken);
         SubmissionId = Guid.NewGuid();
         var prefill = QuotationPrefill.Create(culture, item, process, material);
         ServiceContext = prefill.ServiceContext;
@@ -126,6 +136,12 @@ public sealed class Index(
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
+        await ApplyTrustedCustomerAsync(cancellationToken);
+        if (IsAuthenticatedCustomer && !CustomerProfileAvailable)
+        {
+            return Page();
+        }
+
         ValidateSubmission();
         if (!ModelState.IsValid)
         {
@@ -194,7 +210,7 @@ public sealed class Index(
             : fileResult.Rejected
                 ? $"Quotation request #{referenceNumber} was received, but an attachment was rejected by malware scanning. Do not submit it again; contact info@maliev.com with this reference."
                 : $"Quotation request #{referenceNumber} was received, but an attachment or notification could not be completed. Do not submit it again; contact info@maliev.com with this reference.";
-        return RedirectToPage("Index");
+        return RedirectToPage("Index", new { culture = CurrentCulture });
     }
 
     private async Task<bool> SendNotificationsAsync(
@@ -271,8 +287,48 @@ public sealed class Index(
         }
     }
 
+    private async Task ApplyTrustedCustomerAsync(CancellationToken cancellationToken)
+    {
+        var trustedCustomer = await QuotationTrustedCustomerLoader.LoadAsync(
+            HttpContext,
+            sessionManager,
+            customerAccountClient,
+            Countries,
+            cancellationToken);
+        IsAuthenticatedCustomer = trustedCustomer.IsAuthenticated;
+        CustomerProfileAvailable = trustedCustomer.ProfileAvailable;
+        if (!trustedCustomer.IsAuthenticated)
+        {
+            return;
+        }
+
+        ClearCustomerModelState();
+        FirstName = trustedCustomer.FirstName;
+        LastName = trustedCustomer.LastName;
+        Email = trustedCustomer.Email;
+        Phone = trustedCustomer.Phone;
+        Company = trustedCustomer.Company;
+        TaxNumber = trustedCustomer.TaxNumber;
+        Country = trustedCustomer.Country;
+    }
+
+    private void ClearCustomerModelState()
+    {
+        foreach (var field in new[]
+                 {
+                     nameof(FirstName), nameof(LastName), nameof(Email), nameof(Phone),
+                     nameof(Company), nameof(TaxNumber), nameof(Country)
+                 })
+        {
+            ModelState.Remove(field);
+        }
+    }
+
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string CurrentCulture =>
+        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "en" ? "en" : "th";
 
     private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 }

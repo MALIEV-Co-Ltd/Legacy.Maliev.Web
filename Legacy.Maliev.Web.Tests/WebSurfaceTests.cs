@@ -2854,6 +2854,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.Contains("100 MB", source, StringComparison.Ordinal);
+        Assert.Contains("What helps us quote accurately", source, StringComparison.Ordinal);
+        Assert.Contains("Preparing your files", source, StringComparison.Ordinal);
+        Assert.Contains("manufacturing@maliev.com", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://wetransfer.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Legal/NonDisclosureAgreement\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("AIza", source, StringComparison.Ordinal);
         Assert.DoesNotContain("PayPal", source, StringComparison.OrdinalIgnoreCase);
     }
@@ -2876,7 +2881,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("action=\"/Quotation?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains(
+            $"action=\"/Quotation?handler=SubmitRequest&amp;culture={culture}\"",
+            source,
+            StringComparison.Ordinal);
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"SubmissionId\"", source, StringComparison.Ordinal);
@@ -2890,6 +2898,90 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QuotationPage_AuthenticatedCustomerRendersTrustedProfileInsteadOfEditableIdentity()
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync("/quotation?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-authenticated-customer=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("Ada Lovelace", source, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
+        Assert.Contains("Thailand", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Email\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuotationPage_NormalBrowserPostPreservesEnglishCulture()
+    {
+        var source = await client.GetStringAsync("/quotation?culture=en");
+        var actionMatch = Regex.Match(
+            source,
+            "<form[^>]*action=\"([^\"]+)\"[^>]*id=\"quotation-form\"|<form[^>]*id=\"quotation-form\"[^>]*action=\"([^\"]+)\"",
+            RegexOptions.CultureInvariant);
+        Assert.True(actionMatch.Success, "The quotation form must publish its browser POST action.");
+        var action = WebUtility.HtmlDecode(
+            actionMatch.Groups[1].Success ? actionMatch.Groups[1].Value : actionMatch.Groups[2].Value);
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=en");
+        form["SubmissionId"] = Guid.NewGuid().ToString();
+        form["ServiceContext"] = "custom_manufacturing";
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Country"] = "Thailand";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(action, new FormUrlEncodedContent(form));
+        var responseSource = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<html lang=\"en\">", responseSource, StringComparison.Ordinal);
+        Assert.Contains(">First name<", WebUtility.HtmlDecode(responseSource), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuotationPost_AuthenticatedCustomerIgnoresForgedBrowserIdentity()
+    {
+        await SignInAsync();
+        var quotation = Assert.IsType<StubQuotationClient>(
+            configuredFactory.Services.GetRequiredService<IQuotationClient>());
+        quotation.LastSubmission = null;
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=en");
+        form["SubmissionId"] = Guid.Parse("11111111-2222-3333-4444-555555555555").ToString();
+        form["ServiceContext"] = "custom_manufacturing";
+        form["FirstName"] = "Mallory";
+        form["LastName"] = "Attacker";
+        form["Email"] = "attacker@example.com";
+        form["Phone"] = "+66-forged";
+        form["Company"] = "Forged Company";
+        form["TaxNumber"] = "forged-tax";
+        form["Country"] = "Forged Country";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/quotation?handler=SubmitRequest&culture=en",
+            new FormUrlEncodedContent(form));
+
+        var responseSource = await response.Content.ReadAsStringAsync();
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected the trusted authenticated quotation to persist, but received {response.StatusCode}: {responseSource}");
+        Assert.Equal("/Quotation?culture=en", response.Headers.Location?.OriginalString);
+        var submission = Assert.IsType<QuotationRequestSubmission>(quotation.LastSubmission);
+        Assert.Equal("Ada", submission.FirstName);
+        Assert.Equal("Lovelace", submission.LastName);
+        Assert.Equal("customer@example.com", submission.Email);
+        Assert.Equal("Thailand", submission.Country);
+        Assert.NotEqual("Forged Company", submission.CompanyName);
+        Assert.NotEqual("forged-tax", submission.TaxIdentification);
     }
 
     [Fact]
@@ -3093,11 +3185,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubQuotationClient : IQuotationClient
     {
+        public QuotationRequestSubmission? LastSubmission { get; set; }
+
         public Task<QuotationRequestResult> CreateRequestAsync(
             QuotationRequestSubmission submission,
             string idempotencyKey,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new QuotationRequestResult(1, true, true));
+            CancellationToken cancellationToken)
+        {
+            LastSubmission = submission;
+            return Task.FromResult(new QuotationRequestResult(1, true, true));
+        }
     }
 
     private sealed class StubQuotationFileClient : IQuotationFileClient

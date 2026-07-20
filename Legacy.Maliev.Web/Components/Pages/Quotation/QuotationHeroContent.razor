@@ -1,9 +1,14 @@
 @inject IStringLocalizer<QuotationContent> Localizer
 
-<header class="maliev-page-hero" data-migration-component="quotation-hero-content" data-migration-renderer="blazor-static-ssr">
-    <div class="container">
-        <p class="maliev-eyebrow">@Localizer["Quotation"]</p>
-        <h1>@Localizer["Tell us about your project."]</h1>
-        <p>@Localizer["Share the requirements and drawings you have. Our manufacturing team will review them and respond directly."]</p>
+<header class="inquiry-hero inquiry-hero--quote" data-migration-component="quotation-hero-content" data-migration-renderer="blazor-static-ssr">
+    <div class="inquiry-container inquiry-hero__content">
+        <p class="inquiry-eyebrow">@Localizer["Manual manufacturing quotation"]</p>
+        <h1>@Localizer["Tell us what you need manufactured"]</h1>
+        <p class="inquiry-hero__lead">@Localizer["Share your files, quantity, material, finish, and target date. Our engineering team will review the project and prepare a clear quotation."]</p>
+        <ul class="inquiry-trust-list" aria-label="@Localizer["Quotation service benefits"]">
+            <li><i class="fas fa-shield-alt" aria-hidden="true"></i>@Localizer["Confidential file handling"]</li>
+            <li><i class="fas fa-user-cog" aria-hidden="true"></i>@Localizer["Engineer-reviewed requests"]</li>
+            <li><i class="fas fa-industry" aria-hidden="true"></i>@Localizer["CNC, 3D printing, and 3D scanning"]</li>
+        </ul>
     </div>
 </header>

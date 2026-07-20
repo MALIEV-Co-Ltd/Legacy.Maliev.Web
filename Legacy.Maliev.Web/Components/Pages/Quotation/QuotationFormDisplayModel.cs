@@ -14,6 +14,8 @@ public sealed record QuotationFormDisplayModel(
     string? RecaptchaToken,
     string RecaptchaSiteKey,
     bool CountryServiceAvailable,
+    bool IsAuthenticatedCustomer,
+    bool CustomerProfileAvailable,
     IReadOnlyList<QuotationCountryOption> Countries,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ValidationErrors)
 {

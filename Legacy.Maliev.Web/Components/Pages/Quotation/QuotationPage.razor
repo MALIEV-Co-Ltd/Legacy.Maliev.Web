@@ -1,4 +1,5 @@
 @page "/Quotation"
+@using System.Globalization
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
 @using Legacy.Maliev.Web.Infrastructure
@@ -7,6 +8,8 @@
 @using Microsoft.Extensions.Options
 @inject IHttpContextAccessor HttpContextAccessor
 @inject ICountryClient CountryClient
+@inject IAccountSessionManager AccountSessionManager
+@inject ICustomerAccountClient CustomerAccountClient
 @inject IAntiforgery Antiforgery
 @inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IOptions<RecaptchaEnterpriseOptions> RecaptchaOptions
@@ -31,18 +34,19 @@
 </HeadContent>
 <div data-migration-route-owner="blazor-static-ssr">
     <QuotationHeroContent />
-    <main class="container maliev-section">
-        <section aria-labelledby="quotation-form-title">
-            <div class="row justify-content-center">
-                <div class="col-xl-9">
+    <main class="inquiry-content">
+        <div class="inquiry-container">
+            @if (!string.IsNullOrWhiteSpace(notification))
+            {
+                <div class="inquiry-notification" role="status" aria-live="polite">@notification</div>
+            }
+            <div class="inquiry-shell">
+                <QuotationGuidanceContent />
+                <section class="inquiry-form-card" aria-labelledby="quotation-form-title">
                     <h2 id="quotation-form-title">@Localizer["Manual quotation request"]</h2>
-                    @if (!string.IsNullOrWhiteSpace(notification))
-                    {
-                        <div class="alert alert-info" role="status">@notification</div>
-                    }
                     <form method="post"
                           enctype="multipart/form-data"
-                          action="/Quotation?handler=SubmitRequest"
+                          action="@FormAction"
                           id="quotation-form"
                           data-recaptcha-enterprise-form
                           data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey"
@@ -54,9 +58,9 @@
                         }
                         <QuotationFormFields Model="model" />
                     </form>
-                </div>
+                </section>
             </div>
-        </section>
+        </div>
     </main>
 </div>
 
@@ -75,10 +79,17 @@
         null,
         string.Empty,
         false,
+        false,
+        true,
         [],
         new Dictionary<string, IReadOnlyList<string>>());
     private AntiforgeryTokenSet? tokens;
     private string? notification;
+
+    private string FormAction => $"/Quotation?handler=SubmitRequest&culture={CurrentCulture}";
+
+    private static string CurrentCulture =>
+        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "en" ? "en" : "th";
 
     [SupplyParameterFromQuery(Name = "culture")]
     public string? Culture { get; set; }
@@ -105,20 +116,28 @@
                 [string.Empty] = ["Could not retrieve countries from the server."]
             };
         var prefill = QuotationPrefill.Create(Culture, Item, Process, Material);
+        var trustedCustomer = await QuotationTrustedCustomerLoader.LoadAsync(
+            context,
+            AccountSessionManager,
+            CustomerAccountClient,
+            countries.Value ?? [],
+            context.RequestAborted);
         model = new QuotationFormDisplayModel(
             Guid.NewGuid(),
             prefill.ServiceContext,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            null,
-            null,
-            null,
-            string.Empty,
+            trustedCustomer.FirstName,
+            trustedCustomer.LastName,
+            trustedCustomer.Email,
+            trustedCustomer.Phone,
+            trustedCustomer.Company,
+            trustedCustomer.TaxNumber,
+            trustedCustomer.Country,
             prefill.Message,
             null,
             RecaptchaOptions.Value.SiteKey,
             serviceAvailable,
+            trustedCustomer.IsAuthenticated,
+            trustedCustomer.ProfileAvailable,
             (countries.Value ?? []).Select(country => new QuotationCountryOption(country.Name)).ToArray(),
             errors);
         var tempData = TempDataDictionaryFactory.GetTempData(context);

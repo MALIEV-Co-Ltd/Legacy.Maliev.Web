@@ -902,15 +902,20 @@ public sealed class BlazorMigrationContractTests
         var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Quotation", "Index.cshtml"));
         var componentRoot = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Quotation");
 
-        Assert.Contains("<form method=\"post\" enctype=\"multipart/form-data\" asp-page-handler=\"SubmitRequest\" id=\"quotation-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\"", page, StringComparison.Ordinal);
+        Assert.Contains("enctype=\"multipart/form-data\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"SubmitRequest\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-route-culture=", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"quotation-form\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(QuotationHeroContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(QuotationGuidanceContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(QuotationFormFields)\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
         Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"g-recaptcha-response\"", page, StringComparison.Ordinal);
 
-        foreach (var componentName in new[] { "QuotationHeroContent", "QuotationFormFields" })
+        foreach (var componentName in new[] { "QuotationHeroContent", "QuotationGuidanceContent", "QuotationFormFields" })
         {
             var component = File.ReadAllText(Path.Combine(componentRoot, $"{componentName}.razor"));
             Assert.Contains("IStringLocalizer<QuotationContent>", component, StringComparison.Ordinal);

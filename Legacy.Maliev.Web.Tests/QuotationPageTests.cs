@@ -129,6 +129,8 @@ public sealed class QuotationPageTests
             new StubCountryClient(),
             quotationClient,
             fileClient,
+            new AnonymousSessionManager(),
+            new UnusedCustomerAccountClient(),
             notificationClient ?? new RecordingNotificationClient(),
             antiBotVerifier,
             Options.Create(
@@ -215,6 +217,43 @@ public sealed class QuotationPageTests
             Assert.Equal("submit", expectedAction);
             return Task.FromResult(valid);
         }
+    }
+
+    private sealed class AnonymousSessionManager : IAccountSessionManager
+    {
+        public Task<AccountSignInStatus> SignInAsync(
+            HttpContext context,
+            string email,
+            string password,
+            bool rememberMe,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(AccountSignInStatus.InvalidCredentials);
+
+        public Task SignOutAsync(HttpContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<string?> GetAccessTokenAsync(HttpContext context, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        public Task<int?> GetCustomerDatabaseIdAsync(HttpContext context, CancellationToken cancellationToken) =>
+            Task.FromResult<int?>(null);
+    }
+
+    private sealed class UnusedCustomerAccountClient : ICustomerAccountClient
+    {
+        public Task<CustomerAddressProfileResult> GetAddressProfileAsync(int customerId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not load a customer profile.");
+
+        public Task<CustomerAddressOperationResult> UpdateAddressesAsync(int customerId, CustomerAddressUpdate update, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
+
+        public Task<CustomerAddressOperationResult> UpdateEmailAsync(int customerId, string email, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
+
+        public Task<CustomerAccountProfileResult> GetProfileAsync(int customerId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not load a customer profile.");
+
+        public Task<CustomerAddressOperationResult> UpdateProfileAsync(int customerId, CustomerProfileUpdate update, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
     }
 
     private sealed class RecordingNotificationClient : INotificationClient
