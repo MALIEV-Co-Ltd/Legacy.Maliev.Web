@@ -1,9 +1,14 @@
 @inject IStringLocalizer<ContactContent> Localizer
 
-<header class="maliev-page-hero" data-migration-component="contact-hero-content" data-migration-renderer="blazor-static-ssr">
-    <div class="container">
-        <p class="maliev-eyebrow">@Localizer["Contact"]</p>
-        <h1>@Localizer["Let’s build something useful."]</h1>
-        <p>@Localizer["Tell us what you need, when you need it, and how we can reach you."]</p>
+<section class="inquiry-hero inquiry-hero--contact" aria-labelledby="contact-title" data-migration-component="contact-hero-content" data-migration-renderer="blazor-static-ssr">
+    <div class="inquiry-container inquiry-hero__content">
+        <p class="inquiry-eyebrow">@Localizer["Talk to our team"]</p>
+        <h1 id="contact-title">@Localizer["How can we help?"]</h1>
+        <p class="inquiry-hero__lead">@Localizer["Ask about a project, an existing request, or our manufacturing services. Choose the contact method that works best for you."]</p>
+        <ul class="inquiry-trust-list" aria-label="@Localizer["Contact service benefits"]">
+            <li><i class="fas fa-comments" aria-hidden="true"></i>@Localizer["Real people, practical answers"]</li>
+            <li><i class="fas fa-language" aria-hidden="true"></i>@Localizer["Thai and English support"]</li>
+            <li><i class="fas fa-map-marker-alt" aria-hidden="true"></i>@Localizer["Based in Nonthaburi, Thailand"]</li>
+        </ul>
     </div>
-</header>
+</section>

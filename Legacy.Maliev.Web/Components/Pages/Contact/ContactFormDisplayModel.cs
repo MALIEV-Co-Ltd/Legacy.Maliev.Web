@@ -10,6 +10,7 @@ public sealed record ContactFormDisplayModel(
     string Message,
     string? RecaptchaToken,
     string RecaptchaSiteKey,
+    bool IsAuthenticatedCustomer,
     bool CountryServiceAvailable,
     IReadOnlyList<ContactCountryOption> Countries,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ValidationErrors)

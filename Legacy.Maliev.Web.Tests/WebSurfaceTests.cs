@@ -26,7 +26,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                         new Dictionary<string, string?>
                         {
                             ["Recaptcha:SiteKey"] = "test-site-key",
-                            ["Recaptcha:ProjectId"] = "test-project"
+                            ["Recaptcha:ProjectId"] = "test-project",
+                            ["GoogleMaps:EmbedApiKey"] = "test-map-key"
                         }));
                 builder.ConfigureServices(services =>
                 {
@@ -2760,9 +2761,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("ClientSecret", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ContactPage_UsesConfiguredPlaceEmbedWithLazyAccessibleIframe()
+    {
+        var source = await client.GetStringAsync("/contact?culture=en");
+        var expectedUrl = "https://www.google.com/maps/embed/v1/place?q=place_id:ChIJZ9VSFP2F4jARdmoz755rwQU&amp;key=test-map-key";
+
+        Assert.Contains(expectedUrl, source, StringComparison.Ordinal);
+        Assert.Contains("title=\"Map showing the MALIEV workshop\"", source, StringComparison.Ordinal);
+        Assert.Contains("loading=\"lazy\"", source, StringComparison.Ordinal);
+        Assert.Contains("allowfullscreen", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("maps.google.com", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
-    [InlineData("en", "Contact", "Let’s build something useful.", "Send an enquiry", "First name", "Submit enquiry")]
-    [InlineData("th", "Contact", "Let’s build something useful.", "Send an enquiry", "ชื่อ", "Submit enquiry")]
+    [InlineData("en", "Talk to our team", "How can we help?", "Send us a message", "First name", "Submit")]
+    [InlineData("th", "พูดคุยกับทีมงาน", "เราช่วยอะไรคุณได้บ้าง?", "ส่งข้อความถึงเรา", "ชื่อ", "ส่งข้อความ")]
     public async Task ContactPage_RendersLocalizedStaticSsrFieldsInsideRazorPostBoundary(
         string culture,
         string eyebrow,
@@ -2784,8 +2799,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("action=\"/Contact?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains(submitLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"action=\"/Contact?handler=SubmitRequest&amp;culture={culture}\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);

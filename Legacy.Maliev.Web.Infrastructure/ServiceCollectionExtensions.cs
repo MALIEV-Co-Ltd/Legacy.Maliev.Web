@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("ServiceAuthentication"));
         services.AddOptions<RecaptchaEnterpriseOptions>()
             .Bind(configuration.GetSection("Recaptcha"));
+        services.AddOptions<GoogleMapsOptions>()
+            .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));
 
         AddClient(services, "auth", static endpoints => endpoints.Auth);
         AddClient(services, "careers", static endpoints => endpoints.Career);
@@ -71,6 +73,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<InstantQuotationFileServiceTransport>();
         services.AddScoped<IInstantQuotationUploadClient, InstantQuotationFileServiceUploadClient>();
         services.AddScoped<IAccountSessionManager, AccountSessionManager>();
+        services.AddScoped<IContactTrustedCustomerLoader, ContactTrustedCustomerLoader>();
         services.AddScoped<AccountCookieEvents>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IServiceAccessTokenProvider, ServiceAccessTokenProvider>();

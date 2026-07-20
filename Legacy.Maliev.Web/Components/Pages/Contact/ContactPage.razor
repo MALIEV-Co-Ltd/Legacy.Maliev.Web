@@ -7,9 +7,11 @@
 @using Microsoft.Extensions.Options
 @inject IHttpContextAccessor HttpContextAccessor
 @inject ICountryClient CountryClient
+@inject IContactTrustedCustomerLoader TrustedCustomerLoader
 @inject IAntiforgery Antiforgery
 @inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IOptions<RecaptchaEnterpriseOptions> RecaptchaOptions
+@inject IOptions<GoogleMapsOptions> GoogleMapsOptions
 @inject IStringLocalizer<ContactContent> Localizer
 
 @{
@@ -29,19 +31,32 @@
         <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(RecaptchaOptions.Value.SiteKey)" async defer></script>
     }
 </HeadContent>
-<div data-migration-route-owner="blazor-static-ssr">
+<main class="inquiry-page" data-migration-route-owner="blazor-static-ssr">
     <ContactHeroContent />
-    <main class="container maliev-section">
-        <div class="row g-5">
-            <section class="col-lg-7" aria-labelledby="contact-form-title">
-                <h2 id="contact-form-title">@Localizer["Send an enquiry"]</h2>
-                @if (!string.IsNullOrWhiteSpace(notification))
-                {
-                    <div class="alert alert-success" role="status">@notification</div>
-                }
-                <form method="post"
-                      action="/Contact?handler=SubmitRequest"
-                      id="contact-form"
+    <section class="inquiry-content">
+      <div class="inquiry-container">
+        @if (!string.IsNullOrWhiteSpace(notification))
+        {
+            <div class="inquiry-notification" role="status" aria-live="polite"><p>@notification</p></div>
+        }
+        <div class="contact-method-grid" aria-label="@Localizer["Contact options"]">
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="far fa-envelope" aria-hidden="true"></i></div><div><h2>@Localizer["Email us"]</h2><p>@Localizer["Best for project details and files."]</p><a href="mailto:info@maliev.com">info@maliev.com</a></div></article>
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></div><div><h2>@Localizer["Call us"]</h2><p>@Localizer["Best for a quick question during business hours."]</p><a href="tel:+66818030404">+66(0)81-803-0404</a><a href="tel:+66898950690">+66(0)89-895-0690</a></div></article>
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-map-marker-alt" aria-hidden="true"></i></div><div><h2>@Localizer["Visit our workshop"]</h2><address>@Localizer["36/1 Moo 3"]<br />@Localizer["Khlong Khoi"], <span class="maliev-nowrap">@Localizer["Pak Kret"]</span><br />@Localizer["Nonthaburi 11120"], @Localizer["Thailand"]</address><p><strong>@Localizer["Business hours"]</strong><br />@Localizer["Monday-Friday: 09:00-18:00"]<br />@Localizer["Saturday-Sunday: Closed"]</p></div></article>
+        </div>
+        <div class="inquiry-shell">
+            <aside class="inquiry-aside inquiry-aside--sticky" aria-label="@Localizer["Company contact details"]">
+                <section class="inquiry-panel inquiry-panel--accent contact-line-card">
+                    <a href="@SocialNetworks.Line" target="_blank" rel="noopener"><img src="/src/images/line-qr-clean.svg" width="160" height="160" title="LINE Official Account" alt="@Localizer["MALIEV LINE Official Account QR code"]" /></a>
+                    <div><h2>@Localizer["Chat with us"]</h2><p>@Localizer["Scan the QR code or open our LINE Official Account for a quick conversation."]</p><a href="@SocialNetworks.Line" target="_blank" rel="noopener">@Localizer["Open LINE Official Account"]</a></div>
+                </section>
+                <section class="inquiry-panel"><div class="inquiry-panel__icon"><i class="fas fa-building" aria-hidden="true"></i></div><h2>Maliev Co., Ltd.</h2><p>@Localizer["36/1 Moo 3"]<br />@Localizer["Khlong Khoi"], <span class="maliev-nowrap">@Localizer["Pak Kret"]</span><br />@Localizer["Nonthaburi 11120"], @Localizer["Thailand"]</p>@if (culture == "th") { <p class="contact-tax">เลขประจำตัวผู้เสียภาษี 0125561001573 (สำนักงานใหญ่)</p> }</section>
+                <section class="inquiry-panel"><div class="inquiry-panel__icon"><i class="fas fa-share-alt" aria-hidden="true"></i></div><h2>@Localizer["Follow and message MALIEV"]</h2><p>@Localizer["Find our latest work and contact us through our official social channels."]</p><div class="inquiry-social"><SocialLinks /></div></section>
+            </aside>
+            <form method="post"
+                      action="@($"/Contact?handler=SubmitRequest&culture={culture}")"
+                      id="contact-us"
+                      class="inquiry-form-card"
                       data-recaptcha-enterprise-form
                       data-recaptcha-site-key="@RecaptchaOptions.Value.SiteKey"
                       data-recaptcha-action="submit">
@@ -50,14 +65,12 @@
                         <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
                     }
                     <ContactFormFields Model="model" />
-                </form>
-            </section>
-            <aside class="col-lg-5" aria-labelledby="contact-details-title">
-                <ContactDetailsContent />
-            </aside>
+            </form>
         </div>
-    </main>
-</div>
+        <ContactDetailsContent Model="map" />
+      </div>
+    </section>
+</main>
 
 @code {
     private ContactFormDisplayModel model = new(
@@ -71,36 +84,52 @@
         null,
         string.Empty,
         false,
+        false,
         [],
         new Dictionary<string, IReadOnlyList<string>>());
     private AntiforgeryTokenSet? tokens;
     private string? notification;
+    private ContactMapDisplayModel map = new(null, SocialNetworks.GoogleMaps);
+    private string culture = "en";
 
     protected override async Task OnInitializedAsync()
     {
         var context = HttpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
         var countries = await CountryClient.GetCountriesAsync(context.RequestAborted);
+        var countryValues = countries.Value ?? [];
+        var trustedCustomer = await TrustedCustomerLoader.LoadAsync(context, countryValues, context.RequestAborted);
         var serviceAvailable = countries.ServiceAvailable;
-        IReadOnlyDictionary<string, IReadOnlyList<string>> errors = serviceAvailable
+        var errors = serviceAvailable
             ? new Dictionary<string, IReadOnlyList<string>>()
             : new Dictionary<string, IReadOnlyList<string>>
             {
                 [string.Empty] = ["Could not retrieve countries from the server."]
             };
+        if (trustedCustomer.IsAuthenticated && trustedCustomer.Customer is null)
+        {
+            var profileError = "Could not retrieve your customer profile. Please update your profile or contact us directly.";
+            errors[string.Empty] = errors.TryGetValue(string.Empty, out var existingErrors)
+                ? [.. existingErrors, profileError]
+                : [profileError];
+        }
+        var customer = trustedCustomer.Customer;
         model = new ContactFormDisplayModel(
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            null,
-            null,
-            string.Empty,
+            customer?.FirstName ?? string.Empty,
+            customer?.LastName ?? string.Empty,
+            customer?.Email ?? string.Empty,
+            customer?.Phone,
+            customer?.Company,
+            customer?.Country ?? string.Empty,
             string.Empty,
             null,
             RecaptchaOptions.Value.SiteKey,
+            trustedCustomer.IsAuthenticated,
             serviceAvailable,
-            (countries.Value ?? []).Select(country => new ContactCountryOption(country.Name)).ToArray(),
+            countryValues.Select(country => new ContactCountryOption(country.Name)).ToArray(),
             errors);
+        culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "th" ? "th" : "en";
+        map = ContactMapDisplayModel.Create(GoogleMapsOptions);
         var tempData = TempDataDictionaryFactory.GetTempData(context);
         notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
         tokens = Antiforgery.GetAndStoreTokens(context);
