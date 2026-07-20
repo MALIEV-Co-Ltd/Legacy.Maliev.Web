@@ -72,6 +72,12 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
         Assert.Contains("<meta property=\"og:image\" content=\"https://www.maliev.com/src/images/career-3dprinting.jpg\"", source, StringComparison.Ordinal);
         Assert.Contains($">{status}<", source, StringComparison.Ordinal);
         Assert.Contains($">{responsibilities}<", source, StringComparison.Ordinal);
+        Assert.Contains("Build reliable manufacturing processes.", source, StringComparison.Ordinal);
+        Assert.Contains("Own release validation.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("career-xss", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("alert(1)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"mailto:career@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("onclick=\"PrintJobDescription()\"", source, StringComparison.Ordinal);
@@ -137,6 +143,29 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task CareerDetailRoute_WithUnknownFilledState_DoesNotClaimUrgentOrFilled()
+    {
+        var careerClient = new CareerClientStub(CareerResponseMode.UnknownFilledState);
+        await using var routeFactory = CreateFactory(careerClient);
+        using var client = CreateClient(routeFactory);
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/career/view/7?culture=en"));
+
+        Assert.DoesNotContain(">Urgent<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Filled<", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LocalReviewCareerDetail_HidesTheExactAspireFixture()
+    {
+        var careerClient = new CareerClientStub(CareerResponseMode.LocalAspireFixture);
+        await using var routeFactory = CreateFactory(careerClient, hideLocalAspireFixture: true);
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync("/career/view/7?culture=en");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task DisabledCareerDetailRoute_UsesTheRetainedRazorFallback()
     {
         var careerClient = CareerClientStub.Success();
@@ -151,10 +180,12 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
 
     private WebApplicationFactory<Program> CreateFactory(
         ICareerClient careerClient,
-        bool careerRouteEnabled = true) =>
+        bool careerRouteEnabled = true,
+        bool hideLocalAspireFixture = false) =>
         factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("BlazorRouting:CareerDetail", careerRouteEnabled.ToString());
+            builder.UseSetting("Career:HideLocalAspireFixture", hideLocalAspireFixture.ToString());
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ICareerClient>();
@@ -193,6 +224,8 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
         Missing,
         Unavailable,
         Throw,
+        UnknownFilledState,
+        LocalAspireFixture,
     }
 
     private sealed class CareerClientStub(CareerResponseMode mode) : ICareerClient
@@ -203,9 +236,9 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
             Level.Id,
             "Manufacturing Engineer",
             null,
-            "Build reliable manufacturing processes.",
+            "<p>Build <strong>reliable</strong> manufacturing processes.</p><script id=\"career-xss\">alert(1)</script>",
             "Engineering experience.",
-            "A practical team.",
+            "<ul><li>A practical team.</li><li>Own release validation.</li></ul>",
             "Nonthaburi",
             false,
             null,
@@ -236,6 +269,29 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
                 CareerResponseMode.Unavailable => Task.FromResult(new ServiceResponse<CareerOffer>(null, false)),
                 CareerResponseMode.Throw => Task.FromException<ServiceResponse<CareerOffer>>(
                     new InvalidOperationException("sensitive exception detail")),
+                CareerResponseMode.UnknownFilledState => Task.FromResult(
+                    new ServiceResponse<CareerOffer>(Offer with { IsFilled = null }, true)),
+                CareerResponseMode.LocalAspireFixture => Task.FromResult(
+                    new ServiceResponse<CareerOffer>(
+                        new CareerOffer(
+                            7,
+                            1,
+                            "Local Manufacturing Engineer",
+                            "Local Aspire career boundary verification",
+                            "Support digital manufacturing projects.",
+                            "Manufacturing experience",
+                            "Independent engineering work",
+                            "Nonthaburi",
+                            false,
+                            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                            null,
+                            new CareerLevel(
+                                1,
+                                "Experienced",
+                                "Local Aspire verification level",
+                                new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                                null)),
+                        true)),
                 _ => throw new ArgumentOutOfRangeException(nameof(mode)),
             };
         }

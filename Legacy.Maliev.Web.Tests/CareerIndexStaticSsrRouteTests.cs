@@ -77,6 +77,7 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
         Assert.Contains("name=\"google-site-verification\"", source, StringComparison.Ordinal);
         Assert.Contains("Manufacturing Engineer", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Filled role", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unknown status role", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
@@ -84,6 +85,18 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
         Assert.DoesNotContain("animate__", source, StringComparison.OrdinalIgnoreCase);
 
         Assert.Equal(new CareerRequest(CareerSort.JobId_Ascending, "engineer", 1, 50), clientStub.LastRequest);
+    }
+
+    [Fact]
+    public async Task LocalReviewCareerRoute_HidesOnlyTheExactAspireFixture()
+    {
+        var clientStub = new CapturingCareerClient(includeLocalAspireFixture: true);
+        await using var routeFactory = CreateFactory(clientStub, hideLocalAspireFixture: true);
+        using var client = CreateClient(routeFactory);
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/career?culture=en"));
+
+        Assert.Contains("Manufacturing Engineer", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Local Manufacturing Engineer", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -118,10 +131,12 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
 
     private WebApplicationFactory<Program> CreateFactory(
         ICareerClient careerClient,
-        bool careerRouteEnabled = true) =>
+        bool careerRouteEnabled = true,
+        bool hideLocalAspireFixture = false) =>
         factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("BlazorRouting:CareerIndex", careerRouteEnabled.ToString());
+            builder.UseSetting("Career:HideLocalAspireFixture", hideLocalAspireFixture.ToString());
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ICareerClient>();
@@ -163,7 +178,7 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
         return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
     }
 
-    private sealed class CapturingCareerClient : ICareerClient
+    private sealed class CapturingCareerClient(bool includeLocalAspireFixture = false) : ICareerClient
     {
         private static readonly CareerLevel Level = new(1, "Engineer", null, null, null);
 
@@ -177,13 +192,38 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
             CancellationToken cancellationToken)
         {
             LastRequest = new CareerRequest(sort, search, pageIndex, pageSize);
+            var offers = new List<CareerOffer>
+            {
+                new(1, 1, "Manufacturing Engineer", null, null, null, null, "Nonthaburi", false, null, null, Level),
+                new(2, 1, "Filled role", null, null, null, null, "Bangkok", true, null, null, Level),
+                new(3, 1, "Unknown status role", null, null, null, null, "Bangkok", null, null, null, Level),
+            };
+            if (includeLocalAspireFixture)
+            {
+                offers.Add(new CareerOffer(
+                    4,
+                    1,
+                    "Local Manufacturing Engineer",
+                    "Local Aspire career boundary verification",
+                    "Support digital manufacturing projects.",
+                    "Manufacturing experience",
+                    "Independent engineering work",
+                    "Nonthaburi",
+                    false,
+                    new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                    null,
+                    new CareerLevel(
+                        1,
+                        "Experienced",
+                        "Local Aspire verification level",
+                        new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                        null)));
+            }
+
             return Task.FromResult(new CareerListing(
                 [Level],
                 new CareerOfferPage(
-                    [
-                        new CareerOffer(1, 1, "Manufacturing Engineer", null, null, null, null, "Nonthaburi", false, null, null, Level),
-                        new CareerOffer(2, 1, "Filled role", null, null, null, null, "Bangkok", true, null, null, Level),
-                    ],
+                    offers,
                     pageIndex,
                     3,
                     6,

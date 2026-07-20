@@ -5,6 +5,7 @@
 @using Legacy.Maliev.Web.Components.Layout
 @using Microsoft.AspNetCore.Diagnostics
 @inject ICareerClient CareerClient
+@inject IConfiguration Configuration
 @inject IHttpContextAccessor HttpContextAccessor
 @inject ILogger<CareerDetailPage> Logger
 
@@ -39,7 +40,7 @@ else if (offer is not null)
                                             "https://www.maliev.com/src/images/career-3dprinting.jpg"))" />
         <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     </HeadContent>
-    <CareerDetailContent Model="@CreateDisplayModel(context)" RouteOwner="blazor-static-ssr" />
+    <CareerDetailContent Model="@CreateDisplayModel()" RouteOwner="blazor-static-ssr" />
     <script>
         function PrintJobDescription() {
             var contents = document.getElementById("job-description").innerHTML;
@@ -89,6 +90,13 @@ else if (offer is not null)
                 return;
             }
 
+            if (Configuration.GetValue<bool>("Career:HideLocalAspireFixture")
+                && CareerOfferPresentation.IsLocalAspireFixture(response.Value))
+            {
+                SetFailure(context, StatusCodes.Status404NotFound);
+                return;
+            }
+
             offer = response.Value;
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
@@ -98,9 +106,8 @@ else if (offer is not null)
         }
     }
 
-    private CareerDetailContentModel CreateDisplayModel(HttpContext context) => CareerDetailContentModel.Create(
-        offer ?? throw new InvalidOperationException("A successful career response must include an offer."),
-        $"https://{context.Request.Host}{context.Request.Path}");
+    private CareerDetailContentModel CreateDisplayModel() => CareerDetailContentModel.Create(
+        offer ?? throw new InvalidOperationException("A successful career response must include an offer."));
 
     private void SetFailure(HttpContext context, int statusCode)
     {

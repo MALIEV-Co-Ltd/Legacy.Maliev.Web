@@ -3,6 +3,7 @@
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
 @inject ICareerClient CareerClient
+@inject IConfiguration Configuration
 @inject IHttpContextAccessor HttpContextAccessor
 @inject ILogger<CareerIndexPage> Logger
 
@@ -74,9 +75,12 @@ else
                 pageIndex,
                 pageSize,
                 cancellationToken);
+            var hideLocalAspireFixture = Configuration.GetValue<bool>("Career:HideLocalAspireFixture");
             var visibleOffers = listing.Offers with
             {
-                Items = listing.Offers.Items.Where(offer => offer.IsFilled != true).ToArray()
+                Items = listing.Offers.Items
+                    .Where(offer => CareerOfferPresentation.IsVisibleOpenOffer(offer, hideLocalAspireFixture))
+                    .ToArray()
             };
 
             model = CareerIndexContentModel.Create(

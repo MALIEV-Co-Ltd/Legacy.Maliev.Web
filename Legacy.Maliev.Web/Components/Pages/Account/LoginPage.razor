@@ -6,6 +6,8 @@
 @inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IStringLocalizer<LoginContent> Localizer
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject IWebHostEnvironment Environment
 
 <PageTitle>@Localizer["Login | MALIEV"]</PageTitle>
 <HeadContent>
@@ -20,6 +22,14 @@
         </section>
         <section class="auth-card">
             <header class="auth-card__header"><h1>@Localizer["Sign in"]</h1></header>
+            @if (localReviewCredentials is not null)
+            {
+                <aside class="maliev-alert" data-local-aspire-login role="note">
+                    <strong>Local Aspire review</strong>
+                    <span>Email: <code>@localReviewCredentials.Email</code></span>
+                    <span>Password: <code>@localReviewCredentials.Password</code></span>
+                </aside>
+            }
             <form method="post" class="maliev-form">
                 @if (tokens is not null)
                 {
@@ -38,6 +48,7 @@
 @code {
     private LoginFormDisplayModel model = new(string.Empty, false, null, null, new Dictionary<string, IReadOnlyList<string>>());
     private AntiforgeryTokenSet? tokens;
+    private LocalReviewCredentials? localReviewCredentials;
 
     [SupplyParameterFromQuery(Name = "email")]
     public string? Email { get; set; }
@@ -63,6 +74,7 @@
             IsLocalUrl(ReturnUrl) ? ReturnUrl : null,
             notification,
             new Dictionary<string, IReadOnlyList<string>>());
+        localReviewCredentials = GetLocalReviewCredentials();
         tokens = Antiforgery.GetAndStoreTokens(context);
     }
 
@@ -70,4 +82,21 @@
         !string.IsNullOrEmpty(url)
         && ((url[0] == '/' && (url.Length == 1 || (url[1] != '/' && url[1] != '\\')))
             || (url.Length > 1 && url[0] == '~' && url[1] == '/'));
+
+    private LocalReviewCredentials? GetLocalReviewCredentials()
+    {
+        var permittedEnvironment = Environment.IsDevelopment() || Environment.IsEnvironment("Testing");
+        if (!permittedEnvironment || !Configuration.GetValue<bool>("LocalAspireLoginReview:Enabled"))
+        {
+            return null;
+        }
+
+        var email = Configuration["LocalAspireLoginReview:Email"];
+        var password = Configuration["LocalAspireLoginReview:Password"];
+        return string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)
+            ? null
+            : new LocalReviewCredentials(email, password);
+    }
+
+    private sealed record LocalReviewCredentials(string Email, string Password);
 }
