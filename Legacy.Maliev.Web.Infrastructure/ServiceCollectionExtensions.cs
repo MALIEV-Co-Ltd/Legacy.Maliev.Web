@@ -68,7 +68,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
         services.AddSingleton<IInstantQuotationFileCapabilityStore, InstantQuotationFileCapabilityStore>();
         services.AddSingleton<IInstantQuotationSubmissionStore, InstantQuotationSubmissionStore>();
-        services.AddSingleton<IInstantQuotationUploadClient, UnavailableInstantQuotationUploadClient>();
+        services.AddScoped<InstantQuotationFileServiceTransport>();
+        services.AddScoped<IInstantQuotationUploadClient, InstantQuotationFileServiceUploadClient>();
         services.AddScoped<IAccountSessionManager, AccountSessionManager>();
         services.AddScoped<AccountCookieEvents>();
         services.AddSingleton(TimeProvider.System);

@@ -155,7 +155,7 @@ public sealed class InstantQuotationFileCapabilityStoreTests
     }
 
     [Fact]
-    public void Registration_AddsOnlyProtectedCapabilityStoreAndKeepsRuntimeUploadUnavailable()
+    public void Registration_AddsProtectedCapabilityStoreAndReviewedFileServiceAdapter()
     {
         var services = new ServiceCollection();
         services.AddLegacyServiceClients(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
@@ -168,10 +168,13 @@ public sealed class InstantQuotationFileCapabilityStoreTests
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(IInstantQuotationUploadClient)
-                && descriptor.ImplementationType == typeof(UnavailableInstantQuotationUploadClient));
-        Assert.DoesNotContain(
+                && descriptor.ImplementationType == typeof(InstantQuotationFileServiceUploadClient)
+                && descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
             services,
-            descriptor => descriptor.ServiceType == typeof(InstantQuotationFileServiceTransport));
+            descriptor => descriptor.ServiceType == typeof(InstantQuotationFileServiceTransport)
+                && descriptor.ImplementationType == typeof(InstantQuotationFileServiceTransport)
+                && descriptor.Lifetime == ServiceLifetime.Scoped);
     }
 
     private static InstantQuotationFileCapability Capability(IReadOnlyList<string>? extensions = null) => new(

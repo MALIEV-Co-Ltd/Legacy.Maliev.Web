@@ -121,19 +121,19 @@ public sealed class InstantQuotationUploadClientTests
     }
 
     [Fact]
-    public void Registration_UsesOnlyUnavailableImplementationWithNoHttpDependency()
+    public void Registration_UsesReviewedFileServiceImplementation()
     {
         var services = new ServiceCollection();
         services.AddLegacyServiceClients(new ConfigurationBuilder().Build());
 
         var descriptor = Assert.Single(services, item => item.ServiceType == typeof(IInstantQuotationUploadClient));
 
-        Assert.Equal(typeof(UnavailableInstantQuotationUploadClient), descriptor.ImplementationType);
-        Assert.Empty(typeof(UnavailableInstantQuotationUploadClient).GetConstructors().Single().GetParameters());
+        Assert.Equal(typeof(InstantQuotationFileServiceUploadClient), descriptor.ImplementationType);
+        Assert.Single(typeof(InstantQuotationFileServiceUploadClient).GetConstructors());
     }
 
     [Fact]
-    public void FileServiceTransport_IsInternalAndKeptBehindUnavailableRuntimeAdapter()
+    public void FileServiceTransport_IsInternalAndKeptBehindServerSideAdapter()
     {
         var transport = typeof(UnavailableInstantQuotationUploadClient).Assembly.GetType(
             "Legacy.Maliev.Web.Infrastructure.InstantQuotationFileServiceTransport");
@@ -162,7 +162,11 @@ public sealed class InstantQuotationUploadClientTests
 
         var services = new ServiceCollection();
         services.AddLegacyServiceClients(new ConfigurationBuilder().Build());
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == transport);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == transport
+                && descriptor.ImplementationType == transport
+                && descriptor.Lifetime == ServiceLifetime.Scoped);
     }
 
     [Fact]
