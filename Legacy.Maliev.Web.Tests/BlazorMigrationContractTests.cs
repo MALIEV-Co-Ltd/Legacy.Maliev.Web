@@ -949,7 +949,7 @@ public sealed class BlazorMigrationContractTests
             "Account",
             "LoginContent.razor");
 
-        Assert.Contains("<form method=\"post\" class=\"maliev-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\" class=\"maliev-form\" id=\"customer-login\">", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(LoginContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
