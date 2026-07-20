@@ -11,7 +11,7 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class InstantQuotationSessionStoreTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 7, 18, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Now = DateTimeOffset.UtcNow.AddDays(1);
 
     [Fact]
     public async Task CreateAsync_RepeatedRequests_CreateRandomSessionAndStableSubmissionIdentities()
