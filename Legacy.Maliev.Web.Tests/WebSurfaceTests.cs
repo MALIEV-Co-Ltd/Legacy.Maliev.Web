@@ -2864,6 +2864,26 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
+    [InlineData("en", "/quotation/3d-printing", "I want: 3d-printing")]
+    [InlineData("th", "/quotation/3d-printing", "สินค้าที่ต้องการ: 3d-printing")]
+    [InlineData("en", "/quotation/3d-printing/sls", "Please use: sls")]
+    [InlineData("th", "/quotation/3d-printing/sls", "ระบบเทคโนโลยี: sls")]
+    [InlineData("en", "/quotation/3d-printing/sls/pa12", "Material: pa12")]
+    [InlineData("th", "/quotation/3d-printing/sls/pa12", "วัสดุ: pa12")]
+    public async Task QuotationPage_OptionalLegacySegmentsFeedTheLocalizedPrefill(
+        string culture,
+        string route,
+        string expectedPrefill)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(expectedPrefill, source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("en", "First name", "I want: 3d-printing")]
     [InlineData("th", "ชื่อ", "สินค้าที่ต้องการ: 3d-printing")]
     public async Task QuotationPage_RendersLocalizedStaticSsrFieldsInsideRazorMultipartBoundary(
@@ -2982,6 +3002,37 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal("Thailand", submission.Country);
         Assert.NotEqual("Forged Company", submission.CompanyName);
         Assert.NotEqual("forged-tax", submission.TaxIdentification);
+    }
+
+    [Fact]
+    public async Task QuotationPost_AuthenticatedCustomerWithUnavailableProfileFailsClosedWithoutPersistence()
+    {
+        await SignInAsync();
+        var account = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        account.ProfileGetResultOverride = new CustomerAccountProfileResult(null, false, false);
+        var quotation = Assert.IsType<StubQuotationClient>(
+            configuredFactory.Services.GetRequiredService<IQuotationClient>());
+        quotation.LastSubmission = null;
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=th");
+        form["SubmissionId"] = Guid.NewGuid().ToString();
+        form["ServiceContext"] = "custom_manufacturing";
+        form["FirstName"] = "Mallory";
+        form["LastName"] = "Attacker";
+        form["Email"] = "attacker@example.com";
+        form["Country"] = "Forged Country";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/quotation?handler=SubmitRequest&culture=th",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(quotation.LastSubmission);
+        Assert.Contains("ไม่สามารถโหลดข้อมูลลูกค้าของคุณได้", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("We could not retrieve your customer profile", source, StringComparison.Ordinal);
     }
 
     [Fact]

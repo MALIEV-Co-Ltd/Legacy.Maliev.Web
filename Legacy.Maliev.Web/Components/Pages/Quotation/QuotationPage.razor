@@ -1,4 +1,5 @@
 @page "/Quotation"
+@page "/Quotation/{RouteItem?}/{RouteProcess?}/{RouteMaterial?}"
 @using System.Globalization
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
@@ -103,6 +104,15 @@
     [SupplyParameterFromQuery(Name = "material")]
     public string? Material { get; set; }
 
+    [Parameter]
+    public string? RouteItem { get; set; }
+
+    [Parameter]
+    public string? RouteProcess { get; set; }
+
+    [Parameter]
+    public string? RouteMaterial { get; set; }
+
     protected override async Task OnParametersSetAsync()
     {
         var context = HttpContextAccessor.HttpContext
@@ -115,7 +125,11 @@
             {
                 [string.Empty] = ["Could not retrieve countries from the server."]
             };
-        var prefill = QuotationPrefill.Create(Culture, Item, Process, Material);
+        var prefill = QuotationPrefill.Create(
+            Culture,
+            RouteItem ?? Item,
+            RouteProcess ?? Process,
+            RouteMaterial ?? Material);
         var trustedCustomer = await QuotationTrustedCustomerLoader.LoadAsync(
             context,
             AccountSessionManager,
