@@ -2646,7 +2646,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{passwordLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains(rememberLabel, decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("formaction=\"/Account/Login?handler=Login\"", source, StringComparison.Ordinal);
+        Assert.Contains(
+            $"formaction=\"/Account/Login?handler=Login&amp;culture={culture}\"",
+            source,
+            StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"ReturnUrl\" value=\"/Member/Orders\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
