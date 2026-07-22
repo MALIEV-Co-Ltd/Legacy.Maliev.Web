@@ -14,18 +14,18 @@ jobs:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
     steps:
       - name: Check out Web
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Check out Maliev.Aspire
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Maliev.Aspire
           ref: 085f24b8b6b19c5a8e932b229d93421b03bcd032
           path: .dependencies/Maliev.Aspire
           persist-credentials: false
       - name: Check out Maliev.MessagingContracts
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Maliev.MessagingContracts
           ref: c533c12a8154f5cf7c4fbc9734e82a62705ac60f
