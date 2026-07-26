@@ -3,7 +3,7 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class ServiceFinderPresentationTests
 {
     [Fact]
-    public void ServicesDirectoryKeepsAnAccessibleNoScriptFinderSurface()
+    public void ServicesDirectoryKeepsAnAccessibleProgressiveFinderSurface()
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
