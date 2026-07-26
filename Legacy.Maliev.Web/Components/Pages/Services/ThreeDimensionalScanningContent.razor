@@ -24,11 +24,205 @@
         <article><i class="fas fa-truck" aria-hidden="true"></i><div><h2>@T("Onsite service", "บริการนอกสถานที่")</h2><p>@T("For large, fixed, fragile, or impractical-to-transport objects.", "สำหรับวัตถุขนาดใหญ่ ติดตั้งอยู่ เปราะบาง หรือขนย้ายไม่สะดวก")</p></div></article>
     </div></section>
 
-    <section id="scanning-selection-guide" class="service-section"><div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("Choose the Deliverable First", "เลือกผลลัพธ์ก่อนสแกน")</p><h2>@T("Do you need a raw scan, reverse-engineered CAD, or deviation analysis?", "ต้องการ Raw Scan, CAD จาก Reverse Engineering หรือ Deviation Analysis?")</h2><p>@T("Scanning is data capture—not an automatic one-click conversion into every file type. The right workflow starts with what you need to do after the scan.", "การสแกนคือการเก็บข้อมูล ไม่ใช่การแปลงอัตโนมัติเป็นทุกชนิดไฟล์ในคลิกเดียว ขั้นตอนที่ถูกต้องเริ่มจากสิ่งที่ต้องนำข้อมูลไปใช้")</p></header><div class="service-card-grid">
-        <article class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/scanning/cards/scanning-card-raw-mesh.webp" loading="lazy" width="960" height="640" alt="@T("A scanned cast housing shown as a digital mesh beside the physical part", "ตัวเรือนหล่อที่สแกนเป็นดิจิทัลเมชวางคู่กับชิ้นงานจริง")" /><div class="service-card-body"><h3>@T("Choose a raw or cleaned mesh when…", "เลือก Raw หรือ Cleaned Mesh เมื่อ…")</h3><p>@T("You need visualization, digital preservation, approximate measurements within the agreed scan capability, a reference for sculpting, or input for later processing. Typical outputs are STL, OBJ, or PLY.", "ต้องการแสดงผล เก็บข้อมูลดิจิทัล วัดในขอบเขตที่ตกลง ใช้อ้างอิงงานปั้น หรือเป็นข้อมูลสำหรับขั้นต่อไป ไฟล์ทั่วไปคือ STL, OBJ หรือ PLY")</p></div></article>
-        <article class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/scanning/cards/scanning-card-reverse-engineering.webp" loading="lazy" width="960" height="640" alt="@T("An engineer rebuilding a scanned mechanical part as editable CAD", "วิศวกรสร้างชิ้นส่วนเครื่องกลจากข้อมูลสแกนเป็น CAD ที่แก้ไขได้")" /><div class="service-card-body"><h3>@T("Choose reverse engineering when…", "เลือก Reverse Engineering เมื่อ…")</h3><p>@T("You need editable manufacturing geometry, design changes, replacement-part drawings, mating interfaces, or a CAD model suitable for downstream engineering. Outputs may include STEP or IGES as agreed.", "ต้องการรูปทรงสำหรับผลิตที่แก้ไขได้ ปรับแบบ ทำอะไหล่ สร้างผิวประกอบ หรือใช้ในงานวิศวกรรมต่อไป ไฟล์อาจเป็น STEP หรือ IGES ตามขอบเขต")</p></div></article>
-        <article class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/scanning/cards/scanning-card-deviation-analysis.webp" loading="lazy" width="960" height="640" alt="@T("A color deviation map comparing a scanned impeller with nominal CAD", "แผนที่สีเปรียบเทียบใบพัดที่สแกนกับ CAD ต้นแบบ")" /><div class="service-card-body"><h3>@T("Choose deviation analysis when…", "เลือก Deviation Analysis เมื่อ…")</h3><p>@T("You have nominal CAD and need to visualize where a manufactured, worn, bent, or modified object differs. The agreed output can include aligned comparison views and color-map reporting.", "มี CAD ต้นแบบและต้องการดูตำแหน่งที่ชิ้นงานผลิต สึก งอ หรือดัดแปลงแตกต่างกัน ผลส่งมอบอาจเป็นภาพเปรียบเทียบและรายงานแผนที่สี")</p></div></article>
-    </div></div></section>
+    <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
+        <strong>@T("On this page", "ในหน้านี้")</strong>
+        <a href="#scanning-selection-guide">@T("Deliverable choice", "เลือกผลส่งมอบ")</a>
+        <a href="#scanning-deliverables">@T("Deliverables", "ผลส่งมอบ")</a>
+        <a href="#scanning-workflow">@T("Workflow", "ขั้นตอน")</a>
+        <a href="#scanning-service-modes">@T("Onsite", "นอกสถานที่")</a>
+        <a href="#scanning-preparation">@T("Preparation", "การเตรียม")</a>
+        <a href="#scanning-onsite-checklist">@T("Checklist", "เช็กลิสต์")</a>
+        <a href="#scanning-limitations">@T("Limits", "ข้อจำกัด")</a>
+        <a href="#scanning-guides">@T("Guides", "คู่มือ")</a>
+        <a href="#scanning-faq">@T("FAQ", "คำถามที่พบบ่อย")</a>
+    </nav>
+
+    <section id="scanning-selection-guide" class="service-section scanning-selection-section">
+        <div class="service-container">
+            <header class="service-heading center">
+                <p class="service-eyebrow">@T("Choose the Deliverable First", "เลือกผลลัพธ์ก่อนสแกน")</p>
+                <h2>@T("Do you need a raw scan, reverse-engineered CAD, or deviation analysis?", "ต้องการ Raw Scan, CAD จาก Reverse Engineering หรือ Deviation Analysis?")</h2>
+                <p>@T("Scanning captures the object first. The output becomes more useful as each stage adds cleanup, reconstruction, or comparison.", "การสแกนเริ่มจากการเก็บข้อมูลของวัตถุ ผลลัพธ์จะพร้อมใช้งานมากขึ้นเมื่อแต่ละขั้นเพิ่มการทำความสะอาด การสร้าง CAD หรือการเปรียบเทียบ")</p>
+            </header>
+            <div class="scanning-workflow-timeline" data-scanning-workflow>
+                <ol class="scanning-workflow-steps" aria-label="@T("3D scanning workflow from capture to analysis", "ลำดับงานสแกน 3D ตั้งแต่เก็บข้อมูลจนถึงวิเคราะห์")">
+                    <li class="scanning-workflow-step" data-scanning-step>
+                        <article class="scanning-workflow-card">
+                            <figure class="scanning-workflow-figure">
+                                <img class="scanning-workflow-image" src="/src/images/services/scanning/workflow/scanning-workflow-capture.webp" loading="lazy" decoding="async" width="1536" height="1024" alt="@T("A structured-light 3D scanner capturing a secured aluminum housing", "เครื่องสแกน 3D แบบ Structured Light กำลังเก็บข้อมูลตัวเรือนอะลูมิเนียมที่ยึดอยู่บนแท่น")" />
+                                <figcaption>@T("Scanner + secured workpiece", "เครื่องสแกน + ชิ้นงานที่ยึดอยู่")</figcaption>
+                            </figure>
+                            <div class="scanning-workflow-card-body">
+                                <p class="scanning-workflow-kicker">@T("Start", "เริ่มต้น")</p>
+                                <h3>@T("Set up and capture the object", "จัดเตรียมและเก็บข้อมูลชิ้นงาน")</h3>
+                                <p>@T("We secure the workpiece, set up the scanner, and capture overlapping views before registering the scans into one coordinate space.", "ยึดชิ้นงานให้มั่นคง จัดเตรียมเครื่องสแกน และเก็บข้อมูลหลายมุมที่ซ้อนทับกันก่อนจัดแนวให้อยู่ในพิกัดเดียวกัน")</p>
+                                <div class="scanning-workflow-output"><span>@T("Capture", "เก็บข้อมูล")</span><span>@T("Align", "จัดแนว")</span></div>
+                            </div>
+                        </article>
+                        <span class="scanning-workflow-node" aria-hidden="true">1</span>
+                    </li>
+                    <li class="scanning-workflow-step" data-scanning-step>
+                        <article class="scanning-workflow-card">
+                            <figure class="scanning-workflow-figure">
+                                <img class="scanning-workflow-image" src="/src/images/services/scanning/art/scanning-art-raw-capture.webp" loading="lazy" decoding="async" width="1536" height="1024" alt="@T("An antique sculpture being captured as a raw 3D scan", "ประติมากรรมโบราณกำลังถูกเก็บข้อมูลเป็น Raw Scan 3D")" />
+                                <figcaption>@T("Physical sculpture → raw scan data", "ประติมากรรมจริง → ข้อมูลสแกนดิบ")</figcaption>
+                            </figure>
+                            <div class="scanning-workflow-card-body">
+                                <p class="scanning-workflow-kicker">@T("Stage 1", "ขั้นที่ 1")</p>
+                                <h3>@T("Raw Scan / Raw Data", "Raw Scan / ข้อมูลดิบ")</h3>
+                                <p>@T("A mesh or point cloud for visualization, digital preservation, rendering, or your own downstream processing.", "เมชหรือพอยต์คลาวด์สำหรับแสดงผล เก็บรักษาดิจิทัล เรนเดอร์ หรือประมวลผลต่อด้วยตัวเอง")</p>
+                                <div class="scanning-workflow-output"><span>STL</span><span>OBJ / PLY</span></div>
+                                <p class="scanning-workflow-caveat"><i class="fas fa-circle-info" aria-hidden="true"></i>@T("May still contain holes, noise, separate shells, or non-manifold edges.", "อาจยังมีรู สัญญาณรบกวน เมชแยก หรือขอบที่ไม่ปิด")</p>
+                            </div>
+                        </article>
+                        <span class="scanning-workflow-node" aria-hidden="true">2</span>
+                    </li>
+                    <li class="scanning-workflow-step" data-scanning-step>
+                        <article class="scanning-workflow-card">
+                            <figure class="scanning-workflow-figure">
+                                <img class="scanning-workflow-image" src="/src/images/services/scanning/workflow/scanning-workflow-clean-mesh.webp" loading="lazy" decoding="async" width="1536" height="1024" alt="@T("A complete watertight polygon mesh beside a physical engineering housing", "เมชโพลีกอนปิดสนิทพร้อมชิ้นส่วนวิศวกรรมจริงวางอยู่ข้างกัน")" />
+                                <figcaption>@T("Physical part → watertight mesh", "ชิ้นงานจริง → เมชปิดสนิท")</figcaption>
+                            </figure>
+                            <div class="scanning-workflow-card-body">
+                                <p class="scanning-workflow-kicker">@T("Stage 2", "ขั้นที่ 2")</p>
+                                <h3>@T("Cleaned Mesh", "Cleaned Mesh / เมชสะอาด")</h3>
+                                <p>@T("Noise is removed, suitable holes are closed, and the mesh is checked for a watertight print-ready result when included in scope.", "ลบสัญญาณรบกวน ปิดรูที่เหมาะสม และตรวจเมชให้ปิดสนิทพร้อมพิมพ์เมื่อรวมในขอบเขตงาน")</p>
+                                <div class="scanning-workflow-output"><span>STL</span><span>WATERTIGHT</span></div>
+                                <p class="scanning-workflow-caveat"><i class="fas fa-circle-info" aria-hidden="true"></i>@T("It is still triangular mesh—not editable CAD.", "ยังเป็นเมชสามเหลี่ยม ไม่ใช่ CAD ที่แก้ไขได้")</p>
+                            </div>
+                        </article>
+                        <span class="scanning-workflow-node" aria-hidden="true">3</span>
+                    </li>
+                    <li class="scanning-workflow-step" data-scanning-step>
+                        <article class="scanning-workflow-card">
+                            <figure class="scanning-workflow-figure">
+                                <img class="scanning-workflow-image" src="/src/images/services/scanning/workflow/scanning-workflow-reverse-engineering.webp" loading="lazy" decoding="async" width="1536" height="1024" alt="@T("An engineering housing beside an editable CAD reconstruction", "ชิ้นส่วนวิศวกรรมวางคู่กับ CAD ที่สร้างใหม่และแก้ไขได้")" />
+                                <figcaption>@T("Scan data → editable CAD", "ข้อมูลสแกน → CAD ที่แก้ไขได้")</figcaption>
+                            </figure>
+                            <div class="scanning-workflow-card-body">
+                                <p class="scanning-workflow-kicker">@T("Stage 3", "ขั้นที่ 3")</p>
+                                <h3>@T("Reverse Engineering / CAD", "Reverse Engineering / CAD")</h3>
+                                <p>@T("Features, interfaces, datums, and dimensions are reconstructed into editable geometry for engineering work.", "สร้างฟีเจอร์ ผิวประกอบ ดาตัม และขนาดใหม่เป็นรูปทรงที่แก้ไขได้สำหรับงานวิศวกรรม")</p>
+                                <div class="scanning-workflow-output"><span>STEP / IGES</span><span>DWG*</span></div>
+                                <p class="scanning-workflow-caveat"><i class="fas fa-circle-info" aria-hidden="true"></i>@T("Hidden design intent and assumptions need review.", "เจตนาการออกแบบที่มองไม่เห็นและสมมติฐานต้องทบทวน")</p>
+                            </div>
+                        </article>
+                        <span class="scanning-workflow-node" aria-hidden="true">4</span>
+                    </li>
+                    <li class="scanning-workflow-step" data-scanning-step>
+                        <article class="scanning-workflow-card">
+                            <figure class="scanning-workflow-figure">
+                                <img class="scanning-workflow-image" src="/src/images/services/scanning/workflow/scanning-workflow-deviation-analysis.webp" loading="lazy" decoding="async" width="1536" height="1024" alt="@T("A machined engineering housing with a false-color manufacturing deviation map", "ชิ้นส่วนวิศวกรรมที่ผลิตแล้วพร้อมแผนที่สีแสดงความคลาดเคลื่อนจากการผลิต")" />
+                                <figcaption>@T("Scan + nominal CAD → deviation map", "ข้อมูลสแกน + CAD ต้นแบบ → แผนที่สี")</figcaption>
+                            </figure>
+                            <div class="scanning-workflow-card-body">
+                                <p class="scanning-workflow-kicker">@T("Stage 4", "ขั้นที่ 4")</p>
+                                <h3>@T("Deviation Analysis", "Deviation Analysis / วิเคราะห์ความคลาดเคลื่อน")</h3>
+                                <p>@T("The scan is aligned to nominal CAD to show deformation, wear, or process variation with agreed views and limits.", "จัดแนวข้อมูลสแกนกับ CAD ต้นแบบเพื่อแสดงการเสียรูป การสึก หรือความแปรผันของกระบวนการตามมุมมองและช่วงที่ตกลง")</p>
+                                <div class="scanning-workflow-output"><span>@T("Color map", "แผนที่สี")</span><span>@T("Report", "รายงาน")</span></div>
+                                <p class="scanning-workflow-caveat"><i class="fas fa-circle-info" aria-hidden="true"></i>@T("Requires usable nominal CAD and an agreed alignment.", "ต้องมี CAD ต้นแบบที่ใช้ได้และวิธีจัดแนวที่ตกลง")</p>
+                            </div>
+                        </article>
+                        <span class="scanning-workflow-node" aria-hidden="true">5</span>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <section id="scanning-deliverables" class="service-section scanning-deliverables">
+        <div class="service-container">
+            <header class="service-heading center">
+                <p class="service-eyebrow">@T("What You Receive at Each Stage", "ผลลัพธ์ที่ได้รับในแต่ละขั้น")</p>
+                <h2>@T("From a scan-only STL to a DWG-ready engineering package", "จากไฟล์ STL จากการสแกน สู่ชุดงานวิศวกรรมพร้อม DWG")</h2>
+                <p>@T("A scanner captures a mesh. Each next stage adds a different kind of processing and unlocks a different use. Choose the stopping point that matches the work you need to do next.", "เครื่องสแกนเก็บข้อมูลเป็นเมช แต่ละขั้นต่อไปเพิ่มการประมวลผลคนละแบบและรองรับการใช้งานคนละประเภท เลือกจุดหยุดให้ตรงกับงานที่ต้องทำต่อ")</p>
+            </header>
+            <aside class="scanning-answer-callout" aria-label="@T("Short answer for a 3D scanning and DWG request", "คำตอบสั้น ๆ สำหรับงานสแกน 3D และ DWG")">
+                <div class="scanning-answer-copy">
+                    <span class="scanning-answer-icon"><i class="fas fa-route" aria-hidden="true"></i></span>
+                    <div>
+                        <strong>@T("Short answer for a scan + DWG request", "คำตอบสั้น ๆ สำหรับงานสแกน 3D + DWG")</strong>
+                        <p>@T("Scan-only normally delivers STL mesh data. DWG is a 2D drawing, so it requires an additional reverse-engineering and drafting stage. There is no fixed reduction because CAD/DWG effort varies; we can quote scan-only and CAD/DWG as separate line items.", "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมช STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG แตกต่างกัน เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้")</p>
+                    </div>
+                </div>
+                <div class="scanning-answer-path" aria-label="@T("Scanning deliverable path", "ลำดับผลส่งมอบจากการสแกน")" tabindex="0">
+                    <span>@T("3D scanning", "สแกน 3D")</span><i class="fas fa-arrow-right" aria-hidden="true"></i><span>STL</span><i class="fas fa-arrow-right" aria-hidden="true"></i><span class="is-emphasis">@T("Reverse Engineering", "Reverse Engineering")</span><i class="fas fa-arrow-right" aria-hidden="true"></i><span class="is-emphasis">STEP / DWG</span>
+                </div>
+            </aside>
+            <ol class="scanning-deliverable-grid">
+                <li class="scanning-deliverable-card">
+                    <div class="scanning-deliverable-top"><span class="scanning-deliverable-step">01</span><span class="scanning-deliverable-type">@T("Capture", "เก็บข้อมูล")</span></div>
+                    <figure class="scanning-deliverable-figure">
+                        <img class="scanning-deliverable-image" src="/src/images/services/scanning/cards/scanning-card-raw-mesh.webp" loading="lazy" decoding="async" width="960" height="640" alt="@T("A real mechanical part captured as a raw triangular scan mesh", "ชิ้นส่วนเครื่องกลจริงที่ถูกเก็บเป็นเมชสามเหลี่ยมจากการสแกน")" />
+                        <figcaption>@T("Physical part → triangular mesh", "ชิ้นงานจริง → เมชสามเหลี่ยม")</figcaption>
+                    </figure>
+                    <div class="scanning-deliverable-body">
+                        <div class="scanning-deliverable-files" aria-label="@T("Typical raw scan files", "ไฟล์สแกนดิบที่มักส่งมอบ")"><span class="scanning-file-chip">STL</span><span class="scanning-file-chip">OBJ / PLY*</span></div>
+                        <h3>@T("Raw scan / capture-only", "Raw Scan / เก็บข้อมูลดิบ")</h3>
+                        <p>@T("An aligned or lightly cleaned mesh for visualization, digital archiving, rendering, approximate measurement within the agreed scan capability, self-processing, or a reference for sculpting.", "เมชที่จัดแนวหรือทำความสะอาดเบื้องต้นสำหรับแสดงผล เก็บข้อมูลดิจิทัล เรนเดอร์ วัดในขอบเขตที่ตกลง นำไปประมวลผลต่อเอง หรือใช้อ้างอิงงานปั้น")</p>
+                        <dl class="scanning-deliverable-details">
+                            <div><dt>@T("Good for", "เหมาะกับ")</dt><dd>@T("Visualization, rendering, archiving, self deviation preparation", "งานแสดงผล เรนเดอร์ เก็บถาวร เตรียมวิเคราะห์ความคลาดเคลื่อนเอง")</dd></div>
+                            <div><dt>@T("If you stop here", "ถ้าหยุดที่ขั้นนี้")</dt><dd>@T("Holes, noise, non-manifold edges, separate shells, rough or uneven surfaces, and unseen surfaces may remain. It is not editable CAD or directly machinable/manufacturable.", "อาจยังมีรู สัญญาณรบกวน ขอบไม่ปิด เมชแยก ผิวหยาบหรือไม่เรียบ และผิวที่มองไม่เห็นขาดหาย ไม่ใช่ CAD ที่แก้ไขได้ และยังไม่พร้อมกัดหรือผลิตต่อได้ทันที")</dd></div>
+                        </dl>
+                    </div>
+                </li>
+                <li class="scanning-deliverable-card is-print-ready">
+                    <div class="scanning-deliverable-top"><span class="scanning-deliverable-step">02</span><span class="scanning-deliverable-type">@T("Mesh preparation", "เตรียมเมช")</span></div>
+                    <figure class="scanning-deliverable-figure">
+                        <img class="scanning-deliverable-image" src="/src/images/services/scanning/art/scanning-art-clean-mesh.webp" loading="lazy" decoding="async" width="1536" height="1024" alt="@T("An antique sculpture shown beside a clean, watertight 3D mesh", "ประติมากรรมโบราณวางคู่กับเมช 3D ที่ปิดสนิทพร้อมพิมพ์")" />
+                        <figcaption>@T("Antique sculpture → clean watertight mesh", "ประติมากรรมโบราณ → เมชปิดสนิทพร้อมพิมพ์")</figcaption>
+                    </figure>
+                    <div class="scanning-deliverable-body">
+                        <div class="scanning-deliverable-files" aria-label="@T("Typical print-ready mesh files", "ไฟล์เมชพร้อมพิมพ์ที่มักส่งมอบ")"><span class="scanning-file-chip">STL</span><span class="scanning-file-chip is-accent">WATERTIGHT</span></div>
+                        <h3>@T("Cleaned / print-ready mesh", "Cleaned / Print-ready Mesh")</h3>
+                        <p>@T("Noise and unrelated shells are removed, appropriate holes are closed, scale and orientation are checked, and the mesh is made watertight when that scope is agreed.", "ลบสัญญาณรบกวนและเมชส่วนเกิน ปิดรูที่เหมาะสม ตรวจสเกลและทิศทาง และทำให้เมชปิดสนิทเมื่อรวมขอบเขตงานนี้")</p>
+                        <dl class="scanning-deliverable-details">
+                            <div><dt>@T("Good for", "เหมาะกับ")</dt><dd>@T("Direct 3D printing, mesh visualization, fit checks, basic mesh editing", "พิมพ์ 3D โดยตรง แสดงผลเมช ทดสอบประกอบ และแก้ไขเมชเบื้องต้น")</dd></div>
+                            <div><dt>@T("If you stop here", "ถ้าหยุดที่ขั้นนี้")</dt><dd>@T("A closed STL is still triangular mesh. Filled areas are informed repairs, not recovered hidden design intent; it has no parametric features or manufacturing drawing.", "STL ที่ปิดสนิทยังเป็นเมชสามเหลี่ยม พื้นที่ที่ปิดคือการซ่อมตามข้อมูลที่มี ไม่ใช่การกู้เจตนาการออกแบบที่มองไม่เห็น และไม่มีฟีเจอร์พาราเมตริกหรือแบบผลิต")</dd></div>
+                        </dl>
+                    </div>
+                </li>
+                <li class="scanning-deliverable-card is-engineering">
+                    <div class="scanning-deliverable-top"><span class="scanning-deliverable-step">03</span><span class="scanning-deliverable-type">@T("Reconstruction", "สร้างแบบใหม่")</span></div>
+                    <figure class="scanning-deliverable-figure">
+                        <img class="scanning-deliverable-image" src="/src/images/services/scanning/cards/scanning-card-reverse-engineering.webp" loading="lazy" decoding="async" width="960" height="640" alt="@T("An engineer reconstructing editable CAD from scanned geometry", "วิศวกรกำลังสร้าง CAD ที่แก้ไขได้จากรูปทรงที่สแกน")" />
+                        <figcaption>@T("Mesh → editable CAD → drawing", "เมช → CAD ที่แก้ไขได้ → แบบเขียน")</figcaption>
+                    </figure>
+                    <div class="scanning-deliverable-body">
+                        <div class="scanning-deliverable-files" aria-label="@T("Typical reverse engineering files", "ไฟล์จาก Reverse Engineering ที่มักส่งมอบ")"><span class="scanning-file-chip is-accent">STEP / IGES</span><span class="scanning-file-chip is-accent">DWG / DXF*</span></div>
+                        <h3>@T("Reverse engineering / CAD + DWG", "Reverse Engineering / CAD + DWG")</h3>
+                        <p>@T("Features, datums, interfaces, dimensions, and design assumptions are reconstructed into editable CAD. A 2D DWG/DXF drawing can be added when the drawing scope is included.", "สร้างฟีเจอร์ ดาตัม ผิวประกอบ ขนาด และสมมติฐานการออกแบบใหม่เป็น CAD ที่แก้ไขได้ และเพิ่มแบบเขียน DWG/DXF ได้เมื่อรวมขอบเขตงานแบบเขียน")</p>
+                        <dl class="scanning-deliverable-details">
+                            <div><dt>@T("Good for", "เหมาะกับ")</dt><dd>@T("CNC machining, replacement parts, design changes, assembly interfaces", "งาน CNC อะไหล่ทดแทน การปรับแบบ และจุดประกอบ")</dd></div>
+                            <div><dt>@T("If you stop here", "ถ้าหยุดที่ขั้นนี้")</dt><dd>@T("This is a reconstruction, not a guaranteed recovery of the original CAD history. Wear, damage, hidden geometry, and design intent need review and agreed assumptions.", "เป็นการสร้างแบบใหม่ ไม่ใช่การกู้ประวัติ CAD เดิมที่รับรองได้ การสึก ความเสียหาย รูปทรงที่มองไม่เห็น และเจตนาการออกแบบต้องทบทวนและตกลงสมมติฐาน")</dd></div>
+                        </dl>
+                    </div>
+                </li>
+                <li class="scanning-deliverable-card">
+                    <div class="scanning-deliverable-top"><span class="scanning-deliverable-step">04</span><span class="scanning-deliverable-type">@T("Compare", "เปรียบเทียบ")</span></div>
+                    <figure class="scanning-deliverable-figure">
+                        <img class="scanning-deliverable-image" src="/src/images/services/scanning/cards/scanning-card-deviation-analysis.webp" loading="lazy" decoding="async" width="960" height="640" alt="@T("A color-map deviation analysis comparing a scanned part with nominal CAD", "การวิเคราะห์ความคลาดเคลื่อนด้วยแผนที่สีเปรียบเทียบชิ้นงานสแกนกับ CAD ต้นแบบ")" />
+                        <figcaption>@T("Scan + nominal CAD → color map", "ข้อมูลสแกน + CAD ต้นแบบ → แผนที่สี")</figcaption>
+                    </figure>
+                    <div class="scanning-deliverable-body">
+                        <div class="scanning-deliverable-files" aria-label="@T("Typical deviation analysis outputs", "ผลลัพธ์จาก Deviation Analysis ที่มักส่งมอบ")"><span class="scanning-file-chip">COLOR MAP</span><span class="scanning-file-chip">REPORT</span></div>
+                        <h3>@T("Deviation analysis / inspection report", "Deviation Analysis / รายงานตรวจสอบ")</h3>
+                        <p>@T("The scan is aligned to nominal CAD to show where the manufactured, worn, bent, or modified part differs, with agreed views, sections, limits, and reporting format.", "จัดแนวข้อมูลสแกนกับ CAD ต้นแบบเพื่อแสดงตำแหน่งที่ชิ้นงานผลิต สึก งอ หรือดัดแปลงแตกต่างกัน พร้อมภาพตัด จุดวัด ช่วงสี และรูปแบบรายงานที่ตกลง")</p>
+                        <dl class="scanning-deliverable-details">
+                            <div><dt>@T("Good for", "เหมาะกับ")</dt><dd>@T("Quality review, deformation, wear, fit investigation, process feedback", "ทบทวนคุณภาพ การเสียรูป การสึก ตรวจสอบการประกอบ และปรับปรุงกระบวนการ")</dd></div>
+                            <div><dt>@T("If you stop here", "ถ้าหยุดที่ขั้นนี้")</dt><dd>@T("It needs usable nominal CAD and a defined alignment. A color map is not automatically certified dimensional inspection and does not replace manufacturing CAD.", "ต้องมี CAD ต้นแบบที่ใช้ได้และวิธีจัดแนวที่ชัดเจน แผนที่สีไม่ใช่การตรวจมิติรับรองโดยอัตโนมัติ และไม่ใช่ CAD สำหรับผลิต")</dd></div>
+                        </dl>
+                    </div>
+                </li>
+            </ol>
+            <p class="scanning-deliverable-footnote">@T("* Availability depends on the capture method, source data, and agreed scope.", "* ขึ้นกับวิธีเก็บข้อมูล ข้อมูลต้นทาง และขอบเขตงานที่ตกลง")</p>
+            <div class="scanning-deliverable-footer">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                <p>@T("You can stop at any stage. Tell us what you want to do with the file next, and we will quote only the processing needed for that outcome.", "คุณสามารถหยุดที่ขั้นใดก็ได้ แจ้งเราว่าจะนำไฟล์ไปทำอะไรต่อ แล้วเราจะเสนอราคาเฉพาะงานประมวลผลที่จำเป็นต่อผลลัพธ์นั้น")</p>
+                <a class="service-button service-button-secondary" href="#scanning-faq">@T("Read the scanning FAQ", "อ่านคำถามงานสแกน") <i class="fas fa-arrow-down" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </section>
 
     <section id="scanning-workflow" class="service-section service-section-soft"><div class="service-container service-split reverse"><img class="service-split-image" src="/src/images/services/scanning/scanning-workflow.webp" loading="lazy" width="1776" height="887" alt="@T("Physical part, raw scan mesh, reverse-engineered CAD, and deviation color map", "ชิ้นงานจริง เมชจากการสแกน CAD จาก Reverse Engineering และแผนที่สีความคลาดเคลื่อน")" /><div class="service-copy"><p class="service-eyebrow">@T("A Staged Workflow", "ขั้นตอนที่แยกชัดเจน")</p><h2>@T("What happens at each 3D scanning stage?", "แต่ละขั้นตอนของงานสแกน 3D ทำอะไร?")</h2><p>@T("Each stage adds work and a different kind of information. Ordering only the stage you need avoids paying for unnecessary modeling while ensuring the output is usable.", "แต่ละขั้นเพิ่มงานและข้อมูลคนละประเภท การเลือกเฉพาะขั้นที่จำเป็นช่วยลดงานเกินความต้องการและทำให้ไฟล์ใช้งานได้จริง")</p></div></div></section>
 
@@ -51,13 +245,89 @@
         <article class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/scanning/cards/scanning-card-difficult-surfaces.webp" loading="lazy" width="960" height="640" alt="@T("A reflective component partly treated with removable matte scanning spray and targets", "ชิ้นงานผิวเงาที่เตรียมบางส่วนด้วยสเปรย์สแกนแบบด้านและเป้าสแกน")" /><div class="service-card-body"><h3>@T("Prepare difficult surfaces", "เตรียมผิวที่สแกนยาก")</h3><p>@T("Reflective, transparent, translucent, or very dark surfaces may need controlled lighting, targets, or temporary removable scanning spray with owner approval.", "ผิวเงา ใส โปร่งแสง หรือดำมากอาจต้องควบคุมแสง ติดเป้า หรือใช้สเปรย์สแกนแบบล้างออกได้เมื่อเจ้าของอนุมัติ")</p></div></article>
     </div></div></section>
 
+    <section id="scanning-onsite-checklist" class="service-section service-section-soft scanning-onsite-checklist">
+        <div class="service-container">
+            <header class="service-heading scanning-checklist-heading">
+                <div>
+                    <p class="service-eyebrow">@T("Onsite 3D Scanning Checklist", "เช็กลิสต์เตรียมงานสแกน 3D นอกสถานที่")</p>
+                    <h2>@T("Prepare the site, the part, and the result you need", "เตรียมพื้นที่ ชิ้นงาน และผลลัพธ์ที่ต้องการให้พร้อม")</h2>
+                    <p>@T("Use this checklist before an onsite visit. You do not need every answer to contact us—we will review unknowns, feasibility, and assumptions with you.", "ใช้รายการนี้ก่อนนัดหมายสแกนนอกสถานที่ ไม่จำเป็นต้องมีคำตอบครบทุกข้อก่อนติดต่อ เราจะช่วยทบทวนสิ่งที่ยังไม่ทราบ ความเป็นไปได้ และสมมติฐานร่วมกัน")</p>
+                </div>
+                <div class="scanning-checklist-actions">
+                    <button class="service-button service-button-primary" type="button" onclick="window.print()">@T("Print / save as PDF", "พิมพ์ / บันทึกเป็น PDF") <i class="fas fa-file-pdf" aria-hidden="true"></i></button>
+                    <a class="service-button service-button-secondary" href="#scanning-faq">@T("Read the scan FAQ", "อ่านคำถามงานสแกน") <i class="fas fa-arrow-down" aria-hidden="true"></i></a>
+                </div>
+            </header>
+            <div class="scanning-checklist-intro">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                <p>@T("The print button opens your browser's print dialog. Choose \"Save as PDF\" to download this localized checklist or print it for the onsite team.", "ปุ่มพิมพ์จะเปิดหน้าต่างพิมพ์ของเบราว์เซอร์ เลือก \"บันทึกเป็น PDF\" เพื่อดาวน์โหลดเช็กลิสต์ภาษาที่เลือก หรือพิมพ์ส่งให้ทีมงานหน้างาน")</p>
+            </div>
+            <div class="scanning-checklist-grid">
+                <fieldset class="scanning-checklist-card">
+                    <legend><span class="scanning-checklist-number">01</span><span>@T("Project brief and intended use", "รายละเอียดงานและการใช้งาน")</span></legend>
+                    <p>@T("Tell the team what success looks like before capture begins.", "บอกทีมงานให้ชัดว่าผลลัพธ์ที่ต้องการคืออะไร ก่อนเริ่มเก็บข้อมูล")</p>
+                    <div class="scanning-checklist-list">
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Identify the part or assembly, quantity, approximate size, weight, and whether it is fixed in place.", "ระบุชิ้นงานหรือชุดประกอบ จำนวน ขนาดโดยประมาณ น้ำหนัก และติดตั้งอยู่กับที่หรือไม่")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("State the intended use: visualization, archive, STL/OBJ/PLY mesh, watertight mesh for printing, editable CAD/STEP/DWG, or deviation analysis.", "ระบุการใช้งาน: แสดงผล เก็บข้อมูล เมช STL/OBJ/PLY เมชปิดสนิทสำหรับพิมพ์ CAD/STEP/DWG ที่แก้ไขได้ หรือ Deviation Analysis")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Mark the exact surfaces, features, dimensions, interfaces, or hidden areas that must be captured.", "ระบุผิว ฟีเจอร์ ขนาด ผิวประกอบ หรือพื้นที่ที่มองไม่เห็นซึ่งต้องการให้เก็บข้อมูลเป็นพิเศษ")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Tell us about any additional modifications needed after scanning, such as cleanup, hole filling, smoothing, CAD reconstruction, drawings, or reports.", "แจ้งงานปรับแก้เพิ่มเติมที่ต้องการหลังสแกน เช่น เก็บเมช ปิดรู ทำผิวเรียบ สร้าง CAD แบบเขียน หรือรายงาน")</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="scanning-checklist-card">
+                    <legend><span class="scanning-checklist-number">02</span><span>@T("Work area and site access", "พื้นที่ทำงานและการเข้าถึง")</span></legend>
+                    <p>@T("The team needs safe space to move around the part and stable conditions for repeated views.", "ทีมงานต้องมีพื้นที่ปลอดภัยสำหรับเดินรอบชิ้นงานและสภาพแวดล้อมที่คงที่สำหรับสแกนหลายมุม")</p>
+                    <div class="scanning-checklist-list">
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Provide at least one accessible 220V outlet near the work area and tell us about extension or site power restrictions.", "มีปลั๊กไฟ 220V อย่างน้อย 1 จุดใกล้พื้นที่ทำงาน และแจ้งข้อจำกัดเรื่องสายต่อหรือไฟของหน้างาน")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Clear a safe path and enough working clearance for the scanning team to walk around the required surfaces.", "เปิดทางและพื้นที่ทำงานให้ปลอดภัยเพียงพอ เพื่อให้ทีมงานเดินรอบผิวที่ต้องการสแกนได้")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Arrange access, loading/parking, lifts or stairs, site induction, PPE, permits, and a site contact who can approve decisions.", "เตรียมการเข้าพื้นที่ จุดจอดหรือขนย้าย ลิฟต์หรือบันได การอบรมหน้างาน PPE ใบอนุญาต และผู้ประสานงานที่อนุมัติได้")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Control direct sunlight, moving lights, rain, wind, vibration, dust, heat, and nearby moving machinery during capture.", "ควบคุมแสงแดดโดยตรง ไฟที่เคลื่อน ฝน ลม การสั่น ฝุ่น ความร้อน และเครื่องจักรที่เคลื่อนไหวระหว่างสแกน")</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="scanning-checklist-card">
+                    <legend><span class="scanning-checklist-number">03</span><span>@T("Workpiece preparation", "การเตรียมชิ้นงาน")</span></legend>
+                    <p>@T("The scan captures the physical condition present on the day, so prepare the surface and operating state carefully.", "การสแกนเก็บสภาพทางกายภาพที่มีอยู่ในวันทำงาน จึงควรเตรียมผิวและสภาพการทำงานให้เหมาะสม")</p>
+                    <div class="scanning-checklist-list">
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Clean and dry the part: remove grease, dust, oil, coolant, loose dirt, and temporary covers where safe.", "ทำความสะอาดและเช็ดให้แห้ง ล้างคราบจาระบี ฝุ่น น้ำมัน น้ำหล่อเย็น สิ่งสกปรก และวัสดุปิดชั่วคราวเมื่อปลอดภัย")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Make the part stationary and secure; stop mechanisms and agree safe isolation or lockout with the site owner.", "ทำให้ชิ้นงานอยู่นิ่งและยึดให้มั่นคง หยุดกลไก และตกลงการแยกพลังงานหรือ Lockout กับเจ้าของพื้นที่อย่างปลอดภัย")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Cool hot parts to a safe, stable condition and tell us about any process state that must be preserved.", "ลดอุณหภูมิชิ้นงานร้อนให้อยู่ในสภาพปลอดภัยและคงที่ พร้อมแจ้งสภาพกระบวนการที่ต้องการรักษาไว้")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Flag reflective, transparent, translucent, or very dark surfaces so removable spray, targets, or alternate capture methods can be approved.", "แจ้งผิวเงา ใส โปร่งแสง หรือดำมากล่วงหน้า เพื่อพิจารณาสเปรย์ล้างออกได้ เป้าสแกน หรือวิธีเก็บข้อมูลอื่นโดยขออนุมัติ")</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="scanning-checklist-card">
+                    <legend><span class="scanning-checklist-number">04</span><span>@T("Deviation analysis inputs", "ข้อมูลสำหรับ Deviation Analysis")</span></legend>
+                    <p>@T("Deviation analysis needs a reference and a defined interpretation—not only a scan file.", "Deviation Analysis ต้องมีข้อมูลอ้างอิงและวิธีแปลผลที่ชัดเจน ไม่ใช่แค่ไฟล์สแกน")</p>
+                    <div class="scanning-checklist-list">
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Provide the original or nominal CAD file, correct revision, units, coordinate system, and related drawing if available.", "เตรียมไฟล์ CAD ต้นฉบับหรือ CAD ต้นแบบ Revision ที่ถูกต้อง หน่วย ระบบพิกัด และแบบงานที่เกี่ยวข้องถ้ามี")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Define the deviation band, color scale, tolerance or pass/fail limits, such as the agreed positive and negative range in mm.", "กำหนดช่วง Deviation แถบสี ค่าคลาดเคลื่อน หรือเกณฑ์ผ่าน/ไม่ผ่าน เช่น ช่วงบวกและลบเป็นมิลลิเมตรที่ตกลง")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Identify points, surfaces, datums, sections, interfaces, and specific areas of interest for the report.", "ระบุจุด ผิว Datum ภาพตัด ผิวประกอบ และพื้นที่สนใจเฉพาะสำหรับรายงาน")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Confirm the alignment method, report views, labels, file format, and any regions that should be excluded or treated as unknown.", "ยืนยันวิธีจัดแนว มุมมองรายงาน ป้ายกำกับ รูปแบบไฟล์ และพื้นที่ที่ให้ตัดออกหรือระบุว่าไม่ทราบ")</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="scanning-checklist-card">
+                    <legend><span class="scanning-checklist-number">05</span><span>@T("Before the team arrives", "ก่อนทีมงานเข้าพื้นที่")</span></legend>
+                    <p>@T("A few final confirmations help the onsite session run safely and efficiently.", "การยืนยันขั้นสุดท้ายช่วยให้งานนอกสถานที่ปลอดภัยและดำเนินได้ราบรื่น")</p>
+                    <div class="scanning-checklist-list">
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Send site photos, approximate dimensions, location, access restrictions, and the best contact for the visit.", "ส่งรูปหน้างาน ขนาดโดยประมาณ สถานที่ ข้อจำกัดการเข้าถึง และชื่อผู้ประสานงานหลัก")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Confirm whether photography, reference targets, removable spray, partial disassembly, and temporary covers are permitted.", "ยืนยันว่าอนุญาตการถ่ายรูป การติดเป้า การใช้สเปรย์ล้างออกได้ การถอดบางส่วน และการเปิดฝาชั่วคราวหรือไม่")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Have the part in the agreed operating state and allow time for setup, targets, surface preparation, and repeat passes if needed.", "เตรียมชิ้นงานให้อยู่ในสภาพที่ตกลง และเผื่อเวลาตั้งเครื่อง ติดเป้า เตรียมผิว และสแกนซ้ำหากจำเป็น")</span></label>
+                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Review the assumptions, excluded areas, target files, and delivery recipient with the team before they leave.", "ทบทวนสมมติฐาน พื้นที่ที่ไม่รวม ไฟล์เป้าหมาย และผู้รับไฟล์กับทีมงานก่อนจบงาน")</span></label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="scanning-checklist-footer">
+                <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                <p>@T("If any item is not available yet, tell us early. We can assess the gap, propose a safe workaround, and state the assumption in the quotation.", "หากยังเตรียมข้อใดไม่ได้ ให้แจ้งเราล่วงหน้า เราจะช่วยประเมินช่องว่าง เสนอทางเลือกที่ปลอดภัย และระบุสมมติฐานไว้ในใบเสนอราคา")</p>
+            </div>
+        </div>
+    </section>
+
     <section id="scanning-limitations" class="service-section service-section-soft"><div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("What Scans Well—and What Does Not", "สิ่งที่สแกนได้ดีและข้อจำกัด")</p><h2>@T("3D scanning needs line of sight and a stable surface", "การสแกน 3D ต้องมองเห็นผิวและวัตถุต้องคงที่")</h2></header><div class="service-table-wrap"><table class="service-table"><thead><tr><th>@T("Condition", "ลักษณะวัตถุ")</th><th>@T("What usually happens", "ผลที่มักเกิด")</th><th>@T("Possible preparation", "แนวทางเตรียม")</th></tr></thead><tbody>
         <tr><td>@T("Matte, rigid, textured surfaces", "ผิวด้าน แข็ง และมีรายละเอียด")</td><td>@T("Usually provide stable visual geometry for registration and capture.", "มักให้ข้อมูลรูปทรงที่เสถียรต่อการจัดแนวและเก็บผิว")</td><td>@T("Clean, expose critical areas, and keep the object still.", "ทำความสะอาด เปิดจุดสำคัญ และรักษาให้นิ่ง")</td></tr>
         <tr><td>@T("Shiny, mirror-like, transparent, or translucent", "ผิวเงากระจก ใส หรือโปร่งแสง")</td><td>@T("Light reflects or passes through, causing missing, distorted, or noisy data.", "แสงสะท้อนหรือทะลุผ่าน ทำให้ข้อมูลขาด บิดเบือน หรือมีสัญญาณรบกวน")</td><td>@T("Controlled lighting, removable matte spray, targets, or another measurement method after review.", "ควบคุมแสง ใช้สเปรย์ผิวด้านล้างออก ติดเป้า หรือเลือกวิธีวัดอื่นหลังประเมิน")</td></tr>
         <tr><td>@T("Deep holes, narrow gaps, undercuts, and internal passages", "รูลึก ช่องแคบ อันเดอร์คัต และทางเดินภายใน")</td><td>@T("The scanner cannot capture surfaces it cannot see; shadowed geometry may remain incomplete.", "เครื่องสแกนเก็บผิวที่มองไม่เห็นไม่ได้ รูปทรงในเงาหรือภายในอาจไม่ครบ")</td><td>@T("Multiple angles, partial disassembly when approved, complementary measurement, or explicitly excluded regions.", "สแกนหลายมุม ถอดบางส่วนเมื่ออนุมัติ ใช้วิธีวัดเสริม หรือระบุส่วนที่ไม่รวม")</td></tr>
         <tr><td>@T("Soft, flexible, moving, or hot objects", "วัตถุนิ่ม ยืดหยุ่น เคลื่อนไหว หรือร้อน")</td><td>@T("Shape changes between views and registration becomes unreliable or unsafe.", "รูปทรงเปลี่ยนระหว่างภาพ ทำให้จัดแนวไม่น่าเชื่อถือหรือไม่ปลอดภัย")</td><td>@T("Stabilize safely, cool or stop equipment, define one operating state, or use a different capture strategy.", "ทำให้นิ่งและปลอดภัย ลดอุณหภูมิหรือหยุดเครื่อง กำหนดสภาพเดียว หรือเลือกวิธีอื่น")</td></tr>
         <tr><td>@T("Very small edges, threads, engraving, or surface texture", "ขอบเล็กมาก เกลียว ตัวสลัก หรือผิวละเอียด")</td><td>@T("Features below the practical sampling and optical limit may soften or disappear.", "รายละเอียดต่ำกว่าขีดจำกัดการเก็บข้อมูลและแสงอาจมนหรือหาย")</td><td>@T("Identify critical features early so equipment, close-range capture, or complementary inspection can be evaluated.", "ระบุจุดสำคัญล่วงหน้าเพื่อเลือกอุปกรณ์ ระยะใกล้ หรือการตรวจเสริม")</td></tr>
-    </tbody></table></div><div class="service-note">@T("Achievable detail and measurement uncertainty depend on object size, surface, access, environment, scanner setup, alignment strategy, and requested output. A single accuracy number cannot describe every project.", "รายละเอียดและความไม่แน่นอนขึ้นกับขนาด ผิว การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลลัพธ์ที่ต้องการ จึงไม่ควรใช้ตัวเลขความแม่นยำเดียวกับทุกโครงการ")</div></div></section>
+    </tbody></table></div><div class="service-note">@T("Achievable detail and measurement uncertainty depend on object size, surface, access, environment, scanner setup, alignment strategy, and requested output. A single accuracy number cannot describe every project.", "รายละเอียดและความไม่แน่นอนขึ้นกับขนาด ผิว การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลลัพธ์ที่ต้องการ จึงไม่ควรใช้ตัวเลขความแม่นยำเดียวกับทุกโปรเจ็ค")</div></div></section>
 
     <section id="scanning-guides" class="service-section service-section-soft"><div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("MALIEV 3D Scanning Guides", "คู่มืองานสแกน 3D จาก MALIEV")</p><h2>@T("Prepare the part and choose the right deliverable", "เตรียมชิ้นงานและเลือกไฟล์ส่งมอบให้เหมาะสม")</h2><p>@T("Use these guides to plan access, surface preparation, reverse engineering, and replacement-part reconstruction.", "ใช้คู่มือเหล่านี้วางแผนการเข้าถึง การเตรียมผิว Reverse Engineering และการสร้างอะไหล่ทดแทน")</p></header><div class="service-card-grid">
         <article class="service-card"><h3>@T("Prepare a part for scanning", "เตรียมชิ้นงานก่อนสแกน 3D")</h3><p>@T("Check access, surface condition, reflective or transparent regions, reference targets, and the required output before the visit.", "ตรวจสอบการเข้าถึง สภาพผิว บริเวณเงาหรือใส จุดอ้างอิง และไฟล์ที่ต้องการก่อนนัดหมาย")</p><p><a href="https://shop.maliev.com/blogs/news/prepare-part-for-3d-scanning-service">@T("Read the scanning-preparation guide", "อ่านคู่มือเตรียมชิ้นงานสแกน")</a></p></article>
@@ -70,7 +340,8 @@
         <details><summary>@T("How long does 3D scanning take?", "งานสแกน 3D ใช้เวลานานเท่าไร?")</summary><p>@T("Simple scanning work can be completed within the same day. Lead time increases with part complexity, surface preparation, the number of scan positions, mesh cleanup, reverse engineering, inspection, and reporting requirements.", "งานสแกนที่ไม่ซับซ้อนอาจเสร็จภายในวันเดียว ระยะเวลาจะเพิ่มตามความซับซ้อนของชิ้นงาน การเตรียมผิว จำนวนตำแหน่งสแกน การเก็บเมช งาน Reverse Engineering การตรวจสอบ และรูปแบบรายงาน")</p></details>
         <details><summary>@T("Which part should I bring for scanning, and can broken parts be repaired digitally?", "ควรนำชิ้นงานสภาพใดมาสแกน และซ่อมชิ้นงานที่แตกในโมเดลได้หรือไม่?")</summary><p>@T("Bring the example in the best available condition because the scan captures the geometry that is physically present. Broken parts can still be scanned, and missing or damaged areas can often be reconstructed or modified in the 3D model when sufficient reference geometry and design intent are available.", "ควรนำชิ้นงานที่มีสภาพดีที่สุดเท่าที่มี เพราะการสแกนจะเก็บรูปทรงที่มีอยู่จริง ชิ้นงานแตกยังสามารถสแกนได้ และมักสร้างหรือแก้ไขส่วนที่หายหรือเสียหายในโมเดล 3D ได้เมื่อมีรูปทรงอ้างอิงและข้อมูลเจตนาการออกแบบเพียงพอ")</p></details>
         <details><summary>@T("What sizes and subjects can you scan?", "สแกนวัตถุขนาดและประเภทใดได้บ้าง?")</summary><p>@T("Our optical scanners can capture subjects ranging from small gears to a 6-metre private aircraft when access and conditions are suitable. Sculptures, art pieces, and a stationary human can also be scanned. Scope, achievable detail, setup, and deliverables are assessed for each subject.", "เครื่องสแกนแบบออปติคัลของเรารองรับตั้งแต่เฟืองขนาดเล็กไปจนถึงเครื่องบินส่วนตัวขนาด 6 เมตรเมื่อพื้นที่และสภาพแวดล้อมเหมาะสม ประติมากรรม งานศิลปะ และบุคคลที่อยู่นิ่งก็สามารถสแกนได้ โดยจะประเมินขอบเขต รายละเอียดที่ทำได้ การตั้งเครื่อง และผลส่งมอบเป็นรายกรณี")</p></details>
-        <details><summary>@T("Which scan files can you deliver?", "ส่งมอบไฟล์สแกนรูปแบบใดได้บ้าง?")</summary><p>@T("Raw geometry is commonly delivered as STL. We can also provide OBJ with captured colour when the project and capture method support colour data. Reverse-engineering projects can add editable CAD deliverables such as STEP or IGES as agreed.", "ข้อมูลรูปทรงดิบโดยทั่วไปส่งเป็น STL และสามารถส่ง OBJ พร้อมสีได้เมื่อโครงการและวิธีเก็บข้อมูลรองรับสี งาน Reverse Engineering สามารถเพิ่มไฟล์ CAD ที่แก้ไขได้ เช่น STEP หรือ IGES ตามขอบเขตที่ตกลง")</p></details>
+        <details><summary>@T("Which scan files can you deliver?", "ส่งมอบไฟล์สแกนรูปแบบใดได้บ้าง?")</summary><p>@T("Raw geometry is commonly delivered as STL. We can also provide OBJ with captured colour when the project and capture method support colour data. Reverse-engineering projects can add editable CAD deliverables such as STEP or IGES as agreed.", "ข้อมูลรูปทรงดิบโดยทั่วไปส่งเป็น STL และสามารถส่ง OBJ พร้อมสีได้เมื่อโปรเจ็คและวิธีเก็บข้อมูลรองรับสี งาน Reverse Engineering สามารถเพิ่มไฟล์ CAD ที่แก้ไขได้ เช่น STEP หรือ IGES ตามขอบเขตที่ตกลง")</p></details>
+        <details><summary>@T("Can I order only 3D scanning and receive a DWG?", "ถ้าต้องการแค่สแกน 3D กับไฟล์ DWG ต้องทำอย่างไร?")</summary><p>@T("Scan-only normally delivers a triangular mesh such as STL. DWG is a 2D engineering drawing, so it needs a separate reverse-engineering and drafting stage. There is no fixed reduction because CAD/DWG effort depends on the geometry and drawing requirements; we can quote scan-only and CAD/DWG as separate line items.", "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมชสามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้")</p></details>
         <details><summary>@T("What is the scanner's volumetric accuracy?", "ความแม่นยำเชิงปริมาตรของเครื่องสแกนเท่าไร?")</summary><p>@T("The scanner's volumetric accuracy specification is 0.02 mm + 0.06 mm/m. Actual project results also depend on object size and surface, preparation, access, environment, scanner setup, alignment strategy, and the requested deliverable.", "ข้อกำหนดความแม่นยำเชิงปริมาตรของเครื่องสแกนคือ 0.02 มม. + 0.06 มม./ม. ผลลัพธ์จริงของแต่ละโครงการยังขึ้นกับขนาดและผิวชิ้นงาน การเตรียม การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลส่งมอบที่ต้องการ")</p></details>
         <details><summary>@T("Can you scan outdoors, buildings, or factories?", "สแกนกลางแจ้ง อาคาร หรือโรงงานได้หรือไม่?")</summary><p>@T("We cannot perform optical 3D scanning outdoors under direct sunlight because sunlight overwhelms the projected light used by this scanning technology. We also do not offer whole-building or whole-factory scanning because we do not have a LiDAR 3D scanner. Onsite scanning of suitable parts and equipment remains available in controlled lighting.", "เราไม่สามารถสแกน 3D แบบออปติคัลกลางแจ้งภายใต้แสงแดดโดยตรงได้ เพราะแสงแดดรบกวนแสงที่เครื่องฉายซึ่งเป็นข้อจำกัดของเทคโนโลยีนี้ และไม่รับสแกนอาคารหรือโรงงานทั้งพื้นที่เนื่องจากเราไม่มีเครื่องสแกน 3D แบบ LiDAR แต่ยังให้บริการสแกนชิ้นส่วนและอุปกรณ์นอกสถานที่ได้เมื่อควบคุมแสงอย่างเหมาะสม")</p></details>
         <details><summary>@T("Can every object be scanned?", "ทุกวัตถุสแกนได้หรือไม่?")</summary><p>@T("No. The scanner needs line of sight and a stable optical response. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, partial results, another method, or may not be feasible.", "ไม่ได้ทุกวัตถุ เครื่องต้องมองเห็นผิวและรับแสงที่เสถียร วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ได้ข้อมูลบางส่วน ใช้วิธีอื่น หรือทำไม่ได้")</p></details>
@@ -84,6 +355,8 @@
 
     <section class="service-cta-wrap"><div class="service-container service-cta"><div><h2>@T("Tell us what you need after the scan", "บอกเราว่าต้องการนำข้อมูลสแกนไปทำอะไร")</h2><p>@T("Share photos, size, location, surface condition, critical areas, nominal CAD, and target files. We will help define an appropriate scope.", "ส่งรูป ขนาด สถานที่ สภาพผิว จุดสำคัญ CAD ต้นแบบ และไฟล์ที่ต้องการ เราจะช่วยกำหนดขอบเขตที่เหมาะสม")</p></div><div class="service-actions"><a class="service-button service-button-yellow" href="/Quotation?item=3D-Scanning">@T("Request a Quote", "ขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></div></section>
 </main>
+
+<script src="/src/app/js/scanning-workflow.js" defer></script>
 
 @code {
     [Parameter]
