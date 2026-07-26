@@ -56,12 +56,12 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
     [InlineData(
         "en",
         "Manufacturing services | MALIEV",
-        "Custom part manufacturing, CNC machining, 3D printing, and 3D scanning services in Thailand.",
+        "Custom part manufacturing, CNC machining, 3D printing, 3D design, silicone casting, low-volume injection molding, and 3D scanning services in Thailand.",
         "Manufacturing services")]
     [InlineData(
         "th",
         "บริการผลิตชิ้นส่วน | MALIEV",
-        "บริการผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติในประเทศไทย",
+        "บริการผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์และออกแบบ 3 มิติ งานหล่อซิลิโคน งานฉีดพลาสติกจำนวนน้อย และงานสแกน 3 มิติในประเทศไทย",
         "บริการผลิตชิ้นส่วน")]
     public async Task ServicesRoute_RendersCompleteLocalizedStaticDocument(
         string culture,
@@ -82,6 +82,8 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-breadcrumb\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"BreadcrumbList\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);
@@ -96,6 +98,14 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains("href=\"/services/cnc-machining\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/services/3d-printing\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/services/3d-scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/services/3d-design\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/services/silicone-casting\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/services/low-volume-injection-molding\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-finder-step=\"16\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-finder-key=\"environment\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-finder-optional", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ตอบคำถามสั้น ๆ 5 ข้อ" : "Answer five quick questions", source, StringComparison.Ordinal);
+        Assert.Contains($"aria-current=\"page\">{(culture == "th" ? "บริการ" : "Services")}</li>", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);

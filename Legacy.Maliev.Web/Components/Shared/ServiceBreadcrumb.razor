@@ -4,8 +4,15 @@
 <nav class="service-breadcrumb" aria-label="@BreadcrumbLabel" data-migration-component="service-breadcrumb">
     <ol>
         <li><a href="@HomeUrl">@HomeName</a></li>
-        <li><a href="@ServicesUrl">@ServicesName</a></li>
-        <li aria-current="page">@ServiceName</li>
+        @if (IsServicesIndex)
+        {
+            <li aria-current="page">@ServicesName</li>
+        }
+        else
+        {
+            <li><a href="@ServicesUrl">@ServicesName</a></li>
+            <li aria-current="page">@ServiceName</li>
+        }
     </ol>
 </nav>
 <script type="application/ld+json">@((MarkupString)BreadcrumbJson)</script>
@@ -14,6 +21,7 @@
     private static readonly IReadOnlyDictionary<string, ServiceRoute> ServiceRoutes =
         new Dictionary<string, ServiceRoute>(StringComparer.Ordinal)
         {
+            ["Services"] = new("บริการ", "Services", "/services"),
             ["3D Printing"] = new("พิมพ์ 3D", "3D printing", "/services/3d-printing"),
             ["CNC Machining"] = new("งาน CNC", "CNC machining", "/services/cnc-machining"),
             ["3D Scanning"] = new("สแกน 3D", "3D scanning", "/services/3d-scanning"),
@@ -39,6 +47,8 @@
 
     private string ServiceName => IsThai ? SelectedService.NameTh : SelectedService.NameEn;
 
+    private bool IsServicesIndex => string.Equals(ServiceKey, "Services", StringComparison.Ordinal);
+
     private string HomeUrl => CanonicalUrlPolicy.GetLocalizedUrl("/", Language);
 
     private string ServicesUrl => CanonicalUrlPolicy.GetLocalizedUrl("/services", Language);
@@ -49,12 +59,18 @@
     {
         ["@context"] = "https://schema.org",
         ["@type"] = "BreadcrumbList",
-        ["itemListElement"] = new object[]
-        {
-            CreateListItem(1, HomeName, HomeUrl),
-            CreateListItem(2, ServicesName, ServicesUrl),
-            CreateListItem(3, ServiceName, ServiceUrl),
-        },
+        ["itemListElement"] = IsServicesIndex
+            ? new object[]
+            {
+                CreateListItem(1, HomeName, HomeUrl),
+                CreateListItem(2, ServicesName, ServicesUrl),
+            }
+            : new object[]
+            {
+                CreateListItem(1, HomeName, HomeUrl),
+                CreateListItem(2, ServicesName, ServicesUrl),
+                CreateListItem(3, ServiceName, ServiceUrl),
+            },
     });
 
     private static Dictionary<string, object> CreateListItem(int position, string name, string item) => new()
