@@ -1,6 +1,6 @@
 @using System.Globalization
 
-<section class="service-section service-section-soft" aria-labelledby="service-location-title" data-migration-component="service-location">
+<section class="service-section service-section-soft service-location-section" aria-labelledby="service-location-title" data-migration-component="service-location">
     <div class="service-container service-split">
         <div class="service-copy">
             <p class="service-eyebrow">@T("Verified workshop and contact", "สถานที่และช่องทางติดต่อที่ยืนยันแล้ว")</p>
@@ -34,9 +34,9 @@
                 @T("Saturday-Sunday: Closed", "เสาร์-อาทิตย์: ปิด")
             </p>
             <div class="service-actions">
-                <a class="service-button service-button-primary" href="@Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps" target="_blank" rel="noopener">@T("Open Google Maps", "เปิด Google Maps")</a>
-                <a class="service-button service-button-secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener">@T("Chat on LINE OA", "ติดต่อผ่าน LINE OA")</a>
-                <a class="service-button service-button-secondary" href="/quotation">@T("Send files for review", "ส่งไฟล์เพื่อประเมิน")</a>
+                <a class="service-button service-button-primary" href="@Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps" target="_blank" rel="noopener"><i class="fas fa-map-marked-alt" aria-hidden="true"></i><span>@T("Open Google Maps", "เปิด Google Maps")</span></a>
+                <a class="service-button service-button-secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener" data-contact-placement="service_location_line"><i class="fab fa-line" aria-hidden="true"></i><span>@T("Chat on LINE OA", "ติดต่อผ่าน LINE OA")</span></a>
+                <a class="service-button service-button-secondary" href="/quotation" data-contact-placement="service_location_quotation"><i class="fas fa-file-upload" aria-hidden="true"></i><span>@T("Send files for review", "ส่งไฟล์เพื่อประเมิน")</span></a>
             </div>
         </div>
     </div>
