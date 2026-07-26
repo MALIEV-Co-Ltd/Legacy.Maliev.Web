@@ -75,6 +75,20 @@
         </div></div>
     </section>
 
+    <section id="service-pricing" class="service-section service-section-soft service-pricing-section" aria-labelledby="service-pricing-title">
+        <div class="service-container">
+            <header class="service-heading center">
+                <p class="service-eyebrow">@T("Planning price", "ราคาเพื่อการวางแผน")</p>
+                <h2 id="service-pricing-title">@T("Indicative starting prices", "ราคาเริ่มต้นเพื่อการประเมิน")</h2>
+                <p>@T("Use these starting points to choose a service. The final quotation is confirmed after we review geometry, material, quantity, finish, tolerances, and delivery requirements.", "ใช้ราคาเริ่มต้นเหล่านี้เพื่อเลือกบริการ โดยจะยืนยันราคาจริงหลังตรวจสอบรูปทรง วัสดุ จำนวน ผิวสำเร็จ ค่าความคลาดเคลื่อน และกำหนดส่ง")</p>
+            </header>
+            <div class="service-card-grid service-pricing-grid">
+                <article class="service-card service-pricing-card"><h3>@T("3D design work", "งานออกแบบ 3D")</h3><p>@T("CAD modeling from drawings, photos, or a brief, including manufacturability review.", "ขึ้นแบบ CAD จากแบบ ภาพ หรือข้อมูลตั้งต้น พร้อมตรวจสอบความเหมาะสมต่อการผลิต")</p><strong>@T("Starts at approximately THB 1,500", "เริ่มต้นประมาณ 1,500 บาท")</strong></article>
+                <article class="service-card service-pricing-card"><h3>@T("Design revisions", "การแก้ไขแบบ")</h3><p>@T("The quote includes the agreed scope. New requirements or revisions after approval may add cost and lead time.", "ราคาครอบคลุมขอบเขตที่ตกลงกัน การเพิ่มรายละเอียดหรือแก้แบบหลังยืนยันอาจมีค่าใช้จ่ายและใช้เวลาเพิ่ม")</p><strong>@T("Quoted with project scope", "ประเมินตามขอบเขตงาน")</strong></article>
+            </div>
+            <p class="service-pricing-note">@T("Prices are planning references, not a binding offer. We will confirm the scope, tax, delivery, and any revision or finishing work before production.", "ราคาเป็นข้อมูลเพื่อการวางแผน ไม่ใช่ข้อเสนอผูกพัน เราจะยืนยันขอบเขต ภาษี การจัดส่ง รวมถึงงานแก้ไขและเก็บผิวก่อนเริ่มผลิต")</p>
+        </div>
+    </section>
     <ServiceLocation />
 
     <section class="service-section service-section-light-cta"><div class="service-container service-split"><div class="service-copy"><p class="service-eyebrow">@T("Design to production", "จากแบบสู่การผลิต")</p><h2>@T("Already have a process in mind?", "มีขั้นตอนผลิตในใจแล้วหรือยัง?")</h2><p>@T("Send the model or drawing and tell us the material, quantity, and use. We can move the request into CNC machining, 3D printing, silicone casting, or custom manufacturing review.", "ส่งแบบหรือไฟล์ CAD พร้อมวัสดุ จำนวน และการใช้งาน เราช่วยส่งต่อไปยัง CNC พิมพ์ 3D หล่อซิลิโคน หรือผลิตชิ้นงานตามแบบ")</p><div class="service-actions"><a class="service-button service-button-primary" href="/Quotation?item=3d-design">@T("Start a design project", "เริ่มโปรเจ็คออกแบบ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></div><img class="service-split-image" src="/src/images/services/design/design-workflow.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("CAD workflow from sketch to part", "ขั้นตอนจากภาพร่างสู่แบบ CAD และชิ้นงาน")" /></div></section>

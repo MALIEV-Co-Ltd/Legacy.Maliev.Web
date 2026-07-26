@@ -23,12 +23,16 @@ public sealed partial class ThreeDimensionalDesignParityTests : IClassFixture<We
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("id=\"design-workflow\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"design-visuals\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"service-pricing\"", source, StringComparison.Ordinal);
+        Assert.Contains("Starts at approximately THB 1,500", source, StringComparison.Ordinal);
         Assert.Contains("class=\"service-section service-section-light-cta\"", source, StringComparison.Ordinal);
         Assert.Contains("Already have a process in mind?", source, StringComparison.Ordinal);
         Assert.Contains("What file formats can you deliver?", source, StringComparison.Ordinal);
         Assert.Contains("Can design changes during the project add cost?", source, StringComparison.Ordinal);
+        Assert.Contains("\"@type\":\"FAQPage\"", source, StringComparison.Ordinal);
         Assert.Equal(2, DesignVisualRegex().Matches(source).Count);
         Assert.Equal(6, FaqDetailsRegex().Matches(source).Count);
+        Assert.Equal(6, FaqSchemaQuestionRegex().Matches(source).Count);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
@@ -78,4 +82,7 @@ public sealed partial class ThreeDimensionalDesignParityTests : IClassFixture<We
 
     [GeneratedRegex("<details>", RegexOptions.CultureInvariant)]
     private static partial Regex FaqDetailsRegex();
+
+    [GeneratedRegex("\\\"@type\\\":\\\"Question\\\"", RegexOptions.CultureInvariant)]
+    private static partial Regex FaqSchemaQuestionRegex();
 }
