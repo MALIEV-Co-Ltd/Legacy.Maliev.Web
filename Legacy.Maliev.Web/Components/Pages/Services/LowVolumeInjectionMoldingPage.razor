@@ -1,0 +1,25 @@
+@page "/services/low-volume-injection-molding"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T("Low-Volume Injection Molding up to 1,000 Parts | MALIEV", "บริการฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้น | MALIEV");
+    var description = T("Low-volume injection molding for up to 1,000 parts on a pneumatic PIMM machine, with mold, material, shot weight, and finish reviewed before production.", "บริการฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่อง PIMM ระบบลม พร้อมประเมินแม่พิมพ์ วัสดุ น้ำหนักฉีด และผิวงานก่อนผลิต");
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@T("low volume injection molding Thailand, PIMM 50g, plastic injection service", "ฉีดพลาสติกจำนวนน้อย ประเทศไทย, PIMM 50g, บริการฉีดพลาสติก")" />
+    <link rel="preload" as="image" href="/src/images/services/injection-molding/injection-service-hero-wide.png" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<LowVolumeInjectionMoldingContent RouteOwner="blazor-static-ssr" />
+
+@code {
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

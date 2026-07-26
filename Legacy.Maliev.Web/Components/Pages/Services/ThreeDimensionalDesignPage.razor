@@ -1,0 +1,30 @@
+@page "/services/3d-design"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T(
+        "3D Design Services: Sketch, Scan, and Drawing to CAD | MALIEV",
+        "บริการออกแบบ 3 มิติจากภาพร่าง ชิ้นงานสแกน และแบบ | MALIEV");
+    var description = T(
+        "Turn sketches, reference photos, drawings, and scanned geometry into practical CAD models ready for manufacturing, with DFM guidance from MALIEV.",
+        "เปลี่ยนภาพร่าง รูปถ่าย แบบ และข้อมูลรูปทรงจากการสแกนให้เป็นแบบ CAD พร้อมผลิต พร้อมคำแนะนำ DFM จาก MALIEV");
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@T("3D design service Thailand, CAD modeling, product design, DFM", "รับออกแบบ 3 มิติ, เขียนแบบ CAD, ออกแบบผลิตภัณฑ์, DFM")" />
+    <link rel="preload" as="image" href="/src/images/services/design/design-workflow.webp" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<ThreeDimensionalDesignContent RouteOwner="blazor-static-ssr" />
+
+@code {
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

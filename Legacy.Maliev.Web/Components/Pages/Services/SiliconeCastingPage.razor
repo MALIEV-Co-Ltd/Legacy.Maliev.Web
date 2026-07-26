@@ -1,0 +1,26 @@
+@page "/services/silicone-casting"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T("Silicone Casting Services for Short-Run Parts | MALIEV", "บริการหล่อซิลิโคนสำหรับชิ้นงานจำนวนน้อย | MALIEV");
+    var description = T("Create short-run silicone parts from a reviewed 3D-printed mold, with material, shore hardness, color, and finish matched to the application.", "ผลิตชิ้นงานซิลิโคนจำนวนน้อยจากแม่พิมพ์พิมพ์ 3 มิติ โดยประเมินวัสดุ ความแข็ง สี และผิวงานให้เหมาะกับการใช้งาน");
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@T("silicone casting Thailand, silicone mold, short run silicone parts", "หล่อซิลิโคน ประเทศไทย, แม่พิมพ์ซิลิโคน, ชิ้นงานซิลิโคนจำนวนน้อย")" />
+    <link rel="preload" as="image" href="/src/images/services/silicone-casting/silicone-casting-workflow.webp" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<SiliconeCastingContent RouteOwner="blazor-static-ssr" />
+
+@code {
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}
