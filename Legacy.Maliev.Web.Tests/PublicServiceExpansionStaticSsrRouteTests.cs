@@ -60,6 +60,35 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
         }
     }
 
+    [Fact]
+    public void HomeAndServicesDirectory_ExposeTheExpandedCatalogAndAccessibleFinderMarkup()
+    {
+        var root = FindRepositoryRoot();
+        var web = Path.Combine(root, "Legacy.Maliev.Web");
+        var home = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Home", "HomeContent.razor"));
+        var services = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ServicesContent.razor"));
+
+        foreach (var route in new[]
+        {
+            "/Services/Custom-Manufacturing",
+            "/Services/3D-Design",
+            "/Services/Silicone-Casting",
+            "/Services/Low-Volume-Injection-Molding"
+        })
+        {
+            Assert.Contains(route, home, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("landing-service-directory-preview", home, StringComparison.Ordinal);
+        Assert.Contains("data-service-finder", services, StringComparison.Ordinal);
+        Assert.Contains("role=\"progressbar\"", services, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"false\"", services, StringComparison.Ordinal);
+        Assert.Contains("data-service-finder-answer", services, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "landing", "service-directory-finder.png")));
+        Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "custom-manufacturing", "custom-manufacturing-story.webp")));
+        Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "injection-molding", "injection-card-workshop.png")));
+    }
+
     [Theory]
     [InlineData("/services/3d-design", "design-title", "Design for the part")]
     [InlineData("/services/silicone-casting", "silicone-title", "Silicone Casting")]

@@ -15,4 +15,27 @@
   <data name="Prototypes and production parts across multiple additive processes." xml:space="preserve"><value>ต้นแบบและชิ้นงานผลิตจากหลายกระบวนการ additive</value></data>
   <data name="3D scanning" xml:space="preserve"><value>งานสแกน 3 มิติ</value></data>
   <data name="Raw scans, reverse engineering, deviation analysis, and onsite service." xml:space="preserve"><value>ไฟล์สแกนดิบ reverse engineering deviation analysis และบริการนอกสถานที่</value></data>
+  <data name="3D design" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
+  <data name="Turn sketches, drawings, photos, or scanned geometry into practical CAD with DFM guidance." xml:space="preserve"><value>เปลี่ยนภาพร่าง แบบ รูปถ่าย หรือข้อมูลสแกนเป็น CAD พร้อมคำแนะนำ DFM</value></data>
+  <data name="Silicone casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
+  <data name="Short-run silicone parts from a reviewed 3D-printed mold." xml:space="preserve"><value>ชิ้นงานซิลิโคนจำนวนน้อยจากแม่พิมพ์พิมพ์ 3 มิติที่ผ่านการประเมิน</value></data>
+  <data name="Low-volume injection molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
+  <data name="PIMM molding for up to 1,000 parts, with material and mold review." xml:space="preserve"><value>ฉีดพลาสติกด้วย PIMM ไม่เกิน 1,000 ชิ้น พร้อมประเมินวัสดุและแม่พิมพ์</value></data>
+  <data name="Process finder" xml:space="preserve"><value>ตัวช่วยเลือกกระบวนการ</value></data>
+  <data name="Need help choosing a manufacturing process?" xml:space="preserve"><value>ต้องการความช่วยเหลือในการเลือกกระบวนการผลิตหรือไม่?</value></data>
+  <data name="Answer a few practical questions and we will point you toward the right MALIEV service." xml:space="preserve"><value>ตอบคำถามสั้น ๆ แล้วเราจะแนะนำบริการของ MALIEV ที่เหมาะสม</value></data>
+  <data name="Service finder progress" xml:space="preserve"><value>ความคืบหน้าตัวช่วยเลือกบริการ</value></data>
+  <data name="Question 1 of 5" xml:space="preserve"><value>คำถามที่ 1 จาก 5</value></data>
+  <data name="What do you have to start with?" xml:space="preserve"><value>คุณมีข้อมูลอะไรสำหรับเริ่มต้น?</value></data>
+  <data name="Starting evidence" xml:space="preserve"><value>ข้อมูลตั้งต้น</value></data>
+  <data name="3D CAD files" xml:space="preserve"><value>ไฟล์ CAD 3 มิติ</value></data>
+  <data name="STEP, STL, 3MF, or another usable 3D model" xml:space="preserve"><value>STEP, STL, 3MF หรือโมเดล 3 มิติที่ใช้งานได้</value></data>
+  <data name="2D drawings" xml:space="preserve"><value>แบบ 2 มิติ</value></data>
+  <data name="PDF, DWG, or a dimensioned sketch" xml:space="preserve"><value>PDF, DWG หรือภาพร่างที่ระบุขนาด</value></data>
+  <data name="Photos or a physical sample" xml:space="preserve"><value>รูปถ่ายหรือชิ้นงานตัวอย่าง</value></data>
+  <data name="Reference images or an existing part" xml:space="preserve"><value>รูปอ้างอิงหรือชิ้นงานเดิม</value></data>
+  <data name="No usable files yet" xml:space="preserve"><value>ยังไม่มีไฟล์ที่ใช้งานได้</value></data>
+  <data name="Start with a project review" xml:space="preserve"><value>เริ่มจากการประเมินโครงการ</value></data>
+  <data name="You can also skip the finder and send the files you have for an engineering review." xml:space="preserve"><value>คุณสามารถข้ามตัวช่วยและส่งไฟล์ที่มีเพื่อให้วิศวกรประเมินได้</value></data>
+  <data name="Open the quotation form" xml:space="preserve"><value>เปิดแบบฟอร์มขอราคา</value></data>
 </root>

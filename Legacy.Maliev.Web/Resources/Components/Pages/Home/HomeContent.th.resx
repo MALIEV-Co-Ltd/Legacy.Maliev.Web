@@ -254,4 +254,34 @@
   <data name="Confidential and secure" xml:space="preserve"><value>รักษาความลับและปลอดภัย</value></data>
   <data name="Precision-machined aluminum component" xml:space="preserve"><value>ชิ้นส่วนอะลูมิเนียมที่ผลิตด้วยความแม่นยำสูง</value></data>
   <data name="Scanned production component" xml:space="preserve"><value>ชิ้นส่วนงานผลิตที่ผ่านการสแกน 3 มิติ</value></data>
+  <data name="Custom Manufacturing" xml:space="preserve"><value>ผลิตชิ้นงานตามแบบ</value></data>
+  <data name="Idea sketch, technical drawing, CAD model, and finished machined part" xml:space="preserve"><value>ภาพร่าง แบบวิศวกรรม แบบ CAD และชิ้นงานที่ผลิตเสร็จ</value></data>
+  <data name="Not sure which process fits? Start with your drawing, sample, material, quantity, and intended use." xml:space="preserve"><value>หากยังไม่แน่ใจว่าควรใช้กระบวนการใด ให้เริ่มจากแบบ ตัวอย่าง วัสดุ จำนวน และการใช้งาน</value></data>
+  <data name="Start a project review" xml:space="preserve"><value>เริ่มประเมินโครงการ</value></data>
+  <data name="3D Design" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
+  <data name="Designer turning sketches and reference photos into a CAD model" xml:space="preserve"><value>นักออกแบบเปลี่ยนภาพร่างและรูปถ่ายอ้างอิงเป็นแบบ CAD</value></data>
+  <data name="Turn an idea, sketch, or scanned part into a manufacturable 3D design with practical DFM guidance." xml:space="preserve"><value>เปลี่ยนไอเดีย ภาพร่าง หรือชิ้นงานสแกนเป็นแบบ 3 มิติพร้อมผลิต พร้อมคำแนะนำ DFM</value></data>
+  <data name="Discuss your design" xml:space="preserve"><value>ปรึกษางานออกแบบ</value></data>
+  <data name="Silicone Casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
+  <data name="Silicone poured into a 3D-printed mold" xml:space="preserve"><value>เทซิลิโคนลงในแม่พิมพ์พิมพ์ 3 มิติ</value></data>
+  <data name="Create short-run silicone parts using a 3D-printed mold, with material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยจากแม่พิมพ์พิมพ์ 3 มิติ พร้อมประเมินวัสดุและผิวงาน</value></data>
+  <data name="Discuss silicone casting" xml:space="preserve"><value>ปรึกษางานหล่อซิลิโคน</value></data>
+  <data name="Low-volume Injection Molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
+  <data name="Pneumatic PIMM injection molding machine" xml:space="preserve"><value>เครื่องฉีดพลาสติก PIMM ระบบลม</value></data>
+  <data name="Low-volume molding for up to 1,000 parts on our pneumatic machine, with material and mold reviewed before production." xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่องระบบลม พร้อมประเมินวัสดุและแม่พิมพ์ก่อนผลิต</value></data>
+  <data name="Discuss injection molding" xml:space="preserve"><value>ปรึกษางานฉีดพลาสติก</value></data>
+  <data name="Explore all services" xml:space="preserve"><value>ดูบริการทั้งหมด</value></data>
+  <data name="Need help choosing a process?" xml:space="preserve"><value>ต้องการความช่วยเหลือในการเลือกกระบวนการหรือไม่?</value></data>
+  <data name="Compare every MALIEV service, capability, material, and workflow in one place." xml:space="preserve"><value>เปรียบเทียบบริการ ความสามารถ วัสดุ และขั้นตอนของ MALIEV ในที่เดียว</value></data>
+  <data name="View all services" xml:space="preserve"><value>ดูบริการทั้งหมด</value></data>
+  <data name="Quick guide" xml:space="preserve"><value>คู่มือฉบับย่อ</value></data>
+  <data name="Question 1 of 5" xml:space="preserve"><value>คำถามที่ 1 จาก 5</value></data>
+  <data name="Do you have 3D files or drawings?" xml:space="preserve"><value>คุณมีไฟล์ 3 มิติหรือแบบหรือไม่?</value></data>
+  <data name="3D CAD files" xml:space="preserve"><value>ไฟล์ CAD 3 มิติ</value></data>
+  <data name="STEP, STL, 3MF or other usable 3D models" xml:space="preserve"><value>STEP, STL, 3MF หรือโมเดล 3 มิติที่ใช้งานได้</value></data>
+  <data name="2D drawings" xml:space="preserve"><value>แบบ 2 มิติ</value></data>
+  <data name="PDF, DWG or a dimensioned sketch" xml:space="preserve"><value>PDF, DWG หรือภาพร่างที่ระบุขนาด</value></data>
+  <data name="Photos or sample" xml:space="preserve"><value>รูปถ่ายหรือตัวอย่าง</value></data>
+  <data name="Reference images or a physical part" xml:space="preserve"><value>รูปอ้างอิงหรือชิ้นงานจริง</value></data>
+  <data name="No files yet" xml:space="preserve"><value>ยังไม่มีไฟล์</value></data>
 </root>

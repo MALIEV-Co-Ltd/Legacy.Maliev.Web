@@ -9,7 +9,7 @@
         </div>
     </header>
     <div class="maliev-container public-content">
-        <div class="maliev-card-grid">
+        <div class="maliev-card-grid services-directory-grid">
             <a class="maliev-panel docs-link-card" href="/services/custom-manufacturing">
                 <i class="fas fa-route" aria-hidden="true"></i>
                 <strong>@Localizer["Custom manufacturing"]</strong>
@@ -30,8 +30,46 @@
                 <strong>@Localizer["3D scanning"]</strong>
                 <span>@Localizer["Raw scans, reverse engineering, deviation analysis, and onsite service."]</span>
             </a>
+            <a class="maliev-panel docs-link-card" href="/services/3d-design">
+                <i class="fas fa-drafting-compass" aria-hidden="true"></i>
+                <strong>@Localizer["3D design"]</strong>
+                <span>@Localizer["Turn sketches, drawings, photos, or scanned geometry into practical CAD with DFM guidance."]</span>
+            </a>
+            <a class="maliev-panel docs-link-card" href="/services/silicone-casting">
+                <i class="fas fa-hand-paper" aria-hidden="true"></i>
+                <strong>@Localizer["Silicone casting"]</strong>
+                <span>@Localizer["Short-run silicone parts from a reviewed 3D-printed mold."]</span>
+            </a>
+            <a class="maliev-panel docs-link-card" href="/services/low-volume-injection-molding">
+                <i class="fas fa-industry" aria-hidden="true"></i>
+                <strong>@Localizer["Low-volume injection molding"]</strong>
+                <span>@Localizer["PIMM molding for up to 1,000 parts, with material and mold review."]</span>
+            </a>
         </div>
     </div>
+    <section class="service-finder" aria-labelledby="service-finder-title" data-service-finder>
+        <div class="service-finder-container">
+            <header class="service-finder-header">
+                <p class="maliev-eyebrow">@Localizer["Process finder"]</p>
+                <h2 id="service-finder-title">@Localizer["Need help choosing a manufacturing process?"]</h2>
+                <p>@Localizer["Answer a few practical questions and we will point you toward the right MALIEV service."]</p>
+                <div class="service-finder-progress" role="progressbar" aria-label='@Localizer["Service finder progress"]' aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+                    <span class="service-finder-progress-label" data-service-finder-progress>@Localizer["Question 1 of 5"]</span>
+                    <span class="service-finder-progress-track"><span data-service-finder-progress-bar style="width:20%"></span></span>
+                </div>
+            </header>
+            <div class="service-finder-step" data-service-finder-step="1" aria-labelledby="service-finder-question-1">
+                <h3 id="service-finder-question-1">@Localizer["What do you have to start with?"]</h3>
+                <div class="service-finder-options" role="group" aria-label='@Localizer["Starting evidence"]'>
+                    <button type="button" class="service-finder-option" data-service-finder-answer="cad" aria-pressed="false"><i class="fas fa-cube" aria-hidden="true"></i><span><strong>@Localizer["3D CAD files"]</strong><small>@Localizer["STEP, STL, 3MF, or another usable 3D model"]</small></span></button>
+                    <button type="button" class="service-finder-option" data-service-finder-answer="drawing" aria-pressed="false"><i class="far fa-file-alt" aria-hidden="true"></i><span><strong>@Localizer["2D drawings"]</strong><small>@Localizer["PDF, DWG, or a dimensioned sketch"]</small></span></button>
+                    <button type="button" class="service-finder-option" data-service-finder-answer="sample" aria-pressed="false"><i class="far fa-image" aria-hidden="true"></i><span><strong>@Localizer["Photos or a physical sample"]</strong><small>@Localizer["Reference images or an existing part"]</small></span></button>
+                    <button type="button" class="service-finder-option" data-service-finder-answer="unknown" aria-pressed="false"><i class="far fa-lightbulb" aria-hidden="true"></i><span><strong>@Localizer["No usable files yet"]</strong><small>@Localizer["Start with a project review"]</small></span></button>
+                </div>
+            </div>
+            <p class="service-finder-no-script">@Localizer["You can also skip the finder and send the files you have for an engineering review."] <a href="/quotation">@Localizer["Open the quotation form"]</a></p>
+        </div>
+    </section>
 </main>
 
 @code {
