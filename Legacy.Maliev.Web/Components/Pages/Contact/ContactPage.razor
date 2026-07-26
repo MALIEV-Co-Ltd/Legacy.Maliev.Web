@@ -17,8 +17,8 @@
 @{
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-    var title = Localizer["Contact MALIEV"];
-    var description = Localizer["Contact MALIEV for CNC machining, additive manufacturing, 3D scanning, and custom manufacturing support."];
+    var title = Localizer["Contact MALIEV | Manufacturing Services"];
+    var description = Localizer["Contact MALIEV about CNC machining, 3D printing, 3D scanning, or a general manufacturing question."];
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
@@ -40,15 +40,15 @@
             <div class="inquiry-notification" role="status" aria-live="polite"><p>@notification</p></div>
         }
         <div class="contact-method-grid" aria-label="@Localizer["Contact options"]">
-            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="far fa-envelope" aria-hidden="true"></i></div><div><h2>@Localizer["Email us"]</h2><p>@Localizer["Best for project details and files."]</p><a href="mailto:info@maliev.com">info@maliev.com</a></div></article>
-            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></div><div><h2>@Localizer["Call us"]</h2><p>@Localizer["Best for a quick question during business hours."]</p><a href="tel:+66818030404">+66(0)81-803-0404</a><a href="tel:+66898950690">+66(0)89-895-0690</a></div></article>
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="far fa-envelope" aria-hidden="true"></i></div><div><h2>@Localizer["Email us"]</h2><p>@Localizer["Best for project details and files."]</p><a href="/contact#contact-us" data-contact-email="info@maliev.com">info@maliev.com</a></div></article>
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></div><div><h2>@Localizer["Call us"]</h2><p>@Localizer["Best for a quick question during business hours."]</p><a href="tel:+66898950690">+66(0)89-895-0690</a><a href="tel:+66818030404">+66(0)81-803-0404</a></div></article>
             <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-map-marker-alt" aria-hidden="true"></i></div><div><h2>@Localizer["Visit our workshop"]</h2><address>@Localizer["36/1 Moo 3"]<br />@Localizer["Khlong Khoi"], <span class="maliev-nowrap">@Localizer["Pak Kret"]</span><br />@Localizer["Nonthaburi 11120"], @Localizer["Thailand"]</address><p><strong>@Localizer["Business hours"]</strong><br />@Localizer["Monday-Friday: 09:00-18:00"]<br />@Localizer["Saturday-Sunday: Closed"]</p></div></article>
         </div>
         <div class="inquiry-shell">
             <aside class="inquiry-aside inquiry-aside--sticky" aria-label="@Localizer["Company contact details"]">
                 <section class="inquiry-panel inquiry-panel--accent contact-line-card">
-                    <a href="@SocialNetworks.Line" target="_blank" rel="noopener"><img src="/src/images/line-qr-clean.svg" width="160" height="160" title="LINE Official Account" alt="@Localizer["MALIEV LINE Official Account QR code"]" /></a>
-                    <div><h2>@Localizer["Chat with us"]</h2><p>@Localizer["Scan the QR code or open our LINE Official Account for a quick conversation."]</p><a href="@SocialNetworks.Line" target="_blank" rel="noopener">@Localizer["Open LINE Official Account"]</a></div>
+                    <a href="@SocialNetworks.Line" target="_blank" rel="noopener" data-contact-placement="contact_line_qr"><img src="/src/images/line-qr-clean.svg" width="160" height="160" title="LINE Official Account" alt="@Localizer["MALIEV LINE Official Account QR code"]" /></a>
+                    <div><h2>@Localizer["Chat with us"]</h2><p>@Localizer["Scan the QR code or open our LINE Official Account for a quick conversation."]</p><div class="contact-channel-actions" aria-label="@Localizer["Chat channels"]"><a href="@SocialNetworks.Line" target="_blank" rel="noopener" data-contact-placement="contact_line"><i class="fab fa-line" aria-hidden="true"></i><span>@Localizer["Open LINE Official Account"]</span></a><a href="@SocialNetworks.WhatsApp" target="_blank" rel="noopener" data-contact-placement="contact_whatsapp" data-maliev-contact-destination="whatsapp_business"><i class="fab fa-whatsapp" aria-hidden="true"></i><span>@Localizer["Message us on WhatsApp"]</span></a><a href="@SocialNetworks.MessengerChat" target="_blank" rel="noopener" data-contact-placement="contact_messenger"><i class="fab fa-facebook-messenger" aria-hidden="true"></i><span>@Localizer["Open Messenger"]</span></a></div></div>
                 </section>
                 <section class="inquiry-panel"><div class="inquiry-panel__icon"><i class="fas fa-building" aria-hidden="true"></i></div><h2>Maliev Co., Ltd.</h2><p>@Localizer["36/1 Moo 3"]<br />@Localizer["Khlong Khoi"], <span class="maliev-nowrap">@Localizer["Pak Kret"]</span><br />@Localizer["Nonthaburi 11120"], @Localizer["Thailand"]</p>@if (culture == "th") { <p class="contact-tax">เลขประจำตัวผู้เสียภาษี 0125561001573 (สำนักงานใหญ่)</p> }</section>
                 <section class="inquiry-panel"><div class="inquiry-panel__icon"><i class="fas fa-share-alt" aria-hidden="true"></i></div><h2>@Localizer["Follow and message MALIEV"]</h2><p>@Localizer["Find our latest work and contact us through our official social channels."]</p><div class="inquiry-social"><SocialLinks /></div></section>
