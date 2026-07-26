@@ -1,6 +1,8 @@
 @page "/services/low-volume-injection-molding"
 @using System.Globalization
+@using System.Text.Json
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Metadata
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
@@ -8,6 +10,7 @@
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var title = T("Low-Volume Injection Molding up to 1,000 Parts | MALIEV", "บริการฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้น | MALIEV");
     var description = T("Low-volume injection molding for up to 1,000 parts on a pneumatic PIMM machine, with mold, material, shot weight, and finish reviewed before production.", "บริการฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่อง PIMM ระบบลม พร้อมประเมินแม่พิมพ์ วัสดุ น้ำหนักฉีด และผิวงานก่อนผลิต");
+    var faqJson = CreateFaqJson();
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
@@ -16,10 +19,43 @@
     <link rel="preload" as="image" href="/src/images/services/injection-molding/injection-service-hero-wide.png" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Low-volume Injection Molding"))" />
+    <script type="application/ld+json">@((MarkupString)faqJson)</script>
 </HeadContent>
 <LowVolumeInjectionMoldingContent RouteOwner="blazor-static-ssr" />
 
 @code {
     private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
     private string T(string english, string thai) => IsThai ? thai : english;
+
+    private string CreateFaqJson()
+    {
+        var schema = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "FAQPage",
+            ["mainEntity"] = new object[]
+            {
+                CreateQuestion(T("What quantity is this service designed for?", "บริการนี้เหมาะกับจำนวนเท่าไร?"), T("This service is scoped for pilot runs and repeat batches up to 1,000 parts. If your requirement is more than 1,000 parts, compare the economics of owning a PIMM machine at shop.maliev.com.", "บริการนี้วางขอบเขตสำหรับงานทดลองและงานผลิตซ้ำไม่เกิน 1,000 ชิ้น หากต้องการมากกว่า 1,000 ชิ้น แนะนำเปรียบเทียบความคุ้มค่าของการซื้อเครื่อง PIMM ที่ shop.maliev.com")),
+                CreateQuestion(T("What machine and material limits should I share?", "ควรแจ้งข้อจำกัดของเครื่องและวัสดุอะไรบ้าง?"), T("The pneumatic machine supports shot weights up to 50 g and plastics melting at no more than 350 °C. Final suitability still depends on the part, mold, material, quantity, and intended use, so MALIEV confirms the scope during review.", "เครื่องระบบลมรองรับน้ำหนักฉีดสูงสุด 50 กรัม และพลาสติกที่มีอุณหภูมิหลอมไม่เกิน 350 °C ความเหมาะสมจริงยังขึ้นกับชิ้นงาน แม่พิมพ์ วัสดุ จำนวน และการใช้งาน จึงต้องยืนยันขอบเขตระหว่างการประเมิน")),
+                CreateQuestion(T("What should I send for a useful review?", "ควรส่งข้อมูลอะไรเพื่อให้ประเมินได้ตรงจุด?"), T("Send the CAD or drawing, mold details or photos, material or required behavior, quantity, critical dimensions, finish expectations, and intended use. Mark unknown items clearly so they can be resolved before production.", "ส่งไฟล์ CAD หรือแบบ รายละเอียดหรือรูปแม่พิมพ์ วัสดุหรือคุณสมบัติที่ต้องการ จำนวน ขนาดสำคัญ ความคาดหวังเรื่องผิว และการใช้งาน หากข้อมูลใดยังไม่ทราบให้ระบุไว้ชัดเจนเพื่อแก้ไขก่อนผลิต")),
+                CreateQuestion(T("Which plastic materials can you support?", "รองรับวัสดุพลาสติกใดบ้าง?"), T("We review PP, PE, PS or HIPS, and ABS for this service, subject to the part, mold, and melt-temperature limits. POM is not offered for this route because its grade-specific processing window requires dedicated temperature control, purge/shutdown procedures, and local exhaust ventilation. Overheating, excessive shear, long residence time, or PVC contamination can cause decomposition and hazardous formaldehyde-containing fumes.", "เราประเมิน PP, PE, PS หรือ HIPS และ ABS สำหรับบริการนี้ โดยต้องดูชิ้นงาน แม่พิมพ์ และข้อจำกัดอุณหภูมิหลอมร่วมกัน ไม่รับ POM ในเส้นทางนี้ เพราะ POM มีช่วงการแปรรูปตามเกรดที่ต้องควบคุมอุณหภูมิ ขั้นตอน purge/หยุดเครื่อง และระบบดูดอากาศเฉพาะจุดโดยเฉพาะ หากร้อนเกินไป รับแรงเฉือนมากเกินไป ค้างอยู่ในกระบอกนานเกินไป หรือปนเปื้อน PVC อาจสลายตัวและปล่อยไอที่มีฟอร์มาลดีไฮด์ซึ่งเป็นอันตราย")),
+                CreateQuestion(T("Can MALIEV make the mold too?", "MALIEV ทำแม่พิมพ์ให้ได้หรือไม่?"), T("Yes. Send the 3D design, part, target quantity, and any material or finish requirements. We can review the mold approach and quote the tooling and molding work together.", "ได้ ส่งแบบ 3 มิติ ชิ้นงาน จำนวนเป้าหมาย และข้อกำหนดวัสดุหรือผิวงานมาให้เรา เราช่วยประเมินแนวทางทำแม่พิมพ์และเสนอราคางานแม่พิมพ์กับงานฉีดรวมกันได้")),
+                CreateQuestion(T("Does the lot size change the unit price?", "จำนวนสั่งผลิตมีผลต่อราคาต่อชิ้นหรือไม่?"), T("Yes. A five-part order normally carries a higher unit price than a 1,000-part order because setup and mold costs are spread across fewer parts. We quote the lot size you actually need.", "มีผล จำนวน 5 ชิ้นมักมีราคาต่อชิ้นสูงกว่าจำนวน 1,000 ชิ้น เพราะต้องกระจายต้นทุนเตรียมงานและแม่พิมพ์ไปยังชิ้นส่วนน้อยกว่า เราจะเสนอราคาตามจำนวนที่ต้องการจริง"))
+            }
+        };
+
+        return JsonSerializer.Serialize(schema);
+    }
+
+    private static Dictionary<string, object> CreateQuestion(string question, string answer) => new()
+    {
+        ["@type"] = "Question",
+        ["name"] = question,
+        ["acceptedAnswer"] = new Dictionary<string, object>
+        {
+            ["@type"] = "Answer",
+            ["text"] = answer
+        }
+    };
 }
