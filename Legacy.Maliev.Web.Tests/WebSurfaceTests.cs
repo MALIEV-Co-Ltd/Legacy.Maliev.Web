@@ -3055,7 +3055,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error quotation-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
         Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
