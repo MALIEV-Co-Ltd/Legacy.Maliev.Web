@@ -2542,8 +2542,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Email confirmation", "We could not confirm your email", "Request a new confirmation email or contact support.", "The confirmation link is invalid or expired.", "Back to sign in")]
-    [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "ขออีเมลยืนยันใหม่หรือติดต่อฝ่ายช่วยเหลือ", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    [InlineData("en", "Email confirmation", "We could not confirm your email", "Please review the details below or request a new confirmation email.", "The confirmation link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "โปรดตรวจสอบรายละเอียดด้านล่างหรือขออีเมลยืนยันใหม่", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
     public async Task EmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
         string culture,
         string eyebrow,

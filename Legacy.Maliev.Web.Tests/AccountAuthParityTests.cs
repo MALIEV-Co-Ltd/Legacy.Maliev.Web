@@ -60,6 +60,70 @@ public sealed class AccountAuthParityTests : IClassFixture<WebApplicationFactory
         Assert.Contains("<h2 id=\"forgot-title\">Forgot password</h2>", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ResetPasswordRoute_PreservesSourceCurrentIntroAndCardSemantics()
+    {
+        var source = await GetDocumentAsync(
+            "/account/resetpassword?culture=en&email=user%40example.com&token=abcdefghijklmnopqrstuvwxyz123456");
+
+        Assert.Contains("<section class=\"auth-intro\" aria-labelledby=\"reset-intro-title\">", source, StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"reset-intro-title\">Create a new password</h1>", source, StringComparison.Ordinal);
+        Assert.Contains("Choose a strong password that you do not use for another account.", source, StringComparison.Ordinal);
+        Assert.Contains("<section class=\"auth-card\" aria-labelledby=\"reset-title\">", source, StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"reset-title\">Reset password</h1>", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EmailConfirmationRoute_PreservesSourceCurrentStatusCopyAndSemantics()
+    {
+        var source = await GetDocumentAsync(
+            "/account/emailconfirmation?culture=en&email=customer%40example.com&token=invalid-token");
+
+        Assert.Contains(
+            "<section class=\"maliev-panel maliev-status\" aria-labelledby=\"email-confirmation-title\">",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "class=\"maliev-status__icon maliev-status__icon--danger\" aria-hidden=\"true\"><i class=\"fas fa-envelope-open-text\"></i>",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"email-confirmation-title\">We could not confirm your email</h1>", source, StringComparison.Ordinal);
+        Assert.Contains("Please review the details below or request a new confirmation email.", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ChangeEmailConfirmationRoute_PreservesSourceCurrentStatusSemantics()
+    {
+        var source = await GetDocumentAsync(
+            "/account/changeemailconfirmation?culture=en&email=customer%40example.com&token=invalid-token");
+
+        Assert.Contains(
+            "<section class=\"maliev-panel maliev-status\" aria-labelledby=\"change-email-title\">",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "class=\"maliev-status__icon\" aria-hidden=\"true\"><i class=\"fas fa-envelope\"></i>",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"change-email-title\">Email change confirmation</h1>", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AccessDeniedRoute_PreservesSourceCurrentStatusSemantics()
+    {
+        var source = await GetDocumentAsync("/account/accessdenied?culture=en");
+
+        Assert.Contains(
+            "<section class=\"maliev-panel maliev-status\" aria-labelledby=\"access-denied-title\">",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "class=\"maliev-status__icon\" aria-hidden=\"true\"><i class=\"fas fa-shield-alt\"></i>",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"access-denied-title\">Access denied</h1>", source, StringComparison.Ordinal);
+    }
+
     private async Task<string> GetDocumentAsync(string path)
     {
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
