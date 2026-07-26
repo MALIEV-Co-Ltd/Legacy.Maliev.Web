@@ -25,6 +25,7 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<W
         var program = File.ReadAllText(Path.Combine(web, "Program.cs"));
         var appsettings = File.ReadAllText(Path.Combine(web, "appsettings.json"));
         var content = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Legal", "TermsConditionsContent.razor"));
+        var englishContent = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Legal", "TermsConditionsEnglishContent.razor"));
         var fallback = File.ReadAllText(Path.Combine(web, "Pages", "Legal", "TermsConditions.cshtml"));
 
         Assert.Contains("BlazorRouting:TermsConditions", program, StringComparison.Ordinal);
@@ -32,6 +33,9 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<W
         Assert.Contains("\"TermsConditions\": true", appsettings, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(TermsConditionsContent)\"", fallback, StringComparison.Ordinal);
+        Assert.Contains("TermsConditionsEnglishContent", content, StringComparison.Ordinal);
+        Assert.Contains("TermsConditionsThaiContent", content, StringComparison.Ordinal);
+        Assert.Contains("id=\"link-removal\"", englishContent, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -41,14 +45,14 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<W
         "Read MALIEV website, manufacturing service, file-submission, and user responsibility terms and conditions.",
         "cookies, license, hyperlink, terms and conditions, terms, services, iframes, rights, liability, disclaimer",
         "These terms and conditions outline the rules and regulations",
-        "we will not be liable for any loss or damage of any nature")]
+        "Nothing in this disclaimer will limit or exclude liability that cannot be limited or excluded under applicable law.")]
     [InlineData(
         "th",
         "ข้อกำหนดและเงื่อนไขการให้บริการ | MALIEV",
         "อ่านข้อกำหนดการใช้เว็บไซต์ บริการผลิต การส่งข้อมูล และความรับผิดชอบของผู้ใช้ MALIEV",
         "ข้อกำหนดและเงื่อนไข, cookies, license, hyperlink, terms, services, iframes, rights, liability, disclaimer",
-        "ข้อกำหนดและเงื่อนไข",
-        "เราจะไม่รับผิดต่อความสูญเสียหรือความเสียหายไม่ว่าประเภทใด")]
+        "ข้อกำหนดและเงื่อนไขนี้อธิบายกฎสำหรับการใช้เว็บไซต์",
+        "ข้อจำกัดความรับผิดนี้ใช้กับความรับผิดที่เกิดจากสัญญา")]
     public async Task TermsConditionsRoute_RendersLocalizedStaticSsrWithSeoAnalyticsAndDocumentParity(
         string culture,
         string title,
