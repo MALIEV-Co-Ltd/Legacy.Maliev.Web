@@ -83,7 +83,7 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
         Assert.Contains("data-service-finder", services, StringComparison.Ordinal);
         Assert.Contains("role=\"progressbar\"", services, StringComparison.Ordinal);
         Assert.Contains("aria-pressed=\"false\"", services, StringComparison.Ordinal);
-        Assert.Contains("data-service-finder-answer", services, StringComparison.Ordinal);
+        Assert.Contains("data-finder-answer", services, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "landing", "service-directory-finder.png")));
         Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "custom-manufacturing", "custom-manufacturing-story.webp")));
         Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "injection-molding", "injection-card-workshop.png")));

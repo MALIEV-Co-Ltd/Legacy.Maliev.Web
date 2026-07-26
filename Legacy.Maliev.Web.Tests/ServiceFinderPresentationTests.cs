@@ -14,7 +14,8 @@ public sealed class ServiceFinderPresentationTests
         Assert.Contains("data-service-finder", content, StringComparison.Ordinal);
         Assert.Contains("role=\"progressbar\"", content, StringComparison.Ordinal);
         Assert.Contains("aria-pressed=\"false\"", content, StringComparison.Ordinal);
-        Assert.Contains("service-finder-no-script", content, StringComparison.Ordinal);
+        Assert.Contains("data-finder-skip-to-results", content, StringComparison.Ordinal);
+        Assert.Contains("data-finder-quotation-link", content, StringComparison.Ordinal);
         Assert.Contains("href=\"/quotation\"", content, StringComparison.Ordinal);
         Assert.Contains(".service-finder-options { display: grid; grid-template-columns: repeat(4", css, StringComparison.Ordinal);
         Assert.Contains(".service-finder-option:focus-visible", css, StringComparison.Ordinal);
