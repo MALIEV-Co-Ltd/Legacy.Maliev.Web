@@ -68,13 +68,13 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
     [InlineData(
         "en",
         "Custom Part Manufacturing with CNC and 3D Printing | MALIEV",
-        "Not sure whether CNC machining, 3D printing, or 3D scanning fits your part? Send the drawing or sample, material, quantity, critical features, and intended use for a manufacturing review.",
+        "Custom manufacturing support for CNC, 3D printing, 3D scanning, and design. Send files, quantity, material, and intended use for review.",
         "Custom Part Manufacturing: Start with Your Drawing, Material, Quantity, and Use",
         "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering")]
     [InlineData(
         "th",
         "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV",
-        "หากยังไม่แน่ใจว่าควรใช้ CNC, 3D Printing หรือ 3D Scanning ส่งแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน เพื่อให้ MALIEV ตรวจสอบเส้นทางประเมินที่เหมาะสม",
+        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
         "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
         "รับผลิตชิ้นงานตามแบบ, ผลิตชิ้นส่วนตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
