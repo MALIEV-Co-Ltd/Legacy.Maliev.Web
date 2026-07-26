@@ -38,15 +38,15 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<W
     [InlineData(
         "en",
         "Terms and Conditions | MALIEV",
-        "These terms and conditions outline the rules and regulations for the use of Maliev Co., Ltd.'s Website.",
+        "Read MALIEV website, manufacturing service, file-submission, and user responsibility terms and conditions.",
         "cookies, license, hyperlink, terms and conditions, terms, services, iframes, rights, liability, disclaimer",
         "These terms and conditions outline the rules and regulations",
         "we will not be liable for any loss or damage of any nature")]
     [InlineData(
         "th",
         "ข้อกำหนดและเงื่อนไขการให้บริการ | MALIEV",
-        "ข้อกำหนดและเงื่อนไขการเก็บข้อมูลและใช้บริการต่างๆของเรา",
-        "นโยบายความเป็นส่วนตัว, cookies, license, hyperlink, terms, services, iframes, rights, liability, disclaimer",
+        "อ่านข้อกำหนดการใช้เว็บไซต์ บริการผลิต การส่งข้อมูล และความรับผิดชอบของผู้ใช้ MALIEV",
+        "ข้อกำหนดและเงื่อนไข, cookies, license, hyperlink, terms, services, iframes, rights, liability, disclaimer",
         "ข้อกำหนดและเงื่อนไข",
         "เราจะไม่รับผิดต่อความสูญเสียหรือความเสียหายไม่ว่าประเภทใด")]
     public async Task TermsConditionsRoute_RendersLocalizedStaticSsrWithSeoAnalyticsAndDocumentParity(

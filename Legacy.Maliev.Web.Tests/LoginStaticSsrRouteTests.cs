@@ -34,7 +34,7 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
 
     [Theory]
     [InlineData("en", "Login | MALIEV", "Email", "Password", "Remember me", "Sign in")]
-    [InlineData("th", "Login | MALIEV", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
+    [InlineData("th", "เข้าสู่ระบบ | MALIEV", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
     public async Task LoginGet_RendersLocalizedBlazorStaticSsrWithServerPostBoundary(
         string culture,
         string title,
@@ -97,7 +97,7 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
         Assert.Contains("<h1 id=\"login-intro-title\">Manage your manufacturing projects</h1>", source, StringComparison.Ordinal);
         Assert.Contains("<section class=\"auth-card\" aria-labelledby=\"login-title\">", source, StringComparison.Ordinal);
         Assert.Contains("<p class=\"maliev-eyebrow\">Member account</p>", source, StringComparison.Ordinal);
-        Assert.Contains("<h1 id=\"login-title\">Sign in</h1>", source, StringComparison.Ordinal);
+        Assert.Contains("<h2 id=\"login-title\">Sign in</h2>", source, StringComparison.Ordinal);
         Assert.Matches(
             "<form(?=[^>]*method=\\\"post\\\")(?=[^>]*class=\\\"maliev-form\\\")(?=[^>]*id=\\\"customer-login\\\")[^>]*>",
             source);

@@ -38,15 +38,15 @@ public sealed class PrivacyPolicyStaticSsrRouteTests : IClassFixture<WebApplicat
     [InlineData(
         "en",
         "Privacy Policy | MALIEV",
-        "By using the Service, you agree to the collection and use of information in accordance with this policy. Unless otherwise defined in this Privacy Policy, terms used in this Privacy Policy have the same meanings as in our Terms and Conditions, accessible from http://www.maliev.com",
+        "Learn how MALIEV collects, uses, protects, and retains information when you use our website and manufacturing services.",
         "privacy policy, policies, service, collection, terms and conditions, data, cookies, tracking, legal, security",
-        "Effective date: July 07, 2018")]
+        "24 July 2026")]
     [InlineData(
         "th",
         "นโยบายความเป็นส่วนตัว | MALIEV",
-        "รายละเอียดนโยบายความเป็นส่วนตัว",
+        "นโยบายความเป็นส่วนตัวของ MALIEV อธิบายการเก็บ ใช้ และคุ้มครองข้อมูลเมื่อคุณใช้เว็บไซต์และบริการผลิตของเรา",
         "นโยบายความเป็นส่วนตัว, ข้อมูล, cookies",
-        "วันที่มีผลบังคับใช้: 7 กรกฎาคม 2018")]
+        "24 กรกฎาคม 2569")]
     public async Task PrivacyPolicyRoute_RendersLocalizedStaticSsrWithSeoAnalyticsAndDocumentParity(
         string culture,
         string title,
@@ -65,7 +65,7 @@ public sealed class PrivacyPolicyStaticSsrRouteTests : IClassFixture<WebApplicat
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
-        Assert.Contains($">{effectiveDate}<", source, StringComparison.Ordinal);
+        Assert.Contains(effectiveDate, source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);

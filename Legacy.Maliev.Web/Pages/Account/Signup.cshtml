@@ -3,17 +3,29 @@
 @using Legacy.Maliev.Web.Components.Pages.Account
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<SignupContent> SignupLocalizer
-@{ ViewData["Title"] = SignupLocalizer["Sign Up | MALIEV"]; ViewData["Robots"] = "noindex, follow"; }
+@{
+    var isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
+    ViewData["Title"] = isThai ? "สมัครสมาชิก | MALIEV" : "Sign Up | MALIEV";
+    ViewData["Description"] = isThai
+        ? "สมัครบัญชี MALIEV เพื่อจัดการใบเสนอราคา คำสั่งซื้อ ไฟล์งาน และโปรเจ็คผลิตของคุณออนไลน์อย่างปลอดภัย"
+        : "Create a MALIEV account to manage quotations, orders, project files, and manufacturing work online.";
+    ViewData["Robots"] = "noindex, follow";
+}
 @section Head { <script src="https://www.google.com/recaptcha/enterprise.js?render=@Model.RecaptchaSiteKey"></script> }
 <main class="auth-page">
     <div class="maliev-container auth-shell">
-        <section class="auth-intro">
+        <section class="auth-intro" aria-labelledby="signup-intro-title">
             <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
-            <h1>@SignupLocalizer["Manufacturing project management, in one place"]</h1>
-            <p>@SignupLocalizer["Create an account to manage quotes, orders, projects, and files."]</p>
+            <h1 id="signup-intro-title">@SignupLocalizer["Manufacturing project management, in one place"]</h1>
+            <p>@SignupLocalizer["Create an account to manage quotes, start an order or review previous projects and files."]</p>
+            <ul class="auth-benefits">
+                <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>@SignupLocalizer["Order Management"]</span></li>
+                <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>@SignupLocalizer["Account Management"]</span></li>
+                <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>@SignupLocalizer["Job Management"]</span></li>
+            </ul>
         </section>
-        <section class="auth-card">
-            <header class="auth-card__header"><h1>@SignupLocalizer["Join now"]</h1></header>
+        <section class="auth-card" aria-labelledby="signup-title">
+            <header class="auth-card__header"><p class="maliev-eyebrow">@SignupLocalizer["Get started - it's free"]</p><h2 id="signup-title">@SignupLocalizer["Join now"]</h2></header>
             @if (!string.IsNullOrWhiteSpace(Model.Notification))
             {
                 <div class="maliev-alert maliev-alert--success" role="status">@Model.Notification</div>

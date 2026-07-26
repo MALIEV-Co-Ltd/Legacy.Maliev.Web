@@ -3,7 +3,15 @@
 @using Legacy.Maliev.Web.Components.Pages.Account
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<LoginContent> LoginLocalizer
-@{ ViewData["Title"] = LoginLocalizer["Login | MALIEV"]; ViewData["Robots"] = "noindex, follow"; }
+@{
+    var isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
+    ViewData["Title"] = isThai ? "เข้าสู่ระบบ | MALIEV" : "Login | MALIEV";
+    ViewData["Description"] = isThai
+        ? "เข้าสู่ระบบ MALIEV เพื่อดูใบเสนอราคา คำสั่งซื้อ ไฟล์งาน และข้อมูลบัญชีในพื้นที่ทำงานออนไลน์"
+        : "Sign in to MALIEV to review quotations, orders, project files, and account details in your secure workspace.";
+    ViewData["Keywords"] = isThai ? "member, เข้าสู่ระบบ" : "member area, login";
+    ViewData["Robots"] = "noindex, follow";
+}
 <main class="auth-page">
     <div class="maliev-container auth-shell">
         <section class="auth-intro" aria-labelledby="login-intro-title">
@@ -14,7 +22,7 @@
         <section class="auth-card" aria-labelledby="login-title">
             <header class="auth-card__header">
                 <p class="maliev-eyebrow">@LoginLocalizer["Member account"]</p>
-                <h1 id="login-title">@LoginLocalizer["Sign in"]</h1>
+                <h2 id="login-title">@LoginLocalizer["Sign in"]</h2>
             </header>
             @if (!string.IsNullOrWhiteSpace(Model.Notification))
             {

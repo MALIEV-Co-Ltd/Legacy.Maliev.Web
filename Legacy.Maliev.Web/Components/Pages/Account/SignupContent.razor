@@ -37,6 +37,7 @@
         <div class="maliev-form-field">
             <label for="Password">@Localizer["Password"]</label>
             <input autocomplete="new-password" type="password" id="Password" minlength="6" maxlength="1024" name="Password" required aria-invalid="@AriaInvalid("Password")" aria-describedby="Password-error" data-password-primary />
+            <span class="maliev-form-help">@Localizer["At least 6 characters long, and must contain 6 unique characters."]</span>
             <span id="Password-error" class="@(HasError("Password") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Password")</span>
         </div>
         <div class="maliev-form-field">
@@ -47,8 +48,8 @@
     </div>
 
     <input type="hidden" name="g-recaptcha-response" id="signup-recaptcha-response" value="" data-recaptcha-response />
-    <p>@Localizer["By signing up, you agree to our"] <a href="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a> @Localizer["and"] <a href="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a>.</p>
-    <button type="submit" formaction="/Account/Signup?handler=SignUp" id="submit-button">@Localizer["Sign Up"]</button>
+    <p class="maliev-form-help">@Localizer["By clicking sign up, you are agree to our"] <a href="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a> @Localizer["and"] <a href="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a>.</p>
+    <button type="submit" formaction="/Account/Signup?handler=SignUp" id="submit-button">@Localizer["Sign Up"] <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
 </div>
 
 @code {

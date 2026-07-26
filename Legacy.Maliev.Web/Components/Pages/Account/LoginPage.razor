@@ -1,4 +1,5 @@
 @page "/Account/Login"
+@using System.Globalization
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IHttpContextAccessor HttpContextAccessor
@@ -9,8 +10,18 @@
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Environment
 
-<PageTitle>@Localizer["Login | MALIEV"]</PageTitle>
+@{
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "เข้าสู่ระบบ | MALIEV" : "Login | MALIEV";
+    var description = isThai
+        ? "เข้าสู่ระบบ MALIEV เพื่อดูใบเสนอราคา คำสั่งซื้อ ไฟล์งาน และข้อมูลบัญชีในพื้นที่ทำงานออนไลน์"
+        : "Sign in to MALIEV to review quotations, orders, project files, and account details in your secure workspace.";
+    var keywords = isThai ? "member, เข้าสู่ระบบ" : "member area, login";
+}
+<PageTitle>@title</PageTitle>
 <HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
     <meta name="robots" content="noindex, follow" />
 </HeadContent>
 <main class="auth-page" data-migration-route-owner="blazor-static-ssr">
@@ -23,7 +34,7 @@
         <section class="auth-card" aria-labelledby="login-title">
             <header class="auth-card__header">
                 <p class="maliev-eyebrow">@Localizer["Member account"]</p>
-                <h1 id="login-title">@Localizer["Sign in"]</h1>
+                <h2 id="login-title">@Localizer["Sign in"]</h2>
             </header>
             @if (!string.IsNullOrWhiteSpace(model.Notification))
             {
