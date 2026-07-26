@@ -54,8 +54,9 @@
                 </div>
                 <div class="col-md-6">
                     <label for="Email" class="form-label">@Localizer["Email"]</label>
-                    <input class="form-control" autocomplete="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
-                    <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+            <input class="form-control" autocomplete="email" inputmode="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error quotation-email-feedback" data-live-email data-live-email-invalid='@Localizer["Please enter a valid email address"]' />
+            <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+            <span id="quotation-email-feedback" class="inquiry-help inquiry-live-feedback" data-email-feedback hidden></span>
                 </div>
                 <div class="col-md-6">
                     <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
@@ -74,7 +75,7 @@
                 </div>
                 <div class="col-md-6">
                     <label for="Country" class="form-label">@Localizer["Country"]</label>
-                    <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error">
+                    <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error" data-auto-country>
                         <option value="">@Localizer["Select a country"]</option>
                         @foreach (var country in Model.Countries)
                         {
@@ -106,14 +107,19 @@
             <i class="fas fa-paperclip" aria-hidden="true"></i>
             <h3 id="quotation-files-heading">@Localizer["Project files"]</h3>
         </div>
-        <div class="inquiry-upload">
+        <div class="inquiry-upload" data-upload-dropzone>
             <div class="inquiry-upload__heading">
                 <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
                 <strong>@Localizer["Upload files up to 100 MB total"]</strong>
             </div>
         <div class="col-12">
-            <label for="Files" class="form-label">@Localizer["Drawings and reference files (optional)"]</label>
-            <input type="file" class="form-control" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files />
+            <span class="form-label">@Localizer["Drawings and reference files (optional)"]</span>
+            <label class="inquiry-upload__dropzone-label" for="Files">
+                <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                <span><strong>@Localizer["Choose files or drop them here"]</strong><small>@Localizer["Multiple files are supported"]</small></span>
+            </label>
+            <input type="file" class="inquiry-upload__input" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files data-remove-file-label='@Localizer["Remove"]' />
+            <ul class="inquiry-upload__file-list" data-upload-file-list aria-live="polite" hidden></ul>
             <div id="quotation-files-help" class="form-text">@Localizer["Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage."]</div>
             <span id="Files-error" class="text-danger @(HasError("Files") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Files")</span>
         </div>

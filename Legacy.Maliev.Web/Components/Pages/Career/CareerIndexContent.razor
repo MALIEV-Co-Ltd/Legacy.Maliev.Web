@@ -1,7 +1,8 @@
+@using System.Globalization
 @using Microsoft.AspNetCore.Components
 @inject IStringLocalizer<CareerIndexContent> Localizer
 
-<main class="maliev-page maliev-page-main" data-migration-component="career-index-content" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<main class="maliev-page maliev-page-main career-page" data-migration-component="career-index-content" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <div class="maliev-container workspace-content public-content">
         @if (!Model.ServiceAvailable)
         {
@@ -10,10 +11,10 @@
         <div class="row">
             <div class="col-12">
                 <h1 class="fs-2">@Localizer["Job Offers"]</h1>
-                <p class="small">
+                <p id="career-intro" class="small career-intro">
                     @Localizer["Here you will find our current job offers."]
-                    @Localizer["If you have any questions about the positions, please do not hesitate to contact our contact person directly."]
-                    @Localizer["We look forward to meet you. If you have not found a suitable position, you can apply for a initiative position."]
+                    <!--email_off-->@Localizer["If you have any questions about the positions, please do not hesitate to contact our contact person directly."]<!--/email_off-->
+                    @T("We look forward to meeting you. If you do not see a suitable role, you are welcome to send us your CV for future opportunities.", "หากยังไม่พบตำแหน่งที่เหมาะสม สามารถส่ง CV มาให้เราเก็บไว้พิจารณาในโอกาสต่อไปได้")
                 </p>
             </div>
         </div>
@@ -41,8 +42,8 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="table-wrapper">
-                            <table id="search-result" class="data-table">
+                        <div class="table-wrapper career-table-wrapper" role="region" aria-label='@Localizer["Current job offers"]' tabindex="0">
+                            <table id="search-result" class="data-table data-responsive" data-stack="true">
                                 <thead>
                                     <tr>
                                         <th class="table-col-compact">@Localizer["Ref."]</th>
@@ -60,9 +61,9 @@
                                                 <td data-title="@Localizer["Reference number"]" class="table-link-cell">
                                                     <a href="/Career/View/@offer.Id">@offer.Id</a>
                                                 </td>
-                                                <td data-title="Title">@offer.Title</td>
-                                                <td data-title="Location">@offer.Location</td>
-                                                <td data-title="Level">@offer.LevelName</td>
+                                                <td data-title='@Localizer["Title"]'>@offer.Title</td>
+                                                <td data-title='@Localizer["Location"]'>@offer.Location</td>
+                                                <td data-title='@Localizer["Type"]'>@offer.LevelName</td>
                                             </tr>
                                         }
                                     }
@@ -159,6 +160,9 @@
 
     [Parameter]
     public string RouteOwner { get; set; } = "razor-static-ssr";
+
+    private static string T(string english, string thai) =>
+        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? thai : english;
 
     private string PageUrl(int pageIndex)
     {

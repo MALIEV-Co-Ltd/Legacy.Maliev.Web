@@ -170,4 +170,5 @@
   </data>
   <data name="Search positions" xml:space="preserve"><value>ค้นหาตำแหน่งงาน</value></data><data name="Search" xml:space="preserve"><value>ค้นหา</value></data><data name="Reference number" xml:space="preserve"><value>เลขอ้างอิง</value></data>
   <data name="Location" xml:space="preserve"><value>สถานที่</value></data>
+  <data name="Current job offers" xml:space="preserve"><value>ตำแหน่งงานที่เปิดรับ</value></data>
 </root>

@@ -43,7 +43,7 @@ public sealed partial class KnowledgeGuidelinesStaticSsrRouteTests : IClassFixtu
         "View NDA information")]
     [InlineData(
         "th",
-        "แนวทางเตรียมโครงการ | MALIEV",
+        "แนวทางเตรียมโปรเจ็ค | MALIEV",
         "ข้อมูลที่ควรส่งเมื่อขอบริการ CNC งานพิมพ์ 3 มิติ หรืองานสแกน 3 มิติ",
         "แนวทางขอใบเสนอราคา",
         "ส่งไฟล์ที่ใช้งานได้",

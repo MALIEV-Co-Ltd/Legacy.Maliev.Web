@@ -52,8 +52,9 @@
         </div>
         <div class="inquiry-field">
             <label for="Email" class="form-label">@Localizer["Email"]</label>
-            <input class="form-control" autocomplete="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+            <input class="form-control" autocomplete="email" inputmode="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error contact-email-feedback" data-live-email data-live-email-invalid='@Localizer["Please enter a valid email address"]' />
             <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+            <span id="contact-email-feedback" class="inquiry-help inquiry-live-feedback" data-email-feedback hidden></span>
         </div>
         <div class="inquiry-field">
             <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
@@ -67,7 +68,7 @@
         </div>
         <div class="inquiry-field">
             <label for="Country" class="form-label">@Localizer["Country"]</label>
-            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error">
+            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error" data-auto-country>
                 <option value="">@Localizer["Select a country"]</option>
                 @foreach (var country in Model.Countries)
                 {

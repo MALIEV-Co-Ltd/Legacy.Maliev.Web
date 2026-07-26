@@ -206,4 +206,5 @@
   <data name="Business hours" xml:space="preserve"><value>เวลาทำการ</value></data>
   <data name="Monday-Friday: 09:00-18:00" xml:space="preserve"><value>จันทร์-ศุกร์: 09:00-18:00 น.</value></data>
   <data name="Saturday-Sunday: Closed" xml:space="preserve"><value>เสาร์-อาทิตย์: ปิด</value></data>
+  <data name="Please enter a valid email address" xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
 </root>

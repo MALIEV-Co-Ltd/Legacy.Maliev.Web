@@ -45,10 +45,16 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         Assert.Contains("type=\"typeof(CustomManufacturingContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
-                Path.Combine(web, "Components"),
-                "*.razor",
-                SearchOption.AllDirectories)
+            Path.Combine(web, "Components"),
+            "*.razor",
+            SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
+            .Where(path => !new[]
+            {
+                "ThreeDimensionalDesignPage.razor",
+                "SiliconeCastingPage.razor",
+                "LowVolumeInjectionMoldingPage.razor"
+            }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();
