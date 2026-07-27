@@ -127,7 +127,7 @@
     <value>หน้าแรก</value>
   </data>
   <data name="Here you will find our current job offers." xml:space="preserve">
-    <value>ตำแหน่งงานต่างๆที่เรากำลังเปิดรับ</value>
+<value>ตำแหน่งงานต่าง ๆ ที่เราเปิดรับอยู่</value>
   </data>
   <data name="If you have any questions about the positions, please do not hesitate to contact our contact person directly." xml:space="preserve">
     <value>หากคุณมีข้อสงสัยเกี่ยวกับตำแหน่งงานที่เปิดรับ กรุณาติดต่อสอบถามเข้ามาได้ที่ career@maliev.com</value>
@@ -166,7 +166,7 @@
     <value>รูปแบบ</value>
   </data>
   <data name="We look forward to meet you. If you have not found a suitable position, you can apply for a initiative position." xml:space="preserve">
-    <value>หากยังไม่พบตำแหน่งงานที่ต้องการในระบบของเรา ลองส่งใบสมัครเปล่าหรือลองติดต่อเข้ามาทางอีเมล์เพื่อให้ทางทีมงานพิจารณาได้เลย</value>
+    <value>หากยังไม่พบตำแหน่งงานที่สนใจในระบบของเรา คุณสามารถส่งใบสมัครทั่วไปหรือติดต่อเราทางอีเมล เพื่อให้ทีมงานพิจารณาได้</value>
   </data>
   <data name="Search positions" xml:space="preserve"><value>ค้นหาตำแหน่งงาน</value></data><data name="Search" xml:space="preserve"><value>ค้นหา</value></data><data name="Reference number" xml:space="preserve"><value>เลขอ้างอิง</value></data>
   <data name="Location" xml:space="preserve"><value>สถานที่</value></data>

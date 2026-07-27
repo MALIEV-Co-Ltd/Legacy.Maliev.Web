@@ -1909,7 +1909,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("/services", "en", "Manufacturing services", "/services/cnc-machining")]
-    [InlineData("/services", "th", "บริการผลิตชิ้นส่วน", "/services/cnc-machining")]
+    [InlineData("/services", "th", "บริการผลิตชิ้นงาน", "/services/cnc-machining")]
     [InlineData("/about/socialmedia", "en", "MALIEV on social media", "https://www.youtube.com")]
     [InlineData("/about/socialmedia", "th", "MALIEV บนโซเชียลมีเดีย", "https://www.youtube.com")]
     public async Task ReadOnlyPublicRoute_RendersLocalizedBlazorStaticSsrContent(
@@ -2136,7 +2136,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "FDM & Resin 3D Printing", "Professional 3D Printing for Prototypes and Functional Parts", "How much does 3D printing cost?")]
-    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
@@ -2342,7 +2342,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up", "Passwords do not match.")]
-    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
+    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
     public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(
         string culture,
         string firstNameLabel,
@@ -2630,7 +2630,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "Email", "Password", "Remember me", "Sign in")]
-    [InlineData("th", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
+    [InlineData("th", "อีเมล", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
     public async Task Login_RendersLocalizedStaticSsrFormInsideHardenedSessionBoundary(
         string culture,
         string emailLabel,

@@ -145,7 +145,7 @@
     <value>ข้าพเจ้ายอมรับ</value>
   </data>
   <data name="I allow the company to publish work-in-progress photos on the social media" xml:space="preserve">
-    <value>อนุญาตให้บริษัทนำภาพงานไปเผยแพร่ใน social media</value>
+<value>อนุญาตให้บริษัทนำภาพงานไปเผยแพร่ในโซเชียลมีเดีย</value>
   </data>
   <data name="Material" xml:space="preserve">
     <value>วัสดุ</value>
@@ -193,13 +193,13 @@
     <value>นโยบายการใช้บริการ</value>
   </data>
   <data name="To avoid disappointment, please verify that your parts conformed to our manufacturing specifications." xml:space="preserve">
-    <value>เพื่อลดความไม่พึงพอใจของลูกค้า กรุณาอ่านและทำความเข้าใจกับข้อจำกัดในการผลิตในรูปแบบต่างๆก่อนสั่งชิ้นงาน</value>
+<value>เพื่อลดความไม่พึงพอใจของลูกค้า กรุณาอ่านและทำความเข้าใจข้อจำกัดของกระบวนการผลิตแต่ละแบบก่อนสั่งชิ้นงาน</value>
   </data>
   <data name="Upload" xml:space="preserve">
     <value>ไฟล์งาน</value>
   </data>
   <data name="Upload files" xml:space="preserve">
-    <value>อัพโหลดไฟล์งาน</value>
+    <value>อัปโหลดไฟล์งาน</value>
   </data>
   <data name="Name" xml:space="preserve">
     <value>ชื่อชิ้นงาน</value>

@@ -157,7 +157,7 @@
     <value>Manufacturing Services</value>
   </data>
   <data name="Once you're satisfied with our offer. We start the production." xml:space="preserve">
-    <value>Once you're satisfied with our offer. We start the production.</value>
+    <value>Once you're satisfied with our offer, we'll start production.</value>
   </data>
   <data name="Part is produced by our manufacturing team and inspected in all processes" xml:space="preserve">
     <value>Parts are produced by our manufacturing team and inspected throughout all processes</value>
@@ -178,7 +178,7 @@
     <value>We support students from universities completing their projects too.</value>
   </data>
   <data name="You submit your request by contact us directly or using our upload portal. This can be CAD file or plain documents" xml:space="preserve">
-    <value>You can submit your request by contacting us directly or using our upload portal. This can be a CAD file or plain documents</value>
+    <value>You can submit your request by contacting us directly or using our upload portal. These can be CAD files or other documents.</value>
   </data>
   <data name="Your request is checked by our engineer and the quotation offer is generated for you to examine and review" xml:space="preserve">
     <value>Your request is reviewed by our engineers and a quotation is generated for you to examine</value>

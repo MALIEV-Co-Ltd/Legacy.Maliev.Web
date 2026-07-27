@@ -124,10 +124,10 @@
     <value>เมื่อคุณกดสมัครสมาชิก เราถือว่าคุณยอมรับ</value>
   </data>
   <data name="Create an account to manage quotes, start an order or review previous projects and files." xml:space="preserve">
-    <value>เปิดบัญชีเพื่อตรวจสอบใบเสนอราคา สั่งงาน หรือตรวจสอบสถานะงานและไฟล์ต่างๆในโปรเจ็ค</value>
+    <value>สร้างบัญชีเพื่อดูใบเสนอราคา เริ่มสั่งงาน หรือติดตามสถานะงานและไฟล์โครงการต่าง ๆ</value>
   </data>
   <data name="Email" xml:space="preserve">
-    <value>อีเมล์</value>
+    <value>อีเมล</value>
   </data>
   <data name="everywhere" xml:space="preserve">
     <value>ได้ทุกที่ ทุกเวลา</value>
