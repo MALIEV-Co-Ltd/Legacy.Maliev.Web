@@ -56,13 +56,31 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
         Assert.Contains(rememberLabel, source, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains("formaction=\"/Account/Login?handler=Login\"", source, StringComparison.Ordinal);
+        Assert.Contains($"formaction=\"/Account/Login?handler=Login&culture={culture}\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"ReturnUrl\" value=\"/Member/Orders\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"robots\" content=\"noindex, follow\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("data-local-aspire-login", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LocalAspireLoginReview_RendersOnlyConfiguredDisposableCredentials()
+    {
+        await using var reviewFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("LocalAspireLoginReview:Enabled", "true");
+            builder.UseSetting("LocalAspireLoginReview:Email", "local.customer@maliev.test");
+            builder.UseSetting("LocalAspireLoginReview:Password", "local-test-only");
+        });
+        using var client = CreateClient(reviewFactory);
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/account/login?culture=en"));
+
+        Assert.Contains("data-local-aspire-login", source, StringComparison.Ordinal);
+        Assert.Contains("local.customer@maliev.test", source, StringComparison.Ordinal);
+        Assert.Contains("local-test-only", source, StringComparison.Ordinal);
     }
 
     [Fact]

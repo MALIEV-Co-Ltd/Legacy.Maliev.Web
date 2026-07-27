@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Pages.About.Career;
 
-public sealed class Index(ICareerClient careerClient) : PageModel
+public sealed class Index(ICareerClient careerClient, IConfiguration configuration) : PageModel
 {
     public IReadOnlyList<CareerLevel> CareerLevels { get; private set; } = [];
 
@@ -91,9 +91,12 @@ public sealed class Index(ICareerClient careerClient) : PageModel
             cancellationToken);
 
         CareerLevels = listing.Levels;
+        var hideLocalAspireFixture = configuration.GetValue<bool>("Career:HideLocalAspireFixture");
         JobOffers = listing.Offers with
         {
-            Items = listing.Offers.Items.Where(offer => offer.IsFilled != true).ToArray()
+            Items = listing.Offers.Items
+                .Where(offer => CareerOfferPresentation.IsVisibleOpenOffer(offer, hideLocalAspireFixture))
+                .ToArray()
         };
         ServiceAvailable = listing.ServiceAvailable;
     }

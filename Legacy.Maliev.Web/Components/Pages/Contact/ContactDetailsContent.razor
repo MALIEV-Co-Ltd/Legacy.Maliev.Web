@@ -1,4 +1,7 @@
 @inject IStringLocalizer<ContactContent> Localizer
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.Extensions.Options
+@inject IOptions<GoogleMapsOptions> GoogleMapsOptions
 
 <div data-migration-component="contact-details-content" data-migration-renderer="blazor-static-ssr">
     <h2 id="contact-details-title">@Localizer["Contact details"]</h2>
@@ -7,12 +10,21 @@
         @Localizer["Nonthaburi, Thailand"]<br />
         <a href="mailto:info@maliev.com">info@maliev.com</a>
     </address>
-    <iframe
-        title="@Localizer["MALIEV office location"]"
-        src="https://maps.google.com/maps?q=Maliev%20Co.%2C%20Ltd.%2C%20Nonthaburi%2C%20Thailand&amp;z=15&amp;output=embed"
-        width="100%"
-        height="360"
-        style="border:0"
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    @if (GoogleMapsOptions.Value.IsConfigured)
+    {
+        <iframe
+            title="@Localizer["MALIEV office location"]"
+            src="@GoogleMapsOptions.Value.BuildEmbedUrl()"
+            width="100%"
+            height="360"
+            style="border:0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"></iframe>
+    }
+    else
+    {
+        <p class="maliev-map-unavailable" role="status">
+            @Localizer["The map is temporarily unavailable."]
+        </p>
+    }
 </div>
