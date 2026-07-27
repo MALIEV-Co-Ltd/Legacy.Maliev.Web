@@ -24,6 +24,13 @@ jobs:
           ref: 1065c071ae0aca17fa56d88c1e13ae51bae074a4
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
+      - name: Check out Legacy.Maliev.CompatibilityContracts
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 95c62eb6209411f5aada443b315447a2f76ca0cd
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
