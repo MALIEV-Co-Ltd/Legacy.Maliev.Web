@@ -30,6 +30,33 @@ public sealed record CustomerCredentialOperationResult(
     bool Authorized,
     string? Token = null);
 
+public sealed record CustomerEmailChangeValidationResult(
+    bool Valid,
+    bool ServiceAvailable,
+    bool Authorized,
+    int? CustomerId = null,
+    string? CurrentEmail = null,
+    string? NewEmail = null,
+    bool Completed = false);
+
+public sealed record CustomerEmailChangeCompletionResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public sealed record CustomerEmailChangeWorkflowResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public interface ICustomerEmailChangeWorkflow
+{
+    Task<CustomerEmailChangeWorkflowResult> CompleteAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken);
+}
+
 public interface ICustomerAuthenticationClient
 {
     Task<CustomerAuthenticationResult> LoginAsync(
@@ -54,6 +81,16 @@ public interface ICustomerAuthenticationClient
         CancellationToken cancellationToken);
 
     Task<bool> CompleteEmailConfirmationAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken);
+
+    Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken);
+
+    Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(
         string email,
         string token,
         CancellationToken cancellationToken);

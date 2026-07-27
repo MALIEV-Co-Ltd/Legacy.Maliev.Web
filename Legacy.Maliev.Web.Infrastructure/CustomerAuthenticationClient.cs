@@ -127,6 +127,59 @@ internal sealed class CustomerAuthenticationClient(
             new CompleteActionRequest(email, token),
             cancellationToken);
 
+    public async Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendServiceRequestAsync(
+            HttpMethod.Post,
+            "auth/v1/customer-self-service/email-change/validate",
+            new CompleteActionRequest(email, token),
+            cancellationToken);
+        if (response is null)
+        {
+            return new(false, false, false);
+        }
+
+        var authorized = response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
+        if (!authorized || !response.IsSuccessStatusCode)
+        {
+            return new(false, (int)response.StatusCode < 500, authorized);
+        }
+
+        var validation = await response.Content.ReadFromJsonAsync<EmailChangeValidationResponse>(cancellationToken);
+        return validation is null
+            ? new(false, true, true)
+            : new(
+                true,
+                true,
+                true,
+                validation.DatabaseId,
+                validation.CurrentEmail,
+                validation.NewEmail,
+                validation.Completed);
+    }
+
+    public async Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendServiceRequestAsync(
+            HttpMethod.Post,
+            "auth/v1/customer-self-service/email-change/complete",
+            new CompleteActionRequest(email, token),
+            cancellationToken);
+        if (response is null)
+        {
+            return new(false, false, false);
+        }
+
+        var authorized = response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
+        return new(response.IsSuccessStatusCode, (int)response.StatusCode < 500, authorized);
+    }
+
     public Task<CustomerActionChallenge> RequestPasswordResetAsync(
         string email,
         CancellationToken cancellationToken) =>
@@ -335,6 +388,11 @@ internal sealed class CustomerAuthenticationClient(
     private sealed record ActionRequest(string Email);
     private sealed record CompleteActionRequest(string Email, string Token);
     private sealed record CompletePasswordResetRequest(string Email, string Token, string Password);
+    private sealed record EmailChangeValidationResponse(
+        int DatabaseId,
+        string CurrentEmail,
+        string NewEmail,
+        bool Completed = false);
     private sealed record ChangeEmailRequest(string CurrentPassword, string NewEmail);
     private sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
     private sealed record ChallengeResponse(bool Accepted, string? Token);

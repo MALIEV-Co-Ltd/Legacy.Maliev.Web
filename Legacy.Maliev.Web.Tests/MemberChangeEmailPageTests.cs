@@ -43,7 +43,7 @@ public sealed class MemberChangeEmailPageTests
     }
 
     [Fact]
-    public async Task Post_IdentityRejectionRollsBackProfileToClaimedEmail()
+    public async Task Post_IdentityRejectionLeavesProfileUntouched()
     {
         var session = new StubSessionManager("opaque-access-token", 42);
         var authentication = new StubAuthenticationClient
@@ -58,19 +58,19 @@ public sealed class MemberChangeEmailPageTests
         var result = await page.OnPostChangeEmailAsync(CancellationToken.None);
 
         Assert.IsType<PageResult>(result);
-        Assert.Equal(["new@example.com", "server-current@example.com"], account.Emails);
+        Assert.Empty(account.Emails);
         Assert.False(session.SignOutCalled);
     }
 
     [Fact]
-    public async Task Post_UnauthorizedIdentityStillSignsOutWhenRollbackThrows()
+    public async Task Post_UnauthorizedIdentitySignsOutWithoutProfileMutation()
     {
         var session = new StubSessionManager("opaque-access-token", 42);
         var authentication = new StubAuthenticationClient
         {
             Result = new CustomerCredentialOperationResult(false, true, false),
         };
-        var account = new StubAccountClient { ThrowOnEmailUpdateNumber = 2 };
+        var account = new StubAccountClient();
         var logger = new RecordingLogger();
         var page = CreatePage(session, authentication, account, logger: logger);
         page.CurrentPassword = "current-secret";
@@ -80,12 +80,13 @@ public sealed class MemberChangeEmailPageTests
 
         Assert.IsType<ChallengeResult>(result);
         Assert.True(session.SignOutCalled);
-        Assert.Contains(logger.Messages, message => message.Contains("manual email reconciliation", StringComparison.Ordinal));
+        Assert.Empty(account.Emails);
+        Assert.DoesNotContain(logger.Messages, message => message.Contains("manual email reconciliation", StringComparison.Ordinal));
         Assert.DoesNotContain(logger.Messages, message => message.Contains("current-secret", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task Post_NotificationFailureCannotBypassSignOutOrLogCredentials()
+    public async Task Post_NotificationFailureKeepsSessionAndLeavesProfilePending()
     {
         var session = new StubSessionManager("opaque-access-token", 42);
         var authentication = new StubAuthenticationClient
@@ -105,7 +106,8 @@ public sealed class MemberChangeEmailPageTests
         var result = await page.OnPostChangeEmailAsync(CancellationToken.None);
 
         Assert.IsType<RedirectToPageResult>(result);
-        Assert.True(session.SignOutCalled);
+        Assert.False(session.SignOutCalled);
+        Assert.Empty(account.Emails);
         Assert.DoesNotContain(logger.Messages, message => message.Contains("current-secret", StringComparison.Ordinal));
         Assert.DoesNotContain(logger.Messages, message => message.Contains("single-use-confirmation-token", StringComparison.Ordinal));
     }
@@ -173,6 +175,8 @@ public sealed class MemberChangeEmailPageTests
         public Task<CustomerIdentityRegistration> RegisterAsync(int databaseId, string email, string password, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<CustomerActionChallenge> RequestEmailConfirmationAsync(string email, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(string email, string token, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(string email, string token, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> CompletePasswordResetAsync(string email, string token, string password, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<CustomerCredentialOperationResult> ChangePasswordAsync(string accessToken, string currentPassword, string newPassword, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -225,11 +229,15 @@ public sealed class MemberChangeEmailPageTests
     private sealed class StubNotificationClient : INotificationClient
     {
         public Exception? Exception { get; init; }
+        public List<EmailNotification> Notifications { get; } = [];
 
-        public Task<NotificationResult> SendAsync(NotificationChannel channel, EmailNotification notification, CancellationToken cancellationToken) =>
-            Exception is null
+        public Task<NotificationResult> SendAsync(NotificationChannel channel, EmailNotification notification, CancellationToken cancellationToken)
+        {
+            Notifications.Add(notification);
+            return Exception is null
                 ? Task.FromResult(new NotificationResult(true, true, true))
                 : Task.FromException<NotificationResult>(Exception);
+        }
     }
 
     private sealed class RecordingLogger : ILogger<ChangeEmailPage>

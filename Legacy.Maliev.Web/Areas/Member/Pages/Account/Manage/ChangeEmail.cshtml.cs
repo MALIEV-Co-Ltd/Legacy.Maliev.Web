@@ -76,17 +76,6 @@ public sealed class ChangeEmail(
             return Page();
         }
 
-        var customerUpdate = await customerClient.UpdateEmailAsync(
-            session.CustomerId,
-            NewEmail,
-            cancellationToken);
-        if (!customerUpdate.Succeeded)
-        {
-            ModelState.AddModelError(string.Empty, "The email address could not be changed.");
-            BuildDisplayModel();
-            return Page();
-        }
-
         CustomerCredentialOperationResult identityUpdate;
         try
         {
@@ -98,13 +87,11 @@ public sealed class ChangeEmail(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await RollBackProfileAsync(session.CustomerId, currentEmail);
             throw;
         }
         catch (Exception)
         {
-            await RollBackProfileAsync(session.CustomerId, currentEmail);
-            logger.LogWarning("Identity email change failed unexpectedly after the profile update.");
+            logger.LogWarning("Identity email change failed unexpectedly during the pending identity change.");
             ModelState.AddModelError(string.Empty, "Account security is temporarily unavailable.");
             BuildDisplayModel();
             return Page();
@@ -112,7 +99,6 @@ public sealed class ChangeEmail(
 
         if (!identityUpdate.Succeeded || string.IsNullOrWhiteSpace(identityUpdate.Token))
         {
-            await RollBackProfileAsync(session.CustomerId, currentEmail);
             if (!identityUpdate.Authorized)
             {
                 await sessionManager.SignOutAsync(HttpContext, CancellationToken.None);
@@ -128,8 +114,6 @@ public sealed class ChangeEmail(
             return Page();
         }
 
-        await sessionManager.SignOutAsync(HttpContext, CancellationToken.None);
-
         var callback = QueryHelpers.AddQueryString(
             $"{CanonicalUrlPolicy.CanonicalOrigin}/account/changeemailconfirmation",
             new Dictionary<string, string?>
@@ -137,33 +121,34 @@ public sealed class ChangeEmail(
                 ["email"] = NewEmail,
                 ["token"] = identityUpdate.Token,
             });
-        var sent = false;
-        try
+        var newEmailSent = await TrySendAsync(
+            new EmailNotification(
+                NewEmail,
+                "Confirm your new MALIEV email address",
+                $"<p>Confirm your new email address using this single-use link:</p><p><a href=\"{WebUtility.HtmlEncode(callback)}\">Confirm email</a></p>",
+                null,
+                null,
+                ["mail-tracking@maliev.com"]),
+            cancellationToken);
+        var oldEmailSent = await TrySendAsync(
+            new EmailNotification(
+                currentEmail,
+                "MALIEV email-change request",
+                $"<p>A request was made to change your MALIEV email address to {WebUtility.HtmlEncode(NewEmail)}.</p><p>If you did not request this, secure your account and contact MALIEV support.</p>",
+                null,
+                null,
+                ["mail-tracking@maliev.com"]),
+            cancellationToken);
+
+        Notification = newEmailSent
+            ? "Check your new email address to confirm the change."
+            : "We could not deliver the confirmation email. You can request a new link here.";
+        if (!oldEmailSent)
         {
-            sent = (await notificationClient.SendAsync(
-                NotificationChannel.NoReply,
-                new EmailNotification(
-                    NewEmail,
-                    "Confirm your new MALIEV email address",
-                    $"<p>Confirm your new email address using this single-use link:</p><p><a href=\"{WebUtility.HtmlEncode(callback)}\">Confirm email</a></p>",
-                    null,
-                    null,
-                    ["mail-tracking@maliev.com"]),
-                cancellationToken)).Sent;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            logger.LogWarning("Change-email confirmation delivery failed unexpectedly.");
+            logger.LogWarning("Change-email security notification delivery failed.");
         }
 
-        Notification = sent
-            ? "Check your new email address to confirm the change."
-            : "Your email was changed, but confirmation delivery failed. Contact info@maliev.com.";
-        return RedirectToPage("/Account/Login", new { area = string.Empty, email = NewEmail });
+        return RedirectToPage();
     }
 
     private async Task<OwnedSession?> GetOwnedSessionAsync(
@@ -194,26 +179,26 @@ public sealed class ChangeEmail(
         return null;
     }
 
-    private async Task RollBackProfileAsync(int customerId, string oldEmail)
+    private async Task<bool> TrySendAsync(
+        EmailNotification notification,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var rolledBack = await customerClient.UpdateEmailAsync(
-                customerId,
-                oldEmail,
-                CancellationToken.None);
-            if (rolledBack.Succeeded)
-            {
-                return;
-            }
+            return (await notificationClient.SendAsync(
+                NotificationChannel.NoReply,
+                notification,
+                cancellationToken)).Sent;
         }
-        catch (Exception)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            throw;
         }
-
-        logger.LogCritical(
-            "Customer profile {CustomerId} requires manual email reconciliation after identity change rejection.",
-            customerId);
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Change-email notification delivery failed.");
+            return false;
+        }
     }
 
     private void BuildDisplayModel()

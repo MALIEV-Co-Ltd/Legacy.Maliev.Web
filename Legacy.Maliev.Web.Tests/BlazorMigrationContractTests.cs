@@ -746,7 +746,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("OnGetAsync", pageModel, StringComparison.Ordinal);
         Assert.Contains("GetAccessTokenAsync", pageModel, StringComparison.Ordinal);
         Assert.Contains("GetCustomerDatabaseIdAsync", pageModel, StringComparison.Ordinal);
-        Assert.Contains("UpdateEmailAsync", pageModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateEmailAsync", pageModel, StringComparison.Ordinal);
         Assert.Contains("ChangeEmailAsync", pageModel, StringComparison.Ordinal);
 
         Assert.True(File.Exists(componentPath));
@@ -1205,7 +1205,8 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
         Assert.Contains("string? email", pageModel, StringComparison.Ordinal);
         Assert.Contains("string? token", pageModel, StringComparison.Ordinal);
-        Assert.Contains("CompleteEmailConfirmationAsync", pageModel, StringComparison.Ordinal);
+        Assert.Contains("ICustomerEmailChangeWorkflow", pageModel, StringComparison.Ordinal);
+        Assert.Contains("workflow.CompleteAsync", pageModel, StringComparison.Ordinal);
         Assert.Contains("Response.Headers.CacheControl = \"no-store\"", pageModel, StringComparison.Ordinal);
         Assert.Contains("Response.Headers[\"Referrer-Policy\"] = \"no-referrer\"", pageModel, StringComparison.Ordinal);
 

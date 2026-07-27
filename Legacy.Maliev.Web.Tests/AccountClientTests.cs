@@ -121,6 +121,42 @@ public sealed class AccountClientTests
         Assert.Contains("\"newPassword\":\"new-password\"", handler.Body, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ValidateEmailChange_UsesServiceBearerAndReturnsBoundIdentityState()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            """{"databaseId":42,"currentEmail":"old@example.com","newEmail":"new@example.com","completed":false}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.ValidateEmailChangeAsync("new@example.com", "opaque-token", default);
+
+        Assert.True(result.Valid);
+        Assert.Equal(42, result.CustomerId);
+        Assert.Equal("old@example.com", result.CurrentEmail);
+        Assert.Equal("new@example.com", result.NewEmail);
+        Assert.False(result.Completed);
+        Assert.Equal("Bearer service-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/email-change/validate", handler.RequestUri);
+        Assert.DoesNotContain("opaque-token", handler.RequestUri, StringComparison.Ordinal);
+        Assert.Contains("\"token\":\"opaque-token\"", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CompleteEmailChange_MapsInvalidResponseWithoutLeakingTokenInRoute()
+    {
+        var handler = new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest));
+        var client = CreateClient(handler);
+
+        var result = await client.CompleteEmailChangeAsync("new@example.com", "opaque-token", default);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Equal("auth/v1/customer-self-service/email-change/complete", handler.RequestUri);
+        Assert.DoesNotContain("opaque-token", handler.RequestUri, StringComparison.Ordinal);
+    }
+
     private static CustomerAuthenticationClient CreateClient(RecordingHandler handler) => new(
         new SingleClientFactory(new HttpClient(handler) { BaseAddress = new Uri("https://auth.test/") }),
         new StubServiceTokenProvider(),

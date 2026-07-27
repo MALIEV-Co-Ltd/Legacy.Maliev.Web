@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQuotationFileClient, QuotationFileClient>();
         services.AddScoped<INotificationClient, NotificationClient>();
         services.AddScoped<ICustomerAuthenticationClient, CustomerAuthenticationClient>();
+        services.AddScoped<ICustomerEmailChangeWorkflow, CustomerEmailChangeWorkflow>();
         services.AddScoped<ICustomerProfileClient, CustomerProfileClient>();
         services.AddScoped<ICustomerAccountClient, CustomerAccountClient>();
         services.AddScoped<ICustomerOrderClient, CustomerOrderClient>();

@@ -1487,7 +1487,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [Theory]
     [InlineData("en")]
     [InlineData("th")]
-    public async Task ChangeEmail_SynchronizesExactProfileAndIdentityThenClearsTheBffSession(string culture)
+    public async Task ChangeEmail_CreatesPendingIdentityChallengeWithoutMutatingProfileOrSession(string culture)
     {
         await SignInAsync();
         var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
@@ -1513,24 +1513,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
-        Assert.Contains("email=new@example.com", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
-        var profileUpdate = Assert.Single(accountClient.EmailUpdateInvocations);
-        Assert.Equal(42, profileUpdate.CustomerId);
-        Assert.Equal("new@example.com", profileUpdate.Email);
+        Assert.Equal("/Member/Account/Manage/ChangeEmail", response.Headers.Location?.OriginalString);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
         var identityUpdate = Assert.IsType<EmailChangeInvocation>(authentication.LastEmailChangeInvocation);
         Assert.Equal("sensitive-access-token", identityUpdate.AccessToken);
         Assert.Equal("current-password", identityUpdate.CurrentPassword);
         Assert.Equal("new@example.com", identityUpdate.NewEmail);
-        var notification = Assert.IsType<EmailNotification>(notifications.LastNotification);
+        var notification = Assert.IsType<EmailNotification>(notifications.Notifications[0]);
         Assert.Equal("new@example.com", notification.To);
         Assert.Contains("https://www.maliev.com/account/changeemailconfirmation", notification.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("attacker.example", notification.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("http://www.maliev.com", notification.Body, StringComparison.Ordinal);
         Assert.Contains("confirmation-token", notification.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("current-password", notification.Body, StringComparison.Ordinal);
+        Assert.Equal("customer@example.com", notifications.Notifications[1].To);
+        Assert.DoesNotContain("confirmation-token", notifications.Notifications[1].Body, StringComparison.Ordinal);
         using var account = await client.GetAsync("/member/account/manage/changeemail");
-        Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, account.StatusCode);
     }
 
     [Fact]
@@ -1618,9 +1617,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "The email address could not be changed.")]
-    [InlineData("th", "ไม่สามารถเปลี่ยนอีเมลได้")]
-    public async Task MemberChangeEmail_ProfileFailureStopsBeforeIdentityAndRendersSafeError(
+    [InlineData("en", "Customer profile service is temporarily unavailable.")]
+    [InlineData("th", "ระบบข้อมูลลูกค้าไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberChangeEmail_ProfileReadFailureStopsBeforeIdentityAndRendersSafeError(
         string culture,
         string expectedMessage)
     {
@@ -1631,7 +1630,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
         authentication.ResetEmailChangeInvocations();
         accountClient.ResetEmailInvocations();
-        accountClient.EmailUpdateResults.Enqueue(new CustomerAddressOperationResult(false, false, true));
+        accountClient.ProfileGetResultOverride = new CustomerAccountProfileResult(null, false, true);
         var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
         form["CurrentPassword"] = "current-password";
         form["NewEmail"] = "new@example.com";
@@ -1644,13 +1643,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
         Assert.Null(authentication.LastEmailChangeInvocation);
-        Assert.Single(accountClient.EmailUpdateInvocations);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
     }
 
     [Theory]
     [InlineData("en", "The current password is invalid or the email address is already in use.")]
     [InlineData("th", "รหัสผ่านปัจจุบันไม่ถูกต้องหรืออีเมลนี้ถูกใช้งานแล้ว")]
-    public async Task MemberChangeEmail_IdentityRejectionRollsProfileBackBeforeSafeError(
+    public async Task MemberChangeEmail_IdentityRejectionLeavesProfileUntouchedBeforeSafeError(
         string culture,
         string expectedMessage)
     {
@@ -1673,7 +1672,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
-        Assert.Equal(["new@example.com", "customer@example.com"], accountClient.EmailUpdateInvocations.Select(item => item.Email));
+        Assert.Empty(accountClient.EmailUpdateInvocations);
         Assert.DoesNotContain("rejected-password", source, StringComparison.Ordinal);
         Assert.DoesNotContain("confirmation-token", source, StringComparison.Ordinal);
     }
@@ -3335,8 +3334,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     private sealed class StubNotificationClient : INotificationClient
     {
         public EmailNotification? LastNotification { get; private set; }
+        public List<EmailNotification> Notifications { get; } = [];
 
-        public void Reset() => LastNotification = null;
+        public void Reset()
+        {
+            LastNotification = null;
+            Notifications.Clear();
+        }
 
         public Task<NotificationResult> SendAsync(
             NotificationChannel channel,
@@ -3344,6 +3348,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             CancellationToken cancellationToken)
         {
             LastNotification = notification;
+            Notifications.Add(notification);
             return Task.FromResult(new NotificationResult(true, true, true));
         }
     }
@@ -3478,6 +3483,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) =>
             Task.FromResult(!string.Equals(token, "invalid-token", StringComparison.Ordinal));
+
+        public Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(string email, string token, CancellationToken cancellationToken) =>
+            Task.FromResult(
+                string.Equals(token, "invalid-token", StringComparison.Ordinal)
+                    ? new CustomerEmailChangeValidationResult(false, true, true)
+                    : new CustomerEmailChangeValidationResult(true, true, true, 42, "customer@example.com", email));
+
+        public Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(string email, string token, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerEmailChangeCompletionResult(
+                !string.Equals(token, "invalid-token", StringComparison.Ordinal),
+                true,
+                true));
 
         public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerActionChallenge(true, null, true, true));

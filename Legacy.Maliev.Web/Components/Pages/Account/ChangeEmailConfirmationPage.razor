@@ -5,7 +5,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 @attribute [EnableRateLimiting("account")]
 @inject IHttpContextAccessor HttpContextAccessor
-@inject ICustomerAuthenticationClient AuthenticationClient
+@inject ICustomerEmailChangeWorkflow EmailChangeWorkflow
 @inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IStringLocalizer<ChangeEmailConfirmationContent> Localizer
 
@@ -56,10 +56,11 @@
             return;
         }
 
-        if (await AuthenticationClient.CompleteEmailConfirmationAsync(
+        var result = await EmailChangeWorkflow.CompleteAsync(
             Email,
             Token,
-            context.RequestAborted))
+            context.RequestAborted);
+        if (result.Succeeded)
         {
             TempDataDictionaryFactory.GetTempData(context)["Notification"] = "Email change confirmed. Sign in with your new address.";
             context.Response.Redirect(QueryHelpers.AddQueryString("/Account/Login", "email", Email));
