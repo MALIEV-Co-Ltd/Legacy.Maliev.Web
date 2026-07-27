@@ -5,13 +5,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Pages.About.Career;
 
-public sealed class View(ICareerClient careerClient) : PageModel
+public sealed class View(ICareerClient careerClient, IConfiguration configuration) : PageModel
 {
     public CareerOffer JobOffer { get; private set; } = null!;
 
-    public CareerDetailContentModel DisplayModel => CareerDetailContentModel.Create(
-        JobOffer,
-        $"https://{Request.Host}{Request.Path}");
+    public CareerDetailContentModel DisplayModel => CareerDetailContentModel.Create(JobOffer);
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
@@ -27,6 +25,12 @@ public sealed class View(ICareerClient careerClient) : PageModel
         }
 
         if (response.Value is null)
+        {
+            return NotFound();
+        }
+
+        if (configuration.GetValue<bool>("Career:HideLocalAspireFixture")
+            && CareerOfferPresentation.IsLocalAspireFixture(response.Value))
         {
             return NotFound();
         }

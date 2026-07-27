@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components
+@using System.Globalization
 @inject IStringLocalizer<LoginContent> Localizer
 
 <div data-migration-component="login-content" data-migration-renderer="blazor-static-ssr">
@@ -35,7 +36,7 @@
         <span id="Password-error" class="maliev-form-error @(HasError("Password") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Password")</span>
     </div>
     <label><input type="checkbox" id="RememberMe" name="RememberMe" value="true" checked="@Model.RememberMe" /> @Localizer["Remember me"]</label>
-    <button type="submit" formaction="/Account/Login?handler=Login">@Localizer["Sign in"]</button>
+    <button type="submit" formaction="@FormAction">@Localizer["Sign in"]</button>
     <input name="RememberMe" type="hidden" value="false" />
 </div>
 
@@ -46,4 +47,7 @@
     private bool HasError(string fieldName) => Model.ErrorsFor(fieldName).Count > 0;
 
     private string? AriaInvalid(string fieldName) => HasError(fieldName) ? "true" : null;
+
+    private static string FormAction =>
+        $"/Account/Login?handler=Login&culture={Uri.EscapeDataString(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)}";
 }

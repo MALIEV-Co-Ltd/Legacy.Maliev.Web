@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("ServiceAuthentication"));
         services.AddOptions<RecaptchaEnterpriseOptions>()
             .Bind(configuration.GetSection("Recaptcha"));
+        services.AddOptions<GoogleMapsOptions>()
+            .Bind(configuration.GetSection("GoogleMaps"));
 
         AddClient(services, "auth", static endpoints => endpoints.Auth);
         AddClient(services, "careers", static endpoints => endpoints.Career);

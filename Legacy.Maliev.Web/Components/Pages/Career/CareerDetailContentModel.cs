@@ -11,19 +11,17 @@ public sealed record CareerDetailContentModel(
     string? WhatWeOffer,
     string? Location,
     string LevelName,
-    bool IsFilled,
-    string SocialUrl)
+    bool? IsFilled)
 {
-    public static CareerDetailContentModel Create(CareerOffer offer, string socialUrl) =>
+    public static CareerDetailContentModel Create(CareerOffer offer) =>
         new(
             offer.Id,
             offer.Title,
-            offer.Introduction,
-            offer.Description,
-            offer.Prerequisites,
-            offer.WhatWeOffer,
+            CareerOfferPresentation.ToSafeText(offer.Introduction),
+            CareerOfferPresentation.ToSafeText(offer.Description),
+            CareerOfferPresentation.ToSafeText(offer.Prerequisites),
+            CareerOfferPresentation.ToSafeText(offer.WhatWeOffer),
             offer.Location,
             offer.Level?.Name ?? "not specified",
-            offer.IsFilled == true,
-            socialUrl);
+            offer.IsFilled);
 }

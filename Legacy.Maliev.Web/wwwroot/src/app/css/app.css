@@ -1,11 +1,11 @@
 html[lang="en"],
 html[lang="en"] body {
-    font-family: 'Inter';
+    font-family: 'Inter', 'Noto Sans Thai', sans-serif;
 }
 
 html[lang="th"],
 html[lang="th"] body {
-    font-family: 'Noto Sans Thai';
+    font-family: 'Noto Sans Thai', 'Inter', sans-serif;
 }
 
 .content-container {
