@@ -1,0 +1,16 @@
+@using System.Globalization
+
+@{
+    var isThai = CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+    var label = isThai ? "ในหน้านี้" : "On this page";
+}
+
+<nav class="service-page-toc"
+     data-service-toc
+     hidden
+     aria-label="@label">
+    <div class="service-container service-page-toc-inner">
+        <span class="service-page-toc-label">@label</span>
+        <ul data-service-toc-list></ul>
+    </div>
+</nav>
