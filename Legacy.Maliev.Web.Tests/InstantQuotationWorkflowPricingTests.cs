@@ -158,7 +158,7 @@ public sealed class InstantQuotationWorkflowPricingTests
 
         Assert.Equal(quantity, quote.Parts.Single().Quantity);
         Assert.True(quote.Parts.Single().Tiers.Single(tier => tier.MinQuantity == expectedTier).Active);
-        Assert.Equal(0, quote.Parts.Single().Subtotal % 100, 2);
+        Assert.Equal(0, quote.Parts.Single().UnitPrice % 10, 2);
     }
 
     [Theory]
@@ -196,7 +196,7 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Fact]
-    public void Quote_MixedFdmAndResinPartsUsesDerivedShippingVatAndRounding()
+    public void Quote_MixedFdmAndResinPartsUsesDerivedShippingVatWithoutOrderLevelRounding()
     {
         var state = State(
             Part("PLA", "White", 9),
@@ -224,7 +224,8 @@ public sealed class InstantQuotationWorkflowPricingTests
         Assert.Equal(expectedOrder.PriceBeforeVat, result.PriceBeforeVat, 2);
         Assert.Equal(expectedOrder.PriceBeforeVat * 0.07, result.Vat, 2);
         Assert.Equal(expectedOrder.FinalOrderPrice, result.FinalOrderPrice, 2);
-        Assert.Equal(0, result.FinalOrderPrice % 5, 2);
+        Assert.Equal(expectedOrder.MinimumOrderPrice, result.MinimumOrderPrice, 2);
+        Assert.Equal(expectedOrder.MinimumOrderSurcharge, result.MinimumOrderSurcharge, 2);
     }
 
     [Fact]

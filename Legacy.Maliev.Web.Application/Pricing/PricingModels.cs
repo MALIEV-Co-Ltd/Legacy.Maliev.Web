@@ -93,6 +93,10 @@ public sealed class OrderQuote
 
     public double Printing { get; init; }
 
+    public double MinimumOrderPrice { get; init; }
+
+    public double MinimumOrderSurcharge { get; init; }
+
     public double ShippingCost { get; init; }
 
     public double PriceBeforeVat { get; init; }

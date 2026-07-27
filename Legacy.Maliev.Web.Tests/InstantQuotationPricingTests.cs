@@ -46,7 +46,7 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Fact]
-    public void OrderTotal_SumsItemsThenAddsShippingVatAndFiveBahtRounding()
+    public void OrderTotal_SumsItemsThenAddsShippingAndVatWithoutOrderLevelRounding()
     {
         var result = PricingEngine.QuoteOrder(
             [
@@ -57,9 +57,11 @@ public sealed class InstantQuotationPricingTests
 
         Assert.Equal(3_000, result.ItemsSubtotal, 2);
         Assert.Equal(3_000, result.Printing, 2);
+        Assert.Equal(300, result.MinimumOrderPrice, 2);
+        Assert.Equal(0, result.MinimumOrderSurcharge, 2);
         Assert.Equal(3_200, result.PriceBeforeVat, 2);
         Assert.Equal(224, result.Vat, 2);
-        Assert.Equal(3_425, result.FinalOrderPrice, 2);
+        Assert.Equal(3_424, result.FinalOrderPrice, 2);
     }
 
     [Fact]
@@ -71,6 +73,10 @@ public sealed class InstantQuotationPricingTests
             PricingEngine.QuoteOrder([new OrderLine { Process = PrintProcess.Fdm, Subtotal = 50 }], 0).Printing,
             2);
         Assert.Equal(
+            250,
+            PricingEngine.QuoteOrder([new OrderLine { Process = PrintProcess.Fdm, Subtotal = 50 }], 0).MinimumOrderSurcharge,
+            2);
+        Assert.Equal(
             500,
             PricingEngine.QuoteOrder(
                 [
@@ -78,6 +84,15 @@ public sealed class InstantQuotationPricingTests
                     new OrderLine { Process = PrintProcess.Resin, Subtotal = 100 },
                 ],
                 0).Printing,
+            2);
+        Assert.Equal(
+            300,
+            PricingEngine.QuoteOrder(
+                [
+                    new OrderLine { Process = PrintProcess.Fdm, Subtotal = 100 },
+                    new OrderLine { Process = PrintProcess.Resin, Subtotal = 100 },
+                ],
+                0).MinimumOrderSurcharge,
             2);
     }
 
@@ -105,7 +120,7 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Fact]
-    public void ItemQuote_PreservesTierAndRoundedSubtotalBehavior()
+    public void ItemQuote_RoundsCustomerUnitPriceBeforeCalculatingSubtotal()
     {
         var quote = PricingEngine.QuoteItem(
             new GeometryInput
@@ -122,7 +137,8 @@ public sealed class InstantQuotationPricingTests
         Assert.Equal(4, quote.Tiers.Count);
         Assert.True(quote.Tiers.Single(tier => tier.MinQuantity == 1).Active);
         Assert.Equal(quote.Subtotal, quote.UnitPrice, 2);
-        Assert.Equal(0, quote.Subtotal % 100, 2);
+        Assert.Equal(0, quote.UnitPrice % 10, 2);
+        Assert.All(quote.Tiers, tier => Assert.Equal(0, tier.UnitPrice % 10, 2));
     }
 
     [Fact]
@@ -146,12 +162,12 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Theory]
-    [InlineData(89, 100)]
-    [InlineData(2_720, 2_800)]
-    [InlineData(2_800, 2_800)]
-    public void LineSubtotal_RoundsUpToOneHundredBaht(double subtotal, double expected)
+    [InlineData(89, 90)]
+    [InlineData(2_720, 2_720)]
+    [InlineData(2_801, 2_810)]
+    public void UnitPrice_RoundsUpToTenBaht(double unitPrice, double expected)
     {
-        Assert.Equal(expected, PricingEngine.RoundLineItemSubtotal(subtotal), 2);
+        Assert.Equal(expected, PricingEngine.RoundUnitPrice(unitPrice), 2);
     }
 
     [Fact]

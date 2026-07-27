@@ -476,6 +476,32 @@ body.instant-quotation-shell #main-content {
     margin: 0;
 }
 
+.instant-quote__price-confidence {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: flex-start;
+    gap: .4rem;
+    margin: 0;
+    padding: .5rem .6rem;
+    border: 1px solid transparent;
+    border-radius: .45rem;
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.instant-quote__price-confidence--firm {
+    color: #087d55;
+    background: #eaf7f1;
+    border-color: #c8edd6;
+}
+
+.instant-quote__price-confidence--review {
+    color: #a85d00;
+    background: #fdf3e3;
+    border-color: #ffe1ac;
+}
+
 .instant-quote__workflow:has(.iq-file-input--empty:focus-visible) .iq-compact-dropzone {
     outline: 3px solid #0b57d0;
     outline-offset: 3px;
@@ -656,6 +682,16 @@ body.instant-quotation-shell #main-content {
 
 .instant-quote__workflow .instant-quote__pricing-summary dl {
     margin: 0;
+}
+
+.instant-quote__workflow .instant-quote__pricing-summary dl > div,
+.instant-quote__workflow [data-workflow-order-total] > div {
+    min-width: 0;
+}
+
+.instant-quote__workflow .instant-quote__pricing-summary dt,
+.instant-quote__workflow .instant-quote__pricing-summary dd {
+    overflow-wrap: anywhere;
 }
 
 @media (min-width: 62rem) {

@@ -47,13 +47,13 @@ public static class PricingEngine
         var tiers = PricingCatalog.DiscountTiers.Select(tier => new BulkTier
         {
             MinQuantity = tier.MinQuantity,
-            UnitPrice = AllInUnitPrice(
+            UnitPrice = RoundUnitPrice(AllInUnitPrice(
                 complexityAdjustedCost,
                 setupLabor,
                 failureRate,
                 paymentGrossUp,
                 tier,
-                tier.MinQuantity),
+                tier.MinQuantity)),
             Active = tier.MinQuantity == activeTier.MinQuantity,
         }).ToArray();
 
@@ -64,7 +64,8 @@ public static class PricingEngine
             paymentGrossUp,
             activeTier,
             normalizedQuantity);
-        var subtotal = RoundLineItemSubtotal(unroundedUnitPrice * normalizedQuantity);
+        var unitPrice = RoundUnitPrice(unroundedUnitPrice);
+        var subtotal = unitPrice * normalizedQuantity;
         var boundingCm3 = (Math.Abs(geometry.FootprintMm2) * Math.Abs(geometry.HeightMm)) / 1_000.0;
 
         return new ItemQuote
@@ -74,14 +75,14 @@ public static class PricingEngine
             MaterialPerUnit = materialPerUnit,
             WeightGramsPerUnit = weightGrams,
             BoundingCm3PerUnit = boundingCm3,
-            UnitPrice = subtotal / normalizedQuantity,
+            UnitPrice = unitPrice,
             Subtotal = subtotal,
             Tiers = tiers,
         };
     }
 
-    public static double RoundLineItemSubtotal(double subtotal) =>
-        RoundUpToNearest(Math.Max(0, subtotal), 100);
+    public static double RoundUnitPrice(double unitPrice) =>
+        RoundUpToNearest(Math.Max(0, unitPrice), 10);
 
     public static OrderQuote QuoteOrder(IEnumerable<OrderLine>? lines, double shippingThb)
     {
@@ -92,8 +93,9 @@ public static class PricingEngine
         }
 
         var itemsSubtotal = orderLines.Sum(line => line.Subtotal);
-        var minimumFloor = orderLines.Max(line => PricingCatalog.MinimumOrderPrice(line.Process));
-        var printing = Math.Max(minimumFloor, itemsSubtotal);
+        var minimumOrderPrice = orderLines.Max(line => PricingCatalog.MinimumOrderPrice(line.Process));
+        var printing = Math.Max(minimumOrderPrice, itemsSubtotal);
+        var minimumOrderSurcharge = printing - itemsSubtotal;
         var shipping = Math.Max(0, shippingThb);
         var priceBeforeVat = printing + shipping;
         var vat = priceBeforeVat * PricingCatalog.VatRate;
@@ -102,10 +104,12 @@ public static class PricingEngine
         {
             ItemsSubtotal = itemsSubtotal,
             Printing = printing,
+            MinimumOrderPrice = minimumOrderPrice,
+            MinimumOrderSurcharge = minimumOrderSurcharge,
             ShippingCost = shipping,
             PriceBeforeVat = priceBeforeVat,
             Vat = vat,
-            FinalOrderPrice = RoundUpToNearest(priceBeforeVat + vat, 5),
+            FinalOrderPrice = priceBeforeVat + vat,
         };
     }
 

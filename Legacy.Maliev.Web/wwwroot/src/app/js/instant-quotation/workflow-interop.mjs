@@ -5,6 +5,7 @@ export const supportedPreviewExtensions = Object.freeze([
 ]);
 
 const supportedExtensions = new Set(supportedPreviewExtensions);
+const STALL_TIMEOUT_MS = 120_000;
 
 export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter = null) {
   const viewerModule = await import('/dist/instant-quotation-viewer.mjs');
@@ -85,6 +86,7 @@ export function createWorkflowPreviewInterop({
       released: false,
       quarantined: false,
       attached: false,
+      stallTimer: null,
     };
     previews.set(key, entry);
     if (!supportedExtensions.has(extensionOf(file?.name))) {
@@ -92,7 +94,7 @@ export function createWorkflowPreviewInterop({
       return key;
     }
 
-    entry.completion = Promise.all([
+    const operation = Promise.all([
       Promise.resolve(loadModel(file, { signal: controller.signal })),
       sha256(file, controller.signal),
     ]).then(([object, hash]) => {
@@ -115,6 +117,25 @@ export function createWorkflowPreviewInterop({
     }).catch(error => {
       failPreview(entry, error);
       return null;
+    });
+    entry.completion = new Promise((resolve, reject) => {
+      entry.stallTimer = setTimeout(() => {
+        entry.stallTimer = null;
+        if (!isCurrent(entry)) return;
+        entry.controller.abort();
+        const error = new Error('Preview processing timed out.');
+        failPreview(entry, error);
+        reject(error);
+      }, STALL_TIMEOUT_MS);
+      operation.then(value => {
+        clearTimeout(entry.stallTimer);
+        entry.stallTimer = null;
+        resolve(value);
+      }, error => {
+        clearTimeout(entry.stallTimer);
+        entry.stallTimer = null;
+        reject(error);
+      });
     });
     return key;
   }
@@ -180,6 +201,8 @@ export function createWorkflowPreviewInterop({
     const entry = previews.get(key);
     if (!entry || entry.released || entry.quarantined) return;
     entry.controller?.abort();
+    clearTimeout(entry.stallTimer);
+    entry.stallTimer = null;
     if (entry.attached && viewer) viewer.remove(entry.partId);
     else if (entry.object) disposeModel(entry.object, disposedResources);
     entry.object = null;
@@ -193,6 +216,8 @@ export function createWorkflowPreviewInterop({
     if (!entry) return;
     previews.delete(key);
     entry.released = true;
+    clearTimeout(entry.stallTimer);
+    entry.stallTimer = null;
     entry.controller?.abort();
     if (entry.partId) partKeys.delete(entry.partId);
     if (entry.attached && viewer) viewer.remove(entry.partId);

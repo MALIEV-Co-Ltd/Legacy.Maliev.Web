@@ -77,6 +77,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private InstantQuotationOrderQuote? OrderQuote => workflow?.OrderQuote;
 
+    private bool PriceNeedsEngineeringReview => Parts.Any(static part =>
+        part.Geometry.NonWatertight || !part.Geometry.TopologyChecked);
+
+    private bool AllPartsNeedEngineeringReview => Parts.Count > 0 && Parts.All(static part =>
+        part.Geometry.NonWatertight || !part.Geometry.TopologyChecked);
+
     private string LeadTime => OrderQuote is null
         ? "—"
         : Localizer["{0}–{1} business days", OrderQuote.LeadTimeMinimumDays, OrderQuote.LeadTimeMaximumDays];
