@@ -237,8 +237,9 @@
 .service-material-detail-card h4 { margin: 1rem 0 .45rem; color: var(--service-ink); font-size: .84rem; }
 .service-material-detail-card__description, .service-material-detail-card__availability { margin: .55rem 0 0; color: var(--service-muted); font-size: .82rem; line-height: 1.6; }
 .service-material-detail-properties { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem .9rem; margin: 0; }
-.service-material-detail-properties dt { color: var(--service-blue-dark); font-size: .72rem; font-weight: 600; }
-.service-material-detail-properties dd { margin: .15rem 0 0; color: var(--service-muted); font-size: .76rem; line-height: 1.45; }
+.service-material-detail-properties > .service-material-detail-property { display: grid; min-width: 0; gap: .15rem; align-content: start; }
+.service-material-detail-property dt { color: var(--service-blue-dark); font-size: .72rem; font-weight: 600; }
+.service-material-detail-property dd { margin: 0; color: var(--service-muted); font-size: .76rem; line-height: 1.45; }
 .service-material-detail-colors { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
 .service-material-detail-colors li { padding: .3rem .55rem; border: 1px solid #cbdced; border-radius: 999px; background: #fff; color: var(--service-muted); font-size: .72rem; }
 .service-material-detail-colors__empty { border-style: dashed !important; border-radius: .35rem !important; }

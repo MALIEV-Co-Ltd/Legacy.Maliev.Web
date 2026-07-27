@@ -56,6 +56,17 @@ test('material detail data points only at same-origin public image assets', asyn
     }
 });
 
+test('material detail properties keep each label and value in the same grid item', async () => {
+    const source = await readSource('material-comparison.js');
+    const styles = await readFile(new URL('../wwwroot/src/app/css/service-pages.css', import.meta.url), 'utf8');
+
+    assert.match(source, /const propertyGroup = createElement\("div", "service-material-detail-property"\)/);
+    assert.match(source, /propertyGroup\.append\(createElement\("dt", null, localized\(property\.label\)\)\)/);
+    assert.match(source, /propertyGroup\.append\(createElement\("dd", null, localized\(property\.value\)\)\)/);
+    assert.match(source, /properties\.append\(propertyGroup\)/);
+    assert.match(styles, /\.service-material-detail-properties\s*>\s*\.service-material-detail-property\s*\{\s*display:\s*grid;/);
+});
+
 test('shared service presentation styles are bundled through the deterministic CSS entry', async () => {
     const entry = await readFile(new URL('../assets/site-entry.css', import.meta.url), 'utf8');
     assert.match(entry, /service-finder\.css/);

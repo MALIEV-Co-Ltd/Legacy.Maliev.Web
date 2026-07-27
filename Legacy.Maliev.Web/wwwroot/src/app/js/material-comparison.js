@@ -164,8 +164,10 @@
         content.append(propertiesHeading);
         const properties = createElement("dl", "service-material-detail-properties");
         (Array.isArray(detail.properties) ? detail.properties : []).forEach(property => {
-            properties.append(createElement("dt", null, localized(property.label)));
-            properties.append(createElement("dd", null, localized(property.value)));
+            const propertyGroup = createElement("div", "service-material-detail-property");
+            propertyGroup.append(createElement("dt", null, localized(property.label)));
+            propertyGroup.append(createElement("dd", null, localized(property.value)));
+            properties.append(propertyGroup);
         });
         content.append(properties);
 
