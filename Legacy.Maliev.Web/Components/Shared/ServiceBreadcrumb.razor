@@ -1,6 +1,8 @@
 @using System.Globalization
 @using System.Text.Json
 
+@if (RenderNavigation)
+{
 <nav class="service-breadcrumb" aria-label="@BreadcrumbLabel" data-migration-component="service-breadcrumb">
     <ol>
         <li><a href="@HomeUrl">@HomeName</a></li>
@@ -14,7 +16,8 @@
             <li aria-current="page">@ServiceName</li>
         }
     </ol>
-</nav>
+ </nav>
+}
 <script type="application/ld+json">@((MarkupString)BreadcrumbJson)</script>
 
 @code {
@@ -25,11 +28,18 @@
             ["3D Printing"] = new("พิมพ์ 3D", "3D printing", "/services/3d-printing"),
             ["CNC Machining"] = new("งาน CNC", "CNC machining", "/services/cnc-machining"),
             ["3D Scanning"] = new("สแกน 3D", "3D scanning", "/services/3d-scanning"),
+            ["3D Design"] = new("ออกแบบ 3 มิติ", "3D design", "/services/3d-design"),
+            ["Silicone Casting"] = new("หล่อซิลิโคน", "Silicone casting", "/services/silicone-casting"),
             ["Custom Manufacturing"] = new("ผลิตชิ้นงานตามแบบ", "Custom manufacturing", "/services/custom-manufacturing"),
+            ["Low-volume Injection Molding"] = new("ฉีดพลาสติกจำนวนน้อย", "Low-volume injection molding", "/services/low-volume-injection-molding"),
+            ["Finishing and Color"] = new("การเก็บผิวและสี", "Finishing and colour", "/services/finishing-and-color"),
         };
 
     [Parameter]
     public string ServiceKey { get; set; } = "CNC Machining";
+
+    [Parameter]
+    public bool RenderNavigation { get; set; } = true;
 
     private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
 

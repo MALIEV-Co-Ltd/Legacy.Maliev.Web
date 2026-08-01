@@ -37,6 +37,8 @@ namespace Legacy.Maliev.Web
             {
                 ["/3d-printing"] = "/services/3d-printing",
                 ["/3d-scanning"] = "/services/3d-scanning",
+                ["/3d-design"] = "/services/3d-design",
+                ["/silicone-casting"] = "/services/silicone-casting",
                 ["/cnc-machining"] = "/services/cnc-machining",
             };
 

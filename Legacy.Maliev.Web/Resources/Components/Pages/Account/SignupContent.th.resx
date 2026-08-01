@@ -185,4 +185,16 @@
   <data name="Your drawings stay confidential under our" xml:space="preserve"><value>แบบของคุณจะได้รับการเก็บเป็นความลับภายใต้</value></data>
   <data name="mutual NDA" xml:space="preserve"><value>สัญญา NDA ร่วมกัน</value></data>
   <data name="Thai and English support from our workshop in Nonthaburi, 09:00-18:00 Monday to Friday." xml:space="preserve"><value>ทีมงานจากเวิร์กช็อปนนทบุรีให้บริการทั้งภาษาไทยและภาษาอังกฤษ เวลา 09:00–18:00 น. วันจันทร์ถึงศุกร์</value></data>
+  <data name="Please retype your password" xml:space="preserve"><value>กรุณากรอกรหัสผ่านอีกครั้ง</value></data>
+  <data name="Please enter an email address" xml:space="preserve"><value>กรุณากรอกอีเมล</value></data>
+  <data name="Please enter a valid email address" xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
+  <data name="First name is required" xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
+  <data name="Last name is required" xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
+  <data name="Password is required" xml:space="preserve"><value>กรุณากรอกรหัสผ่าน</value></data>
+  <data name="Password does not match" xml:space="preserve"><value>รหัสผ่านไม่ตรงกัน</value></data>
+  <data name="We could not create your account. Please try again, or contact us if the problem continues." xml:space="preserve"><value>ระบบไม่สามารถสร้างบัญชีของคุณได้ กรุณาลองใหม่อีกครั้ง หรือติดต่อเราหากยังพบปัญหา</value></data>
+  <data name="We could not clean up the failed sign-up. Please contact us before trying again." xml:space="preserve"><value>ระบบไม่สามารถล้างข้อมูลการสมัครที่ไม่สำเร็จได้ กรุณาติดต่อเราก่อนสมัครใหม่</value></data>
+  <data name="We could not send the confirmation email. Please try again later." xml:space="preserve"><value>ระบบไม่สามารถส่งอีเมลยืนยันได้ กรุณาลองใหม่ภายหลัง</value></data>
+  <data name="We could not finish setting up your account. Please contact us." xml:space="preserve"><value>ระบบตั้งค่าบัญชีของคุณไม่สำเร็จ กรุณาติดต่อเรา</value></data>
+  <data name="Account created. Check your email and follow the link to confirm your address before signing in." xml:space="preserve"><value>สร้างบัญชีเรียบร้อยแล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ</value></data>
 </root>

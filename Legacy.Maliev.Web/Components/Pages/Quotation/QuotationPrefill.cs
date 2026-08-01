@@ -1,4 +1,5 @@
 using System.Text;
+using Legacy.Maliev.Web.Pages.Quotation;
 
 namespace Legacy.Maliev.Web.Components.Pages.Quotation;
 
@@ -8,7 +9,12 @@ public sealed record QuotationPrefill(string ServiceContext, string Message)
         string? culture,
         string? item,
         string? process,
-        string? material)
+        string? material,
+        string? finishHex = null,
+        string? finishHlc = null,
+        string? finishLab = null,
+        string? finishPantone = null,
+        string? finishSheen = null)
     {
         var serviceContext = NormalizeServiceContext(item);
         var supportedItems = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -28,6 +34,18 @@ public sealed record QuotationPrefill(string ServiceContext, string Message)
         if (!string.IsNullOrWhiteSpace(process))
         {
             builder.AppendLine(thai ? $"ระบบเทคโนโลยี: {process}" : $"Please use: {process}");
+        }
+
+        var finishingReference = FinishingColorQuotePrefill.Build(
+            culture,
+            finishHex,
+            finishHlc,
+            finishLab,
+            finishPantone,
+            finishSheen);
+        if (!string.IsNullOrEmpty(finishingReference))
+        {
+            builder.AppendLine(finishingReference.TrimEnd());
         }
 
         builder.AppendLine("---");

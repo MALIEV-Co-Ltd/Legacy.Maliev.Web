@@ -30,6 +30,42 @@ public sealed class Index(
     [StringLength(50)]
     public string? Company { get; set; }
 
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderFiles { get; set; }
+
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderService { get; set; }
+
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderMaterial { get; set; }
+
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderQuantity { get; set; }
+
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderEndUse { get; set; }
+
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderPerformance { get; set; }
+
+    [BindProperty]
+    [StringLength(80)]
+    public string? FinderEnvironment { get; set; }
+
+    [BindProperty]
+    [StringLength(400)]
+    public string? FinderRecommendations { get; set; }
+
+    [BindProperty]
+    [StringLength(400)]
+    public string? FinderPath { get; set; }
+
     public IReadOnlyList<Country> Countries { get; private set; } = [];
 
     [BindProperty]
@@ -115,19 +151,60 @@ public sealed class Index(
                         ? "The submitted value is invalid."
                         : error.ErrorMessage)
                     .ToArray(),
-                StringComparer.Ordinal));
+                StringComparer.Ordinal),
+        FinderFiles,
+        FinderService,
+        FinderMaterial,
+        FinderQuantity,
+        FinderEndUse,
+        FinderPerformance,
+        FinderEnvironment,
+        FinderRecommendations,
+        FinderPath);
 
     public async Task<IActionResult> OnGetAsync(
         string? culture,
         string? item,
         string? process,
         string? material,
+        string? finder_files,
+        string? finder_service,
+        string? finder_material,
+        string? finder_quantity,
+        string? finder_end_use,
+        string? finder_performance,
+        string? finder_environment,
+        string? finder_recommendations,
+        string? finder_path,
+        string? finish_hex,
+        string? finish_hlc,
+        string? finish_lab,
+        string? finish_pantone,
+        string? finish_sheen,
         CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
         await ApplyTrustedCustomerAsync(cancellationToken);
         SubmissionId = Guid.NewGuid();
-        var prefill = QuotationPrefill.Create(culture, item, process, material);
+        FinderFiles = finder_files;
+        FinderService = finder_service;
+        FinderMaterial = finder_material;
+        FinderQuantity = finder_quantity;
+        FinderEndUse = finder_end_use;
+        FinderPerformance = finder_performance;
+        FinderEnvironment = finder_environment;
+        FinderRecommendations = finder_recommendations;
+        FinderPath = finder_path;
+        var prefill = QuotationPrefill.Create(
+            culture,
+            item,
+            process,
+            material,
+            finish_hex,
+            finish_hlc,
+            finish_lab,
+            finish_pantone,
+            finish_sheen);
         ServiceContext = prefill.ServiceContext;
         Message = prefill.Message;
         return Page();
@@ -154,6 +231,24 @@ public sealed class Index(
             return Page();
         }
 
+        var finderAttribution = ServiceFinderAttribution.TryCreate(
+            FinderFiles ?? string.Empty,
+            FinderService ?? string.Empty,
+            FinderMaterial ?? string.Empty,
+            FinderQuantity ?? string.Empty,
+            FinderEndUse ?? string.Empty,
+            FinderRecommendations ?? string.Empty,
+            FinderPath ?? string.Empty,
+            FinderPerformance ?? string.Empty,
+            FinderEnvironment ?? string.Empty,
+            out var validatedFinderAttribution)
+            ? validatedFinderAttribution
+            : null;
+        if (HasFinderInput() && finderAttribution is null)
+        {
+            logger.LogWarning("An invalid service-finder handoff was omitted from quotation metadata.");
+        }
+
         var result = await quotationClient.CreateRequestAsync(
             new QuotationRequestSubmission(
                 FirstName.Trim(),
@@ -163,7 +258,8 @@ public sealed class Index(
                 Country.Trim(),
                 NormalizeOptional(Company),
                 NormalizeOptional(TaxNumber),
-                Message.Trim()),
+                Message.Trim(),
+                finderAttribution?.ToMetadataJson()),
             $"legacy-web-quotation-{SubmissionId:N}",
             cancellationToken);
         if (result.ReferenceNumber is not int referenceNumber)
@@ -326,6 +422,17 @@ public sealed class Index(
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private bool HasFinderInput() =>
+        !string.IsNullOrWhiteSpace(FinderFiles)
+        || !string.IsNullOrWhiteSpace(FinderService)
+        || !string.IsNullOrWhiteSpace(FinderMaterial)
+        || !string.IsNullOrWhiteSpace(FinderQuantity)
+        || !string.IsNullOrWhiteSpace(FinderEndUse)
+        || !string.IsNullOrWhiteSpace(FinderPerformance)
+        || !string.IsNullOrWhiteSpace(FinderEnvironment)
+        || !string.IsNullOrWhiteSpace(FinderRecommendations)
+        || !string.IsNullOrWhiteSpace(FinderPath);
 
     private static string CurrentCulture =>
         CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "en" ? "en" : "th";

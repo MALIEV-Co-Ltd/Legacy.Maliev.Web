@@ -3,6 +3,8 @@ import '../wwwroot/src/app/js/material-comparison.js';
 import '../wwwroot/src/app/js/service-toc.js';
 import '../wwwroot/src/app/js/instant-quotation.js';
 import '../wwwroot/src/app/js/sidebar.js';
+import '../wwwroot/src/app/js/service-finder.js';
+import '../wwwroot/src/app/js/inquiry-pages.js';
 import '../wwwroot/src/app/js/motion.js';
 import '../wwwroot/src/app/js/hlc-colour-atlas-data.js';
 import '../wwwroot/src/app/js/finish-color-matcher-core.js';

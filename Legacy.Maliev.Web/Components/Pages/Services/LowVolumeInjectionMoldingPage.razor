@@ -3,25 +3,27 @@
 @using System.Text.Json
 @using Legacy.Maliev.Web.Components.Layout
 @using Legacy.Maliev.Web.Components.Metadata
+@using Legacy.Maliev.Web.Components.Shared
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-    var title = T("Low-Volume Injection Molding up to 1,000 Parts | MALIEV", "บริการฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้น | MALIEV");
-    var description = T("Low-volume injection molding for up to 1,000 parts on a pneumatic PIMM machine, with mold, material, shot weight, and finish reviewed before production.", "บริการฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่อง PIMM ระบบลม พร้อมประเมินแม่พิมพ์ วัสดุ น้ำหนักฉีด และผิวงานก่อนผลิต");
+    var title = T("Low-Volume Injection Molding up to 1,000 Parts | MALIEV", "รับฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้น | MALIEV");
+    var description = T("Low-volume injection molding for pilot runs and repeat batches up to 1,000 parts. MALIEV reviews the part, mold, material, and quantity.", "รับฉีดพลาสติกจำนวนน้อยสำหรับงานทดลองและงานผลิตซ้ำไม่เกิน 1,000 ชิ้น พร้อมประเมินชิ้นงาน แม่พิมพ์ วัสดุ และจำนวน");
     var faqJson = CreateFaqJson();
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
     <meta name="description" content="@description" />
-    <meta name="keywords" content="@T("low volume injection molding Thailand, PIMM 50g, plastic injection service", "ฉีดพลาสติกจำนวนน้อย ประเทศไทย, PIMM 50g, บริการฉีดพลาสติก")" />
+    <meta name="keywords" content="@T("low-volume injection molding Thailand, injection molding up to 1,000 parts, pneumatic injection molding, PIMM machine", "รับฉีดพลาสติกจำนวนน้อย, ฉีดพลาสติกไม่เกิน 1,000 ชิ้น, เครื่องฉีดพลาสติกระบบลม, PIMM")" />
     <link rel="preload" as="image" href="/src/images/services/injection-molding/injection-service-hero-wide.png" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Low-volume Injection Molding"))" />
     <script type="application/ld+json">@((MarkupString)faqJson)</script>
 </HeadContent>
+<ServiceBreadcrumb ServiceKey="Low-volume Injection Molding" RenderNavigation="false" />
 <LowVolumeInjectionMoldingContent RouteOwner="blazor-static-ssr" />
 
 @code {

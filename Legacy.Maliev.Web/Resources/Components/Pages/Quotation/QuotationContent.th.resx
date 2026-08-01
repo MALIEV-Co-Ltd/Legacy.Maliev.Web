@@ -238,6 +238,7 @@
   <data name="Email your request to" xml:space="preserve"><value>ส่งรายละเอียดทางอีเมลมาที่</value></data>
   <data name="or contact our team through these channels." xml:space="preserve"><value>หรือติดต่อทีมงานผ่านช่องทางเหล่านี้</value></data>
   <data name="Request a manual quotation" xml:space="preserve"><value>ขอใบเสนอราคาจากทีมงาน</value></data>
+  <data name="Manual quotation request" xml:space="preserve"><value>ขอใบเสนอราคาด้วยตนเอง</value></data>
   <data name="Complete the form below. Required fields are marked with an asterisk." xml:space="preserve"><value>กรอกแบบฟอร์มด้านล่าง ช่องที่จำเป็นจะแสดงด้วยเครื่องหมายดอกจัน</value></data>
   <data name="Contact details" xml:space="preserve"><value>ข้อมูลผู้ติดต่อ</value></data>
   <data name="Required" xml:space="preserve"><value>จำเป็น</value></data>
@@ -271,4 +272,8 @@
   <data name="apply." xml:space="preserve"><value>มีผลบังคับใช้</value></data>
   <data name="We could not verify that you are human. Please try again." xml:space="preserve"><value>ไม่สามารถยืนยันว่าคุณเป็นมนุษย์ได้ กรุณาลองอีกครั้ง</value></data>
   <data name="Submitting..." xml:space="preserve"><value>กำลังส่ง...</value></data>
+  <data name="Email address is required" xml:space="preserve"><value>กรุณากรอกอีเมล</value></data>
+  <data name="Please enter your first name" xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
+  <data name="Please enter your last name" xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
+  <data name="Please enter your message" xml:space="preserve"><value>กรุณากรอกข้อความ</value></data>
 </root>

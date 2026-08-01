@@ -1,26 +1,62 @@
 @page "/services/silicone-casting"
 @using System.Globalization
+@using System.Text.Json
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Metadata
+@using Legacy.Maliev.Web.Components.Shared
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-    var title = T("Silicone Casting Services for Short-Run Parts | MALIEV", "บริการหล่อซิลิโคนสำหรับชิ้นงานจำนวนน้อย | MALIEV");
-    var description = T("Create short-run silicone parts from a reviewed 3D-printed mold, with material, shore hardness, color, and finish matched to the application.", "ผลิตชิ้นงานซิลิโคนจำนวนน้อยจากแม่พิมพ์พิมพ์ 3 มิติ โดยประเมินวัสดุ ความแข็ง สี และผิวงานให้เหมาะกับการใช้งาน");
+    var title = T("Silicone Casting with 3D-Printed Molds | MALIEV", "บริการหล่อซิลิโคนด้วยแม่พิมพ์พิมพ์ 3 มิติ | MALIEV");
+    var description = T("Short-run silicone casting using a 3D-printed mold, with geometry, material behavior, finish, and application reviewed before production.", "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์พิมพ์ 3 มิติ พร้อมประเมินรูปทรง พฤติกรรมวัสดุ ผิว และการใช้งานก่อนผลิต");
+    var faqJson = CreateFaqJson();
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
     <meta name="description" content="@description" />
-    <meta name="keywords" content="@T("silicone casting Thailand, silicone mold, short run silicone parts", "หล่อซิลิโคน ประเทศไทย, แม่พิมพ์ซิลิโคน, ชิ้นงานซิลิโคนจำนวนน้อย")" />
+    <meta name="keywords" content="@T("silicone casting Thailand, 3D printed mold, short run silicone parts, prototype silicone", "รับหล่อซิลิโคน, หล่อซิลิโคนด้วยแม่พิมพ์ 3 มิติ, ชิ้นงานซิลิโคนจำนวนน้อย, ต้นแบบซิลิโคน")" />
     <link rel="preload" as="image" href="/src/images/services/silicone-casting/silicone-casting-workflow.webp" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Silicone Casting"))" />
+    <script type="application/ld+json">@((MarkupString)faqJson)</script>
 </HeadContent>
+<ServiceBreadcrumb ServiceKey="Silicone Casting" RenderNavigation="false" />
 <SiliconeCastingContent RouteOwner="blazor-static-ssr" />
 
 @code {
     private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
 
     private string T(string english, string thai) => IsThai ? thai : english;
+
+    private string CreateFaqJson()
+    {
+        var questions = new (string English, string Thai, string EnglishAnswer, string ThaiAnswer)[]
+        {
+            ("Can a 3D-printed mold be used for silicone casting?", "ใช้แม่พิมพ์พิมพ์ 3 มิติสำหรับหล่อซิลิโคนได้หรือไม่?", "Yes, for suitable short-run applications. Mold geometry, print material, surface, release strategy, parting line, vents, and silicone behavior must be reviewed before committing to the process.", "ได้สำหรับงานจำนวนน้อยที่เหมาะสม ต้องประเมินรูปทรงแม่พิมพ์ วัสดุพิมพ์ ผิว น้ำยาถอดแบบ แนวแยก ช่องระบาย และพฤติกรรมซิลิโคนก่อนยืนยันกระบวนการ"),
+            ("What information is needed before casting?", "ก่อนหล่อต้องใช้ข้อมูลอะไรบ้าง?", "Send the part CAD or drawing, target quantity, silicone hardness or behavior, finish, color, critical dimensions, insert requirements, and intended use.", "ส่ง CAD หรือแบบชิ้นงาน จำนวนเป้าหมาย ความแข็งหรือพฤติกรรมซิลิโคน ผิว สี ขนาดสำคัญ ชิ้นส่วนแทรก และการใช้งาน"),
+            ("Is silicone casting the same as injection molding?", "การหล่อซิลิโคนเหมือนการฉีดพลาสติกหรือไม่?", "No. Silicone casting uses a mold and a liquid silicone system, while injection molding uses a heated plastic material and a different machine and tool strategy. The right route depends on the part and use.", "ไม่เหมือนกัน การหล่อซิลิโคนใช้แม่พิมพ์และซิลิโคนเหลว ส่วนการฉีดพลาสติกใช้วัสดุพลาสติกที่ให้ความร้อนและเครื่องจักรกับแม่พิมพ์คนละแบบ ต้องเลือกตามชิ้นงานและการใช้งาน"),
+            ("What drives silicone casting cost?", "อะไรเป็นตัวกำหนดราคาหล่อซิลิโคน?", "The 3D-printed mold, master pattern, silicone volume, silicone color, number of molds, and required finish all affect cost and lead time. We confirm the estimate after reviewing the part and target quantity.", "ราคาและระยะเวลาขึ้นกับค่าแม่พิมพ์พิมพ์ 3 มิติ ต้นแบบ ปริมาณซิลิโคน สีซิลิโคน จำนวนแม่พิมพ์ และผิวงาน โดยจะยืนยันหลังตรวจสอบชิ้นงานและจำนวนเป้าหมาย"),
+            ("What lead time should I plan for?", "ควรวางแผนระยะเวลาเท่าไร?", "A typical project is around seven days, including a few days for the mold and master pattern. Each pouring cycle generally needs about 6–8 hours to fully cure; fewer molds reduce cost but can extend the schedule.", "โปรเจ็คทั่วไปใช้เวลาประมาณ 7 วัน รวมเวลาทำแม่พิมพ์และต้นแบบไม่กี่วัน การเทแต่ละรอบใช้เวลาประมาณ 6–8 ชั่วโมงเพื่อแข็งตัวเต็มที่ หากใช้แม่พิมพ์น้อยจะลดต้นทุนแต่ทำให้ระยะเวลานานขึ้นได้"),
+            ("Is there a minimum silicone order?", "มีปริมาณซิลิโคนขั้นต่ำหรือไม่?", "For planning, a one-litre minimum of silicone is a useful starting point. The actual amount depends on the part, runners, vents, waste, and the number of pours.", "สำหรับการวางแผน ปริมาณซิลิโคนขั้นต่ำ 1 ลิตรเป็นจุดเริ่มต้นที่ใช้ประเมินได้ ปริมาณจริงขึ้นกับชิ้นงาน ทางเท ช่องระบาย เศษวัสดุ และจำนวนรอบเท"),
+        };
+        var schema = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "FAQPage",
+            ["mainEntity"] = questions.Select(question => new Dictionary<string, object>
+            {
+                ["@type"] = "Question",
+                ["name"] = T(question.English, question.Thai),
+                ["acceptedAnswer"] = new Dictionary<string, object>
+                {
+                    ["@type"] = "Answer",
+                    ["text"] = T(question.EnglishAnswer, question.ThaiAnswer),
+                },
+            }).ToArray(),
+        };
+        return JsonSerializer.Serialize(schema);
+    }
 }

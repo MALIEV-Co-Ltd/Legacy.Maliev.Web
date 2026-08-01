@@ -45,8 +45,8 @@
                 CreateQuestion(
                     T("How much does 3D scanning cost?", "สแกน 3D ราคาเท่าไร?"),
                     T(
-                        "Raw 3D scanning with STL output starts at THB 2,500. Reverse-engineering output starts at THB 4,500. A deviation-analysis report adds THB 1,000. The final quotation depends on size, complexity, preparation, scan positions, site access, cleanup, alignment, and required deliverables.",
-                        "งานสแกน 3D พร้อมไฟล์ STL ดิบเริ่มต้น 2,500 บาท งาน Reverse Engineering เริ่มต้น 4,500 บาท และรายงาน Deviation Analysis เพิ่ม 1,000 บาท ราคาสุดท้ายขึ้นกับขนาด ความซับซ้อน การเตรียมผิว จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเก็บข้อมูล การจัดแนว และผลส่งมอบ")),
+                        "Cost depends on object size and complexity, preparation, scan positions, site access, travel, cleanup, alignment, and whether the deliverable is a mesh, reverse-engineered CAD, or deviation report.",
+                        "ราคาขึ้นกับขนาดและความซับซ้อน การเตรียม จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเดินทาง การเก็บเมช การจัดแนว และผลลัพธ์ว่าเป็นเมช CAD หรือรายงาน")),
                 CreateQuestion(
                     T("How long does 3D scanning take?", "งานสแกน 3D ใช้เวลานานเท่าไร?"),
                     T(
@@ -66,12 +66,17 @@
                     T("Which scan files can you deliver?", "ส่งมอบไฟล์สแกนรูปแบบใดได้บ้าง?"),
                     T(
                         "Raw geometry is commonly delivered as STL. We can also provide OBJ with captured colour when the project and capture method support colour data. Reverse-engineering projects can add editable CAD deliverables such as STEP or IGES as agreed.",
-                        "ข้อมูลรูปทรงดิบโดยทั่วไปส่งเป็น STL และสามารถส่ง OBJ พร้อมสีได้เมื่อโครงการและวิธีเก็บข้อมูลรองรับสี งาน Reverse Engineering สามารถเพิ่มไฟล์ CAD ที่แก้ไขได้ เช่น STEP หรือ IGES ตามขอบเขตที่ตกลง")),
+                        "ข้อมูลรูปทรงดิบโดยทั่วไปส่งเป็น STL และสามารถส่ง OBJ พร้อมสีได้เมื่อโปรเจ็คและวิธีเก็บข้อมูลรองรับสี งาน Reverse Engineering สามารถเพิ่มไฟล์ CAD ที่แก้ไขได้ เช่น STEP หรือ IGES ตามขอบเขตที่ตกลง")),
+                CreateQuestion(
+                    T("Can I order only 3D scanning and receive a DWG?", "ถ้าต้องการแค่สแกน 3D กับไฟล์ DWG ต้องทำอย่างไร?"),
+                    T(
+                        "A scan-only scope normally delivers a triangular mesh such as STL. DWG is a 2D engineering drawing, so it requires an additional reverse-engineering and drafting scope. There is no fixed reduction because CAD/DWG effort depends on the geometry and drawing requirements; we can quote scan-only and CAD/DWG as separate line items.",
+                        "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมชสามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้")),
                 CreateQuestion(
                     T("What is the scanner's volumetric accuracy?", "ความแม่นยำเชิงปริมาตรของเครื่องสแกนเท่าไร?"),
                     T(
                         "The scanner's volumetric accuracy specification is 0.02 mm + 0.06 mm/m. Actual project results also depend on object size and surface, preparation, access, environment, scanner setup, alignment strategy, and the requested deliverable.",
-                        "ข้อกำหนดความแม่นยำเชิงปริมาตรของเครื่องสแกนคือ 0.02 มม. + 0.06 มม./ม. ผลลัพธ์จริงของแต่ละโครงการยังขึ้นกับขนาดและผิวชิ้นงาน การเตรียม การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลส่งมอบที่ต้องการ")),
+                        "ข้อกำหนดความแม่นยำเชิงปริมาตรของเครื่องสแกนคือ 0.02 มม. + 0.06 มม./ม. ผลลัพธ์จริงของแต่ละโปรเจ็คยังขึ้นกับขนาดและผิวชิ้นงาน การเตรียม การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลส่งมอบที่ต้องการ")),
                 CreateQuestion(
                     T("Can you scan outdoors, buildings, or factories?", "สแกนกลางแจ้ง อาคาร หรือโรงงานได้หรือไม่?"),
                     T(
@@ -80,8 +85,8 @@
                 CreateQuestion(
                     T("Can every object be scanned?", "ทุกวัตถุสแกนได้หรือไม่?"),
                     T(
-                        "No. The scanner needs line of sight and a stable optical response. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, partial results, another method, or may not be feasible.",
-                        "ไม่ได้ทุกวัตถุ เครื่องต้องมองเห็นผิวและรับแสงที่เสถียร วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ได้ข้อมูลบางส่วน ใช้วิธีอื่น หรือทำไม่ได้")),
+                        "No. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, another method, partial results, or may not be feasible.",
+                        "ไม่ได้ทุกวัตถุ วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ใช้วิธีอื่น ได้ข้อมูลบางส่วน หรือทำไม่ได้")),
                 CreateQuestion(
                     T("Is an STL file editable CAD?", "ไฟล์ STL เป็น CAD ที่แก้ไขได้หรือไม่?"),
                     T(
@@ -98,10 +103,10 @@
                         "Usually the physical part, usable nominal CAD, a defined alignment method, critical regions, reporting needs, and an agreed interpretation of color limits. The result shows differences relative to that alignment; it is not automatically certified dimensional inspection.",
                         "โดยทั่วไปต้องมีชิ้นงาน CAD ต้นแบบ วิธีจัดแนว จุดสำคัญ รูปแบบรายงาน และช่วงสีที่ตกลง ผลแสดงความต่างตามการจัดแนวนั้น ไม่ได้เป็นการตรวจมิติรับรองโดยอัตโนมัติ")),
                 CreateQuestion(
-                    T("Can you scan at our factory or site?", "ไปสแกนที่โรงงานหรือหน้างานได้หรือไม่?"),
+                    T("Can MALIEV scan at our factory or site?", "MALIEV ไปสแกนที่โรงงานหรือหน้างานได้หรือไม่?"),
                     T(
-                        "Yes. We provide onsite scanning when feasibility, access, safety, environment, working space, and schedule are agreed. Send photos, approximate dimensions, location, restrictions, and required deliverables for planning.",
-                        "ได้ เรามีบริการนอกสถานที่เมื่อประเมินความเป็นไปได้ การเข้าถึง ความปลอดภัย สภาพแวดล้อม พื้นที่ และตารางแล้ว กรุณาส่งรูป ขนาดโดยประมาณ สถานที่ ข้อจำกัด และผลลัพธ์ที่ต้องการ"))
+                        "Yes. Onsite scanning is available when access, safety, environment, working space, schedule, and required deliverables are agreed.",
+                        "ได้ มีบริการสแกนนอกสถานที่เมื่อประเมินการเข้าถึง ความปลอดภัย สภาพแวดล้อม พื้นที่ ตาราง และผลลัพธ์แล้ว"))
             }
         };
 

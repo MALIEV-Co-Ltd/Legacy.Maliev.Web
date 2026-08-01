@@ -138,4 +138,21 @@
   <data name="Manage your manufacturing projects" xml:space="preserve"><value>จัดการโครงการผลิตของคุณ</value></data>
   <data name="Sign in to review quotations, orders, files, and account details in one secure place." xml:space="preserve"><value>เข้าสู่ระบบเพื่อตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์ และข้อมูลบัญชีอย่างปลอดภัยในที่เดียว</value></data>
   <data name="Member account" xml:space="preserve"><value>บัญชีสมาชิก</value></data>
+  <data name="Email address is required" xml:space="preserve"><value>กรุณากรอกอีเมล</value></data>
+  <data name="Password is required" xml:space="preserve"><value>กรุณากรอกรหัสผ่าน</value></data>
+  <data name="Resend verification email" xml:space="preserve"><value>ส่งอีเมลยืนยันใหม่</value></data>
+  <data name="Email verification required" xml:space="preserve"><value>ต้องยืนยันอีเมล</value></data>
+  <data name="Please verify your email before signing in." xml:space="preserve"><value>โปรดยืนยันอีเมลก่อนเข้าสู่ระบบ</value></data>
+  <data name="If the account requires verification, a new verification link has been sent." xml:space="preserve"><value>หากบัญชีต้องยืนยันอีเมล ระบบได้ส่งลิงก์ยืนยันใหม่แล้ว</value></data>
+  <data name="We could not send the verification email. Please try again later." xml:space="preserve"><value>ไม่สามารถส่งอีเมลยืนยันได้ โปรดลองอีกครั้งภายหลัง</value></data>
+  <data name="Login failed" xml:space="preserve"><value>เข้าสู่ระบบไม่สำเร็จ</value></data>
+  <data name="Too many failed attempts. This account has been locked out, please try again later." xml:space="preserve"><value>มีการพยายามเข้าสู่ระบบไม่สำเร็จหลายครั้ง บัญชีถูกล็อกชั่วคราว โปรดลองอีกครั้งภายหลัง</value></data>
+  <data name="Log in required Two-Factor Authentication" xml:space="preserve"><value>การเข้าสู่ระบบต้องยืนยันตัวตนแบบสองขั้นตอน</value></data>
+  <data name="Please verify your input again." xml:space="preserve"><value>โปรดตรวจสอบข้อมูลที่กรอกอีกครั้ง</value></data>
+  <data name="Hello," xml:space="preserve"><value>สวัสดี</value></data>
+  <data name="Email Confirmation" xml:space="preserve"><value>ยืนยันอีเมล</value></data>
+  <data name="Please confirm your MALIEV customer email address by selecting the link below." xml:space="preserve"><value>โปรดยืนยันอีเมลสำหรับบัญชีลูกค้า MALIEV โดยเลือกลิงก์ด้านล่าง</value></data>
+  <data name="Confirm email" xml:space="preserve"><value>ยืนยันอีเมล</value></data>
+  <data name="If you did not request this email, you can ignore it." xml:space="preserve"><value>หากคุณไม่ได้ขออีเมลนี้ สามารถละเว้นข้อความนี้ได้</value></data>
+  <data name="New to MALIEV?" xml:space="preserve"><value>ยังไม่มีบัญชีกับ MALIEV?</value></data>
 </root>

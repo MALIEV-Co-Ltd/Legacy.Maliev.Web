@@ -1,0 +1,314 @@
+{
+  "PLA": {
+    "description": { "en": "Easy-to-print bioplastic for visual prototypes, fit checks and presentation models.", "th": "พลาสติกชีวภาพที่พิมพ์ง่าย เหมาะกับต้นแบบรูปลักษณ์ งานทดลองประกอบ และโมเดลนำเสนอ" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa (typical printed part)", "th": "45–65 MPa (ช่วงทั่วไปของชิ้นงานพิมพ์)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "45–60 °C", "th": "45–60 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good with water; limited resistance to strong acids, bases and solvents.", "th": "ทนน้ำได้ดี แต่ไม่เหมาะกับกรด ด่าง และตัวทำละลายเข้มข้น" } }
+    ],
+    "colors": { "en": ["Black", "White", "Gray", "Green", "Blue", "Orange", "Red", "Beige", "Brown"], "th": ["ดำ", "ขาว", "เทา", "เขียว", "น้ำเงิน", "ส้ม", "แดง", "เบจ", "น้ำตาล"] },
+    "availability": { "en": "Material reference: Polymaker PolyLite PLA lists these colours; local availability and stock are confirmed before production.", "th": "อ้างอิงวัสดุ Polymaker PolyLite PLA: มีสีตามรายการนี้ โดยจะยืนยันตัวเลือกและสต็อกก่อนผลิต" },
+    "application": { "en": "Representative FDM fixture application", "th": "ตัวอย่างการใช้งานเป็นฟิกซ์เจอร์จาก FDM" },
+    "image": "/src/images/services/printing/materials/material-pla.webp",
+    "alt": { "en": "3D printed FDM fixture being checked in a workshop", "th": "ฟิกซ์เจอร์ที่พิมพ์ด้วย FDM กำลังถูกตรวจสอบในเวิร์กช็อป" }
+  },
+  "PETG": {
+    "description": { "en": "Tough, low-odour general-purpose filament for functional parts and enclosures.", "th": "เส้นพลาสติกเหนียว กลิ่นน้อย เหมาะกับชิ้นส่วนใช้งานและกล่องครอบ" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–60 MPa", "th": "45–60 MPa" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "65–80 °C", "th": "65–80 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good resistance to water, alcohols and weak acids; solvents can stress-crack it.", "th": "ทนน้ำ แอลกอฮอล์ และกรดอ่อนได้ดี แต่ตัวทำละลายอาจทำให้แตกร้าวจากความเค้น" } }
+    ],
+    "colors": { "en": ["Black", "White", "Gray", "Red"], "th": ["ดำ", "ขาว", "เทา", "แดง"] },
+    "availability": { "en": "Material reference: eSUN PETG lists black, white, gray and red; confirm local availability and current stock.", "th": "อ้างอิงวัสดุ eSUN PETG: มีสีดำ ขาว เทา และแดง โดยจะยืนยันตัวเลือกและสต็อกล่าสุดก่อนผลิต" },
+    "application": { "en": "Representative PETG functional-part application", "th": "ตัวอย่างชิ้นส่วนใช้งานจาก PETG" },
+    "image": "/src/images/services/printing/materials/material-petg.webp",
+    "alt": { "en": "Functional 3D printed parts in several filament materials", "th": "ชิ้นส่วนใช้งานที่พิมพ์ด้วยเส้นพลาสติกหลายชนิด" }
+  },
+  "ABS": {
+    "description": { "en": "Impact-resistant engineering filament for housings, fixtures and parts exposed to moderate heat.", "th": "วัสดุวิศวกรรมทนกระแทก เหมาะกับกล่องครอบ ฟิกซ์เจอร์ และชิ้นงานที่เจอความร้อนปานกลาง" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "35–50 MPa", "th": "35–50 MPa" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "80–100 °C", "th": "80–100 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Resists water and dilute acids/bases; acetone and ketones can attack the surface.", "th": "ทนน้ำและกรดด่างเจือจาง แต่ผิวอาจถูกทำลายด้วยอะซิโตนและคีโตน" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Colour is grade and supplier dependent; no fixed Thailand retail palette is shown here. Ask us to confirm stock.", "th": "สีขึ้นกับเกรดและผู้จำหน่าย จึงไม่ระบุพาเลตตายตัวในหน้านี้ สอบถามเพื่อยืนยันสต็อกได้" },
+    "application": { "en": "Representative engineering fixture application", "th": "ตัวอย่างฟิกซ์เจอร์งานวิศวกรรม" },
+    "image": "/src/images/services/printing/materials/material-abs.webp",
+    "alt": { "en": "Large dark 3D printed engineering fixture installed on a machine", "th": "ฟิกซ์เจอร์วิศวกรรมสีเข้มที่พิมพ์ 3D ติดตั้งกับเครื่องจักร" }
+  },
+  "ASA": {
+    "description": { "en": "Outdoor-capable filament with better UV and weather resistance than ABS.", "th": "วัสดุสำหรับงานกลางแจ้ง ทน UV และสภาพอากาศได้ดีกว่า ABS" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "40–55 MPa", "th": "40–55 MPa" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "85–100 °C", "th": "85–100 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good weathering and cleaning-agent resistance; solvents can soften the surface.", "th": "ทนสภาพอากาศและน้ำยาทำความสะอาดได้ดี แต่ตัวทำละลายอาจทำให้ผิวนิ่ม" } }
+    ],
+    "colors": { "en": ["Black", "White"], "th": ["ดำ", "ขาว"] },
+    "availability": { "en": "Material reference: eSUN ASA+ lists black and white options; confirm the exact local colour and current stock.", "th": "อ้างอิงวัสดุ eSUN ASA+: มีตัวเลือกสีดำและขาว โดยจะยืนยันสีและสต็อกในไทยก่อนผลิต" },
+    "application": { "en": "Representative weather-resistant machine cover", "th": "ตัวอย่างฝาครอบเครื่องจักรที่ทนสภาพอากาศ" },
+    "image": "/src/images/services/printing/materials/material-asa.webp",
+    "alt": { "en": "3D printed industrial part being fitted to equipment", "th": "ชิ้นส่วนอุตสาหกรรมที่พิมพ์ 3D กำลังติดตั้งกับอุปกรณ์" }
+  },
+  "HIPS": {
+    "description": { "en": "Light, easy-to-finish material for prototypes and dissolvable support with compatible workflows.", "th": "วัสดุน้ำหนักเบา ขัดแต่งง่าย เหมาะกับต้นแบบและซัพพอร์ตที่ต้องใช้กระบวนการเข้าคู่กัน" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "20–35 MPa", "th": "20–35 MPa" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "75–90 °C", "th": "75–90 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Sensitive to aromatic solvents; some support workflows use limonene dissolution.", "th": "ไวต่อตัวทำละลายอะโรมาติก และบางกระบวนการใช้ลิโมนีนละลายซัพพอร์ต" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Colour is supplier dependent; confirm current Thailand stock before quoting.", "th": "สีขึ้นกับผู้จำหน่าย โปรดยืนยันสต็อกในไทยก่อนประเมินราคา" },
+    "application": { "en": "Representative light prototype application", "th": "ตัวอย่างการใช้งานต้นแบบน้ำหนักเบา" },
+    "image": "/src/images/services/printing/materials/material-hips.webp",
+    "alt": { "en": "Assorted 3D printed prototype parts on a workbench", "th": "ชิ้นส่วนต้นแบบที่พิมพ์ 3D หลายรูปแบบบนโต๊ะทำงาน" }
+  },
+  "TPU": {
+    "description": { "en": "Flexible 95A-class filament for grips, bumpers, seals and shock-absorbing components.", "th": "เส้นพลาสติกยืดหยุ่นระดับ 95A เหมาะกับด้ามจับ กันกระแทก ซีล และชิ้นส่วนซับแรง" },
+    "properties": [
+      { "label": { "en": "Hardness / elongation", "th": "ความแข็ง / การยืดตัว" }, "value": { "en": "About Shore A 95; elongation commonly 100–400%", "th": "ประมาณ Shore A 95; ยืดตัวได้ราว 100–400%" } },
+      { "label": { "en": "Service temperature", "th": "อุณหภูมิใช้งาน" }, "value": { "en": "Typically −20 to 80 °C; confirm grade", "th": "โดยทั่วไป −20 ถึง 80 °C; ต้องยืนยันตามเกรด" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good abrasion and oil resistance; strong acids and solvents require a grade check.", "th": "ทนการสึกและน้ำมันได้ดี แต่กรดเข้มข้นและตัวทำละลายต้องตรวจสอบเกรด" } }
+    ],
+    "colors": { "en": ["Black", "White"], "th": ["ดำ", "ขาว"] },
+    "availability": { "en": "Material reference: eSUN TPU-95A lists black and white options; confirm the exact hardness, local availability and current stock.", "th": "อ้างอิงวัสดุ eSUN TPU-95A: มีตัวเลือกสีดำและขาว โดยจะยืนยันความแข็ง สี และสต็อกในไทยก่อนผลิต" },
+    "application": { "en": "Representative flexible grip and protective-part application", "th": "ตัวอย่างด้ามจับและชิ้นส่วนป้องกันแบบยืดหยุ่น" },
+    "image": "/src/images/services/printing/materials/material-tpu.webp",
+    "alt": { "en": "Flexible black and light-coloured 3D printed parts arranged with functional components", "th": "ชิ้นส่วนพิมพ์ 3D แบบยืดหยุ่นสีดำและสีอ่อนวางร่วมกับชิ้นส่วนใช้งาน" }
+  },
+  "PC": {
+    "description": { "en": "High-strength, heat-resistant engineering filament for demanding functional parts.", "th": "วัสดุวิศวกรรมแข็งแรงและทนร้อน เหมาะกับชิ้นส่วนใช้งานที่รับภาระสูง" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "50–70 MPa", "th": "50–70 MPa" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "105–120 °C", "th": "105–120 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good with water and many oils; solvents may cause stress cracking.", "th": "ทนน้ำและน้ำมันหลายชนิด แต่ตัวทำละลายอาจทำให้แตกร้าวจากความเค้น" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Specialty colour and grade are confirmed per quotation; no fixed Thailand retail palette is shown.", "th": "สีและเกรดเฉพาะทางจะยืนยันตามใบประเมินราคา จึงไม่ระบุพาเลตตายตัวในหน้านี้" },
+    "application": { "en": "Representative high-load industrial component", "th": "ตัวอย่างชิ้นส่วนอุตสาหกรรมรับแรงสูง" },
+    "image": "/src/images/services/printing/materials/material-pc.webp",
+    "alt": { "en": "Large structural 3D printed component being installed in industrial equipment", "th": "ชิ้นส่วนโครงสร้างที่พิมพ์ 3D กำลังติดตั้งกับอุปกรณ์อุตสาหกรรม" }
+  },
+  "PC-FR": {
+    "description": { "en": "Flame-retardant PC grades for electrical and industrial housings when the exact certification is specified.", "th": "PC เกรดหน่วงไฟสำหรับกล่องไฟฟ้าและงานอุตสาหกรรม โดยต้องระบุใบรับรองที่ต้องการให้ชัดเจน" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa (grade dependent)", "th": "45–65 MPa (ขึ้นกับเกรด)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "100–120 °C (grade dependent)", "th": "100–120 °C (ขึ้นกับเกรด)" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PC-like resistance; verify the flame-retardant formulation and SDS.", "th": "พฤติกรรมใกล้เคียง PC ต้องตรวจสอบสูตรหน่วงไฟและ SDS ของวัสดุ" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "No fixed Thailand colour palette is published here. Certification, grade and stock are confirmed per project.", "th": "ไม่พบพาเลตสีตายตัวที่ยืนยันได้ในไทย จึงตรวจสอบใบรับรอง เกรด และสต็อกเป็นรายงาน" },
+    "application": { "en": "Representative electrical enclosure application", "th": "ตัวอย่างกล่องครอบอุปกรณ์ไฟฟ้า" },
+    "image": "/src/images/services/printing/materials/material-pc-fr.webp",
+    "alt": { "en": "3D printed electronics enclosure being checked for fit", "th": "กล่องครอบอุปกรณ์อิเล็กทรอนิกส์ที่พิมพ์ 3D กำลังตรวจสอบการประกอบ" }
+  },
+  "PA6": {
+    "description": { "en": "Tough nylon for gears, hinges and wear parts; dry handling is essential.", "th": "ไนลอนเหนียวสำหรับเฟือง บานพับ และชิ้นส่วนสึกหรอ ต้องควบคุมความชื้นก่อนพิมพ์" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–75 MPa dry; lower when moisture-conditioned", "th": "45–75 MPa เมื่อแห้ง และลดลงเมื่อดูดความชื้น" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "80–120 °C (moisture dependent)", "th": "80–120 °C (ขึ้นกับความชื้น)" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good resistance to oils and fuels; absorbs water and can change dimensions.", "th": "ทนน้ำมันและเชื้อเพลิงได้ดี แต่ดูดน้ำและอาจทำให้ขนาดเปลี่ยน" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Colour and grade are supplier dependent; confirm Thailand stock and drying requirements.", "th": "สีและเกรดขึ้นกับผู้จำหน่าย โปรดยืนยันสต็อกในไทยและเงื่อนไขการอบแห้ง" },
+    "application": { "en": "Representative wear-resistant mechanism", "th": "ตัวอย่างกลไกที่ต้องทนการสึก" },
+    "image": "/src/images/services/printing/materials/material-pa6.webp",
+    "alt": { "en": "3D printed mechanism being checked in a functional fixture", "th": "กลไกที่พิมพ์ 3D กำลังตรวจสอบในฟิกซ์เจอร์ใช้งาน" }
+  },
+  "PA12": {
+    "description": { "en": "Dimensionally steadier nylon for durable precision parts with lower moisture uptake than PA6.", "th": "ไนลอนสำหรับชิ้นส่วนแม่นยำทนทาน ดูดความชื้นน้อยกว่า PA6" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa", "th": "45–65 MPa" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "90–110 °C", "th": "90–110 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good resistance to oils, fuels and many dilute chemicals; still needs dry storage.", "th": "ทนน้ำมัน เชื้อเพลิง และสารเคมีเจือจางหลายชนิด แต่ยังต้องเก็บแบบควบคุมความชื้น" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Specialty nylon colour is supplier dependent; confirm Thailand stock before quoting.", "th": "สีไนลอนเฉพาะทางขึ้นกับผู้จำหน่าย โปรดยืนยันสต็อกในไทยก่อนประเมินราคา" },
+    "application": { "en": "Representative durable precision component", "th": "ตัวอย่างชิ้นส่วนแม่นยำที่ต้องการความทนทาน" },
+    "image": "/src/images/services/printing/materials/material-pa12.webp",
+    "alt": { "en": "Large durable 3D printed component installed on a production machine", "th": "ชิ้นส่วนทนทานที่พิมพ์ 3D ติดตั้งบนเครื่องผลิต" }
+  },
+  "PLA-CF": {
+    "description": { "en": "Carbon-fibre PLA with a stiff, matte appearance for rigid fixtures and visual engineering parts.", "th": "PLA เสริมคาร์บอนไฟเบอร์ที่แข็งและมีผิวด้าน เหมาะกับฟิกซ์เจอร์และชิ้นงานวิศวกรรมเน้นรูปลักษณ์" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–70 MPa (orientation and brand dependent)", "th": "45–70 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "50–65 °C", "th": "50–65 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Similar to PLA; carbon fibre improves stiffness, not chemical resistance.", "th": "ใกล้เคียง PLA คาร์บอนไฟเบอร์ช่วยเพิ่มความแข็ง ไม่ได้เพิ่มความทนสารเคมี" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "The Thailand listing confirms the carbon-fibre grade, but not a fixed colour variant; confirm the exact spool and stock before quoting.", "th": "รายการในไทยยืนยันเกรดเสริมคาร์บอน แต่ไม่ได้ยืนยันสีตายตัว โปรดยืนยันม้วนวัสดุและสต็อกก่อนประเมินราคา" },
+    "application": { "en": "Representative carbon-fibre fixture application", "th": "ตัวอย่างฟิกซ์เจอร์เสริมคาร์บอนไฟเบอร์" },
+    "image": "/src/images/services/printing/materials/material-pla-cf.webp",
+    "alt": { "en": "Dark carbon-fibre 3D printed bracket fitted to industrial equipment", "th": "ขายึดพิมพ์ 3D สีเข้มเสริมคาร์บอนไฟเบอร์ติดตั้งกับอุปกรณ์อุตสาหกรรม" }
+  },
+  "PETG-CF": {
+    "description": { "en": "Stiffer PETG with carbon fibre for functional fixtures that still need useful toughness.", "th": "PETG เสริมคาร์บอนไฟเบอร์ที่แข็งขึ้น เหมาะกับฟิกซ์เจอร์ใช้งานที่ยังต้องการความเหนียว" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa (orientation and brand dependent)", "th": "45–65 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "70–90 °C", "th": "70–90 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PETG-like chemical behaviour; carbon fibre adds stiffness and abrasion to the nozzle.", "th": "พฤติกรรมต่อสารเคมีใกล้เคียง PETG และคาร์บอนไฟเบอร์เพิ่มความแข็งพร้อมทำให้หัวฉีดสึก" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "The Thailand listing confirms the carbon-fibre grade, but not a fixed colour variant; confirm the exact spool and stock before quoting.", "th": "รายการในไทยยืนยันเกรดเสริมคาร์บอน แต่ไม่ได้ยืนยันสีตายตัว โปรดยืนยันม้วนวัสดุและสต็อกก่อนประเมินราคา" },
+    "application": { "en": "Representative stiff functional fixture", "th": "ตัวอย่างฟิกซ์เจอร์ใช้งานที่ต้องการความแข็ง" },
+    "image": "/src/images/services/printing/materials/material-petg-cf.webp",
+    "alt": { "en": "Carbon-fibre reinforced 3D printed fixture being checked on a workbench", "th": "ฟิกซ์เจอร์พิมพ์ 3D เสริมคาร์บอนไฟเบอร์กำลังตรวจสอบบนโต๊ะทำงาน" }
+  },
+  "PET-CF": {
+    "description": { "en": "Carbon-fibre PET for stiff, dimensionally stable jigs and tooling.", "th": "PET เสริมคาร์บอนไฟเบอร์สำหรับจิ๊กและเครื่องมือที่ต้องการความแข็งและคงรูป" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "50–75 MPa (orientation and brand dependent)", "th": "50–75 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "80–105 °C", "th": "80–105 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PET-like resistance; verify the exact resin and fibre loading.", "th": "พฤติกรรมใกล้เคียง PET ต้องตรวจสอบสูตรเรซิ่นและสัดส่วนเส้นใย" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "No fixed Thailand colour variant is published for this carbon-fibre grade; ask us to verify the supplier batch and stock.", "th": "ไม่พบสีตายตัวที่ยืนยันได้ในไทยสำหรับเกรดเสริมคาร์บอนนี้ สอบถามเพื่อให้เราตรวจสอบล็อตและสต็อกของผู้จำหน่าย" },
+    "application": { "en": "Representative tooling and jig application", "th": "ตัวอย่างเครื่องมือและจิ๊กใช้งาน" },
+    "image": "/src/images/services/printing/materials/material-pet-cf.webp",
+    "alt": { "en": "Dark 3D printed tooling component mounted in an industrial cell", "th": "ชิ้นส่วนเครื่องมือพิมพ์ 3D สีเข้มติดตั้งในเซลล์อุตสาหกรรม" }
+  },
+  "PA-CF": {
+    "description": { "en": "Carbon-fibre nylon for high stiffness-to-weight engineering parts; moisture control is mandatory.", "th": "ไนลอนเสริมคาร์บอนไฟเบอร์สำหรับชิ้นส่วนวิศวกรรมที่ต้องการความแข็งต่อน้ำหนักสูง ต้องควบคุมความชื้น" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "55–90 MPa (dry, orientation dependent)", "th": "55–90 MPa (เมื่อแห้งและขึ้นกับทิศทางพิมพ์)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "100–140 °C (grade dependent)", "th": "100–140 °C (ขึ้นกับเกรด)" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good resistance to oils and fuels; moisture changes dimensions and properties.", "th": "ทนน้ำมันและเชื้อเพลิงได้ดี แต่ความชื้นทำให้ขนาดและคุณสมบัติเปลี่ยน" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "No fixed Thailand colour variant is published for this carbon-nylon grade; grade and stock are confirmed per quotation.", "th": "ไม่พบสีตายตัวที่ยืนยันได้ในไทยสำหรับไนลอนเสริมคาร์บอนนี้ เกรดและสต็อกจะยืนยันตามใบประเมินราคา" },
+    "application": { "en": "Representative load-bearing nylon component", "th": "ตัวอย่างชิ้นส่วนไนลอนรับแรง" },
+    "image": "/src/images/services/printing/materials/material-pa-cf.webp",
+    "alt": { "en": "Large black carbon-fibre nylon component being fitted to equipment", "th": "ชิ้นส่วนไนลอนเสริมคาร์บอนสีดำกำลังติดตั้งกับอุปกรณ์" }
+  },
+  "ASA-CF": {
+    "description": { "en": "Stiff, UV-stable ASA reinforced with carbon fibre for outdoor tooling and housings.", "th": "ASA เสริมคาร์บอนไฟเบอร์ที่แข็งและทน UV สำหรับเครื่องมือและกล่องครอบกลางแจ้ง" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–70 MPa (orientation and brand dependent)", "th": "45–70 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
+      { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "85–105 °C", "th": "85–105 °C" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "ASA-like UV/weather resistance; verify solvents and fibre loading by grade.", "th": "ทน UV และสภาพอากาศใกล้เคียง ASA ต้องตรวจสอบตัวทำละลายและสัดส่วนเส้นใยตามเกรด" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "No fixed Thailand colour variant is published for this carbon-fibre grade; ask us to verify the supplier batch and stock.", "th": "ไม่พบสีตายตัวที่ยืนยันได้ในไทยสำหรับเกรดเสริมคาร์บอนนี้ สอบถามเพื่อให้เราตรวจสอบล็อตและสต็อกของผู้จำหน่าย" },
+    "application": { "en": "Representative outdoor tooling application", "th": "ตัวอย่างเครื่องมือสำหรับงานกลางแจ้ง" },
+    "image": "/src/images/services/printing/materials/material-asa-cf.webp",
+    "alt": { "en": "Dark reinforced 3D printed fixture in a production environment", "th": "ฟิกซ์เจอร์พิมพ์ 3D เสริมเส้นใยสีเข้มในสภาพแวดล้อมการผลิต" }
+  },
+  "PETG-ESD": {
+    "description": { "en": "Static-dissipative PETG for electronics handling fixtures when a target resistance range is specified.", "th": "PETG สลายประจุไฟฟ้าสถิตสำหรับฟิกซ์เจอร์งานอิเล็กทรอนิกส์ โดยต้องระบุช่วงค่าความต้านทานที่ต้องการ" },
+    "properties": [
+      { "label": { "en": "Mechanical range", "th": "ช่วงคุณสมบัติเชิงกล" }, "value": { "en": "PETG-like; typically 40–55 MPa tensile strength", "th": "ใกล้เคียง PETG โดยทั่วไป 40–55 MPa" } },
+      { "label": { "en": "Electrical property", "th": "คุณสมบัติทางไฟฟ้า" }, "value": { "en": "Surface resistance is formulation-specific; confirm the required ESD target.", "th": "ค่าความต้านทานผิวขึ้นกับสูตรวัสดุ ต้องยืนยันเป้าหมาย ESD ที่ต้องการ" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PETG-like water and dilute-chemical resistance; verify the additive package.", "th": "ทนน้ำและสารเคมีเจือจางใกล้เคียง PETG ต้องตรวจสอบสารเติมแต่ง" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "No fixed Thailand retail palette is published; resistance target, grade and colour are quoted together.", "th": "ไม่พบพาเลตสีตายตัวที่ยืนยันได้ในไทย จะประเมินค่าความต้านทาน เกรด และสีร่วมกัน" },
+    "application": { "en": "Representative ESD electronics fixture", "th": "ตัวอย่างฟิกซ์เจอร์ ESD สำหรับงานอิเล็กทรอนิกส์" },
+    "image": "/src/images/services/printing/materials/material-petg-esd.webp",
+    "alt": { "en": "3D printed electronics housing being checked with a circuit assembly", "th": "กล่องครอบอิเล็กทรอนิกส์พิมพ์ 3D กำลังตรวจสอบร่วมกับแผงวงจร" }
+  },
+  "PC-ESD": {
+    "description": { "en": "Static-dissipative PC for stronger ESD fixtures and housings, subject to grade certification.", "th": "PC สลายประจุไฟฟ้าสถิตสำหรับฟิกซ์เจอร์และกล่องครอบ ESD ที่ต้องการความแข็งแรง โดยขึ้นกับใบรับรองเกรด" },
+    "properties": [
+      { "label": { "en": "Mechanical range", "th": "ช่วงคุณสมบัติเชิงกล" }, "value": { "en": "PC-like; typically 45–65 MPa tensile strength", "th": "ใกล้เคียง PC โดยทั่วไป 45–65 MPa" } },
+      { "label": { "en": "Electrical property", "th": "คุณสมบัติทางไฟฟ้า" }, "value": { "en": "Surface resistance is formulation-specific; target and test method must be specified.", "th": "ค่าความต้านทานผิวขึ้นกับสูตรวัสดุ ต้องระบุเป้าหมายและวิธีทดสอบ" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PC-like resistance; solvents may cause stress cracking.", "th": "พฤติกรรมใกล้เคียง PC ตัวทำละลายอาจทำให้แตกร้าวจากความเค้น" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Material reference: 3DXTECH ESD-safe PC; colour, grade, certification and local availability are confirmed per quotation.", "th": "อ้างอิงวัสดุ 3DXTECH PC สำหรับงาน ESD: สี เกรด ใบรับรอง และความพร้อมในไทยจะยืนยันตามใบประเมินราคา" },
+    "application": { "en": "Representative strong ESD fixture", "th": "ตัวอย่างฟิกซ์เจอร์ ESD ที่ต้องการความแข็งแรง" },
+    "image": "/src/images/services/printing/materials/material-pc-esd.webp",
+    "alt": { "en": "Strong dark 3D printed fixture positioned in an industrial machine", "th": "ฟิกซ์เจอร์พิมพ์ 3D สีเข้มที่แข็งแรงวางในเครื่องจักรอุตสาหกรรม" }
+  },
+  "ABS-FR": {
+    "description": { "en": "Flame-retardant ABS grades for housings where the required standard and certificate are specified up front.", "th": "ABS เกรดหน่วงไฟสำหรับกล่องครอบที่ต้องระบุมาตรฐานและใบรับรองตั้งแต่ต้น" },
+    "properties": [
+      { "label": { "en": "Mechanical range", "th": "ช่วงคุณสมบัติเชิงกล" }, "value": { "en": "ABS-like; typically 30–50 MPa tensile strength", "th": "ใกล้เคียง ABS โดยทั่วไป 30–50 MPa" } },
+      { "label": { "en": "Thermal / flame property", "th": "คุณสมบัติความร้อน / หน่วงไฟ" }, "value": { "en": "Grade-specific; do not assume a UL94 class without a certificate.", "th": "ขึ้นกับเกรด ห้ามสรุปคลาส UL94 หากไม่มีใบรับรอง" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "ABS-like resistance; acetone and ketones can attack the surface.", "th": "พฤติกรรมใกล้เคียง ABS อะซิโตนและคีโตนอาจทำลายผิว" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Colour, flame rating and Thailand stock are confirmed per project; no fixed palette is shown.", "th": "สี ระดับหน่วงไฟ และสต็อกในไทยจะยืนยันเป็นรายโครงการ จึงไม่ระบุพาเลตตายตัว" },
+    "application": { "en": "Representative fire-aware electronics enclosure", "th": "ตัวอย่างกล่องครอบอิเล็กทรอนิกส์ที่มีข้อกำหนดด้านไฟ" },
+    "image": "/src/images/services/printing/materials/material-abs-fr.webp",
+    "alt": { "en": "3D printed electronics enclosure being fitted around a circuit board", "th": "กล่องครอบอิเล็กทรอนิกส์พิมพ์ 3D กำลังประกอบรอบแผงวงจร" }
+  },
+  "PVA": {
+    "description": { "en": "Water-soluble support material for internal channels and complex overhangs; not a final-use part material.", "th": "วัสดุซัพพอร์ตละลายน้ำสำหรับช่องภายในและส่วนยื่นซับซ้อน ไม่ใช่วัสดุชิ้นงานใช้งานจริง" },
+    "properties": [
+      { "label": { "en": "Mechanical range", "th": "ช่วงคุณสมบัติเชิงกล" }, "value": { "en": "Typically 20–35 MPa tensile strength before water exposure", "th": "โดยทั่วไป 20–35 MPa ก่อนสัมผัสน้ำ" } },
+      { "label": { "en": "Water behaviour", "th": "พฤติกรรมต่อน้ำ" }, "value": { "en": "Dissolves in water; keep sealed and dry before printing.", "th": "ละลายน้ำได้ ต้องเก็บปิดสนิทและแห้งก่อนพิมพ์" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Water-sensitive support; compatibility depends on the paired model material.", "th": "เป็นซัพพอร์ตไวต่อน้ำ ความเข้ากันได้ขึ้นกับวัสดุของโมเดลที่พิมพ์คู่กัน" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Support filament colour is not used as a customer-facing finish; confirm availability with the chosen build process.", "th": "สีของเส้นซัพพอร์ตไม่ใช่สีผิวชิ้นงาน โปรดยืนยันความพร้อมตามกระบวนการพิมพ์ที่เลือก" },
+    "application": { "en": "Representative dissolvable-support workflow", "th": "ตัวอย่างกระบวนการใช้ซัพพอร์ตละลายน้ำ" },
+    "image": "/src/images/services/printing/materials/material-pva.webp",
+    "alt": { "en": "3D model preparation view showing internal geometry for support planning", "th": "ภาพเตรียมโมเดล 3D ที่แสดงโครงสร้างภายในเพื่อวางแผนซัพพอร์ต" }
+  },
+  "M68": {
+    "description": { "en": "Standard resin for smooth, detailed visual prototypes and appearance models.", "th": "เรซิ่นมาตรฐานสำหรับต้นแบบรูปลักษณ์และโมเดลรายละเอียดสูง ผิวเรียบ" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "35–45 MPa (typical cured resin range)", "th": "35–45 MPa (ช่วงทั่วไปของเรซิ่นที่บ่มแล้ว)" } },
+      { "label": { "en": "Hardness / elongation", "th": "ความแข็ง / การยืดตัว" }, "value": { "en": "Shore D 70–85; elongation 3–10%", "th": "Shore D 70–85; ยืดตัว 3–10%" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Post-cured photopolymer; IPA and solvents can soften uncured or poorly post-cured surfaces.", "th": "เป็นโฟโตพอลิเมอร์ที่ต้องบ่มต่อ ผิวที่ยังบ่มไม่สมบูรณ์อาจถูก IPA และตัวทำละลายทำให้นิ่ม" } }
+    ],
+    "colors": { "en": ["Beige", "Black", "Clear", "Gray", "Green", "Orange", "Red", "Sky blue", "White", "Yellow"], "th": ["เบจ", "ดำ", "ใส", "เทา", "เขียว", "ส้ม", "แดง", "ฟ้า", "ขาว", "เหลือง"] },
+    "availability": { "en": "Material reference: eSUN Standard Resin lists these colours; confirm the exact grade, local availability and current stock before quoting.", "th": "อ้างอิงวัสดุ eSUN Standard Resin: มีสีตามรายการนี้ โดยจะยืนยันเกรด ตัวเลือก และสต็อกในไทยก่อนประเมินราคา" },
+    "application": { "en": "Representative detailed resin enclosure application", "th": "ตัวอย่างกล่องครอบรายละเอียดสูงจากเรซิ่น" },
+    "image": "/src/images/services/printing/materials/material-m68.webp",
+    "alt": { "en": "Detailed resin-printed electronics enclosure being assembled", "th": "กล่องครอบอิเล็กทรอนิกส์รายละเอียดสูงจากเรซิ่นกำลังประกอบ" }
+  },
+  "K": {
+    "description": { "en": "Tough resin for snap-fits and functional visual models, with better impact tolerance than standard resin.", "th": "เรซิ่นเหนียวสำหรับสแนปฟิตและโมเดลใช้งาน ทนกระแทกกว่าเรซิ่นมาตรฐาน" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "30–50 MPa (typical cured range)", "th": "30–50 MPa (ช่วงทั่วไปเมื่อบ่มแล้ว)" } },
+      { "label": { "en": "Elongation", "th": "การยืดตัว" }, "value": { "en": "20–80% depending on formulation and cure", "th": "20–80% ขึ้นกับสูตรวัสดุและการบ่ม" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Cured resin tolerates brief handling exposure; verify long-term solvent and UV requirements.", "th": "เรซิ่นที่บ่มแล้วทนการใช้งานชั่วคราวได้ แต่ต้องตรวจสอบการสัมผัสตัวทำละลายและ UV ระยะยาว" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Tough-resin colour is supplier and printer-profile dependent; confirm the current Thailand option.", "th": "สีเรซิ่นเหนียวขึ้นกับผู้จำหน่ายและโปรไฟล์เครื่องพิมพ์ โปรดยืนยันตัวเลือกในไทยล่าสุด" },
+    "application": { "en": "Representative snap-fit functional prototype", "th": "ตัวอย่างต้นแบบใช้งานแบบสแนปฟิต" },
+    "image": "/src/images/services/printing/materials/material-k.webp",
+    "alt": { "en": "Resin-printed enclosure parts being checked for a functional assembly", "th": "ชิ้นส่วนกล่องครอบจากเรซิ่นกำลังตรวจสอบการประกอบใช้งาน" }
+  },
+  "G217": {
+    "description": { "en": "Transparent resin for clear prototypes, lenses, windows and light-guide studies.", "th": "เรซิ่นใสสำหรับต้นแบบโปร่งใส เลนส์ หน้าต่าง และการทดลองนำแสง" },
+    "properties": [
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "35–55 MPa (typical cured range)", "th": "35–55 MPa (ช่วงทั่วไปเมื่อบ่มแล้ว)" } },
+      { "label": { "en": "Hardness / elongation", "th": "ความแข็ง / การยืดตัว" }, "value": { "en": "Shore D 70–85; elongation 5–20%", "th": "Shore D 70–85; ยืดตัว 5–20%" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Clarity and chemical resistance depend strongly on washing, post-cure and polishing.", "th": "ความใสและการทนสารเคมีขึ้นกับการล้าง การบ่ม และการขัดเงาอย่างมาก" } }
+    ],
+    "colors": { "en": ["Clear"], "th": ["ใส"] },
+    "availability": { "en": "Clear resin is listed by Thailand suppliers; confirm the exact grade and optical finish required.", "th": "เรซิ่นใสมีรายการจากผู้จำหน่ายในไทย ต้องยืนยันเกรดและผิวทางแสงที่ต้องการ" },
+    "application": { "en": "Representative clear prototype enclosure", "th": "ตัวอย่างกล่องต้นแบบโปร่งใส" },
+    "image": "/src/images/services/printing/materials/material-g217.webp",
+    "alt": { "en": "Clear and translucent 3D printed parts shown with functional prototypes", "th": "ชิ้นส่วนพิมพ์ 3D แบบใสและโปร่งแสงวางร่วมกับต้นแบบใช้งาน" }
+  },
+  "F80": {
+    "description": { "en": "Flexible resin for soft-touch details, seals and tactile prototypes; tear life depends on geometry and cure.", "th": "เรซิ่นยืดหยุ่นสำหรับชิ้นส่วนสัมผัสนุ่ม ซีล และต้นแบบที่ต้องการความนิ่ม อายุการฉีกขาดขึ้นกับรูปทรงและการบ่ม" },
+    "properties": [
+      { "label": { "en": "Hardness / elongation", "th": "ความแข็ง / การยืดตัว" }, "value": { "en": "About Shore A 75–85; elongation 100–250% (grade dependent)", "th": "ประมาณ Shore A 75–85; ยืดตัว 100–250% (ขึ้นกับเกรด)" } },
+      { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "About 2–8 MPa (flexible-resin range)", "th": "ประมาณ 2–8 MPa (ช่วงของเรซิ่นยืดหยุ่น)" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Verify oil, solvent, UV and tear requirements with the selected resin profile.", "th": "ต้องตรวจสอบการทนน้ำมัน ตัวทำละลาย UV และการฉีกขาดตามโปรไฟล์เรซิ่น" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "Flexible-resin colour and stock are supplier dependent; confirm the current Thailand option.", "th": "สีและสต็อกเรซิ่นยืดหยุ่นขึ้นกับผู้จำหน่าย โปรดยืนยันตัวเลือกในไทยล่าสุด" },
+    "application": { "en": "Representative soft-touch and seal prototype", "th": "ตัวอย่างต้นแบบสัมผัสนุ่มและซีล" },
+    "image": "/src/images/services/printing/materials/material-f80.webp",
+    "alt": { "en": "Soft-looking flexible 3D printed parts shown beside rigid prototypes", "th": "ชิ้นส่วนพิมพ์ 3D แบบยืดหยุ่นวางข้างต้นแบบแบบแข็ง" }
+  },
+  "CASTWAX": {
+    "description": { "en": "Castable wax-filled resin for investment-casting patterns; it is not a final-use plastic part.", "th": "เรซิ่นผสมแว็กซ์สำหรับทำต้นแบบหล่อแบบอินเวสต์เมนต์ ไม่ใช่ชิ้นส่วนพลาสติกสำหรับใช้งานปลายทาง" },
+    "properties": [
+      { "label": { "en": "Mechanical data", "th": "ข้อมูลเชิงกล" }, "value": { "en": "Not intended for final-use mechanical loading; pattern strength is process-specific.", "th": "ไม่ออกแบบมาให้รับแรงในงานปลายทาง ความแข็งแรงของต้นแบบขึ้นกับกระบวนการ" } },
+      { "label": { "en": "Thermal behaviour", "th": "พฤติกรรมทางความร้อน" }, "value": { "en": "Designed to burn out cleanly during investment casting; follow the foundry schedule.", "th": "ออกแบบให้เผาออกสะอาดในกระบวนการหล่อ ต้องทำตามตารางการเผาของโรงหล่อ" } },
+      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Photopolymer handling and post-cure precautions apply; consult the resin SDS.", "th": "ต้องปฏิบัติตามข้อควรระวังของโฟโตพอลิเมอร์และการบ่ม และดู SDS ของเรซิ่น" } }
+    ],
+    "colors": { "en": [], "th": [] },
+    "availability": { "en": "No fixed Thailand colour variant is published for this castable resin; we confirm the exact resin and burnout schedule with the foundry.", "th": "ไม่พบสีตายตัวที่ยืนยันได้ในไทยสำหรับเรซิ่นหล่อนี้ เราจะยืนยันเรซิ่นและตารางการเผากับโรงหล่อ" },
+    "application": { "en": "Representative investment-casting pattern workflow", "th": "ตัวอย่างต้นแบบสำหรับกระบวนการหล่อแบบอินเวสต์เมนต์" },
+    "image": "/src/images/services/printing/materials/material-castwax.webp",
+    "alt": { "en": "Detailed resin printed pattern being prepared for a production workflow", "th": "ต้นแบบเรซิ่นรายละเอียดสูงกำลังเตรียมเข้าสู่กระบวนการผลิต" }
+  }
+}

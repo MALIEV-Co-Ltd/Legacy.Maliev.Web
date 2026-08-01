@@ -264,11 +264,12 @@
   <data name="Discuss your design" xml:space="preserve"><value>ปรึกษางานออกแบบ</value></data>
   <data name="Silicone Casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
   <data name="Silicone poured into a 3D-printed mold" xml:space="preserve"><value>เทซิลิโคนลงในแม่พิมพ์พิมพ์ 3 มิติ</value></data>
-  <data name="Create short-run silicone parts using a 3D-printed mold, with material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยจากแม่พิมพ์พิมพ์ 3 มิติ พร้อมประเมินวัสดุและผิวงาน</value></data>
+  <data name="Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน</value></data>
   <data name="Discuss silicone casting" xml:space="preserve"><value>ปรึกษางานหล่อซิลิโคน</value></data>
   <data name="Low-volume Injection Molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
   <data name="Pneumatic PIMM injection molding machine" xml:space="preserve"><value>เครื่องฉีดพลาสติก PIMM ระบบลม</value></data>
-  <data name="Low-volume molding for up to 1,000 parts on our pneumatic machine, with material and mold reviewed before production." xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่องระบบลม พร้อมประเมินวัสดุและแม่พิมพ์ก่อนผลิต</value></data>
+  <data name="Low-volume molding for up to 1,000 parts on our pneumatic machine, with shot weights up to 50 g and plastics melting at no more than 350 °C. Larger runs: consider buying the PIMM machine from shop.maliev.com." xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่องระบบลม รองรับน้ำหนักฉีดสูงสุด 50 กรัม และพลาสติกที่มีอุณหภูมิหลอมไม่เกิน 350 °C หากมากกว่า 1,000 ชิ้น แนะนำซื้อเครื่อง PIMM จาก shop.maliev.com</value></data>
+  <data name="Find the right service" xml:space="preserve"><value>ค้นหาบริการที่เหมาะกับคุณ</value></data>
   <data name="Discuss injection molding" xml:space="preserve"><value>ปรึกษางานฉีดพลาสติก</value></data>
   <data name="Explore all services" xml:space="preserve"><value>ดูบริการทั้งหมด</value></data>
   <data name="Need help choosing a process?" xml:space="preserve"><value>ต้องการความช่วยเหลือในการเลือกกระบวนการหรือไม่?</value></data>

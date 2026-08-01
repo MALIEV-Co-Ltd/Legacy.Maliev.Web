@@ -81,7 +81,7 @@ public sealed class Signup(
             return Page();
         }
 
-        if (!await antiBotVerifier.VerifyAsync(RecaptchaToken, "account_signup", cancellationToken))
+        if (!await antiBotVerifier.VerifyAsync(RecaptchaToken, "submit", cancellationToken))
         {
             ModelState.AddModelError(string.Empty, "Security verification failed. Please try again.");
             return Page();

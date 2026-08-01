@@ -8,7 +8,8 @@ public sealed record QuotationRequestSubmission(
     string Country,
     string? CompanyName,
     string? TaxIdentification,
-    string Message);
+    string Message,
+    string? InternalComment = null);
 
 public sealed record QuotationRequestResult(
     int? ReferenceNumber,

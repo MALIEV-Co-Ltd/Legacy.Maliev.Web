@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using Legacy.Maliev.Web.Components.Layout
 @using Legacy.Maliev.Web.Components.Metadata
+@using Legacy.Maliev.Web.Components.Shared
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
@@ -19,13 +20,14 @@
 <PageTitle>@title</PageTitle>
 <HeadContent>
     <meta name="description" content="@description" />
-    <meta name="keywords" content="@T("3D design service Thailand, CAD modeling, product design, DFM", "รับออกแบบ 3 มิติ, เขียนแบบ CAD, ออกแบบผลิตภัณฑ์, DFM")" />
+    <meta name="keywords" content="@T("3D design service Thailand, CAD modeling, product design, DFM, reverse engineering design", "รับออกแบบ 3 มิติ, เขียนแบบ CAD, ออกแบบผลิตภัณฑ์, DFM, reverse engineering")" />
     <link rel="preload" as="image" href="/src/images/services/design/design-workflow.webp" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Design"))" />
     <script type="application/ld+json">@((MarkupString)faqJson)</script>
 </HeadContent>
+<ServiceBreadcrumb ServiceKey="3D Design" RenderNavigation="false" />
 <ThreeDimensionalDesignContent RouteOwner="blazor-static-ssr" />
 
 @code {

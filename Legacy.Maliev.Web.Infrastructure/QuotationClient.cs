@@ -53,7 +53,7 @@ internal sealed class QuotationClient(
                         submission.CompanyName,
                         submission.TaxIdentification,
                         submission.Message,
-                        null,
+                        submission.InternalComment,
                         false),
                     options: ExactLegacyJson)
             };
@@ -129,7 +129,7 @@ internal sealed class QuotationClient(
         && string.Equals(created.CompanyName, submission.CompanyName, StringComparison.Ordinal)
         && string.Equals(created.TaxIdentification, submission.TaxIdentification, StringComparison.Ordinal)
         && string.Equals(created.Message, submission.Message, StringComparison.Ordinal)
-        && string.IsNullOrEmpty(created.InternalComment)
+        && string.Equals(created.InternalComment, submission.InternalComment, StringComparison.Ordinal)
         && !created.Done
         && created.CreatedDate != default;
 
