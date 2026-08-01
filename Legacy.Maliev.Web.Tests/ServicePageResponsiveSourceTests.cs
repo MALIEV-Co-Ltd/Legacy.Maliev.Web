@@ -14,15 +14,21 @@ public sealed class ServicePageResponsiveSourceTests
 
         Assert.Contains("data-service-toc", toc, StringComparison.Ordinal);
         Assert.Contains("data-service-toc-list", toc, StringComparison.Ordinal);
+        Assert.Contains("data-service-toc-toggle", toc, StringComparison.Ordinal);
+        Assert.Contains("data-service-toc-preview", toc, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"service-page-toc-panel\"", toc, StringComparison.Ordinal);
         Assert.Contains("hidden", toc, StringComparison.Ordinal);
         Assert.Contains("position: sticky", css, StringComparison.Ordinal);
         Assert.Contains("overflow-x: auto", css, StringComparison.Ordinal);
+        Assert.Contains("padding-inline-end: 2.75rem", css, StringComparison.Ordinal);
+        Assert.Contains("service-page-toc[data-toc-open=\"true\"] .service-page-toc-panel", css, StringComparison.Ordinal);
         Assert.Contains(".service-page-toc a.is-active", css, StringComparison.Ordinal);
         Assert.Contains("aria-current=\"true\"", css, StringComparison.Ordinal);
         Assert.Contains("requestAnimationFrame", js, StringComparison.Ordinal);
         Assert.Contains("prefers-reduced-motion", js, StringComparison.Ordinal);
         Assert.Contains("scrollTo({", js, StringComparison.Ordinal);
         Assert.Contains("addEventListener('scroll'", js, StringComparison.Ordinal);
+        Assert.Contains("TRAILING_EDGE_PADDING = 44", js, StringComparison.Ordinal);
         Assert.Contains("service-toc.js", entry, StringComparison.Ordinal);
     }
 

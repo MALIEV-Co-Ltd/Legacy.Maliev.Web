@@ -43,7 +43,14 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "ช่วยกำหนดเส้นทางประเมินระหว่าง CNC, 3D Printing และ 3D Scanning จากแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน ก่อนส่งต่อไปยังบริการเฉพาะทาง",
                 "Manufacturing process selection for projects that may need CNC machining, 3D printing, or 3D scanning, based on the drawing or sample, material, quantity, critical features, and intended use.",
                 "https://www.maliev.com/services/custom-manufacturing",
-                string.Empty)
+                string.Empty),
+            ["Finishing and Color"] = new(
+                "บริการเก็บผิวและมาตรฐานสี",
+                "3D Printed Part Finishing and Colour Standards",
+                "กำหนดสี ระดับความเงา การเตรียมผิว รอยต่อ และเกณฑ์ตรวจรับสำหรับชิ้นงานพิมพ์ 3 มิติก่อนผลิต",
+                "Finishing guidance for 3D printed parts, including colour standards, sheen, surface preparation, seams, and acceptance criteria before production.",
+                "https://www.maliev.com/services/finishing-and-color",
+                "https://www.maliev.com/src/images/services/printing/printing-finish-color-approval.webp")
         };
 
     public static PublicServiceStructuredDataDisplayModel Create(string? serviceName)

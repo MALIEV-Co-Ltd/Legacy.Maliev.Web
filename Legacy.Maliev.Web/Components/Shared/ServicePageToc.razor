@@ -1,8 +1,14 @@
 @using System.Globalization
 
 @{
-    var isThai = CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
-    var label = isThai ? "ในหน้านี้" : "On this page";
+var isThai = CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+var label = isThai ? "ในหน้านี้" : "On this page";
+var hint = isThai ? "เลือกหัวข้อเพื่อข้ามไปยังรายละเอียด" : "Jump to a section";
+var allSections = isThai ? "ดูหัวข้อทั้งหมด" : "Show all sections";
+var previewLabel = isThai ? "ตัวอย่างหัวข้อ" : "Section preview";
+var previewHint = isThai
+    ? "วางเมาส์หรือโฟกัสที่หัวข้อเพื่อดูตัวอย่าง คลิกเพื่อไปยังหัวข้อนั้น"
+    : "Hover or focus a chapter to preview it. Click to jump to that chapter.";
 }
 
 <nav class="service-page-toc"
@@ -11,6 +17,17 @@
      aria-label="@label">
     <div class="service-container service-page-toc-inner">
         <span class="service-page-toc-label">@label</span>
-        <ul data-service-toc-list></ul>
+        <div id="service-page-toc-panel" class="service-page-toc-panel" data-service-toc-panel>
+            <ul id="service-page-toc-list" data-service-toc-list></ul>
+            <aside class="service-page-toc-preview" data-service-toc-preview aria-label="@previewLabel" aria-live="polite" aria-hidden="true">
+                <strong data-service-toc-preview-title></strong>
+                <p data-service-toc-preview-summary></p>
+                <span>@previewHint</span>
+            </aside>
+        </div>
+        <button class="service-page-toc-toggle" type="button" data-service-toc-toggle aria-expanded="false" aria-controls="service-page-toc-panel" aria-label="@allSections" title="@hint">
+            <span class="service-page-toc-current" data-service-toc-current>@hint</span>
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+        </button>
     </div>
 </nav>
