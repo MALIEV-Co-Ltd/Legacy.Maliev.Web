@@ -15,6 +15,18 @@
     --maliev-radius-sm: .45rem;
     --maliev-radius: .75rem;
     --maliev-radius-lg: 1rem;
+    /* Dense-UI type steps below the .78rem label. Reading surfaces never go here, but
+       the Instant Quotation configurator is a control panel: part metrics, DFM findings,
+       bulk-price tiers and material cards all sit under the label step. It had invented
+       five near-identical sizes (.64/.66/.68/.70/.72rem) across 41 declarations, which is
+       what a missing scale looks like. Three steps replace them.
+       --maliev-text-xs is the floor for Thai: its combining vowels and tone marks stack
+       two levels above and one below the baseline, and they stop resolving under it, so
+       --maliev-text-2xs is for Latin numerals and metadata only. */
+    --maliev-text-2xs: .66rem;
+    --maliev-text-xs: .72rem;
+    --maliev-text-sm: .82rem;
+    --maliev-text-md: .9rem;
     --maliev-shadow-sm: 0 .45rem 1.4rem rgba(16, 44, 78, .07);
     --maliev-shadow: 0 1rem 2.8rem rgba(16, 44, 78, .10);
     --maliev-container: min(92vw, 86rem);
@@ -67,6 +79,10 @@ body {
 
 .maliev-page-main {
     padding-block: clamp(2rem, 4vw, 4.5rem);
+}
+
+.maliev-page-main.services-index-page {
+    padding-block: 0 clamp(2rem, 4vw, 4.5rem);
 }
 
 .maliev-page-header {
@@ -263,7 +279,19 @@ body {
     color: var(--maliev-ink);
 }
 
+.maliev-form button.maliev-button--secondary {
+    border-color: #b9c8d9;
+    background: #fff;
+    color: var(--maliev-ink);
+}
+
 .maliev-button--secondary:hover {
+    border-color: #8da7c5;
+    background: var(--maliev-blue-soft);
+    color: var(--maliev-blue-dark);
+}
+
+.maliev-form button.maliev-button--secondary:hover {
     border-color: #8da7c5;
     background: var(--maliev-blue-soft);
     color: var(--maliev-blue-dark);
@@ -272,6 +300,34 @@ body {
 .maliev-button--danger {
     border-color: var(--maliev-danger);
     background: var(--maliev-danger);
+}
+
+/* A submitting button kept full Signal Blue and still lifted on hover, so "disabled"
+   was indistinguishable from "ready". Both the disabled attribute and the form-level
+   busy flag land here. */
+.maliev-button:disabled,
+.maliev-form button:disabled,
+.maliev-form input[type="submit"]:disabled,
+.maliev-form[aria-busy="true"] button[type="submit"] {
+    border-color: #4a6c9e;
+    background: #4a6c9e;
+    cursor: progress;
+    transform: none;
+}
+
+.maliev-button:disabled:hover,
+.maliev-form button:disabled:hover,
+.maliev-form input[type="submit"]:disabled:hover,
+.maliev-form[aria-busy="true"] button[type="submit"]:hover {
+    border-color: #4a6c9e;
+    background: #4a6c9e;
+    transform: none;
+}
+
+.maliev-form button.maliev-button--secondary:disabled {
+    border-color: #dbe3ec;
+    background: #fff;
+    color: #8a97a8;
 }
 
 .maliev-form {
@@ -341,9 +397,12 @@ body {
     color: var(--maliev-danger);
 }
 
+/* Danger reads from the tinted surface and a hairline in the same hue, per DESIGN.md's
+   semantic-colour rule — not from a bar bolted to one edge. */
 .validation-summary-errors {
     padding: .8rem 1rem;
-    border-left: 3px solid var(--maliev-danger);
+    border: 1px solid #f0bcc4;
+    border-radius: var(--maliev-radius-sm);
     background: #fff1f3;
 }
 
@@ -469,6 +528,8 @@ body {
 .auth-page {
     position: relative;
     isolation: isolate;
+    /* No min-height: the auth cards are short, and a viewport-height floor left a dead
+       band of empty canvas between the card and the footer on every one of them. */
     padding-block: clamp(2.5rem, 7vw, 6rem);
     overflow: hidden;
     background:
@@ -519,8 +580,9 @@ body {
     width: 100%;
     margin-inline: auto;
     padding: clamp(1.25rem, 4vw, 2rem);
+    /* A coloured cap on a rounded card is the stock template gesture. The card earns its
+       presence from the hairline and the ambient shadow, which is the system's card spec. */
     border: 1px solid var(--maliev-line);
-    border-top: 3px solid var(--maliev-blue);
     border-radius: var(--maliev-radius-lg);
     background: #fff;
     box-shadow: var(--maliev-shadow);
@@ -561,6 +623,9 @@ body {
     font-weight: 600;
 }
 
+/* Each item answers a different question a first-time customer has — breadth, speed,
+   confidentiality, support — so they carry distinct icons rather than four identical
+   ticks that read as one undifferentiated block. */
 .auth-benefits {
     display: grid;
     gap: 1rem;
@@ -592,6 +657,9 @@ body {
     font-weight: 600;
 }
 
+/* Bootstrap's .form-check-input is a 16px box with its own focus shadow in a second
+   blue. This is the system's own checkbox: a 44px hit area around a 1.2rem control,
+   with the one focus ring the rest of the auth pages use. */
 .auth-check {
     display: flex;
     gap: .7rem;
@@ -617,6 +685,9 @@ body {
     cursor: pointer;
 }
 
+/* Google permits hiding the badge only where the "protected by reCAPTCHA" disclosure
+   is shown instead, which the signup, contact, and quotation forms now carry. Hiding
+   it also removes a position: fixed element that overflowed narrow viewports. */
 .grecaptcha-badge {
     visibility: hidden;
 }
@@ -656,32 +727,6 @@ body {
 .maliev-status__details {
     margin-block: 1.5rem;
     text-align: left;
-}
-
-/* Keep an in-flight action visibly distinct from the ready state. */
-.maliev-button:disabled,
-.maliev-form button:disabled,
-.maliev-form input[type="submit"]:disabled,
-.maliev-form[aria-busy="true"] button[type="submit"] {
-    border-color: #4a6c9e;
-    background: #4a6c9e;
-    cursor: progress;
-    transform: none;
-}
-
-.maliev-button:disabled:hover,
-.maliev-form button:disabled:hover,
-.maliev-form input[type="submit"]:disabled:hover,
-.maliev-form[aria-busy="true"] button[type="submit"]:hover {
-    border-color: #4a6c9e;
-    background: #4a6c9e;
-    transform: none;
-}
-
-.maliev-form button.maliev-button--secondary:disabled {
-    border-color: #dbe3ec;
-    background: #fff;
-    color: #8a97a8;
 }
 
 .legal-page {
@@ -1030,6 +1075,16 @@ body {
     caption-side: top;
 }
 
+.career-intro {
+    max-width: 68ch;
+    color: var(--maliev-muted);
+    line-height: 1.65;
+}
+
+.career-table-wrapper {
+    position: relative;
+}
+
 .workspace-content img,
 .workspace-content video,
 .workspace-content canvas {
@@ -1203,18 +1258,70 @@ body {
     padding: 1.1rem 1.25rem 1.35rem;
 }
 
-.service-index-card-body strong { color: var(--maliev-navy); font-size: 1.05rem; }
-.service-index-card-body > span { color: var(--maliev-muted); font-size: .88rem; line-height: 1.65; }
-.service-index-card-action { display: inline-flex; align-items: center; gap: .45rem; width: fit-content; margin-top: auto; color: var(--maliev-blue-dark); font-size: .9rem; font-weight: 600; line-height: 1.2; }
-.service-index-card-action i, .service-index-card-action .svg-inline--fa { display: inline-flex; width: 1rem; height: 1rem; align-items: center; justify-content: center; color: currentColor; font-size: .9rem; line-height: 1; transform: translateY(.03em); }
+.service-index-card-body strong {
+    color: var(--maliev-navy);
+    font-size: 1.05rem;
+}
+
+.service-index-card-body > span {
+    color: var(--maliev-muted);
+    font-size: .88rem;
+    line-height: 1.65;
+}
+
+.service-index-card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    width: fit-content;
+    margin-top: auto;
+    color: var(--maliev-blue-dark);
+    font-size: .9rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.service-index-card-action i,
+.service-index-card-action .svg-inline--fa {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    font-size: .9rem;
+    line-height: 1;
+    transform: translateY(.03em);
+}
+
+.service-index-card-action i,
+.service-index-card-action .svg-inline--fa {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    font-size: .9rem;
+    line-height: 1;
+    transform: translateY(.03em);
+}
 
 @media (max-width: 63.99rem) {
-    .service-index-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .service-index-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 47.99rem) {
-    .service-index-grid { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
-    .service-index-card-body { min-height: 0; }
+    .service-index-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.25rem;
+    }
+
+    .service-index-card-body {
+        min-height: 0;
+    }
 }
 
 .docs-step-list {
@@ -1312,6 +1419,10 @@ body {
     outline-offset: 3px;
 }
 
+/* The ring is offset, so it lands on whatever sits behind the control. Signal Blue
+   clears 3:1 on every light surface in the system (5.2:1 on the canvas, 5.6:1 on a
+   card); the previous #72a9ff managed 2.4:1 there. Inside the navy page header the
+   relationship inverts, so that one surface lightens the ring instead. */
 .maliev-page-header a:focus-visible,
 .maliev-page-header button:focus-visible,
 .maliev-skip-link:focus-visible {
@@ -1327,11 +1438,11 @@ body {
     left: 50%;
     width: min(calc(100% - clamp(1.5rem, 4vw, 3rem)), 68rem);
     transform: translateX(-50%);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, .14);
-    border-radius: .8rem;
-    background: rgba(3, 21, 40, .88);
-    box-shadow: 0 .9rem 2.5rem rgba(3, 16, 31, .24);
+    color: var(--maliev-ink);
+    border: 1px solid var(--maliev-line);
+    border-radius: var(--maliev-radius);
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 1rem 2.8rem rgba(16, 44, 78, .16);
     backdrop-filter: blur(.65rem);
 }
 
@@ -1352,29 +1463,32 @@ body {
     width: 2.4rem;
     height: 2.4rem;
     place-items: center;
-    color: #8bb8ff;
-    border: 1px solid rgba(139, 184, 255, .3);
-    border-radius: .65rem;
-    background: rgba(47, 105, 234, .16);
+    color: var(--maliev-blue);
+    border: 1px solid #cfe0ff;
+    border-radius: 50%;
+    background: var(--maliev-blue-soft);
     font-size: 1rem;
 }
 
 .privacy-consent__content strong {
     display: block;
     margin-bottom: .15rem;
+    color: var(--maliev-navy);
     font-size: .88rem;
+    font-weight: 600;
 }
 
 .privacy-consent__content p {
     margin: 0;
-    color: #d7e1ee;
+    color: var(--maliev-muted);
     font-size: .78rem;
+    font-weight: 400;
     line-height: 1.45;
 }
 
 .privacy-consent__content a {
-    color: #9fc3ff;
-    font-weight: 600;
+    color: var(--maliev-blue-dark);
+    font-weight: 400;
     text-underline-offset: .18em;
 }
 
@@ -1388,37 +1502,38 @@ body {
 
 .privacy-consent__reject {
     padding: .3rem .15rem;
-    color: #d7e1ee;
+    color: var(--maliev-muted);
     border: 0;
     background: transparent;
     font: inherit;
     font-size: .76rem;
-    font-weight: 500;
+    font-weight: 400;
     text-decoration: underline;
-    text-decoration-color: rgba(215, 225, 238, .62);
+    text-decoration-color: #a9b8cb;
     text-underline-offset: .18em;
     white-space: nowrap;
     cursor: pointer;
 }
 
 .privacy-consent__reject:hover {
-    color: #fff;
+    color: var(--maliev-ink);
     text-decoration-color: currentColor;
 }
 
 .privacy-consent__accept {
     min-height: 2.5rem;
     padding: .55rem .9rem;
-    color: #07182b;
-    border: 0;
+    color: #fff;
+    border: 1px solid var(--maliev-blue);
     border-radius: .7rem;
-    background: #fff;
+    background: var(--maliev-blue);
     font-weight: 600;
     white-space: nowrap;
 }
 
 .privacy-consent__accept:hover {
-    background: #dce9ff;
+    border-color: var(--maliev-blue-dark);
+    background: var(--maliev-blue-dark);
 }
 
 .privacy-consent__accept:focus-visible,
@@ -1514,6 +1629,10 @@ body {
         align-items: stretch;
     }
 
+    /* button[type="submit"] belongs here too. Without it Login's primary stayed
+       shrink-wrapped while the secondary "Create your account" anchor went full-bleed
+       beside it, so the escape hatch outweighed the action on the one viewport where
+       thumb reach decides which one gets pressed. */
     .maliev-actions > .maliev-button,
     .maliev-form button[type="submit"],
     .maliev-form input[type="submit"] {
@@ -1531,6 +1650,24 @@ body {
 
     .workspace-content .row {
         --bs-gutter-x: .75rem;
+    }
+
+    .career-page .row,
+    .career-page .col-12,
+    .career-page .col,
+    .career-page .col-md-6 {
+        min-width: 0;
+    }
+
+    .workspace-content .data-responsive[data-stack="true"] {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    .workspace-content .data-responsive[data-stack="true"] td:last-child {
+        border-bottom: 0;
     }
 
     .workspace-content .card-body,

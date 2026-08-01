@@ -1,0 +1,127 @@
+/* MALIEV motion system — "registration".
+   ---------------------------------------------------------------------------
+   In the shop, registration is bringing a workpiece to a datum and locking it
+   before the cut. Nothing on a machine drifts into place: it travels a short,
+   controlled distance along one axis and stops dead. That is the whole motion
+   language here — one axis, small travel, exponential deceleration, no bounce,
+   no float, no parallax. Authorship lives in the two entrances (the home hero's
+   three plates closing on their seam, and the interior page heroes); everything
+   else uses the deliberately plain reveal below.
+
+   The hidden state is gated on [data-motion="ready"], which the inline script in
+   _Layout.cshtml <head> sets before first paint — so content is never painted and
+   then snatched away. No JS at all means no gate and no hiding. That same inline
+   script arms a failsafe that drops the gate if motion.js never runs; motion.js
+   cancels it once it has taken ownership. Element selection lives in motion.js;
+   the list below must stay in step with REVEAL_TARGETS there. */
+
+:root {
+    /* Confident arrival: fast departure, long settle, no overshoot. */
+    --motion-ease: cubic-bezier(.16, 1, .3, 1);
+    --motion-reveal-duration: .48s;
+    --motion-enter-duration: .62s;
+    --motion-plate-duration: .78s;
+    --motion-rise: .65rem;
+}
+
+/* --- Hidden state ---------------------------------------------------------
+   Structural, so it applies from the first paint. Keep every selector at or
+   below two class-level components: the reveal rule below has to out-specify
+   all of them. */
+[data-motion="ready"] .landing-value-strip article,
+[data-motion="ready"] .landing-section-heading,
+[data-motion="ready"] .landing-service-grid > article,
+[data-motion="ready"] .landing-process-grid > li,
+[data-motion="ready"] .landing-reason-grid > article,
+[data-motion="ready"] .landing-cta,
+[data-motion="ready"] .service-quick article,
+[data-motion="ready"] .service-heading,
+[data-motion="ready"] .service-card-grid > *,
+[data-motion="ready"] .service-process > li,
+[data-motion="ready"] .service-pricing-grid > *,
+[data-motion="ready"] .service-split > *,
+[data-motion="ready"] .service-faq > details,
+[data-motion="ready"] .service-table-wrap,
+[data-motion="ready"] .service-material-comparison,
+[data-motion="ready"] .service-note,
+[data-motion="ready"] .service-cta,
+[data-motion="ready"] .timeline > li,
+[data-motion="ready"] .contact-method-grid > article,
+[data-motion="ready"] .inquiry-panel,
+[data-motion="ready"] .inquiry-form-card,
+[data-motion="ready"] .inquiry-checklist,
+[data-motion="ready"] .inquiry-map,
+[data-motion="ready"] .landing-hero-copy > *,
+[data-motion="ready"] .service-hero-copy > *,
+[data-motion="ready"] .inquiry-hero__content > * {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-rise), 0);
+}
+
+/* The three hero plates arrive along the seam's own axis, not upward: the cut
+   runs top-to-bottom, so the halves close on it from left and right. The
+   translate rides the photograph, never the wedge — moving a wedge would drag
+   its clip-path with it and open a dark sliver along the seam. */
+[data-motion="ready"] .landing-collage img {
+    opacity: 0;
+    transform: translate3d(var(--motion-plate-shift, -1.4rem), 0, 0);
+}
+[data-motion="ready"] .landing-collage-cnc img { --motion-plate-shift: -1.6rem; }
+[data-motion="ready"] .landing-collage-print img { --motion-plate-shift: 1.6rem; }
+[data-motion="ready"] .landing-collage-scan img { --motion-plate-shift: -1.2rem; }
+
+/* --- Revealed state -------------------------------------------------------
+   Three class-level components so it wins against every hidden selector above
+   regardless of which one matched. */
+[data-motion="ready"] [data-reveal] {
+    transition: opacity var(--motion-reveal-duration) var(--motion-ease),
+                transform var(--motion-reveal-duration) var(--motion-ease);
+}
+[data-motion="ready"] [data-reveal="enter"] {
+    transition-duration: var(--motion-enter-duration);
+}
+[data-motion="ready"] [data-reveal="plate"] {
+    transition-duration: var(--motion-plate-duration);
+}
+[data-motion="ready"] [data-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+/* Reduced motion: the arrival is instant, but nothing may stay hidden. Repeats
+   the hidden selectors at equal specificity and later in the file, so it wins
+   without !important. */
+@media (prefers-reduced-motion: reduce) {
+    [data-motion="ready"] .landing-value-strip article,
+    [data-motion="ready"] .landing-section-heading,
+    [data-motion="ready"] .landing-service-grid > article,
+    [data-motion="ready"] .landing-process-grid > li,
+    [data-motion="ready"] .landing-reason-grid > article,
+    [data-motion="ready"] .landing-cta,
+    [data-motion="ready"] .service-quick article,
+    [data-motion="ready"] .service-heading,
+    [data-motion="ready"] .service-card-grid > *,
+    [data-motion="ready"] .service-process > li,
+    [data-motion="ready"] .service-pricing-grid > *,
+    [data-motion="ready"] .service-split > *,
+    [data-motion="ready"] .service-faq > details,
+    [data-motion="ready"] .service-table-wrap,
+    [data-motion="ready"] .service-material-comparison,
+    [data-motion="ready"] .service-note,
+    [data-motion="ready"] .service-cta,
+    [data-motion="ready"] .timeline > li,
+    [data-motion="ready"] .contact-method-grid > article,
+    [data-motion="ready"] .inquiry-panel,
+    [data-motion="ready"] .inquiry-form-card,
+    [data-motion="ready"] .inquiry-checklist,
+    [data-motion="ready"] .inquiry-map,
+    [data-motion="ready"] .landing-hero-copy > *,
+    [data-motion="ready"] .service-hero-copy > *,
+    [data-motion="ready"] .inquiry-hero__content > *,
+    [data-motion="ready"] .landing-collage img,
+    [data-motion="ready"] [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
