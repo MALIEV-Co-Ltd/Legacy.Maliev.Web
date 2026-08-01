@@ -17,7 +17,7 @@
     --maliev-radius-lg: 1rem;
     --maliev-shadow-sm: 0 .45rem 1.4rem rgba(16, 44, 78, .07);
     --maliev-shadow: 0 1rem 2.8rem rgba(16, 44, 78, .10);
-    --maliev-container: min(92vw, 82rem);
+    --maliev-container: min(92vw, 86rem);
     --maliev-reading: min(88vw, 48rem);
 }
 
@@ -469,8 +469,7 @@ body {
 .auth-page {
     position: relative;
     isolation: isolate;
-    min-height: min(52rem, calc(100vh - 4.5rem));
-    padding-block: clamp(2rem, 6vw, 5rem);
+    padding-block: clamp(2.5rem, 7vw, 6rem);
     overflow: hidden;
     background:
         linear-gradient(90deg, rgba(244, 247, 251, .98), rgba(244, 247, 251, .88)),
@@ -498,24 +497,26 @@ body {
     max-width: 34rem;
 }
 
-.auth-intro h1,
-.auth-card h1 {
+.auth-intro h1 {
     margin: 0;
     color: var(--maliev-navy);
     font-size: clamp(2rem, 4vw, 3.4rem);
     font-weight: 600;
+    line-height: 1.08;
     letter-spacing: -.04em;
+    text-wrap: balance;
 }
 
 .auth-intro p,
 .auth-card__intro {
     margin: .8rem 0 0;
+    max-width: 34rem;
     color: var(--maliev-muted);
     line-height: 1.7;
 }
 
 .auth-card {
-    width: min(100%, 32rem);
+    width: 100%;
     margin-inline: auto;
     padding: clamp(1.25rem, 4vw, 2rem);
     border: 1px solid var(--maliev-line);
@@ -531,36 +532,93 @@ body {
     border-bottom: 1px solid var(--maliev-line);
 }
 
-.auth-card__header h1 {
+.auth-card__header h2 {
+    margin: 0;
+    color: var(--maliev-navy);
     font-size: clamp(1.55rem, 3vw, 2rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -.02em;
 }
 
 .auth-card__footer {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
+    display: grid;
+    gap: .75rem;
+    justify-items: start;
+    margin-top: 1.5rem;
+    padding-top: 1.15rem;
     border-top: 1px solid var(--maliev-line);
     color: var(--maliev-muted);
     font-size: .85rem;
 }
 
+.auth-card__footer-lead {
+    margin: 0;
+}
+
+.auth-card__footer-link {
+    color: var(--maliev-blue-dark);
+    font-weight: 600;
+}
+
 .auth-benefits {
     display: grid;
-    gap: .75rem;
-    margin: 1.5rem 0 0;
+    gap: 1rem;
+    max-width: 34rem;
+    margin: 2rem 0 0;
     padding: 0;
     list-style: none;
 }
 
 .auth-benefits li {
-    display: flex;
-    gap: .7rem;
-    align-items: flex-start;
-    color: #405069;
+    display: grid;
+    grid-template-columns: 1.1rem minmax(0, 1fr);
+    gap: .85rem;
+    align-items: start;
+    color: #3b4a60;
+    font-size: .92rem;
+    line-height: 1.6;
 }
 
 .auth-benefits i {
-    margin-top: .2rem;
+    margin-top: .28rem;
     color: var(--maliev-blue);
+    font-size: .95rem;
+    text-align: center;
+}
+
+.auth-benefits a {
+    color: var(--maliev-blue-dark);
+    font-weight: 600;
+}
+
+.auth-check {
+    display: flex;
+    gap: .7rem;
+    align-items: center;
+}
+
+.auth-check__input {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    border: 1px solid #cbd7e4;
+    border-radius: .25rem;
+    accent-color: var(--maliev-blue);
+}
+
+.auth-check__label {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--maliev-ink);
+    font-size: .9rem;
+    cursor: pointer;
+}
+
+.grecaptcha-badge {
+    visibility: hidden;
 }
 
 .maliev-status {
@@ -598,6 +656,32 @@ body {
 .maliev-status__details {
     margin-block: 1.5rem;
     text-align: left;
+}
+
+/* Keep an in-flight action visibly distinct from the ready state. */
+.maliev-button:disabled,
+.maliev-form button:disabled,
+.maliev-form input[type="submit"]:disabled,
+.maliev-form[aria-busy="true"] button[type="submit"] {
+    border-color: #4a6c9e;
+    background: #4a6c9e;
+    cursor: progress;
+    transform: none;
+}
+
+.maliev-button:disabled:hover,
+.maliev-form button:disabled:hover,
+.maliev-form input[type="submit"]:disabled:hover,
+.maliev-form[aria-busy="true"] button[type="submit"]:hover {
+    border-color: #4a6c9e;
+    background: #4a6c9e;
+    transform: none;
+}
+
+.maliev-form button.maliev-button--secondary:disabled {
+    border-color: #dbe3ec;
+    background: #fff;
+    color: #8a97a8;
 }
 
 .legal-page {
@@ -1224,7 +1308,14 @@ body {
 .workspace-page button:focus-visible,
 .docs-page a:focus-visible,
 .docs-page button:focus-visible {
-    outline: 3px solid #72a9ff;
+    outline: 3px solid var(--maliev-blue);
+    outline-offset: 3px;
+}
+
+.maliev-page-header a:focus-visible,
+.maliev-page-header button:focus-visible,
+.maliev-skip-link:focus-visible {
+    outline: 3px solid #9cc4ff;
     outline-offset: 3px;
 }
 
@@ -1333,7 +1424,7 @@ body {
 .privacy-consent__accept:focus-visible,
 .privacy-consent__reject:focus-visible,
 .privacy-consent__content a:focus-visible {
-    outline: 3px solid #72a9ff;
+    outline: 3px solid var(--maliev-blue);
     outline-offset: 3px;
 }
 
@@ -1424,6 +1515,7 @@ body {
     }
 
     .maliev-actions > .maliev-button,
+    .maliev-form button[type="submit"],
     .maliev-form input[type="submit"] {
         width: 100%;
     }

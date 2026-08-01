@@ -171,4 +171,18 @@
   <data name="Already have an account?" xml:space="preserve"><value>มีบัญชีอยู่แล้ว?</value></data>
   <data name="Sign in" xml:space="preserve"><value>เข้าสู่ระบบ</value></data>
   <data name="Passwords do not match." xml:space="preserve"><value>รหัสผ่านทั้งสองช่องไม่ตรงกัน</value></data>
+  <data name="At least 8 characters." xml:space="preserve"><value>รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร</value></data>
+  <data name="By signing up, you agree to our" xml:space="preserve"><value>เมื่อสมัครสมาชิก คุณยอมรับ</value></data>
+  <data name="This site is protected by reCAPTCHA and the Google" xml:space="preserve"><value>เว็บไซต์นี้ได้รับการปกป้องโดย reCAPTCHA และนโยบายของ Google</value></data>
+  <data name="Terms of Service" xml:space="preserve"><value>ข้อกำหนดในการให้บริการของ Google</value></data>
+  <data name="apply." xml:space="preserve"><value>มีผลบังคับใช้</value></data>
+  <data name="We could not verify that you are human. Please try again." xml:space="preserve"><value>ไม่สามารถยืนยันว่าคุณเป็นมนุษย์ได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="Submitting..." xml:space="preserve"><value>กำลังส่ง...</value></data>
+  <data name="Create your account" xml:space="preserve"><value>สร้างบัญชีของคุณ</value></data>
+  <data name="New to MALIEV?" xml:space="preserve"><value>เพิ่งรู้จัก MALIEV?</value></data>
+  <data name="Six processes under one roof: CNC machining, 3D printing, 3D scanning, 3D design, silicone casting, and low-volume injection molding." xml:space="preserve"><value>รวม 6 กระบวนการผลิตไว้ในที่เดียว ทั้งงาน CNC พิมพ์ 3 มิติ สแกน 3 มิติ ออกแบบ 3 มิติ หล่อซิลิโคน และฉีดพลาสติกจำนวนน้อย</value></data>
+  <data name="Upload a CAD file and get a price in minutes, with DFM findings on the part before you commit." xml:space="preserve"><value>อัปโหลดไฟล์ CAD และรับราคาโดยประมาณภายในไม่กี่นาที พร้อมผลตรวจ DFM ของชิ้นงานก่อนตัดสินใจ</value></data>
+  <data name="Your drawings stay confidential under our" xml:space="preserve"><value>แบบของคุณจะได้รับการเก็บเป็นความลับภายใต้</value></data>
+  <data name="mutual NDA" xml:space="preserve"><value>สัญญา NDA ร่วมกัน</value></data>
+  <data name="Thai and English support from our workshop in Nonthaburi, 09:00-18:00 Monday to Friday." xml:space="preserve"><value>ทีมงานจากเวิร์กช็อปนนทบุรีให้บริการทั้งภาษาไทยและภาษาอังกฤษ เวลา 09:00–18:00 น. วันจันทร์ถึงศุกร์</value></data>
 </root>

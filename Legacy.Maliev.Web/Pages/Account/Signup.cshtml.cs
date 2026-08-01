@@ -38,7 +38,7 @@ public sealed class Signup(
     [BindProperty]
     [Required]
     [DataType(DataType.Password)]
-    [StringLength(1024, MinimumLength = 6)]
+    [StringLength(1024, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
 
     [BindProperty]

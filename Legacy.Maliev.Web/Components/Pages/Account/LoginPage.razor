@@ -27,18 +27,16 @@
 <main class="auth-page" data-migration-route-owner="blazor-static-ssr">
     <div class="maliev-container auth-shell">
         <section class="auth-intro" aria-labelledby="login-intro-title">
-            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
             <h1 id="login-intro-title">@Localizer["Manage your manufacturing projects"]</h1>
             <p>@Localizer["Sign in to review quotations, orders, files, and account details in one secure place."]</p>
         </section>
         <section class="auth-card" aria-labelledby="login-title">
             <header class="auth-card__header">
-                <p class="maliev-eyebrow">@Localizer["Member account"]</p>
                 <h2 id="login-title">@Localizer["Sign in"]</h2>
             </header>
             @if (!string.IsNullOrWhiteSpace(model.Notification))
             {
-                <div class="maliev-alert mb-3" role="status">
+                <div class="maliev-alert mb-3" role="status" aria-live="polite">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                     <span>@model.Notification</span>
                 </div>
@@ -51,7 +49,7 @@
                     <span>Password: <code>@localReviewCredentials.Password</code></span>
                 </aside>
             }
-            <form method="post" class="maliev-form" id="customer-login">
+            <form method="post" class="maliev-form" id="customer-login" data-single-submit>
                 @if (tokens is not null)
                 {
                     <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
@@ -59,10 +57,11 @@
                 <LoginContent Model="model" />
             </form>
             <footer class="auth-card__footer">
+                <p class="auth-card__footer-lead">@Localizer["New to MALIEV?"]</p>
                 <div class="maliev-actions">
                     <a href="/Account/Signup" class="maliev-button maliev-button--secondary">@Localizer["Create your account"]</a>
-                    <a href="/Account/ForgotPassword">@Localizer["Forgot your password?"]</a>
                 </div>
+                <a class="auth-card__footer-link" href="/Account/ForgotPassword">@Localizer["Forgot your password?"]</a>
             </footer>
         </section>
     </div>

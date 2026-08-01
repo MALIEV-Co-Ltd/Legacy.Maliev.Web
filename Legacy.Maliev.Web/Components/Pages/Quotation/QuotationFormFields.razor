@@ -142,11 +142,12 @@
             <a href="/Legal/NonDisclosureAgreement" target="_blank" rel="nofollow">@Localizer["NDA"]</a>
             @Localizer["form and send it back to us with your request."]
         </p>
-        <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable || !Model.CustomerProfileAvailable)">
-            @Localizer["Submit quotation request"]
+        <p class="inquiry-privacy inquiry-privacy--recaptcha">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
+        <p id="quotation-recaptcha-error" class="inquiry-help text-danger" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
+        <button type="submit" id="submit-button" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable || !Model.CustomerProfileAvailable)">
+            <span data-submit-label>@Localizer["Submit quotation request"]</span>
         </button>
     </div>
-    <p class="small text-muted mt-3">@Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]</p>
 </div>
 
 @code {

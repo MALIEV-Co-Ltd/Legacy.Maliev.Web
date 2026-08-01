@@ -94,9 +94,11 @@
 
     <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="@Model.RecaptchaToken" data-recaptcha-response />
     <div class="inquiry-actions">
-        <p class="inquiry-privacy"><i class="fas fa-lock" aria-hidden="true"></i> @Localizer["Your contact details are used only to respond to this request."] @Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]</p>
+        <p class="inquiry-privacy"><i class="fas fa-lock" aria-hidden="true"></i> @Localizer["Your contact details are used only to respond to this request."]</p>
+        <p class="inquiry-privacy inquiry-privacy--recaptcha">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
+        <p id="contact-recaptcha-error" class="inquiry-help text-danger" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
         <button type="submit" id="submit-button" class="inquiry-submit" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
-            @Localizer["Submit"] <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            <span data-submit-label>@Localizer["Submit"]</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </button>
     </div>
 </div>

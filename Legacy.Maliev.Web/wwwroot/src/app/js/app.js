@@ -44,15 +44,37 @@ function initializeApplication() {
     });
 
     document.querySelectorAll('[data-recaptcha-enterprise-form]').forEach(function (form) {
-        var responseInput = form.querySelector('[data-recaptcha-response]');
+        var responseInput = form.querySelector('[data-recaptcha-response]')
+            || form.querySelector('[data-recaptcha-token]');
         var uploadFiles = form.querySelector('[data-upload-files]');
         var uploadService = form.querySelector('[data-upload-service]');
+        var submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+        var recaptchaError = form.querySelector('[data-recaptcha-error]');
         var uploadStartEmitted = false;
         if (!responseInput || !form.dataset.recaptchaSiteKey) {
             return;
         }
 
+        function resetAfterRecaptchaFailure() {
+            delete form.dataset.recaptchaPending;
+            delete form.dataset.recaptchaVerified;
+            form.removeAttribute?.('aria-busy');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.removeAttribute?.('aria-disabled');
+            }
+            responseInput.value = '';
+            if (recaptchaError) {
+                recaptchaError.hidden = false;
+            }
+        }
+
         form.addEventListener('submit', function (event) {
+            if (form.dataset.recaptchaPending === 'true') {
+                event.preventDefault();
+                return;
+            }
+
             if (form.dataset.recaptchaVerified === 'true') {
                 if (form.dataset.uploadAnalytics === 'true'
                     && !uploadStartEmitted
@@ -73,19 +95,66 @@ function initializeApplication() {
             }
 
             event.preventDefault();
-            window.grecaptcha.enterprise.ready(function () {
-                window.grecaptcha.enterprise.execute(
-                    form.dataset.recaptchaSiteKey,
-                    { action: form.dataset.recaptchaAction }).then(function (token) {
-                        responseInput.value = token;
-                        form.dataset.recaptchaVerified = 'true';
-                        if (typeof form.requestSubmit === 'function') {
-                            form.requestSubmit();
-                        } else {
-                            form.submit();
-                        }
-                    });
-            });
+            if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+                if (typeof form.reportValidity === 'function') {
+                    form.reportValidity();
+                }
+
+                return;
+            }
+
+            if (!window.grecaptcha || !window.grecaptcha.enterprise
+                || typeof window.grecaptcha.enterprise.ready !== 'function'
+                || typeof window.grecaptcha.enterprise.execute !== 'function') {
+                resetAfterRecaptchaFailure();
+                return;
+            }
+
+            form.dataset.recaptchaPending = 'true';
+            form.setAttribute?.('aria-busy', 'true');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.setAttribute?.('aria-disabled', 'true');
+            }
+            if (recaptchaError) {
+                recaptchaError.hidden = true;
+            }
+
+            try {
+                window.grecaptcha.enterprise.ready(function () {
+                    window.grecaptcha.enterprise.execute(
+                        form.dataset.recaptchaSiteKey,
+                        { action: form.dataset.recaptchaAction }).then(function (token) {
+                            if (!token) {
+                                resetAfterRecaptchaFailure();
+                                return;
+                            }
+
+                            responseInput.value = token;
+                            delete form.dataset.recaptchaPending;
+                            form.dataset.recaptchaVerified = 'true';
+                            if (typeof form.requestSubmit === 'function') {
+                                form.requestSubmit();
+                            } else {
+                                form.submit();
+                            }
+                        }).catch(resetAfterRecaptchaFailure);
+                });
+            } catch (exception) {
+                resetAfterRecaptchaFailure();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-single-submit]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (form.dataset.submitting === 'true') {
+                event.preventDefault();
+                return;
+            }
+
+            form.dataset.submitting = 'true';
+            form.setAttribute?.('aria-busy', 'true');
         });
     });
 
@@ -145,19 +214,137 @@ function SubmitFormOnce(formId, buttonId, submittingText) {
     }
 
     form.dataset.submitting = 'true';
-    form.setAttribute('aria-busy', 'true');
+    form.setAttribute?.('aria-busy', 'true');
     submitButton.disabled = true;
-    submitButton.setAttribute('aria-disabled', 'true');
+    submitButton.setAttribute?.('aria-disabled', 'true');
     if (submittingText) {
         if (submitButton.tagName === 'INPUT') {
             submitButton.value = submittingText;
         } else {
-            submitButton.textContent = submittingText;
+            var label = submitButton.querySelector('[data-submit-label]');
+            if (label) {
+                label.textContent = submittingText;
+            } else {
+                submitButton.textContent = submittingText;
+            }
         }
     }
 
     form.submit();
     return true;
+}
+
+// Score-based reCAPTCHA Enterprise binding for retained Razor form fallbacks.
+// The token is generated only after native validation and the guarded POST keeps
+// the existing field names and page-handler contract intact.
+function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText, errorId) {
+    var form = document.getElementById(formId);
+    var submitButton = document.getElementById(buttonId);
+    var tokenInput = form
+        ? (form.querySelector('[data-recaptcha-response]') || form.querySelector('[data-recaptcha-token]'))
+        : null;
+    var error = errorId ? document.getElementById(errorId) : null;
+    var uploadFiles = form ? form.querySelector('[data-upload-files]') : null;
+    var uploadService = form ? form.querySelector('[data-upload-service]') : null;
+    var uploadStartEmitted = false;
+    if (!form || !submitButton || !tokenInput) {
+        return;
+    }
+
+    function showError() {
+        delete form.dataset.recaptchaPending;
+        form.removeAttribute?.('aria-busy');
+        submitButton.disabled = false;
+        submitButton.removeAttribute?.('aria-disabled');
+        tokenInput.value = '';
+        if (error) {
+            error.hidden = false;
+        }
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        if (form.dataset.recaptchaPending === 'true' || form.dataset.submitting === 'true') {
+            return;
+        }
+
+        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+            if (typeof form.reportValidity === 'function') {
+                form.reportValidity();
+            }
+
+            return;
+        }
+
+        if (!window.grecaptcha || !window.grecaptcha.enterprise
+            || typeof window.grecaptcha.enterprise.ready !== 'function'
+            || typeof window.grecaptcha.enterprise.execute !== 'function') {
+            showError();
+            return;
+        }
+
+        form.dataset.recaptchaPending = 'true';
+        form.setAttribute?.('aria-busy', 'true');
+        submitButton.disabled = true;
+        submitButton.setAttribute?.('aria-disabled', 'true');
+        if (error) {
+            error.hidden = true;
+        }
+
+        try {
+            window.grecaptcha.enterprise.ready(function () {
+                window.grecaptcha.enterprise.execute(siteKey, { action: action })
+                    .then(function (token) {
+                        if (!token) {
+                            showError();
+                            return;
+                        }
+
+                        tokenInput.value = token;
+                        delete form.dataset.recaptchaPending;
+                        var submit = function () {
+                            SubmitFormOnce(formId, buttonId, submittingText);
+                        };
+                        if (form.dataset.uploadAnalytics === 'true'
+                            && !uploadStartEmitted
+                            && uploadFiles
+                            && uploadFiles.files.length > 0
+                            && window.malievAnalytics
+                            && typeof window.malievAnalytics.emit === 'function') {
+                            uploadStartEmitted = true;
+                            window.malievAnalytics.emit({
+                                event: 'file_upload_start',
+                                service: uploadService ? uploadService.value : 'custom_manufacturing',
+                                file_count: uploadFiles.files.length
+                            });
+                            window.setTimeout(submit, 150);
+                        } else {
+                            submit();
+                        }
+                    })
+                    .catch(showError);
+            });
+        } catch (exception) {
+            showError();
+        }
+    });
+}
+
+function GuardSingleSubmit(formId) {
+    var form = document.getElementById(formId);
+    if (!form) {
+        return;
+    }
+
+    form.addEventListener('submit', function (event) {
+        if (form.dataset.submitting === 'true') {
+            event.preventDefault();
+            return;
+        }
+
+        form.dataset.submitting = 'true';
+        form.setAttribute?.('aria-busy', 'true');
+    });
 }
 
 function PreviewImageFile(targetElementID) {
@@ -235,6 +422,8 @@ if (document.readyState === 'loading') {
 }
 
 window.SubmitFormOnce = SubmitFormOnce;
+window.GuardRecaptchaSubmit = GuardRecaptchaSubmit;
+window.GuardSingleSubmit = GuardSingleSubmit;
 window.PreviewImageFile = PreviewImageFile;
 window.ScrollToTop = ScrollToTop;
 window.ForceInputNumberInRange = ForceInputNumberInRange;

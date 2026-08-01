@@ -207,4 +207,11 @@
   <data name="Monday-Friday: 09:00-18:00" xml:space="preserve"><value>จันทร์-ศุกร์: 09:00-18:00 น.</value></data>
   <data name="Saturday-Sunday: Closed" xml:space="preserve"><value>เสาร์-อาทิตย์: ปิด</value></data>
   <data name="Please enter a valid email address" xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
+  <data name="This site is protected by reCAPTCHA and the Google" xml:space="preserve"><value>เว็บไซต์นี้ได้รับการปกป้องโดย reCAPTCHA และนโยบายของ Google</value></data>
+  <data name="Privacy Policy" xml:space="preserve"><value>นโยบายความเป็นส่วนตัว</value></data>
+  <data name="and" xml:space="preserve"><value>และ</value></data>
+  <data name="Terms of Service" xml:space="preserve"><value>ข้อกำหนดในการให้บริการของ Google</value></data>
+  <data name="apply." xml:space="preserve"><value>มีผลบังคับใช้</value></data>
+  <data name="We could not verify that you are human. Please try again." xml:space="preserve"><value>ไม่สามารถยืนยันว่าคุณเป็นมนุษย์ได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="Submitting..." xml:space="preserve"><value>กำลังส่ง...</value></data>
 </root>

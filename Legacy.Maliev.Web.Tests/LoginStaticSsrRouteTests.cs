@@ -96,18 +96,19 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
         Assert.Contains("<section class=\"auth-intro\" aria-labelledby=\"login-intro-title\">", source, StringComparison.Ordinal);
         Assert.Contains("<h1 id=\"login-intro-title\">Manage your manufacturing projects</h1>", source, StringComparison.Ordinal);
         Assert.Contains("<section class=\"auth-card\" aria-labelledby=\"login-title\">", source, StringComparison.Ordinal);
-        Assert.Contains("<p class=\"maliev-eyebrow\">Member account</p>", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("<p class=\"maliev-eyebrow\">Member account</p>", source, StringComparison.Ordinal);
         Assert.Contains("<h2 id=\"login-title\">Sign in</h2>", source, StringComparison.Ordinal);
         Assert.Matches(
             "<form(?=[^>]*method=\\\"post\\\")(?=[^>]*class=\\\"maliev-form\\\")(?=[^>]*id=\\\"customer-login\\\")[^>]*>",
             source);
         Assert.Contains("class=\"form-control\" autocomplete=\"email\"", source, StringComparison.Ordinal);
         Assert.Contains("class=\"form-control\" autocomplete=\"current-password\"", source, StringComparison.Ordinal);
-        Assert.Contains("<div class=\"form-check\">", source, StringComparison.Ordinal);
-        Assert.Contains("class=\"form-check-input\"", source, StringComparison.Ordinal);
-        Assert.Contains("class=\"form-check-label\"", source, StringComparison.Ordinal);
-        Assert.Contains("Sign in <i class=\"fas fa-arrow-right\" aria-hidden=\"true\"></i>", source, StringComparison.Ordinal);
-        Assert.Matches("<footer class=\\\"auth-card__footer\\\">\\s*<div class=\\\"maliev-actions\\\">", source);
+        Assert.Contains("class=\"auth-check__input\"", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-check__label\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"form-check-input\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-submit-label", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-card__footer-lead\">New to MALIEV?", source, StringComparison.Ordinal);
+        Assert.Matches("<footer class=\\\"auth-card__footer\\\">[\\s\\S]*<div class=\\\"maliev-actions\\\">", source);
         Assert.Contains("class=\"maliev-button maliev-button--secondary\"", source, StringComparison.Ordinal);
     }
 

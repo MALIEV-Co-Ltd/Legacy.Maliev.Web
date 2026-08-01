@@ -25,7 +25,8 @@
                       enctype="multipart/form-data"
                       asp-page-handler="SubmitRequest"
                       asp-route-culture="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName"
-                      id="quotation-form">
+                      id="quotation-form"
+                      data-upload-analytics="true">
                     <component type="typeof(QuotationFormFields)" render-mode="Static" param-Model="Model.DisplayModel" />
                 </form>
             </section>
@@ -37,45 +38,6 @@
     @if (!string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey))
     {
         <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(Model.RecaptchaSiteKey)" async defer></script>
-        <script>
-            (() => {
-                const form = document.getElementById('quotation-form');
-                const tokenInput = document.getElementById('quotation-recaptcha-response');
-                const filesInput = document.getElementById('Files');
-                const serviceInput = document.getElementById('ServiceContext');
-                let uploadStartEmitted = false;
-                if (!form || !tokenInput) return;
-
-                function emitUploadStart() {
-                    if (uploadStartEmitted || !filesInput || filesInput.files.length === 0) return false;
-                    if (!window.malievAnalytics || typeof window.malievAnalytics.emit !== 'function') return false;
-
-                    uploadStartEmitted = true;
-                    window.malievAnalytics.emit({
-                        event: 'file_upload_start',
-                        service: serviceInput ? serviceInput.value : 'custom_manufacturing',
-                        file_count: filesInput.files.length
-                    });
-                    return true;
-                }
-
-                form.addEventListener('submit', event => {
-                    if (tokenInput.value) {
-                        if (!emitUploadStart()) return;
-
-                        event.preventDefault();
-                        window.setTimeout(function () {
-                            form.submit();
-                        }, 150);
-                        return;
-                    }
-                    event.preventDefault();
-                    grecaptcha.enterprise.ready(async () => {
-                        tokenInput.value = await grecaptcha.enterprise.execute('@Model.RecaptchaSiteKey', { action: 'submit' });
-                        form.requestSubmit();
-                    });
-                });
-            })();
-        </script>
+        <script>GuardRecaptchaSubmit("quotation-form", "submit-button", "@Model.RecaptchaSiteKey", "submit", "@QuotationLocalizer["Submitting..."]", "quotation-recaptcha-error");</script>
     }
 }

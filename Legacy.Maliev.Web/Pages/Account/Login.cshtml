@@ -15,32 +15,34 @@
 <main class="auth-page">
     <div class="maliev-container auth-shell">
         <section class="auth-intro" aria-labelledby="login-intro-title">
-            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
             <h1 id="login-intro-title">@LoginLocalizer["Manage your manufacturing projects"]</h1>
             <p>@LoginLocalizer["Sign in to review quotations, orders, files, and account details in one secure place."]</p>
         </section>
         <section class="auth-card" aria-labelledby="login-title">
             <header class="auth-card__header">
-                <p class="maliev-eyebrow">@LoginLocalizer["Member account"]</p>
                 <h2 id="login-title">@LoginLocalizer["Sign in"]</h2>
             </header>
             @if (!string.IsNullOrWhiteSpace(Model.Notification))
             {
-                <div class="maliev-alert mb-3" role="status">
+                <div class="maliev-alert mb-3" role="status" aria-live="polite">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                     <span>@Model.Notification</span>
                 </div>
             }
-            <form method="post" class="maliev-form" id="customer-login">
+            <form method="post" class="maliev-form" id="customer-login" data-single-submit>
                 <component type="typeof(LoginContent)" render-mode="Static" param-Model="Model.DisplayModel" />
             </form>
             <footer class="auth-card__footer">
+                <p class="auth-card__footer-lead">@LoginLocalizer["New to MALIEV?"]</p>
                 <div class="maliev-actions">
                     <a href="/Account/Signup" class="maliev-button maliev-button--secondary">@LoginLocalizer["Create your account"]</a>
-                    <a href="/Account/ForgotPassword">@LoginLocalizer["Forgot your password?"]</a>
                 </div>
+                <a class="auth-card__footer-link" href="/Account/ForgotPassword">@LoginLocalizer["Forgot your password?"]</a>
             </footer>
         </section>
     </div>
 </main>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>GuardSingleSubmit("customer-login");</script>
+}
