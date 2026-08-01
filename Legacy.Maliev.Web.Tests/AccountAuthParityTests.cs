@@ -35,14 +35,13 @@ public sealed class AccountAuthParityTests : IClassFixture<WebApplicationFactory
         Assert.Contains("<h1 id=\"signup-intro-title\">Manufacturing project management, in one place</h1>", source, StringComparison.Ordinal);
         Assert.Contains("Create an account to manage quotes, start an order or review previous projects and files.", source, StringComparison.Ordinal);
         Assert.Contains("class=\"auth-benefits\"", source, StringComparison.Ordinal);
-        Assert.Contains(">Order Management<", source, StringComparison.Ordinal);
-        Assert.Contains(">Account Management<", source, StringComparison.Ordinal);
-        Assert.Contains(">Job Management<", source, StringComparison.Ordinal);
-        Assert.Contains("<p class=\"maliev-eyebrow\">Get started - it's free</p>", source, StringComparison.Ordinal);
-        Assert.Contains("<h2 id=\"signup-title\">Join now</h2>", source, StringComparison.Ordinal);
-        Assert.Contains("At least 6 characters long, and must contain 6 unique characters.", source, StringComparison.Ordinal);
-        Assert.Contains("By clicking sign up, you are agree to our", source, StringComparison.Ordinal);
-        Assert.Contains("Sign Up <i class=\"fas fa-arrow-right\" aria-hidden=\"true\"></i>", source, StringComparison.Ordinal);
+        Assert.Contains("Six processes under one roof: CNC machining, 3D printing, 3D scanning, 3D design, silicone casting, and low-volume injection molding.", source, StringComparison.Ordinal);
+        Assert.Contains("Thai and English support from our workshop in Nonthaburi, 09:00-18:00 Monday to Friday.", source, StringComparison.Ordinal);
+        Assert.Contains("<h2 id=\"signup-title\">Create your account</h2>", source, StringComparison.Ordinal);
+        Assert.Contains("At least 8 characters.", source, StringComparison.Ordinal);
+        Assert.Contains("By signing up, you agree to our", source, StringComparison.Ordinal);
+        Assert.Contains("data-submit-label>Sign Up</span>", source, StringComparison.Ordinal);
+        Assert.Contains("<i class=\"fas fa-arrow-right\" aria-hidden=\"true\"></i>", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -70,7 +69,7 @@ public sealed class AccountAuthParityTests : IClassFixture<WebApplicationFactory
         Assert.Contains("<h1 id=\"reset-intro-title\">Create a new password</h1>", source, StringComparison.Ordinal);
         Assert.Contains("Choose a strong password that you do not use for another account.", source, StringComparison.Ordinal);
         Assert.Contains("<section class=\"auth-card\" aria-labelledby=\"reset-title\">", source, StringComparison.Ordinal);
-        Assert.Contains("<h1 id=\"reset-title\">Reset password</h1>", source, StringComparison.Ordinal);
+        Assert.Contains("<h2 id=\"reset-title\">Reset password</h2>", source, StringComparison.Ordinal);
     }
 
     [Fact]

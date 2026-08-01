@@ -40,6 +40,14 @@ public sealed class AnalyticsSurfaceContractTests
             "Pages",
             "Quotation",
             "Index.cshtml"));
+        var applicationScript = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            "app.js"));
 
         Assert.Contains("pendingEvents", google, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.emit", google, StringComparison.Ordinal);
@@ -61,11 +69,12 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.Contains("window.malievAnalytics.emit(reviewEvent)", contact, StringComparison.Ordinal);
         Assert.DoesNotContain("window.dataLayer.push(contactEvent)", contact, StringComparison.Ordinal);
         Assert.DoesNotContain("window.dataLayer.push(reviewEvent)", contact, StringComparison.Ordinal);
-        Assert.Contains("file_upload_start", quotation, StringComparison.Ordinal);
-        Assert.Contains("window.malievAnalytics.emit", quotation, StringComparison.Ordinal);
-        Assert.Contains("event.preventDefault()", quotation, StringComparison.Ordinal);
-        Assert.Contains("window.setTimeout", quotation, StringComparison.Ordinal);
-        Assert.Contains("form.submit()", quotation, StringComparison.Ordinal);
+        Assert.Contains("data-upload-analytics=\"true\"", quotation, StringComparison.Ordinal);
+        Assert.Contains("file_upload_start", applicationScript, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.emit", applicationScript, StringComparison.Ordinal);
+        Assert.Contains("event.preventDefault()", applicationScript, StringComparison.Ordinal);
+        Assert.Contains("window.setTimeout", applicationScript, StringComparison.Ordinal);
+        Assert.Contains("form.submit()", applicationScript, StringComparison.Ordinal);
     }
 
     [Fact]

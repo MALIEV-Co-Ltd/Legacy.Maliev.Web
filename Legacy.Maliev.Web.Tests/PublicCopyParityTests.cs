@@ -22,6 +22,7 @@ public sealed class PublicCopyParityTests
         var privacy = ReadWebFile("Components", "Pages", "Legal", "PrivacyPolicyContent.razor");
         var privacyThai = ReadWebFile("Components", "Pages", "Legal", "PrivacyPolicyThaiContent.razor");
         var terms = ReadWebFile("Components", "Pages", "Legal", "TermsConditionsContent.razor");
+        var termsEnglish = ReadWebFile("Components", "Pages", "Legal", "TermsConditionsEnglishContent.razor");
         var termsThai = ReadWebFile("Components", "Pages", "Legal", "TermsConditionsThaiContent.razor");
 
         Assert.Contains("24 July 2026", privacy, StringComparison.Ordinal);
@@ -29,8 +30,10 @@ public sealed class PublicCopyParityTests
         Assert.Contains("href=\"#transfer\"", privacy, StringComparison.Ordinal);
         Assert.Contains("<!--email_off-->info@@maliev.com<!--/email_off-->", privacy, StringComparison.Ordinal);
         Assert.Contains("LegalEffectiveDate", terms, StringComparison.Ordinal);
-        Assert.Contains("id=\"hyperlinking\"", terms, StringComparison.Ordinal);
-        Assert.Contains("id=\"disclaimer\"", terms, StringComparison.Ordinal);
+        Assert.Contains("href=\"#hyperlinking\"", terms, StringComparison.Ordinal);
+        Assert.Contains("href=\"#disclaimer\"", terms, StringComparison.Ordinal);
+        Assert.Contains("id=\"hyperlinking\"", termsEnglish, StringComparison.Ordinal);
+        Assert.Contains("id=\"disclaimer\"", termsEnglish, StringComparison.Ordinal);
         Assert.Contains("24 กรกฎาคม 2569", termsThai, StringComparison.Ordinal);
     }
 

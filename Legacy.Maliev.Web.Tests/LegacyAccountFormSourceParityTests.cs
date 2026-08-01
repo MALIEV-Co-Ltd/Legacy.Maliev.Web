@@ -64,6 +64,29 @@ public sealed class LegacyAccountFormSourceParityTests
     }
 
     [Fact]
+    public void AccountCritiqueFixesKeepAccessibleFocusSubmitAndSignupProofContracts()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var css = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "application-shell.css"));
+        var js = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "app.js"));
+        var signup = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Account", "SignupPage.razor"));
+        var signupForm = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Account", "SignupContent.razor"));
+        var login = File.ReadAllText(Path.Combine(web, "Pages", "Account", "Login.cshtml"));
+
+        Assert.Contains("outline: 3px solid var(--maliev-blue);", css, StringComparison.Ordinal);
+        Assert.Contains(".maliev-page-header a:focus-visible", css, StringComparison.Ordinal);
+        Assert.Contains("outline: 3px solid #9cc4ff;", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("outline: 3px solid #72a9ff;", css, StringComparison.Ordinal);
+        Assert.Contains("GuardSingleSubmit(\"customer-login\")", login, StringComparison.Ordinal);
+        Assert.Contains("querySelector('[data-submit-label]')", js, StringComparison.Ordinal);
+        Assert.Contains("Six processes under one roof", signup, StringComparison.Ordinal);
+        Assert.Contains("Nonthaburi", signup, StringComparison.Ordinal);
+        Assert.Contains("/Legal/NonDisclosureAgreement", signup, StringComparison.Ordinal);
+        Assert.Contains("By signing up, you agree to our", signupForm, StringComparison.Ordinal);
+        Assert.DoesNotContain("you are agree", signupForm, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PrimaryPhoneNumberIsConsistentAndPrioritized()
     {
         var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");

@@ -14,22 +14,26 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
     }
 
     [Fact]
-    public async Task ThreeDimensionalPrintingRoute_RendersTheCurrentFinishingAssemblyAndFileGuidance()
+    public async Task ThreeDimensionalPrintingRoute_RendersTheCurrentSourceAssemblyAndFileGuidance()
     {
         using var client = factory.CreateClient();
         using var response = await client.GetAsync("/services/3d-printing?culture=en");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("id=\"printing-finishing\"", source, StringComparison.Ordinal);
-        Assert.Contains("id=\"printing-split-assembly\"", source, StringComparison.Ordinal);
-        Assert.Contains("id=\"printing-finish-brief\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"printing-tolerances\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"printing-related\"", source, StringComparison.Ordinal);
+        Assert.Contains("What tolerance can 3D printing hold?", source, StringComparison.Ordinal);
+        Assert.Contains("Painting, assembly, or a different process", source, StringComparison.Ordinal);
+        Assert.Contains("Compare Materials", source, StringComparison.Ordinal);
+        Assert.Contains("How we agree colour, sheen, and seams", source, StringComparison.Ordinal);
+        Assert.Contains("See indicative starting prices", source, StringComparison.Ordinal);
+        Assert.Contains("Your files stay confidential. We sign an NDA on request.", source, StringComparison.Ordinal);
+        Assert.Contains("Read our NDA", source, StringComparison.Ordinal);
+        Assert.Contains("Talk to an engineer", source, StringComparison.Ordinal);
         Assert.Contains("class=\"service-page-toc\"", source, StringComparison.Ordinal);
-        Assert.Equal(10, ServiceCardMediaRegex().Matches(source).Count);
-        Assert.Equal(13, FaqDetailsRegex().Matches(source).Count);
-        Assert.Contains("Color references need a standard", source, StringComparison.Ordinal);
-        Assert.Contains("Split, join, smooth, and finish", source, StringComparison.Ordinal);
-        Assert.Contains("Make the finish and assembly expectations explicit", source, StringComparison.Ordinal);
+        Assert.Equal(6, ServiceCardMediaRegex().Matches(source).Count);
+        Assert.Equal(7, FaqDetailsRegex().Matches(source).Count);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
@@ -65,6 +69,8 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("material-comparison.js", appEntry, StringComparison.Ordinal);
         Assert.Contains("data-material-row", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("data-material-empty", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("data-material-details-url", component, StringComparison.Ordinal);
+        Assert.Contains("material_detail_viewed", comparisonScript, StringComparison.Ordinal);
 
         foreach (var relativePath in new[]
         {

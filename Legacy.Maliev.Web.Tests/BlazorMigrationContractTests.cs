@@ -949,7 +949,7 @@ public sealed class BlazorMigrationContractTests
             "Account",
             "LoginContent.razor");
 
-        Assert.Contains("<form method=\"post\" class=\"maliev-form\" id=\"customer-login\">", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\" class=\"maliev-form\" id=\"customer-login\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(LoginContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
@@ -1056,7 +1056,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("type=\"typeof(SignupContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
-        Assert.Contains("document.getElementById('signup-recaptcha-response').value = token", page, StringComparison.Ordinal);
+        Assert.Contains("GuardRecaptchaSubmit(", page, StringComparison.Ordinal);
         Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
 
         Assert.True(File.Exists(componentPath));

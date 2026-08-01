@@ -111,7 +111,7 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
 
         var organizationContacts = organization.GetProperty("contactPoint").EnumerateArray().ToArray();
         Assert.Equal(2, organizationContacts.Length);
-        Assert.Equal("+66818030404", organizationContacts[0].GetProperty("telephone").GetString());
+        Assert.Equal("+66898950690", organizationContacts[0].GetProperty("telephone").GetString());
         Assert.Equal("info@maliev.com", organizationContacts[0].GetProperty("email").GetString());
         Assert.Equal("+66898950690", organizationContacts[1].GetProperty("telephone").GetString());
         Assert.Equal("manufacturing@maliev.com", organizationContacts[1].GetProperty("email").GetString());
@@ -123,7 +123,7 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
         Assert.Equal("Maliev Co., Ltd.", localBusiness.GetProperty("name").GetString());
         Assert.Equal("https://www.maliev.com", localBusiness.GetProperty("url").GetString());
         Assert.Equal(SocialNetworks.GoogleMaps, localBusiness.GetProperty("hasMap").GetString());
-        Assert.Equal("+66818030404", localBusiness.GetProperty("telephone").GetString());
+        Assert.Equal("+66898950690", localBusiness.GetProperty("telephone").GetString());
         Assert.Equal("$$", localBusiness.GetProperty("priceRange").GetString());
         Assert.StartsWith(localBusinessDescriptionPrefix, localBusiness.GetProperty("description").GetString(), StringComparison.Ordinal);
         Assert.Equal("info@maliev.com", localBusiness.GetProperty("email").GetString());

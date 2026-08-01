@@ -15,6 +15,7 @@ public sealed class PublicNavigationOwnedRoutesTests
             "/Services/3D-Design",
             "/Services/Silicone-Casting",
             "/Services/Low-Volume-Injection-Molding",
+            "/Services/Finishing-And-Color",
             "/Services"
         })
         {

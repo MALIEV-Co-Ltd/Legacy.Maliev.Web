@@ -30,7 +30,26 @@ public sealed class QuotationPageTests
             new RecordingFileClient(),
             new StubAntiBotVerifier(true));
 
-        await page.OnGetAsync("en", item, null, null, CancellationToken.None);
+        await page.OnGetAsync(
+            "en",
+            item,
+            null,
+            null,
+            finder_files: null,
+            finder_service: null,
+            finder_material: null,
+            finder_quantity: null,
+            finder_end_use: null,
+            finder_performance: null,
+            finder_environment: null,
+            finder_recommendations: null,
+            finder_path: null,
+            finish_hex: null,
+            finish_hlc: null,
+            finish_lab: null,
+            finish_pantone: null,
+            finish_sheen: null,
+            cancellationToken: CancellationToken.None);
 
         Assert.Equal(expectedService, page.ServiceContext);
     }

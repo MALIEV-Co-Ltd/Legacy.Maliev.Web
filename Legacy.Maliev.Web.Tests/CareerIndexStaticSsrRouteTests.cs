@@ -32,6 +32,7 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
         Assert.Contains("BlazorRouting:CareerIndex", program, StringComparison.Ordinal);
         Assert.Contains("\"/Career/Index\"", program, StringComparison.Ordinal);
         Assert.Contains("\"CareerIndex\": true", appsettings, StringComparison.Ordinal);
+        Assert.Contains("\"HideLocalAspireFixture\": true", appsettings, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(CareerIndexContent)\"", fallback, StringComparison.Ordinal);
     }
@@ -40,12 +41,12 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
     [InlineData(
         "en",
         "Career | MALIEV",
-        "Discover your perfect job match, and the freedom and support to take your career to the next level.",
+        "Explore MALIEV career opportunities in engineering, manufacturing, customer support, and project delivery.",
         "Job Offers")]
     [InlineData(
         "th",
         "ตำแหน่งงาน | MALIEV",
-        "เข้ามาร่วมงานกับเรา เพื่ออิสระในการทำงานและการสนับสนุนที่จะผลักดันอาชีพคุณไปอีกระดับ",
+        "ดูตำแหน่งงานกับ MALIEV และเรียนรู้วิธีสมัครงานด้านวิศวกรรม การผลิต และการสนับสนุนลูกค้า",
         "ตำแหน่งงาน")]
     public async Task CareerRoute_RendersLocalizedServiceBackedStaticSsrWithSeoAndAnalytics(
         string culture,
@@ -67,6 +68,10 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ร่วมสร้างงานผลิตที่ใช้งานได้จริงกับ MALIEV" : "Build useful manufacturing work with MALIEV", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "วิศวกรรมและการผลิต" : "Engineering and production", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ดูแลลูกค้าและโปรเจ็ค" : "Customer and project support", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "วิธีสมัครงาน" : "How to apply", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);

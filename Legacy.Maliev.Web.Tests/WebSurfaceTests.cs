@@ -1676,6 +1676,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://googleads.g.doubleclick.net", policy, StringComparison.Ordinal);
+        Assert.Contains("'wasm-unsafe-eval'", policy, StringComparison.Ordinal);
+        Assert.Contains("https://storage.googleapis.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://cloudflareinsights.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.recaptcha.net", policy, StringComparison.Ordinal);
         Assert.Contains("https://*.google-analytics.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://*.analytics.google.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://*.googletagmanager.com", policy, StringComparison.Ordinal);
@@ -2655,7 +2659,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"password\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"RememberMe\" value=\"true\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"RememberMe\" type=\"hidden\" value=\"false\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"hidden\" name=\"RememberMe\" value=\"false\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -3074,7 +3078,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(22, routes.Length);
+        Assert.Equal(26, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));

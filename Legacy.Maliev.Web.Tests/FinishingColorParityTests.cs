@@ -65,6 +65,22 @@ public sealed class FinishingColorParityTests : IClassFixture<WebApplicationFact
         Assert.Contains("data-migration-component=\"public-service-structured-data\"", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SourceVisibleFinishingCopyRemainsExact()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "FinishingAndColorPage.razor"));
+
+        Assert.Contains("A photo or screen is affected by lighting and display settings.", page, StringComparison.Ordinal);
+        Assert.Contains("ภาพถ่ายหรือหน้าจอได้รับผลจากแสงและการแสดงผล", page, StringComparison.Ordinal);
+        Assert.Contains("Confirm the sheen before painting begins.", page, StringComparison.Ordinal);
+        Assert.Contains("Yes. We can quote split planning, joining, filler, sanding, primer, paint, and clear coat together.", page, StringComparison.Ordinal);
+        Assert.Contains("We can reduce a seam with joining, automotive putty or wood filler", page, StringComparison.Ordinal);
+        Assert.Contains("a different color, sheen, or clear-coat type after approval", page, StringComparison.Ordinal);
+        Assert.Contains("split and joining plan, final dimensions, quantity, use environment", page, StringComparison.Ordinal);
+        Assert.Contains("แผนแบ่งและต่อชิ้นงาน ขนาดสุดท้าย จำนวน สภาพการใช้งาน", page, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

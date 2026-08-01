@@ -77,6 +77,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
+                "FinishingAndColorPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
@@ -117,16 +118,16 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
     [Theory]
     [InlineData(
         "en",
-        "3D Printing Services Bangkok & Nonthaburi | Instant Online Quote",
+        "3D Printing Services Bangkok | MALIEV",
         "Order FDM and resin 3D printed parts in engineering materials. Compare material uses, prepare files, and upload CAD for instant 3D printing pricing.",
         "Professional 3D Printing for Prototypes and Functional Parts",
         "3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing")]
     [InlineData(
         "th",
-        "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี | ประเมินราคาออนไลน์",
-        "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซินสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์",
+        "รับพิมพ์ 3D กรุงเทพและนนทบุรี | MALIEV",
+        "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่นสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์",
         "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง",
-        "รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิน")]
+        "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี, รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิ่น")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
@@ -156,6 +157,9 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains("data-migration-component=\"public-google-tag-manager-head\"", source, StringComparison.Ordinal);
         Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-contact-channel-analytics\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-pricing\"", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 300 บาท" : "Starts at approximately THB 300", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 500 บาท" : "Starts at approximately THB 500", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
@@ -210,6 +214,27 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
     }
 
     [Fact]
+    public void SourceVisiblePrintingCopyAndPricingRemainExact()
+    {
+        var root = FindRepositoryRoot();
+        var content = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
+        var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
+
+        Assert.Contains("well-designed part — not a guarantee", content, StringComparison.Ordinal);
+        Assert.Contains("งานที่ออกแบบมาเหมาะสม ไม่ใช่การรับประกัน", content, StringComparison.Ordinal);
+        Assert.Contains("drawing — we can ream, tap, or machine", content, StringComparison.Ordinal);
+        Assert.Contains("Indicative starting prices for FDM and resin are listed in the pricing section on this page.", content, StringComparison.Ordinal);
+        Assert.Contains("ราคาเริ่มต้นของงาน FDM และเรซิ่นแสดงอยู่ในส่วนราคาเริ่มต้นของหน้านี้", content, StringComparison.Ordinal);
+        Assert.Contains("Which material is strongest?", content, StringComparison.Ordinal);
+        Assert.Contains("วัสดุใดแข็งแรงที่สุด?", content, StringComparison.Ordinal);
+        Assert.Contains("There is no single strongest choice for every condition.", content, StringComparison.Ordinal);
+        Assert.Contains("Can you print only one part?", content, StringComparison.Ordinal);
+        Assert.Contains("Multiple identical parts may use the machine more efficiently", content, StringComparison.Ordinal);
+        Assert.Contains("Practical prototypes, fixtures, and larger functional parts", pricing, StringComparison.Ordinal);
+        Assert.Contains("เหมาะกับต้นแบบ จิ๊ก และชิ้นงานใช้งานจริงขนาดใหญ่", pricing, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AcceptedConsent_PreservesTheGtmBodyContainerOnTheRoute()
     {
         using var client = CreateClient(factory);
@@ -239,7 +264,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>3D Printing Services Bangkok &amp; Nonthaburi | Instant Online Quote</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>3D Printing Services Bangkok | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
