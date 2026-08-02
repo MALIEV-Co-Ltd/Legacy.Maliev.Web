@@ -5,6 +5,9 @@
 - Read-only source: `R:\maliev-web`, `main`, `370fe2010b9b63646151222fac3959eebed85dc4`.
 - Migrated target: `Legacy.Maliev.Web` on .NET 10 and Blazor static SSR, with interactive islands only where required.
 - Audited range: `dcc088f..370fe20` (79 commits).
+- Complete Web/Web-test history: 298 commits, independently inventoried in
+  `docs/complete-source-history-parity-through-370fe20.md` and verified against
+  the read-only source by `scripts/verify-complete-source-history-parity.ps1`.
 - Production deployment is outside this audit. The source repository was not modified.
 - Local-only Claude settings and Impeccable critique artifacts are intentionally excluded.
 - Source IBM Plex work is superseded by the owner-approved `Inter, "Noto Sans Thai", sans-serif` contract.
@@ -46,9 +49,9 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 | `0dac145` | Migrated | Measurements grouped with their part. |
 | `4062184` | Migrated | Thai/English legal links and resources. |
 | `f506d03` | Migrated | Material settings height and viewer behavior. |
-| `172d08d` | Migrated | Exact nine standalone quotation formats and 200 MB admission limit; workflow/upload tests. |
-| `369b749` | Migrated | Case-insensitive extension normalization, including Safari identifiers. |
-| `bb74b3e` | Migrated | Mobile/iOS file-selection snapshot and lifecycle behavior. |
+| `172d08d` | Migrated | Exact nine standalone quotation formats, full MIME picker allowlist and 200 MB admission limit; workflow/upload and per-format browser-module tests. |
+| `369b749` | Migrated | Safari STL MIME/UTI identifiers (`application/sla`, `application/vnd.ms-pki.stl`, `model/x.stl-binary`, `model/x.stl-ascii`) are retained in the picker contract. |
+| `bb74b3e` | Migrated | iPhone/iPad and Mac-touch detection preserves the application allowlist in `data-accepted-types`, removes Safari's unsupported picker filter, and still rejects unsupported extensions before preview/upload; Node regression tests cover iOS, iPadOS and desktop behavior. |
 | `33ce2c0` | Migrated | Summary viewport containment in `065479d`. |
 | `da854df` | Migrated | Missing browser content type accepted and normalized to octet-stream for validated member uploads. |
 | `ee2bb59` | Migrated | Opaque incident ID, response header, structured logging and Thai UI in `122b338`; incident tests. |
