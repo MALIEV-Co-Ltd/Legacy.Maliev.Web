@@ -24,7 +24,7 @@ public sealed class SetInitialPassword(
     [BindProperty, Required, StringLength(256, MinimumLength = 32)]
     public string Token { get; set; } = string.Empty;
 
-    [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 6)]
+    [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
 
     [BindProperty, Required, DataType(DataType.Password), Compare(nameof(Password)), StringLength(1024)]

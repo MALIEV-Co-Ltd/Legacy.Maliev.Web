@@ -28,11 +28,6 @@ public static class MemberCompatibilityEndpointRouteBuilderExtensions
             .RequireAuthorization()
             .ExcludeFromDescription();
         endpoints.MapGet(
-                "/member/account/manage/createpassword",
-                static () => Results.Redirect("/Member/Account/Manage/ChangePassword"))
-            .RequireAuthorization()
-            .ExcludeFromDescription();
-        endpoints.MapGet(
                 "/member/quotations/paymentsuccess",
                 static () => Results.Redirect("/Member/Quotations"))
             .RequireAuthorization()

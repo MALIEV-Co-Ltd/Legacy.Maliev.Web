@@ -51,6 +51,41 @@ public sealed class AccountSessionStoreTests
         Assert.NotEqual(principal.FindFirstValue(AccountSessionManager.SessionIdClaim), ownerClaim);
     }
 
+    [Fact]
+    public async Task SignIn_PasswordlessCapabilityIsProjectedIntoTheNonSecretCookiePrincipal()
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var authentication = new RefreshingAuthenticationClient(
+            now,
+            new CustomerAuthenticationResult(
+                new CustomerTokenSet("access-secret", "refresh-secret", "Bearer", 900, now.AddDays(1)),
+                true,
+                42,
+                HasPassword: false));
+        var store = new LockingStore(new AccountSession(
+            "existing@example.com",
+            7,
+            "old-access",
+            "old-refresh",
+            now.AddMinutes(10),
+            now.AddDays(1)));
+        var manager = new AccountSessionManager(authentication, store, new FixedTimeProvider(now));
+        var authenticationService = new CapturingAuthenticationService();
+
+        var status = await manager.SignInAsync(
+            CreateHttpContext(authenticationService),
+            "passwordless@example.com",
+            "federated-sign-in",
+            false,
+            default);
+
+        Assert.Equal(AccountSignInStatus.Succeeded, status);
+        Assert.Equal(
+            "false",
+            Assert.IsType<ClaimsPrincipal>(authenticationService.SignedInPrincipal)
+                .FindFirstValue("has_password"));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

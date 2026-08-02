@@ -32,8 +32,13 @@ internal sealed class CustomerAuthenticationClient(
 
             if (response.StatusCode == HttpStatusCode.Conflict)
             {
-                var action = await response.Content.ReadFromJsonAsync<LoginActionResponse>(cancellationToken);
-                return action is null || string.IsNullOrWhiteSpace(action.Token)
+                var action = await ReadJsonOrNullAsync<LoginActionResponse>(
+                    response.Content,
+                    "customer login required action",
+                    cancellationToken);
+                return action is null
+                    || string.IsNullOrWhiteSpace(action.Token)
+                    || action.Action is not ("confirm_email" or "set_initial_password")
                     ? new(null, true)
                     : new(
                         null,
@@ -42,9 +47,22 @@ internal sealed class CustomerAuthenticationClient(
                         new CustomerLoginRequiredAction(action.Action, action.Token));
             }
 
-            response.EnsureSuccessStatusCode();
-            var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
-            return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
+            if (!response.IsSuccessStatusCode)
+            {
+                return new(null, (int)response.StatusCode < 500);
+            }
+
+            var tokens = await ReadJsonOrNullAsync<CustomerTokenSet>(
+                response.Content,
+                "customer login",
+                cancellationToken);
+            return IsValid(tokens)
+                ? new(
+                    tokens,
+                    true,
+                    ExtractDatabaseId(tokens!.AccessToken),
+                    HasPassword: ExtractHasPassword(tokens.AccessToken))
+                : new(null, false);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -68,9 +86,22 @@ internal sealed class CustomerAuthenticationClient(
                 return new(null, true);
             }
 
-            response.EnsureSuccessStatusCode();
-            var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
-            return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
+            if (!response.IsSuccessStatusCode)
+            {
+                return new(null, (int)response.StatusCode < 500);
+            }
+
+            var tokens = await ReadJsonOrNullAsync<CustomerTokenSet>(
+                response.Content,
+                "customer session refresh",
+                cancellationToken);
+            return IsValid(tokens)
+                ? new(
+                    tokens,
+                    true,
+                    ExtractDatabaseId(tokens!.AccessToken),
+                    HasPassword: ExtractHasPassword(tokens.AccessToken))
+                : new(null, false);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -121,7 +152,10 @@ internal sealed class CustomerAuthenticationClient(
             return new(false, null, null, null);
         }
 
-        return await response.Content.ReadFromJsonAsync<CustomerIdentityRegistration>(cancellationToken)
+        return await ReadJsonOrNullAsync<CustomerIdentityRegistration>(
+                response.Content,
+                "customer identity registration",
+                cancellationToken)
             ?? new(false, null, null, null);
     }
 
@@ -169,9 +203,12 @@ internal sealed class CustomerAuthenticationClient(
             return new(false, (int)response.StatusCode < 500, authorized);
         }
 
-        var validation = await response.Content.ReadFromJsonAsync<EmailChangeValidationResponse>(cancellationToken);
+        var validation = await ReadJsonOrNullAsync<EmailChangeValidationResponse>(
+            response.Content,
+            "customer email-change validation",
+            cancellationToken);
         return validation is null
-            ? new(false, true, true)
+            ? new(false, false, true)
             : new(
                 true,
                 true,
@@ -250,6 +287,38 @@ internal sealed class CustomerAuthenticationClient(
             expectsChallenge: false,
             cancellationToken);
 
+    public async Task<CustomerPasswordCreationResult> CreatePasswordAsync(
+        string accessToken,
+        string newPassword,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "auth/v1/customer-self-service/password/create")
+            {
+                Content = JsonContent.Create(new CreatePasswordRequest(newPassword)),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var response = await clientFactory.CreateClient("auth").SendAsync(request, cancellationToken);
+            var authorized = response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
+            return response.StatusCode switch
+            {
+                HttpStatusCode.NoContent => new(true, true, true, false),
+                HttpStatusCode.Conflict => new(false, true, true, true),
+                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new(false, true, false, false),
+                _ when (int)response.StatusCode >= 500 => new(false, false, authorized, false),
+                _ => new(false, true, authorized, false),
+            };
+        }
+        catch (Exception exception) when (IsTransient(exception, cancellationToken))
+        {
+            logger.LogWarning(exception, "Auth service was unavailable while creating a customer password.");
+            return new(false, false, true, false);
+        }
+    }
+
     private async Task<CustomerCredentialOperationResult> ChangeCredentialAsync(
         string action,
         string accessToken,
@@ -280,8 +349,13 @@ internal sealed class CustomerAuthenticationClient(
                 return new(true, true, true);
             }
 
-            var challenge = await response.Content.ReadFromJsonAsync<ChallengeResponse>(cancellationToken);
-            return new(challenge?.Accepted == true && challenge.Token is not null, true, true, challenge?.Token);
+            var challenge = await ReadJsonOrNullAsync<ChallengeResponse>(
+                response.Content,
+                "customer credential challenge",
+                cancellationToken);
+            return challenge is null
+                ? new(false, false, true)
+                : new(challenge.Accepted && challenge.Token is not null, true, true, challenge.Token);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -319,8 +393,13 @@ internal sealed class CustomerAuthenticationClient(
             return new(false, null, (int)response.StatusCode < 500, true);
         }
 
-        var challenge = await response.Content.ReadFromJsonAsync<ChallengeResponse>(cancellationToken);
-        return new(challenge?.Accepted == true, challenge?.Token, true, true);
+        var challenge = await ReadJsonOrNullAsync<ChallengeResponse>(
+            response.Content,
+            "customer action challenge",
+            cancellationToken);
+        return challenge is null
+            ? new(false, null, false, true)
+            : new(challenge.Accepted, challenge.Token, true, true);
     }
 
     private async Task<CustomerActionChallenge> CompleteChallengeAsync(
@@ -344,8 +423,13 @@ internal sealed class CustomerAuthenticationClient(
             return new(false, null, (int)response.StatusCode < 500, authorized);
         }
 
-        var challenge = await response.Content.ReadFromJsonAsync<ChallengeResponse>(cancellationToken);
-        return new(challenge?.Accepted == true, challenge?.Token, true, true);
+        var challenge = await ReadJsonOrNullAsync<ChallengeResponse>(
+            response.Content,
+            "customer recovery challenge",
+            cancellationToken);
+        return challenge is null
+            ? new(false, null, false, true)
+            : new(challenge.Accepted, challenge.Token, true, true);
     }
 
     private async Task<bool> CompleteActionAsync(
@@ -400,6 +484,30 @@ internal sealed class CustomerAuthenticationClient(
         exception is HttpRequestException
         || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
 
+    private async Task<T?> ReadJsonOrNullAsync<T>(
+        HttpContent content,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
+        {
+            logger.LogWarning(exception, "Auth service returned an invalid response during {Operation}.", operation);
+            return default;
+        }
+    }
+
+    private static bool IsValid(CustomerTokenSet? tokens) =>
+        tokens is not null
+        && !string.IsNullOrWhiteSpace(tokens.AccessToken)
+        && !string.IsNullOrWhiteSpace(tokens.RefreshToken)
+        && string.Equals(tokens.TokenType, "Bearer", StringComparison.OrdinalIgnoreCase)
+        && tokens.ExpiresIn > 0
+        && tokens.RefreshExpiresAt > DateTimeOffset.UnixEpoch;
+
     private static int? ExtractDatabaseId(string? accessToken)
     {
         if (string.IsNullOrWhiteSpace(accessToken))
@@ -438,6 +546,26 @@ internal sealed class CustomerAuthenticationClient(
         }
     }
 
+    private static bool ExtractHasPassword(string accessToken)
+    {
+        try
+        {
+            var segments = accessToken.Split('.');
+            if (segments.Length != 3)
+            {
+                return true;
+            }
+
+            using var payload = JsonDocument.Parse(WebEncoders.Base64UrlDecode(segments[1]));
+            return !payload.RootElement.TryGetProperty("has_password", out var claim)
+                || claim.ValueKind is not JsonValueKind.False;
+        }
+        catch (Exception exception) when (exception is FormatException or JsonException)
+        {
+            return true;
+        }
+    }
+
     private sealed record LoginRequest(string UserName, string Password, int IdentityKind);
     private sealed record LoginActionResponse(string Action, string Token);
     private sealed record RefreshRequest(string RefreshToken);
@@ -452,5 +580,6 @@ internal sealed class CustomerAuthenticationClient(
         bool Completed = false);
     private sealed record ChangeEmailRequest(string CurrentPassword, string NewEmail);
     private sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+    private sealed record CreatePasswordRequest(string NewPassword);
     private sealed record ChallengeResponse(bool Accepted, string? Token);
 }

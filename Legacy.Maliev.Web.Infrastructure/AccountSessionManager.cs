@@ -88,6 +88,7 @@ internal sealed class AccountSessionManager(
                     $"customer:{session.CustomerDatabaseId.ToString(CultureInfo.InvariantCulture)}"),
                 new Claim("identity_kind", "customer"),
                 new Claim("legacy_database_id", session.CustomerDatabaseId.ToString()),
+                new Claim("has_password", result.HasPassword ? "true" : "false", ClaimValueTypes.Boolean),
                 new Claim(SessionIdClaim, sessionId),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme);

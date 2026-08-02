@@ -62,7 +62,7 @@ public sealed class Login(
                     .ToArray(),
                 StringComparer.Ordinal));
 
-    public IActionResult OnGet(string? email, string? returnUrl)
+    public IActionResult OnGet(string? email, string? returnUrl, bool accountCreated = false)
     {
         if (User.Identity?.IsAuthenticated == true)
         {
@@ -71,6 +71,10 @@ public sealed class Login(
 
         Email = email?.Trim() ?? string.Empty;
         ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+        if (accountCreated)
+        {
+            Notification = localizer["Account created. Check your email and follow the link to confirm your address before signing in."];
+        }
         return Page();
     }
 
@@ -138,14 +142,13 @@ public sealed class Login(
             cancellationToken);
         if (challenge.Token is not null)
         {
-            var callbackPath = QueryHelpers.AddQueryString(
-                "/Account/EmailConfirmation",
+            var callback = QueryHelpers.AddQueryString(
+                $"{CanonicalUrlPolicy.CanonicalOrigin}/Account/EmailConfirmation",
                 new Dictionary<string, string?>
                 {
                     ["email"] = Email.Trim(),
                     ["token"] = challenge.Token,
                 });
-            var callback = UriHelper.BuildAbsolute(Request.Scheme, Request.Host, callbackPath);
             if (!await SendEmailConfirmationAsync(callback, cancellationToken))
             {
                 EmailConfirmationRecoveryToken = null;

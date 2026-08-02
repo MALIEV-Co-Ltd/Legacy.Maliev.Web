@@ -38,7 +38,7 @@ public sealed class MemberOrderCompatibilityTests
             "Pages",
             "Quotations",
             "PaymentSuccess.cshtml.cs")));
-        Assert.False(File.Exists(Path.Combine(
+        Assert.True(File.Exists(Path.Combine(
             root,
             "Legacy.Maliev.Web",
             "Areas",
@@ -47,7 +47,7 @@ public sealed class MemberOrderCompatibilityTests
             "Account",
             "Manage",
             "CreatePassword.cshtml")));
-        Assert.False(File.Exists(Path.Combine(
+        Assert.True(File.Exists(Path.Combine(
             root,
             "Legacy.Maliev.Web",
             "Areas",
@@ -62,7 +62,7 @@ public sealed class MemberOrderCompatibilityTests
         var source = File.ReadAllText(endpointPath);
         Assert.Contains("/member/orders/material-options", source, StringComparison.Ordinal);
         Assert.Contains("/member/quotations/paymentsuccess", source, StringComparison.Ordinal);
-        Assert.Contains("/member/account/manage/createpassword", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("/member/account/manage/createpassword", source, StringComparison.Ordinal);
         Assert.DoesNotContain("/Quotation?item=CNC-Machining", source, StringComparison.Ordinal);
         Assert.DoesNotContain("/Quotation?item=3D-Printing", source, StringComparison.Ordinal);
         Assert.DoesNotContain("/Quotation?item=3D-Scanning", source, StringComparison.Ordinal);
@@ -90,6 +90,18 @@ public sealed class MemberOrderCompatibilityTests
         Assert.Contains("@page \"/Member/Orders/3D-Scanning\"", component, StringComparison.Ordinal);
         Assert.Contains("@page \"/Member/Orders/CNC-Machining\"", component, StringComparison.Ordinal);
         Assert.Contains("IAntiforgery", component, StringComparison.Ordinal);
+
+        var memberShell = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberWorkspaceShell.razor"));
+        Assert.Contains("/Quotation/CNC-Machining", memberShell, StringComparison.Ordinal);
+        Assert.Contains("/Quotation/3D-Printing", memberShell, StringComparison.Ordinal);
+        Assert.Contains("/Quotation/3D-Scanning", memberShell, StringComparison.Ordinal);
+        Assert.Contains("/Member/Account/Manage/CreatePassword", memberShell, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

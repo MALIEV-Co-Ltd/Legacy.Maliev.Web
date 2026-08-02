@@ -29,9 +29,9 @@ public sealed class AccountClientTests
     }
 
     [Fact]
-    public async Task Login_ExtractsPositiveCustomerDatabaseIdFromAuthIssuedAccessToken()
+    public async Task Login_ExtractsCustomerDatabaseIdAndPasswordCapabilityFromAuthIssuedAccessToken()
     {
-        var accessToken = Jwt(new { legacy_database_id = "42" });
+        var accessToken = Jwt(new { legacy_database_id = "42", has_password = false });
         var handler = new RecordingHandler(_ => Json(
             HttpStatusCode.OK,
             $$"""{"accessToken":"{{accessToken}}","refreshToken":"refresh","tokenType":"Bearer","expiresIn":900,"refreshExpiresAt":"2026-07-16T00:00:00Z"}"""));
@@ -40,6 +40,7 @@ public sealed class AccountClientTests
         var result = await client.LoginAsync("customer@example.com", "correct-password", default);
 
         Assert.Equal(42, result.DatabaseId);
+        Assert.False(result.HasPassword);
     }
 
     [Theory]
@@ -58,6 +59,53 @@ public sealed class AccountClientTests
         Assert.Equal(action, result.RequiredAction?.Action);
         Assert.Equal("opaque-action-token", result.RequiredAction?.Token);
         Assert.DoesNotContain("opaque-action-token", handler.RequestUri, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("unknown_action", "opaque-action-token")]
+    [InlineData("confirm_email", "")]
+    public async Task Login_InvalidRequiredActionFailsClosed(string action, string token)
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.Conflict,
+            $$"""{"action":"{{action}}","token":"{{token}}"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.LoginAsync("customer@example.com", "validated-password", default);
+
+        Assert.Null(result.Tokens);
+        Assert.Null(result.RequiredAction);
+        Assert.True(result.ServiceAvailable);
+    }
+
+    [Theory]
+    [InlineData("not-json")]
+    [InlineData("{}")]
+    [InlineData("{\"accessToken\":\"\",\"refreshToken\":\"refresh\",\"tokenType\":\"Bearer\",\"expiresIn\":900,\"refreshExpiresAt\":\"2026-07-16T00:00:00Z\"}")]
+    public async Task Login_MalformedOrIncompleteSuccessFailsClosed(string body)
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, body));
+        var client = CreateClient(handler);
+
+        var result = await client.LoginAsync("customer@example.com", "validated-password", default);
+
+        Assert.Null(result.Tokens);
+        Assert.Null(result.DatabaseId);
+        Assert.False(result.ServiceAvailable);
+    }
+
+    [Fact]
+    public async Task Refresh_EmptyTokenSetFailsClosed()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            """{"accessToken":"","refreshToken":"","tokenType":"Bearer","expiresIn":0,"refreshExpiresAt":"0001-01-01T00:00:00Z"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.RefreshAsync("opaque-refresh", default);
+
+        Assert.Null(result.Tokens);
+        Assert.False(result.ServiceAvailable);
     }
 
     [Fact]
@@ -134,6 +182,38 @@ public sealed class AccountClientTests
     }
 
     [Fact]
+    public async Task Register_MalformedSuccessReturnsSafeFailureForSagaCompensation()
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.Created, "not-json"));
+        var client = CreateClient(handler);
+
+        var result = await client.RegisterAsync(
+            42,
+            "customer@example.com",
+            "correct-password",
+            default);
+
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task RecoverEmailConfirmation_MalformedSuccessFailsClosed()
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, "not-json"));
+        var client = CreateClient(handler);
+
+        var result = await client.RecoverEmailConfirmationAsync(
+            "customer@example.com",
+            "opaque-recovery-token",
+            default);
+
+        Assert.False(result.Accepted);
+        Assert.False(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Null(result.Token);
+    }
+
+    [Fact]
     public async Task ChangeEmail_UsesCustomerBearerAndJsonOnlyCredentials()
     {
         var handler = new RecordingHandler(_ => Json(
@@ -175,6 +255,27 @@ public sealed class AccountClientTests
         Assert.True(result.Authorized);
         Assert.Equal("Bearer customer-access-token", handler.Authorization);
         Assert.Equal("auth/v1/customer-self-service/password/change", handler.RequestUri);
+        Assert.Contains("\"newPassword\":\"new-password\"", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreatePassword_UsesCustomerBearerAndMapsConflictWithoutCredentialLeak()
+    {
+        var handler = new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.Conflict));
+        var client = CreateClient(handler);
+
+        var result = await client.CreatePasswordAsync(
+            "customer-access-token",
+            "new-password",
+            default);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.AlreadyExists);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Equal("Bearer customer-access-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/password/create", handler.RequestUri);
+        Assert.DoesNotContain("new-password", handler.RequestUri, StringComparison.Ordinal);
         Assert.Contains("\"newPassword\":\"new-password\"", handler.Body, StringComparison.Ordinal);
     }
 
