@@ -127,13 +127,13 @@
     <value>ติดต่อเรา</value>
   </data>
   <data name="Email" xml:space="preserve">
-    <value>อีเมล์</value>
+    <value>อีเมล</value>
   </data>
   <data name="First name" xml:space="preserve">
     <value>ชื่อ</value>
   </data>
   <data name="Here are several ways you can contact us." xml:space="preserve">
-    <value>คุณสามารถติดต่อเราได้ผ่าน Social Networks เหล่านี้</value>
+    <value>คุณสามารถติดต่อเราได้ผ่านช่องทางโซเชียลเหล่านี้</value>
   </data>
   <data name="Just send us a message using the form below and we will get back to you as soon as possible." xml:space="preserve">
     <value>ฝากข้อความของคุณไว้ผ่านฟอร์มข้างล่างนี้ แล้วเราจะติดต่อกลับไปโดยเร็วที่สุด</value>
@@ -166,10 +166,10 @@
     <value>เรายินดีที่จะตอบทุกคำถามที่คุณมี</value>
   </data>
   <data name="We can get in touch with you faster" xml:space="preserve">
-    <value>ทำให้เราสามารถติดต่อคุณได้เร็วขึ้น</value>
+    <value>ช่วยให้เราติดต่อคุณได้เร็วขึ้น</value>
   </data>
   <data name="We'll never share your email with anyone" xml:space="preserve">
-    <value>เราจะไม่แชร์อีเมล์ให้กับใคร</value>
+    <value>เราจะไม่เปิดเผยอีเมลของคุณให้บุคคลอื่น</value>
   </data>
   <data name="Your message" xml:space="preserve">
     <value>ข้อความ</value>
@@ -178,7 +178,7 @@
   <data name="How can we help?" xml:space="preserve"><value>เราช่วยอะไรคุณได้บ้าง?</value></data>
   <data name="Ask about a project, an existing request, or our manufacturing services. Choose the contact method that works best for you." xml:space="preserve"><value>สอบถามเกี่ยวกับงาน คำขอที่ส่งไว้ หรือบริการผลิตของเรา เลือกช่องทางติดต่อที่สะดวกสำหรับคุณ</value></data>
   <data name="Contact service benefits" xml:space="preserve"><value>ข้อดีของการติดต่อเรา</value></data>
-  <data name="Real people, practical answers" xml:space="preserve"><value>ทีมงานจริง พร้อมคำตอบที่ใช้งานได้</value></data>
+  <data name="Real people, practical answers" xml:space="preserve"><value>ทีมงานจริง พร้อมคำตอบที่ตรงประเด็น</value></data>
   <data name="Thai and English support" xml:space="preserve"><value>ให้บริการภาษาไทยและอังกฤษ</value></data>
   <data name="Based in Nonthaburi, Thailand" xml:space="preserve"><value>ตั้งอยู่ที่นนทบุรี ประเทศไทย</value></data>
   <data name="Contact options" xml:space="preserve"><value>ช่องทางติดต่อ</value></data>

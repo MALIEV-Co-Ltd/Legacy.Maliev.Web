@@ -117,5 +117,5 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Social media | MALIEV" xml:space="preserve"><value>โซเชียลมีเดีย | MALIEV</value></data><data name="Follow MALIEV for manufacturing examples, process updates, and company news." xml:space="preserve"><value>ติดตามตัวอย่างงานผลิต ข่าวกระบวนการ และข่าวสารจาก MALIEV</value></data>
+<data name="Social media | MALIEV" xml:space="preserve"><value>โซเชียลมีเดีย | MALIEV</value></data><data name="Follow MALIEV for manufacturing examples, process updates, and company news." xml:space="preserve"><value>ติดตามตัวอย่างงานผลิต ข่าวสารกระบวนการ และข่าวจาก MALIEV</value></data>
 </root>

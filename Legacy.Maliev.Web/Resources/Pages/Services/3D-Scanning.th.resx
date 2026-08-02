@@ -178,7 +178,7 @@
     <value>นี่คือตัวอย่างงานสแกนที่เราเคยทำ</value>
   </data>
   <data name="Depending on the part and its complexity" xml:space="preserve">
-    <value>ขึ้นอยู่กับลักษณะต่างๆของแต่ละชิ้นงาน</value>
+<value>ขึ้นอยู่กับลักษณะของแต่ละชิ้นงาน</value>
   </data>
   <data name="Multiple file formats such as STL, OBJ, PLY, 3MF, ASC and more" xml:space="preserve">
     <value>ส่งไฟล์งานได้หลายนามสกุล เช่น STL, OBJ, PLY, 3MF, ASC และอีกมากมาย</value>

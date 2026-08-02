@@ -124,7 +124,7 @@
     <value>2. รับใบเสนอราคา</value>
   </data>
   <data name="3. Review the quotation" xml:space="preserve">
-    <value>3. ตรวจเช็คใบเสนอราคา</value>
+    <value>3. ตรวจสอบใบเสนอราคา</value>
   </data>
   <data name="4. Production" xml:space="preserve">
     <value>4. ผลิตชิ้นงาน</value>
@@ -139,49 +139,49 @@
     <value>งาน CNC ตามแบบ</value>
   </data>
   <data name="Great quality prototype does not have to be expensive" xml:space="preserve">
-    <value>งาน Prototype คุณภาพดีไม่จำเป็นต้องราคาแพง</value>
+    <value>ต้นแบบคุณภาพดีไม่จำเป็นต้องมีราคาแพง</value>
   </data>
   <data name="Have a project which we can help?" xml:space="preserve">
-    <value>คุณมีงานที่ต้องการให้เราช่วยเหลือไหม?</value>
+    <value>มีโครงการที่ต้องการให้เราช่วยหรือไม่?</value>
   </data>
   <data name="Have an ideas which need someone to help manufacture it?" xml:space="preserve">
-    <value>หากคุณมีไอเดียที่ดีและกำลังมองหาผู้ผลิตที่มีคุณภาพ</value>
+    <value>มีไอเดียที่ต้องการผู้ช่วยผลิตหรือไม่?</value>
   </data>
   <data name="How does it work?" xml:space="preserve">
-    <value>สั่งงานกับเรายังไง?</value>
+    <value>ขั้นตอนการสั่งงานกับเราเป็นอย่างไร?</value>
   </data>
   <data name="Kick-off your product ideas with affordable manufacturing services." xml:space="preserve">
-    <value>เริ่มต้นไอเดียของคุณกับการให้บริการงานผลิตของเรา</value>
+    <value>เริ่มต้นไอเดียผลิตภัณฑ์ของคุณด้วยบริการผลิตที่คุ้มค่า</value>
   </data>
   <data name="Manufacturing Services" xml:space="preserve">
     <value>บริการผลิตชิ้นงาน</value>
   </data>
   <data name="Once you're satisfied with our offer. We start the production." xml:space="preserve">
-    <value>เมื่อคุณพอใจกับข้อเสนอของเราแล้ว สามารถเริ่มการผลิตได้เลยทันที</value>
+    <value>เมื่อคุณพอใจกับข้อเสนอของเรา เราจะเริ่มผลิตทันที</value>
   </data>
   <data name="Part is produced by our manufacturing team and inspected in all processes" xml:space="preserve">
-    <value>มีการตรวจสอบและควบคุมคุณภาพการผลิตในทุกขั้นตอน โดยวิศวกรผู้ชำนาญ</value>
+    <value>ทีมผลิตของเราผลิตชิ้นงานและตรวจสอบทุกขั้นตอน</value>
   </data>
   <data name="Talk with us" xml:space="preserve">
     <value>สอบถามข้อมูลเพิ่มเติม</value>
   </data>
   <data name="Talk with us and discuss your needs." xml:space="preserve">
-    <value>พูดคุยกับเราและแลกเปลี่ยนความต้องการของคุณ</value>
+    <value>พูดคุยกับเราเพื่อหารือความต้องการของคุณ</value>
   </data>
   <data name="Create your own product at the most affordable price" xml:space="preserve">
-    <value>สร้างสรรค์ผลงานของคุณเอง ในราคาที่ดีที่สุด</value>
+    <value>สร้างผลงานของคุณเองในราคาที่คุ้มค่า</value>
   </data>
   <data name="We delivery your part safely to your doorstep, and there is one more happy customer" xml:space="preserve">
-    <value>เรามีบริการจัดส่งถึงหน้าบ้านคุณ</value>
+    <value>เราจัดส่งชิ้นงานถึงหน้าบ้านคุณอย่างปลอดภัย</value>
   </data>
   <data name="We support students from universities completing their projects too." xml:space="preserve">
-    <value>ทั้งนี้เรายังมีบริการให้คำปรึกษาและสนับสนุน กลุ่มนิสิตนักศึกษาที่ต้องการความช่วยเหลือด้านการผลิตและออกแบบ</value>
+    <value>เรายังให้คำปรึกษาและสนับสนุนนิสิตนักศึกษาที่ต้องการความช่วยเหลือด้านการผลิตและการออกแบบ</value>
   </data>
   <data name="You submit your request by contact us directly or using our upload portal. This can be CAD file or plain documents" xml:space="preserve">
-    <value>คุณส่งคำขอมาที่เราโดยตรงหรืออัพโหลดไฟล์งานผ่านระบบของเรา ในรูปแบบ CAD, รูปภาพ หรือ ไฟล์ PDF</value>
+    <value>คุณส่งคำขอมาได้โดยตรงหรืออัปโหลดไฟล์ผ่านระบบของเรา เช่น ไฟล์ CAD รูปภาพ หรือไฟล์ PDF</value>
   </data>
   <data name="Your request is checked by our engineer and the quotation offer is generated for you to examine and review" xml:space="preserve">
-    <value>งานของคุณได้ผ่านการตรวจสอบจากทีมวิศวกรของเราและทางเราจัดทำใบเสนอราคาให้คุณได้ตรวจสอบ</value>
+    <value>วิศวกรของเราจะตรวจสอบงานและจัดทำใบเสนอราคาให้คุณพิจารณา</value>
   </data>
   <data name="Get started now" xml:space="preserve">
     <value>ลงทะเบียนแล้วสั่งงานตอนนี้</value>
@@ -193,7 +193,7 @@
     <value>งานสแกน 3 มิติ</value>
   </data>
   <data name="Looking for our Online Shop?" xml:space="preserve">
-    <value>กำลังมองหาร้านค้าออนไลน์ของเราอยู่ไหม?</value>
+    <value>กำลังมองหาร้านค้าออนไลน์ของเราอยู่หรือไม่?</value>
   </data>
   <data name="Visit our online store" xml:space="preserve">
     <value>ไปที่ร้านค้าออนไลน์</value>
@@ -210,7 +210,7 @@
   <data name="High-accuracy 3D scanning" xml:space="preserve"><value>งานสแกน 3 มิติความละเอียดสูง</value></data>
   <data name="Why customers work with MALIEV" xml:space="preserve"><value>เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV</value></data>
   <data name="Fast &amp; Competitive Quotes" xml:space="preserve"><value>เสนอราคารวดเร็วและคุ้มค่า</value></data>
-  <data name="Get an accurate quote in hours, not days." xml:space="preserve"><value>รับราคาที่แม่นยำภายในไม่กี่ชั่วโมง ไม่ต้องรอหลายวัน</value></data>
+  <data name="Get an accurate quote in hours, not days." xml:space="preserve"><value>รับใบเสนอราคาที่แม่นยำภายในไม่กี่ชั่วโมง ไม่ต้องรอหลายวัน</value></data>
   <data name="Multiple Manufacturing Methods" xml:space="preserve"><value>กระบวนการผลิตที่หลากหลาย</value></data>
   <data name="CNC machining, 3D printing, and 3D scanning solutions." xml:space="preserve"><value>ครบทั้งงาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ</value></data>
   <data name="Engineering Support" xml:space="preserve"><value>ทีมวิศวกรให้คำปรึกษา</value></data>
@@ -245,7 +245,7 @@
   <data name="Quality-Focused" xml:space="preserve"><value>มุ่งเน้นคุณภาพ</value></data>
   <data name="Strict quality control and careful inspection deliver consistent results." xml:space="preserve"><value>ควบคุมคุณภาพและตรวจสอบอย่างละเอียด เพื่อผลลัพธ์ที่สม่ำเสมอ</value></data>
   <data name="Responsive Communication" xml:space="preserve"><value>สื่อสารรวดเร็วและชัดเจน</value></data>
-  <data name="Real people, clear updates, and practical support when you need us." xml:space="preserve"><value>ติดต่อทีมงานจริง รับข้อมูลอัปเดตชัดเจน และความช่วยเหลือเมื่อคุณต้องการ</value></data>
+  <data name="Real people, clear updates, and practical support when you need us." xml:space="preserve"><value>ติดต่อทีมงานจริง รับข้อมูลอัปเดตที่ชัดเจน และขอความช่วยเหลือได้เมื่อคุณต้องการ</value></data>
   <data name="Ready to bring your ideas to life?" xml:space="preserve"><value>พร้อมเปลี่ยนไอเดียของคุณให้เป็นชิ้นงานจริงหรือยัง?</value></data>
   <data name="Get a fast, accurate 3D printing estimate for your project today." xml:space="preserve"><value>ประเมินราคางานพิมพ์ 3 มิติได้อย่างรวดเร็วและแม่นยำวันนี้</value></data>
   <data name="Talk to an Expert" xml:space="preserve"><value>ปรึกษาผู้เชี่ยวชาญ</value></data>
@@ -264,7 +264,7 @@
   <data name="Discuss your design" xml:space="preserve"><value>ปรึกษางานออกแบบ</value></data>
   <data name="Silicone Casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
   <data name="Silicone poured into a 3D-printed mold" xml:space="preserve"><value>เทซิลิโคนลงในแม่พิมพ์พิมพ์ 3 มิติ</value></data>
-  <data name="Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน</value></data>
+  <data name="Create short-run silicone parts using a 3D-printed mold, with material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน</value></data>
   <data name="Discuss silicone casting" xml:space="preserve"><value>ปรึกษางานหล่อซิลิโคน</value></data>
   <data name="Low-volume Injection Molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
   <data name="Pneumatic PIMM injection molding machine" xml:space="preserve"><value>เครื่องฉีดพลาสติก PIMM ระบบลม</value></data>

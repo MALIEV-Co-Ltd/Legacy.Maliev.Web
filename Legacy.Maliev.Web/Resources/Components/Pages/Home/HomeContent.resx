@@ -157,7 +157,7 @@
     <value>Manufacturing Services</value>
   </data>
   <data name="Once you're satisfied with our offer. We start the production." xml:space="preserve">
-    <value>Once you're satisfied with our offer. We start the production.</value>
+    <value>Once you're satisfied with our offer, we'll start production.</value>
   </data>
   <data name="Part is produced by our manufacturing team and inspected in all processes" xml:space="preserve">
     <value>Parts are produced by our manufacturing team and inspected throughout all processes</value>
@@ -178,7 +178,7 @@
     <value>We support students from universities completing their projects too.</value>
   </data>
   <data name="You submit your request by contact us directly or using our upload portal. This can be CAD file or plain documents" xml:space="preserve">
-    <value>You can submit your request by contacting us directly or using our upload portal. This can be a CAD file or plain documents</value>
+    <value>You can submit your request by contacting us directly or using our upload portal. These can be CAD files or other documents.</value>
   </data>
   <data name="Your request is checked by our engineer and the quotation offer is generated for you to examine and review" xml:space="preserve">
     <value>Your request is reviewed by our engineers and a quotation is generated for you to examine</value>
@@ -268,7 +268,8 @@
   <data name="Discuss silicone casting" xml:space="preserve"><value>Discuss silicone casting</value></data>
   <data name="Low-volume Injection Molding" xml:space="preserve"><value>Low-volume Injection Molding</value></data>
   <data name="Pneumatic PIMM injection molding machine" xml:space="preserve"><value>Pneumatic PIMM injection molding machine</value></data>
-  <data name="Low-volume molding for up to 1,000 parts on our pneumatic machine, with material and mold reviewed before production." xml:space="preserve"><value>Low-volume molding for up to 1,000 parts on our pneumatic machine, with material and mold reviewed before production.</value></data>
+  <data name="Low-volume molding for up to 1,000 parts on our pneumatic machine, with shot weights up to 50 g and plastics melting at no more than 350 °C. Larger runs: consider buying the PIMM machine from shop.maliev.com." xml:space="preserve"><value>Low-volume molding for up to 1,000 parts on our pneumatic machine, with shot weights up to 50 g and plastics melting at no more than 350 °C. Larger runs: consider buying the PIMM machine from shop.maliev.com.</value></data>
+  <data name="Find the right service" xml:space="preserve"><value>Find the right service</value></data>
   <data name="Discuss injection molding" xml:space="preserve"><value>Discuss injection molding</value></data>
   <data name="Explore all services" xml:space="preserve"><value>Explore all services</value></data>
   <data name="Need help choosing a process?" xml:space="preserve"><value>Need help choosing a process?</value></data>

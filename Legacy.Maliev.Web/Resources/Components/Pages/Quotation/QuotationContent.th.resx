@@ -127,7 +127,7 @@
     <value>ข้อมูลผู้ติดต่อ</value>
   </data>
   <data name="Email" xml:space="preserve">
-    <value>อีเมล์</value>
+    <value>อีเมล</value>
   </data>
   <data name="First name" xml:space="preserve">
     <value>ชื่อ</value>
@@ -160,37 +160,37 @@
     <value>เบอร์โทรศัพท์</value>
   </data>
   <data name="Upload" xml:space="preserve">
-    <value>อัพโหลด</value>
+    <value>อัปโหลด</value>
   </data>
   <data name="We can get in touch with you faster" xml:space="preserve">
-    <value>ทำให้เราสามารถติดต่อคุณได้เร็วยิ่งขึ้น</value>
+    <value>ช่วยให้เราติดต่อคุณได้เร็วขึ้น</value>
   </data>
   <data name="We will get back to you with a quotation shortly." xml:space="preserve">
     <value>เราจะรีบตอบกลับไปหาคุณ พร้อมกับใบเสนอราคา</value>
   </data>
   <data name="We'll never share your email with anyone" xml:space="preserve">
-    <value>เราไม่แชร์และขายอีเมล์ของคุณให้กับใคร</value>
+    <value>เราจะไม่เปิดเผยอีเมลของคุณให้บุคคลอื่น</value>
   </data>
   <data name="You can contact us from here too!" xml:space="preserve">
     <value>คุณสามารถติดต่อเราได้ผ่านช่องทางเหล่านี้เช่นกัน</value>
   </data>
   <data name="If you wish to upload larger file, try" xml:space="preserve">
-    <value>หากคุณต้องการอัพโหลดไฟล์ขนาดใหญ่ ลอง</value>
+    <value>หากคุณต้องการอัปโหลดไฟล์ขนาดใหญ่ ลอง</value>
   </data>
   <data name="or" xml:space="preserve">
     <value>หรือ</value>
   </data>
   <data name="Then send us the links." xml:space="preserve">
-    <value>แล้วส่งลิงค์มาให้เรา</value>
+    <value>จากนั้นส่งลิงก์มาให้เรา</value>
   </data>
   <data name="for a quotation." xml:space="preserve">
     <value>เพื่อขอใบเสนอราคา</value>
   </data>
   <data name="If you are experiencing problem sending quotation. Please contact us directly at" xml:space="preserve">
-    <value>หากลูกค้ามีปัญหาในการส่งแบบยื่นขอใบเสนอราคา กรุณาติดต่อเราโดยตรงที่</value>
+    <value>หากพบปัญหาในการส่งคำขอใบเสนอราคา กรุณาติดต่อเราโดยตรงที่</value>
   </data>
   <data name="The selected files size are too large. Please use external upload services." xml:space="preserve">
-    <value>ไฟล์ที่คุณเลือกมีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ผ่านช่องทางอื่นแล้วส่งลิงค์มาให้เรา</value>
+    <value>ไฟล์ที่คุณเลือกมีขนาดใหญ่เกินไป กรุณาอัปโหลดไฟล์ผ่านช่องทางอื่นแล้วส่งลิงก์มาให้เรา</value>
   </data>
   <data name="You have selected" xml:space="preserve">
     <value>ไฟล์ที่คุณเลือกมีขนาดรวมทั้งหมด</value>

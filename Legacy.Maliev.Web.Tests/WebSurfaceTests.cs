@@ -2342,7 +2342,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "First name", "Last name", "Email", "Password", "Retype Password", "Sign Up", "Passwords do not match.")]
-    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล์", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
+    [InlineData("th", "ชื่อ", "นามสกุล", "อีเมล", "รหัสผ่าน", "ใส่รหัสผ่านอีกครั้ง", "สมัครสมาชิก", "รหัสผ่านทั้งสองช่องไม่ตรงกัน")]
     public async Task Signup_RendersLocalizedStaticSsrFormWithCanonicalAntiBotField(
         string culture,
         string firstNameLabel,
@@ -2630,7 +2630,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "Email", "Password", "Remember me", "Sign in")]
-    [InlineData("th", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
+    [InlineData("th", "อีเมล", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
     public async Task Login_RendersLocalizedStaticSsrFormInsideHardenedSessionBoundary(
         string culture,
         string emailLabel,

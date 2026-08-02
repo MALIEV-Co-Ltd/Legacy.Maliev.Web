@@ -34,7 +34,7 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
 
     [Theory]
     [InlineData("en", "Login | MALIEV", "Email", "Password", "Remember me", "Sign in")]
-    [InlineData("th", "เข้าสู่ระบบ | MALIEV", "อีเมล์", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
+    [InlineData("th", "เข้าสู่ระบบ | MALIEV", "อีเมล", "รหัสผ่าน", "จำข้อมูลไว้", "ล็อคอิน")]
     public async Task LoginGet_RendersLocalizedBlazorStaticSsrWithServerPostBoundary(
         string culture,
         string title,

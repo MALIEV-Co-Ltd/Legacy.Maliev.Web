@@ -160,7 +160,7 @@
     <value>เบอร์โทร</value>
   </data>
   <data name="Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost." xml:space="preserve">
-    <value>อัพโหลดไฟล์ แล้วเลือกว่าคุณต้องการให้เราพิมพ์งานของคุณแบบไหน ระบบจะสามารถประเมินราคางานให้ได้ทันที ไม่ต้องเสียเวลารอให้คนมานั่งประเมินราคางานของคุณอีกต่อไป</value>
+    <value>อัปโหลดไฟล์ แล้วเลือกวิธีพิมพ์งานที่ต้องการ ระบบจะประเมินราคาให้ทันที ไม่ต้องรอเจ้าหน้าที่คำนวณราคา</value>
   </data>
   <data name="You only pay when your order is accepted." xml:space="preserve">
     <value>คุณสามารถชำระค่าพิมพ์ได้ หลังจากที่เราตรวจสอบไฟล์งานคุณเรียบร้อยแล้วเท่านั้น</value>
@@ -211,7 +211,7 @@
     <value>เพื่อขอใบเสนอราคา</value>
   </data>
   <data name="If you are experiencing problem sending quotation. Please contact us directly at" xml:space="preserve">
-    <value>หากลูกค้ามีปัญหาในการส่งแบบยื่นขอใบเสนอราคา กรุณาติดต่อเราโดยตรงที่</value>
+<value>หากพบปัญหาในการส่งคำขอใบเสนอราคา กรุณาติดต่อเราโดยตรงที่</value>
   </data>
   <data name="Shipping cost and tax not included." xml:space="preserve">
     <value>ยังไม่รวมค่าจัดส่งและภาษีมูลค่าเพิ่ม</value>

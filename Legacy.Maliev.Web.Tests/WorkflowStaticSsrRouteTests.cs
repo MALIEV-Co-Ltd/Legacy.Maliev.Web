@@ -120,7 +120,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         "ขั้นตอนงานผลิต | MALIEV",
         "เข้าใจขั้นตอนของ MALIEV ตั้งแต่ตรวจไฟล์และเสนอราคา ไปจนถึงผลิตและส่งมอบ",
         "เกิดอะไรขึ้นหลังขอใบเสนอราคา",
-        "ขั้นตอนโปรเจ็ค",
+        "ขั้นตอนโปรเจกต์",
         "วิศวกรรมตรวจสอบ",
         "ส่งมอบ")]
     public async Task WorkflowRoute_RendersCompleteLocalizedStaticDocument(
