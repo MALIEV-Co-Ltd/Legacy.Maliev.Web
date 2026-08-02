@@ -20,7 +20,22 @@ public sealed record CustomerOrder(
     bool AllowPayment,
     string? TrackingNumber,
     DateTime? CreatedDate,
-    DateTime? ModifiedDate);
+    DateTime? ModifiedDate)
+{
+    public int? EmployeeId { get; init; }
+
+    public int? MaterialId { get; init; }
+
+    public int? SurfaceFinishId { get; init; }
+
+    public int? ColorId { get; init; }
+
+    public int? CurrencyId { get; init; }
+
+    public int? Turnaround { get; init; }
+
+    public bool AllowSocialMedia { get; init; }
+}
 
 public sealed record CustomerOrderProcess(int Id, int CategoryId, string Name);
 

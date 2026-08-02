@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerOrderCatalogClient, CustomerOrderCatalogClient>();
         services.AddScoped<ICustomerOrderSubmissionTransport, CustomerOrderSubmissionTransport>();
         services.AddScoped<ICustomerOrderSubmissionService, CustomerOrderSubmissionService>();
+        services.AddScoped<ICustomerMemberDetailClient, CustomerMemberDetailClient>();
         services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
         services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
         services.AddSingleton<IInstantQuotationFileCapabilityStore, InstantQuotationFileCapabilityStore>();
