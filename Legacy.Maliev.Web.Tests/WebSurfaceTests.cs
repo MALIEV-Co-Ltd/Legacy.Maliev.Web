@@ -44,6 +44,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICustomerOrderCatalogClient>();
                     services.RemoveAll<ICustomerOrderSubmissionService>();
                     services.RemoveAll<ICustomerQuotationClient>();
+                    services.RemoveAll<ICustomerMemberDetailClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -58,6 +59,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<ICustomerOrderCatalogClient, StubCustomerOrderCatalogClient>();
                     services.AddSingleton<ICustomerOrderSubmissionService, StubCustomerOrderSubmissionService>();
                     services.AddSingleton<ICustomerQuotationClient, StubCustomerQuotationClient>();
+                    services.AddSingleton<ICustomerMemberDetailClient, StubCustomerMemberDetailClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
@@ -618,15 +620,17 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files")]
-    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา")]
+    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files", "Quotation PDF", "Awaiting payment")]
+    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา", "ใบเสนอราคา PDF", "รอการชำระเงิน")]
     public async Task MemberQuotationDetail_RendersLocalizedOwnedStaticSsr(
         string culture,
         string heading,
         string status,
         string itemsHeading,
         string ordersHeading,
-        string filesHeading)
+        string filesHeading,
+        string quotationDocumentLabel,
+        string awaitingPaymentLabel)
     {
         await SignInAsync();
         var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
@@ -649,6 +653,15 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("CNC bracket", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
         Assert.Contains("drawing.pdf", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(quotationDocumentLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Mali Ev", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("99 Factory Road", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("INV-81", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(awaitingPaymentLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("123-4-56789-0", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("THB", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("ICT", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://storage.test/quotations/drawing.pdf\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("legacy-private-quotations", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("customers/42/quotations/15", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
@@ -878,7 +891,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("CNC", decodedSource, StringComparison.Ordinal);
         Assert.Contains("Reviewing", decodedSource, StringComparison.Ordinal);
         Assert.Contains("part.step", decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("orders/part.step", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Aluminium 6061", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Metal", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Bead blasted", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Natural", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("ICT", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://storage.test/orders/part.step\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("orders/part.step", decodedSource.Replace("https://storage.test/orders/part.step", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.DoesNotContain("legacy-orders", decodedSource, StringComparison.Ordinal);
         Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
         Assert.Contains("name=\"orderId\" value=\"7\"", source, StringComparison.Ordinal);
@@ -3971,15 +3990,21 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     {
         private static readonly CustomerOrder Order = new(
             7, 42, "Part", "CNC part", 3, 2, 0, 2, 100, 0, 200, 5,
-            null, null, null, true, false, null,
+            new DateTime(2026, 7, 21), new DateTime(2026, 7, 20), null, true, false, null,
             new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc));
+            new DateTime(2026, 7, 16, 4, 30, 0, DateTimeKind.Utc))
+        {
+            MaterialId = 12,
+            SurfaceFinishId = 13,
+            ColorId = 14,
+            CurrencyId = 764,
+        };
 
         private static readonly CustomerOrderDetails Details = new(
             Order,
             new CustomerOrderProcess(3, 1, "CNC"),
-            [new CustomerOrderStatus(9, 7, 2, "Reviewing", null, null, null)],
-            [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", null, null)]);
+            [new CustomerOrderStatus(9, 7, 2, "Reviewing", "Engineering review", new DateTime(2026, 7, 15, 1, 0, 0, DateTimeKind.Utc), null)],
+            [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", new DateTime(2026, 7, 15, 2, 0, 0, DateTimeKind.Utc), null)]);
 
         public OrderInvocation? LastGetInvocation { get; private set; }
 
@@ -4124,7 +4149,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         private static readonly CustomerQuotation Quotation = new(
             15,
             42,
-            null,
+            81,
             30,
             new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
             100,
@@ -4218,4 +4243,39 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     private sealed record QuotationDetailInvocation(int CustomerId, int QuotationId);
 
     private sealed record QuotationDecisionInvocation(int CustomerId, int QuotationId, bool Accepted, Guid OperationId);
+
+    private sealed class StubCustomerMemberDetailClient : ICustomerMemberDetailClient
+    {
+        public Task<CustomerOrderSupplement> GetOrderSupplementAsync(
+            CustomerOrderDetails details,
+            CancellationToken cancellationToken) => Task.FromResult(new CustomerOrderSupplement(
+                "Aluminium 6061",
+                "Metal",
+                "Bead blasted",
+                "Natural",
+                "THB",
+                [new CustomerDownloadFile("part.step", new Uri("https://storage.test/orders/part.step"), new DateTime(2026, 7, 15, 2, 0, 0, DateTimeKind.Utc))],
+                []));
+
+        public Task<CustomerQuotationSupplement> GetQuotationSupplementAsync(
+            int customerId,
+            CustomerQuotationDetails details,
+            CancellationToken cancellationToken) => Task.FromResult(new CustomerQuotationSupplement(
+                "THB",
+                new CustomerContactSummary(
+                    "Mali Ev",
+                    "customer@example.com",
+                    "+66 2 000 0000",
+                    "+66 81 000 0000",
+                    "-",
+                    new CustomerAddressSummary(null, "99 Factory Road", null, "Bangkok", null, "10110", "Thailand"),
+                    new CustomerAddressSummary("MALIEV", "36/1 Moo 3", null, "Nonthaburi", null, "11120", "Thailand")),
+                new CustomerInvoiceSummary(81, "INV-81", "THB", false, 91, null, 107),
+                new Uri("https://storage.test/documents/quotation.pdf"),
+                new Uri("https://storage.test/documents/invoice.pdf"),
+                new Uri("https://storage.test/documents/receipt.pdf"),
+                [new CustomerDownloadFile("drawing.pdf", new Uri("https://storage.test/quotations/drawing.pdf"), new DateTime(2026, 7, 15, 3, 0, 0, DateTimeKind.Utc))],
+                [new CustomerBankAccountSummary("MALIEV Bank", "Head office", "MALITHBK", "123-4-56789-0")],
+                []));
+    }
 }

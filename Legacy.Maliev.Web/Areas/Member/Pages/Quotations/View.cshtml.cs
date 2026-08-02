@@ -11,7 +11,8 @@ namespace Legacy.Maliev.Web.Areas.Member.Pages.Quotations;
 [Authorize]
 public sealed class View(
     IAccountSessionManager sessionManager,
-    ICustomerQuotationClient quotationClient) : PageModel
+    ICustomerQuotationClient quotationClient,
+    ICustomerMemberDetailClient memberDetailClient) : PageModel
 {
     public MemberQuotationDetailDisplayModel DisplayModel { get; private set; } = MemberQuotationDetailDisplayModel.Empty;
 
@@ -43,7 +44,10 @@ public sealed class View(
 
         OperationId = parsedOperationId.ToString("D");
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
-        if (customerId is null) return Challenge();
+        if (customerId is null)
+        {
+            return Challenge();
+        }
 
         var result = await quotationClient.DecideAsync(
             customerId.Value,
@@ -76,72 +80,32 @@ public sealed class View(
 
     private async Task<IActionResult> LoadAsync(int quotationId, CancellationToken cancellationToken)
     {
-        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
-        if (customerId is null) return Challenge();
-
-        var result = await quotationClient.GetAsync(customerId.Value, quotationId, cancellationToken);
-        if (result.Details is null && result.ServiceAvailable && result.Authorized) return NotFound();
-        if (result.Details is null)
+        var loaded = await MemberDetailLoaders.LoadQuotationAsync(
+            HttpContext,
+            sessionManager,
+            quotationClient,
+            memberDetailClient,
+            quotationId,
+            Notification,
+            cancellationToken);
+        if (loaded.IsUnauthorized)
         {
-            ModelState.AddModelError(
-                string.Empty,
-                result.ServiceAvailable
-                    ? "Your quotation could not be loaded."
-                    : "Quotation service is temporarily unavailable.");
+            return Challenge();
         }
 
-        DisplayModel = CreateDisplayModel(
-            result.Details,
-            Notification,
-            ModelState
-                .SelectMany(entry => entry.Value?.Errors ?? [])
-                .Where(error => error.Exception is null && !string.IsNullOrWhiteSpace(error.ErrorMessage))
-                .Select(error => error.ErrorMessage)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray());
+        if (loaded.IsNotFound)
+        {
+            return NotFound();
+        }
+
+        var pageErrors = ModelState
+            .SelectMany(entry => entry.Value?.Errors ?? [])
+            .Where(error => error.Exception is null && !string.IsNullOrWhiteSpace(error.ErrorMessage))
+            .Select(error => error.ErrorMessage);
+        DisplayModel = loaded.Model with
+        {
+            Errors = loaded.Model.Errors.Concat(pageErrors).Distinct(StringComparer.Ordinal).ToArray(),
+        };
         return Page();
     }
-
-    private static MemberQuotationDetailDisplayModel CreateDisplayModel(
-        CustomerQuotationDetails? details,
-        string? notification,
-        IReadOnlyList<string> errors)
-    {
-        if (details is null)
-        {
-            return MemberQuotationDetailDisplayModel.Empty with { Notification = notification, Errors = errors };
-        }
-
-        var quotation = details.Quotation;
-        return new MemberQuotationDetailDisplayModel(
-            quotation.Id,
-            quotation.Accepted,
-            quotation.Period,
-            quotation.ExpirationDate.ToString("yyyy-MM-dd"),
-            quotation.Subtotal.ToString("N2"),
-            quotation.Vat.ToString("N2"),
-            quotation.Total.ToString("N2"),
-            quotation.WithholdingTax?.ToString("N2") ?? "-",
-            quotation.QuotedAmount?.ToString("N2") ?? "-",
-            quotation.CurrencyId,
-            string.IsNullOrWhiteSpace(quotation.ShippedVia) ? "-" : quotation.ShippedVia,
-            string.IsNullOrWhiteSpace(quotation.Fob) ? "-" : quotation.Fob,
-            string.IsNullOrWhiteSpace(quotation.Terms) ? "-" : quotation.Terms,
-            quotation.Comment,
-            quotation.Accepted is null && quotation.ExpirationDate.Date >= DateTime.UtcNow.Date,
-            notification,
-            errors,
-            details.OrderItems.Select(item => new MemberQuotationLineDisplayModel(
-                item.Description ?? "-",
-                item.Quantity?.ToString() ?? "-",
-                item.UnitPrice?.ToString("N2") ?? "-",
-                item.Subtotal?.ToString("N2") ?? "-")).ToArray(),
-            details.Orders.Select(order => new MemberQuotationOrderDisplayModel(
-                order.OrderId,
-                $"/member/orders/view?itemID={order.OrderId}")).ToArray(),
-            details.Files.Select(file => GetDisplayFileName(file.ObjectName)).ToArray());
-    }
-
-    private static string GetDisplayFileName(string objectName) =>
-        objectName.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "-";
 }

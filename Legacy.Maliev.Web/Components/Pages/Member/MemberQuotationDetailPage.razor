@@ -8,6 +8,7 @@
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IAccountSessionManager SessionManager
 @inject ICustomerQuotationClient QuotationClient
+@inject ICustomerMemberDetailClient MemberDetailClient
 @inject IAntiforgery Antiforgery
 @inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IStringLocalizer<MemberQuotationDetailContent> Localizer
@@ -48,7 +49,7 @@
         var tempData = TempDataDictionaryFactory.GetTempData(context);
         var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
         var loaded = await MemberDetailLoaders.LoadQuotationAsync(
-            context, SessionManager, QuotationClient, id, notification, context.RequestAborted);
+            context, SessionManager, QuotationClient, MemberDetailClient, id, notification, context.RequestAborted);
         if (loaded.IsNotFound) context.Response.StatusCode = StatusCodes.Status404NotFound;
         model = loaded.Model;
         tokens = model.CanDecide ? Antiforgery.GetAndStoreTokens(context) : null;

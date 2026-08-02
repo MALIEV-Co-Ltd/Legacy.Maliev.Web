@@ -55,4 +55,43 @@
   <data name="The quotation changed while your decision was being recorded. Please review it and try again." xml:space="preserve"><value>ใบเสนอราคามีการเปลี่ยนแปลงระหว่างบันทึกคำตอบ โปรดตรวจสอบข้อมูลแล้วลองอีกครั้ง</value></data>
   <data name="Your quotation decision could not be recorded." xml:space="preserve"><value>ไม่สามารถบันทึกคำตอบของคุณได้</value></data>
   <data name="Quotation processing is temporarily unavailable." xml:space="preserve"><value>ระบบประมวลผลใบเสนอราคาไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Documents" xml:space="preserve"><value>เอกสาร</value></data>
+  <data name="Quotation PDF" xml:space="preserve"><value>ใบเสนอราคา PDF</value></data>
+  <data name="Invoice PDF" xml:space="preserve"><value>ใบแจ้งหนี้ PDF</value></data>
+  <data name="Receipt PDF" xml:space="preserve"><value>ใบเสร็จรับเงิน PDF</value></data>
+  <data name="Created" xml:space="preserve"><value>สร้างเมื่อ</value></data>
+  <data name="Currency" xml:space="preserve"><value>สกุลเงิน</value></data>
+  <data name="Remark" xml:space="preserve"><value>หมายเหตุ</value></data>
+  <data name="Customer and addresses" xml:space="preserve"><value>ลูกค้าและที่อยู่</value></data>
+  <data name="Customer" xml:space="preserve"><value>ลูกค้า</value></data>
+  <data name="Telephone" xml:space="preserve"><value>โทรศัพท์</value></data>
+  <data name="Mobile" xml:space="preserve"><value>โทรศัพท์มือถือ</value></data>
+  <data name="Fax" xml:space="preserve"><value>โทรสาร</value></data>
+  <data name="Billing address" xml:space="preserve"><value>ที่อยู่ออกใบแจ้งหนี้</value></data>
+  <data name="Shipping address" xml:space="preserve"><value>ที่อยู่จัดส่ง</value></data>
+  <data name="Not provided" xml:space="preserve"><value>ยังไม่ได้ระบุ</value></data>
+  <data name="Customer details are not available." xml:space="preserve"><value>ไม่มีข้อมูลลูกค้า</value></data>
+  <data name="Invoice and payment" xml:space="preserve"><value>ใบแจ้งหนี้และการชำระเงิน</value></data>
+  <data name="No invoice has been issued." xml:space="preserve"><value>ยังไม่มีการออกใบแจ้งหนี้</value></data>
+  <data name="Invoice number" xml:space="preserve"><value>เลขที่ใบแจ้งหนี้</value></data>
+  <data name="Payment status" xml:space="preserve"><value>สถานะการชำระเงิน</value></data>
+  <data name="Paid" xml:space="preserve"><value>ชำระแล้ว</value></data>
+  <data name="Awaiting payment" xml:space="preserve"><value>รอการชำระเงิน</value></data>
+  <data name="Payment date" xml:space="preserve"><value>วันที่ชำระเงิน</value></data>
+  <data name="Outstanding" xml:space="preserve"><value>ยอดค้างชำระ</value></data>
+  <data name="Bank transfer" xml:space="preserve"><value>โอนเงินผ่านธนาคาร</value></data>
+  <data name="Branch" xml:space="preserve"><value>สาขา</value></data>
+  <data name="SWIFT" xml:space="preserve"><value>SWIFT</value></data>
+  <data name="Account number" xml:space="preserve"><value>เลขที่บัญชี</value></data>
+  <data name="Include the invoice number with your transfer" xml:space="preserve"><value>กรุณาระบุเลขที่ใบแจ้งหนี้เมื่อโอนเงิน</value></data>
+  <data name="Name" xml:space="preserve"><value>ชื่อไฟล์</value></data>
+  <data name="Some quotation details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดบางส่วนของใบเสนอราคาไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Customer and address details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดลูกค้าและที่อยู่ไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Country names are temporarily unavailable." xml:space="preserve"><value>ชื่อประเทศไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Currency details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดสกุลเงินไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Invoice details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดใบแจ้งหนี้ไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Invoice document is temporarily unavailable." xml:space="preserve"><value>เอกสารใบแจ้งหนี้ไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Receipt document is temporarily unavailable." xml:space="preserve"><value>เอกสารใบเสร็จรับเงินไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Bank-transfer details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดการโอนเงินผ่านธนาคารไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="One or more files are temporarily unavailable." xml:space="preserve"><value>ไฟล์อย่างน้อยหนึ่งรายการไม่พร้อมใช้งานชั่วคราว</value></data>
 </root>

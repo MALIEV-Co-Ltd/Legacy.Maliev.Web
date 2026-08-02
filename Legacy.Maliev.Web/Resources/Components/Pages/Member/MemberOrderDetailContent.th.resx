@@ -42,4 +42,26 @@
   <data name="Contact MALIEV on WhatsApp" xml:space="preserve"><value>ติดต่อ MALIEV ทาง WhatsApp</value></data>
   <data name="If anything is not right, contact us on LINE so our team can follow up." xml:space="preserve"><value>หากมีสิ่งใดไม่เรียบร้อย โปรดติดต่อเราทาง LINE เพื่อให้ทีมงานติดตามและช่วยเหลือ</value></data>
   <data name="Reviews are optional and are not tied to discounts, rewards, or order support." xml:space="preserve"><value>การรีวิวเป็นความสมัครใจ และไม่ผูกกับส่วนลด รางวัล หรือการรับบริการหลังการขาย</value></data>
+  <data name="Created" xml:space="preserve"><value>สร้างเมื่อ</value></data>
+  <data name="Last updated" xml:space="preserve"><value>แก้ไขล่าสุด</value></data>
+  <data name="Material group" xml:space="preserve"><value>กลุ่มวัสดุ</value></data>
+  <data name="Material" xml:space="preserve"><value>วัสดุ</value></data>
+  <data name="Surface finish" xml:space="preserve"><value>ผิวสำเร็จ</value></data>
+  <data name="Color" xml:space="preserve"><value>สี</value></data>
+  <data name="Unit price" xml:space="preserve"><value>ราคาต่อหน่วย</value></data>
+  <data name="Lead time" xml:space="preserve"><value>ระยะเวลาดำเนินการ</value></data>
+  <data name="days" xml:space="preserve"><value>วัน</value></data>
+  <data name="Not yet available" xml:space="preserve"><value>ยังไม่มีข้อมูล</value></data>
+  <data name="Estimated shipment" xml:space="preserve"><value>วันที่คาดว่าจะจัดส่ง</value></data>
+  <data name="Finished date" xml:space="preserve"><value>วันที่ผลิตเสร็จ</value></data>
+  <data name="Description" xml:space="preserve"><value>รายละเอียด</value></data>
+  <data name="None" xml:space="preserve"><value>ไม่มี</value></data>
+  <data name="Name" xml:space="preserve"><value>ชื่อไฟล์</value></data>
+  <data name="files" xml:space="preserve"><value>ไฟล์</value></data>
+  <data name="Some order details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดบางส่วนของคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Material details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดวัสดุไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Surface-finish details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดผิวสำเร็จไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Color details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดสีไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Currency details are temporarily unavailable." xml:space="preserve"><value>รายละเอียดสกุลเงินไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="One or more files are temporarily unavailable." xml:space="preserve"><value>ไฟล์อย่างน้อยหนึ่งรายการไม่พร้อมใช้งานชั่วคราว</value></data>
 </root>
