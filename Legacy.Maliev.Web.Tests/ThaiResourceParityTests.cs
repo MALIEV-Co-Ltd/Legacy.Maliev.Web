@@ -99,6 +99,25 @@ public sealed class ThaiResourceParityTests
             ["Resources/Components/Pages/Account/EmailConfirmationContent.th.resx"] = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["Email Confirmation | MALIEV"] = "ยืนยันอีเมล | MALIEV"
+            },
+            ["Resources/Components/Pages/Member/MemberWorkspaceShell.th.resx"] = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["Member workspace"] = "พื้นที่สมาชิก",
+                ["Close member menu"] = "ปิดเมนูสมาชิก",
+                ["Member navigation"] = "เมนูสมาชิก",
+                ["Dashboard"] = "แผงควบคุม",
+                ["Overview"] = "ภาพรวม",
+                ["Projects"] = "งานของคุณ",
+                ["Request a quotation"] = "ขอใบเสนอราคา",
+                ["Quotations"] = "ใบเสนอราคา",
+                ["Order history"] = "ประวัติคำสั่งซื้อ",
+                ["Account"] = "บัญชี",
+                ["Account settings"] = "ตั้งค่าบัญชี",
+                ["Profile"] = "ข้อมูลส่วนตัว",
+                ["Addresses"] = "ที่อยู่",
+                ["Change email"] = "เปลี่ยนอีเมล",
+                ["Change password"] = "เปลี่ยนรหัสผ่าน",
+                ["Member menu"] = "เมนูสมาชิก"
             }
         };
 

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Member workspace" xml:space="preserve"><value>พื้นที่สมาชิก</value></data>
+  <data name="Close member menu" xml:space="preserve"><value>ปิดเมนูสมาชิก</value></data>
+  <data name="Member navigation" xml:space="preserve"><value>เมนูสมาชิก</value></data>
+  <data name="Dashboard" xml:space="preserve"><value>แผงควบคุม</value></data>
+  <data name="Overview" xml:space="preserve"><value>ภาพรวม</value></data>
+  <data name="Projects" xml:space="preserve"><value>งานของคุณ</value></data>
+  <data name="Request a quotation" xml:space="preserve"><value>ขอใบเสนอราคา</value></data>
+  <data name="Quotations" xml:space="preserve"><value>ใบเสนอราคา</value></data>
+  <data name="Order history" xml:space="preserve"><value>ประวัติคำสั่งซื้อ</value></data>
+  <data name="Account" xml:space="preserve"><value>บัญชี</value></data>
+  <data name="Account settings" xml:space="preserve"><value>ตั้งค่าบัญชี</value></data>
+  <data name="Profile" xml:space="preserve"><value>ข้อมูลส่วนตัว</value></data>
+  <data name="Addresses" xml:space="preserve"><value>ที่อยู่</value></data>
+  <data name="Change email" xml:space="preserve"><value>เปลี่ยนอีเมล</value></data>
+  <data name="Change password" xml:space="preserve"><value>เปลี่ยนรหัสผ่าน</value></data>
+  <data name="Member menu" xml:space="preserve"><value>เมนูสมาชิก</value></data>
+</root>
