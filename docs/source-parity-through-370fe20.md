@@ -69,7 +69,7 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 | `beecf31` | Migrated | Thin-part DFM and degenerate-boundary corrections. |
 | `ada8404` | Migrated | Web-side customer/order workflow is present; the source Intranet portion remains in the Legacy Intranet lane. |
 | `344c32a` | Migrated | Exact catalog validation and fail-closed fallback. |
-| `b220158` | Migrated | Opaque transactional credential callbacks in `4283bfa`/`3546120`; Auth counterpart `d6143f8`. |
+| `b220158` | Migrated | Opaque transactional credential callbacks in `4283bfa`/`3546120`; Auth main `764e29e` (PR #66). |
 | `1c611bb` | Gate | Web material/color contract is frozen in tests; downstream Legacy material compatibility is a separate service gate. |
 | `8888ce5` | Excluded | Impeccable tooling/settings/critique only. |
 | `bea4a42` | Migrated | Expanded service pages, finishing route, SEO, breadcrumbs, location and pricing in `19b42e1`/`7e604c1`/`b9e2078`. |
@@ -81,7 +81,7 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 | `e62d177` | Migrated | Shared motion system with reduced-motion fail-safe in `29353ba`; source and Node tests. |
 | `b16aa08` | Migrated | Dependency/build-asset refresh; current audit evidence is npm audit with zero vulnerabilities. |
 | `04c9bb0` | Migrated | HLC matcher, preview, quotation prefill and browser tests. |
-| `e25c833` | Migrated | First-login required actions and set-initial-password flow in `3546120`; Auth counterpart `d6143f8`. |
+| `e25c833` | Migrated | First-login required actions and set-initial-password flow in `3546120`; Auth main `764e29e` (PR #66). |
 | `81909e6` | Migrated | Responsive chapter navigation and sticky TOC. |
 | `2fbee81` | Migrated | Finishing selection guidance. |
 | `7055e4e` | Migrated | Matcher diagnostics route only through consent-gated `malievAnalytics`; analytics tests. |
@@ -106,7 +106,7 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 
 ## Remaining release gates
 
-1. Land AuthService commit `d6143f8` before enabling the first-login Web flow outside local review.
+1. AuthService main `764e29e` is landed; retain its 409 required-action and opaque challenge contracts during Aspire review.
 2. Prove Legacy Web KSA/GSA Workload Identity and ADC-backed reCAPTCHA configuration through GitOps.
 3. Validate employee identity callbacks in Legacy Intranet/Auth and material-catalog compatibility in their own Legacy service lanes.
 4. Run the integrated Aspire review gate. Do not deploy Legacy applications to production until the owner explicitly approves it.
