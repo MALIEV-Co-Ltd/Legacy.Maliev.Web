@@ -90,6 +90,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
                 "MemberChangePasswordPage.razor",
+                "MemberCreatePasswordPage.razor",
                 "MemberOrderCreationPage.razor",
                 "MemberOrderDetailPage.razor",
                 "MemberOrderHistoryPage.razor",

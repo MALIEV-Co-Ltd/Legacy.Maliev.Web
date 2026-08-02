@@ -1,4 +1,5 @@
 @inject IStringLocalizer<MemberWorkspaceShell> Localizer
+@inject IHttpContextAccessor HttpContextAccessor
 
 <div class="workspace-page" data-member-workspace>
     <div class="workspace-shell">
@@ -17,7 +18,9 @@
                 <section class="workspace-nav-group" aria-labelledby="member-project-navigation">
                     <p id="member-project-navigation" class="workspace-nav-group__label">@Localizer["Projects"]</p>
                     <ul class="workspace-nav-list">
-                        <li><a class="workspace-nav-link" href="/Quotation"><i class="fas fa-plus-circle" aria-hidden="true"></i><span>@Localizer["Request a quotation"]</span></a></li>
+                        <li><a class="workspace-nav-link" href="/Quotation/CNC-Machining"><i class="fas fa-industry" aria-hidden="true"></i><span>@Localizer["New CNC machining quote"]</span></a></li>
+                        <li><a class="workspace-nav-link" href="/Quotation/3D-Printing"><i class="fas fa-cubes" aria-hidden="true"></i><span>@Localizer["New 3D printing quote"]</span></a></li>
+                        <li><a class="workspace-nav-link" href="/Quotation/3D-Scanning"><i class="fas fa-cube" aria-hidden="true"></i><span>@Localizer["New 3D scanning quote"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/Member/Quotations"><i class="fas fa-file-invoice" aria-hidden="true"></i><span>@Localizer["Quotations"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/Member/Orders/History"><i class="fas fa-history" aria-hidden="true"></i><span>@Localizer["Order history"]</span></a></li>
                     </ul>
@@ -29,7 +32,14 @@
                         <li><a class="workspace-nav-link" href="/Member/Account/Manage/Profile"><i class="fas fa-user-circle" aria-hidden="true"></i><span>@Localizer["Profile"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/Member/Account/Manage/Address"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>@Localizer["Addresses"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/Member/Account/Manage/ChangeEmail"><i class="fas fa-envelope" aria-hidden="true"></i><span>@Localizer["Change email"]</span></a></li>
-                        <li><a class="workspace-nav-link" href="/Member/Account/Manage/ChangePassword"><i class="fas fa-key" aria-hidden="true"></i><span>@Localizer["Change password"]</span></a></li>
+                        @if (HasPassword)
+                        {
+                            <li><a class="workspace-nav-link" href="/Member/Account/Manage/ChangePassword"><i class="fas fa-key" aria-hidden="true"></i><span>@Localizer["Change password"]</span></a></li>
+                        }
+                        else
+                        {
+                            <li><a class="workspace-nav-link" href="/Member/Account/Manage/CreatePassword"><i class="fas fa-user-lock" aria-hidden="true"></i><span>@Localizer["Create password"]</span></a></li>
+                        }
                     </ul>
                 </section>
             </nav>
@@ -49,4 +59,9 @@
 @code {
     [Parameter, EditorRequired]
     public RenderFragment? ChildContent { get; set; }
+
+    private bool HasPassword => !string.Equals(
+        HttpContextAccessor.HttpContext?.User.FindFirst("has_password")?.Value,
+        "false",
+        StringComparison.OrdinalIgnoreCase);
 }

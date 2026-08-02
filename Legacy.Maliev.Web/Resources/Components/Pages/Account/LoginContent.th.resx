@@ -155,4 +155,5 @@
   <data name="Confirm email" xml:space="preserve"><value>ยืนยันอีเมล</value></data>
   <data name="If you did not request this email, you can ignore it." xml:space="preserve"><value>หากคุณไม่ได้ขออีเมลนี้ สามารถละเว้นข้อความนี้ได้</value></data>
   <data name="New to MALIEV?" xml:space="preserve"><value>ยังไม่มีบัญชีกับ MALIEV?</value></data>
+  <data name="Account created. Check your email and follow the link to confirm your address before signing in." xml:space="preserve"><value>สร้างบัญชีเรียบร้อยแล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ</value></data>
 </root>

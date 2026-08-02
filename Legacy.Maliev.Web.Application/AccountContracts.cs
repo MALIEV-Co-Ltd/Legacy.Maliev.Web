@@ -11,7 +11,8 @@ public sealed record CustomerAuthenticationResult(
     CustomerTokenSet? Tokens,
     bool ServiceAvailable,
     int? DatabaseId = null,
-    CustomerLoginRequiredAction? RequiredAction = null);
+    CustomerLoginRequiredAction? RequiredAction = null,
+    bool HasPassword = true);
 
 public sealed record CustomerLoginRequiredAction(string Action, string Token);
 
@@ -32,6 +33,12 @@ public sealed record CustomerCredentialOperationResult(
     bool ServiceAvailable,
     bool Authorized,
     string? Token = null);
+
+public sealed record CustomerPasswordCreationResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized,
+    bool AlreadyExists);
 
 public sealed record CustomerEmailChangeValidationResult(
     bool Valid,
@@ -130,6 +137,11 @@ public interface ICustomerAuthenticationClient
         string currentPassword,
         string newPassword,
         CancellationToken cancellationToken);
+
+    Task<CustomerPasswordCreationResult> CreatePasswordAsync(
+        string accessToken,
+        string newPassword,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 }
 
 public sealed record CustomerProfile(

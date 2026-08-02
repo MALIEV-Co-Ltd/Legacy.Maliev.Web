@@ -3,6 +3,7 @@ using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Account;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -10,6 +11,42 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class SignupPageTests
 {
+    [Fact]
+    public async Task SuccessfulSignupRedirectsToLoginAndUsesCanonicalConfirmationOrigin()
+    {
+        var notification = new RecordingNotificationClient();
+        var model = new Signup(
+            new SuccessfulCustomerClient(),
+            new SuccessfulAuthenticationClient(),
+            notification,
+            new PassingAntiBotVerifier(),
+            Options.Create(new RecaptchaEnterpriseOptions { SiteKey = "test" }),
+            NullLogger<Signup>.Instance)
+        {
+            PageContext = new PageContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    Request = { Scheme = "https", Host = new HostString("attacker.example") },
+                },
+            },
+            FirstName = "Customer",
+            LastName = "Example",
+            Email = "customer@example.com",
+            Password = "correct-password",
+            ConfirmPassword = "correct-password",
+            RecaptchaToken = "valid-token",
+        };
+
+        var result = Assert.IsType<RedirectToPageResult>(await model.OnPostSignUpAsync(default));
+
+        Assert.Equal("/Account/Login", result.PageName);
+        Assert.Equal("customer@example.com", result.RouteValues?["email"]);
+        Assert.Equal(true, result.RouteValues?["accountCreated"]);
+        Assert.Contains("https://www.maliev.com/Account/EmailConfirmation", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task IdentityRegistrationFailure_DeletesPreviouslyCreatedCustomerProfile()
     {
@@ -49,6 +86,45 @@ public sealed class SignupPageTests
         {
             DeletedCustomerId = customerId;
             return Task.FromResult(true);
+        }
+    }
+
+    private sealed class SuccessfulCustomerClient : ICustomerProfileClient
+    {
+        public Task<CustomerProfileResult> CreateAsync(string firstName, string lastName, string email, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerProfileResult(new CustomerProfile(42, firstName, lastName, email), true, true));
+
+        public Task<bool> DeleteAsync(int customerId, CancellationToken cancellationToken) => Task.FromResult(true);
+    }
+
+    private sealed class SuccessfulAuthenticationClient : ICustomerAuthenticationClient
+    {
+        public Task<CustomerIdentityRegistration> RegisterAsync(int databaseId, string email, string password, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerIdentityRegistration(true, "identity-1", databaseId, email));
+
+        public Task<CustomerActionChallenge> RequestEmailConfirmationAsync(string email, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerActionChallenge(true, "opaque-confirmation-token", true, true));
+
+        public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task RevokeAsync(string refreshToken, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(string email, string token, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(string email, string token, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<bool> CompletePasswordResetAsync(string email, string token, string password, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerCredentialOperationResult> ChangeEmailAsync(string accessToken, string currentPassword, string newEmail, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerCredentialOperationResult> ChangePasswordAsync(string accessToken, string currentPassword, string newPassword, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingNotificationClient : INotificationClient
+    {
+        public EmailNotification? Notification { get; private set; }
+
+        public Task<NotificationResult> SendAsync(NotificationChannel channel, EmailNotification notification, CancellationToken cancellationToken)
+        {
+            Notification = notification;
+            return Task.FromResult(new NotificationResult(true, true, true));
         }
     }
 

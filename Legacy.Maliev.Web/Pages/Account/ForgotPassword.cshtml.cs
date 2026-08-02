@@ -5,6 +5,7 @@ using Legacy.Maliev.Web.Components.Pages.Account;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
@@ -58,16 +59,13 @@ public sealed class ForgotPassword(
 
     private async Task<bool> SendResetAsync(string token, CancellationToken cancellationToken)
     {
-        var callback = Url.Page(
-            "/Account/ResetPassword",
-            null,
-            new { email = Email.Trim(), token },
-            Request.Scheme,
-            Request.Host.Value);
-        if (string.IsNullOrWhiteSpace(callback))
-        {
-            return false;
-        }
+        var callback = QueryHelpers.AddQueryString(
+            $"{CanonicalUrlPolicy.CanonicalOrigin}/Account/ResetPassword",
+            new Dictionary<string, string?>
+            {
+                ["email"] = Email.Trim(),
+                ["token"] = token,
+            });
 
         try
         {

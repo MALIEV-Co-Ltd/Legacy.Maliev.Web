@@ -21,7 +21,7 @@ public sealed class ChangePassword(
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024)]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 6)]
+    [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 8)]
     public string NewPassword { get; set; } = string.Empty;
 
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024), Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
@@ -121,7 +121,7 @@ public sealed class ChangePassword(
         {
             nameof(CurrentPassword) when string.IsNullOrWhiteSpace(CurrentPassword) => "Current password is required.",
             nameof(NewPassword) when string.IsNullOrWhiteSpace(NewPassword) => "New password is required.",
-            nameof(NewPassword) => "New password must contain at least 6 characters.",
+            nameof(NewPassword) => "New password must contain at least 8 characters.",
             nameof(ConfirmPassword) when string.IsNullOrWhiteSpace(ConfirmPassword) => "Please confirm the new password.",
             nameof(ConfirmPassword) => "Passwords do not match.",
             "" when error.Exception is null && error.ErrorMessage is

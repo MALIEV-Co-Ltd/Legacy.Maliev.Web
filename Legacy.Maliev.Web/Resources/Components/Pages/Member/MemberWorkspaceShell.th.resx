@@ -37,6 +37,9 @@
   <data name="Overview" xml:space="preserve"><value>ภาพรวม</value></data>
   <data name="Projects" xml:space="preserve"><value>งานของคุณ</value></data>
   <data name="Request a quotation" xml:space="preserve"><value>ขอใบเสนอราคา</value></data>
+  <data name="New CNC machining quote" xml:space="preserve"><value>ขอใบเสนอราคางาน CNC ใหม่</value></data>
+  <data name="New 3D printing quote" xml:space="preserve"><value>ขอใบเสนอราคางานพิมพ์ 3 มิติใหม่</value></data>
+  <data name="New 3D scanning quote" xml:space="preserve"><value>ขอใบเสนอราคางานสแกน 3 มิติใหม่</value></data>
   <data name="Quotations" xml:space="preserve"><value>ใบเสนอราคา</value></data>
   <data name="Order history" xml:space="preserve"><value>ประวัติคำสั่งซื้อ</value></data>
   <data name="Account" xml:space="preserve"><value>บัญชี</value></data>
@@ -45,5 +48,6 @@
   <data name="Addresses" xml:space="preserve"><value>ที่อยู่</value></data>
   <data name="Change email" xml:space="preserve"><value>เปลี่ยนอีเมล</value></data>
   <data name="Change password" xml:space="preserve"><value>เปลี่ยนรหัสผ่าน</value></data>
+  <data name="Create password" xml:space="preserve"><value>สร้างรหัสผ่าน</value></data>
   <data name="Member menu" xml:space="preserve"><value>เมนูสมาชิก</value></data>
 </root>

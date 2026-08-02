@@ -99,6 +99,21 @@ public sealed class LegacyAccountFormSourceParityTests
         Assert.DoesNotContain("+66(0)81-803-0404", contactUs, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CustomerPasswordFormsEnforceTheCurrentEightCharacterMinimum()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var memberChange = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Member", "MemberChangePasswordContent.razor"));
+        var memberCreate = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Member", "MemberCreatePasswordContent.razor"));
+        var initial = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Account", "SetInitialPasswordContent.razor"));
+        var memberChangeHandler = File.ReadAllText(Path.Combine(web, "Areas", "Member", "Pages", "Account", "Manage", "ChangePassword.cshtml.cs"));
+        var memberCreateHandler = File.ReadAllText(Path.Combine(web, "Areas", "Member", "Pages", "Account", "Manage", "CreatePassword.cshtml.cs"));
+        var initialHandler = File.ReadAllText(Path.Combine(web, "Pages", "Account", "SetInitialPassword.cshtml.cs"));
+
+        Assert.All(new[] { memberChange, memberCreate, initial }, source => Assert.Contains("minlength=\"8\"", source, StringComparison.Ordinal));
+        Assert.All(new[] { memberChangeHandler, memberCreateHandler, initialHandler }, source => Assert.Contains("MinimumLength = 8", source, StringComparison.Ordinal));
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

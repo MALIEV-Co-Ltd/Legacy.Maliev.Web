@@ -6,6 +6,7 @@ using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Pages.Account;
@@ -121,26 +122,32 @@ public sealed class Signup(
             cancellationToken);
         var sent = challenge.Token is not null
             && await SendConfirmationAsync(challenge.Token, cancellationToken);
-        Notification = sent
-            ? "Account created. Please check your email to confirm your address."
-            : "Account created, but confirmation delivery is unavailable. Please contact info@maliev.com.";
-        return RedirectToPage();
+        if (!sent)
+        {
+            Notification = "Account created, but confirmation delivery is unavailable. Please contact info@maliev.com.";
+            return RedirectToPage();
+        }
+
+        return RedirectToPage(
+            "/Account/Login",
+            new
+            {
+                email = Email.Trim(),
+                accountCreated = true,
+            });
     }
 
     private async Task<bool> SendConfirmationAsync(
         string token,
         CancellationToken cancellationToken)
     {
-        var callback = Url.Page(
-            "/Account/EmailConfirmation",
-            null,
-            new { email = Email.Trim(), token },
-            Request.Scheme,
-            Request.Host.Value);
-        if (string.IsNullOrWhiteSpace(callback))
-        {
-            return false;
-        }
+        var callback = QueryHelpers.AddQueryString(
+            $"{CanonicalUrlPolicy.CanonicalOrigin}/Account/EmailConfirmation",
+            new Dictionary<string, string?>
+            {
+                ["email"] = Email.Trim(),
+                ["token"] = token,
+            });
 
         var name = WebUtility.HtmlEncode($"{FirstName.Trim()} {LastName.Trim()}");
         var safeCallback = WebUtility.HtmlEncode(callback);

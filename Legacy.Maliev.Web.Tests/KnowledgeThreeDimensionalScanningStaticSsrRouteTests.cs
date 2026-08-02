@@ -84,6 +84,7 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
                 "MemberChangePasswordPage.razor",
+                "MemberCreatePasswordPage.razor",
                 "MemberOrderCreationPage.razor",
                 "MemberOrderDetailPage.razor",
                 "MemberOrderHistoryPage.razor",
