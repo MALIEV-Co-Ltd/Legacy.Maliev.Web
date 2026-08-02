@@ -251,15 +251,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
-    public async Task AuthenticatedCreatePasswordCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery()
+    public async Task AuthenticatedCreatePasswordRoute_RendersSecureFormWithoutEchoingUntrustedQuery()
     {
         await SignInAsync();
 
         using var response = await client.GetAsync("/member/account/manage/createpassword?untrusted=discard");
 
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal("/Member/Account/Manage/ChangePassword", response.Headers.Location?.OriginalString);
-        Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
+        var source = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("name=\"Password\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"ConfirmPassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("untrusted", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -688,7 +691,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var form = await GetAntiforgeryFormAsync("/member/quotations/view?id=15&culture=en");
         form["quotationId"] = "15";
         form["accepted"] = accepted.ToString();
-        form["operationId"] = "11fdb79a-3548-4c24-8dbc-1b457c3bc04e";
+        form["operationId"] = Legacy.Maliev.Web.Areas.Member.Pages.Quotations.View
+            .CreateDecisionOperationId(15)
+            .ToString("D");
         using var response = await client.PostAsync(
             "/member/quotations/view?handler=Decision",
             new FormUrlEncodedContent(form));
@@ -707,6 +712,27 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("\"transaction_id\":\"quotation-15\"", source, StringComparison.Ordinal);
         Assert.Contains($"\"decision\":\"{decision}\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("customer_id", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MemberQuotationDecision_ReloadKeepsStableInvoiceOperationIdentity()
+    {
+        await SignInAsync();
+
+        using var first = await client.GetAsync("/member/quotations/view?id=15&culture=en");
+        using var second = await client.GetAsync("/member/quotations/view?id=15&culture=en");
+        var firstSource = await first.Content.ReadAsStringAsync();
+        var secondSource = await second.Content.ReadAsStringAsync();
+
+        static string OperationId(string source) => Regex.Match(
+            source,
+            "name=\"operationId\" value=\"(?<value>[0-9a-f-]+)\"",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Groups["value"].Value;
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.NotEmpty(OperationId(firstSource));
+        Assert.Equal(OperationId(firstSource), OperationId(secondSource));
     }
 
     [Fact]
@@ -1311,10 +1337,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("name=\"FirstName\"", profile, StringComparison.Ordinal);
         Assert.Contains("customer@example.com", profile, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"Email\"", profile, StringComparison.Ordinal);
-        Assert.Equal(HttpStatusCode.Redirect, createPassword.StatusCode);
-        Assert.Equal(
-            "/Member/Account/Manage/ChangePassword",
-            createPassword.Headers.Location?.OriginalString);
+        var createPasswordSource = await createPassword.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, createPassword.StatusCode);
+        Assert.Contains("name=\"Password\"", createPasswordSource, StringComparison.Ordinal);
+        Assert.Contains("name=\"ConfirmPassword\"", createPasswordSource, StringComparison.Ordinal);
+        Assert.Contains("__RequestVerificationToken", createPasswordSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", createPasswordSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PasswordlessMemberNavigationOffersCreatePasswordInsteadOfChangePassword()
+    {
+        await SignInAsync("passwordless-federated-session");
+
+        var source = await client.GetStringAsync("/member?culture=en");
+
+        Assert.Contains("/Member/Account/Manage/CreatePassword", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/Member/Account/Manage/ChangePassword", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -3688,11 +3727,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         return JsonDocument.Parse(payload.Groups[1].Value);
     }
 
-    private async Task SignInAsync()
+    private async Task SignInAsync(string password = "correct-password")
     {
         var form = await GetAntiforgeryFormAsync("/account/login");
         form["Email"] = "customer@example.com";
-        form["Password"] = "correct-password";
+        form["Password"] = password;
         form["RememberMe"] = "false";
         using var response = await client.PostAsync(
             "/account/login?handler=Login",
@@ -3735,6 +3774,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     true,
                     null,
                     new CustomerLoginRequiredAction("confirm_email", "opaque-recovery-token-12345678901234567890")),
+                "passwordless-federated-session" => new CustomerAuthenticationResult(
+                    new CustomerTokenSet(
+                        "sensitive-access-token",
+                        "sensitive-refresh-token",
+                        "Bearer",
+                        900,
+                        DateTimeOffset.UtcNow.AddDays(1)),
+                    true,
+                    42,
+                    HasPassword: false),
                 _ => new CustomerAuthenticationResult(
                     new CustomerTokenSet(
                         "sensitive-access-token",
