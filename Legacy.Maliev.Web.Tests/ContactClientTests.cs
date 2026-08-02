@@ -82,6 +82,32 @@ public sealed class ContactClientTests
         Assert.Empty(handler.Requests);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.OK, "{\"id\":81}", false)]
+    [InlineData(HttpStatusCode.Created, "{\"id\":0}", false)]
+    [InlineData(HttpStatusCode.Created, "not-json", false)]
+    [InlineData(HttpStatusCode.BadRequest, "{\"title\":\"invalid\"}", true)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "{\"title\":\"down\"}", false)]
+    public async Task Submit_UnexpectedResponseFailsClosed(
+        HttpStatusCode statusCode,
+        string body,
+        bool serviceAvailable)
+    {
+        var handler = new RecordingHandler(_ => JsonResponse(body, statusCode));
+        var client = new ContactClient(
+            new NamedHttpClientFactory("contacts", new HttpClient(handler) { BaseAddress = new Uri("http://contacts/") }),
+            new StubServiceAccessTokenProvider("service-token"),
+            NullLogger<ContactClient>.Instance);
+
+        var result = await client.SubmitAsync(
+            new ContactSubmission("Mali", "Ev", null, "info@example.com", null, "Thailand", "Hello"),
+            CancellationToken.None);
+
+        Assert.Null(result.ReferenceNumber);
+        Assert.Equal(serviceAvailable, result.ServiceAvailable);
+        Assert.True(result.Authorized);
+    }
+
     private static HttpResponseMessage JsonResponse(string json, HttpStatusCode statusCode = HttpStatusCode.OK) =>
         new(statusCode)
         {

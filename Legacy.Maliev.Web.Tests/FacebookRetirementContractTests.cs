@@ -36,6 +36,7 @@ public sealed class FacebookRetirementContractTests
         {
             [Path.Combine("Legacy.Maliev.Web", "Components", "Analytics", "PublicContactChannelAnalytics.razor")] = "facebook_messenger",
             [Path.Combine("Legacy.Maliev.Web", "Components", "Layout", "SocialLinks.razor")] = "fa-facebook-messenger",
+            [Path.Combine("Legacy.Maliev.Web", "Components", "Pages", "Contact", "ContactPage.razor")] = "fa-facebook-messenger",
         };
 
         var violations = productionRoots

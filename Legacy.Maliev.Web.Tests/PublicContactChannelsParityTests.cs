@@ -22,6 +22,8 @@ public sealed class PublicContactChannelsParityTests
         Assert.Contains("aria-label=\"@Localizer[\"Chat channels\"]\"", contact, StringComparison.Ordinal);
         Assert.Contains("data-contact-placement=\"contact_whatsapp\"", contact, StringComparison.Ordinal);
         Assert.Contains("data-contact-placement=\"contact_messenger\"", contact, StringComparison.Ordinal);
+        Assert.Contains("fab fa-facebook-messenger", contact, StringComparison.Ordinal);
+        Assert.DoesNotContain("fas fa-comment-dots", contact, StringComparison.Ordinal);
         Assert.Contains("data-contact-placement=\"service_location_whatsapp\"", serviceLocation, StringComparison.Ordinal);
         Assert.Contains("Chat on WhatsApp", serviceLocation, StringComparison.Ordinal);
     }
