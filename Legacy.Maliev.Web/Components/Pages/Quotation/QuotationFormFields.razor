@@ -129,7 +129,7 @@
             </label>
             <input type="file" class="inquiry-upload__input" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files data-remove-file-label='@Localizer["Remove"]' />
             <ul class="inquiry-upload__file-list" data-upload-file-list aria-live="polite" hidden></ul>
-            <div id="quotation-files-help" class="form-text">@Localizer["Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage."]</div>
+            <div id="quotation-files-help" class="form-text">@Localizer["Upload multiple files up to 100 MB combined. Every upload is malware-scanned before storage."]</div>
             <span id="Files-error" class="text-danger @(HasError("Files") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Files")</span>
         </div>
             <p class="form-text mt-3">

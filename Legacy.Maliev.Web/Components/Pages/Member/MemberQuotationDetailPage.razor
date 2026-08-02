@@ -39,13 +39,16 @@
 @code {
     private MemberQuotationDetailDisplayModel model = MemberQuotationDetailDisplayModel.Empty;
     private AntiforgeryTokenSet? tokens;
-    private string operationId = Guid.NewGuid().ToString("D");
+    private string operationId = string.Empty;
     [SupplyParameterFromQuery(Name = "id")] public string? Id { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
         var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
         var id = int.TryParse(Id, out var parsed) ? parsed : 0;
+        operationId = Legacy.Maliev.Web.Areas.Member.Pages.Quotations.View
+            .CreateDecisionOperationId(id)
+            .ToString("D");
         var tempData = TempDataDictionaryFactory.GetTempData(context);
         var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
         var loaded = await MemberDetailLoaders.LoadQuotationAsync(

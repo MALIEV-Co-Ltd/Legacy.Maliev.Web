@@ -23,7 +23,6 @@ public sealed class Index(
     ILogger<Index> logger) : PageModel
 {
     private const long MaximumUploadBytes = 100L * 1024L * 1024L;
-    private const int MaximumFileCount = 10;
     private const string RecaptchaAction = "submit";
 
     [BindProperty]
@@ -354,11 +353,6 @@ public sealed class Index(
         if (SubmissionId == Guid.Empty)
         {
             ModelState.AddModelError(nameof(SubmissionId), "This quotation form has expired. Please reload it.");
-        }
-
-        if (Files.Count > MaximumFileCount)
-        {
-            ModelState.AddModelError(nameof(Files), $"Upload no more than {MaximumFileCount} files.");
         }
 
         if (Files.Any(file => file.Length <= 0))

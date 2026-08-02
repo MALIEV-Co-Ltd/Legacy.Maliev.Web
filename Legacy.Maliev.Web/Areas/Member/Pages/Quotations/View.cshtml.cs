@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
@@ -16,7 +18,7 @@ public sealed class View(
 {
     public MemberQuotationDetailDisplayModel DisplayModel { get; private set; } = MemberQuotationDetailDisplayModel.Empty;
 
-    public string OperationId { get; private set; } = Guid.NewGuid().ToString("D");
+    public string OperationId { get; private set; } = string.Empty;
 
     [TempData]
     public string? Notification { get; set; }
@@ -42,7 +44,13 @@ public sealed class View(
             return BadRequest();
         }
 
-        OperationId = parsedOperationId.ToString("D");
+        var expectedOperationId = CreateDecisionOperationId(quotationId);
+        if (parsedOperationId != expectedOperationId)
+        {
+            return BadRequest();
+        }
+
+        OperationId = expectedOperationId.ToString("D");
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
         if (customerId is null)
         {
@@ -80,6 +88,7 @@ public sealed class View(
 
     private async Task<IActionResult> LoadAsync(int quotationId, CancellationToken cancellationToken)
     {
+        OperationId = CreateDecisionOperationId(quotationId).ToString("D");
         var loaded = await MemberDetailLoaders.LoadQuotationAsync(
             HttpContext,
             sessionManager,
@@ -107,5 +116,12 @@ public sealed class View(
             Errors = loaded.Model.Errors.Concat(pageErrors).Distinct(StringComparer.Ordinal).ToArray(),
         };
         return Page();
+    }
+
+    internal static Guid CreateDecisionOperationId(int quotationId)
+    {
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"legacy-web-customer-quotation-decision:{quotationId}"));
+        return new Guid(digest.AsSpan(0, 16));
     }
 }

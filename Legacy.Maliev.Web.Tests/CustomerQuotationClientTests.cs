@@ -102,6 +102,51 @@ public sealed class CustomerQuotationClientTests
     }
 
     [Fact]
+    public async Task Accept_RejectsAccountingPreviewForAnotherCustomerBeforeInvoiceCreation()
+    {
+        var quotationHandler = new RecordingHandler(_ => Json(HttpStatusCode.OK, OwnedQuotationJson));
+        var accountingHandler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            InvoicePreviewJson.Replace("\"customerId\":42", "\"customerId\":99", StringComparison.Ordinal)));
+        var client = CreateClient(quotationHandler, accountingHandler);
+
+        var result = await client.DecideAsync(42, 9, true, Guid.NewGuid(), CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Single(accountingHandler.Requests);
+        Assert.Equal(HttpMethod.Get, accountingHandler.Requests[0].Method);
+        Assert.Single(quotationHandler.Requests);
+    }
+
+    [Fact]
+    public async Task Accept_RetryAfterDecisionFailureReusesInvoiceOperationIdentity()
+    {
+        var decisionCalls = 0;
+        var quotationHandler = new RecordingHandler(request => request.Method == HttpMethod.Get
+            ? Json(HttpStatusCode.OK, OwnedQuotationJson)
+            : ++decisionCalls == 1
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                : Json(HttpStatusCode.OK, "{\"status\":0}"));
+        var accountingHandler = new RecordingHandler(request => request.Method == HttpMethod.Get
+            ? Json(HttpStatusCode.OK, InvoicePreviewJson)
+            : Json(HttpStatusCode.OK, "{\"invoiceId\":23}"));
+        var operationId = Guid.Parse("11fdb79a-3548-4c24-8dbc-1b457c3bc04e");
+        var client = CreateClient(quotationHandler, accountingHandler);
+
+        var first = await client.DecideAsync(42, 9, true, operationId, CancellationToken.None);
+        var retry = await client.DecideAsync(42, 9, true, operationId, CancellationToken.None);
+
+        Assert.False(first.Succeeded);
+        Assert.True(retry.Succeeded);
+        Assert.Equal(2, accountingHandler.Requests.Count(request => request.Method == HttpMethod.Post));
+        Assert.All(
+            accountingHandler.Requests.Where(request => request.Method == HttpMethod.Post),
+            request => Assert.Equal(operationId.ToString("D"), request.IdempotencyKey));
+    }
+
+    [Fact]
     public async Task Decline_VerifiesOwnershipWithoutCreatingInvoice()
     {
         var quotationHandler = new RecordingHandler(request => request.Method == HttpMethod.Get

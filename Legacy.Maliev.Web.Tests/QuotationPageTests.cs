@@ -84,6 +84,23 @@ public sealed class QuotationPageTests
     }
 
     [Fact]
+    public async Task Post_MoreThanTenFilesWithinAggregateLimitAreAccepted()
+    {
+        var quotation = new RecordingQuotationClient(new QuotationRequestResult(715, true, true));
+        var files = new RecordingFileClient(new QuotationFileResult(true, true, true, false));
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true));
+        page.Files = Enumerable.Range(1, 11)
+            .Select(index => FormFile($"drawing-{index}.step", "application/step", "STEP"))
+            .ToArray();
+
+        var result = await page.OnPostSubmitRequestAsync(CancellationToken.None);
+
+        Assert.IsType<RedirectToPageResult>(result);
+        Assert.Equal(1, quotation.CallCount);
+        Assert.Equal(11, files.UploadCount);
+    }
+
+    [Fact]
     public async Task Post_PersistedRequestWithUploadFailureRedirectsWithReferenceAndNoResubmitMessage()
     {
         var submissionId = Guid.Parse("11111111-2222-3333-4444-555555555555");
@@ -214,6 +231,7 @@ public sealed class QuotationPageTests
         QuotationFileResult? result = null) : IQuotationFileClient
     {
         public int? RequestId { get; private set; }
+        public int UploadCount { get; private set; }
 
         public Task<QuotationFileResult> UploadAndLinkAsync(
             int requestId,
@@ -222,6 +240,7 @@ public sealed class QuotationPageTests
             CancellationToken cancellationToken)
         {
             RequestId = requestId;
+            UploadCount = files.Count;
             return Task.FromResult(result ?? new QuotationFileResult(true, true, true, false));
         }
     }
