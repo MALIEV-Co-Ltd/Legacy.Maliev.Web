@@ -133,8 +133,9 @@
                 event[key] = fields[key];
             });
 
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push(event);
+            if (window.malievAnalytics && typeof window.malievAnalytics.emit === 'function') {
+                window.malievAnalytics.emit(event);
+            }
         }
 
         function ensureFinderStarted() {

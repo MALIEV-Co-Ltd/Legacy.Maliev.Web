@@ -48,6 +48,20 @@ public sealed class AnalyticsSurfaceContractTests
             "app",
             "js",
             "app.js"));
+        var diagnosticScripts = new[]
+        {
+            "finish-color-matcher.js",
+            "material-comparison.js",
+            "service-finder.js",
+            "inquiry-pages.js",
+        }.Select(file => File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            file))).ToArray();
 
         Assert.Contains("pendingEvents", google, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.emit", google, StringComparison.Ordinal);
@@ -75,6 +89,11 @@ public sealed class AnalyticsSurfaceContractTests
         Assert.Contains("event.preventDefault()", applicationScript, StringComparison.Ordinal);
         Assert.Contains("window.setTimeout", applicationScript, StringComparison.Ordinal);
         Assert.Contains("form.submit()", applicationScript, StringComparison.Ordinal);
+        Assert.All(diagnosticScripts, source =>
+        {
+            Assert.Contains("window.malievAnalytics.emit", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("window.dataLayer.push", source, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

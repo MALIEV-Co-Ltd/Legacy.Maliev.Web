@@ -46,8 +46,9 @@
     const culture = root.dataset.culture || 'en';
     const numberFormat = new Intl.NumberFormat(culture, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
     const analytics = core.createDiagnosticTracker(culture, (event) => {
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push(event);
+        if (window.malievAnalytics && typeof window.malievAnalytics.emit === 'function') {
+            window.malievAnalytics.emit(event);
+        }
     });
     let selectedReference = null;
     let activeResults = [];
