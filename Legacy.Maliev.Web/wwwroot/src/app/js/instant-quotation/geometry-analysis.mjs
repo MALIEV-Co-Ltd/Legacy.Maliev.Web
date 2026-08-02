@@ -7,6 +7,8 @@ export const geometryAnalysisLimits = Object.freeze({
   maximumDimensionMm: 350,
 });
 
+const thicknessEdgeTrimFraction = 0.05;
+
 /**
  * Reproduces the legacy production mesh analysis over upload-derived geometry.
  * The result is deterministic Web-pricing input after the Web BFF binds it to
@@ -299,8 +301,17 @@ function minimumThickness(profiles, dimensionXmm, dimensionYmm, dimensionZmm) {
     dimensionYmm || Infinity,
     dimensionZmm || Infinity);
   const finiteBoundingThickness = Number.isFinite(boundingThickness) ? boundingThickness : 0;
-  if (profiles) {
-    for (let index = 0; index < profiles.area.length; index += 1) {
+  if (profiles && profiles.area.length === profiles.perimeter.length) {
+    const sampleCount = profiles.area.length;
+    const trimCount = Math.max(1, Math.ceil(sampleCount * thicknessEdgeTrimFraction));
+    let firstSample = trimCount;
+    let lastSample = sampleCount - trimCount;
+    if (firstSample >= lastSample) {
+      firstSample = 0;
+      lastSample = sampleCount;
+    }
+
+    for (let index = firstSample; index < lastSample; index += 1) {
       if (profiles.perimeter[index] > 1e-6 && profiles.area[index] > 0) {
         const thickness = (2 * profiles.area[index]) / profiles.perimeter[index];
         minimum = minimum === null ? thickness : Math.min(minimum, thickness);
