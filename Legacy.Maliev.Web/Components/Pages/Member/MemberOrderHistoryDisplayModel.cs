@@ -6,10 +6,16 @@ public sealed record MemberOrderHistoryDisplayModel(
     int PageSize,
     IReadOnlyList<string> Errors,
     IReadOnlyList<MemberOrderHistoryItemDisplayModel> Orders,
+    int PageIndex,
+    int TotalPages,
+    int TotalRecords,
+    IReadOnlyList<MemberPageLinkDisplayModel> PageLinks,
+    string? FirstHref,
     string? PreviousHref,
-    string? NextHref)
+    string? NextHref,
+    string? LastHref)
 {
-    public static MemberOrderHistoryDisplayModel Empty { get; } = new(null, null, 25, [], [], null, null);
+    public static MemberOrderHistoryDisplayModel Empty { get; } = new(null, null, 25, [], [], 1, 0, 0, [], null, null, null, null);
 }
 
 public sealed record MemberOrderHistoryItemDisplayModel(
@@ -19,3 +25,5 @@ public sealed record MemberOrderHistoryItemDisplayModel(
     int Quantity,
     string Subtotal,
     string CreatedDate);
+
+public sealed record MemberPageLinkDisplayModel(int Number, string Href, bool Current);

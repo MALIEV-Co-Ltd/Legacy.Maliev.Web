@@ -404,7 +404,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         quotationClient.ResetInvocation();
 
         using var response = await client.GetAsync(
-            $"/member/quotations?culture={culture}&index=2&size=10&sort=QuotationCreatedDate_Ascending&search=CNC");
+            $"/member/quotations?culture={culture}&index=2&size=25&sort=QuotationCreatedDate_Ascending&search=CNC");
         var source = await response.Content.ReadAsStringAsync();
         var decodedSource = WebUtility.HtmlDecode(source);
 
@@ -419,11 +419,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{nextLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"sort\" value=\"QuotationCreatedDate_Ascending\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"QuotationCreatedDate_Ascending\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"25\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"data-table data-responsive\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-record-count=\"1\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"page\">2</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/quotations?index=1&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/quotations?index=3&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=1&amp;size=25&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=3&amp;size=25&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -433,7 +438,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal("QuotationCreatedDate_Ascending", invocation.Sort);
         Assert.Equal("CNC", invocation.Search);
         Assert.Equal(2, invocation.PageIndex);
-        Assert.Equal(10, invocation.PageSize);
+        Assert.Equal(25, invocation.PageSize);
     }
 
     [Fact]
@@ -623,7 +628,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         orderClient.ResetInvocations();
 
         using var response = await client.GetAsync(
-            $"/member/orders/history?culture={culture}&index=2&size=10&sort=OrderCreatedDate_Ascending&search=CNC");
+            $"/member/orders/history?culture={culture}&index=2&size=25&sort=OrderCreatedDate_Ascending&search=CNC");
         var source = await response.Content.ReadAsStringAsync();
         var decodedSource = WebUtility.HtmlDecode(source);
 
@@ -638,11 +643,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("Part", decodedSource, StringComparison.Ordinal);
         Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"sort\" value=\"OrderCreatedDate_Ascending\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"OrderCreatedDate_Ascending\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"25\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"data-table data-responsive\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-record-count=\"1\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"page\">2</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/history?index=1&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/history?index=3&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=1&amp;size=25&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=3&amp;size=25&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -652,7 +662,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal("OrderCreatedDate_Ascending", invocation.Sort);
         Assert.Equal("CNC", invocation.Search);
         Assert.Equal(2, invocation.PageIndex);
-        Assert.Equal(10, invocation.PageSize);
+        Assert.Equal(25, invocation.PageSize);
     }
 
     [Theory]
