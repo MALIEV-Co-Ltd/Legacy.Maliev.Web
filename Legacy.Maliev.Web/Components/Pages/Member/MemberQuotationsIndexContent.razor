@@ -71,8 +71,8 @@
                     <td data-title="@Localizer["Status"]">@status</td>
                     <td data-title="@Localizer["Quoted amount"]">@quotation.QuotedAmount</td>
                     <td data-title="@Localizer["Currency ID"]">@quotation.CurrencyId</td>
-                    <td data-title="@Localizer["Expiration date"]">@quotation.ExpirationDate</td>
-                    <td data-title="@Localizer["Created"]">@quotation.CreatedDate</td>
+                    <td data-title="@Localizer["Expiration date"]"><time class="convert-to-localdate" datetime="@quotation.ExpirationDate">@quotation.ExpirationDate</time></td>
+                    <td data-title="@Localizer["Created"]">@if (quotation.CreatedDate == "-") { <span>-</span> } else { <time class="convert-to-localdate" datetime="@quotation.CreatedDate">@quotation.CreatedDate</time> }</td>
                     <td data-title="@Localizer["Action"]"><a href="/member/quotations/view?id=@quotation.Id">@Localizer["View quotation"]</a></td>
                 </tr>
             }
