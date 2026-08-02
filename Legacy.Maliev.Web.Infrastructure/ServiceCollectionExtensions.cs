@@ -68,6 +68,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerProfileClient, CustomerProfileClient>();
         services.AddScoped<ICustomerAccountClient, CustomerAccountClient>();
         services.AddScoped<ICustomerOrderClient, CustomerOrderClient>();
+        services.AddScoped<ICustomerOrderCatalogClient, CustomerOrderCatalogClient>();
+        services.AddScoped<ICustomerOrderSubmissionTransport, CustomerOrderSubmissionTransport>();
+        services.AddScoped<ICustomerOrderSubmissionService, CustomerOrderSubmissionService>();
         services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
         services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
         services.AddSingleton<IInstantQuotationFileCapabilityStore, InstantQuotationFileCapabilityStore>();
