@@ -451,6 +451,7 @@ app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.UseStandardMiddleware();
 app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
 app.UseExceptionHandler("/Error");
+app.UseMiddleware<ErrorIncidentMiddleware>();
 app.UseWhen(
     static context => !context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase),
     branch => branch.UseStatusCodePagesWithReExecute("/Error", "?code={0}"));

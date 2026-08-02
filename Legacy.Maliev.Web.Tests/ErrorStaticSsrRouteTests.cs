@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -38,8 +39,8 @@ public sealed class ErrorStaticSsrRouteTests : IClassFixture<WebApplicationFacto
     [Theory]
     [InlineData("en", 404, "Error | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.")]
     [InlineData("th", 404, "ข้อผิดพลาด | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง")]
-    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please try again. If the problem continues, contact support and include the request ID below.")]
-    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดลองอีกครั้ง หากยังพบปัญหา โปรดติดต่อฝ่ายช่วยเหลือพร้อมแจ้งรหัสคำขอด้านล่าง")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrAndPreservesResponseContract(
         string culture,
         int statusCode,
@@ -61,6 +62,8 @@ public sealed class ErrorStaticSsrRouteTests : IClassFixture<WebApplicationFacto
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        var incidentId = Assert.Single(response.Headers.GetValues("X-Incident-Id"));
+        Assert.Matches("^[a-f0-9]{32}$", incidentId);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);
@@ -73,6 +76,14 @@ public sealed class ErrorStaticSsrRouteTests : IClassFixture<WebApplicationFacto
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
+
+        if (statusCode == StatusCodes.Status500InternalServerError)
+        {
+            Assert.Contains($"<code id=\"incident-id\">{incidentId}</code>", source, StringComparison.Ordinal);
+            Assert.Contains("id=\"incident-occurred-at\"", source, StringComparison.Ordinal);
+            Assert.Contains("UTC</time>", source, StringComparison.Ordinal);
+            Assert.Contains("mailto:support@maliev.com", source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
