@@ -3,7 +3,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 RUN apk add --no-cache git \
     && git clone --filter=blob:none --no-checkout https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults.git /dependencies/Legacy.Maliev.ServiceDefaults \
-    && git -C /dependencies/Legacy.Maliev.ServiceDefaults checkout bcab875a7f703d1d9c2d535479e93653720eb62d
+    && git -C /dependencies/Legacy.Maliev.ServiceDefaults checkout 1065c071ae0aca17fa56d88c1e13ae51bae074a4 \
+    && git clone --filter=blob:none --no-checkout https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts.git /dependencies/Legacy.Maliev.CompatibilityContracts \
+    && git -C /dependencies/Legacy.Maliev.CompatibilityContracts checkout 95c62eb6209411f5aada443b315447a2f76ca0cd
 COPY nuget.config Directory.Build.props ./
 COPY Legacy.Maliev.Web.Application/Legacy.Maliev.Web.Application.csproj Legacy.Maliev.Web.Application/
 COPY Legacy.Maliev.Web.Infrastructure/Legacy.Maliev.Web.Infrastructure.csproj Legacy.Maliev.Web.Infrastructure/

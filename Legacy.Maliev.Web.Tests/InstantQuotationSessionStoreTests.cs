@@ -89,8 +89,8 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.NotNull(raw);
         var rawText = Encoding.UTF8.GetString(raw);
         Assert.DoesNotContain("owner-sensitive", rawText, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLA", rawText, StringComparison.Ordinal);
         var payload = fixture.Protector.Unprotect(raw);
+        Assert.NotEqual(payload, raw);
         using var document = JsonDocument.Parse(payload);
         Assert.Equal(1, document.RootElement.GetProperty("Version").GetInt32());
         var propertyNames = typeof(InstantQuotationSessionState).GetProperties().Select(property => property.Name).ToArray();

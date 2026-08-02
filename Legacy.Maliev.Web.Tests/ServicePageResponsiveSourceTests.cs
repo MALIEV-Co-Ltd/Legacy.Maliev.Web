@@ -45,7 +45,7 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.Contains($"ServiceKey=\"{service}\"", source, StringComparison.Ordinal);
     }
 
-    private static string Read(params string[] parts) => File.ReadAllText(Path.Combine([Root, ..parts]));
+    private static string Read(params string[] parts) => File.ReadAllText(Path.Combine([Root, .. parts]));
 
     private static string FindRepositoryRoot()
     {
