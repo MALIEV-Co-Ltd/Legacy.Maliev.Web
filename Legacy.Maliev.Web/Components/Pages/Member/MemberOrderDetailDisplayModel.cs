@@ -11,13 +11,14 @@ public sealed record MemberOrderDetailDisplayModel(
     string Subtotal,
     string TrackingNumber,
     bool AllowCancellation,
+    bool HasShippedStatus,
     string? Notification,
     IReadOnlyList<string> Errors,
     IReadOnlyList<MemberOrderStatusDisplayModel> History,
     IReadOnlyList<string> FileNames)
 {
     public static MemberOrderDetailDisplayModel Empty { get; } = new(
-        0, null, null, "-", 0, 0, "-", "-", "-", false, null, [], [], []);
+        0, null, null, "-", 0, 0, "-", "-", "-", false, false, null, [], [], []);
 }
 
 public sealed record MemberOrderStatusDisplayModel(string? Name, string CreatedDate);

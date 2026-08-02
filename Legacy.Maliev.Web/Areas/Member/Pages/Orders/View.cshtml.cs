@@ -120,6 +120,7 @@ public sealed class View(
             order.Subtotal?.ToString("N2") ?? "-",
             string.IsNullOrWhiteSpace(order.TrackingNumber) ? "-" : order.TrackingNumber,
             order.AllowCancellation,
+            details.History.Any(status => string.Equals(status.Name, "Shipped", StringComparison.OrdinalIgnoreCase)),
             notification,
             errors,
             details.History.Select(status => new MemberOrderStatusDisplayModel(

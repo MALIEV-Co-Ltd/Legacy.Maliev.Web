@@ -70,6 +70,20 @@
                 </ul>
             }
         </section>
+        @if (Model.HasShippedStatus)
+        {
+            <section class="maliev-panel" aria-labelledby="post-shipment-review-heading">
+                <h2 id="post-shipment-review-heading">@Localizer["Has your order arrived?"]</h2>
+                <p>@Localizer["Whether your experience was positive or critical, an honest Google review helps other customers understand what working with MALIEV is like."]</p>
+                <div class="maliev-actions">
+                    <a class="maliev-button" href="@Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps" target="_blank" rel="noopener" data-maliev-review-platform="google_business_profile">@Localizer["Open MALIEV on Google Maps"]</a>
+                    <a class="maliev-button maliev-button--secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener" data-contact-placement="member_order_line">@Localizer["Contact MALIEV on LINE"]</a>
+                    <a class="maliev-button maliev-button--secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.WhatsApp" target="_blank" rel="noopener" data-contact-placement="member_order_whatsapp" data-maliev-contact-destination="whatsapp_business">@Localizer["Contact MALIEV on WhatsApp"]</a>
+                </div>
+                <p>@Localizer["If anything is not right, contact us on LINE so our team can follow up."]</p>
+                <p>@Localizer["Reviews are optional and are not tied to discounts, rewards, or order support."]</p>
+            </section>
+        }
     }
 </div>
 

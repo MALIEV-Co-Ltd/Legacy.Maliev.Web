@@ -35,4 +35,11 @@
   <data name="Your order could not be cancelled." xml:space="preserve"><value>ไม่สามารถยกเลิกคำสั่งซื้อของคุณได้</value></data>
   <data name="Your order could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดคำสั่งซื้อของคุณได้</value></data>
   <data name="Order service is temporarily unavailable." xml:space="preserve"><value>ระบบคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Has your order arrived?" xml:space="preserve"><value>ได้รับสินค้าแล้วหรือยัง?</value></data>
+  <data name="Whether your experience was positive or critical, an honest Google review helps other customers understand what working with MALIEV is like." xml:space="preserve"><value>ไม่ว่าประสบการณ์ของคุณจะน่าประทับใจหรือมีข้อเสนอแนะ รีวิวที่ตรงไปตรงมาบน Google จะช่วยให้ลูกค้ารายอื่นเข้าใจการทำงานร่วมกับ MALIEV ได้ดียิ่งขึ้น</value></data>
+  <data name="Open MALIEV on Google Maps" xml:space="preserve"><value>เปิด MALIEV ใน Google Maps</value></data>
+  <data name="Contact MALIEV on LINE" xml:space="preserve"><value>ติดต่อ MALIEV ทาง LINE</value></data>
+  <data name="Contact MALIEV on WhatsApp" xml:space="preserve"><value>ติดต่อ MALIEV ทาง WhatsApp</value></data>
+  <data name="If anything is not right, contact us on LINE so our team can follow up." xml:space="preserve"><value>หากมีสิ่งใดไม่เรียบร้อย โปรดติดต่อเราทาง LINE เพื่อให้ทีมงานติดตามและช่วยเหลือ</value></data>
+  <data name="Reviews are optional and are not tied to discounts, rewards, or order support." xml:space="preserve"><value>การรีวิวเป็นความสมัครใจ และไม่ผูกกับส่วนลด รางวัล หรือการรับบริการหลังการขาย</value></data>
 </root>

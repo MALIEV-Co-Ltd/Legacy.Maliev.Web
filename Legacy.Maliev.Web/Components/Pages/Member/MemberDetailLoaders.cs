@@ -68,7 +68,7 @@ public static class MemberDetailLoaders
             CreateQuotationDisplayModel(result.Details, errors));
     }
 
-    private static MemberOrderDetailDisplayModel CreateOrderDisplayModel(
+    internal static MemberOrderDetailDisplayModel CreateOrderDisplayModel(
         CustomerOrderDetails? details,
         string? notification,
         IReadOnlyList<string> errors)
@@ -90,6 +90,7 @@ public static class MemberDetailLoaders
             order.Subtotal?.ToString("N2") ?? "-",
             string.IsNullOrWhiteSpace(order.TrackingNumber) ? "-" : order.TrackingNumber,
             order.AllowCancellation,
+            details.History.Any(status => string.Equals(status.Name, "Shipped", StringComparison.OrdinalIgnoreCase)),
             notification,
             errors,
             details.History.Select(status => new MemberOrderStatusDisplayModel(
