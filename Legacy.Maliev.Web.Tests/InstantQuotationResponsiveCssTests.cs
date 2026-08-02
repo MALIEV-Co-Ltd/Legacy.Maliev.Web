@@ -28,6 +28,7 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("[data-workflow-build-preference]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-material-comparison]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-part-number]", css, StringComparison.Ordinal);
+        Assert.Contains("repeat(auto-fit, minmax(min(100%, 9rem), 1fr))", css, StringComparison.Ordinal);
     }
 
     [Fact]
