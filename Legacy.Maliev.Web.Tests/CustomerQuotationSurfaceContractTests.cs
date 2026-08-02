@@ -6,7 +6,7 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class CustomerQuotationSurfaceContractTests
 {
     [Fact]
-    public void CustomerQuotationBoundary_IsRegisteredAndPreservesMemberRoutesWithoutPaymentMutation()
+    public void CustomerQuotationBoundary_IsRegisteredAndPreservesMemberDecisionRoutesWithoutRetiredPaymentMutation()
     {
         var application = typeof(ICustomerAccountClient).Assembly;
         var infrastructure = typeof(CustomerAccountClient).Assembly;
@@ -46,7 +46,11 @@ public sealed class CustomerQuotationSurfaceContractTests
         Assert.Contains("GetCustomerDatabaseIdAsync", indexModel, StringComparison.Ordinal);
         Assert.Contains("[Authorize]", detailModel, StringComparison.Ordinal);
         Assert.Contains("GetCustomerDatabaseIdAsync", detailModel, StringComparison.Ordinal);
-        Assert.DoesNotContain("OnPost", detailModel, StringComparison.Ordinal);
+        Assert.Contains("OnPostDecisionAsync", detailModel, StringComparison.Ordinal);
+        Assert.Contains("GetCustomerDatabaseIdAsync", detailModel, StringComparison.Ordinal);
+        Assert.Contains("quotationClient.DecideAsync", detailModel, StringComparison.Ordinal);
+        Assert.Contains("Guid.TryParse(operationId", detailModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("paypal", detailModel, StringComparison.OrdinalIgnoreCase);
         var retiredPaymentResult = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Legacy.Maliev.Web",

@@ -42,6 +42,7 @@ public static class MemberDetailLoaders
         IAccountSessionManager sessionManager,
         ICustomerQuotationClient quotationClient,
         int quotationId,
+        string? notification,
         CancellationToken cancellationToken)
     {
         if (quotationId <= 0)
@@ -65,7 +66,7 @@ public static class MemberDetailLoaders
             ? new[] { result.ServiceAvailable ? "Your quotation could not be loaded." : "Quotation service is temporarily unavailable." }
             : [];
         return MemberDetailLoadResult<MemberQuotationDetailDisplayModel>.Success(
-            CreateQuotationDisplayModel(result.Details, errors));
+            CreateQuotationDisplayModel(result.Details, notification, errors));
     }
 
     internal static MemberOrderDetailDisplayModel CreateOrderDisplayModel(
@@ -101,11 +102,12 @@ public static class MemberDetailLoaders
 
     private static MemberQuotationDetailDisplayModel CreateQuotationDisplayModel(
         CustomerQuotationDetails? details,
+        string? notification,
         IReadOnlyList<string> errors)
     {
         if (details is null)
         {
-            return MemberQuotationDetailDisplayModel.Empty with { Errors = errors };
+            return MemberQuotationDetailDisplayModel.Empty with { Notification = notification, Errors = errors };
         }
 
         var quotation = details.Quotation;
@@ -124,6 +126,8 @@ public static class MemberDetailLoaders
             string.IsNullOrWhiteSpace(quotation.Fob) ? "-" : quotation.Fob,
             string.IsNullOrWhiteSpace(quotation.Terms) ? "-" : quotation.Terms,
             quotation.Comment,
+            quotation.Accepted is null && quotation.ExpirationDate.Date >= DateTime.UtcNow.Date,
+            notification,
             errors,
             details.OrderItems.Select(item => new MemberQuotationLineDisplayModel(
                 item.Description ?? "-",

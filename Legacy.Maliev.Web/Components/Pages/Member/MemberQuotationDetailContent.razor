@@ -4,8 +4,11 @@
     <div class="maliev-section-header">
         <p class="maliev-eyebrow">@Localizer["Quotation management"]</p>
         <h1 id="member-quotation-detail-title">@Localizer["Quotation details"]</h1>
-        <p>@Localizer["This page is read-only while the legacy payment workflow is being replaced."]</p>
     </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert maliev-alert--success" role="status">@Localizer[Model.Notification]</div>
+    }
     @if (Model.Errors.Count > 0)
     {
         <div class="validation-summary-errors" role="alert">
@@ -100,7 +103,6 @@
             }
         </section>
     }
-    <p><a class="maliev-button maliev-button--secondary" href="/member/quotations">@Localizer["Back to quotations"]</a></p>
 </section>
 
 @code {

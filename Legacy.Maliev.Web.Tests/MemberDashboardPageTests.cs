@@ -171,5 +171,6 @@ public sealed class MemberDashboardPageTests
         }
 
         public Task<CustomerQuotationDetailsResult> GetAsync(int customerId, int quotationId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CustomerQuotationDecisionResult> DecideAsync(int customerId, int quotationId, bool accepted, Guid operationId, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

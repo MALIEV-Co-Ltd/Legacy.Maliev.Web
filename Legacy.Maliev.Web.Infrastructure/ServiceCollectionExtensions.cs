@@ -44,6 +44,7 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));
 
         AddClient(services, "auth", static endpoints => endpoints.Auth);
+        AddClient(services, "accounting", static endpoints => endpoints.Accounting);
         AddClient(services, "careers", static endpoints => endpoints.Career);
         AddClient(services, "catalog", static endpoints => endpoints.Catalog);
         AddClient(services, "contacts", static endpoints => endpoints.Contact);

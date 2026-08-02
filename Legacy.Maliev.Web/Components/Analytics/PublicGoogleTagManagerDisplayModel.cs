@@ -39,23 +39,28 @@ public sealed record PublicGoogleTagManagerDisplayModel(
 
     private static string BuildQueuedEventScript(ITempDataDictionary tempData)
     {
-        if (!LeadAnalyticsEventQueue.TryConsume(tempData, out var leadEvent) || leadEvent is null)
+        var scripts = new List<string>();
+        if (LeadAnalyticsEventQueue.TryConsume(tempData, out var leadEvent) && leadEvent is not null)
         {
-            return string.Empty;
+            scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent)});");
+            if (leadEvent.FileUploadCompleted)
+            {
+                var fileUploadEvent = JsonSerializer.Serialize(new
+                {
+                    @event = "file_upload_complete",
+                    service = leadEvent.Service,
+                    transaction_id = leadEvent.TransactionId
+                });
+                scripts.Add($"window.malievAnalytics.emit({fileUploadEvent});");
+            }
         }
 
-        var script = $"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent)});";
-        if (!leadEvent.FileUploadCompleted)
+        if (CustomerJourneyAnalyticsEventQueue.TryConsume(tempData, out var journeyEvent)
+            && journeyEvent is not null)
         {
-            return script;
+            scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(journeyEvent)});");
         }
 
-        var fileUploadEvent = JsonSerializer.Serialize(new
-        {
-            @event = "file_upload_complete",
-            service = leadEvent.Service,
-            transaction_id = leadEvent.TransactionId
-        });
-        return $"{script}\nwindow.malievAnalytics.emit({fileUploadEvent});";
+        return string.Join('\n', scripts);
     }
 }

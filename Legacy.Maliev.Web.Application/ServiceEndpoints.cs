@@ -4,6 +4,8 @@ public sealed class ServiceEndpoints
 {
     public Uri Auth { get; init; } = new("http://auth");
 
+    public Uri Accounting { get; init; } = new("http://accounting");
+
     public Uri Career { get; init; } = new("http://careers");
 
     public Uri Catalog { get; init; } = new("http://catalog");

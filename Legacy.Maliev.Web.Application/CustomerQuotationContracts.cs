@@ -72,6 +72,13 @@ public sealed record CustomerQuotationDetailsResult(
     bool ServiceAvailable,
     bool Authorized);
 
+public sealed record CustomerQuotationDecisionResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized,
+    bool Conflict,
+    int? InvoiceId);
+
 public interface ICustomerQuotationClient
 {
     Task<CustomerQuotationListResult> ListAsync(
@@ -85,5 +92,12 @@ public interface ICustomerQuotationClient
     Task<CustomerQuotationDetailsResult> GetAsync(
         int customerId,
         int quotationId,
+        CancellationToken cancellationToken);
+
+    Task<CustomerQuotationDecisionResult> DecideAsync(
+        int customerId,
+        int quotationId,
+        bool accepted,
+        Guid operationId,
         CancellationToken cancellationToken);
 }

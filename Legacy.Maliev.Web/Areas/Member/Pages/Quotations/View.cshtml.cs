@@ -1,6 +1,7 @@
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,6 +15,11 @@ public sealed class View(
 {
     public MemberQuotationDetailDisplayModel DisplayModel { get; private set; } = MemberQuotationDetailDisplayModel.Empty;
 
+    public string OperationId { get; private set; } = Guid.NewGuid().ToString("D");
+
+    [TempData]
+    public string? Notification { get; set; }
+
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
         if (id <= 0)
@@ -21,23 +27,62 @@ public sealed class View(
             return NotFound();
         }
 
-        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
-        if (customerId is null)
+        return await LoadAsync(id, cancellationToken);
+    }
+
+    public async Task<IActionResult> OnPostDecisionAsync(
+        int quotationId,
+        bool accepted,
+        string? operationId,
+        CancellationToken cancellationToken)
+    {
+        if (quotationId <= 0 || !Guid.TryParse(operationId, out var parsedOperationId) || parsedOperationId == Guid.Empty)
         {
-            return Challenge();
+            return BadRequest();
         }
 
-        var result = await quotationClient.GetAsync(
+        OperationId = parsedOperationId.ToString("D");
+        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
+        if (customerId is null) return Challenge();
+
+        var result = await quotationClient.DecideAsync(
             customerId.Value,
-            id,
+            quotationId,
+            accepted,
+            parsedOperationId,
             cancellationToken);
+        if (result.Succeeded)
+        {
+            CustomerJourneyAnalyticsEventQueue.TryQueueQuotationDecision(
+                TempData,
+                quotationId,
+                accepted ? "accepted" : "declined",
+                out _);
+            Notification = accepted
+                ? "You have successfully accepted the quotation. A payable invoice has been generated."
+                : "You have successfully declined the quotation.";
+            return RedirectToPage(new { id = quotationId });
+        }
+
+        ModelState.AddModelError(
+            string.Empty,
+            result.Conflict
+                ? "The quotation changed while your decision was being recorded. Please review it and try again."
+                : result.ServiceAvailable
+                    ? "Your quotation decision could not be recorded."
+                    : "Quotation processing is temporarily unavailable.");
+        return await LoadAsync(quotationId, cancellationToken);
+    }
+
+    private async Task<IActionResult> LoadAsync(int quotationId, CancellationToken cancellationToken)
+    {
+        var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
+        if (customerId is null) return Challenge();
+
+        var result = await quotationClient.GetAsync(customerId.Value, quotationId, cancellationToken);
+        if (result.Details is null && result.ServiceAvailable && result.Authorized) return NotFound();
         if (result.Details is null)
         {
-            if (result.ServiceAvailable && result.Authorized)
-            {
-                return NotFound();
-            }
-
             ModelState.AddModelError(
                 string.Empty,
                 result.ServiceAvailable
@@ -45,22 +90,26 @@ public sealed class View(
                     : "Quotation service is temporarily unavailable.");
         }
 
-        DisplayModel = CreateDisplayModel(result.Details, ModelState
-            .SelectMany(entry => entry.Value?.Errors ?? [])
-            .Where(error => error.Exception is null && !string.IsNullOrWhiteSpace(error.ErrorMessage))
-            .Select(error => error.ErrorMessage)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray());
+        DisplayModel = CreateDisplayModel(
+            result.Details,
+            Notification,
+            ModelState
+                .SelectMany(entry => entry.Value?.Errors ?? [])
+                .Where(error => error.Exception is null && !string.IsNullOrWhiteSpace(error.ErrorMessage))
+                .Select(error => error.ErrorMessage)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray());
         return Page();
     }
 
     private static MemberQuotationDetailDisplayModel CreateDisplayModel(
         CustomerQuotationDetails? details,
+        string? notification,
         IReadOnlyList<string> errors)
     {
         if (details is null)
         {
-            return MemberQuotationDetailDisplayModel.Empty with { Errors = errors };
+            return MemberQuotationDetailDisplayModel.Empty with { Notification = notification, Errors = errors };
         }
 
         var quotation = details.Quotation;
@@ -79,6 +128,8 @@ public sealed class View(
             string.IsNullOrWhiteSpace(quotation.Fob) ? "-" : quotation.Fob,
             string.IsNullOrWhiteSpace(quotation.Terms) ? "-" : quotation.Terms,
             quotation.Comment,
+            quotation.Accepted is null && quotation.ExpirationDate.Date >= DateTime.UtcNow.Date,
+            notification,
             errors,
             details.OrderItems.Select(item => new MemberQuotationLineDisplayModel(
                 item.Description ?? "-",

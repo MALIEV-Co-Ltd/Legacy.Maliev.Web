@@ -46,4 +46,13 @@
   <data name="Back to quotations" xml:space="preserve"><value>กลับไปยังใบเสนอราคา</value></data>
   <data name="Your quotation could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดใบเสนอราคาของคุณได้</value></data>
   <data name="Quotation service is temporarily unavailable." xml:space="preserve"><value>ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Quotation decision" xml:space="preserve"><value>ตอบรับใบเสนอราคา</value></data>
+  <data name="Accepting creates the payable invoice and moves the linked orders forward. Declining closes this quotation." xml:space="preserve"><value>เมื่อยอมรับ ระบบจะออกใบแจ้งหนี้ที่ต้องชำระและดำเนินคำสั่งซื้อที่เกี่ยวข้องต่อ หากปฏิเสธ ใบเสนอราคานี้จะถูกปิด</value></data>
+  <data name="Accept quotation" xml:space="preserve"><value>ยอมรับใบเสนอราคา</value></data>
+  <data name="Decline quotation" xml:space="preserve"><value>ปฏิเสธใบเสนอราคา</value></data>
+  <data name="You have successfully accepted the quotation. A payable invoice has been generated." xml:space="preserve"><value>ยอมรับใบเสนอราคาเรียบร้อยแล้ว และระบบได้ออกใบแจ้งหนี้สำหรับชำระเงินแล้ว</value></data>
+  <data name="You have successfully declined the quotation." xml:space="preserve"><value>ปฏิเสธใบเสนอราคาเรียบร้อยแล้ว</value></data>
+  <data name="The quotation changed while your decision was being recorded. Please review it and try again." xml:space="preserve"><value>ใบเสนอราคามีการเปลี่ยนแปลงระหว่างบันทึกคำตอบ โปรดตรวจสอบข้อมูลแล้วลองอีกครั้ง</value></data>
+  <data name="Your quotation decision could not be recorded." xml:space="preserve"><value>ไม่สามารถบันทึกคำตอบของคุณได้</value></data>
+  <data name="Quotation processing is temporarily unavailable." xml:space="preserve"><value>ระบบประมวลผลใบเสนอราคาไม่พร้อมใช้งานชั่วคราว</value></data>
 </root>

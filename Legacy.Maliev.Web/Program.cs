@@ -296,7 +296,13 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Member",
             "/Quotations/View",
-            model => model.Selectors.Clear());
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         foreach (var page in new[]
         {
             "/Account/Manage/Profile",

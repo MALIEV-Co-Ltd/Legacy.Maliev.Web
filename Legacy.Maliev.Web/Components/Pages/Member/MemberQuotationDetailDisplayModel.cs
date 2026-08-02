@@ -15,13 +15,15 @@ public sealed record MemberQuotationDetailDisplayModel(
     string FreeOnBoard,
     string Terms,
     string? Comment,
+    bool CanDecide,
+    string? Notification,
     IReadOnlyList<string> Errors,
     IReadOnlyList<MemberQuotationLineDisplayModel> Items,
     IReadOnlyList<MemberQuotationOrderDisplayModel> Orders,
     IReadOnlyList<string> FileNames)
 {
     public static MemberQuotationDetailDisplayModel Empty { get; } = new(
-        0, null, 0, "-", "-", "-", "-", "-", "-", 0, "-", "-", "-", null, [], [], [], []);
+        0, null, 0, "-", "-", "-", "-", "-", "-", 0, "-", "-", "-", null, false, null, [], [], [], []);
 }
 
 public sealed record MemberQuotationLineDisplayModel(

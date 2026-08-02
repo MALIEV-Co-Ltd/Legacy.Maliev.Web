@@ -179,6 +179,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/member/quotations/view?handler=Decision\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"accepted\" value=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"accepted\" value=\"false\"", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -508,6 +512,63 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var invocation = Assert.IsType<QuotationDetailInvocation>(quotationClient.LastDetailInvocation);
         Assert.Equal(42, invocation.CustomerId);
         Assert.Equal(15, invocation.QuotationId);
+    }
+
+    [Theory]
+    [InlineData(true, "accepted")]
+    [InlineData(false, "declined")]
+    public async Task MemberQuotationDecision_IsOwnedAntiforgeryProtectedAndQueuesExactAnalytics(
+        bool accepted,
+        string decision)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        var form = await GetAntiforgeryFormAsync("/member/quotations/view?id=15&culture=en");
+        form["quotationId"] = "15";
+        form["accepted"] = accepted.ToString();
+        form["operationId"] = "11fdb79a-3548-4c24-8dbc-1b457c3bc04e";
+        using var response = await client.PostAsync(
+            "/member/quotations/view?handler=Decision",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Quotations/View?id=15", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<QuotationDecisionInvocation>(quotationClient.LastDecisionInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(15, invocation.QuotationId);
+        Assert.Equal(accepted, invocation.Accepted);
+        Assert.NotEqual(Guid.Empty, invocation.OperationId);
+
+        using var redirected = await client.GetAsync(response.Headers.Location);
+        var source = WebUtility.HtmlDecode(await redirected.Content.ReadAsStringAsync());
+        Assert.Contains("\"event\":\"maliev_quote_decision\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"transaction_id\":\"quotation-15\"", source, StringComparison.Ordinal);
+        Assert.Contains($"\"decision\":\"{decision}\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer_id", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MemberQuotationDecision_WithoutAntiforgeryIsRejectedBeforeServiceCall()
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        using var response = await client.PostAsync(
+            "/member/quotations/view?handler=Decision",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["quotationId"] = "15",
+                ["accepted"] = "true",
+                ["operationId"] = Guid.NewGuid().ToString("D"),
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(quotationClient.LastDecisionInvocation);
     }
 
     [Theory]
@@ -3743,13 +3804,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public QuotationDetailInvocation? LastDetailInvocation { get; private set; }
 
+        public QuotationDecisionInvocation? LastDecisionInvocation { get; private set; }
+
         public CustomerQuotationDetailsResult? DetailResultOverride { get; set; }
+
+        public CustomerQuotationDecisionResult? DecisionResultOverride { get; set; }
 
         public void ResetInvocation()
         {
             LastInvocation = null;
             LastDetailInvocation = null;
+            LastDecisionInvocation = null;
             DetailResultOverride = null;
+            DecisionResultOverride = null;
         }
 
         public Task<CustomerQuotationListResult> ListAsync(
@@ -3787,6 +3854,17 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                 : null;
             return Task.FromResult(new CustomerQuotationDetailsResult(details, true, customerId == 42));
         }
+
+        public Task<CustomerQuotationDecisionResult> DecideAsync(
+            int customerId,
+            int quotationId,
+            bool accepted,
+            Guid operationId,
+            CancellationToken cancellationToken)
+        {
+            LastDecisionInvocation = new(customerId, quotationId, accepted, operationId);
+            return Task.FromResult(DecisionResultOverride ?? new CustomerQuotationDecisionResult(true, true, true, false, accepted ? 23 : null));
+        }
     }
 
     private sealed record QuotationListInvocation(
@@ -3797,4 +3875,6 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         int PageSize);
 
     private sealed record QuotationDetailInvocation(int CustomerId, int QuotationId);
+
+    private sealed record QuotationDecisionInvocation(int CustomerId, int QuotationId, bool Accepted, Guid OperationId);
 }

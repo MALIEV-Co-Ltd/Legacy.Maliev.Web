@@ -6,3 +6,17 @@
     ViewData["Robots"] = "noindex,follow";
 }
 <component type="typeof(MemberQuotationDetailContent)" render-mode="Static" param-Model="Model.DisplayModel" />
+@if (Model.DisplayModel.CanDecide)
+{
+    <form method="post" asp-page-handler="Decision" class="maliev-panel maliev-form" aria-labelledby="quotation-decision-title">
+        <input type="hidden" name="quotationId" value="@Model.DisplayModel.Id" />
+        <input type="hidden" name="operationId" value="@Model.OperationId" />
+        <h2 id="quotation-decision-title">@MetadataLocalizer["Quotation decision"]</h2>
+        <p>@MetadataLocalizer["Accepting creates the payable invoice and moves the linked orders forward. Declining closes this quotation."]</p>
+        <div class="maliev-actions">
+            <button type="submit" name="accepted" value="true" class="maliev-button">@MetadataLocalizer["Accept quotation"]</button>
+            <button type="submit" name="accepted" value="false" class="maliev-button maliev-button--danger">@MetadataLocalizer["Decline quotation"]</button>
+        </div>
+    </form>
+}
+<p><a class="maliev-button maliev-button--secondary" asp-page="/Quotations/Index">@MetadataLocalizer["Back to quotations"]</a></p>

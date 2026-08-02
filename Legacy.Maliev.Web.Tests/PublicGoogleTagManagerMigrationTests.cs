@@ -114,6 +114,28 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("accepted")]
+    [InlineData("declined")]
+    public void QueuedQuotationDecision_RendersExactNonPiiJourneyEvent(string decision)
+    {
+        var journeyEvent = new CustomerJourneyAnalyticsEvent("quotation-714", decision);
+        var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
+        {
+            ["Maliev.CustomerJourneyAnalyticsEvent"] = JsonSerializer.Serialize(journeyEvent),
+        });
+
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            new DefaultHttpContext(),
+            new TempDataDictionaryFactory(provider));
+
+        Assert.Equal(
+            $"window.malievAnalytics.emit({{\"event\":\"maliev_quote_decision\",\"transaction_id\":\"quotation-714\",\"decision\":\"{decision}\",\"source\":\"customer_portal\"}});",
+            model.QueuedEventScript);
+        Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("customer_id", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void QueuedEvent_SaveFailureSuppressesEmissionWithoutBreakingThePage()
     {
