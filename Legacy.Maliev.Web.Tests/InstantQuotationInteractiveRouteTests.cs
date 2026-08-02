@@ -130,7 +130,10 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
 
         Assert.Contains("<label for=\"instant-quote-files\"", source, StringComparison.Ordinal);
         Assert.Contains("<InputFile id=\"instant-quote-files\"", source, StringComparison.Ordinal);
-        Assert.Contains("accept=\".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges\"", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "accept=\".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges,model/stl,application/sla,application/vnd.ms-pki.stl,model/x.stl-binary,model/x.stl-ascii,model/obj,model/3mf,model/gltf-binary,model/gltf+json,model/step,model/iges\"",
+            source,
+            StringComparison.Ordinal);
         Assert.Contains("multiple", source, StringComparison.Ordinal);
         Assert.Contains("aria-live=\"polite\"", source, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", source, StringComparison.Ordinal);

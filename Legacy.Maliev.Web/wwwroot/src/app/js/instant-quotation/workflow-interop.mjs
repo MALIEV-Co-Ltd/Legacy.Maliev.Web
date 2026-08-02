@@ -7,6 +7,25 @@ export const supportedPreviewExtensions = Object.freeze([
 const supportedExtensions = new Set(supportedPreviewExtensions);
 const STALL_TIMEOUT_MS = 120_000;
 
+export function configureFilePickerForPlatform(input, navigatorLike = globalThis.navigator ?? {}) {
+  if (!input) return false;
+  const userAgent = String(navigatorLike.userAgent ?? '');
+  const platform = String(navigatorLike.platform ?? '');
+  const maxTouchPoints = Number(navigatorLike.maxTouchPoints ?? 0);
+  const isIosDevice = /iPad|iPhone|iPod/.test(userAgent)
+    || (platform === 'MacIntel' && maxTouchPoints > 1);
+  if (!isIosDevice) return false;
+
+  // iOS Files identifies STL using a UTI with no reliable HTML accept mapping.
+  // Preserve the allowlist for diagnostics, let Files return the selection, and
+  // continue to enforce supported extensions before parsing or upload begins.
+  input.dataset.acceptedTypes = input.getAttribute?.('accept')
+    || input.dataset.acceptedTypes
+    || '';
+  input.removeAttribute?.('accept');
+  return true;
+}
+
 export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter = null) {
   const viewerModule = await import('/dist/instant-quotation-viewer.mjs');
   return createWorkflowPreviewInterop({
@@ -48,6 +67,7 @@ export function createWorkflowPreviewInterop({
 
   function bindInput(input) {
     assertActive();
+    configureFilePickerForPlatform(input);
     if (inputElement === input) return;
     unbindInput();
     inputElement = input;
