@@ -9,6 +9,8 @@ public static class PricingCatalog
     public const double FdmLineWidthMm = 0.42;
     public const int FdmWallCount = 3;
     public const double FdmInfillDensity = 0.15;
+    public const double QualityBuildFactor = 1.35;
+    public const double StrengthBuildFactor = 1.20;
     public const double FdmWallSpeedMmPerSec = 50.0;
     public const double FdmSupportDensity = 0.15;
     public const double FdmSupportReachFactor = 0.5;
@@ -88,6 +90,20 @@ public static class PricingCatalog
 
     public static DiscountTier ResolveTier(int quantity) =>
         DiscountTiers.LastOrDefault(tier => quantity >= tier.MinQuantity) ?? DiscountTiers[0];
+
+    public static double BuildPreferenceFactor(BuildPreference preference) => preference switch
+    {
+        BuildPreference.Quality => QualityBuildFactor,
+        BuildPreference.Strength => StrengthBuildFactor,
+        _ => 1.0,
+    };
+
+    public static BuildPreference ResolveBuildPreference(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "quality" => BuildPreference.Quality,
+        "strength" => BuildPreference.Strength,
+        _ => BuildPreference.Standard,
+    };
 
     public static MaterialInfo? ResolveMaterial(string? key)
     {

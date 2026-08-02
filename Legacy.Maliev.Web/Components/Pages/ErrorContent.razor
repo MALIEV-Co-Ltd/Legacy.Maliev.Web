@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components
+@using System.Globalization
 @inject IStringLocalizer<ErrorContent> Localizer
 
 <main class="maliev-page maliev-page-main" data-migration-component="error-content" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
@@ -14,13 +15,18 @@
             {
                 <p class="maliev-eyebrow">@Localizer["Application error"]</p>
                 <h1 id="error-title">@Localizer["Sorry. Something did not work properly."]</h1>
-                <p>@Localizer["Please try again. If the problem continues, contact support and include the request ID below."]</p>
-                @if (!string.IsNullOrWhiteSpace(Model.RequestId))
+                <p>@Localizer["Please include this incident ID when contacting support."]</p>
+                @if (!string.IsNullOrWhiteSpace(Model.IncidentId))
                 {
                     <dl class="maliev-meta-list maliev-status__details">
-                        <dt>@Localizer["Request ID"]</dt>
-                        <dd><code>@Model.RequestId</code></dd>
+                        <dt>@Localizer["Incident ID"]</dt>
+                        <dd><code id="incident-id">@Model.IncidentId</code></dd>
+                        <dt>@Localizer["Occurred at (UTC)"]</dt>
+                        <dd><time id="incident-occurred-at" datetime="@Model.OccurredAtUtc.ToString("O", CultureInfo.InvariantCulture)">@OccurredAtUtc</time></dd>
+                        <dt>@Localizer["Status code"]</dt>
+                        <dd><code>@(Model.StatusCode?.ToString(CultureInfo.InvariantCulture) ?? "-")</code></dd>
                     </dl>
+                    <p><a href="@SupportLink">@Localizer["Send incident details to support"]</a></p>
                 }
             }
             <div class="maliev-actions">
@@ -37,4 +43,22 @@
 
     [Parameter]
     public string? RouteOwner { get; set; }
+
+    private string OccurredAtUtc => Model.OccurredAtUtc
+        .ToUniversalTime()
+        .ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+
+    private string SupportLink
+    {
+        get
+        {
+            var subject = Uri.EscapeDataString($"Application error {Model.IncidentId}");
+            var body = Uri.EscapeDataString(
+                $"Incident ID: {Model.IncidentId}\r\n"
+                + $"Occurred at (UTC): {OccurredAtUtc}\r\n"
+                + $"Status code: {Model.StatusCode?.ToString(CultureInfo.InvariantCulture) ?? "-"}\r\n\r\n"
+                + "Please describe what you were doing immediately before this error.");
+            return $"mailto:support@maliev.com?subject={subject}&body={body}";
+        }
+    }
 }

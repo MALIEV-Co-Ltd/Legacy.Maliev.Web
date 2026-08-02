@@ -44,6 +44,7 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));
 
         AddClient(services, "auth", static endpoints => endpoints.Auth);
+        AddClient(services, "accounting", static endpoints => endpoints.Accounting);
         AddClient(services, "careers", static endpoints => endpoints.Career);
         AddClient(services, "catalog", static endpoints => endpoints.Catalog);
         AddClient(services, "contacts", static endpoints => endpoints.Contact);
@@ -63,9 +64,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQuotationFileClient, QuotationFileClient>();
         services.AddScoped<INotificationClient, NotificationClient>();
         services.AddScoped<ICustomerAuthenticationClient, CustomerAuthenticationClient>();
+        services.AddScoped<ICustomerEmailChangeWorkflow, CustomerEmailChangeWorkflow>();
         services.AddScoped<ICustomerProfileClient, CustomerProfileClient>();
         services.AddScoped<ICustomerAccountClient, CustomerAccountClient>();
         services.AddScoped<ICustomerOrderClient, CustomerOrderClient>();
+        services.AddScoped<ICustomerOrderCatalogClient, CustomerOrderCatalogClient>();
+        services.AddScoped<ICustomerOrderSubmissionTransport, CustomerOrderSubmissionTransport>();
+        services.AddScoped<ICustomerOrderSubmissionService, CustomerOrderSubmissionService>();
+        services.AddScoped<ICustomerMemberDetailClient, CustomerMemberDetailClient>();
         services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
         services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
         services.AddSingleton<IInstantQuotationFileCapabilityStore, InstantQuotationFileCapabilityStore>();

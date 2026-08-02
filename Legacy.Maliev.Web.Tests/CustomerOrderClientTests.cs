@@ -34,7 +34,7 @@ public sealed class CustomerOrderClientTests
     public async Task Get_ComposesOnlyTheCustomerScopedDetailRoute()
     {
         var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, """
-            {"order":{"id":7,"customerId":42,"name":"Part","description":null,"processId":3,"quantity":2,"manufactured":0,"remaining":2,"unitPrice":100,"discountPercent":0,"subtotal":200,"leadTime":5,"promisedDate":null,"finishedDate":null,"comment":null,"allowCancellation":true,"allowPayment":false,"trackingNumber":null,"createdDate":null,"modifiedDate":null},"process":{"id":3,"categoryId":1,"name":"CNC"},"history":[{"id":9,"orderId":7,"orderStatusId":2,"name":"Reviewing","description":null,"createdDate":null,"modifiedDate":null}],"files":[{"id":4,"orderId":7,"bucket":"legacy-orders","objectName":"orders/part.step","createdDate":null,"modifiedDate":null}]}
+            {"order":{"id":7,"customerId":42,"employeeId":8,"name":"Part","description":null,"processId":3,"materialId":12,"surfaceFinishId":13,"colorId":14,"currencyId":764,"quantity":2,"manufactured":0,"remaining":2,"unitPrice":100,"discountPercent":0,"subtotal":200,"leadTime":5,"turnaround":2,"promisedDate":null,"finishedDate":null,"comment":null,"allowCancellation":true,"allowPayment":false,"allowSocialMedia":true,"trackingNumber":null,"createdDate":null,"modifiedDate":null},"process":{"id":3,"categoryId":1,"name":"CNC"},"history":[{"id":9,"orderId":7,"orderStatusId":2,"name":"Reviewing","description":null,"createdDate":null,"modifiedDate":null}],"files":[{"id":4,"orderId":7,"bucket":"legacy-orders","objectName":"orders/part.step","createdDate":null,"modifiedDate":null}]}
             """));
         var client = CreateClient(handler);
 
@@ -43,6 +43,13 @@ public sealed class CustomerOrderClientTests
         Assert.Equal("CNC", result.Details?.Process?.Name);
         Assert.Equal("Reviewing", result.Details?.History.Single().Name);
         Assert.Equal("orders/part.step", result.Details?.Files.Single().ObjectName);
+        Assert.Equal(8, result.Details?.Order.EmployeeId);
+        Assert.Equal(12, result.Details?.Order.MaterialId);
+        Assert.Equal(13, result.Details?.Order.SurfaceFinishId);
+        Assert.Equal(14, result.Details?.Order.ColorId);
+        Assert.Equal(764, result.Details?.Order.CurrencyId);
+        Assert.Equal(2, result.Details?.Order.Turnaround);
+        Assert.True(result.Details?.Order.AllowSocialMedia);
         Assert.Equal("orders/customers/42/7", Assert.Single(handler.Requests).Path);
     }
 

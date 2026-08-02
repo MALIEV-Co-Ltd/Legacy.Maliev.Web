@@ -279,6 +279,24 @@ builder.Services.AddRazorPages(options =>
             "Member",
             "/Orders/History",
             model => model.Selectors.Clear());
+        foreach (var page in new[]
+        {
+            "/Orders/3D-Printing",
+            "/Orders/3D-Scanning",
+            "/Orders/CNC-Machining",
+        })
+        {
+            options.Conventions.AddAreaPageRouteModelConvention(
+                "Member",
+                page,
+                model =>
+                {
+                    foreach (var selector in model.Selectors)
+                    {
+                        selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                    }
+                });
+        }
         options.Conventions.AddAreaPageRouteModelConvention(
             "Member",
             "/Quotations/Index",
@@ -296,7 +314,13 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Member",
             "/Quotations/View",
-            model => model.Selectors.Clear());
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         foreach (var page in new[]
         {
             "/Account/Manage/Profile",
@@ -445,6 +469,7 @@ app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.UseStandardMiddleware();
 app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
 app.UseExceptionHandler("/Error");
+app.UseMiddleware<ErrorIncidentMiddleware>();
 app.UseWhen(
     static context => !context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase),
     branch => branch.UseStatusCodePagesWithReExecute("/Error", "?code={0}"));

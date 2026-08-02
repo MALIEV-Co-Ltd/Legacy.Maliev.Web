@@ -5,6 +5,7 @@ public sealed record LoginFormDisplayModel(
     bool RememberMe,
     string? ReturnUrl,
     string? Notification,
+    string? EmailConfirmationRecoveryToken,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ValidationErrors)
 {
     public IReadOnlyList<string> AllErrors => ValidationErrors.Values.SelectMany(errors => errors).ToArray();

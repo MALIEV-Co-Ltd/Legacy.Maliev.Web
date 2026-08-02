@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  BoxGeometry,
   BufferGeometry,
   Float32BufferAttribute,
   Group,
@@ -43,10 +44,10 @@ test('analyzes indexed triangles in world space with the production geometry con
   assert.equal(result.nonManifold, false);
   assert.equal(result.bodyCount, 1);
   assert.equal(result.topologyChecked, true);
-  assert.equal(result.oddlySmall, true);
+  assert.equal(result.oddlySmall, false);
   assert.equal(result.oddlyLarge, false);
   assert.equal(result.volumeMethod, 'signed-mesh-volume');
-  assert.deepEqual(result.dfmCodes, ['dimension-too-small']);
+  assert.deepEqual(result.dfmCodes, []);
   assert.doesNotThrow(() => JSON.stringify(result));
 });
 
@@ -84,7 +85,7 @@ test('uses the half-bounding-box fallback only for an impossible non-watertight 
   assert.equal(result.volumeMethod, 'half-bounding-box-fallback');
   assert.equal(result.areaProfileMm2, null);
   assert.equal(result.perimeterProfileMm, null);
-  assert.equal(result.minThicknessMm, baseline.minThicknessMm);
+  assert.ok(Math.abs(result.minThicknessMm - baseline.minThicknessMm) < 1e-12);
 });
 
 test('quantizes topology, reports disconnected bodies and non-manifold edges, and emits production DFM codes', () => {
@@ -98,15 +99,33 @@ test('quantizes topology, reports disconnected bodies and non-manifold edges, an
   assert.equal(result.nonWatertight, true);
   assert.equal(result.nonManifold, true);
   assert.equal(result.bodyCount, 2);
-  assert.equal(result.oddlySmall, true);
+  assert.equal(result.oddlySmall, false);
   assert.equal(result.oddlyLarge, true);
   assert.deepEqual(result.dfmCodes, [
     'non-watertight',
     'non-manifold',
     'multiple-bodies',
-    'dimension-too-small',
     'dimension-too-large',
   ]);
+});
+
+test('bounds thin-part thickness by the smallest overall model extent', () => {
+  const result = analyzeUploadDerivedGeometry(new Mesh(new BoxGeometry(100, 100, 0.5)));
+
+  assert.ok(result.minThicknessMm > 0);
+  assert.ok(result.minThicknessMm <= 0.5);
+  assert.equal(result.oddlySmall, false);
+  assert.equal(result.oddlyLarge, false);
+  assert.deepEqual(result.dfmCodes, []);
+});
+
+test('ignores degenerate cap slices when estimating a sloped ring wall', () => {
+  const result = analyzeUploadDerivedGeometry(slopedCapRingMesh());
+
+  assert.ok(result.dimensionXmm >= 33 && result.dimensionXmm <= 33.6);
+  assert.ok(result.dimensionYmm >= 33 && result.dimensionYmm <= 33.6);
+  assert.ok(result.dimensionZmm >= 5.9 && result.dimensionZmm <= 6.1);
+  assert.ok(result.minThicknessMm >= 3.7 && result.minThicknessMm <= 3.9);
 });
 
 test('uses 24 profile samples and skips topology above the production limits', () => {
@@ -165,6 +184,41 @@ function tetrahedronMesh() {
     1, 2, 3,
   ]);
   return new Mesh(geometry);
+}
+
+function slopedCapRingMesh() {
+  const segments = 128;
+  const outerRadius = 16.65;
+  const innerRadius = 12.84;
+  const height = 6.014;
+  const capRise = 0.20;
+  const triangles = [];
+  const vertex = (radius, angle, z) => [radius * Math.cos(angle), radius * Math.sin(angle), z];
+  const append = (a, b, c) => triangles.push(...a, ...b, ...c);
+
+  for (let segment = 0; segment < segments; segment += 1) {
+    const angle0 = (Math.PI * 2 * segment) / segments;
+    const angle1 = (Math.PI * 2 * (segment + 1)) / segments;
+    const outerBottom0 = vertex(outerRadius, angle0, 0);
+    const outerBottom1 = vertex(outerRadius, angle1, 0);
+    const outerTop0 = vertex(outerRadius, angle0, height - capRise);
+    const outerTop1 = vertex(outerRadius, angle1, height - capRise);
+    const innerBottom0 = vertex(innerRadius, angle0, capRise);
+    const innerBottom1 = vertex(innerRadius, angle1, capRise);
+    const innerTop0 = vertex(innerRadius, angle0, height);
+    const innerTop1 = vertex(innerRadius, angle1, height);
+
+    append(outerBottom0, outerBottom1, outerTop1);
+    append(outerBottom0, outerTop1, outerTop0);
+    append(innerBottom0, innerTop0, innerTop1);
+    append(innerBottom0, innerTop1, innerBottom1);
+    append(outerBottom0, innerBottom1, outerBottom1);
+    append(outerBottom0, innerBottom0, innerBottom1);
+    append(outerTop0, outerTop1, innerTop1);
+    append(outerTop0, innerTop1, innerTop0);
+  }
+
+  return triangleSoupMesh(triangles);
 }
 
 function tetrahedronTriangles() {

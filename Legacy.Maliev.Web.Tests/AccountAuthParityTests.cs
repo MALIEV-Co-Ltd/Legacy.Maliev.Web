@@ -42,6 +42,20 @@ public sealed class AccountAuthParityTests : IClassFixture<WebApplicationFactory
         Assert.Contains("By signing up, you agree to our", source, StringComparison.Ordinal);
         Assert.Contains("data-submit-label>Sign Up</span>", source, StringComparison.Ordinal);
         Assert.Contains("<i class=\"fas fa-arrow-right\" aria-hidden=\"true\"></i>", source, StringComparison.Ordinal);
+        Assert.Contains("data-recaptcha-action=\"submit\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-recaptcha-action=\"account_signup\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SignupFallback_UsesTheSameRecaptchaActionAsItsPostHandler()
+    {
+        var root = FindRepositoryRoot();
+        var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "Signup.cshtml"));
+        var handler = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Account", "Signup.cshtml.cs"));
+
+        Assert.Contains("\"submit\",", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"account_signup\"", page, StringComparison.Ordinal);
+        Assert.Contains("VerifyAsync(RecaptchaToken, \"submit\"", handler, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -136,5 +150,16 @@ public sealed class AccountAuthParityTests : IClassFixture<WebApplicationFactory
         Assert.StartsWith("<!DOCTYPE html>", source.TrimStart(), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         return source;
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Legacy.Maliev.Web.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
     }
 }

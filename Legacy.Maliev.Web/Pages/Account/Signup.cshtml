@@ -39,5 +39,5 @@
 </main>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-        <script>GuardRecaptchaSubmit("customer-signup", "submit-button", "@Model.RecaptchaSiteKey", "account_signup", "@SignupLocalizer["Submitting..."]", "signup-recaptcha-error");</script>
+        <script>GuardRecaptchaSubmit("customer-signup", "submit-button", "@Model.RecaptchaSiteKey", "submit", "@SignupLocalizer["Submitting..."]", "signup-recaptcha-error");</script>
 }

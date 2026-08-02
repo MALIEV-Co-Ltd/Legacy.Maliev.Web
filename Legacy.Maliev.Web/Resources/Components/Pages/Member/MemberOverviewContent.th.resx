@@ -324,4 +324,25 @@
   <data name="You have an open quotation to review." xml:space="preserve">
     <value>คุณมีใบเสนอราคาที่รอตรวจสอบ</value>
   </data>
+  <data name="Your billing and shipping addresses must be complete before production and delivery." xml:space="preserve">
+    <value>โปรดกรอกที่อยู่วางบิลและที่อยู่จัดส่งให้ครบก่อนเริ่มผลิตและจัดส่งชิ้นงาน</value>
+  </data>
+  <data name="Complete address setup" xml:space="preserve">
+    <value>กรอกข้อมูลที่อยู่</value>
+  </data>
+  <data name="Address summary" xml:space="preserve">
+    <value>ข้อมูลที่อยู่</value>
+  </data>
+  <data name="You have not set up a billing address yet." xml:space="preserve">
+    <value>คุณยังไม่ได้บันทึกที่อยู่วางบิล</value>
+  </data>
+  <data name="A billing address is required before you can place an order." xml:space="preserve">
+    <value>ต้องระบุที่อยู่วางบิลก่อนส่งคำสั่งซื้อ</value>
+  </data>
+  <data name="You have not set up a shipping address yet." xml:space="preserve">
+    <value>คุณยังไม่ได้บันทึกที่อยู่จัดส่ง</value>
+  </data>
+  <data name="Add a shipping address so completed work can be delivered." xml:space="preserve">
+    <value>เพิ่มที่อยู่จัดส่งเพื่อให้เราส่งชิ้นงานที่ผลิตเสร็จแล้วให้คุณได้</value>
+  </data>
 </root>

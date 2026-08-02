@@ -18,12 +18,31 @@
                 </ul>
             </div>
         }
+        <div class="maliev-form-grid">
         <div class="maliev-form-field">
             <label for="member-order-search">@Localizer["Search orders"]</label>
             <input id="member-order-search" name="search" value="@Model.Search" autocomplete="off" />
         </div>
-        <input type="hidden" name="sort" value="@Model.Sort" />
-        <input type="hidden" name="size" value="@Model.PageSize" />
+        <div class="maliev-form-field">
+            <label for="member-order-sort">@Localizer["Sort by"]</label>
+            <select id="member-order-sort" name="sort">
+                <option value="OrderCreatedDate_Descending" selected="@(EffectiveSort == "OrderCreatedDate_Descending")">@Localizer["Newest first"]</option>
+                <option value="OrderCreatedDate_Ascending" selected="@(EffectiveSort == "OrderCreatedDate_Ascending")">@Localizer["Oldest first"]</option>
+                <option value="OrderName_Ascending" selected="@(EffectiveSort == "OrderName_Ascending")">@Localizer["Name A-Z"]</option>
+                <option value="OrderName_Descending" selected="@(EffectiveSort == "OrderName_Descending")">@Localizer["Name Z-A"]</option>
+            </select>
+        </div>
+        <div class="maliev-form-field">
+            <label for="member-order-size">@Localizer["Rows per page"]</label>
+            <select id="member-order-size" name="size">
+                @foreach (var size in PageSizes)
+                {
+                    <option value="@size" selected="@(Model.PageSize == size)">@size</option>
+                }
+            </select>
+        </div>
+        </div>
+        <input type="hidden" name="index" value="1" />
         <button type="submit" class="maliev-button">@Localizer["Search"]</button>
     </form>
     @if (Model.Orders.Count == 0)
@@ -34,33 +53,45 @@
     }
     else
     {
-        <div class="maliev-card-grid">
-            @foreach (var order in Model.Orders)
-            {
-                <article class="maliev-panel">
-                    <p class="maliev-eyebrow">@Localizer["Order"] #@order.Id</p>
-                    <h2>@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</h2>
-                    @if (!string.IsNullOrWhiteSpace(order.Description))
-                    {
-                        <p>@order.Description</p>
-                    }
-                    <dl>
-                        <dt>@Localizer["Quantity"]</dt><dd>@order.Quantity</dd>
-                        <dt>@Localizer["Subtotal"]</dt><dd>@order.Subtotal</dd>
-                        <dt>@Localizer["Created"]</dt><dd>@order.CreatedDate</dd>
-                    </dl>
-                    <a class="maliev-button maliev-button--secondary" href="/member/orders/view?itemID=@order.Id">@Localizer["View order"]</a>
-                </article>
-            }
+        <p class="maliev-form-help" data-record-count="@Model.TotalRecords">@Localizer["Showing {0} of {1} orders", Model.Orders.Count, Model.TotalRecords]</p>
+        <div class="table-wrapper">
+            <table class="data-table data-responsive" data-stack="true">
+                <thead><tr><th>@Localizer["Order"]</th><th>@Localizer["Name"]</th><th>@Localizer["Quantity"]</th><th>@Localizer["Subtotal"]</th><th>@Localizer["Created"]</th><th>@Localizer["Action"]</th></tr></thead>
+                <tbody>
+                @foreach (var order in Model.Orders)
+                {
+                    <tr>
+                        <td data-title="@Localizer["Order"]">#@order.Id</td>
+                        <td data-title="@Localizer["Name"]">@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</td>
+                        <td data-title="@Localizer["Quantity"]">@order.Quantity</td>
+                        <td data-title="@Localizer["Subtotal"]">@order.Subtotal</td>
+                        <td data-title="@Localizer["Created"]">@if (order.CreatedDate == "-") { <span>-</span> } else { <time class="convert-to-localdate" datetime="@order.CreatedDate">@order.CreatedDate</time> }</td>
+                        <td data-title="@Localizer["Action"]"><a href="/member/orders/view?itemID=@order.Id">@Localizer["View order"]</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
         </div>
-        <nav aria-label="@Localizer["Order pages"]">
+        <nav class="pagination" aria-label="@Localizer["Order pages"]">
+            @if (Model.FirstHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.FirstHref">@Localizer["First"]</a>
+            }
             @if (Model.PreviousHref is not null)
             {
                 <a class="maliev-button maliev-button--secondary" href="@Model.PreviousHref">@Localizer["Previous"]</a>
             }
+            @foreach (var pageLink in Model.PageLinks)
+            {
+                <a class="maliev-button @(pageLink.Current ? string.Empty : "maliev-button--secondary")" href="@pageLink.Href" aria-current="@(pageLink.Current ? "page" : null)">@pageLink.Number</a>
+            }
             @if (Model.NextHref is not null)
             {
                 <a class="maliev-button maliev-button--secondary" href="@Model.NextHref">@Localizer["Next"]</a>
+            }
+            @if (Model.LastHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.LastHref">@Localizer["Last"]</a>
             }
         </nav>
     }
@@ -69,4 +100,8 @@
 @code {
     [Parameter]
     public MemberOrderHistoryDisplayModel Model { get; set; } = MemberOrderHistoryDisplayModel.Empty;
+
+    private static readonly int[] PageSizes = [25, 50, 100];
+
+    private string EffectiveSort => string.IsNullOrWhiteSpace(Model.Sort) ? "OrderCreatedDate_Descending" : Model.Sort;
 }

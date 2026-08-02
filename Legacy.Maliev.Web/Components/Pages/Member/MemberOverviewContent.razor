@@ -24,6 +24,47 @@
         </section>
     }
 
+    @if (Model.BillingAddress is null || Model.ShippingAddress is null)
+    {
+        <aside class="maliev-alert maliev-alert--warning" role="status" data-account-setup-notice>
+            <strong>@Localizer["Continue setting up your account"]</strong>
+            <span>@Localizer["Your billing and shipping addresses must be complete before production and delivery."]</span>
+            <a href="/member/account/manage/address">@Localizer["Complete address setup"]</a>
+        </aside>
+    }
+
+    <section aria-labelledby="member-address-summary-title">
+        <h2 id="member-address-summary-title">@Localizer["Address summary"]</h2>
+        <div class="maliev-card-grid">
+            <article class="maliev-panel">
+                <h3>@Localizer["Billing address"]</h3>
+                @if (Model.BillingAddress is null)
+                {
+                    <p>@Localizer["You have not set up a billing address yet."]</p>
+                    <p class="text-danger">@Localizer["A billing address is required before you can place an order."]</p>
+                }
+                else
+                {
+                    <AddressSummary Address="Model.BillingAddress" />
+                }
+                <p><a href="/member/account/manage/address">@Localizer["Edit billing address"]</a></p>
+            </article>
+            <article class="maliev-panel">
+                <h3>@Localizer["Shipping address"]</h3>
+                @if (Model.ShippingAddress is null)
+                {
+                    <p>@Localizer["You have not set up a shipping address yet."]</p>
+                    <p>@Localizer["Add a shipping address so completed work can be delivered."]</p>
+                }
+                else
+                {
+                    <AddressSummary Address="Model.ShippingAddress" />
+                }
+                <p><a href="/member/account/manage/address">@Localizer["Edit shipping address"]</a></p>
+            </article>
+        </div>
+    </section>
+
     <section aria-labelledby="member-quick-actions-title">
         <h2 id="member-quick-actions-title">@Localizer["Quick actions"]</h2>
         <div class="maliev-card-grid">
@@ -42,12 +83,12 @@
         else
         {
             <div class="table-wrapper">
-                <table class="data-table">
+                <table class="data-table data-responsive">
                     <thead><tr><th scope="col">@Localizer["Order"]</th><th scope="col">@Localizer["Name"]</th><th scope="col">@Localizer["Created"]</th></tr></thead>
                     <tbody>
                     @foreach (var order in Model.RecentOrders)
                     {
-                        <tr><td><a href="/member/orders/view?itemID=@order.Id">#@order.Id</a></td><td>@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</td><td>@order.CreatedDate</td></tr>
+                        <tr><td data-title="@Localizer["Order"]"><a href="/member/orders/view?itemID=@order.Id">#@order.Id</a></td><td data-title="@Localizer["Name"]">@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</td><td data-title="@Localizer["Created"]">@if (order.CreatedDate == "-") { <span>-</span> } else { <time class="convert-to-localdate" datetime="@order.CreatedDate">@order.CreatedDate</time> }</td></tr>
                     }
                     </tbody>
                 </table>
@@ -65,8 +106,8 @@
         else
         {
             <div class="table-wrapper">
-                <table class="data-table">
-                    <thead><tr><th scope="col">@Localizer["Quotation"]</th><th scope="col">@Localizer["Status"]</th><th scope="col">@Localizer["Expiration date"]</th></tr></thead>
+                <table class="data-table data-responsive">
+                    <thead><tr><th scope="col">@Localizer["Quotation"]</th><th scope="col">@Localizer["Period"]</th><th scope="col">@Localizer["Expiration date"]</th><th scope="col">@Localizer["Total"]</th><th scope="col">@Localizer["Status"]</th></tr></thead>
                     <tbody>
                     @foreach (var quotation in Model.RecentQuotations)
                     {
@@ -76,7 +117,7 @@
                             false => Localizer["Declined"],
                             _ => Localizer["Open"],
                         };
-                        <tr><td><a href="/member/quotations/view?id=@quotation.Id">#@quotation.Id</a></td><td>@status</td><td>@quotation.ExpirationDate</td></tr>
+                        <tr><td data-title="@Localizer["Quotation"]"><a href="/member/quotations/view?id=@quotation.Id">#@quotation.Id</a></td><td data-title="@Localizer["Period"]">@quotation.Period @Localizer["days"]</td><td data-title="@Localizer["Expiration date"]"><time class="convert-to-localdate" datetime="@quotation.ExpirationDate">@quotation.ExpirationDate</time></td><td data-title="@Localizer["Total"]">@quotation.Total.ToString("N2", System.Globalization.CultureInfo.CurrentCulture) THB</td><td data-title="@Localizer["Status"]">@status</td></tr>
                     }
                     </tbody>
                 </table>

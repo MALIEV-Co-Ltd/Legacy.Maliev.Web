@@ -18,12 +18,31 @@
                 </ul>
             </div>
         }
+        <div class="maliev-form-grid">
         <div class="maliev-form-field">
             <label for="member-quotation-search">@Localizer["Search quotations"]</label>
             <input id="member-quotation-search" name="search" value="@Model.Search" autocomplete="off" />
         </div>
-        <input type="hidden" name="sort" value="@Model.Sort" />
-        <input type="hidden" name="size" value="@Model.PageSize" />
+        <div class="maliev-form-field">
+            <label for="member-quotation-sort">@Localizer["Sort by"]</label>
+            <select id="member-quotation-sort" name="sort">
+                <option value="QuotationCreatedDate_Descending" selected="@(EffectiveSort == "QuotationCreatedDate_Descending")">@Localizer["Newest first"]</option>
+                <option value="QuotationCreatedDate_Ascending" selected="@(EffectiveSort == "QuotationCreatedDate_Ascending")">@Localizer["Oldest first"]</option>
+                <option value="QuotationExpirationDate_Ascending" selected="@(EffectiveSort == "QuotationExpirationDate_Ascending")">@Localizer["Expiring first"]</option>
+                <option value="QuotationQuotedAmount_Descending" selected="@(EffectiveSort == "QuotationQuotedAmount_Descending")">@Localizer["Highest amount"]</option>
+            </select>
+        </div>
+        <div class="maliev-form-field">
+            <label for="member-quotation-size">@Localizer["Rows per page"]</label>
+            <select id="member-quotation-size" name="size">
+                @foreach (var size in PageSizes)
+                {
+                    <option value="@size" selected="@(Model.PageSize == size)">@size</option>
+                }
+            </select>
+        </div>
+        </div>
+        <input type="hidden" name="index" value="1" />
         <button type="submit" class="maliev-button">@Localizer["Search"]</button>
     </form>
     @if (Model.Quotations.Count == 0)
@@ -34,7 +53,11 @@
     }
     else
     {
-        <div class="maliev-card-grid">
+        <p class="maliev-form-help" data-record-count="@Model.TotalRecords">@Localizer["Showing {0} of {1} quotations", Model.Quotations.Count, Model.TotalRecords]</p>
+        <div class="table-wrapper">
+            <table class="data-table data-responsive" data-stack="true">
+                <thead><tr><th>@Localizer["Quotation"]</th><th>@Localizer["Status"]</th><th>@Localizer["Quoted amount"]</th><th>@Localizer["Currency ID"]</th><th>@Localizer["Expiration date"]</th><th>@Localizer["Created"]</th><th>@Localizer["Action"]</th></tr></thead>
+                <tbody>
             @foreach (var quotation in Model.Quotations)
             {
                 var status = quotation.Accepted switch
@@ -43,27 +66,39 @@
                     false => Localizer["Declined"],
                     _ => Localizer["Open"],
                 };
-                <article class="maliev-panel">
-                    <p class="maliev-eyebrow">@Localizer["Quotation"] #@quotation.Id</p>
-                    <h2>@status</h2>
-                    <dl>
-                        <dt>@Localizer["Quoted amount"]</dt><dd>@quotation.QuotedAmount</dd>
-                        <dt>@Localizer["Currency ID"]</dt><dd>@quotation.CurrencyId</dd>
-                        <dt>@Localizer["Expiration date"]</dt><dd>@quotation.ExpirationDate</dd>
-                        <dt>@Localizer["Created"]</dt><dd>@quotation.CreatedDate</dd>
-                    </dl>
-                    <a class="maliev-button maliev-button--secondary" href="/member/quotations/view?id=@quotation.Id">@Localizer["View quotation"]</a>
-                </article>
+                <tr>
+                    <td data-title="@Localizer["Quotation"]">#@quotation.Id</td>
+                    <td data-title="@Localizer["Status"]">@status</td>
+                    <td data-title="@Localizer["Quoted amount"]">@quotation.QuotedAmount</td>
+                    <td data-title="@Localizer["Currency ID"]">@quotation.CurrencyId</td>
+                    <td data-title="@Localizer["Expiration date"]"><time class="convert-to-localdate" datetime="@quotation.ExpirationDate">@quotation.ExpirationDate</time></td>
+                    <td data-title="@Localizer["Created"]">@if (quotation.CreatedDate == "-") { <span>-</span> } else { <time class="convert-to-localdate" datetime="@quotation.CreatedDate">@quotation.CreatedDate</time> }</td>
+                    <td data-title="@Localizer["Action"]"><a href="/member/quotations/view?id=@quotation.Id">@Localizer["View quotation"]</a></td>
+                </tr>
             }
+                </tbody>
+            </table>
         </div>
-        <nav aria-label="@Localizer["Quotation pages"]">
+        <nav class="pagination" aria-label="@Localizer["Quotation pages"]">
+            @if (Model.FirstHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.FirstHref">@Localizer["First"]</a>
+            }
             @if (Model.PreviousHref is not null)
             {
                 <a class="maliev-button maliev-button--secondary" href="@Model.PreviousHref">@Localizer["Previous"]</a>
             }
+            @foreach (var pageLink in Model.PageLinks)
+            {
+                <a class="maliev-button @(pageLink.Current ? string.Empty : "maliev-button--secondary")" href="@pageLink.Href" aria-current="@(pageLink.Current ? "page" : null)">@pageLink.Number</a>
+            }
             @if (Model.NextHref is not null)
             {
                 <a class="maliev-button maliev-button--secondary" href="@Model.NextHref">@Localizer["Next"]</a>
+            }
+            @if (Model.LastHref is not null)
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.LastHref">@Localizer["Last"]</a>
             }
         </nav>
     }
@@ -72,4 +107,8 @@
 @code {
     [Parameter]
     public MemberQuotationsIndexDisplayModel Model { get; set; } = MemberQuotationsIndexDisplayModel.Empty;
+
+    private static readonly int[] PageSizes = [25, 50, 100];
+
+    private string EffectiveSort => string.IsNullOrWhiteSpace(Model.Sort) ? "QuotationCreatedDate_Descending" : Model.Sort;
 }

@@ -4,8 +4,11 @@
     <div class="maliev-section-header">
         <p class="maliev-eyebrow">@Localizer["Quotation management"]</p>
         <h1 id="member-quotation-detail-title">@Localizer["Quotation details"]</h1>
-        <p>@Localizer["This page is read-only while the legacy payment workflow is being replaced."]</p>
     </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert maliev-alert--success" role="status">@Localizer[Model.Notification]</div>
+    }
     @if (Model.Errors.Count > 0)
     {
         <div class="validation-summary-errors" role="alert">
@@ -25,27 +28,69 @@
             false => Localizer["Declined"],
             _ => Localizer["Open"],
         };
+        <nav class="maliev-actions" aria-label="@Localizer["Documents"]">
+            @if (!string.IsNullOrWhiteSpace(Model.QuotationDocumentHref))
+            {
+                <a class="maliev-button" href="@Model.QuotationDocumentHref" target="_blank" rel="noopener">@Localizer["Quotation PDF"]</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.InvoiceDocumentHref))
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.InvoiceDocumentHref" target="_blank" rel="noopener">@Localizer["Invoice PDF"]</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.ReceiptDocumentHref))
+            {
+                <a class="maliev-button maliev-button--secondary" href="@Model.ReceiptDocumentHref" target="_blank" rel="noopener">@Localizer["Receipt PDF"]</a>
+            }
+        </nav>
         <article class="maliev-panel">
             <p class="maliev-eyebrow">@Localizer["Quotation"] #@Model.Id</p>
             <h2>@status</h2>
             <dl>
+                <dt>@Localizer["Created"]</dt><dd>@Date(Model.CreatedDate)</dd>
                 <dt>@Localizer["Period"]</dt><dd>@Model.Period @Localizer["days"]</dd>
-                <dt>@Localizer["Expiration date"]</dt><dd>@Model.ExpirationDate</dd>
+                <dt>@Localizer["Expiration date"]</dt><dd>@Date(Model.ExpirationDate)</dd>
                 <dt>@Localizer["Subtotal"]</dt><dd>@Model.Subtotal</dd>
                 <dt>@Localizer["VAT"]</dt><dd>@Model.Vat</dd>
                 <dt>@Localizer["Total"]</dt><dd>@Model.Total</dd>
                 <dt>@Localizer["Withholding tax"]</dt><dd>@Model.WithholdingTax</dd>
                 <dt>@Localizer["Quoted amount"]</dt><dd>@Model.QuotedAmount</dd>
-                <dt>@Localizer["Currency ID"]</dt><dd>@Model.CurrencyId</dd>
+                <dt>@Localizer["Currency"]</dt><dd>@Model.Currency</dd>
                 <dt>@Localizer["Shipping method"]</dt><dd>@Model.ShippingMethod</dd>
                 <dt>@Localizer["Free on board"]</dt><dd>@Model.FreeOnBoard</dd>
                 <dt>@Localizer["Terms"]</dt><dd>@Model.Terms</dd>
             </dl>
             @if (!string.IsNullOrWhiteSpace(Model.Comment))
             {
-                <p>@Model.Comment</p>
+                <p><strong>@Localizer["Remark"]:</strong> @Model.Comment</p>
             }
         </article>
+        <section class="member-detail-grid" aria-label="@Localizer["Customer and addresses"]">
+            <article class="maliev-panel">
+                <h2>@Localizer["Customer"]</h2>
+                @if (Model.Customer is null)
+                {
+                    <p>@Localizer["Customer details are not available."]</p>
+                }
+                else
+                {
+                    <p>
+                        <strong>@Model.Customer.FullName</strong><br />
+                        @Model.Customer.Email<br />
+                        @Localizer["Telephone"]: @Model.Customer.Telephone<br />
+                        @Localizer["Mobile"]: @Model.Customer.Mobile<br />
+                        @Localizer["Fax"]: @Model.Customer.Fax
+                    </p>
+                }
+            </article>
+            <article class="maliev-panel">
+                <h2>@Localizer["Billing address"]</h2>
+                @Address(Model.Customer?.BillingAddress)
+            </article>
+            <article class="maliev-panel">
+                <h2>@Localizer["Shipping address"]</h2>
+                @Address(Model.Customer?.ShippingAddress)
+            </article>
+        </section>
         <section class="maliev-panel">
             <h2>@Localizer["Quotation items"]</h2>
             @if (Model.Items.Count == 0)
@@ -68,6 +113,36 @@
             }
         </section>
         <section class="maliev-panel">
+            <h2>@Localizer["Invoice and payment"]</h2>
+            @if (Model.Invoice is null)
+            {
+                <p>@Localizer["No invoice has been issued."]</p>
+            }
+            else
+            {
+                <dl>
+                    <dt>@Localizer["Invoice number"]</dt><dd>@Model.Invoice.Number</dd>
+                    <dt>@Localizer["Payment status"]</dt><dd>@(Model.Invoice.IsPaid ? Localizer["Paid"] : Localizer["Awaiting payment"])</dd>
+                    <dt>@Localizer["Payment date"]</dt><dd>@Date(Model.Invoice.PaymentDate)</dd>
+                    <dt>@Localizer["Outstanding"]</dt><dd>@Model.Invoice.Outstanding</dd>
+                </dl>
+                @if (!Model.Invoice.IsPaid && Model.BankAccounts.Count > 0)
+                {
+                    <h3>@Localizer["Bank transfer"]</h3>
+                    @foreach (var account in Model.BankAccounts)
+                    {
+                        <p>
+                            <strong>@account.Bank</strong><br />
+                            @Localizer["Branch"]: @account.Branch<br />
+                            @Localizer["SWIFT"]: @account.Swift<br />
+                            @Localizer["Account number"]: <strong>@account.AccountNumber</strong>
+                        </p>
+                    }
+                    <p>@Localizer["Include the invoice number with your transfer"]: <strong>@Model.Invoice.Number</strong></p>
+                }
+            }
+        </section>
+        <section class="maliev-panel">
             <h2>@Localizer["Linked orders"]</h2>
             @if (Model.Orders.Count == 0)
             {
@@ -85,25 +160,65 @@
         </section>
         <section class="maliev-panel">
             <h2>@Localizer["Quotation files"]</h2>
-            @if (Model.FileNames.Count == 0)
+            @if (Model.Files.Count == 0)
             {
                 <p>@Localizer["No files are linked to this quotation."]</p>
             }
             else
             {
-                <ul>
-                    @foreach (var fileName in Model.FileNames)
-                    {
-                        <li>@fileName</li>
-                    }
-                </ul>
+                <div class="table-wrapper">
+                    <table class="data-table data-table--compact">
+                        <thead><tr><th scope="col">@Localizer["Name"]</th><th scope="col">@Localizer["Created"]</th></tr></thead>
+                        <tbody>
+                        @foreach (var file in Model.Files)
+                        {
+                            <tr><td><a href="@file.Href" target="_blank" rel="noopener">@file.FileName</a></td><td>@Date(file.CreatedDate)</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             }
         </section>
     }
-    <p><a class="maliev-button maliev-button--secondary" href="/member/quotations">@Localizer["Back to quotations"]</a></p>
 </section>
 
 @code {
     [Parameter]
     public MemberQuotationDetailDisplayModel Model { get; set; } = MemberQuotationDetailDisplayModel.Empty;
+
+    private static RenderFragment Date(MemberDateDisplayModel date) => builder =>
+    {
+        if (string.IsNullOrWhiteSpace(date.MachineValue))
+        {
+            builder.AddContent(0, date.DisplayValue);
+            return;
+        }
+
+        builder.OpenElement(1, "time");
+        builder.AddAttribute(2, "datetime", date.MachineValue);
+        builder.AddContent(3, date.DisplayValue);
+        builder.CloseElement();
+    };
+
+    private RenderFragment Address(MemberPostalAddressDisplayModel? address) => builder =>
+    {
+        if (address is null || address.Lines.Count == 0)
+        {
+            builder.AddContent(0, Localizer["Not provided"]);
+            return;
+        }
+
+        builder.OpenElement(1, "address");
+        for (var index = 0; index < address.Lines.Count; index++)
+        {
+            builder.AddContent(index * 2 + 2, address.Lines[index]);
+            if (index < address.Lines.Count - 1)
+            {
+                builder.OpenElement(index * 2 + 3, "br");
+                builder.CloseElement();
+            }
+        }
+
+        builder.CloseElement();
+    };
 }

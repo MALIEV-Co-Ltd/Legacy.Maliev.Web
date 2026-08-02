@@ -1,0 +1,10 @@
+@page
+@model Legacy.Maliev.Web.Areas.Member.Pages.Orders.Machining
+@inject IStringLocalizer<MemberOrderCreationContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["CNC Manufacturing order | MALIEV"];
+    ViewData["Robots"] = "noindex,follow";
+}
+<form method="post" asp-page-handler="Submit" enctype="multipart/form-data" class="maliev-panel maliev-form" data-terms-gated-form>
+    <component type="typeof(MemberOrderCreationContent)" render-mode="Static" param-Model="Model.DisplayModel" />
+</form>

@@ -1,28 +1,57 @@
 @page "/Member/Quotations/View"
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @attribute [Authorize]
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IAccountSessionManager SessionManager
 @inject ICustomerQuotationClient QuotationClient
+@inject ICustomerMemberDetailClient MemberDetailClient
+@inject IAntiforgery Antiforgery
+@inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IStringLocalizer<MemberQuotationDetailContent> Localizer
 
 <PageTitle>@Localizer["Quotation details | MALIEV"]</PageTitle>
 <HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
-<div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><MemberQuotationDetailContent Model="model" /></MemberWorkspaceShell></div>
+<div data-migration-route-owner="blazor-static-ssr">
+    <MemberWorkspaceShell>
+        <MemberQuotationDetailContent Model="model" />
+        @if (model.CanDecide && tokens is not null)
+        {
+            <form method="post" action="/member/quotations/view?handler=Decision" class="maliev-panel maliev-form" aria-labelledby="quotation-decision-title">
+                <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                <input type="hidden" name="quotationId" value="@model.Id" />
+                <input type="hidden" name="operationId" value="@operationId" />
+                <h2 id="quotation-decision-title">@Localizer["Quotation decision"]</h2>
+                <p>@Localizer["Accepting creates the payable invoice and moves the linked orders forward. Declining closes this quotation."]</p>
+                <div class="maliev-actions">
+                    <button type="submit" name="accepted" value="true" class="maliev-button">@Localizer["Accept quotation"]</button>
+                    <button type="submit" name="accepted" value="false" class="maliev-button maliev-button--danger">@Localizer["Decline quotation"]</button>
+                </div>
+            </form>
+        }
+        <p><a class="maliev-button maliev-button--secondary" href="/member/quotations">@Localizer["Back to quotations"]</a></p>
+    </MemberWorkspaceShell>
+</div>
 
 @code {
     private MemberQuotationDetailDisplayModel model = MemberQuotationDetailDisplayModel.Empty;
+    private AntiforgeryTokenSet? tokens;
+    private string operationId = Guid.NewGuid().ToString("D");
     [SupplyParameterFromQuery(Name = "id")] public string? Id { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
         var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
         var id = int.TryParse(Id, out var parsed) ? parsed : 0;
+        var tempData = TempDataDictionaryFactory.GetTempData(context);
+        var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
         var loaded = await MemberDetailLoaders.LoadQuotationAsync(
-            context, SessionManager, QuotationClient, id, context.RequestAborted);
+            context, SessionManager, QuotationClient, MemberDetailClient, id, notification, context.RequestAborted);
         if (loaded.IsNotFound) context.Response.StatusCode = StatusCodes.Status404NotFound;
         model = loaded.Model;
+        tokens = model.CanDecide ? Antiforgery.GetAndStoreTokens(context) : null;
     }
 }

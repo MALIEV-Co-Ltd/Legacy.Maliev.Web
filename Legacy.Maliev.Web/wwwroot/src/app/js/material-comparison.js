@@ -109,8 +109,11 @@
             return;
         }
 
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({
+        if (!window.malievAnalytics || typeof window.malievAnalytics.emit !== "function") {
+            return;
+        }
+
+        window.malievAnalytics.emit({
             event: "material_detail_viewed",
             material_id: state.key,
             process: state.row.dataset.materialGroup || "unknown",

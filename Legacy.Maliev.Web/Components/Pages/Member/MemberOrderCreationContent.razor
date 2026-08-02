@@ -1,0 +1,62 @@
+@using Legacy.Maliev.Web.Application
+@inject IStringLocalizer<MemberOrderCreationContent> Localizer
+
+<div data-migration-component="member-order-creation-content" data-member-order-form data-kind="@Model.Kind.ToString().ToLowerInvariant()" data-options-endpoint="/member/orders/material-options">
+    <div class="maliev-section-header">
+        <p class="maliev-eyebrow">@Localizer["Order management"]</p>
+        <h1 id="member-order-create-title">@Localizer[Model.Title]</h1>
+        <p>@(Model.Kind == CustomerOrderKind.Scanning
+            ? Localizer["Please tell us about the object you want us to scan."]
+            : Localizer["Please submit a separate order for each manufacturing part."])</p>
+        @if (Model.Kind != CustomerOrderKind.Scanning)
+        {
+            <p>@Localizer["Verify that your part conforms to our manufacturing specifications. The quotation is non-binding and can be cancelled before acceptance."]</p>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notification))
+    {
+        <div class="maliev-alert maliev-alert--success" role="status">@Localizer[Model.Notification]</div>
+    }
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="validation-summary-errors" role="alert"><ul>@foreach (var error in Model.Errors) { <li>@Localizer[error]</li> }</ul></div>
+    }
+    <div class="maliev-form-field maliev-form-field--full">
+        <label for="member-order-files">@(Model.Kind == CustomerOrderKind.Scanning ? Localizer["Pictures of the object"] : Localizer["Upload files"])</label>
+        <input id="member-order-files" type="file" name="Files" accept="@Model.AcceptedExtensions" multiple />
+        <span class="maliev-form-help">@Localizer["Optional. Maximum total upload size: 200 MB."]</span>
+    </div>
+    <div class="maliev-form-grid">
+        <div class="maliev-form-field"><label for="member-order-name">@Localizer["Name"]</label><input id="member-order-name" name="Name" value="@Model.Name" maxlength="200" required /></div>
+        @if (Model.Kind != CustomerOrderKind.Scanning)
+        {
+            <div class="maliev-form-field"><label for="member-order-quantity">@Localizer["Quantity"]</label><input id="member-order-quantity" type="number" name="Quantity" value="@Model.Quantity" min="1" required /></div>
+            <div class="maliev-form-field"><label for="member-order-process">@Localizer["Process"]</label><select id="member-order-process" name="ProcessId" required><option value="">@Localizer["Please select a process"]</option>@foreach (var process in Model.Catalog?.Processes ?? []) { <option value="@process.Id" selected="@(process.Id == Model.ProcessId)">@process.Name</option> }</select></div>
+            <div class="maliev-form-field"><label for="member-order-material">@Localizer["Material"]</label><select id="member-order-material" name="MaterialId" data-order-material required><option value="">@Localizer["Please select a material"]</option>@foreach (var group in Model.Catalog?.MaterialGroups ?? []) { <optgroup label="@group.Name">@foreach (var material in (Model.Catalog?.Materials ?? []).Where(item => item.MaterialGroupId == group.Id)) { <option value="@material.Id" selected="@(material.Id == Model.MaterialId)">@material.Name</option> }</optgroup> }</select></div>
+            @if (Model.Kind == CustomerOrderKind.Additive)
+            {
+                <div class="maliev-form-field"><label for="member-order-color">@Localizer["Color"]</label><select id="member-order-color" name="ColorId" data-order-color required><option value="">@Localizer["Please select a color"]</option>@foreach (var color in Model.Colors) { <option value="@color.Id" selected="@(color.Id == Model.ColorId)">@color.Name</option> }</select></div>
+            }
+            <div class="maliev-form-field"><label for="member-order-finish">@Localizer["Surface finish"]</label><select id="member-order-finish" name="SurfaceFinishId" data-order-finish required><option value="">@Localizer["Please select a surface finish"]</option>@foreach (var finish in Model.SurfaceFinishes) { <option value="@finish.Id" selected="@(finish.Id == Model.SurfaceFinishId)">@finish.Name</option> }</select></div>
+        }
+        else
+        {
+            <fieldset class="maliev-form-field"><legend>@Localizer["Measurement system"]</legend><label><input type="radio" name="IsMetric" value="true" checked="@Model.IsMetric" /> @Localizer["Metric (mm)"]</label><label><input type="radio" name="IsMetric" value="false" checked="@(!Model.IsMetric)" /> @Localizer["Imperial (in)"]</label></fieldset>
+            <div class="maliev-form-field"><label for="member-order-width">@Localizer["Width"]</label><input id="member-order-width" type="number" name="Width" value="@Model.Width" min="0.01" step="any" required /></div>
+            <div class="maliev-form-field"><label for="member-order-length">@Localizer["Length"]</label><input id="member-order-length" type="number" name="Length" value="@Model.Length" min="0.01" step="any" required /></div>
+            <div class="maliev-form-field"><label for="member-order-height">@Localizer["Height"]</label><input id="member-order-height" type="number" name="Height" value="@Model.Height" min="0.01" step="any" required /></div>
+        }
+        <div class="maliev-form-field maliev-form-field--full"><label for="member-order-description">@Localizer["Description"]</label><textarea id="member-order-description" name="Description" rows="8" maxlength="500">@Model.Description</textarea><span class="maliev-form-help">@Localizer["Maximum 500 characters."]</span></div>
+    </div>
+    <label class="maliev-checkbox"><input type="checkbox" name="AllowSocialMedia" value="true" checked="@Model.AllowSocialMedia" /> <span>@Localizer["I allow MALIEV to publish work-in-progress photos on social media."]</span></label>
+    <input type="hidden" name="AllowSocialMedia" value="false" />
+    <label class="maliev-checkbox"><input type="checkbox" name="AcceptTermsAndConditions" value="true" checked="@Model.AcceptTermsAndConditions" data-terms-checkbox required /> <span>@Localizer["I agree to the"] <a href="/Legal/TermsConditions" target="_blank" rel="noopener">@Localizer["terms of service"]</a>.</span></label>
+    <input type="hidden" name="AcceptTermsAndConditions" value="false" />
+    <p class="maliev-form-help">@Localizer["Need an NDA?"] <a href="/Legal/NonDisclosureAgreement" target="_blank" rel="noopener">@Localizer["Download the agreement"]</a> @Localizer["and send it to"] <a href="mailto:nda@maliev.com">nda@maliev.com</a>.</p>
+    <input type="hidden" name="OperationId" value="@Model.OperationId" />
+    <button type="submit" class="maliev-button" data-terms-submit disabled>@Localizer["Submit an order"]</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MemberOrderCreationDisplayModel Model { get; set; } = default!;
+}

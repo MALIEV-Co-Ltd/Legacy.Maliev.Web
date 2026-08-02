@@ -49,14 +49,14 @@ public sealed class ForgotPassword(
             cancellationToken);
         if (challenge.Token is not null)
         {
-            await SendResetAsync(challenge.Token, cancellationToken);
+            _ = await SendResetAsync(challenge.Token, cancellationToken);
         }
 
         Notification = "If an eligible account exists, a password reset link has been sent.";
         return RedirectToPage();
     }
 
-    private async Task SendResetAsync(string token, CancellationToken cancellationToken)
+    private async Task<bool> SendResetAsync(string token, CancellationToken cancellationToken)
     {
         var callback = Url.Page(
             "/Account/ResetPassword",
@@ -66,23 +66,37 @@ public sealed class ForgotPassword(
             Request.Host.Value);
         if (string.IsNullOrWhiteSpace(callback))
         {
-            return;
+            return false;
         }
 
-        var safeCallback = WebUtility.HtmlEncode(callback);
-        var result = await notificationClient.SendAsync(
-            NotificationChannel.NoReply,
-            new EmailNotification(
-                Email.Trim(),
-                "Reset your MALIEV password",
-                $"<p>Use this single-use link to reset your password:</p><p><a href=\"{safeCallback}\">Reset password</a></p><p>If you did not request this, you can ignore this email.</p>",
-                null,
-                null,
-                ["mail-tracking@maliev.com"]),
-            cancellationToken);
-        if (!result.Sent)
+        try
         {
-            logger.LogWarning("Password reset notification delivery failed.");
+            var safeCallback = WebUtility.HtmlEncode(callback);
+            var result = await notificationClient.SendAsync(
+                NotificationChannel.NoReply,
+                new EmailNotification(
+                    Email.Trim(),
+                    "Reset your MALIEV password",
+                    $"<p>Use this single-use link to reset your password:</p><p><a href=\"{safeCallback}\">Reset password</a></p><p>If you did not request this, you can ignore this email.</p>",
+                    null,
+                    null,
+                    ["mail-tracking@maliev.com"]),
+                cancellationToken);
+            if (!result.Sent)
+            {
+                logger.LogWarning("Password reset notification delivery failed.");
+            }
+
+            return result.Sent;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Password reset notification delivery failed.");
+            return false;
         }
     }
 }

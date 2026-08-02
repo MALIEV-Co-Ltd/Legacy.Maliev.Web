@@ -6,6 +6,7 @@
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IAccountSessionManager SessionManager
 @inject ICustomerAccountClient AccountClient
+@inject ICountryClient CountryClient
 @inject ICustomerOrderClient OrderClient
 @inject ICustomerQuotationClient QuotationClient
 @inject IStringLocalizer<MemberOverviewContent> Localizer
@@ -27,6 +28,7 @@
             context,
             SessionManager,
             AccountClient,
+            CountryClient,
             OrderClient,
             QuotationClient,
             context.RequestAborted);

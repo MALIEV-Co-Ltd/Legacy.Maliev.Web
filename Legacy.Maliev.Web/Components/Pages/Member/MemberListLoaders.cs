@@ -42,20 +42,42 @@ public static class MemberListLoaders
                 : "Order service is temporarily unavailable.");
         }
 
-        return new MemberOrderHistoryDisplayModel(
+        return CreateOrderDisplayModel(
+            page,
             search,
             sort,
             pageSize,
-            errors.Distinct(StringComparer.Ordinal).ToArray(),
+            errors.Distinct(StringComparer.Ordinal).ToArray());
+    }
+
+    internal static MemberOrderHistoryDisplayModel CreateOrderDisplayModel(
+        CustomerOrderPage page,
+        string? search,
+        string? sort,
+        int pageSize,
+        IReadOnlyList<string> errors)
+    {
+        const string path = "/member/orders/history";
+        return new(
+            search,
+            sort,
+            pageSize,
+            errors,
             page.Items.Select(order => new MemberOrderHistoryItemDisplayModel(
                 order.Id,
                 order.Name,
                 order.Description,
                 order.Quantity,
                 order.Subtotal?.ToString("N2") ?? "-",
-                order.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")).ToArray(),
-            page.PageIndex > 1 ? BuildPageHref("/member/orders/history", page.PageIndex - 1, pageSize, sort, search) : null,
-            page.PageIndex < page.TotalPages ? BuildPageHref("/member/orders/history", page.PageIndex + 1, pageSize, sort, search) : null);
+                order.CreatedDate?.ToString("O") ?? "-")).ToArray(),
+            page.PageIndex,
+            page.TotalPages,
+            page.TotalRecords,
+            BuildPageLinks(path, page.PageIndex, page.TotalPages, pageSize, sort, search),
+            page.PageIndex > 1 ? BuildPageHref(path, 1, pageSize, sort, search) : null,
+            page.PageIndex > 1 ? BuildPageHref(path, page.PageIndex - 1, pageSize, sort, search) : null,
+            page.PageIndex < page.TotalPages ? BuildPageHref(path, page.PageIndex + 1, pageSize, sort, search) : null,
+            page.PageIndex < page.TotalPages ? BuildPageHref(path, page.TotalPages, pageSize, sort, search) : null);
     }
 
     public static async Task<MemberQuotationsIndexDisplayModel> LoadQuotationsAsync(
@@ -91,20 +113,42 @@ public static class MemberListLoaders
                 : "Quotation service is temporarily unavailable.");
         }
 
-        return new MemberQuotationsIndexDisplayModel(
+        return CreateQuotationDisplayModel(
+            page,
             search,
             sort,
             pageSize,
-            errors.Distinct(StringComparer.Ordinal).ToArray(),
+            errors.Distinct(StringComparer.Ordinal).ToArray());
+    }
+
+    internal static MemberQuotationsIndexDisplayModel CreateQuotationDisplayModel(
+        CustomerQuotationPage page,
+        string? search,
+        string? sort,
+        int pageSize,
+        IReadOnlyList<string> errors)
+    {
+        const string path = "/member/quotations";
+        return new(
+            search,
+            sort,
+            pageSize,
+            errors,
             page.Items.Select(quotation => new MemberQuotationListItemDisplayModel(
                 quotation.Id,
                 quotation.Accepted,
                 quotation.QuotedAmount?.ToString("N2") ?? "-",
                 quotation.CurrencyId,
-                quotation.ExpirationDate.ToString("yyyy-MM-dd"),
-                quotation.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")).ToArray(),
-            page.HasPreviousPage ? BuildPageHref("/member/quotations", page.PageIndex - 1, pageSize, sort, search) : null,
-            page.HasNextPage ? BuildPageHref("/member/quotations", page.PageIndex + 1, pageSize, sort, search) : null);
+                quotation.ExpirationDate.ToString("O"),
+                quotation.CreatedDate?.ToString("O") ?? "-")).ToArray(),
+            page.PageIndex,
+            page.TotalPages,
+            page.TotalRecords,
+            BuildPageLinks(path, page.PageIndex, page.TotalPages, pageSize, sort, search),
+            page.HasPreviousPage ? BuildPageHref(path, 1, pageSize, sort, search) : null,
+            page.HasPreviousPage ? BuildPageHref(path, page.PageIndex - 1, pageSize, sort, search) : null,
+            page.HasNextPage ? BuildPageHref(path, page.PageIndex + 1, pageSize, sort, search) : null,
+            page.HasNextPage ? BuildPageHref(path, page.TotalPages, pageSize, sort, search) : null);
     }
 
     private static (int PageIndex, int PageSize, IReadOnlyList<string> Errors) ParsePaging(string? index, string? size)
@@ -112,17 +156,42 @@ public static class MemberListLoaders
         var validIndex = string.IsNullOrWhiteSpace(index)
             || int.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
         var validSize = string.IsNullOrWhiteSpace(size)
-            || int.TryParse(size, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
+            || (int.TryParse(size, NumberStyles.Integer, CultureInfo.InvariantCulture, out var requestedSize)
+                && IsSupportedPageSize(requestedSize));
         var pageIndex = int.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedIndex)
             ? Math.Max(parsedIndex, 1)
             : 1;
         var pageSize = int.TryParse(size, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedSize)
-            ? Math.Clamp(parsedSize, 1, 100)
+            ? NormalizePageSize(parsedSize)
             : 25;
         return (pageIndex, pageSize, validIndex && validSize ? [] : [InvalidQueryValuesMessage]);
     }
 
-    private static string BuildPageHref(
+    internal static int NormalizePageSize(int pageSize) => IsSupportedPageSize(pageSize) ? pageSize : 25;
+
+    private static bool IsSupportedPageSize(int pageSize) => pageSize is 25 or 50 or 100;
+
+    private static IReadOnlyList<MemberPageLinkDisplayModel> BuildPageLinks(
+        string path,
+        int pageIndex,
+        int totalPages,
+        int pageSize,
+        string? sort,
+        string? search)
+    {
+        if (totalPages <= 0) return [];
+
+        var first = Math.Max(1, Math.Min(pageIndex - 2, totalPages - 4));
+        var last = Math.Min(totalPages, first + 4);
+        return Enumerable.Range(first, last - first + 1)
+            .Select(number => new MemberPageLinkDisplayModel(
+                number,
+                BuildPageHref(path, number, pageSize, sort, search),
+                number == pageIndex))
+            .ToArray();
+    }
+
+    internal static string BuildPageHref(
         string path,
         int pageIndex,
         int pageSize,

@@ -41,7 +41,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICustomerProfileClient>();
                     services.RemoveAll<ICustomerAccountClient>();
                     services.RemoveAll<ICustomerOrderClient>();
+                    services.RemoveAll<ICustomerOrderCatalogClient>();
+                    services.RemoveAll<ICustomerOrderSubmissionService>();
                     services.RemoveAll<ICustomerQuotationClient>();
+                    services.RemoveAll<ICustomerMemberDetailClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
@@ -53,7 +56,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
                     services.AddSingleton<ICustomerAccountClient, StubCustomerAccountClient>();
                     services.AddSingleton<ICustomerOrderClient, StubCustomerOrderClient>();
+                    services.AddSingleton<ICustomerOrderCatalogClient, StubCustomerOrderCatalogClient>();
+                    services.AddSingleton<ICustomerOrderSubmissionService, StubCustomerOrderSubmissionService>();
                     services.AddSingleton<ICustomerQuotationClient, StubCustomerQuotationClient>();
+                    services.AddSingleton<ICustomerMemberDetailClient, StubCustomerMemberDetailClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
@@ -137,7 +143,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("Something did not work properly", content, StringComparison.Ordinal);
-        Assert.Contains("Request ID", content, StringComparison.Ordinal);
+        Assert.Contains("Incident ID", content, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"error-content\"", content, StringComparison.Ordinal);
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
@@ -149,8 +155,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [Theory]
     [InlineData("en", 404, "Error | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
     [InlineData("th", 404, "ข้อผิดพลาด | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
-    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please try again. If the problem continues, contact support and include the request ID below.", "Back to the home page", "Contact support")]
-    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดลองอีกครั้ง หากยังพบปัญหา โปรดติดต่อฝ่ายช่วยเหลือพร้อมแจ้งรหัสคำขอด้านล่าง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.", "Back to the home page", "Contact support")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrForStatusCode(
         string culture,
         int statusCode,
@@ -244,21 +250,15 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(string.Empty, await authenticated.Content.ReadAsStringAsync());
     }
 
-    [Theory]
-    [InlineData("/member/orders/cnc-machining?untrusted=discard", "/Quotation?item=CNC-Machining")]
-    [InlineData("/member/orders/3d-printing?untrusted=discard", "/Quotation?item=3D-Printing")]
-    [InlineData("/member/orders/3d-scanning?untrusted=discard", "/Quotation?item=3D-Scanning")]
-    [InlineData("/member/account/manage/createpassword?untrusted=discard", "/Member/Account/Manage/ChangePassword")]
-    public async Task AuthenticatedCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery(
-        string route,
-        string expectedLocation)
+    [Fact]
+    public async Task AuthenticatedCreatePasswordCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery()
     {
         await SignInAsync();
 
-        using var response = await client.GetAsync(route);
+        using var response = await client.GetAsync("/member/account/manage/createpassword?untrusted=discard");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal(expectedLocation, response.Headers.Location?.OriginalString);
+        Assert.Equal("/Member/Account/Manage/ChangePassword", response.Headers.Location?.OriginalString);
         Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
     }
 
@@ -312,6 +312,12 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{orderHistoryLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Existing Billing", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Existing Shipping", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Thailand", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("107.00 THB", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("class=\"convert-to-localdate\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-account-setup-notice", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -375,12 +381,147 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{historyLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{cncLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/3D-Scanning\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/member/orders/3d-printing", "en", "Additive Manufacturing", "/Member/Orders/3D-Printing?handler=Submit")]
+    [InlineData("/member/orders/3d-printing", "th", "งานผลิตแบบเพิ่มเนื้อวัสดุ", "/Member/Orders/3D-Printing?handler=Submit")]
+    [InlineData("/member/orders/3d-scanning", "en", "3D Scanning", "/Member/Orders/3D-Scanning?handler=Submit")]
+    [InlineData("/member/orders/cnc-machining", "en", "CNC Manufacturing", "/Member/Orders/CNC-Machining?handler=Submit")]
+    public async Task MemberOrderCreation_RendersAuthenticatedLocalizedStaticSsrForm(
+        string route,
+        string culture,
+        string heading,
+        string action)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decoded = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"member-order-creation-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decoded, StringComparison.Ordinal);
+        Assert.Contains($"action=\"{action}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"OperationId\"", source, StringComparison.Ordinal);
+        Assert.Contains("noindex,follow", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CustomerId", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_SubmitsTrustedCustomerAndValidatedCatalogSelection()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/orders/3d-printing?culture=en");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        var operationId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form["__RequestVerificationToken"]), "__RequestVerificationToken");
+        content.Add(new StringContent("Bracket"), "Name");
+        content.Add(new StringContent("2"), "Quantity");
+        content.Add(new StringContent("10"), "ProcessId");
+        content.Add(new StringContent("20"), "MaterialId");
+        content.Add(new StringContent("30"), "ColorId");
+        content.Add(new StringContent("40"), "SurfaceFinishId");
+        content.Add(new StringContent("true"), "AllowSocialMedia");
+        content.Add(new StringContent("true"), "AcceptTermsAndConditions");
+        content.Add(new StringContent(operationId.ToString()), "OperationId");
+
+        using var response = await client.PostAsync("/member/orders/3d-printing?handler=Submit&culture=en", content);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders/View?itemID=81", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<OrderSubmissionInvocation>(submission.LastInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("customer@example.com", invocation.CustomerEmail);
+        Assert.Equal(operationId, invocation.OperationId);
+        Assert.Equal(CustomerOrderKind.Additive, invocation.Draft.Kind);
+        Assert.Equal("Bracket", invocation.Draft.Name);
+        Assert.Equal(10, invocation.Draft.ProcessId);
+        Assert.Equal(20, invocation.Draft.MaterialId);
+        Assert.Equal(30, invocation.Draft.ColorId);
+        Assert.Equal(40, invocation.Draft.SurfaceFinishId);
+        Assert.Equal(2, invocation.Draft.Quantity);
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_RejectsMissingAntiforgeryBeforeSubmission()
+    {
+        await SignInAsync();
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent("Bracket"), "Name");
+
+        using var response = await client.PostAsync("/member/orders/3d-printing?handler=Submit", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(submission.LastInvocation);
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_MaterialOptionsRequireAuthenticationAndReturnControlledShape()
+    {
+        using var anonymous = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        using var challenge = await anonymous.GetAsync("/member/orders/material-options?materialId=20");
+        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+
+        await SignInAsync();
+        using var response = await client.GetAsync("/member/orders/material-options?materialId=20");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var payload = JsonDocument.Parse(source);
+        Assert.Equal("Black", payload.RootElement.GetProperty("colors")[0].GetProperty("name").GetString());
+        Assert.Equal("As printed", payload.RootElement.GetProperty("surfaceFinishes")[0].GetProperty("name").GetString());
+        Assert.Equal(2, payload.RootElement.EnumerateObject().Count());
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_RejectsUnlinkedMaterialOptionsBeforeSubmission()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/orders/3d-printing?culture=en");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form["__RequestVerificationToken"]), "__RequestVerificationToken");
+        content.Add(new StringContent("Bracket"), "Name");
+        content.Add(new StringContent("2"), "Quantity");
+        content.Add(new StringContent("10"), "ProcessId");
+        content.Add(new StringContent("20"), "MaterialId");
+        content.Add(new StringContent("999"), "ColorId");
+        content.Add(new StringContent("40"), "SurfaceFinishId");
+        content.Add(new StringContent("true"), "AcceptTermsAndConditions");
+        content.Add(new StringContent(Guid.NewGuid().ToString()), "OperationId");
+
+        using var response = await client.PostAsync("/member/orders/3d-printing?handler=Submit&culture=en", content);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Please select a valid color.", source, StringComparison.Ordinal);
+        Assert.Null(submission.LastInvocation);
     }
 
     [Theory]
@@ -400,7 +541,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         quotationClient.ResetInvocation();
 
         using var response = await client.GetAsync(
-            $"/member/quotations?culture={culture}&index=2&size=10&sort=QuotationCreatedDate_Ascending&search=CNC");
+            $"/member/quotations?culture={culture}&index=2&size=25&sort=QuotationCreatedDate_Ascending&search=CNC");
         var source = await response.Content.ReadAsStringAsync();
         var decodedSource = WebUtility.HtmlDecode(source);
 
@@ -415,11 +556,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{nextLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"sort\" value=\"QuotationCreatedDate_Ascending\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"QuotationCreatedDate_Ascending\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"25\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"data-table data-responsive\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-record-count=\"1\"", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"convert-to-localdate\"", source, StringComparison.Ordinal);
+        Assert.Contains("datetime=\"2026-08-15T00:00:00.0000000Z\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"page\">2</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/quotations?index=1&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/quotations?index=3&amp;size=10&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=1&amp;size=25&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/quotations?index=3&amp;size=25&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -429,7 +577,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal("QuotationCreatedDate_Ascending", invocation.Sort);
         Assert.Equal("CNC", invocation.Search);
         Assert.Equal(2, invocation.PageIndex);
-        Assert.Equal(10, invocation.PageSize);
+        Assert.Equal(25, invocation.PageSize);
     }
 
     [Fact]
@@ -468,15 +616,17 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files")]
-    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา")]
+    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files", "Quotation PDF", "Awaiting payment")]
+    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา", "ใบเสนอราคา PDF", "รอการชำระเงิน")]
     public async Task MemberQuotationDetail_RendersLocalizedOwnedStaticSsr(
         string culture,
         string heading,
         string status,
         string itemsHeading,
         string ordersHeading,
-        string filesHeading)
+        string filesHeading,
+        string quotationDocumentLabel,
+        string awaitingPaymentLabel)
     {
         await SignInAsync();
         var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
@@ -499,15 +649,85 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("CNC bracket", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
         Assert.Contains("drawing.pdf", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(quotationDocumentLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Mali Ev", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("99 Factory Road", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("INV-81", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(awaitingPaymentLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains("123-4-56789-0", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("THB", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("ICT", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://storage.test/quotations/drawing.pdf\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("legacy-private-quotations", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("customers/42/quotations/15", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/member/quotations/view?handler=Decision\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"accepted\" value=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"accepted\" value=\"false\"", source, StringComparison.Ordinal);
 
         var invocation = Assert.IsType<QuotationDetailInvocation>(quotationClient.LastDetailInvocation);
         Assert.Equal(42, invocation.CustomerId);
         Assert.Equal(15, invocation.QuotationId);
+    }
+
+    [Theory]
+    [InlineData(true, "accepted")]
+    [InlineData(false, "declined")]
+    public async Task MemberQuotationDecision_IsOwnedAntiforgeryProtectedAndQueuesExactAnalytics(
+        bool accepted,
+        string decision)
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        var form = await GetAntiforgeryFormAsync("/member/quotations/view?id=15&culture=en");
+        form["quotationId"] = "15";
+        form["accepted"] = accepted.ToString();
+        form["operationId"] = "11fdb79a-3548-4c24-8dbc-1b457c3bc04e";
+        using var response = await client.PostAsync(
+            "/member/quotations/view?handler=Decision",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Quotations/View?id=15", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<QuotationDecisionInvocation>(quotationClient.LastDecisionInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal(15, invocation.QuotationId);
+        Assert.Equal(accepted, invocation.Accepted);
+        Assert.NotEqual(Guid.Empty, invocation.OperationId);
+
+        using var redirected = await client.GetAsync(response.Headers.Location);
+        var source = WebUtility.HtmlDecode(await redirected.Content.ReadAsStringAsync());
+        Assert.Contains("\"event\":\"maliev_quote_decision\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"transaction_id\":\"quotation-15\"", source, StringComparison.Ordinal);
+        Assert.Contains($"\"decision\":\"{decision}\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer_id", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MemberQuotationDecision_WithoutAntiforgeryIsRejectedBeforeServiceCall()
+    {
+        await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
+
+        using var response = await client.PostAsync(
+            "/member/quotations/view?handler=Decision",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["quotationId"] = "15",
+                ["accepted"] = "true",
+                ["operationId"] = Guid.NewGuid().ToString("D"),
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(quotationClient.LastDecisionInvocation);
     }
 
     [Theory]
@@ -562,7 +782,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         orderClient.ResetInvocations();
 
         using var response = await client.GetAsync(
-            $"/member/orders/history?culture={culture}&index=2&size=10&sort=OrderCreatedDate_Ascending&search=CNC");
+            $"/member/orders/history?culture={culture}&index=2&size=25&sort=OrderCreatedDate_Ascending&search=CNC");
         var source = await response.Content.ReadAsStringAsync();
         var decodedSource = WebUtility.HtmlDecode(source);
 
@@ -577,11 +797,18 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("Part", decodedSource, StringComparison.Ordinal);
         Assert.Contains("name=\"search\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"sort\" value=\"OrderCreatedDate_Ascending\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"size\" value=\"10\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"sort\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"OrderCreatedDate_Ascending\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"size\"", source, StringComparison.Ordinal);
+        Assert.Contains("value=\"25\" selected", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"data-table data-responsive\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-record-count=\"1\"", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"convert-to-localdate\"", source, StringComparison.Ordinal);
+        Assert.Contains("datetime=\"2026-07-15T00:00:00.0000000Z\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"page\">2</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/history?index=1&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/history?index=3&amp;size=10&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=1&amp;size=25&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/history?index=3&amp;size=25&amp;sort=OrderCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("service-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -591,7 +818,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal("OrderCreatedDate_Ascending", invocation.Sort);
         Assert.Equal("CNC", invocation.Search);
         Assert.Equal(2, invocation.PageIndex);
-        Assert.Equal(10, invocation.PageSize);
+        Assert.Equal(25, invocation.PageSize);
     }
 
     [Theory]
@@ -664,7 +891,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("CNC", decodedSource, StringComparison.Ordinal);
         Assert.Contains("Reviewing", decodedSource, StringComparison.Ordinal);
         Assert.Contains("part.step", decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("orders/part.step", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Aluminium 6061", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Metal", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Bead blasted", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Natural", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("ICT", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://storage.test/orders/part.step\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("orders/part.step", decodedSource.Replace("https://storage.test/orders/part.step", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.DoesNotContain("legacy-orders", decodedSource, StringComparison.Ordinal);
         Assert.Contains("__RequestVerificationToken", source, StringComparison.Ordinal);
         Assert.Contains("name=\"orderId\" value=\"7\"", source, StringComparison.Ordinal);
@@ -1426,7 +1659,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [Theory]
     [InlineData("en")]
     [InlineData("th")]
-    public async Task ChangeEmail_SynchronizesExactProfileAndIdentityThenClearsTheBffSession(string culture)
+    public async Task ChangeEmail_CreatesPendingIdentityChallengeWithoutMutatingProfileOrSession(string culture)
     {
         await SignInAsync();
         var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
@@ -1452,24 +1685,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
-        Assert.Contains("email=new@example.com", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
-        var profileUpdate = Assert.Single(accountClient.EmailUpdateInvocations);
-        Assert.Equal(42, profileUpdate.CustomerId);
-        Assert.Equal("new@example.com", profileUpdate.Email);
+        Assert.Equal("/Member/Account/Manage/ChangeEmail", response.Headers.Location?.OriginalString);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
         var identityUpdate = Assert.IsType<EmailChangeInvocation>(authentication.LastEmailChangeInvocation);
         Assert.Equal("sensitive-access-token", identityUpdate.AccessToken);
         Assert.Equal("current-password", identityUpdate.CurrentPassword);
         Assert.Equal("new@example.com", identityUpdate.NewEmail);
-        var notification = Assert.IsType<EmailNotification>(notifications.LastNotification);
+        var notification = Assert.IsType<EmailNotification>(notifications.Notifications[0]);
         Assert.Equal("new@example.com", notification.To);
         Assert.Contains("https://www.maliev.com/account/changeemailconfirmation", notification.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("attacker.example", notification.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("http://www.maliev.com", notification.Body, StringComparison.Ordinal);
         Assert.Contains("confirmation-token", notification.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("current-password", notification.Body, StringComparison.Ordinal);
+        Assert.Equal("customer@example.com", notifications.Notifications[1].To);
+        Assert.DoesNotContain("confirmation-token", notifications.Notifications[1].Body, StringComparison.Ordinal);
         using var account = await client.GetAsync("/member/account/manage/changeemail");
-        Assert.Equal(HttpStatusCode.Redirect, account.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, account.StatusCode);
     }
 
     [Fact]
@@ -1557,9 +1789,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "The email address could not be changed.")]
-    [InlineData("th", "ไม่สามารถเปลี่ยนอีเมลได้")]
-    public async Task MemberChangeEmail_ProfileFailureStopsBeforeIdentityAndRendersSafeError(
+    [InlineData("en", "Customer profile service is temporarily unavailable.")]
+    [InlineData("th", "ระบบข้อมูลลูกค้าไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberChangeEmail_ProfileReadFailureStopsBeforeIdentityAndRendersSafeError(
         string culture,
         string expectedMessage)
     {
@@ -1570,7 +1802,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
         authentication.ResetEmailChangeInvocations();
         accountClient.ResetEmailInvocations();
-        accountClient.EmailUpdateResults.Enqueue(new CustomerAddressOperationResult(false, false, true));
+        accountClient.ProfileGetResultOverride = new CustomerAccountProfileResult(null, false, true);
         var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
         form["CurrentPassword"] = "current-password";
         form["NewEmail"] = "new@example.com";
@@ -1583,13 +1815,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
         Assert.Null(authentication.LastEmailChangeInvocation);
-        Assert.Single(accountClient.EmailUpdateInvocations);
+        Assert.Empty(accountClient.EmailUpdateInvocations);
     }
 
     [Theory]
     [InlineData("en", "The current password is invalid or the email address is already in use.")]
     [InlineData("th", "รหัสผ่านปัจจุบันไม่ถูกต้องหรืออีเมลนี้ถูกใช้งานแล้ว")]
-    public async Task MemberChangeEmail_IdentityRejectionRollsProfileBackBeforeSafeError(
+    public async Task MemberChangeEmail_IdentityRejectionLeavesProfileUntouchedBeforeSafeError(
         string culture,
         string expectedMessage)
     {
@@ -1612,7 +1844,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
-        Assert.Equal(["new@example.com", "customer@example.com"], accountClient.EmailUpdateInvocations.Select(item => item.Email));
+        Assert.Empty(accountClient.EmailUpdateInvocations);
         Assert.DoesNotContain("rejected-password", source, StringComparison.Ordinal);
         Assert.DoesNotContain("confirmation-token", source, StringComparison.Ordinal);
     }
@@ -2618,6 +2850,97 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task Login_TemporaryPasswordRedirectsToSingleUseSetupWithoutCreatingSession()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/login?culture=en");
+        form["Email"] = "customer@example.com";
+        form["Password"] = "temporary-password";
+        form["RememberMe"] = "true";
+        form["ReturnUrl"] = "/Member/Orders";
+
+        using var response = await client.PostAsync(
+            "/account/login?handler=Login&culture=en",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith("/Account/SetInitialPassword?", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        Assert.Contains("token=opaque-setup-token-12345678901234567890", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        Assert.Contains("returnUrl=%2FMember%2FOrders", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            response.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith("__Host-Maliev.Legacy.Session=", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Login_UnconfirmedCredentialOffersContextualResendAndSendsFreshSingleUseLink()
+    {
+        var notification = Assert.IsType<StubNotificationClient>(
+            configuredFactory.Services.GetRequiredService<INotificationClient>());
+        notification.Reset();
+        var form = await GetAntiforgeryFormAsync("/account/login?culture=en");
+        form["Email"] = "customer@example.com";
+        form["Password"] = "unconfirmed-password";
+        form["RememberMe"] = "false";
+
+        using var login = await client.PostAsync(
+            "/account/login?handler=Login&culture=en",
+            new FormUrlEncodedContent(form));
+        var loginSource = await login.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        Assert.Contains("name=\"EmailConfirmationRecoveryToken\" value=\"opaque-recovery-token-12345678901234567890\"", loginSource, StringComparison.Ordinal);
+        Assert.Contains("handler=ResendEmailConfirmation", loginSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("unconfirmed-password", loginSource, StringComparison.Ordinal);
+
+        form.Remove("Password");
+        form["EmailConfirmationRecoveryToken"] = "opaque-recovery-token-12345678901234567890";
+        using var resend = await client.PostAsync(
+            "/account/login?handler=ResendEmailConfirmation&culture=en",
+            new FormUrlEncodedContent(form));
+
+        var resendSource = await resend.Content.ReadAsStringAsync();
+        Assert.True(
+            resend.StatusCode == HttpStatusCode.Redirect,
+            $"Expected redirect, received {resend.StatusCode}. Body: {resendSource}");
+        Assert.NotNull(notification.LastNotification);
+        Assert.Equal("customer@example.com", notification.LastNotification.To);
+        Assert.Contains("fresh-confirmation-token-12345678901234567890", notification.LastNotification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("opaque-recovery-token-12345678901234567890", notification.LastNotification.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SetInitialPassword_ValidPostConsumesChallengeThenCreatesHardenedSession()
+    {
+        const string setupToken = "opaque-setup-token-12345678901234567890";
+        var notification = Assert.IsType<StubNotificationClient>(
+            configuredFactory.Services.GetRequiredService<INotificationClient>());
+        notification.Reset();
+        var form = await GetAntiforgeryFormAsync(
+            $"/Account/SetInitialPassword?culture=en&email=customer%40example.com&token={setupToken}&returnUrl=%2FMember%2FOrders");
+        form["Email"] = "customer@example.com";
+        form["Token"] = setupToken;
+        form["Password"] = "customer-owned-password";
+        form["ConfirmPassword"] = "customer-owned-password";
+        form["RememberMe"] = "true";
+        form["ReturnUrl"] = "/Member/Orders";
+
+        using var response = await client.PostAsync(
+            "/Account/SetInitialPassword?handler=Complete&culture=en",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders", response.Headers.Location?.OriginalString);
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("__Host-Maliev.Legacy.Session=", StringComparison.Ordinal));
+        Assert.DoesNotContain(setupToken, cookie, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer-owned-password", cookie, StringComparison.Ordinal);
+        Assert.NotNull(notification.LastNotification);
+        Assert.Equal("customer@example.com", notification.LastNotification.To);
+        Assert.DoesNotContain(setupToken, notification.LastNotification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer-owned-password", notification.LastNotification.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Login_DoesNotPromoteUntrustedQueryTextIntoTrustedAlert()
     {
         using var response = await client.GetAsync(
@@ -3274,8 +3597,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     private sealed class StubNotificationClient : INotificationClient
     {
         public EmailNotification? LastNotification { get; private set; }
+        public List<EmailNotification> Notifications { get; } = [];
 
-        public void Reset() => LastNotification = null;
+        public void Reset()
+        {
+            LastNotification = null;
+            Notifications.Clear();
+        }
 
         public Task<NotificationResult> SendAsync(
             NotificationChannel channel,
@@ -3283,6 +3611,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             CancellationToken cancellationToken)
         {
             LastNotification = notification;
+            Notifications.Add(notification);
             return Task.FromResult(new NotificationResult(true, true, true));
         }
     }
@@ -3394,15 +3723,28 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         }
 
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAuthenticationResult(
-                new CustomerTokenSet(
-                    "sensitive-access-token",
-                    "sensitive-refresh-token",
-                    "Bearer",
-                    900,
-                    DateTimeOffset.UtcNow.AddDays(1)),
-                true,
-                42));
+            Task.FromResult(password switch
+            {
+                "temporary-password" => new CustomerAuthenticationResult(
+                    null,
+                    true,
+                    null,
+                    new CustomerLoginRequiredAction("set_initial_password", "opaque-setup-token-12345678901234567890")),
+                "unconfirmed-password" => new CustomerAuthenticationResult(
+                    null,
+                    true,
+                    null,
+                    new CustomerLoginRequiredAction("confirm_email", "opaque-recovery-token-12345678901234567890")),
+                _ => new CustomerAuthenticationResult(
+                    new CustomerTokenSet(
+                        "sensitive-access-token",
+                        "sensitive-refresh-token",
+                        "Bearer",
+                        900,
+                        DateTimeOffset.UtcNow.AddDays(1)),
+                    true,
+                    42),
+            });
 
         public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerAuthenticationResult(null, true));
@@ -3418,11 +3760,39 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) =>
             Task.FromResult(!string.Equals(token, "invalid-token", StringComparison.Ordinal));
 
+        public Task<CustomerActionChallenge> RecoverEmailConfirmationAsync(
+            string email,
+            string recoveryToken,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                string.Equals(recoveryToken, "opaque-recovery-token-12345678901234567890", StringComparison.Ordinal)
+                    ? new CustomerActionChallenge(true, "fresh-confirmation-token-12345678901234567890", true, true)
+                    : new CustomerActionChallenge(false, null, true, true));
+
+        public Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(string email, string token, CancellationToken cancellationToken) =>
+            Task.FromResult(
+                string.Equals(token, "invalid-token", StringComparison.Ordinal)
+                    ? new CustomerEmailChangeValidationResult(false, true, true)
+                    : new CustomerEmailChangeValidationResult(true, true, true, 42, "customer@example.com", email));
+
+        public Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(string email, string token, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerEmailChangeCompletionResult(
+                !string.Equals(token, "invalid-token", StringComparison.Ordinal),
+                true,
+                true));
+
         public Task<CustomerActionChallenge> RequestPasswordResetAsync(string email, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerActionChallenge(true, null, true, true));
 
         public Task<bool> CompletePasswordResetAsync(string email, string token, string password, CancellationToken cancellationToken) =>
             Task.FromResult(true);
+
+        public Task<bool> CompleteInitialPasswordAsync(
+            string email,
+            string token,
+            string password,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(string.Equals(token, "opaque-setup-token-12345678901234567890", StringComparison.Ordinal));
 
         public Task<CustomerCredentialOperationResult> ChangeEmailAsync(
             string accessToken,
@@ -3620,15 +3990,21 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     {
         private static readonly CustomerOrder Order = new(
             7, 42, "Part", "CNC part", 3, 2, 0, 2, 100, 0, 200, 5,
-            null, null, null, true, false, null,
+            new DateTime(2026, 7, 21), new DateTime(2026, 7, 20), null, true, false, null,
             new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc));
+            new DateTime(2026, 7, 16, 4, 30, 0, DateTimeKind.Utc))
+        {
+            MaterialId = 12,
+            SurfaceFinishId = 13,
+            ColorId = 14,
+            CurrencyId = 764,
+        };
 
         private static readonly CustomerOrderDetails Details = new(
             Order,
             new CustomerOrderProcess(3, 1, "CNC"),
-            [new CustomerOrderStatus(9, 7, 2, "Reviewing", null, null, null)],
-            [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", null, null)]);
+            [new CustomerOrderStatus(9, 7, 2, "Reviewing", "Engineering review", new DateTime(2026, 7, 15, 1, 0, 0, DateTimeKind.Utc), null)],
+            [new CustomerOrderFile(4, 7, "legacy-orders", "orders/part.step", new DateTime(2026, 7, 15, 2, 0, 0, DateTimeKind.Utc), null)]);
 
         public OrderInvocation? LastGetInvocation { get; private set; }
 
@@ -3708,6 +4084,57 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         }
     }
 
+    private sealed class StubCustomerOrderCatalogClient : ICustomerOrderCatalogClient
+    {
+        private static readonly CustomerOrderCatalog Catalog = new(
+            [new CustomerOrderCatalogProcess(10, 1, "FDM"), new CustomerOrderCatalogProcess(11, 2, "Structured light")],
+            [new CustomerOrderCatalogMaterialGroup(1, "Thermoplastics")],
+            [new CustomerOrderCatalogMaterial(20, 1, "PLA")],
+            [new CustomerOrderFileFormat(1, "STEP", ".step"), new CustomerOrderFileFormat(2, "STL", ".stl")]);
+
+        public Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderCatalogResult(
+                kind == CustomerOrderKind.Scanning
+                    ? Catalog with { Processes = [new CustomerOrderCatalogProcess(11, 2, "Structured light")] }
+                    : Catalog,
+                true,
+                true));
+
+        public Task<CustomerOrderMaterialOptionsResult> GetMaterialOptionsAsync(int materialId, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderMaterialOptionsResult(
+                materialId == 20
+                    ? new CustomerOrderMaterialOptions(
+                        [new CustomerOrderCatalogOption(30, "Black")],
+                        [new CustomerOrderCatalogOption(40, "As printed")])
+                    : null,
+                true,
+                materialId == 20));
+    }
+
+    private sealed class StubCustomerOrderSubmissionService : ICustomerOrderSubmissionService
+    {
+        public OrderSubmissionInvocation? LastInvocation { get; private set; }
+
+        public void Reset() => LastInvocation = null;
+
+        public Task<CustomerOrderSubmissionResult> SubmitAsync(
+            int trustedCustomerId,
+            string trustedCustomerEmail,
+            CustomerOrderDraft draft,
+            Guid operationId,
+            CancellationToken cancellationToken)
+        {
+            LastInvocation = new(trustedCustomerId, trustedCustomerEmail, draft, operationId);
+            return Task.FromResult(new CustomerOrderSubmissionResult(81, true, true, true, true, false, true, true));
+        }
+    }
+
+    private sealed record OrderSubmissionInvocation(
+        int CustomerId,
+        string CustomerEmail,
+        CustomerOrderDraft Draft,
+        Guid OperationId);
+
     private sealed record OrderInvocation(int CustomerId, int OrderId);
 
     private sealed record OrderListInvocation(
@@ -3722,7 +4149,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         private static readonly CustomerQuotation Quotation = new(
             15,
             42,
-            null,
+            81,
             30,
             new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
             100,
@@ -3743,13 +4170,19 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public QuotationDetailInvocation? LastDetailInvocation { get; private set; }
 
+        public QuotationDecisionInvocation? LastDecisionInvocation { get; private set; }
+
         public CustomerQuotationDetailsResult? DetailResultOverride { get; set; }
+
+        public CustomerQuotationDecisionResult? DecisionResultOverride { get; set; }
 
         public void ResetInvocation()
         {
             LastInvocation = null;
             LastDetailInvocation = null;
+            LastDecisionInvocation = null;
             DetailResultOverride = null;
+            DecisionResultOverride = null;
         }
 
         public Task<CustomerQuotationListResult> ListAsync(
@@ -3787,6 +4220,17 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                 : null;
             return Task.FromResult(new CustomerQuotationDetailsResult(details, true, customerId == 42));
         }
+
+        public Task<CustomerQuotationDecisionResult> DecideAsync(
+            int customerId,
+            int quotationId,
+            bool accepted,
+            Guid operationId,
+            CancellationToken cancellationToken)
+        {
+            LastDecisionInvocation = new(customerId, quotationId, accepted, operationId);
+            return Task.FromResult(DecisionResultOverride ?? new CustomerQuotationDecisionResult(true, true, true, false, accepted ? 23 : null));
+        }
     }
 
     private sealed record QuotationListInvocation(
@@ -3797,4 +4241,41 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         int PageSize);
 
     private sealed record QuotationDetailInvocation(int CustomerId, int QuotationId);
+
+    private sealed record QuotationDecisionInvocation(int CustomerId, int QuotationId, bool Accepted, Guid OperationId);
+
+    private sealed class StubCustomerMemberDetailClient : ICustomerMemberDetailClient
+    {
+        public Task<CustomerOrderSupplement> GetOrderSupplementAsync(
+            CustomerOrderDetails details,
+            CancellationToken cancellationToken) => Task.FromResult(new CustomerOrderSupplement(
+                "Aluminium 6061",
+                "Metal",
+                "Bead blasted",
+                "Natural",
+                "THB",
+                [new CustomerDownloadFile("part.step", new Uri("https://storage.test/orders/part.step"), new DateTime(2026, 7, 15, 2, 0, 0, DateTimeKind.Utc))],
+                []));
+
+        public Task<CustomerQuotationSupplement> GetQuotationSupplementAsync(
+            int customerId,
+            CustomerQuotationDetails details,
+            CancellationToken cancellationToken) => Task.FromResult(new CustomerQuotationSupplement(
+                "THB",
+                new CustomerContactSummary(
+                    "Mali Ev",
+                    "customer@example.com",
+                    "+66 2 000 0000",
+                    "+66 81 000 0000",
+                    "-",
+                    new CustomerAddressSummary(null, "99 Factory Road", null, "Bangkok", null, "10110", "Thailand"),
+                    new CustomerAddressSummary("MALIEV", "36/1 Moo 3", null, "Nonthaburi", null, "11120", "Thailand")),
+                new CustomerInvoiceSummary(81, "INV-81", "THB", false, 91, null, 107),
+                new Uri("https://storage.test/documents/quotation.pdf"),
+                new Uri("https://storage.test/documents/invoice.pdf"),
+                new Uri("https://storage.test/documents/receipt.pdf"),
+                [new CustomerDownloadFile("drawing.pdf", new Uri("https://storage.test/quotations/drawing.pdf"), new DateTime(2026, 7, 15, 3, 0, 0, DateTimeKind.Utc))],
+                [new CustomerBankAccountSummary("MALIEV Bank", "Head office", "MALITHBK", "123-4-56789-0")],
+                []));
+    }
 }

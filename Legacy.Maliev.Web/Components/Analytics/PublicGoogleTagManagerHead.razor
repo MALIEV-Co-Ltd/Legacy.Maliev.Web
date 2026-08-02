@@ -12,6 +12,7 @@
     });
     window.malievAnalytics = window.malievAnalytics || (function (initialConsentGranted) {
         var consentGranted = initialConsentGranted;
+        var consentDecisionMade = initialConsentGranted;
         var pendingEvents = [];
 
         function push(eventData) {
@@ -29,9 +30,12 @@
                     return;
                 }
 
-                pendingEvents.push(eventData);
+                if (!consentDecisionMade) {
+                    pendingEvents.push(eventData);
+                }
             },
             setConsent: function (state) {
+                consentDecisionMade = true;
                 consentGranted = state === 'granted';
                 if (!consentGranted) {
                     pendingEvents.length = 0;

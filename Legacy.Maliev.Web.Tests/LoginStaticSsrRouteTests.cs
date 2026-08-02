@@ -23,6 +23,8 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
 
         var program = File.ReadAllText(Path.Combine(web, "Program.cs"));
         var appsettings = File.ReadAllText(Path.Combine(web, "appsettings.json"));
+        var developmentAppsettings = File.ReadAllText(Path.Combine(web, "appsettings.Development.json"));
+        var loginRoute = File.ReadAllText(routePath);
         var fallback = File.ReadAllText(Path.Combine(web, "Pages", "Account", "Login.cshtml"));
 
         Assert.Contains("BlazorRouting:Login", program, StringComparison.Ordinal);
@@ -30,6 +32,9 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
         Assert.Contains("HttpMethodMetadata([\"GET\", \"HEAD\"])", program, StringComparison.Ordinal);
         Assert.Contains("\"Login\": true", appsettings, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(LoginContent)\"", fallback, StringComparison.Ordinal);
+        Assert.DoesNotContain("LocalAspireLoginReview", developmentAppsettings, StringComparison.Ordinal);
+        Assert.DoesNotContain("LocalAspireLoginReview", loginRoute, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-local-aspire-login", loginRoute, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -67,20 +72,13 @@ public sealed class LoginStaticSsrRouteTests : IClassFixture<WebApplicationFacto
     }
 
     [Fact]
-    public async Task LocalAspireLoginReview_RendersOnlyConfiguredDisposableCredentials()
+    public async Task LoginRoute_DoesNotExposeCredentialHints()
     {
-        await using var reviewFactory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseSetting("LocalAspireLoginReview:Enabled", "true");
-            builder.UseSetting("LocalAspireLoginReview:Email", "local.customer@maliev.test");
-            builder.UseSetting("LocalAspireLoginReview:Password", "local-test-only");
-        });
-        using var client = CreateClient(reviewFactory);
+        using var client = CreateClient(factory);
         var source = WebUtility.HtmlDecode(await client.GetStringAsync("/account/login?culture=en"));
 
-        Assert.Contains("data-local-aspire-login", source, StringComparison.Ordinal);
-        Assert.Contains("local.customer@maliev.test", source, StringComparison.Ordinal);
-        Assert.Contains("local-test-only", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-local-aspire-login", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Local Aspire review", source, StringComparison.Ordinal);
     }
 
     [Theory]

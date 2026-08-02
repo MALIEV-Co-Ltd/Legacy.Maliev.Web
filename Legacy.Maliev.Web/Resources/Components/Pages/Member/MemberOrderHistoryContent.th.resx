@@ -30,4 +30,15 @@
   <data name="Your order history could not be loaded." xml:space="preserve"><value>ไม่สามารถโหลดประวัติคำสั่งซื้อของคุณได้</value></data>
   <data name="Order service is temporarily unavailable." xml:space="preserve"><value>ระบบคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
   <data name="One or more query values are invalid." xml:space="preserve"><value>ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง</value></data>
+  <data name="Sort by" xml:space="preserve"><value>เรียงตาม</value></data>
+  <data name="Newest first" xml:space="preserve"><value>ใหม่ล่าสุดก่อน</value></data>
+  <data name="Oldest first" xml:space="preserve"><value>เก่าที่สุดก่อน</value></data>
+  <data name="Name A-Z" xml:space="preserve"><value>ชื่อตามลำดับ ก-ฮ</value></data>
+  <data name="Name Z-A" xml:space="preserve"><value>ชื่อย้อนลำดับ ฮ-ก</value></data>
+  <data name="Rows per page" xml:space="preserve"><value>จำนวนรายการต่อหน้า</value></data>
+  <data name="Showing {0} of {1} orders" xml:space="preserve"><value>แสดง {0} จากคำสั่งซื้อทั้งหมด {1} รายการ</value></data>
+  <data name="Name" xml:space="preserve"><value>ชื่อ</value></data>
+  <data name="Action" xml:space="preserve"><value>ดำเนินการ</value></data>
+  <data name="First" xml:space="preserve"><value>หน้าแรก</value></data>
+  <data name="Last" xml:space="preserve"><value>หน้าสุดท้าย</value></data>
 </root>

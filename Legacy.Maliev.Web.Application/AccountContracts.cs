@@ -10,7 +10,10 @@ public sealed record CustomerTokenSet(
 public sealed record CustomerAuthenticationResult(
     CustomerTokenSet? Tokens,
     bool ServiceAvailable,
-    int? DatabaseId = null);
+    int? DatabaseId = null,
+    CustomerLoginRequiredAction? RequiredAction = null);
+
+public sealed record CustomerLoginRequiredAction(string Action, string Token);
 
 public sealed record CustomerIdentityRegistration(
     bool Succeeded,
@@ -29,6 +32,33 @@ public sealed record CustomerCredentialOperationResult(
     bool ServiceAvailable,
     bool Authorized,
     string? Token = null);
+
+public sealed record CustomerEmailChangeValidationResult(
+    bool Valid,
+    bool ServiceAvailable,
+    bool Authorized,
+    int? CustomerId = null,
+    string? CurrentEmail = null,
+    string? NewEmail = null,
+    bool Completed = false);
+
+public sealed record CustomerEmailChangeCompletionResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public sealed record CustomerEmailChangeWorkflowResult(
+    bool Succeeded,
+    bool ServiceAvailable,
+    bool Authorized);
+
+public interface ICustomerEmailChangeWorkflow
+{
+    Task<CustomerEmailChangeWorkflowResult> CompleteAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken);
+}
 
 public interface ICustomerAuthenticationClient
 {
@@ -53,7 +83,22 @@ public interface ICustomerAuthenticationClient
         string email,
         CancellationToken cancellationToken);
 
+    Task<CustomerActionChallenge> RecoverEmailConfirmationAsync(
+        string email,
+        string recoveryToken,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
     Task<bool> CompleteEmailConfirmationAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken);
+
+    Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(
+        string email,
+        string token,
+        CancellationToken cancellationToken);
+
+    Task<CustomerEmailChangeCompletionResult> CompleteEmailChangeAsync(
         string email,
         string token,
         CancellationToken cancellationToken);
@@ -67,6 +112,12 @@ public interface ICustomerAuthenticationClient
         string token,
         string password,
         CancellationToken cancellationToken);
+
+    Task<bool> CompleteInitialPasswordAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 
     Task<CustomerCredentialOperationResult> ChangeEmailAsync(
         string accessToken,

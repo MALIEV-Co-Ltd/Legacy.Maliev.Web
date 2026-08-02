@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -222,7 +223,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
             new PersistedConfiguration(
                 part.Configuration.MaterialKey,
                 part.Configuration.Color,
-                part.Configuration.Quantity));
+                part.Configuration.Quantity,
+                part.Configuration.BuildPreference.ToString()));
     }
 
     private static InstantQuotationSessionState ToSessionState(PersistedSession persisted) => new(
@@ -260,7 +262,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
             new InstantQuotationPartConfiguration(
                 configuration.MaterialKey!,
                 configuration.Color!,
-                configuration.Quantity));
+                configuration.Quantity,
+                PricingCatalog.ResolveBuildPreference(configuration.BuildPreference)));
     }
 
     private static InstantQuotationOrderState Snapshot(InstantQuotationOrderState state)
@@ -343,7 +346,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
     private sealed record PersistedConfiguration(
         string? MaterialKey,
         string? Color,
-        int Quantity);
+        int Quantity,
+        string? BuildPreference = null);
 
     private sealed class SnapshotList<T>(IEnumerable<T> source) : IReadOnlyList<T>
     {

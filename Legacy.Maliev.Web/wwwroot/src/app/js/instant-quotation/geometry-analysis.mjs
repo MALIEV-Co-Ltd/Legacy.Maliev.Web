@@ -7,6 +7,8 @@ export const geometryAnalysisLimits = Object.freeze({
   maximumDimensionMm: 350,
 });
 
+const thicknessEdgeTrimFraction = 0.05;
+
 /**
  * Reproduces the legacy production mesh analysis over upload-derived geometry.
  * The result is deterministic Web-pricing input after the Web BFF binds it to
@@ -91,10 +93,9 @@ export function analyzeUploadDerivedGeometry(object3D) {
     volumeMethod = 'half-bounding-box-fallback';
   }
 
-  const minimumDimension = Math.min(dimensionXmm, dimensionYmm, dimensionZmm);
   const maximumDimension = Math.max(dimensionXmm, dimensionYmm, dimensionZmm);
-  const oddlySmall = minimumDimension > 0
-    && minimumDimension < geometryAnalysisLimits.minimumDimensionMm;
+  const oddlySmall = maximumDimension > 0
+    && maximumDimension < geometryAnalysisLimits.minimumDimensionMm;
   const oddlyLarge = maximumDimension > geometryAnalysisLimits.maximumDimensionMm;
 
   return {
@@ -295,20 +296,30 @@ function analyzeMeshQuality(triangles, diagonal) {
 
 function minimumThickness(profiles, dimensionXmm, dimensionYmm, dimensionZmm) {
   let minimum = null;
-  if (profiles) {
-    for (let index = 0; index < profiles.area.length; index += 1) {
+  const boundingThickness = Math.min(
+    dimensionXmm || Infinity,
+    dimensionYmm || Infinity,
+    dimensionZmm || Infinity);
+  const finiteBoundingThickness = Number.isFinite(boundingThickness) ? boundingThickness : 0;
+  if (profiles && profiles.area.length === profiles.perimeter.length) {
+    const sampleCount = profiles.area.length;
+    const trimCount = Math.max(1, Math.ceil(sampleCount * thicknessEdgeTrimFraction));
+    let firstSample = trimCount;
+    let lastSample = sampleCount - trimCount;
+    if (firstSample >= lastSample) {
+      firstSample = 0;
+      lastSample = sampleCount;
+    }
+
+    for (let index = firstSample; index < lastSample; index += 1) {
       if (profiles.perimeter[index] > 1e-6 && profiles.area[index] > 0) {
         const thickness = (2 * profiles.area[index]) / profiles.perimeter[index];
         minimum = minimum === null ? thickness : Math.min(minimum, thickness);
       }
     }
   }
-  if (minimum !== null) return minimum;
-  const fallback = Math.min(
-    dimensionXmm || Infinity,
-    dimensionYmm || Infinity,
-    dimensionZmm || Infinity);
-  return Number.isFinite(fallback) ? fallback : 0;
+  if (minimum === null) return finiteBoundingThickness;
+  return finiteBoundingThickness > 0 ? Math.min(minimum, finiteBoundingThickness) : minimum;
 }
 
 function dfmCodes(quality, oddlySmall, oddlyLarge) {

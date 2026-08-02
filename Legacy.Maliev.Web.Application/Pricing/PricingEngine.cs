@@ -2,7 +2,11 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingEngine
 {
-    public static ItemQuote QuoteItem(GeometryInput geometry, MaterialInfo material, int quantity)
+    public static ItemQuote QuoteItem(
+        GeometryInput geometry,
+        MaterialInfo material,
+        int quantity,
+        BuildPreference buildPreference = BuildPreference.Standard)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(material);
@@ -39,6 +43,8 @@ public static class PricingEngine
                 estimate.SupportGrams,
                 material) * PricingCatalog.ComplexityFactor;
         }
+
+        complexityAdjustedCost *= PricingCatalog.BuildPreferenceFactor(buildPreference);
 
         var setupLabor = PricingCatalog.SetupHours(material.Process) * PricingCatalog.LaborRatePerHour;
         var failureRate = PricingCatalog.FailureReserveRate(material.Process);

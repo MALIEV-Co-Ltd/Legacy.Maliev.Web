@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true"><xsd:complexType><xsd:choice maxOccurs="unbounded">
+      <xsd:element name="data"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" /><xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" /><xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" /><xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" /><xsd:attribute ref="xml:space" /></xsd:complexType></xsd:element>
+      <xsd:element name="resheader"><xsd:complexType><xsd:sequence><xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" /></xsd:sequence><xsd:attribute name="name" type="xsd:string" use="required" /></xsd:complexType></xsd:element>
+    </xsd:choice></xsd:complexType></xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader><resheader name="version"><value>2.0</value></resheader><resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader><resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Order management" xml:space="preserve"><value>จัดการคำสั่งซื้อ</value></data>
+  <data name="Additive Manufacturing" xml:space="preserve"><value>งานผลิตแบบเพิ่มเนื้อวัสดุ</value></data>
+  <data name="3D Scanning" xml:space="preserve"><value>งานสแกน 3 มิติ</value></data>
+  <data name="CNC Manufacturing" xml:space="preserve"><value>งานผลิตด้วยเครื่อง CNC</value></data>
+  <data name="Additive Manufacturing order | MALIEV" xml:space="preserve"><value>สร้างคำสั่งซื้องานพิมพ์ 3 มิติ | MALIEV</value></data>
+  <data name="3D Scanning order | MALIEV" xml:space="preserve"><value>สร้างคำสั่งซื้องานสแกน 3 มิติ | MALIEV</value></data>
+  <data name="CNC Manufacturing order | MALIEV" xml:space="preserve"><value>สร้างคำสั่งซื้องาน CNC | MALIEV</value></data>
+  <data name="Please tell us about the object you want us to scan." xml:space="preserve"><value>โปรดระบุรายละเอียดของวัตถุที่ต้องการสแกน</value></data>
+  <data name="Please submit a separate order for each manufacturing part." xml:space="preserve"><value>โปรดสร้างคำสั่งซื้อแยกสำหรับชิ้นงานแต่ละรายการ</value></data>
+  <data name="Verify that your part conforms to our manufacturing specifications. The quotation is non-binding and can be cancelled before acceptance." xml:space="preserve"><value>โปรดตรวจสอบว่าชิ้นงานเป็นไปตามข้อกำหนดการผลิต ใบเสนอราคายังไม่มีผลผูกพันและยกเลิกได้ก่อนตอบรับ</value></data>
+  <data name="Pictures of the object" xml:space="preserve"><value>รูปภาพของวัตถุ</value></data>
+  <data name="Upload files" xml:space="preserve"><value>แนบไฟล์</value></data>
+  <data name="Optional. Maximum total upload size: 200 MB." xml:space="preserve"><value>ไม่บังคับ ขนาดรวมสูงสุด 200 MB</value></data>
+  <data name="Name" xml:space="preserve"><value>ชื่อชิ้นงาน</value></data>
+  <data name="Quantity" xml:space="preserve"><value>จำนวน</value></data>
+  <data name="Process" xml:space="preserve"><value>กระบวนการผลิต</value></data>
+  <data name="Please select a process" xml:space="preserve"><value>โปรดเลือกกระบวนการผลิต</value></data>
+  <data name="Material" xml:space="preserve"><value>วัสดุ</value></data>
+  <data name="Please select a material" xml:space="preserve"><value>โปรดเลือกวัสดุ</value></data>
+  <data name="Color" xml:space="preserve"><value>สี</value></data>
+  <data name="Please select a color" xml:space="preserve"><value>โปรดเลือกสี</value></data>
+  <data name="Surface finish" xml:space="preserve"><value>ลักษณะผิวสำเร็จ</value></data>
+  <data name="Please select a surface finish" xml:space="preserve"><value>โปรดเลือกลักษณะผิวสำเร็จ</value></data>
+  <data name="Measurement system" xml:space="preserve"><value>ระบบหน่วยวัด</value></data>
+  <data name="Metric (mm)" xml:space="preserve"><value>เมตริก (มม.)</value></data>
+  <data name="Imperial (in)" xml:space="preserve"><value>อิมพีเรียล (นิ้ว)</value></data>
+  <data name="Width" xml:space="preserve"><value>ความกว้าง</value></data>
+  <data name="Length" xml:space="preserve"><value>ความยาว</value></data>
+  <data name="Height" xml:space="preserve"><value>ความสูง</value></data>
+  <data name="Description" xml:space="preserve"><value>รายละเอียดเพิ่มเติม</value></data>
+  <data name="Maximum 500 characters." xml:space="preserve"><value>ไม่เกิน 500 ตัวอักษร</value></data>
+  <data name="I allow MALIEV to publish work-in-progress photos on social media." xml:space="preserve"><value>ฉันอนุญาตให้ MALIEV เผยแพร่ภาพระหว่างการผลิตผ่านสื่อสังคมออนไลน์</value></data>
+  <data name="I agree to the" xml:space="preserve"><value>ฉันยอมรับ</value></data>
+  <data name="terms of service" xml:space="preserve"><value>ข้อกำหนดการใช้บริการ</value></data>
+  <data name="Need an NDA?" xml:space="preserve"><value>ต้องการทำสัญญารักษาความลับหรือไม่</value></data>
+  <data name="Download the agreement" xml:space="preserve"><value>ดาวน์โหลดเอกสาร</value></data>
+  <data name="and send it to" xml:space="preserve"><value>แล้วส่งมาที่</value></data>
+  <data name="Submit an order" xml:space="preserve"><value>ส่งคำสั่งซื้อ</value></data>
+  <data name="Order options are temporarily unavailable." xml:space="preserve"><value>ตัวเลือกคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="The order operation is invalid. Please reload the page and try again." xml:space="preserve"><value>ข้อมูลการส่งคำสั่งซื้อไม่ถูกต้อง โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง</value></data>
+  <data name="You must agree to the terms of service." xml:space="preserve"><value>โปรดยอมรับข้อกำหนดการใช้บริการ</value></data>
+  <data name="The total upload size cannot exceed 200 MB." xml:space="preserve"><value>ไฟล์ทั้งหมดต้องมีขนาดรวมไม่เกิน 200 MB</value></data>
+  <data name="Please select a valid process." xml:space="preserve"><value>โปรดเลือกกระบวนการผลิตที่ถูกต้อง</value></data>
+  <data name="Please select a valid material." xml:space="preserve"><value>โปรดเลือกวัสดุที่ถูกต้อง</value></data>
+  <data name="Please select a valid color." xml:space="preserve"><value>โปรดเลือกสีที่ถูกต้อง</value></data>
+  <data name="Please select a valid surface finish." xml:space="preserve"><value>โปรดเลือกลักษณะผิวสำเร็จที่ถูกต้อง</value></data>
+  <data name="Material options are temporarily unavailable." xml:space="preserve"><value>ตัวเลือกวัสดุไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="One or more files use an unsupported format." xml:space="preserve"><value>มีไฟล์อย่างน้อยหนึ่งรายการที่ไม่รองรับ</value></data>
+  <data name="Width must be greater than zero." xml:space="preserve"><value>ความกว้างต้องมากกว่าศูนย์</value></data>
+  <data name="Length must be greater than zero." xml:space="preserve"><value>ความยาวต้องมากกว่าศูนย์</value></data>
+  <data name="Height must be greater than zero." xml:space="preserve"><value>ความสูงต้องมากกว่าศูนย์</value></data>
+  <data name="Your order has been submitted successfully." xml:space="preserve"><value>ส่งคำสั่งซื้อเรียบร้อยแล้ว</value></data>
+  <data name="Your order was saved, but one or more follow-up steps are incomplete. Please contact us before retrying." xml:space="preserve"><value>บันทึกคำสั่งซื้อแล้ว แต่มีขั้นตอนต่อเนื่องที่ยังไม่สมบูรณ์ โปรดติดต่อเราก่อนส่งซ้ำ</value></data>
+  <data name="This order submission conflicts with an existing request. Please reload and try again." xml:space="preserve"><value>คำสั่งซื้อนี้ซ้ำกับคำขอที่มีอยู่ โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง</value></data>
+  <data name="Your order could not be submitted." xml:space="preserve"><value>ไม่สามารถส่งคำสั่งซื้อได้</value></data>
+  <data name="Order processing is temporarily unavailable." xml:space="preserve"><value>ระบบรับคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
+</root>

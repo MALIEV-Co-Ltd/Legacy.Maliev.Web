@@ -93,6 +93,23 @@ test('reject clears a denied-consent queue so a later grant cannot flush it', ()
     assert.equal(findEvents(context.dataLayer, 'line_click').length, 0);
 });
 
+test('events emitted after an explicit rejection are dropped instead of retained', () => {
+    const context = createConsentContext('denied');
+
+    context.gtag('consent', 'update', deniedOrGranted('denied'));
+    context.malievAnalytics.setConsent('denied');
+    context.malievAnalytics.emit({
+        event: 'messenger_click',
+        channel: 'messenger',
+        destination: 'facebook_messenger',
+        context: 'contact',
+    });
+    context.gtag('consent', 'update', deniedOrGranted('granted'));
+    context.malievAnalytics.setConsent('granted');
+
+    assert.equal(findEvents(context.dataLayer, 'messenger_click').length, 0);
+});
+
 test('instant quotation events retain exact payloads through consent queue, flush, and rejection', () => {
     const payloads = [
         { event: 'file_upload_start', service: '3d_printing', file_count: 2 },

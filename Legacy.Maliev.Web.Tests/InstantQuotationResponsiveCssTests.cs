@@ -25,6 +25,10 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("grid-template-columns: minmax(0, 44fr) minmax(0, 56fr)", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-state=\"review\"]", css, StringComparison.Ordinal);
         Assert.Contains("height: 260px", css, StringComparison.Ordinal);
+        Assert.Contains("[data-workflow-build-preference]", css, StringComparison.Ordinal);
+        Assert.Contains("[data-workflow-material-comparison]", css, StringComparison.Ordinal);
+        Assert.Contains("[data-workflow-part-number]", css, StringComparison.Ordinal);
+        Assert.Contains("repeat(auto-fit, minmax(min(100%, 9rem), 1fr))", css, StringComparison.Ordinal);
     }
 
     [Fact]

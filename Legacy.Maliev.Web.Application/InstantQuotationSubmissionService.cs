@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
+using Legacy.Maliev.Web.Application.Pricing;
 
 namespace Legacy.Maliev.Web.Application;
 
@@ -453,6 +454,7 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"{index + 1} - {SingleLine(part.DisplayFileName)}");
             message.AppendLine($"Material: {partQuote.MaterialKey}");
             message.AppendLine($"Color: {SingleLine(partQuote.Color)}");
+            message.AppendLine($"Build: {BuildPreferenceDescription(partQuote.BuildPreference)}");
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
             message.AppendLine($"Volume: {part.Geometry.VolumeMm3.ToString("0.###", CultureInfo.InvariantCulture)} mm3");
             var geometryWarnings = GeometryWarnings(part.Geometry);
@@ -493,6 +495,13 @@ internal sealed class InstantQuotationSubmissionService(
         return message.ToString();
     }
 
+    private static string BuildPreferenceDescription(BuildPreference preference) => preference switch
+    {
+        BuildPreference.Quality => "Quality (0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill)",
+        BuildPreference.Strength => "Strength (6 walls, 2 mm shells, denser infill)",
+        _ => $"Standard ({PricingCatalog.FdmLayerHeightMm:0.00} mm layers, {PricingCatalog.FdmWallCount} walls, {PricingCatalog.FdmInfillDensity:P0} sparse infill)",
+    };
+
     private static IReadOnlyList<string> GeometryWarnings(AuthoritativeInstantQuotationGeometry geometry)
     {
         var warnings = new List<string>();
@@ -516,10 +525,10 @@ internal sealed class InstantQuotationSubmissionService(
             warnings.Add($"Multi-body mesh ({geometry.BodyCount.ToString(CultureInfo.InvariantCulture)} bodies)");
         }
 
-        var minimumDimension = Math.Min(
+        var maximumDimension = Math.Max(
             geometry.DimensionXmm,
-            Math.Min(geometry.DimensionYmm, geometry.DimensionZmm));
-        if (minimumDimension is > 0 and < 3)
+            Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
+        if (maximumDimension is > 0 and < 3)
         {
             warnings.Add("Dimension below 3 mm");
         }

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace Legacy.Maliev.Web.Pages.Account;
 
 [EnableRateLimiting("account")]
-public sealed class ChangeEmailConfirmation(ICustomerAuthenticationClient authenticationClient) : PageModel
+public sealed class ChangeEmailConfirmation(ICustomerEmailChangeWorkflow workflow) : PageModel
 {
     [TempData]
     public string? Notification { get; set; }
@@ -32,10 +32,8 @@ public sealed class ChangeEmailConfirmation(ICustomerAuthenticationClient authen
             return BadRequest();
         }
 
-        if (await authenticationClient.CompleteEmailConfirmationAsync(
-            email,
-            token,
-            cancellationToken))
+        var result = await workflow.CompleteAsync(email, token, cancellationToken);
+        if (result.Succeeded)
         {
             Notification = "Email change confirmed. Sign in with your new address.";
             return RedirectToPage("/Account/Login", new { email });

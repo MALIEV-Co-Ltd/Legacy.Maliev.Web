@@ -25,55 +25,110 @@
         <article class="maliev-panel">
             <p class="maliev-eyebrow">@Localizer["Order"] #@Model.Id</p>
             <h2>@(string.IsNullOrWhiteSpace(Model.Name) ? Localizer["Unnamed order"] : Model.Name)</h2>
-            @if (!string.IsNullOrWhiteSpace(Model.Description))
-            {
-                <p>@Model.Description</p>
-            }
             <dl>
+                <dt>@Localizer["Created"]</dt><dd>@Date(Model.CreatedDate)</dd>
+                <dt>@Localizer["Last updated"]</dt><dd>@Date(Model.ModifiedDate)</dd>
                 <dt>@Localizer["Process"]</dt><dd>@Model.Process</dd>
+                <dt>@Localizer["Material group"]</dt><dd>@Model.MaterialGroup</dd>
+                <dt>@Localizer["Material"]</dt><dd>@Model.Material</dd>
+                <dt>@Localizer["Surface finish"]</dt><dd>@Model.SurfaceFinish</dd>
+                <dt>@Localizer["Color"]</dt><dd>@Model.Color</dd>
                 <dt>@Localizer["Quantity"]</dt><dd>@Model.Quantity</dd>
-                <dt>@Localizer["Manufactured"]</dt><dd>@Model.Manufactured</dd>
+                <dt>@Localizer["Manufactured"]</dt><dd>@Model.Manufactured / @Model.Quantity</dd>
                 <dt>@Localizer["Remaining"]</dt><dd>@Model.Remaining</dd>
+                <dt>@Localizer["Unit price"]</dt><dd>@Model.UnitPrice</dd>
                 <dt>@Localizer["Subtotal"]</dt><dd>@Model.Subtotal</dd>
-                <dt>@Localizer["Tracking number"]</dt><dd>@Model.TrackingNumber</dd>
+                <dt>@Localizer["Lead time"]</dt><dd>@(Model.LeadTime == "-" ? Localizer["Not yet available"] : Model.LeadTime.Replace(" days", $" {Localizer["days"]}", StringComparison.Ordinal))</dd>
+                <dt>@Localizer["Estimated shipment"]</dt><dd>@Date(Model.PromisedDate)</dd>
+                <dt>@Localizer["Finished date"]</dt><dd>@Date(Model.FinishedDate)</dd>
+                <dt>@Localizer["Tracking number"]</dt><dd>@(Model.TrackingNumber == "-" ? Localizer["Not yet available"] : Model.TrackingNumber)</dd>
+                <dt>@Localizer["Description"]</dt><dd>@(string.IsNullOrWhiteSpace(Model.Description) ? Localizer["None"] : Model.Description)</dd>
             </dl>
         </article>
-        <section class="maliev-panel">
-            <h2>@Localizer["Status history"]</h2>
+        <section class="maliev-panel" aria-labelledby="member-order-files-title">
+            <h2 id="member-order-files-title">@Localizer["Order files"]</h2>
+            @if (Model.Files.Count == 0)
+            {
+                <p>@Localizer["No files are linked to this order."]</p>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table class="data-table data-table--compact">
+                        <caption>@Model.Files.Count @Localizer["files"]</caption>
+                        <thead><tr><th scope="col">@Localizer["Name"]</th><th scope="col">@Localizer["Created"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var file in Model.Files)
+                            {
+                                <tr>
+                                    <td><a href="@file.Href" target="_blank" rel="noopener">@file.FileName</a></td>
+                                    <td>@Date(file.CreatedDate)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+        <section class="maliev-panel" aria-labelledby="member-order-history-title">
+            <h2 id="member-order-history-title">@Localizer["Status history"]</h2>
             @if (Model.History.Count == 0)
             {
                 <p>@Localizer["No status history is available."]</p>
             }
             else
             {
-                <ol>
-                    @foreach (var status in Model.History)
-                    {
-                        <li><strong>@(status.Name ?? Localizer["Status"])</strong> @status.CreatedDate</li>
-                    }
-                </ol>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">#</th><th scope="col">@Localizer["Created"]</th><th scope="col">@Localizer["Description"]</th><th scope="col">@Localizer["Status"]</th></tr></thead>
+                        <tbody>
+                            @for (var index = 0; index < Model.History.Count; index++)
+                            {
+                                var status = Model.History[index];
+                                <tr>
+                                    <td>@(index + 1)</td>
+                                    <td>@Date(status.CreatedDate)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(status.Description) ? "-" : status.Description)</td>
+                                    <td>@(status.Name ?? Localizer["Status"])</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </section>
-        <section class="maliev-panel">
-            <h2>@Localizer["Order files"]</h2>
-            @if (Model.FileNames.Count == 0)
-            {
-                <p>@Localizer["No files are linked to this order."]</p>
-            }
-            else
-            {
-                <ul>
-                    @foreach (var fileName in Model.FileNames)
-                    {
-                        <li>@fileName</li>
-                    }
-                </ul>
-            }
-        </section>
+        @if (Model.HasShippedStatus)
+        {
+            <section class="maliev-panel" aria-labelledby="post-shipment-review-heading">
+                <h2 id="post-shipment-review-heading">@Localizer["Has your order arrived?"]</h2>
+                <p>@Localizer["Whether your experience was positive or critical, an honest Google review helps other customers understand what working with MALIEV is like."]</p>
+                <div class="maliev-actions">
+                    <a class="maliev-button" href="@Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps" target="_blank" rel="noopener" data-maliev-review-platform="google_business_profile">@Localizer["Open MALIEV on Google Maps"]</a>
+                    <a class="maliev-button maliev-button--secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener" data-contact-placement="member_order_line">@Localizer["Contact MALIEV on LINE"]</a>
+                    <a class="maliev-button maliev-button--secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.WhatsApp" target="_blank" rel="noopener" data-contact-placement="member_order_whatsapp" data-maliev-contact-destination="whatsapp_business">@Localizer["Contact MALIEV on WhatsApp"]</a>
+                </div>
+                <p>@Localizer["If anything is not right, contact us on LINE so our team can follow up."]</p>
+                <p>@Localizer["Reviews are optional and are not tied to discounts, rewards, or order support."]</p>
+            </section>
+        }
     }
 </div>
 
 @code {
     [Parameter]
     public MemberOrderDetailDisplayModel Model { get; set; } = MemberOrderDetailDisplayModel.Empty;
+
+    private static RenderFragment Date(MemberDateDisplayModel date) => builder =>
+    {
+        if (string.IsNullOrWhiteSpace(date.MachineValue))
+        {
+            builder.AddContent(0, date.DisplayValue);
+            return;
+        }
+
+        builder.OpenElement(1, "time");
+        builder.AddAttribute(2, "datetime", date.MachineValue);
+        builder.AddContent(3, date.DisplayValue);
+        builder.CloseElement();
+    };
 }

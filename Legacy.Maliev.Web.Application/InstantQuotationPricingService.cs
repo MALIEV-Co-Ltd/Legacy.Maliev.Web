@@ -70,17 +70,28 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         }
 
         var geometry = part.Geometry;
+        var geometryInput = new GeometryInput
+        {
+            HeightMm = geometry.HeightMm,
+            VolumeMm3 = geometry.VolumeMm3,
+            FootprintMm2 = geometry.FootprintMm2,
+            AreaProfileMm2 = geometry.AreaProfileMm2,
+            PerimeterProfileMm = geometry.PerimeterProfileMm,
+        };
         var item = PricingEngine.QuoteItem(
-            new GeometryInput
-            {
-                HeightMm = geometry.HeightMm,
-                VolumeMm3 = geometry.VolumeMm3,
-                FootprintMm2 = geometry.FootprintMm2,
-                AreaProfileMm2 = geometry.AreaProfileMm2,
-                PerimeterProfileMm = geometry.PerimeterProfileMm,
-            },
+            geometryInput,
             material,
-            configuration.Quantity);
+            configuration.Quantity,
+            configuration.BuildPreference);
+        var materialPrices = PricingCatalog.Materials.Values
+            .Select(candidate => new InstantQuotationMaterialPrice(
+                candidate.Key,
+                PricingEngine.QuoteItem(
+                    geometryInput,
+                    candidate,
+                    configuration.Quantity,
+                    configuration.BuildPreference).UnitPrice))
+            .ToArray();
 
         return new InstantQuotationPartQuote(
             part.PartId,
@@ -94,6 +105,8 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             item.BoundingCm3PerUnit,
             item.UnitPrice,
             item.Subtotal,
-            item.Tiers);
+            item.Tiers,
+            configuration.BuildPreference,
+            materialPrices);
     }
 }

@@ -8,7 +8,13 @@ public sealed class ArchitectureTests
         var root = FindRepositoryRoot();
         var project = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Legacy.Maliev.Web.csproj"));
 
-        Assert.DoesNotContain("EntityFrameworkCore", project, StringComparison.OrdinalIgnoreCase);
+        // Shared ServiceDefaults uses EF health-check types at runtime. The Web host may carry
+        // those runtime assemblies, but it must not reference a DbContext or a database project.
+        var projectReferences = string.Join(
+            Environment.NewLine,
+            project.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => line.Contains("ProjectReference", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain("EntityFrameworkCore", projectReferences, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("DbContext", project, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Maliev.Service.PayPal", project, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Maliev.LoggerService", project, StringComparison.OrdinalIgnoreCase);

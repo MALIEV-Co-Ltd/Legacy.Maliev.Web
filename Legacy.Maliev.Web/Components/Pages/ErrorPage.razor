@@ -1,5 +1,5 @@
 @page "/Error"
-@using System.Diagnostics
+@using Legacy.Maliev.Web.Middleware
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IStringLocalizer<ErrorContent> Localizer
 
@@ -10,7 +10,7 @@
 <ErrorContent Model="displayModel" RouteOwner="blazor-static-ssr" />
 
 @code {
-    private ErrorDisplayModel displayModel = new(false, null);
+    private ErrorDisplayModel displayModel = new(false, null, default, null);
 
     [SupplyParameterFromQuery(Name = "code")]
     public int? Code { get; set; }
@@ -20,7 +20,11 @@
         var context = HttpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
 
-        var requestId = Activity.Current?.Id ?? context.TraceIdentifier;
-        displayModel = new(Code == StatusCodes.Status404NotFound, requestId);
+        var incident = ErrorIncidentHandler.GetOrCreate(context, DateTimeOffset.UtcNow);
+        displayModel = new(
+            Code == StatusCodes.Status404NotFound,
+            incident.IncidentId,
+            incident.OccurredAtUtc,
+            Code);
     }
 }
