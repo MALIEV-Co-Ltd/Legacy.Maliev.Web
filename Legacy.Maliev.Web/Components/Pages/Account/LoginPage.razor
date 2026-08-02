@@ -1,4 +1,5 @@
 @page "/Account/Login"
+@using System.Globalization
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IHttpContextAccessor HttpContextAccessor
@@ -9,19 +10,37 @@
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Environment
 
-<PageTitle>@Localizer["Login | MALIEV"]</PageTitle>
+@{
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "เข้าสู่ระบบ | MALIEV" : "Login | MALIEV";
+    var description = isThai
+        ? "เข้าสู่ระบบ MALIEV เพื่อดูใบเสนอราคา คำสั่งซื้อ ไฟล์งาน และข้อมูลบัญชีในพื้นที่ทำงานออนไลน์"
+        : "Sign in to MALIEV to review quotations, orders, project files, and account details in your secure workspace.";
+    var keywords = isThai ? "member, เข้าสู่ระบบ" : "member area, login";
+}
+<PageTitle>@title</PageTitle>
 <HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
     <meta name="robots" content="noindex, follow" />
 </HeadContent>
 <main class="auth-page" data-migration-route-owner="blazor-static-ssr">
     <div class="maliev-container auth-shell">
-        <section class="auth-intro">
-            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
-            <h1>@Localizer["Manage your manufacturing projects"]</h1>
+        <section class="auth-intro" aria-labelledby="login-intro-title">
+            <h1 id="login-intro-title">@Localizer["Manage your manufacturing projects"]</h1>
             <p>@Localizer["Sign in to review quotations, orders, files, and account details in one secure place."]</p>
         </section>
-        <section class="auth-card">
-            <header class="auth-card__header"><h1>@Localizer["Sign in"]</h1></header>
+        <section class="auth-card" aria-labelledby="login-title">
+            <header class="auth-card__header">
+                <h2 id="login-title">@Localizer["Sign in"]</h2>
+            </header>
+            @if (!string.IsNullOrWhiteSpace(model.Notification))
+            {
+                <div class="maliev-alert mb-3" role="status" aria-live="polite">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    <span>@model.Notification</span>
+                </div>
+            }
             @if (localReviewCredentials is not null)
             {
                 <aside class="maliev-alert" data-local-aspire-login role="note">
@@ -30,7 +49,7 @@
                     <span>Password: <code>@localReviewCredentials.Password</code></span>
                 </aside>
             }
-            <form method="post" class="maliev-form">
+            <form method="post" class="maliev-form" id="customer-login" data-single-submit>
                 @if (tokens is not null)
                 {
                     <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
@@ -38,8 +57,11 @@
                 <LoginContent Model="model" />
             </form>
             <footer class="auth-card__footer">
-                <a href="/Account/Signup">@Localizer["Create your account"]</a>
-                <a href="/Account/ForgotPassword">@Localizer["Forgot your password?"]</a>
+                <p class="auth-card__footer-lead">@Localizer["New to MALIEV?"]</p>
+                <div class="maliev-actions">
+                    <a href="/Account/Signup" class="maliev-button maliev-button--secondary">@Localizer["Create your account"]</a>
+                </div>
+                <a class="auth-card__footer-link" href="/Account/ForgotPassword">@Localizer["Forgot your password?"]</a>
             </footer>
         </section>
     </div>

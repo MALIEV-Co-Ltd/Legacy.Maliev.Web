@@ -13,9 +13,25 @@
 {
     <PageTitle>@Localizer["Email Confirmation | MALIEV"]</PageTitle>
     <HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
-    <div data-migration-route-owner="blazor-static-ssr">
-        <EmailConfirmationContent Model="invalidModel" />
-    </div>
+    <main class="maliev-page maliev-page-main" data-migration-component="email-confirmation-content" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="blazor-static-ssr">
+        <div class="maliev-container">
+            <section class="maliev-panel maliev-status" aria-labelledby="email-confirmation-title">
+                <div class="maliev-status__icon maliev-status__icon--danger" aria-hidden="true"><i class="fas fa-envelope-open-text"></i></div>
+                <p class="maliev-eyebrow">@Localizer["Email confirmation"]</p>
+                <h1 id="email-confirmation-title">@Localizer["We could not confirm your email"]</h1>
+                <p>@Localizer["Please review the details below or request a new confirmation email."]</p>
+                <div class="validation-summary-errors @(invalidModel.Errors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
+                    <ul>
+                        @foreach (var error in invalidModel.Errors)
+                        {
+                            <li>@Localizer[error]</li>
+                        }
+                    </ul>
+                </div>
+                <a href="/Account/Login" class="maliev-button">@Localizer["Back to sign in"]</a>
+            </section>
+        </div>
+    </main>
 }
 
 @code {

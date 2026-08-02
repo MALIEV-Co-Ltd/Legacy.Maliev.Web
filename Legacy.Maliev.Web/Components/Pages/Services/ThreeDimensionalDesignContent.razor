@@ -1,0 +1,115 @@
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Shared
+
+<main class="service-page" data-migration-component="three-dimensional-design-content" data-migration-route-owner="@RouteOwner">
+    <nav class="service-breadcrumb" aria-label="@T("Breadcrumb", "เส้นทางนำทาง")">
+        <ol>
+            <li><a href="/">@T("Home", "หน้าแรก")</a></li>
+            <li><a href="/services">@T("Services", "บริการ")</a></li>
+            <li aria-current="page">@T("3D Design", "ออกแบบ 3 มิติ")</li>
+        </ol>
+    </nav>
+
+    <section class="service-hero" aria-labelledby="design-title">
+        <img class="service-hero-media" src="/src/images/services/design/design-workflow.webp" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Designer turning sketches and reference photos into a CAD model", "นักออกแบบเปลี่ยนภาพร่างและรูปถ่ายอ้างอิงเป็นแบบ CAD")" />
+        <div class="service-container service-hero-copy">
+            <p class="service-eyebrow">@T("3D Design & DFM", "ออกแบบ 3 มิติและ DFM")</p>
+            <h1 id="design-title">@T("From Sketch or Scan to a Production-Ready 3D Model", "จากภาพร่างหรือชิ้นงานสแกนสู่แบบ 3 มิติพร้อมผลิต")</h1>
+            <p class="service-hero-lead">@T("Bring an idea, drawing, reference photo, or scanned part. We turn the evidence into a clear CAD model, resolve practical design decisions, and prepare the next manufacturing step.", "ส่งไอเดีย แบบ รูปถ่ายอ้างอิง หรือชิ้นงานสแกน เราช่วยเปลี่ยนข้อมูลให้เป็นแบบ CAD ที่ชัดเจน ตัดสินใจด้านการออกแบบ และเตรียมขั้นตอนผลิตต่อไป")</p>
+            <ul class="service-hero-points">
+                <li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Sketch and drawing development", "พัฒนาจากภาพร่างและแบบ")</li>
+                <li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Scan-to-CAD support", "ช่วยพัฒนาจากข้อมูลสแกนสู่ CAD")</li>
+                <li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("DFM decisions before production", "ตัดสินใจ DFM ก่อนผลิต")</li>
+            </ul>
+            <div class="service-actions">
+                <a class="service-button service-button-primary" href="/Quotation?item=3d-design">@T("Request a design review", "ขอประเมินงานออกแบบ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                <a class="service-button service-button-secondary" href="/services/custom-manufacturing">@T("Discuss a complete project", "ปรึกษาโปรเจ็คครบวงจร")</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="service-quick" aria-label="@T("3D design service scope", "ขอบเขตบริการออกแบบ 3 มิติ")">
+        <div class="service-container service-quick-grid">
+            <article><div><h2>@T("Inputs", "ข้อมูลตั้งต้น")</h2><p>@T("Sketches, drawings, photos, samples, and scanned meshes.", "ภาพร่าง แบบ รูปถ่าย ชิ้นงาน และเมชจากการสแกน")</p></div></article>
+            <article><div><h2>@T("Outputs", "สิ่งส่งมอบ")</h2><p>@T("Agreed CAD formats, drawings, and design notes.", "ไฟล์ CAD แบบ และบันทึกการออกแบบตามที่ตกลง")</p></div></article>
+            <article><div><h2>@T("Decisions", "ประเด็นที่ต้องตัดสินใจ")</h2><p>@T("Interfaces, tolerances, materials, and manufacturing route.", "จุดประกอบ ค่าคลาดเคลื่อน วัสดุ และกระบวนการผลิต")</p></div></article>
+            <article><div><h2>@T("Next step", "ขั้นตอนถัดไป")</h2><p>@T("Move directly into a specialist manufacturing review when ready.", "ส่งต่อให้บริการผลิตเฉพาะทางเมื่อแบบพร้อม")</p></div></article>
+        </div>
+    </section>
+
+    <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
+        <strong>@T("On this page", "ในหน้านี้")</strong>
+        <a href="#design-workflow">@T("Workflow", "ขั้นตอน")</a>
+        <a href="#design-visuals">@T("Evidence to engineering", "ข้อมูลสู่งานวิศวกรรม")</a>
+        <a href="#design-decisions">@T("Design decisions", "ประเด็นออกแบบ")</a>
+        <a href="#design-faq">@T("FAQ", "คำถามที่พบบ่อย")</a>
+    </nav>
+
+    <section id="design-workflow" class="service-section" aria-labelledby="design-workflow-title">
+        <div class="service-container">
+            <header class="service-heading center"><p class="service-eyebrow">@T("A practical workflow", "ขั้นตอนที่ใช้งานได้จริง")</p><h2 id="design-workflow-title">@T("Make the design intent clear before the machine starts", "ทำให้เจตนาการออกแบบชัดเจนก่อนเริ่มผลิต")</h2><p>@T("Good 3D design is more than modeling surfaces. It connects what you want the part to do with dimensions, interfaces, material behavior, and the process that will make it.", "การออกแบบ 3 มิติที่ดีไม่ใช่แค่ขึ้นผิว แต่เชื่อมการใช้งานของชิ้นงานเข้ากับขนาด จุดประกอบ พฤติกรรมวัสดุ และกระบวนการที่จะใช้ผลิต")</p></header>
+            <ol class="service-process">
+                <li><h3>@T("Share the evidence", "ส่งข้อมูลที่มี")</h3><p>@T("Send sketches, drawings, photos, a sample, or scan data together with the intended use.", "ส่งภาพร่าง แบบ รูปถ่าย ชิ้นงาน หรือข้อมูลสแกนพร้อมการใช้งานที่ต้องการ")</p></li>
+                <li><h3>@T("Resolve the unknowns", "แก้ข้อมูลที่ยังไม่ชัด")</h3><p>@T("Identify missing dimensions, critical fits, load cases, finish needs, and assumptions before modeling.", "ระบุขนาดที่ขาด จุดฟิต แรงที่รับ ผิวที่ต้องการ และสมมติฐานก่อนขึ้นแบบ")</p></li>
+                <li><h3>@T("Build and review the CAD", "ขึ้นแบบและทบทวน CAD")</h3><p>@T("Develop the model and drawings around the selected material, tolerance, and manufacturing route.", "พัฒนาแบบและแบบงานตามวัสดุ ค่าคลาดเคลื่อน และกระบวนการผลิตที่เลือก")</p></li>
+                <li><h3>@T("Release the next step", "ส่งต่อขั้นตอนถัดไป")</h3><p>@T("Use the approved model for CNC, 3D printing, silicone casting, or another agreed manufacturing review.", "ใช้แบบที่อนุมัติแล้วส่งต่อ CNC พิมพ์ 3D หล่อซิลิโคน หรือบริการผลิตที่ตกลง")</p></li>
+            </ol>
+        </div>
+    </section>
+
+    <section id="design-visuals" class="service-section service-section-soft" aria-labelledby="design-visuals-title">
+        <div class="service-container">
+            <header class="service-heading center"><p class="service-eyebrow">@T("Evidence to engineering", "จากข้อมูลสู่การออกแบบวิศวกรรม")</p><h2 id="design-visuals-title">@T("See how the design decisions connect", "ดูว่าการตัดสินใจด้านการออกแบบเชื่อมโยงกันอย่างไร")</h2><p>@T("The more useful information we have at the start, the more confidently we can define the model, quote the work, and prepare the next manufacturing step.", "ยิ่งมีข้อมูลที่ใช้งานได้มากตั้งแต่ต้น เรายิ่งกำหนดแบบ ประเมินราคา และเตรียมขั้นตอนผลิตต่อไปได้อย่างมั่นใจ")</p></header>
+            <div class="service-image-grid">
+                <figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/design/design-inputs.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("Engineering drawings, a reference part, and a CAD model", "แบบวิศวกรรม ชิ้นงานอ้างอิง และแบบ CAD")" /><figcaption class="service-card-body"><h3>@T("Send as much evidence as possible", "ส่งข้อมูลให้มากที่สุดเท่าที่มี")</h3><p>@T("Sketches, drawings, photos, sample parts, dimensions, material, quantity, use, and critical interfaces help us quote the design work correctly before modeling starts.", "ภาพร่าง แบบ รูปถ่าย ชิ้นงานตัวอย่าง ขนาด วัสดุ จำนวน การใช้งาน และจุดประกอบสำคัญช่วยให้เราประเมินงานออกแบบได้ตรงก่อนเริ่มขึ้นแบบ")</p></figcaption></figure>
+                <figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/design/design-dfm-review.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("DFM review of wall thickness and draft on a CAD model", "ตรวจสอบ DFM ความหนาผนังและ draft บนแบบ CAD")" /><figcaption class="service-card-body"><h3>@T("DFM before release", "ตรวจ DFM ก่อนปล่อยแบบ")</h3><p>@T("We specialize in DFM, so the geometry is shaped around manufacturability, material behavior, tolerances, interfaces, and the process that will actually make the part.", "เราเชี่ยวชาญ DFM จึงพัฒนารูปทรงให้เหมาะกับการผลิตจริง พฤติกรรมวัสดุ ค่าคลาดเคลื่อน จุดประกอบ และกระบวนการที่จะใช้ผลิต")</p></figcaption></figure>
+            </div>
+        </div>
+    </section>
+
+    <section id="design-decisions" class="service-section" aria-labelledby="design-decisions-title">
+        <div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("What we can help decide", "ประเด็นที่ช่วยตัดสินใจ")</p><h2 id="design-decisions-title">@T("Design for the part, not just the screen", "ออกแบบเพื่อชิ้นงานจริง ไม่ใช่แค่ภาพบนจอ")</h2></header><div class="service-card-grid">
+            <article class="service-card"><h3>@T("Interfaces and fit", "จุดประกอบและการฟิต")</h3><p>@T("Define holes, clearances, datum references, mating surfaces, and the dimensions that determine whether the part works in the assembly.", "กำหนดรู ระยะเคลียร์ จุดอ้างอิง ผิวประกอบ และขนาดที่มีผลต่อการทำงานของชุดประกอบ")</p></article>
+            <article class="service-card"><h3>@T("Process-aware geometry", "รูปทรงที่เหมาะกับกระบวนการ")</h3><p>@T("Consider machining access, print orientation, support, draft, wall thickness, mold strategy, and finishing before committing to geometry.", "พิจารณาการเข้าถึงเครื่อง ทิศทางพิมพ์ ซัพพอร์ต draft ความหนาผนัง แนวทางทำแม่พิมพ์ และการเก็บงานก่อนยืนยันรูปทรง")</p></article>
+            <article class="service-card"><h3>@T("Clear deliverables", "สิ่งส่งมอบที่ชัดเจน")</h3><p>@T("Agree the CAD format, drawing detail, revision notes, and what remains to be confirmed so the next team can work without guessing.", "ตกลงรูปแบบไฟล์ CAD รายละเอียดแบบ บันทึก revision และประเด็นที่ยังต้องยืนยันเพื่อให้ทีมถัดไปทำงานต่อได้")</p></article>
+        </div></div>
+    </section>
+
+    <section id="service-pricing" class="service-section service-section-soft service-pricing-section" aria-labelledby="service-pricing-title">
+        <div class="service-container">
+            <header class="service-heading center">
+                <p class="service-eyebrow">@T("Planning price", "ราคาเพื่อการวางแผน")</p>
+                <h2 id="service-pricing-title">@T("Indicative starting prices", "ราคาเริ่มต้นเพื่อการประเมิน")</h2>
+                <p>@T("Use these starting points to choose a service. The final quotation is confirmed after we review geometry, material, quantity, finish, tolerances, and delivery requirements.", "ใช้ราคาเริ่มต้นเหล่านี้เพื่อเลือกบริการ โดยจะยืนยันราคาจริงหลังตรวจสอบรูปทรง วัสดุ จำนวน ผิวสำเร็จ ค่าความคลาดเคลื่อน และกำหนดส่ง")</p>
+            </header>
+            <div class="service-card-grid service-pricing-grid">
+                <article class="service-card service-pricing-card"><h3>@T("3D design work", "งานออกแบบ 3D")</h3><p>@T("CAD modeling from drawings, photos, or a brief, including manufacturability review.", "ขึ้นแบบ CAD จากแบบ ภาพ หรือข้อมูลตั้งต้น พร้อมตรวจสอบความเหมาะสมต่อการผลิต")</p><strong>@T("Starts at approximately THB 1,500", "เริ่มต้นประมาณ 1,500 บาท")</strong></article>
+                <article class="service-card service-pricing-card"><h3>@T("Design revisions", "การแก้ไขแบบ")</h3><p>@T("The quote includes the agreed scope. New requirements or revisions after approval may add cost and lead time.", "ราคาครอบคลุมขอบเขตที่ตกลงกัน การเพิ่มรายละเอียดหรือแก้แบบหลังยืนยันอาจมีค่าใช้จ่ายและใช้เวลาเพิ่ม")</p><strong>@T("Quoted with project scope", "ประเมินตามขอบเขตงาน")</strong></article>
+            </div>
+            <p class="service-pricing-note">@T("Prices are planning references, not a binding offer. We will confirm the scope, tax, delivery, and any revision or finishing work before production.", "ราคาเป็นข้อมูลเพื่อการวางแผน ไม่ใช่ข้อเสนอผูกพัน เราจะยืนยันขอบเขต ภาษี การจัดส่ง รวมถึงงานแก้ไขและเก็บผิวก่อนเริ่มผลิต")</p>
+        </div>
+    </section>
+    <ServiceLocation />
+
+    <section class="service-section service-section-light-cta"><div class="service-container service-split"><div class="service-copy"><p class="service-eyebrow">@T("Design to production", "จากแบบสู่การผลิต")</p><h2>@T("Already have a process in mind?", "มีขั้นตอนผลิตในใจแล้วหรือยัง?")</h2><p>@T("Send the model or drawing and tell us the material, quantity, and use. We can move the request into CNC machining, 3D printing, silicone casting, or custom manufacturing review.", "ส่งแบบหรือไฟล์ CAD พร้อมวัสดุ จำนวน และการใช้งาน เราช่วยส่งต่อไปยัง CNC พิมพ์ 3D หล่อซิลิโคน หรือผลิตชิ้นงานตามแบบ")</p><div class="service-actions"><a class="service-button service-button-primary" href="/Quotation?item=3d-design">@T("Start a design project", "เริ่มโปรเจ็คออกแบบ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></div><img class="service-split-image" src="/src/images/services/design/design-workflow.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("CAD workflow from sketch to part", "ขั้นตอนจากภาพร่างสู่แบบ CAD และชิ้นงาน")" /></div></section>
+
+    <section class="service-section service-section-soft" aria-labelledby="design-faq-title" data-migration-component="public-service-faq"><div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("Questions before sending files", "คำถามก่อนส่งไฟล์")</p><h2 id="design-faq-title">@T("3D design FAQ", "คำถามเรื่องออกแบบ 3 มิติ")</h2></header><div class="service-faq">
+        <details><summary>@T("Can you create a CAD model from a sketch or photo?", "สร้าง CAD จากภาพร่างหรือรูปถ่ายได้หรือไม่?")</summary><p>@T("Yes. Send the sketch, reference photos, dimensions, sample part, or scanned mesh. We confirm what can be measured and which assumptions must be agreed.", "ได้ กรุณาส่งภาพร่าง รูปถ่าย ขนาด ชิ้นงาน หรือเมชจากการสแกน เราจะยืนยันข้อมูลที่วัดได้และสมมติฐานที่ต้องตกลง")</p></details>
+        <details><summary>@T("Will the model be ready for manufacturing?", "แบบพร้อมผลิตหรือไม่?")</summary><p>@T("The model is developed around the agreed process, material, tolerances, interfaces, and use. Final suitability is confirmed with the selected manufacturing route.", "แบบจะพัฒนาตามกระบวนการ วัสดุ ค่าคลาดเคลื่อน จุดประกอบ และการใช้งาน โดยยืนยันความเหมาะสมกับกระบวนการผลิตสุดท้ายอีกครั้ง")</p></details>
+        <details><summary>@T("What should I send for a design review?", "ควรส่งข้อมูลอะไรเพื่อประเมินงานออกแบบ?")</summary><p>@T("Send the concept or drawing, target dimensions, material, quantity, critical interfaces, intended use, reference parts, and required CAD format.", "ส่งไอเดียหรือแบบ ขนาดเป้าหมาย วัสดุ จำนวน จุดประกอบสำคัญ การใช้งาน ชิ้นงานอ้างอิง และรูปแบบไฟล์ CAD ที่ต้องการ")</p></details>
+        <details><summary>@T("What file formats can you deliver?", "ส่งมอบไฟล์รูปแบบใดได้บ้าง?")</summary><p>@T("Depending on the agreed scope, deliverables can include native CAD files such as STEP, STL files, and 2D drawings. Confirm the required format before work begins.", "ขึ้นกับขอบเขตงาน สามารถส่งมอบไฟล์ CAD เช่น STEP ไฟล์ STL และแบบ 2D ได้ ควรยืนยันรูปแบบไฟล์ที่ต้องการก่อนเริ่มงาน")</p></details>
+        <details><summary>@T("How long does a 3D design project take?", "งานออกแบบ 3 มิติใช้เวลานานเท่าไร?")</summary><p>@T("A simple, well-defined request can be completed the same day. Complex geometry or several requested revisions can take multiple days after the scope is confirmed.", "งานที่เรียบง่ายและข้อมูลครบอาจเสร็จภายในวันเดียว ส่วนรูปทรงซับซ้อนหรือมีการแก้ไขหลายรอบอาจใช้เวลาหลายวันหลังยืนยันขอบเขต")</p></details>
+        <details><summary>@T("Can design changes during the project add cost?", "การแก้แบบระหว่างโปรเจ็คมีค่าใช้จ่ายเพิ่มหรือไม่?")</summary><p>@T("Changes or revisions after modeling starts can add cost when they expand the agreed scope. Sending complete information before kickoff helps us quote the work accurately.", "การแก้ไขแบบหลังเริ่มงานอาจมีค่าใช้จ่ายเพิ่มเมื่อทำให้งานเกินขอบเขตที่ตกลง การส่งข้อมูลให้ครบก่อนเริ่มช่วยให้ประเมินราคาได้ตรงจุด")</p></details>
+    </div></div></section>
+
+    <section class="service-cta-wrap"><div class="service-container service-cta"><div><h2>@T("Turn the idea into a model you can make", "เปลี่ยนไอเดียให้เป็นแบบที่ผลิตได้")</h2><p>@T("Share what you have and we will help define the next practical design step.", "ส่งข้อมูลที่มี แล้วให้เราช่วยกำหนดขั้นตอนออกแบบที่เหมาะสม")</p></div><div class="service-actions"><a class="service-button service-button-yellow" href="/Quotation?item=3d-design">@T("Request a design review", "ขอประเมินงานออกแบบ")</a></div></div></section>
+</main>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

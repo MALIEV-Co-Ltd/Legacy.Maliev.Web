@@ -1,6 +1,7 @@
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using System.Text.Json;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -42,6 +43,7 @@ public sealed class ContactPageTests
 
         var redirect = Assert.IsType<RedirectToPageResult>(result);
         Assert.Equal("Index", redirect.PageName);
+        Assert.Equal("en", redirect.RouteValues!["culture"]);
         Assert.Equal(1, contactClient.CallCount);
         var analyticsPayload = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("913", StringComparison.Ordinal));
         using var analyticsDocument = JsonDocument.Parse(analyticsPayload);
@@ -65,12 +67,68 @@ public sealed class ContactPageTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Post_AuthenticatedCustomerReplacesSpoofedBrowserIdentityWithTrustedProfile()
+    {
+        var contactClient = new RecordingContactClient(new ContactSubmissionResult(914, true, true));
+        var trustedCustomer = new ContactTrustedCustomer(
+            "Trusted",
+            "Customer",
+            "trusted@example.com",
+            "+66810000000",
+            "Trusted Company",
+            "Thailand");
+        var page = CreatePage(
+            contactClient,
+            new StubAntiBotVerifier(true),
+            trustedCustomerLoader: new StubTrustedCustomerLoader(new(trustedCustomer, true, true)));
+        page.FirstName = "Spoofed";
+        page.LastName = "Browser";
+        page.Email = "attacker@example.com";
+        page.Phone = "+66000000000";
+        page.Company = "Attacker Company";
+        page.Country = "Nowhere";
+
+        var result = await page.OnPostSubmitRequestAsync(CancellationToken.None);
+
+        Assert.IsType<RedirectToPageResult>(result);
+        var submission = Assert.Single(contactClient.Submissions);
+        Assert.Equal("Trusted", submission.FirstName);
+        Assert.Equal("Customer", submission.LastName);
+        Assert.Equal("trusted@example.com", submission.Email);
+        Assert.Equal("+66810000000", submission.Telephone);
+        Assert.Equal("Trusted Company", submission.Company);
+        Assert.Equal("Thailand", submission.Country);
+    }
+
+    [Fact]
+    public async Task Post_AuthenticatedCustomerProfileFailureFailsClosed()
+    {
+        var contactClient = new RecordingContactClient(new ContactSubmissionResult(915, true, true));
+        var page = CreatePage(
+            contactClient,
+            new StubAntiBotVerifier(true),
+            trustedCustomerLoader: new StubTrustedCustomerLoader(new(null, true, false)));
+
+        var result = await page.OnPostSubmitRequestAsync(CancellationToken.None);
+
+        Assert.IsType<PageResult>(result);
+        Assert.Empty(contactClient.Submissions);
+        Assert.Contains(
+            page.ModelState[string.Empty]!.Errors,
+            error => error.ErrorMessage.Contains("profile", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static ContactPage CreatePage(
         RecordingContactClient contactClient,
         IAntiBotVerifier antiBotVerifier,
-        INotificationClient? notificationClient = null)
+        INotificationClient? notificationClient = null,
+        IContactTrustedCustomerLoader? trustedCustomerLoader = null)
     {
         var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString("?culture=en");
+        httpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "customer:27")], "test"));
         var page = new ContactPage(
             new StubCountryClient(),
             contactClient,
@@ -82,6 +140,8 @@ public sealed class ContactPageTests
                     SiteKey = "test-site-key",
                     ProjectId = "test-project"
                 }),
+            Options.Create(new GoogleMapsOptions()),
+            trustedCustomerLoader ?? new StubTrustedCustomerLoader(new(null, false, true)),
             NullLogger<ContactPage>.Instance)
         {
             PageContext = new PageContext { HttpContext = httpContext },
@@ -110,14 +170,25 @@ public sealed class ContactPageTests
         ContactSubmissionResult? result = null) : IContactClient
     {
         public int CallCount { get; private set; }
+        public List<ContactSubmission> Submissions { get; } = [];
 
         public Task<ContactSubmissionResult> SubmitAsync(
             ContactSubmission submission,
             CancellationToken cancellationToken)
         {
             CallCount++;
+            Submissions.Add(submission);
             return Task.FromResult(result ?? new ContactSubmissionResult(null, true, true));
         }
+    }
+
+    private sealed class StubTrustedCustomerLoader(ContactTrustedCustomerLoadResult result)
+        : IContactTrustedCustomerLoader
+    {
+        public Task<ContactTrustedCustomerLoadResult> LoadAsync(
+            HttpContext context,
+            IReadOnlyList<Country> countries,
+            CancellationToken cancellationToken) => Task.FromResult(result);
     }
 
     private sealed class StubAntiBotVerifier(bool valid) : IAntiBotVerifier

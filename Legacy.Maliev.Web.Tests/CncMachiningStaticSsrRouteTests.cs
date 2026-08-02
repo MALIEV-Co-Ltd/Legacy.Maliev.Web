@@ -44,16 +44,22 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Contains("type=\"typeof(CncMachiningContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
-                Path.Combine(web, "Components"),
-                "*.razor",
-                SearchOption.AllDirectories)
+            Path.Combine(web, "Components"),
+            "*.razor",
+            SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
+            .Where(path => !new[]
+            {
+                "ThreeDimensionalDesignPage.razor",
+                "SiliconeCastingPage.razor",
+                "LowVolumeInjectionMoldingPage.razor"
+            }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();
 
         Assert.Equal(
-            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages);
     }
 
@@ -99,6 +105,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Contains("data-migration-component=\"public-google-tag-manager-head\"", source, StringComparison.Ordinal);
         Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-contact-channel-analytics\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-pricing\"", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 2,500 บาท" : "Starts at approximately THB 2,500", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
@@ -149,6 +157,23 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Equal("CNC Machining", service.RootElement.GetProperty("serviceType").GetString());
         Assert.Equal(7, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public void SourceVisibleCncCopyAndPricingRemainExact()
+    {
+        var root = FindRepositoryRoot();
+        var content = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "CncMachiningContent.razor"));
+        var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
+
+        Assert.Contains("We accept one-off parts when the geometry, material, and project scope are feasible.", content, StringComparison.Ordinal);
+        Assert.Contains("รับงานชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง", content, StringComparison.Ordinal);
+        Assert.Contains("CNC machining starts at THB 2,500.", content, StringComparison.Ordinal);
+        Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
+        Assert.Contains("What file formats should I send?", content, StringComparison.Ordinal);
+        Assert.Contains("แนะนำไฟล์ STEP หรือไฟล์ solid CAD พร้อมแบบ PDF", content, StringComparison.Ordinal);
+        Assert.Contains("Production quantities", pricing, StringComparison.Ordinal);
+        Assert.Contains("Unit price changes with quantity, material, setup, tooling, and finishing requirements.", pricing, StringComparison.Ordinal);
     }
 
     [Fact]

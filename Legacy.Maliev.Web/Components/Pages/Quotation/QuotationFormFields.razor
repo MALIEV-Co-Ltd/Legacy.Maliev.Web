@@ -16,67 +16,147 @@
 
     <input type="hidden" id="SubmissionId" name="SubmissionId" value="@Model.SubmissionId" />
     <input type="hidden" id="ServiceContext" name="ServiceContext" value="@Model.ServiceContext" data-upload-service />
+    <input type="hidden" name="FinderFiles" value="@Model.FinderFiles" />
+    <input type="hidden" name="FinderService" value="@Model.FinderService" />
+    <input type="hidden" name="FinderMaterial" value="@Model.FinderMaterial" />
+    <input type="hidden" name="FinderQuantity" value="@Model.FinderQuantity" />
+    <input type="hidden" name="FinderEndUse" value="@Model.FinderEndUse" />
+    <input type="hidden" name="FinderPerformance" value="@Model.FinderPerformance" />
+    <input type="hidden" name="FinderEnvironment" value="@Model.FinderEnvironment" />
+    <input type="hidden" name="FinderRecommendations" value="@Model.FinderRecommendations" />
+    <input type="hidden" name="FinderPath" value="@Model.FinderPath" />
 
-    <div class="row g-3">
-        <div class="col-md-6">
-            <label for="FirstName" class="form-label">@Localizer["First name"]</label>
-            <input class="form-control" autocomplete="given-name" type="text" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
-            <span id="FirstName-error" class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
+    <section class="inquiry-section" aria-labelledby="quotation-contact-heading">
+        <div class="inquiry-section-heading">
+            <i class="far fa-address-card" aria-hidden="true"></i>
+            <h3 id="quotation-contact-heading">@Localizer["Contact details"]</h3>
         </div>
-        <div class="col-md-6">
-            <label for="LastName" class="form-label">@Localizer["Last name"]</label>
-            <input class="form-control" autocomplete="family-name" type="text" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
-            <span id="LastName-error" class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
-        </div>
-        <div class="col-md-6">
-            <label for="Email" class="form-label">@Localizer["Email"]</label>
-            <input class="form-control" autocomplete="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+        @if (Model.IsAuthenticatedCustomer && Model.CustomerProfileAvailable)
+        {
+            <dl class="inquiry-customer-card" data-authenticated-customer="true">
+                <div><dt>@Localizer["First name"] / @Localizer["Last name"]</dt><dd>@Model.FirstName @Model.LastName</dd></div>
+                <div><dt>@Localizer["Email"]</dt><dd>@Model.Email</dd></div>
+                <div><dt>@Localizer["Telephone"]</dt><dd>@Model.Phone</dd></div>
+                <div><dt>@Localizer["Company"]</dt><dd>@Model.Company</dd></div>
+                <div><dt>@Localizer["Tax identification (optional)"]</dt><dd>@Model.TaxNumber</dd></div>
+                <div><dt>@Localizer["Country"]</dt><dd>@Model.Country</dd></div>
+            </dl>
+        }
+        else if (Model.IsAuthenticatedCustomer)
+        {
+            <div class="alert alert-warning" role="alert">
+                @Localizer["We could not retrieve your customer profile. Please update your profile or contact us directly."]
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="FirstName" class="form-label">@Localizer["First name"]</label>
+                    <input class="form-control" autocomplete="given-name" type="text" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
+                    <span id="FirstName-error" class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
+                </div>
+                <div class="col-md-6">
+                    <label for="LastName" class="form-label">@Localizer["Last name"]</label>
+                    <input class="form-control" autocomplete="family-name" type="text" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
+                    <span id="LastName-error" class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
+                </div>
+                <div class="col-md-6">
+                    <label for="Email" class="form-label">@Localizer["Email"]</label>
+            <input class="form-control" autocomplete="email" inputmode="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error quotation-email-feedback" data-live-email data-live-email-invalid='@Localizer["Please enter a valid email address"]' />
             <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+            <span id="quotation-email-feedback" class="inquiry-help inquiry-live-feedback" data-email-feedback hidden></span>
+                </div>
+                <div class="col-md-6">
+                    <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
+                    <input class="form-control" autocomplete="tel" type="tel" id="Phone" maxlength="50" name="Phone" value="@Model.Phone" aria-invalid="@AriaInvalid("Phone")" aria-describedby="Phone-error" />
+                    <span id="Phone-error" class="text-danger @(HasError("Phone") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Phone")</span>
+                </div>
+                <div class="col-md-6">
+                    <label for="Company" class="form-label">@Localizer["Company"]</label>
+                    <input class="form-control" autocomplete="organization" type="text" id="Company" maxlength="50" name="Company" value="@Model.Company" aria-invalid="@AriaInvalid("Company")" aria-describedby="Company-error" />
+                    <span id="Company-error" class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Company")</span>
+                </div>
+                <div class="col-md-6">
+                    <label for="TaxNumber" class="form-label">@Localizer["Tax identification (optional)"]</label>
+                    <input class="form-control" type="text" id="TaxNumber" maxlength="50" name="TaxNumber" value="@Model.TaxNumber" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="TaxNumber-error" />
+                    <span id="TaxNumber-error" class="text-danger @(HasError("TaxNumber") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("TaxNumber")</span>
+                </div>
+                <div class="col-md-6">
+                    <label for="Country" class="form-label">@Localizer["Country"]</label>
+                    <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error" data-auto-country>
+                        <option value="">@Localizer["Select a country"]</option>
+                        @foreach (var country in Model.Countries)
+                        {
+                            <option value="@country.Name" selected="@(string.Equals(Model.Country, country.Name, StringComparison.Ordinal))">@country.Name</option>
+                        }
+                    </select>
+                    <span id="Country-error" class="text-danger @(HasError("Country") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Country")</span>
+                </div>
+            </div>
+        }
+    </section>
+
+    <section class="inquiry-section" aria-labelledby="quotation-project-heading">
+        <div class="inquiry-section-heading">
+            <i class="fas fa-cube" aria-hidden="true"></i>
+            <h3 id="quotation-project-heading">@Localizer["Project details"]</h3>
         </div>
-        <div class="col-md-6">
-            <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
-            <input class="form-control" autocomplete="tel" type="tel" id="Phone" maxlength="50" name="Phone" value="@Model.Phone" aria-invalid="@AriaInvalid("Phone")" aria-describedby="Phone-error" />
-            <span id="Phone-error" class="text-danger @(HasError("Phone") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Phone")</span>
-        </div>
-        <div class="col-md-6">
-            <label for="Company" class="form-label">@Localizer["Company"]</label>
-            <input class="form-control" autocomplete="organization" type="text" id="Company" maxlength="50" name="Company" value="@Model.Company" aria-invalid="@AriaInvalid("Company")" aria-describedby="Company-error" />
-            <span id="Company-error" class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Company")</span>
-        </div>
-        <div class="col-md-6">
-            <label for="TaxNumber" class="form-label">@Localizer["Tax identification (optional)"]</label>
-            <input class="form-control" type="text" id="TaxNumber" maxlength="50" name="TaxNumber" value="@Model.TaxNumber" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="TaxNumber-error" />
-            <span id="TaxNumber-error" class="text-danger @(HasError("TaxNumber") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("TaxNumber")</span>
-        </div>
-        <div class="col-md-6">
-            <label for="Country" class="form-label">@Localizer["Country"]</label>
-            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error">
-                <option value="">@Localizer["Select a country"]</option>
-                @foreach (var country in Model.Countries)
-                {
-                    <option value="@country.Name" selected="@(string.Equals(Model.Country, country.Name, StringComparison.Ordinal))">@country.Name</option>
-                }
-            </select>
-            <span id="Country-error" class="text-danger @(HasError("Country") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Country")</span>
-        </div>
+        <div class="row g-3">
         <div class="col-12">
             <label for="Message" class="form-label">@Localizer["Project requirements"]</label>
             <textarea class="form-control" rows="10" id="Message" maxlength="10000" name="Message" required aria-invalid="@AriaInvalid("Message")" aria-describedby="Message-error">@Model.Message</textarea>
             <span id="Message-error" class="text-danger @(HasError("Message") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Message")</span>
         </div>
+        </div>
+    </section>
+
+    <section class="inquiry-section" aria-labelledby="quotation-files-heading">
+        <div class="inquiry-section-heading">
+            <i class="fas fa-paperclip" aria-hidden="true"></i>
+            <h3 id="quotation-files-heading">@Localizer["Project files"]</h3>
+        </div>
+        <div class="inquiry-upload" data-upload-dropzone>
+            <div class="inquiry-upload__heading">
+                <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                <strong>@Localizer["Upload files up to 100 MB total"]</strong>
+            </div>
         <div class="col-12">
-            <label for="Files" class="form-label">@Localizer["Drawings and reference files (optional)"]</label>
-            <input type="file" class="form-control" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files />
+            <span class="form-label">@Localizer["Drawings and reference files (optional)"]</span>
+            <label class="inquiry-upload__dropzone-label" for="Files">
+                <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                <span><strong>@Localizer["Choose files or drop them here"]</strong><small>@Localizer["Multiple files are supported"]</small></span>
+            </label>
+            <input type="file" class="inquiry-upload__input" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files data-remove-file-label='@Localizer["Remove"]' />
+            <ul class="inquiry-upload__file-list" data-upload-file-list aria-live="polite" hidden></ul>
             <div id="quotation-files-help" class="form-text">@Localizer["Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage."]</div>
             <span id="Files-error" class="text-danger @(HasError("Files") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Files")</span>
         </div>
-    </div>
+            <p class="form-text mt-3">
+                @Localizer["For larger files, use"]
+                <a href="https://wetransfer.com" target="_blank" rel="noopener">WeTransfer</a>,
+                <a href="https://uploadfiles.io" target="_blank" rel="noopener">Uploadfiles.io</a>,
+                @Localizer["or"] <a href="https://www.google.com/drive/" target="_blank" rel="noopener">Google Drive</a>.
+                @Localizer["Then send us the links."]
+            </p>
+        </div>
+    </section>
 
     <input type="hidden" name="g-recaptcha-response" id="quotation-recaptcha-response" value="@Model.RecaptchaToken" data-recaptcha-response />
-    <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
-        @Localizer["Submit quotation request"]
-    </button>
-    <p class="small text-muted mt-3">@Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]</p>
+    <div class="inquiry-actions">
+        <p class="inquiry-privacy">
+            <i class="fas fa-user-shield" aria-hidden="true"></i>
+            <strong>@Localizer["We take your data security seriously!"]</strong>
+            @Localizer["If you wish to sign a non-disclosure agreement with us, please download the"]
+            <a href="/Legal/NonDisclosureAgreement" target="_blank" rel="nofollow">@Localizer["NDA"]</a>
+            @Localizer["form and send it back to us with your request."]
+        </p>
+        <p class="inquiry-privacy inquiry-privacy--recaptcha">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
+        <p id="quotation-recaptcha-error" class="inquiry-help text-danger" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
+        <button type="submit" id="submit-button" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable || !Model.CustomerProfileAvailable)">
+            <span data-submit-label>@Localizer["Submit quotation request"]</span>
+        </button>
+    </div>
 </div>
 
 @code {

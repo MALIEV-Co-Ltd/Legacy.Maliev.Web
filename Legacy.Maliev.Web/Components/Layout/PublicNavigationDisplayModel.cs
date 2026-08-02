@@ -29,8 +29,8 @@ public sealed record PublicNavigationDisplayModel(
         var cultures = (localization.SupportedUICultures ?? Array.Empty<CultureInfo>())
             .Select(culture => new PublicNavigationCultureOption(
                 culture.Name,
-                culture.TwoLetterISOLanguageName == "th" ? "ไทย" : "EN",
-                culture.Name == currentCulture))
+                culture.TwoLetterISOLanguageName.Equals("th", StringComparison.OrdinalIgnoreCase) ? "ไทย" : "English",
+                string.Equals(culture.Name, currentCulture, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
         var returnUrl = string.IsNullOrEmpty(context.Request.Path)
             ? "~/"

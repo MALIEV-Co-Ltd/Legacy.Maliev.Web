@@ -73,7 +73,7 @@ public sealed class SharedNavigationMigrationTests : IClassFixture<WebApplicatio
     }
 
     [Theory]
-    [InlineData("en", "Get a Quote", "Login", "EN")]
+    [InlineData("en", "Get a Quote", "Login", "English")]
     [InlineData("th", "ขอใบเสนอราคา", "เข้าสู่ระบบ", "ไทย")]
     public async Task PublicNavigation_RendersLocalizedAnonymousStaticSsr(
         string culture,

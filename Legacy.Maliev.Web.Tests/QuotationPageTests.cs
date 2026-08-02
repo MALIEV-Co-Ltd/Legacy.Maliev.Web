@@ -30,7 +30,26 @@ public sealed class QuotationPageTests
             new RecordingFileClient(),
             new StubAntiBotVerifier(true));
 
-        await page.OnGetAsync("en", item, null, null, CancellationToken.None);
+        await page.OnGetAsync(
+            "en",
+            item,
+            null,
+            null,
+            finder_files: null,
+            finder_service: null,
+            finder_material: null,
+            finder_quantity: null,
+            finder_end_use: null,
+            finder_performance: null,
+            finder_environment: null,
+            finder_recommendations: null,
+            finder_path: null,
+            finish_hex: null,
+            finish_hlc: null,
+            finish_lab: null,
+            finish_pantone: null,
+            finish_sheen: null,
+            cancellationToken: CancellationToken.None);
 
         Assert.Equal(expectedService, page.ServiceContext);
     }
@@ -129,6 +148,8 @@ public sealed class QuotationPageTests
             new StubCountryClient(),
             quotationClient,
             fileClient,
+            new AnonymousSessionManager(),
+            new UnusedCustomerAccountClient(),
             notificationClient ?? new RecordingNotificationClient(),
             antiBotVerifier,
             Options.Create(
@@ -215,6 +236,43 @@ public sealed class QuotationPageTests
             Assert.Equal("submit", expectedAction);
             return Task.FromResult(valid);
         }
+    }
+
+    private sealed class AnonymousSessionManager : IAccountSessionManager
+    {
+        public Task<AccountSignInStatus> SignInAsync(
+            HttpContext context,
+            string email,
+            string password,
+            bool rememberMe,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(AccountSignInStatus.InvalidCredentials);
+
+        public Task SignOutAsync(HttpContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<string?> GetAccessTokenAsync(HttpContext context, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        public Task<int?> GetCustomerDatabaseIdAsync(HttpContext context, CancellationToken cancellationToken) =>
+            Task.FromResult<int?>(null);
+    }
+
+    private sealed class UnusedCustomerAccountClient : ICustomerAccountClient
+    {
+        public Task<CustomerAddressProfileResult> GetAddressProfileAsync(int customerId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not load a customer profile.");
+
+        public Task<CustomerAddressOperationResult> UpdateAddressesAsync(int customerId, CustomerAddressUpdate update, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
+
+        public Task<CustomerAddressOperationResult> UpdateEmailAsync(int customerId, string email, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
+
+        public Task<CustomerAccountProfileResult> GetProfileAsync(int customerId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not load a customer profile.");
+
+        public Task<CustomerAddressOperationResult> UpdateProfileAsync(int customerId, CustomerProfileUpdate update, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
     }
 
     private sealed class RecordingNotificationClient : INotificationClient

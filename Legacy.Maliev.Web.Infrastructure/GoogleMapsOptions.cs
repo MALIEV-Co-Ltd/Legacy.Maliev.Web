@@ -8,6 +8,11 @@ namespace Legacy.Maliev.Web.Infrastructure;
 public sealed class GoogleMapsOptions
 {
     /// <summary>
+    /// The configuration section containing the browser Maps key and place.
+    /// </summary>
+    public const string SectionName = "GoogleMaps";
+
+    /// <summary>
     /// The browser key accepted by the Google Maps Embed API.
     /// </summary>
     public string EmbedApiKey { get; set; } = string.Empty;

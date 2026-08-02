@@ -35,6 +35,8 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             partQuotes,
             order.ItemsSubtotal,
             order.Printing,
+            order.MinimumOrderPrice,
+            order.MinimumOrderSurcharge,
             order.ShippingCost,
             order.PriceBeforeVat,
             order.Vat,

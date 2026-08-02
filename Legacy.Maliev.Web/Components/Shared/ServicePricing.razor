@@ -1,0 +1,50 @@
+@using System.Globalization
+
+@if (!string.IsNullOrWhiteSpace(ServiceKey))
+{
+    <section id="service-pricing" class="service-section service-section-soft service-pricing-section" aria-labelledby="service-pricing-title" data-migration-component="service-pricing">
+        <div class="service-container">
+            <header class="service-heading center">
+                <h2 id="service-pricing-title">@T("Indicative starting prices", "ราคาเริ่มต้นเพื่อการประเมิน")</h2>
+                <p>@T("Use these starting points to choose a service. The final quotation is confirmed after we review geometry, material, quantity, finish, tolerances, and delivery requirements.", "ใช้ราคาเริ่มต้นเหล่านี้เพื่อเลือกบริการ โดยจะยืนยันราคาจริงหลังตรวจสอบรูปทรง วัสดุ จำนวน ผิวสำเร็จ ค่าคลาดเคลื่อน และกำหนดส่ง")</p>
+            </header>
+
+            <div class="service-pricing-grid">
+                @if (ServiceKey.Equals("3d-printing", StringComparison.OrdinalIgnoreCase))
+                {
+                    <article class="service-pricing-card"><h3>FDM</h3><p>@T("Practical prototypes, fixtures, and larger functional parts in engineering thermoplastics. Lead time usually starts at 1 day.", "เหมาะกับต้นแบบ จิ๊ก และชิ้นงานใช้งานจริงขนาดใหญ่ในพลาสติกวิศวกรรม ระยะเวลาโดยทั่วไปเริ่มต้น 1 วัน")</p><strong>@T("Starts at approximately THB 300", "เริ่มต้นประมาณ 300 บาท")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Resin printing", "พิมพ์เรซิ่น")</h3><p>@T("Fine detail and smooth surfaces for presentation models, patterns, and smaller parts. Lead time usually starts at 7 days.", "รายละเอียดสูงและผิวเรียบสำหรับต้นแบบนำเสนอ แพทเทิร์น และชิ้นงานขนาดเล็ก ระยะเวลาโดยทั่วไปเริ่มต้น 7 วัน")</p><strong>@T("Starts at approximately THB 500", "เริ่มต้นประมาณ 500 บาท")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Industrial processes", "กระบวนการอุตสาหกรรม")</h3><p>@T("MJF, SLS, SLM, and DMLS for specialist materials, larger production runs, or tighter specifications. Lead time is typically around 14 days.", "MJF, SLS, SLM และ DMLS สำหรับวัสดุเฉพาะ งานจำนวนมาก หรือข้อกำหนดที่เข้มงวด ระยะเวลาโดยทั่วไปประมาณ 14 วัน")</p><strong>@T("Quote after file review", "ประเมินราคาหลังตรวจสอบไฟล์")</strong></article>
+                }
+                else if (ServiceKey.Equals("3d-scanning", StringComparison.OrdinalIgnoreCase))
+                {
+                    <article class="service-pricing-card"><h3>@T("Direct scan mesh", "เมชจากการสแกนโดยตรง")</h3><p>@T("A scan mesh for visual reference, inspection, or downstream preparation.", "เมชจากการสแกนสำหรับอ้างอิง ตรวจสอบ หรือเตรียมงานขั้นต่อไป")</p><strong>@T("Starts at approximately THB 2,500", "เริ่มต้นประมาณ 2,500 บาท")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Reverse engineering", "Reverse Engineering")</h3><p>@T("A usable CAD reconstruction built from the physical part and agreed deliverables.", "สร้างไฟล์ CAD ที่ใช้งานได้จากชิ้นงานจริงตามไฟล์ส่งมอบที่ตกลงกัน")</p><strong>@T("Starts at approximately THB 4,500", "เริ่มต้นประมาณ 4,500 บาท")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Onsite scanning", "สแกนนอกสถานที่")</h3><p>@T("Travel, access, object size, and inspection requirements affect the quotation.", "ค่าเดินทาง การเข้าถึง ขนาดชิ้นงาน และข้อกำหนดการตรวจสอบมีผลต่อราคา")</p><strong>@T("Quoted after site review", "ประเมินหลังตรวจสอบหน้างาน")</strong></article>
+                }
+                else if (ServiceKey.Equals("cnc-machining", StringComparison.OrdinalIgnoreCase))
+                {
+                    <article class="service-pricing-card"><h3>@T("CNC machining", "งาน CNC")</h3><p>@T("One-off and repeat parts in common metals and engineering plastics, subject to geometry and tolerances.", "งานชิ้นเดียวและงานผลิตซ้ำในโลหะและพลาสติกวิศวกรรม โดยขึ้นกับรูปทรงและค่าความคลาดเคลื่อน")</p><strong>@T("Starts at approximately THB 2,500", "เริ่มต้นประมาณ 2,500 บาท")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Production quantities", "งานผลิตซ้ำ")</h3><p>@T("Unit price changes with quantity, material, setup, tooling, and finishing requirements.", "ราคาต่อชิ้นเปลี่ยนตามจำนวน วัสดุ การตั้งเครื่อง เครื่องมือ และงานเก็บผิว")</p><strong>@T("Quoted from your drawing", "ประเมินจากแบบงานของคุณ")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Typical lead time", "ระยะเวลาผลิตโดยทั่วไป")</h3><p>@T("Scheduling depends on the part and current capacity; the quotation confirms the delivery plan.", "กำหนดส่งขึ้นกับชิ้นงานและคิวผลิต โดยจะยืนยันแผนส่งมอบในใบเสนอราคา")</p><strong>@T("Often from 14 days", "โดยทั่วไปเริ่มประมาณ 14 วัน")</strong></article>
+                }
+                else if (ServiceKey.Equals("silicone-casting", StringComparison.OrdinalIgnoreCase))
+                {
+                    <article class="service-pricing-card"><h3>@T("Mold and master pattern", "แม่พิมพ์และต้นแบบ")</h3><p>@T("The 3D-printed mold and master pattern are priced from the geometry, size, and preparation required.", "ค่าแม่พิมพ์พิมพ์ 3 มิติและต้นแบบขึ้นกับรูปทรง ขนาด และงานเตรียมที่ต้องทำ")</p><strong>@T("Quoted after geometry review", "ประเมินหลังตรวจสอบรูปทรง")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Silicone, color, and mold count", "ซิลิโคน สี และจำนวนแม่พิมพ์")</h3><p>@T("Silicone volume, color choice, and the number of molds directly affect cost and lead time. Fewer molds lower cost but extend the schedule.", "ปริมาณซิลิโคน สี และจำนวนแม่พิมพ์มีผลโดยตรงต่อต้นทุนและเวลา แม่พิมพ์น้อยลงช่วยลดต้นทุนแต่ใช้เวลานานขึ้น")</p><strong>@T("Quoted from the production plan", "ประเมินจากแผนการผลิต")</strong></article>
+                    <article class="service-pricing-card"><h3>@T("Lead time", "ระยะเวลา")</h3><p>@T("Planning is around seven days; each pour normally needs 6–8 hours to cure fully.", "วางแผนงานประมาณ 7 วัน และการเทแต่ละรอบใช้เวลาประมาณ 6–8 ชั่วโมงเพื่อแข็งตัวเต็มที่")</p><strong>@T("Confirmed with your mold plan", "ยืนยันตามแผนแม่พิมพ์")</strong></article>
+                }
+            </div>
+            <p class="service-pricing-note">@T("Prices are planning references, not a binding offer. We will confirm the scope, tax, delivery, and any revision or finishing work before production.", "ราคาเป็นข้อมูลเพื่อการวางแผน ไม่ใช่ข้อเสนอผูกพัน เราจะยืนยันขอบเขต ภาษี การจัดส่ง รวมถึงงานแก้ไขและเก็บผิวก่อนเริ่มผลิต")</p>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string ServiceKey { get; set; } = string.Empty;
+
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

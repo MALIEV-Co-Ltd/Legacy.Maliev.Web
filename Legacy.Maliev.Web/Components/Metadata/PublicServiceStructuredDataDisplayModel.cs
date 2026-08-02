@@ -33,17 +33,45 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
             ["3D Scanning"] = new(
                 "บริการรับสแกน 3D",
                 "3D Scanning Services",
-                "เก็บข้อมูลรูปทรงสำหรับไฟล์สแกนดิบ Reverse Engineering และการเปรียบเทียบความคลาดเคลื่อน โดยยืนยันความเป็นไปได้และสิ่งส่งมอบตามแต่ละโครงการ",
+                "เก็บข้อมูลรูปทรงสำหรับไฟล์สแกนดิบ Reverse Engineering และการเปรียบเทียบความคลาดเคลื่อน โดยยืนยันความเป็นไปได้และสิ่งส่งมอบตามแต่ละโปรเจ็ค",
                 "3D geometry capture for raw scan data, reverse-engineering input, and deviation analysis, with feasibility and deliverables confirmed for each project.",
                 "https://www.maliev.com/services/3d-scanning",
                 "https://www.maliev.com/src/images/services/scanning/scanning-hero.webp"),
+            ["3D Design"] = new(
+                "บริการออกแบบ 3 มิติ",
+                "3D Design Services",
+                "พัฒนาแบบ 3 มิติจากภาพร่าง แบบ รูปถ่าย หรือข้อมูลสแกน พร้อมคำแนะนำ DFM และการเตรียมแบบสำหรับผลิต",
+                "3D design development from sketches, drawings, photos, or scanned geometry, with DFM guidance and manufacturing-ready deliverables.",
+                "https://www.maliev.com/services/3d-design",
+                "https://www.maliev.com/src/images/services/design/design-workflow.webp"),
+            ["Silicone Casting"] = new(
+                "บริการหล่อซิลิโคน",
+                "Silicone Casting Services",
+                "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์พิมพ์ 3 มิติ โดยประเมินรูปทรง วัสดุ ผิว และการใช้งานก่อนหล่อ",
+                "Short-run silicone casting with a 3D-printed mold, with geometry, material, finish, and application reviewed before casting.",
+                "https://www.maliev.com/services/silicone-casting",
+                "https://www.maliev.com/src/images/services/silicone-casting/silicone-casting-workflow.webp"),
             ["Custom Manufacturing"] = new(
                 "รับผลิตชิ้นงานตามแบบ",
                 "Custom Part Manufacturing",
                 "ช่วยกำหนดเส้นทางประเมินระหว่าง CNC, 3D Printing และ 3D Scanning จากแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน ก่อนส่งต่อไปยังบริการเฉพาะทาง",
                 "Manufacturing process selection for projects that may need CNC machining, 3D printing, or 3D scanning, based on the drawing or sample, material, quantity, critical features, and intended use.",
                 "https://www.maliev.com/services/custom-manufacturing",
-                string.Empty)
+                "https://www.maliev.com/src/images/services/custom-manufacturing/custom-manufacturing-story.webp"),
+            ["Low-volume Injection Molding"] = new(
+                "บริการฉีดพลาสติกจำนวนน้อย",
+                "Low-Volume Injection Molding",
+                "รับฉีดพลาสติกจำนวนน้อยสำหรับงานทดลองและงานผลิตซ้ำไม่เกิน 1,000 ชิ้น ด้วยเครื่องระบบลม รองรับน้ำหนักฉีดสูงสุด 50 กรัม และพลาสติกที่มีอุณหภูมิหลอมไม่เกิน 350 °C",
+                "Low-volume injection molding for pilot runs and repeat batches up to 1,000 parts on a pneumatic PIMM machine, with shot weights up to 50 g and plastics melting at no more than 350 °C.",
+                "https://www.maliev.com/services/low-volume-injection-molding",
+                "https://www.maliev.com/src/images/services/injection-molding/injection-service-hero-wide.png"),
+            ["Finishing and Color"] = new(
+                "บริการเก็บผิวและมาตรฐานสี",
+                "3D Printed Part Finishing and Colour Standards",
+                "กำหนดสี ระดับความเงา การเตรียมผิว รอยต่อ และเกณฑ์ตรวจรับสำหรับชิ้นงานพิมพ์ 3 มิติก่อนผลิต",
+                "Finishing guidance for 3D printed parts, including colour standards, sheen, surface preparation, seams, and acceptance criteria before production.",
+                "https://www.maliev.com/services/finishing-and-color",
+                "https://www.maliev.com/src/images/services/printing/printing-finish-color-approval.webp")
         };
 
     public static PublicServiceStructuredDataDisplayModel Create(string? serviceName)

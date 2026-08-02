@@ -39,9 +39,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
     [Theory]
     [InlineData(
         "en",
-        "Manufacturing Services Bangkok Nonthaburi: CNC Machining, 3D Printing & 3D Scanning",
-        "Professional CNC machining, 3D printing, and 3D scanning services in Bangkok and Nonthaburi, Thailand. Upload your file for an instant quote.",
-        "3d printing thailand, 3d scanning thailand, cnc machining thailand, manufacturing services bangkok, cnc machining nonthaburi",
+        "Custom Manufacturing Services | MALIEV",
+        "Custom CNC, 3D printing, 3D scanning, and design services for prototypes and production parts in Bangkok and Nonthaburi.",
+        "custom part manufacturing thailand, 3d printing thailand, 3d scanning thailand, 3d design thailand, silicone casting thailand, low volume injection molding thailand, cnc machining thailand",
         "Precision. Speed. Reliability.",
         "Manufacturing Services for Prototypes and Production Parts",
         "Our Services",
@@ -50,9 +50,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         "Ready to bring your ideas to life?")]
     [InlineData(
         "th",
-        "บริการผลิตชิ้นส่วนออนไลน์ นนทบุรี กรุงเทพ: CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ",
-        "บริการพิมพ์ 3 มิติ ชิ้นงาน CNC และสแกน 3 มิติ ในนนทบุรีและกรุงเทพ อัปโหลดไฟล์เพื่อประเมินราคาทันที ไม่มีจำนวนขั้นต่ำ",
-        "รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับ CNC ตามแบบ, โรงกลึง นนทบุรี, CNC กรุงเทพ",
+        "รับผลิตชิ้นงานตามแบบ | MALIEV",
+        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ",
+        "รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ",
         "แม่นยำ รวดเร็ว เชื่อถือได้",
         "บริการผลิตชิ้นงานต้นแบบและชิ้นส่วนสำหรับการผลิตจริง",
         "บริการของเรา",
@@ -88,7 +88,23 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         Assert.Contains($">{reasons}<", source, StringComparison.Ordinal);
         Assert.Contains($">{finalCallToAction}<", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("href=\"/Services/Index\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/Contact\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(culture == "th" ? "ค้นหาบริการที่เหมาะกับคุณ" : "Find the right service", source, StringComparison.Ordinal);
+        Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
+        Assert.Contains("landing-service-card--directory-link", source, StringComparison.Ordinal);
+        Assert.Contains(
+            culture == "th"
+                ? "ฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่องระบบลม รองรับน้ำหนักฉีดสูงสุด 50 กรัม"
+                : "with shot weights up to 50 g",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            culture == "th"
+                ? "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน"
+                : "with the material and finish reviewed for the application.",
+            source,
+            StringComparison.Ordinal);
         Assert.Contains("landing-hero-cnc.webp", source, StringComparison.Ordinal);
         Assert.Contains("landing-hero-printing.webp", source, StringComparison.Ordinal);
         Assert.Contains("landing-hero-scanning.webp", source, StringComparison.Ordinal);
@@ -183,7 +199,7 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         using var client = CreateClient(fallbackFactory);
         var source = await client.GetStringAsync("/?culture=en");
 
-        Assert.Contains("<title>Manufacturing Services Bangkok Nonthaburi: CNC Machining, 3D Printing &amp; 3D Scanning</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Custom Manufacturing Services | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"home-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }

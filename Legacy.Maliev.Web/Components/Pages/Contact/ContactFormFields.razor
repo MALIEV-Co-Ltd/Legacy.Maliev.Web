@@ -2,7 +2,11 @@
 @inject IStringLocalizer<ContactContent> Localizer
 
 <div data-migration-component="contact-form-fields" data-migration-renderer="blazor-static-ssr">
-    <div class="text-danger @(Model.ErrorsFor(string.Empty).Count > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
+    <header class="inquiry-form-header">
+        <h2>@Localizer["Send us a message"]</h2>
+        <p>@Localizer["Tell us how we can help and include enough detail for the right team member to respond."]</p>
+    </header>
+    <div class="inquiry-validation-summary text-danger @(Model.ErrorsFor(string.Empty).Count > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
         @if (Model.ErrorsFor(string.Empty).Count > 0)
         {
             <ul>
@@ -14,35 +18,57 @@
         }
     </div>
 
-    <div class="row g-3">
-        <div class="col-md-6">
+    <section class="inquiry-section" aria-labelledby="contact-details-heading">
+        <div class="inquiry-section-heading">
+            <i class="far fa-address-card" aria-hidden="true"></i>
+            <h3 id="contact-details-heading">@Localizer["Your details"]</h3>
+            @if (!Model.IsAuthenticatedCustomer)
+            {
+                <span class="inquiry-required-note"><span class="inquiry-required">*</span> @Localizer["Required"]</span>
+            }
+        </div>
+        @if (Model.IsAuthenticatedCustomer)
+        {
+            <dl class="inquiry-customer-card">
+                <div><dt>@Localizer["First name"] / @Localizer["Last name"]</dt><dd>@Model.FirstName @Model.LastName</dd></div>
+                <div><dt>@Localizer["Email"]</dt><dd>@Model.Email</dd></div>
+                <div><dt>@Localizer["Telephone number"]</dt><dd>@Model.Phone</dd></div>
+                <div><dt>@Localizer["Company"]</dt><dd>@Model.Company</dd></div>
+                <div><dt>@Localizer["Country"]</dt><dd>@Model.Country</dd></div>
+            </dl>
+        }
+        else
+        {
+          <div class="inquiry-field-grid">
+        <div class="inquiry-field">
             <label for="FirstName" class="form-label">@Localizer["First name"]</label>
             <input class="form-control" autocomplete="given-name" type="text" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
             <span id="FirstName-error" class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
         </div>
-        <div class="col-md-6">
+        <div class="inquiry-field">
             <label for="LastName" class="form-label">@Localizer["Last name"]</label>
             <input class="form-control" autocomplete="family-name" type="text" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
             <span id="LastName-error" class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
         </div>
-        <div class="col-md-6">
+        <div class="inquiry-field">
             <label for="Email" class="form-label">@Localizer["Email"]</label>
-            <input class="form-control" autocomplete="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error" />
+            <input class="form-control" autocomplete="email" inputmode="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error contact-email-feedback" data-live-email data-live-email-invalid='@Localizer["Please enter a valid email address"]' />
             <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
+            <span id="contact-email-feedback" class="inquiry-help inquiry-live-feedback" data-email-feedback hidden></span>
         </div>
-        <div class="col-md-6">
+        <div class="inquiry-field">
             <label for="Phone" class="form-label">@Localizer["Telephone"]</label>
             <input class="form-control" autocomplete="tel" type="tel" id="Phone" maxlength="50" name="Phone" value="@Model.Phone" aria-invalid="@AriaInvalid("Phone")" aria-describedby="Phone-error" />
             <span id="Phone-error" class="text-danger @(HasError("Phone") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Phone")</span>
         </div>
-        <div class="col-md-6">
+        <div class="inquiry-field">
             <label for="Company" class="form-label">@Localizer["Company"]</label>
             <input class="form-control" autocomplete="organization" type="text" id="Company" maxlength="50" name="Company" value="@Model.Company" aria-invalid="@AriaInvalid("Company")" aria-describedby="Company-error" />
             <span id="Company-error" class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Company")</span>
         </div>
-        <div class="col-md-6">
+        <div class="inquiry-field">
             <label for="Country" class="form-label">@Localizer["Country"]</label>
-            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error">
+            <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error" data-auto-country>
                 <option value="">@Localizer["Select a country"]</option>
                 @foreach (var country in Model.Countries)
                 {
@@ -51,18 +77,30 @@
             </select>
             <span id="Country-error" class="text-danger @(HasError("Country") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Country")</span>
         </div>
-        <div class="col-12">
+          </div>
+        }
+    </section>
+    <section class="inquiry-section" aria-labelledby="contact-message-heading">
+        <div class="inquiry-section-heading">
+            <i class="far fa-comment-dots" aria-hidden="true"></i>
+            <h3 id="contact-message-heading">@Localizer["Your message"]</h3>
+        </div>
+        <div class="inquiry-field inquiry-field--full">
             <label for="Message" class="form-label">@Localizer["How can we help?"]</label>
             <textarea class="form-control" rows="7" id="Message" maxlength="5000" name="Message" required aria-invalid="@AriaInvalid("Message")" aria-describedby="Message-error">@Model.Message</textarea>
             <span id="Message-error" class="text-danger @(HasError("Message") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Message")</span>
         </div>
-    </div>
+    </section>
 
     <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="@Model.RecaptchaToken" data-recaptcha-response />
-    <button type="submit" class="btn btn-primary mt-4" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
-        @Localizer["Submit enquiry"]
-    </button>
-    <p class="small text-muted mt-3">@Localizer["Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply."]</p>
+    <div class="inquiry-actions">
+        <p class="inquiry-privacy"><i class="fas fa-lock" aria-hidden="true"></i> @Localizer["Your contact details are used only to respond to this request."]</p>
+        <p class="inquiry-privacy inquiry-privacy--recaptcha">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
+        <p id="contact-recaptcha-error" class="inquiry-help text-danger" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
+        <button type="submit" id="submit-button" class="inquiry-submit" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable)">
+            <span data-submit-label>@Localizer["Submit"]</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </button>
+    </div>
 </div>
 
 @code {

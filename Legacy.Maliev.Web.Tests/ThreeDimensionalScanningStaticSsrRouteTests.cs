@@ -49,10 +49,16 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("type=\"typeof(ThreeDimensionalScanningContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
-                Path.Combine(web, "Components"),
-                "*.razor",
-                SearchOption.AllDirectories)
+            Path.Combine(web, "Components"),
+            "*.razor",
+            SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
+            .Where(path => !new[]
+            {
+                "ThreeDimensionalDesignPage.razor",
+                "SiliconeCastingPage.razor",
+                "LowVolumeInjectionMoldingPage.razor"
+            }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -71,6 +77,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
+                "FinishingAndColorPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
@@ -150,6 +157,9 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("data-migration-component=\"public-google-tag-manager-head\"", source, StringComparison.Ordinal);
         Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-contact-channel-analytics\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-pricing\"", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 2,500 บาท" : "Starts at approximately THB 2,500", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 4,500 บาท" : "Starts at approximately THB 4,500", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
@@ -199,8 +209,39 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
         Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
         Assert.Equal("3D Scanning", service.RootElement.GetProperty("serviceType").GetString());
-        Assert.Equal(12, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
+        Assert.Equal(13, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+        Assert.Equal(
+            culture == "th"
+                ? "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมชสามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้"
+                : "A scan-only scope normally delivers a triangular mesh such as STL. DWG is a 2D engineering drawing, so it requires an additional reverse-engineering and drafting scope. There is no fixed reduction because CAD/DWG effort depends on the geometry and drawing requirements; we can quote scan-only and CAD/DWG as separate line items.",
+            faq.RootElement.GetProperty("mainEntity")[5].GetProperty("acceptedAnswer").GetProperty("text").GetString());
+        Assert.Equal(
+            culture == "th"
+                ? "ไม่ได้ทุกวัตถุ วัตถุใส เงากระจก เคลื่อนที่ ร้อน เข้าถึงไม่ได้ อยู่ภายใน เล็กมาก หรือไม่ปลอดภัย อาจต้องเตรียม ใช้วิธีอื่น ได้ข้อมูลบางส่วน หรือทำไม่ได้"
+                : "No. Transparent, mirror-like, moving, very hot, inaccessible, internal, extremely small, or unsafe subjects may need preparation, another method, partial results, or may not be feasible.",
+            faq.RootElement.GetProperty("mainEntity")[8].GetProperty("acceptedAnswer").GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public void SourceVisibleScanningCopyAndPricingRemainExact()
+    {
+        var root = FindRepositoryRoot();
+        var content = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor"));
+        var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
+
+        Assert.Contains("Scan-only normally delivers STL mesh data.", content, StringComparison.Ordinal);
+        Assert.Contains("งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมช STL", content, StringComparison.Ordinal);
+        Assert.Contains("Raw 3D scanning with STL output starts at THB 2,500.", content, StringComparison.Ordinal);
+        Assert.Contains("งานสแกน 3D พร้อมไฟล์ STL ดิบเริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
+        Assert.Contains("Scan-only normally delivers a triangular mesh such as STL.", content, StringComparison.Ordinal);
+        Assert.Contains("Can every object be scanned?", content, StringComparison.Ordinal);
+        Assert.Contains("The scanner needs line of sight and a stable optical response.", content, StringComparison.Ordinal);
+        Assert.Contains("Can you scan at our factory or site?", content, StringComparison.Ordinal);
+        Assert.Contains("We provide onsite scanning when feasibility", content, StringComparison.Ordinal);
+        Assert.Contains("Direct scan mesh", pricing, StringComparison.Ordinal);
+        Assert.Contains("เมชจากการสแกนโดยตรง", pricing, StringComparison.Ordinal);
+        Assert.Contains("Quoted after site review", pricing, StringComparison.Ordinal);
     }
 
     [Fact]

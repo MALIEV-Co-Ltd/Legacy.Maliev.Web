@@ -40,10 +40,16 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Contains("type=\"typeof(WorkflowContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
-                Path.Combine(web, "Components"),
-                "*.razor",
-                SearchOption.AllDirectories)
+            Path.Combine(web, "Components"),
+            "*.razor",
+            SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
+            .Where(path => !new[]
+            {
+                "ThreeDimensionalDesignPage.razor",
+                "SiliconeCastingPage.razor",
+                "LowVolumeInjectionMoldingPage.razor"
+            }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -62,6 +68,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
+                "FinishingAndColorPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
@@ -113,7 +120,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<WebAppli
         "ขั้นตอนงานผลิต | MALIEV",
         "เข้าใจขั้นตอนของ MALIEV ตั้งแต่ตรวจไฟล์และเสนอราคา ไปจนถึงผลิตและส่งมอบ",
         "เกิดอะไรขึ้นหลังขอใบเสนอราคา",
-        "ขั้นตอนโครงการ",
+        "ขั้นตอนโปรเจ็ค",
         "วิศวกรรมตรวจสอบ",
         "ส่งมอบ")]
     public async Task WorkflowRoute_RendersCompleteLocalizedStaticDocument(

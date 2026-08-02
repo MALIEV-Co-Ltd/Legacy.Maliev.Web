@@ -297,6 +297,8 @@ public sealed record InstantQuotationOrderQuote(
     IReadOnlyList<InstantQuotationPartQuote> Parts,
     double ItemsSubtotal,
     double Printing,
+    double MinimumOrderPrice,
+    double MinimumOrderSurcharge,
     double ShippingCost,
     double PriceBeforeVat,
     double Vat,

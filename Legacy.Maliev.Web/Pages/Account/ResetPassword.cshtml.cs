@@ -24,12 +24,13 @@ public sealed class ResetPassword(ICustomerAuthenticationClient authenticationCl
     [BindProperty]
     [Required]
     [DataType(DataType.Password)]
-    [StringLength(1024, MinimumLength = 6)]
+    [StringLength(1024, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
 
     [BindProperty]
     [Required]
     [DataType(DataType.Password)]
+    [StringLength(1024, MinimumLength = 8)]
     [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 

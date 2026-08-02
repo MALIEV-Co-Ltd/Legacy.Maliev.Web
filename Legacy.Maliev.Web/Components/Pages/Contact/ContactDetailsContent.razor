@@ -4,27 +4,23 @@
 @inject IOptions<GoogleMapsOptions> GoogleMapsOptions
 
 <div data-migration-component="contact-details-content" data-migration-renderer="blazor-static-ssr">
-    <h2 id="contact-details-title">@Localizer["Contact details"]</h2>
-    <address>
-        <strong>Maliev Co., Ltd.</strong><br />
-        @Localizer["Nonthaburi, Thailand"]<br />
-        <a href="mailto:info@maliev.com">info@maliev.com</a>
-    </address>
-    @if (GoogleMapsOptions.Value.IsConfigured)
-    {
-        <iframe
-            title="@Localizer["MALIEV office location"]"
-            src="@GoogleMapsOptions.Value.BuildEmbedUrl()"
-            width="100%"
-            height="360"
-            style="border:0"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"></iframe>
-    }
-    else
-    {
-        <p class="maliev-map-unavailable" role="status">
-            @Localizer["The map is temporarily unavailable."]
-        </p>
-    }
+    <section class="inquiry-map" aria-labelledby="map-heading">
+        <div class="inquiry-map__header">
+            <h2 id="map-heading">@Localizer["Find MALIEV"]</h2>
+            <a href="@Model.OpenUrl" target="_blank" rel="noopener">@Localizer["Open in Google Maps"] <i class="fas fa-external-link-alt" aria-hidden="true"></i></a>
+        </div>
+        @if (Model.EmbedUrl is not null && GoogleMapsOptions.Value.IsConfigured)
+        {
+            <iframe title="@Localizer["Map showing the MALIEV workshop"]" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="@GoogleMapsOptions.Value.BuildEmbedUrl()" allowfullscreen></iframe>
+        }
+        else
+        {
+            <p class="maliev-map-unavailable" role="status">@Localizer["The map is temporarily unavailable."]</p>
+        }
+    </section>
 </div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ContactMapDisplayModel Model { get; set; } = null!;
+}

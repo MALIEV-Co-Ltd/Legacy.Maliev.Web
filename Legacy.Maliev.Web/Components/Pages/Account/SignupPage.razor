@@ -1,4 +1,5 @@
 @page "/Account/Signup"
+@using System.Globalization
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @using Microsoft.Extensions.Options
@@ -10,23 +11,38 @@
 @inject IStringLocalizer<SignupContent> Localizer
 @inject NavigationManager Navigation
 
-<PageTitle>@Localizer["Sign Up | MALIEV"]</PageTitle>
+@{
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "สมัครสมาชิก | MALIEV" : "Sign Up | MALIEV";
+    var description = isThai
+        ? "สมัครบัญชี MALIEV เพื่อจัดการใบเสนอราคา คำสั่งซื้อ ไฟล์งาน และโปรเจ็คผลิตของคุณออนไลน์อย่างปลอดภัย"
+        : "Create a MALIEV account to manage quotations, orders, project files, and manufacturing work online.";
+}
+<PageTitle>@title</PageTitle>
 <HeadContent>
+    <meta name="description" content="@description" />
     <meta name="robots" content="noindex, follow" />
     <script src="https://www.google.com/recaptcha/enterprise.js?render=@RecaptchaOptions.Value.SiteKey"></script>
 </HeadContent>
 <main class="auth-page" data-migration-route-owner="blazor-static-ssr">
     <div class="maliev-container auth-shell">
-        <section class="auth-intro">
-            <p class="maliev-eyebrow">MALIEV WORKSPACE</p>
-            <h1>@Localizer["Manufacturing project management, in one place"]</h1>
-            <p>@Localizer["Create an account to manage quotes, orders, projects, and files."]</p>
+        <section class="auth-intro" aria-labelledby="signup-intro-title">
+            <h1 id="signup-intro-title">@Localizer["Manufacturing project management, in one place"]</h1>
+            <p>@Localizer["Create an account to manage quotes, start an order or review previous projects and files."]</p>
+            <ul class="auth-benefits">
+                <li><i class="fas fa-layer-group" aria-hidden="true"></i><span>@Localizer["Six processes under one roof: CNC machining, 3D printing, 3D scanning, 3D design, silicone casting, and low-volume injection molding."]</span></li>
+                <li><i class="fas fa-bolt" aria-hidden="true"></i><span>@Localizer["Upload a CAD file and get a price in minutes, with DFM findings on the part before you commit."]</span></li>
+                <li><i class="fas fa-shield-alt" aria-hidden="true"></i><span>@Localizer["Your drawings stay confidential under our"] <a href="/Legal/NonDisclosureAgreement">@Localizer["mutual NDA"]</a>.</span></li>
+                <li><i class="fas fa-comments" aria-hidden="true"></i><span>@Localizer["Thai and English support from our workshop in Nonthaburi, 09:00-18:00 Monday to Friday."]</span></li>
+            </ul>
         </section>
-        <section class="auth-card">
-            <header class="auth-card__header"><h1>@Localizer["Join now"]</h1></header>
+        <section class="auth-card" aria-labelledby="signup-title">
+            <header class="auth-card__header">
+                <h2 id="signup-title">@Localizer["Create your account"]</h2>
+            </header>
             @if (!string.IsNullOrWhiteSpace(notification))
             {
-                <div class="maliev-alert maliev-alert--success" role="status">@notification</div>
+                <div class="maliev-alert maliev-alert--success" role="status" aria-live="polite">@notification</div>
             }
             <form id="customer-signup"
                   method="post"
@@ -40,7 +56,10 @@
                 }
                 <SignupContent Model="model" />
             </form>
-            <footer class="auth-card__footer">@Localizer["Already have an account?"] <a href="/Account/Login">@Localizer["Sign in"]</a></footer>
+            <footer class="auth-card__footer">
+                <p class="auth-card__footer-lead">@Localizer["Already have an account?"]</p>
+                <div class="maliev-actions"><a href="/Account/Login" class="maliev-button maliev-button--secondary">@Localizer["Sign in"]</a></div>
+            </footer>
         </section>
     </div>
 </main>

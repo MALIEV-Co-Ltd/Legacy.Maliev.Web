@@ -483,6 +483,12 @@ internal sealed class InstantQuotationSubmissionService(
 
         message.AppendLine(
             $"Due date: {quote.LeadTimeMinimumDays.ToString(CultureInfo.InvariantCulture)}-{quote.LeadTimeMaximumDays.ToString(CultureInfo.InvariantCulture)} business day(s)");
+        if (quote.MinimumOrderSurcharge > 0)
+        {
+            message.AppendLine(
+                $"Minimum order surcharge: {quote.MinimumOrderSurcharge.ToString("0.00", CultureInfo.InvariantCulture)} THB "
+                + $"(minimum order {quote.MinimumOrderPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB)");
+        }
         message.AppendLine($"Total price: {quote.FinalOrderPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB");
         return message.ToString();
     }
@@ -618,6 +624,8 @@ internal sealed class InstantQuotationSubmissionService(
 
         AppendSnapshotValue(snapshot, quote.ItemsSubtotal);
         AppendSnapshotValue(snapshot, quote.Printing);
+        AppendSnapshotValue(snapshot, quote.MinimumOrderPrice);
+        AppendSnapshotValue(snapshot, quote.MinimumOrderSurcharge);
         AppendSnapshotValue(snapshot, quote.ShippingCost);
         AppendSnapshotValue(snapshot, quote.PriceBeforeVat);
         AppendSnapshotValue(snapshot, quote.Vat);

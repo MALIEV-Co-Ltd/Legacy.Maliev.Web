@@ -9,6 +9,11 @@
   <data name="CNC Machining" xml:space="preserve"><value>CNC ชิ้นงานตามแบบ</value></data>
   <data name="3D Printing" xml:space="preserve"><value>พิมพ์ 3 มิติ</value></data>
   <data name="3D Scanning" xml:space="preserve"><value>สแกน 3 มิติ</value></data>
+  <data name="3D design" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
+  <data name="Custom manufacturing" xml:space="preserve"><value>ผลิตชิ้นงานตามแบบ</value></data>
+  <data name="Low-volume injection molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
+  <data name="Silicone casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
+  <data name="All services" xml:space="preserve"><value>บริการทั้งหมด</value></data>
   <data name="Instant 3D Quotation" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3D ทันที</value></data>
   <data name="Get a Quote" xml:space="preserve"><value>ขอใบเสนอราคา</value></data>
   <data name="Online Shop" xml:space="preserve"><value>ร้านค้าออนไลน์</value></data>

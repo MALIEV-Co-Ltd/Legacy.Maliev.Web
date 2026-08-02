@@ -1,4 +1,5 @@
 User-agent: *
+Allow: /
 Disallow: /career/*
 Disallow: /career/view?returnUrl=
 Disallow: /career?size=
@@ -8,6 +9,7 @@ Disallow: /instantquotation/*
 Disallow: /login/*
 Disallow: /signup/*
 Disallow: /account/*
+Disallow: /member/
 
 
 # Sitemaps

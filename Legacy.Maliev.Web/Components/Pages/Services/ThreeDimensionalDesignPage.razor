@@ -1,0 +1,80 @@
+@page "/services/3d-design"
+@using System.Globalization
+@using System.Text.Json
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Metadata
+@using Legacy.Maliev.Web.Components.Shared
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T(
+        "3D Design Services: Sketch, Scan, and Drawing to CAD | MALIEV",
+        "บริการออกแบบ 3 มิติจากภาพร่าง ชิ้นงานสแกน และแบบ | MALIEV");
+    var description = T(
+        "Turn sketches, reference photos, drawings, and scanned geometry into practical CAD models ready for manufacturing, with DFM guidance from MALIEV.",
+        "เปลี่ยนภาพร่าง รูปถ่าย แบบ และข้อมูลรูปทรงจากการสแกนให้เป็นแบบ CAD พร้อมผลิต พร้อมคำแนะนำ DFM จาก MALIEV");
+    var faqJson = CreateFaqJson();
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@T("3D design service Thailand, CAD modeling, product design, DFM, reverse engineering design", "รับออกแบบ 3 มิติ, เขียนแบบ CAD, ออกแบบผลิตภัณฑ์, DFM, reverse engineering")" />
+    <link rel="preload" as="image" href="/src/images/services/design/design-workflow.webp" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Design"))" />
+    <script type="application/ld+json">@((MarkupString)faqJson)</script>
+</HeadContent>
+<ServiceBreadcrumb ServiceKey="3D Design" RenderNavigation="false" />
+<ThreeDimensionalDesignContent RouteOwner="blazor-static-ssr" />
+
+@code {
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+
+    private string CreateFaqJson()
+    {
+        var schema = new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "FAQPage",
+            ["mainEntity"] = new object[]
+            {
+                CreateQuestion(
+                    T("Can you create a CAD model from a sketch or photo?", "สามารถสร้างแบบ CAD จากภาพร่างหรือรูปถ่ายได้หรือไม่?"),
+                    T("Yes. Send the sketch, reference photos, dimensions, sample part, or scanned mesh. We confirm what can be measured and which design assumptions must be agreed before modeling.", "ได้ กรุณาส่งภาพร่าง รูปถ่ายอ้างอิง ขนาด ชิ้นงานตัวอย่าง หรือเมชจากการสแกน เราจะยืนยันข้อมูลที่วัดได้และสมมติฐานที่ต้องตกลงก่อนขึ้นแบบ")),
+                CreateQuestion(
+                    T("Will the model be ready for manufacturing?", "แบบที่ได้พร้อมผลิตหรือไม่?"),
+                    T("The model is developed around the agreed process, material, tolerances, interfaces, and use. DFM review helps identify risks, but final production suitability is confirmed with the selected manufacturing route.", "แบบจะพัฒนาตามกระบวนการ วัสดุ ค่าความคลาดเคลื่อน จุดประกอบ และการใช้งานที่ตกลงกัน การตรวจ DFM ช่วยหาความเสี่ยง แต่ต้องยืนยันความเหมาะสมกับกระบวนการผลิตสุดท้ายอีกครั้ง")),
+                CreateQuestion(
+                    T("What should I send for a design review?", "ควรส่งข้อมูลอะไรเพื่อประเมินงานออกแบบ?"),
+                    T("Send the concept or drawing, target dimensions, material, quantity, critical interfaces, intended use, reference parts, and required CAD format. Mark unknown dimensions clearly.", "ส่งไอเดียหรือแบบ ขนาดเป้าหมาย วัสดุ จำนวน จุดประกอบสำคัญ การใช้งาน ชิ้นงานอ้างอิง และรูปแบบไฟล์ CAD ที่ต้องการ หากขนาดใดยังไม่ทราบให้ระบุให้ชัดเจน")),
+                CreateQuestion(
+                    T("What file formats can you deliver?", "ส่งมอบไฟล์รูปแบบใดได้บ้าง?"),
+                    T("Depending on the agreed scope, deliverables can include native CAD files such as STEP, STL files, and 2D drawings. Confirm the required format before work begins.", "ขึ้นกับขอบเขตงาน สามารถส่งมอบไฟล์ CAD เช่น STEP ไฟล์ STL และแบบ 2D ได้ ควรยืนยันรูปแบบไฟล์ที่ต้องการก่อนเริ่มงาน")),
+                CreateQuestion(
+                    T("How long does a 3D design project take?", "งานออกแบบ 3 มิติใช้เวลานานเท่าไร?"),
+                    T("A simple, well-defined request can be completed the same day. Complex geometry or several requested revisions can take multiple days after the scope is confirmed.", "งานที่เรียบง่ายและข้อมูลครบอาจเสร็จภายในวันเดียว ส่วนรูปทรงซับซ้อนหรือมีการแก้ไขหลายรอบอาจใช้เวลาหลายวันหลังยืนยันขอบเขต")),
+                CreateQuestion(
+                    T("Can design changes during the project add cost?", "การแก้แบบระหว่างโปรเจ็คมีค่าใช้จ่ายเพิ่มหรือไม่?"),
+                    T("Changes or revisions after modeling starts can add cost when they expand the agreed scope. Sending complete information before kickoff helps us quote the work accurately.", "การแก้ไขแบบหลังเริ่มงานอาจมีค่าใช้จ่ายเพิ่มเมื่อทำให้งานเกินขอบเขตที่ตกลง การส่งข้อมูลให้ครบก่อนเริ่มช่วยให้ประเมินราคาได้ตรงจุด"))
+            }
+        };
+
+        return JsonSerializer.Serialize(schema);
+    }
+
+    private static Dictionary<string, object> CreateQuestion(string question, string answer) => new()
+    {
+        ["@type"] = "Question",
+        ["name"] = question,
+        ["acceptedAnswer"] = new Dictionary<string, object>
+        {
+            ["@type"] = "Answer",
+            ["text"] = answer
+        }
+    };
+}

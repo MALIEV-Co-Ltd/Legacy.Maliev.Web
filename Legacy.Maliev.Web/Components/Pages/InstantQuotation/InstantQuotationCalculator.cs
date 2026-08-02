@@ -102,6 +102,9 @@ public static class InstantQuotationCalculator
         {
             success = true,
             printing = Math.Round(order.Printing, 2),
+            itemsSubtotal = Math.Round(order.ItemsSubtotal, 2),
+            minimumOrderPrice = Math.Round(order.MinimumOrderPrice, 2),
+            minimumOrderSurcharge = Math.Round(order.MinimumOrderSurcharge, 2),
             shipping = Math.Round(order.ShippingCost, 2),
             vat = Math.Round(order.Vat, 2),
             finalOrderPrice = Math.Round(order.FinalOrderPrice, 2),

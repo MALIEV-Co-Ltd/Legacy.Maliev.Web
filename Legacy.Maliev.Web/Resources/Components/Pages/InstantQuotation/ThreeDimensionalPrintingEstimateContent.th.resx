@@ -436,4 +436,9 @@
   <data name="Price and lead-time summary" xml:space="preserve"><value>สรุปราคาและระยะเวลาผลิต</value></data>
   <data name="Step 3 of 3" xml:space="preserve"><value>ขั้นตอนที่ 3 จาก 3</value></data>
   <data name="Order summary" xml:space="preserve"><value>สรุปคำสั่งซื้อ</value></data>
+  <data name="Firm price — calculated from measured volume." xml:space="preserve"><value>ราคายืนยันได้ — คำนวณจากปริมาตรที่วัดได้จริง</value></data>
+  <data name="Needs engineer review — the model is not watertight, so this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — โมเดลไม่ปิดสนิท ราคานี้เป็นเพียงการประมาณ</value></data>
+  <data name="Needs engineer review — some parts are not watertight, so part of this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — ชิ้นงานบางส่วนไม่ปิดสนิท ราคาบางส่วนจึงเป็นการประมาณ</value></data>
+  <data name="Minimum order surcharge" xml:space="preserve"><value>ค่าธรรมเนียมยอดสั่งซื้อขั้นต่ำ</value></data>
+  <data name="minimum" xml:space="preserve"><value>ขั้นต่ำ</value></data>
 </root>

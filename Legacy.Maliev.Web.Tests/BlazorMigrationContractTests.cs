@@ -865,12 +865,13 @@ public sealed class BlazorMigrationContractTests
         var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Contact", "Index.cshtml"));
         var componentRoot = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Contact");
 
-        Assert.Contains("<form method=\"post\" asp-page-handler=\"SubmitRequest\" id=\"contact-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"SubmitRequest\" asp-route-culture=\"@Model.Culture\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"contact-us\" class=\"inquiry-form-card\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(ContactHeroContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(ContactFormFields)\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(ContactDetailsContent)\"", page, StringComparison.Ordinal);
-        Assert.Equal(3, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
+        Assert.Equal(4, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
         Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"g-recaptcha-response\"", page, StringComparison.Ordinal);
 
@@ -901,15 +902,20 @@ public sealed class BlazorMigrationContractTests
         var page = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "Quotation", "Index.cshtml"));
         var componentRoot = Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Quotation");
 
-        Assert.Contains("<form method=\"post\" enctype=\"multipart/form-data\" asp-page-handler=\"SubmitRequest\" id=\"quotation-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\"", page, StringComparison.Ordinal);
+        Assert.Contains("enctype=\"multipart/form-data\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"SubmitRequest\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-route-culture=", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"quotation-form\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(QuotationHeroContent)\"", page, StringComparison.Ordinal);
+        Assert.Contains("type=\"typeof(QuotationGuidanceContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(QuotationFormFields)\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Count(page, "render-mode=\"Static\""));
         Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"g-recaptcha-response\"", page, StringComparison.Ordinal);
 
-        foreach (var componentName in new[] { "QuotationHeroContent", "QuotationFormFields" })
+        foreach (var componentName in new[] { "QuotationHeroContent", "QuotationGuidanceContent", "QuotationFormFields" })
         {
             var component = File.ReadAllText(Path.Combine(componentRoot, $"{componentName}.razor"));
             Assert.Contains("IStringLocalizer<QuotationContent>", component, StringComparison.Ordinal);
@@ -943,7 +949,7 @@ public sealed class BlazorMigrationContractTests
             "Account",
             "LoginContent.razor");
 
-        Assert.Contains("<form method=\"post\" class=\"maliev-form\">", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\" class=\"maliev-form\" id=\"customer-login\"", page, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(LoginContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
@@ -1050,7 +1056,7 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("type=\"typeof(SignupContent)\"", page, StringComparison.Ordinal);
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
-        Assert.Contains("document.getElementById('signup-recaptcha-response').value = token", page, StringComparison.Ordinal);
+        Assert.Contains("GuardRecaptchaSubmit(", page, StringComparison.Ordinal);
         Assert.DoesNotContain("asp-for=", page, StringComparison.Ordinal);
 
         Assert.True(File.Exists(componentPath));

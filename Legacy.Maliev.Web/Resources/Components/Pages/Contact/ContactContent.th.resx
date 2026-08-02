@@ -199,11 +199,29 @@
   <data name="Your details" xml:space="preserve"><value>ข้อมูลของคุณ</value></data>
   <data name="Required" xml:space="preserve"><value>จำเป็น</value></data>
   <data name="Country" xml:space="preserve"><value>ประเทศ</value></data>
+  <data name="Select a country" xml:space="preserve"><value>เลือกประเทศ</value></data>
+  <data name="Telephone" xml:space="preserve"><value>โทรศัพท์</value></data>
   <data name="Your contact details are used only to respond to this request." xml:space="preserve"><value>เราจะใช้ข้อมูลติดต่อของคุณเพื่อตอบคำขอนี้เท่านั้น</value></data>
   <data name="Find MALIEV" xml:space="preserve"><value>แผนที่ MALIEV</value></data>
   <data name="Open in Google Maps" xml:space="preserve"><value>เปิดใน Google Maps</value></data>
   <data name="Map showing the MALIEV workshop" xml:space="preserve"><value>แผนที่แสดงที่ตั้ง MALIEV</value></data>
+  <data name="The map is temporarily unavailable." xml:space="preserve"><value>ขณะนี้แผนที่ไม่พร้อมใช้งานชั่วคราว</value></data>
   <data name="Business hours" xml:space="preserve"><value>เวลาทำการ</value></data>
   <data name="Monday-Friday: 09:00-18:00" xml:space="preserve"><value>จันทร์-ศุกร์: 09:00-18:00 น.</value></data>
   <data name="Saturday-Sunday: Closed" xml:space="preserve"><value>เสาร์-อาทิตย์: ปิด</value></data>
+  <data name="Please enter a valid email address" xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
+  <data name="This site is protected by reCAPTCHA and the Google" xml:space="preserve"><value>เว็บไซต์นี้ได้รับการปกป้องโดย reCAPTCHA และนโยบายของ Google</value></data>
+  <data name="Privacy Policy" xml:space="preserve"><value>นโยบายความเป็นส่วนตัว</value></data>
+  <data name="and" xml:space="preserve"><value>และ</value></data>
+  <data name="Terms of Service" xml:space="preserve"><value>ข้อกำหนดในการให้บริการของ Google</value></data>
+  <data name="apply." xml:space="preserve"><value>มีผลบังคับใช้</value></data>
+  <data name="We could not verify that you are human. Please try again." xml:space="preserve"><value>ไม่สามารถยืนยันว่าคุณเป็นมนุษย์ได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="Submitting..." xml:space="preserve"><value>กำลังส่ง...</value></data>
+  <data name="Chat channels" xml:space="preserve"><value>ช่องทางแชต</value></data>
+  <data name="Message us on WhatsApp" xml:space="preserve"><value>ส่งข้อความผ่าน WhatsApp</value></data>
+  <data name="Open Messenger" xml:space="preserve"><value>เปิด Messenger</value></data>
+  <data name="Email address is required" xml:space="preserve"><value>กรุณากรอกอีเมล</value></data>
+  <data name="Please enter your first name" xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
+  <data name="Please enter your last name" xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
+  <data name="Please enter your message" xml:space="preserve"><value>กรุณากรอกข้อความ</value></data>
 </root>

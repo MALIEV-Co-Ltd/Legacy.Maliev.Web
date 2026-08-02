@@ -106,6 +106,9 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
         Assert.Contains("instant-quote__flow-step", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
         Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
+        Assert.Contains("PriceNeedsEngineeringReview", code, StringComparison.Ordinal);
+        Assert.Contains("AllPartsNeedEngineeringReview", code, StringComparison.Ordinal);
+        Assert.Contains("some parts are not watertight", markup, StringComparison.Ordinal);
         Assert.Contains("Quote=\"@OrderQuote\"", markup, StringComparison.Ordinal);
         Assert.Contains(".EnterReview();", code, StringComparison.Ordinal);
         Assert.Contains(".EnterCustomerDetails();", code, StringComparison.Ordinal);

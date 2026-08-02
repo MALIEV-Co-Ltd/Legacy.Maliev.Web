@@ -9,48 +9,36 @@
     ViewData["Keywords"] = ContactLocalizer["contact MALIEV, manufacturing enquiry, CNC quotation, 3D printing support"];
 }
 
-<component type="typeof(ContactHeroContent)" render-mode="Static" />
-
-<main class="container maliev-section">
-    <div class="row g-5">
-        <section class="col-lg-7" aria-labelledby="contact-form-title">
-            <h2 id="contact-form-title">@ContactLocalizer["Send an enquiry"]</h2>
-
-            @if (!string.IsNullOrWhiteSpace(Model.Notification))
-            {
-                <div class="alert alert-success" role="status">@Model.Notification</div>
-            }
-
-            <form method="post" asp-page-handler="SubmitRequest" id="contact-form">
+<main class="inquiry-page">
+    <component type="typeof(ContactHeroContent)" render-mode="Static" />
+    <section class="inquiry-content"><div class="inquiry-container">
+        @if (!string.IsNullOrWhiteSpace(Model.Notification))
+        {
+            <div class="inquiry-notification" role="status" aria-live="polite"><p>@Model.Notification</p></div>
+        }
+        <div class="contact-method-grid" aria-label="@ContactLocalizer["Contact options"]">
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="far fa-envelope" aria-hidden="true"></i></div><div><h2>@ContactLocalizer["Email us"]</h2><p>@ContactLocalizer["Best for project details and files."]</p><a href="mailto:info@maliev.com">info@maliev.com</a></div></article>
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></div><div><h2>@ContactLocalizer["Call us"]</h2><p>@ContactLocalizer["Best for a quick question during business hours."]</p><a href="tel:+66898950690">+66(0)89-895-0690</a><a href="tel:+66818030404">+66(0)81-803-0404</a></div></article>
+            <article class="contact-method-card"><div class="contact-method-card__icon"><i class="fas fa-map-marker-alt" aria-hidden="true"></i></div><div><h2>@ContactLocalizer["Visit our workshop"]</h2><address>@ContactLocalizer["36/1 Moo 3"]<br />@ContactLocalizer["Khlong Khoi"], <span class="maliev-nowrap">@ContactLocalizer["Pak Kret"]</span><br />@ContactLocalizer["Nonthaburi 11120"], @ContactLocalizer["Thailand"]</address><p><strong>@ContactLocalizer["Business hours"]</strong><br />@ContactLocalizer["Monday-Friday: 09:00-18:00"]<br />@ContactLocalizer["Saturday-Sunday: Closed"]</p></div></article>
+        </div>
+        <div class="inquiry-shell">
+            <aside class="inquiry-aside inquiry-aside--sticky" aria-label="@ContactLocalizer["Company contact details"]">
+                <section class="inquiry-panel inquiry-panel--accent contact-line-card"><a href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener"><img src="~/src/images/line-qr-clean.svg" width="160" height="160" title="LINE Official Account" alt="@ContactLocalizer["MALIEV LINE Official Account QR code"]" /></a><div><h2>@ContactLocalizer["Chat with us"]</h2><p>@ContactLocalizer["Scan the QR code or open our LINE Official Account for a quick conversation."]</p><a href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener">@ContactLocalizer["Open LINE Official Account"]</a></div></section>
+                <section class="inquiry-panel"><div class="inquiry-panel__icon"><i class="fas fa-building" aria-hidden="true"></i></div><h2>Maliev Co., Ltd.</h2><p>@ContactLocalizer["36/1 Moo 3"]<br />@ContactLocalizer["Khlong Khoi"], <span class="maliev-nowrap">@ContactLocalizer["Pak Kret"]</span><br />@ContactLocalizer["Nonthaburi 11120"], @ContactLocalizer["Thailand"]</p>@if (Model.Culture == "th") { <p class="contact-tax">เลขประจำตัวผู้เสียภาษี 0125561001573 (สำนักงานใหญ่)</p> }</section>
+                <section class="inquiry-panel"><div class="inquiry-panel__icon"><i class="fas fa-share-alt" aria-hidden="true"></i></div><h2>@ContactLocalizer["Follow and message MALIEV"]</h2><p>@ContactLocalizer["Find our latest work and contact us through our official social channels."]</p><div class="inquiry-social"><component type="typeof(Legacy.Maliev.Web.Components.Layout.SocialLinks)" render-mode="Static" /></div></section>
+            </aside>
+            <form method="post" asp-page-handler="SubmitRequest" asp-route-culture="@Model.Culture" id="contact-us" class="inquiry-form-card">
                 <component type="typeof(ContactFormFields)" render-mode="Static" param-Model="Model.DisplayModel" />
             </form>
-        </section>
-
-        <aside class="col-lg-5" aria-labelledby="contact-details-title">
-            <component type="typeof(ContactDetailsContent)" render-mode="Static" />
-        </aside>
-    </div>
+        </div>
+        <component type="typeof(ContactDetailsContent)" render-mode="Static" param-Model="Model.Map" />
+    </div></section>
 </main>
 
 @section Scripts {
     @if (!string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey))
     {
         <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(Model.RecaptchaSiteKey)" async defer></script>
-        <script>
-            (() => {
-                const form = document.getElementById('contact-form');
-                const tokenInput = document.getElementById('g-recaptcha-response');
-                if (!form || !tokenInput) return;
-
-                form.addEventListener('submit', event => {
-                    if (tokenInput.value) return;
-                    event.preventDefault();
-                    grecaptcha.enterprise.ready(async () => {
-                        tokenInput.value = await grecaptcha.enterprise.execute('@Model.RecaptchaSiteKey', { action: 'submit' });
-                        form.requestSubmit();
-                    });
-                });
-            })();
-        </script>
+        <script>GuardRecaptchaSubmit("contact-us", "submit-button", "@Model.RecaptchaSiteKey", "submit", "@ContactLocalizer["Submitting..."]", "contact-recaptcha-error");</script>
     }
 }

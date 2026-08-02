@@ -37,6 +37,13 @@
         <h4 id="instant-quote-review-summary-heading">@Localizer["Price and lead-time summary"]</h4>
         <dl data-workflow-review-total>
             <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
+            @if (Quote is { MinimumOrderSurcharge: > 0 } orderQuote)
+            {
+                <div data-workflow-minimum-order-surcharge>
+                    <dt>@Localizer["Minimum order surcharge"] (@Localizer["minimum"] @Money(orderQuote.MinimumOrderPrice))</dt>
+                    <dd>@Money(orderQuote.MinimumOrderSurcharge)</dd>
+                </div>
+            }
             <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
             <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
             <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>

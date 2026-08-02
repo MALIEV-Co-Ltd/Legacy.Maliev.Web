@@ -6,6 +6,7 @@ import {
   createCanvasResizeController,
   createModelViewer,
   createOcctLoader,
+  ensurePreviewGeometryNormals,
   loadStandaloneModel,
   orientGltfForPrinting,
   stableBodyColor,
@@ -19,6 +20,25 @@ import {
   MeshStandardMaterial,
   Texture,
 } from 'three';
+
+test('indexed preview geometry is expanded and flat-shaded before analysis', () => {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute([
+    0, 0, 0, 1, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 1, 0, 0, 0, 1,
+  ], 3));
+  geometry.setIndex([0, 1, 2, 0, 3, 4]);
+  const material = new MeshStandardMaterial({ color: '#ffffff' });
+  const mesh = new Mesh(geometry, material);
+  const root = { traverse: callback => callback(mesh) };
+
+  ensurePreviewGeometryNormals(root);
+
+  assert.equal(mesh.geometry.index, null);
+  assert.equal(mesh.geometry.getAttribute('normal').count, mesh.geometry.getAttribute('position').count);
+  assert.equal(material.flatShading, true);
+  assert.equal(material.version > 0, true);
+});
 test('viewer retains camera state per part and exposes orbit keyboard alternatives', () => {
   const adapter = createAdapter();
   const viewer = createModelViewer({ adapter });

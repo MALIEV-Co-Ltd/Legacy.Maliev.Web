@@ -1,14 +1,21 @@
 @page "/"
+@using System.Globalization
 @using Legacy.Maliev.Web.Components.Layout
 @inject IHttpContextAccessor HttpContextAccessor
-@inject IStringLocalizer<HomePage> Localizer
 
 @{
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-    var title = Localizer["Manufacturing Services Bangkok Nonthaburi: CNC Machining, 3D Printing & 3D Scanning"].Value;
-    var description = Localizer["Professional CNC machining, 3D printing, and 3D scanning services in Bangkok and Nonthaburi, Thailand. Upload your file for an instant quote."].Value;
-    var keywords = Localizer["3d printing thailand, 3d scanning thailand, cnc machining thailand, manufacturing services bangkok, cnc machining nonthaburi"].Value;
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai
+        ? "รับผลิตชิ้นงานตามแบบ | MALIEV"
+        : "Custom Manufacturing Services | MALIEV";
+    var description = isThai
+        ? "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ"
+        : "Custom CNC, 3D printing, 3D scanning, and design services for prototypes and production parts in Bangkok and Nonthaburi.";
+    var keywords = isThai
+        ? "รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ"
+        : "custom part manufacturing thailand, 3d printing thailand, 3d scanning thailand, 3d design thailand, silicone casting thailand, low volume injection molding thailand, cnc machining thailand";
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>

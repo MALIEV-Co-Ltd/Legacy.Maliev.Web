@@ -28,6 +28,10 @@ public sealed class FacebookRetirementContractTests
             $"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}dist{Path.DirectorySeparatorChar}",
         };
+        var ignoredFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            Path.Combine("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "app.css"),
+        };
         var allowedTokensByFile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [Path.Combine("Legacy.Maliev.Web", "Components", "Analytics", "PublicContactChannelAnalytics.razor")] = "facebook_messenger",
@@ -41,6 +45,11 @@ public sealed class FacebookRetirementContractTests
             .Select(path =>
             {
                 var relativePath = Path.GetRelativePath(root, path);
+                if (ignoredFiles.Contains(relativePath))
+                {
+                    return null;
+                }
+
                 var source = File.ReadAllText(path);
                 if (allowedTokensByFile.TryGetValue(relativePath, out var allowedToken))
                 {

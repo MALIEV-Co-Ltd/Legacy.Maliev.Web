@@ -1,0 +1,262 @@
+@page "/services/finishing-and-color"
+@using System.Globalization
+@using System.Text.Json
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Components.Shared
+@using Legacy.Maliev.Web.Components.Pages.Services
+@using Legacy.Maliev.Web.Components.Metadata
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T("Finishing & Colour Standards for 3D Printed Parts | MALIEV", "การเก็บผิวและมาตรฐานสีสำหรับงานพิมพ์ 3 มิติ | MALIEV");
+    var description = T("Define paint colour, sheen, surface preparation, seams, and acceptance criteria before production so the quotation and the finished part match.", "กำหนดสี ระดับความเงา การเตรียมผิว รอยต่อ และเกณฑ์ตรวจรับก่อนผลิต เพื่อให้ใบเสนอราคาและชิ้นงานจริงตรงกัน");
+    var keywords = T("3D print painting, Pantone RAL matching, clear coat matte gloss, 3D print assembly finishing, surface preparation", "พ่นสีงานพิมพ์ 3 มิติ, เทียบสี Pantone RAL, เคลือบใสด้านเงา, ประกอบและเก็บผิวงานพิมพ์, เตรียมผิวก่อนพ่นสี");
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
+    <link rel="preload" as="image" href="/src/images/services/printing/printing-finish-color-approval.webp" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Finishing and Color"))" />
+    <script type="application/ld+json">@((MarkupString)FaqJson)</script>
+</HeadContent>
+<ServiceBreadcrumb ServiceKey="Finishing and Color" />
+
+<main class="service-page" data-migration-route-owner="blazor-static-ssr" data-migration-component="finishing-and-color-content">
+    <section class="service-hero" aria-labelledby="finishing-title">
+        <img class="service-hero-media" src="/src/images/services/printing/printing-finish-color-approval.webp" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Technician comparing a 3D-printed part with color swatches and a reference image", "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง")" />
+        <div class="service-container service-hero-copy">
+            <h1 id="finishing-title">@T("Finishing and colour standards", "การเก็บผิวและมาตรฐานสี")</h1>
+            <p class="service-hero-lead">@T("A reference photo communicates the idea, but it does not define a measured colour or sheen. Agree the finish scope before production so the quotation, the result, and the acceptance criteria all match.", "ภาพอ้างอิงช่วยสื่อแนวคิด แต่ไม่ได้กำหนดค่าสีหรือระดับความเงาที่วัดได้ ควรยืนยันขอบเขตงานเก็บผิวก่อนผลิต เพื่อให้ใบเสนอราคา ผลงาน และเกณฑ์ยอมรับตรงกัน")</p>
+            <ul class="service-hero-points"><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Pantone and RAL colour matching", "เทียบสีด้วยรหัส Pantone และ RAL")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Matte, satin, and gloss clear coat", "เคลือบใสแบบด้าน ซาติน และเงา")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Split, join, and refinish large parts", "แบ่ง ต่อ และเก็บผิวชิ้นงานขนาดใหญ่")</li></ul>
+            <div class="service-actions"><a class="service-button service-button-primary" href="/quotation?item=3D-Printing">@T("Request a finishing quote", "ขอใบเสนอราคางานเก็บผิว")</a><a class="service-button service-button-secondary" href="/InstantQuotation/3D-Printing">@T("Get instant 3D pricing", "ประเมินราคาพิมพ์ 3D ทันที")</a></div>
+        </div>
+    </section>
+
+    <ServicePageToc />
+
+    <section id="finishing-standards" class="service-section">
+        <div class="service-container">
+            <header class="service-heading center">
+                <h2>@T("Define the finish before we paint", "กำหนดรายละเอียดผิวก่อนเริ่มพ่นสี")</h2>
+                <p>@T("Choose any screen colour or sample one from an image. We mark the closest open HLC reference, then arrange lighter and darker tonal alternatives for your finishing quote.", "เลือกสีจากหน้าจอหรือจิ้มสีจากภาพ ระบบจะทำเครื่องหมายรหัสอ้างอิง HLC แบบเปิดที่ใกล้ที่สุด แล้วจัดตัวเลือกโทนที่สว่างและเข้มกว่าเพื่อส่งพร้อมคำขอใบเสนอราคางานเก็บผิว")</p>
+            </header>
+
+            <section class="finish-color-matcher"
+                     aria-labelledby="finish-color-matcher-title"
+                     data-finish-color-matcher
+                     data-culture="@(isThai ? "th" : "en")"
+                     data-results-status="@T("{count} guided HLC references for {hex}, ordered from lightest to darkest.", "รหัสอ้างอิง HLC แนะนำ {count} รายการสำหรับ {hex} เรียงจากสว่างไปเข้ม")"
+                     data-selection-status="@T("Selected {code}, {sheen}, ΔE00 {delta}. Your finish brief is updated.", "เลือก {code} ผิว{sheen} ค่า ΔE00 {delta} แล้ว อัปเดตสรุปรายละเอียดผิวเรียบร้อย")"
+                     data-closest-position="@T("Closest match: {position} of {count}. Swipe to explore lighter and darker alternatives.", "สีที่ใกล้ที่สุด: ลำดับ {position} จาก {count} ปัดเพื่อดูตัวเลือกที่สว่างและเข้มกว่า")"
+                     data-select-template="@T("Select {code}. Color difference {delta}. {position}.", "เลือก {code} ค่าความต่างสี {delta} {position}")"
+                     data-lightness-position="@T("Lightness {lightness} out of 100", "ความสว่าง {lightness} จาก 100")"
+                     data-closest-label="@T("Closest match", "ใกล้ที่สุด")"
+                     data-sheen-matte="@T("Matte", "ด้าน")"
+                     data-sheen-satin="@T("Satin", "ซาติน")"
+                     data-sheen-gloss="@T("Gloss", "เงา")"
+                     data-preview-template="@T("{sheen} finish preview", "ภาพจำลองผิว{sheen}")"
+                     data-no-pantone="@T("Not supplied", "ไม่ได้ระบุ")"
+                     data-primer-template="@T("Start the spray-out with {primer}.", "เริ่มพ่นแผ่นทดสอบด้วย{primer}")"
+                     data-primer-light="@T("a white or light-neutral primer", "สีรองพื้นขาวหรือสีกลางโทนอ่อน")"
+                     data-primer-medium="@T("a medium-grey primer", "สีรองพื้นเทากลาง")"
+                     data-primer-dark="@T("a dark-grey primer", "สีรองพื้นเทาเข้ม")"
+                     data-clear-matte="@T("Use a compatible matte clear system, keep overlap and film build even, and do not polish the finished surface.", "ใช้ระบบเคลือบใสด้านที่เข้ากัน ควบคุมระยะซ้อนและความหนาฟิล์มให้สม่ำเสมอ และห้ามขัดเงาผิวสำเร็จ")"
+                     data-clear-satin="@T("Use a compatible satin clear system and keep overlap, film build, flash-off, and drying consistent across the part.", "ใช้ระบบเคลือบใสซาตินที่เข้ากัน และควบคุมระยะซ้อน ความหนาฟิล์ม ระยะพัก และการแห้งให้สม่ำเสมอทั้งชิ้น")"
+                     data-clear-gloss="@T("Use a compatible gloss clear system over a uniform base coat; polish only after the specified cure when the chosen system allows it.", "ใช้ระบบเคลือบใสเงาที่เข้ากันบนสีพื้นซึ่งสม่ำเสมอ และขัดเงาหลังบ่มตามเวลาที่ระบบสีกำหนดเท่านั้น")"
+                     data-invalid-hex="@T("Enter a complete six-digit HEX color, such as #A2474F.", "กรุณากรอกรหัส HEX 6 หลัก เช่น #A2474F")"
+                     data-invalid-image="@T("Choose a JPEG, PNG, WebP, GIF, or other valid image file and try again.", "กรุณาเลือกไฟล์ภาพ JPEG, PNG, WebP, GIF หรือไฟล์ภาพที่ถูกต้องแล้วลองอีกครั้ง")"
+                     data-image-ready="@T("Image loaded. Move the sampling marker with the arrow keys, then press Enter, or click the area you want to sample.", "โหลดภาพแล้ว ใช้ปุ่มลูกศรเลื่อนจุดเก็บตัวอย่างแล้วกด Enter หรือคลิกบริเวณที่ต้องการจิ้มสี")">
+                <div class="finish-matcher-intro">
+                    <div>
+                        <h3 id="finish-color-matcher-title">@T("Choose a finish colour with confidence", "เลือกสีและผิวสำเร็จได้อย่างมั่นใจ")</h3>
+                    </div>
+                    <p class="finish-matcher-caveat"><i class="fas fa-circle-info" aria-hidden="true"></i>@T("Screen colours and the sheen preview guide the quotation; production colour is confirmed with a physical spray-out or reference.", "สีบนหน้าจอและภาพจำลองความเงาใช้ประกอบใบเสนอราคา ส่วนสีสำหรับผลิตจริงจะยืนยันด้วยแผ่นพ่นทดสอบหรือชิ้นอ้างอิง")</p>
+                </div>
+
+                <div class="finish-matcher-layout">
+                    <div class="finish-matcher-controls">
+                        <div class="finish-sheen-preview" data-sheen-preview data-sheen="satin" style="--finish-color: #A2474F;">
+                            <div class="finish-sheen-stage" data-sheen-stage aria-hidden="true">
+                                <canvas class="finish-sheen-canvas" data-sheen-canvas></canvas>
+                                <span class="finish-sheen-fallback" data-color-preview></span>
+                            </div>
+                            <p class="finish-sheen-caption">
+                                <strong data-preview-sheen>@T("Satin finish preview", "ภาพจำลองผิวซาติน")</strong>
+                                <span>@T("Real-time physical clear-coat rendering shows relative reflections. Confirm production colour and gloss with a physical spray-out.", "การเรนเดอร์เคลือบใสแบบกายภาพแสดงการสะท้อนโดยเปรียบเทียบ กรุณายืนยันสีและความเงาสำหรับผลิตจริงด้วยแผ่นพ่นทดสอบ")</span>
+                            </p>
+                        </div>
+
+                        <div class="finish-color-inputs">
+                            <div class="finish-color-field">
+                                <label for="finish-color-picker">@T("Choose a screen colour", "เลือกสีบนหน้าจอ")</label>
+                                <input id="finish-color-picker" type="color" value="#A2474F" data-color-input />
+                            </div>
+                            <div class="finish-color-field finish-hex-field">
+                                <label for="finish-color-hex">HEX</label>
+                                <input id="finish-color-hex" type="text" value="#A2474F" inputmode="text" maxlength="7" pattern="#[0-9A-Fa-f]{6}" spellcheck="false" aria-describedby="finish-hex-help" data-hex-input />
+                                <span id="finish-hex-help" class="finish-field-help">@T("Six digits, for example #A2474F", "ใช้ 6 หลัก เช่น #A2474F")</span>
+                            </div>
+                        </div>
+
+                        <label class="finish-image-button" for="finish-image-input">
+                            <i class="fas fa-image" aria-hidden="true"></i>
+                            @T("Pick a colour from an image", "เลือกสีจากภาพ")
+                        </label>
+                        <input id="finish-image-input" class="visually-hidden" type="file" accept="image/*" data-image-input />
+                        <p class="finish-inline-message" role="status" aria-live="polite" data-image-status hidden></p>
+
+                        <div class="finish-image-panel" data-image-panel hidden>
+                            <div class="finish-image-heading">
+                                <strong data-image-name></strong>
+                                <span id="finish-image-help">@T("Click an area, or use the arrow keys to move the marker and press Enter.", "คลิกบริเวณที่ต้องการ หรือใช้ปุ่มลูกศรเลื่อนจุดแล้วกด Enter")</span>
+                            </div>
+                            <div class="finish-image-sampling-area">
+                                <canvas class="finish-image-canvas" tabindex="0" role="img" aria-describedby="finish-image-help" aria-label="@T("Uploaded image with a movable colour-sampling marker", "ภาพที่อัปโหลดพร้อมจุดเก็บตัวอย่างสีที่เลื่อนได้")" data-image-canvas></canvas>
+                                <span class="finish-image-sample-cursor" data-image-cursor aria-hidden="true"></span>
+                            </div>
+                        </div>
+
+                        <fieldset class="finish-sheen-options">
+                            <legend>@T("Finish sheen", "ระดับความเงา")</legend>
+                            <label><input type="radio" name="finish-sheen" value="matte" /> <span>@T("Matte", "ด้าน")</span></label>
+                            <label><input type="radio" name="finish-sheen" value="satin" checked /> <span>@T("Satin", "ซาติน")</span></label>
+                            <label><input type="radio" name="finish-sheen" value="gloss" /> <span>@T("Gloss", "เงา")</span></label>
+                        </fieldset>
+                    </div>
+
+                    <div class="finish-matcher-results">
+                        <div class="finish-results-heading">
+                            <div>
+                                <h4>@T("10 guided HLC references", "รหัส HLC แนะนำ 10 รายการ")</h4>
+                            </div>
+                            <span class="finish-tone-order"><span>@T("Lightest", "สว่างสุด")</span><i aria-hidden="true"></i><span>@T("Darkest", "เข้มสุด")</span></span>
+                        </div>
+                        <p id="finish-results-help" class="finish-results-help"><strong>@T("Lower ΔE00 means a closer screen-to-reference match.", "ค่า ΔE00 ยิ่งต่ำ สีบนหน้าจอยิ่งใกล้รหัสอ้างอิง")</strong> @T("Start with the recommended card, then compare its lighter and darker alternatives.", "เริ่มจากรายการแนะนำ แล้วเปรียบเทียบตัวเลือกที่สว่างและเข้มกว่าตามลำดับ")</p>
+                        <p class="finish-results-navigation" data-closest-position></p>
+                        <p class="visually-hidden" aria-live="polite" data-result-status></p>
+                        <ol class="finish-match-list" aria-label="@T("Ten HLC references ordered from lightest to darkest", "รหัสอ้างอิง HLC 10 รายการ เรียงจากสว่างที่สุดไปเข้มที่สุด")" aria-describedby="finish-results-help" data-color-results></ol>
+                    </div>
+                </div>
+
+                <div class="finish-selection">
+                    <span class="finish-selection-swatch" data-selected-swatch aria-hidden="true"></span>
+                    <div class="finish-selection-summary">
+                        <span class="finish-selection-label">@T("Your finish brief", "สรุปรายละเอียดผิวของคุณ")</span>
+                        <strong data-selected-code></strong>
+                        <dl>
+                            <div><dt>@T("Screen HEX", "HEX บนหน้าจอ")</dt><dd data-selected-hex></dd></div>
+                            <div><dt>@T("Sheen", "ระดับความเงา")</dt><dd data-selected-sheen></dd></div>
+                            <div><dt>@T("Match", "ความใกล้เคียง")</dt><dd data-selected-delta></dd></div>
+                            <div><dt>Pantone</dt><dd data-selected-pantone></dd></div>
+                        </dl>
+                    </div>
+                    <div class="finish-selection-action">
+                        <p>@T("MALIEV confirms the production colour and gloss against the agreed physical reference and coating system.", "MALIEV จะยืนยันสีและความเงาสำหรับผลิตจริงกับชิ้นอ้างอิงและระบบสีที่ตกลงกัน")</p>
+                        <a class="service-button service-button-primary" href="/quotation?item=3d-printing" data-base-url="/quotation" data-quote-link>@T("Use this finish in my quote", "ใช้รายละเอียดผิวนี้ในคำขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                </div>
+                <p class="visually-hidden" aria-live="polite" aria-atomic="true" data-selection-status></p>
+
+                <div class="finish-support-details">
+                    <details data-guidance-topic="color_science">
+                        <summary>@T("What HLC, Lab, and ΔE00 mean", "HLC, Lab และ ΔE00 หมายถึงอะไร")</summary>
+                        <div class="finish-definition-grid">
+                            <div><strong>HLC</strong><p>@T("A readable colour address: hue family, measured lightness, and chroma or colour intensity.", "รหัสสีที่อ่านเป็นลำดับ ได้แก่ กลุ่มเฉดสี ค่าความสว่าง และความอิ่มหรือความเข้มของสี")</p></div>
+                            <div><strong>Lab</strong><p>@T("Three measured coordinates: L* is light to dark, a* runs green to red, and b* runs blue to yellow. This tool calculates D50 Lab values.", "พิกัดสี 3 ค่า ได้แก่ L* จากสว่างไปเข้ม a* จากเขียวไปแดง และ b* จากน้ำเงินไปเหลือง เครื่องมือนี้คำนวณค่า Lab ภายใต้แสง D50")</p></div>
+                            <div><strong>ΔE00</strong><p>@T("A perceptual colour-difference score. Lower is closer; zero means the same measured Lab colour. Screens, paint, texture, and lighting can still change what you see.", "คะแนนความต่างสีตามการรับรู้ ค่ายิ่งต่ำยิ่งใกล้กัน และศูนย์หมายถึงค่า Lab ที่วัดได้เท่ากัน แต่หน้าจอ สีจริง พื้นผิว และแสงยังทำให้มองเห็นต่างกันได้")</p></div>
+                        </div>
+                    </details>
+
+                    <details data-guidance-topic="painting_plan">
+                        <summary>@T("Painting plan for this selection", "แนวทางพ่นสีสำหรับตัวเลือกนี้")</summary>
+                        <div class="finish-paint-plan">
+                            <div><span>@T("Primer starting point", "แนวทางเริ่มต้นสำหรับสีรองพื้น")</span><strong class="finish-primer-guidance" data-primer-guidance></strong><p>@T("The substrate, filler, paint opacity, and selected coating system may require a different primer shade. Confirm it with a physical spray-out.", "วัสดุชิ้นงาน ฟิลเลอร์ ความทึบของสี และระบบสีที่เลือกอาจต้องใช้สีรองพื้นต่างออกไป กรุณายืนยันด้วยแผ่นพ่นทดสอบจริง")</p></div>
+                            <div><span>@T("Mixing formula", "สูตรผสมสี")</span><strong>@T("Do not calculate a paint formula from a screen HEX value.", "ไม่ควรคำนวณสูตรผสมสีจากค่า HEX บนหน้าจอ")</strong><p>@T("Choose the supplier's paint system first, retrieve or develop its formula, then verify colour and coverage on a labelled spray-out card.", "ควรเลือกระบบสีของผู้ผลิตก่อน จากนั้นเรียกใช้หรือพัฒนาสูตรในระบบนั้น แล้วตรวจสอบสีและการกลบบนแผ่นพ่นทดสอบที่ระบุข้อมูลครบ")</p></div>
+                            <div><span>@T("Clear-coat technique", "แนวทางพ่นเคลือบใส")</span><strong data-clear-guidance></strong><p>@T("Follow the chosen system's technical data sheet for compatible products, mixing, flash-off, film build, curing, and safety controls.", "ปฏิบัติตามเอกสารข้อมูลทางเทคนิคของระบบสีที่เลือกสำหรับผลิตภัณฑ์ที่เข้ากัน การผสม ระยะพัก ความหนาฟิล์ม การบ่ม และข้อควบคุมด้านความปลอดภัย")</p></div>
+                        </div>
+                    </details>
+
+                    <details class="finish-pantone-handoff" data-guidance-topic="pantone_handoff">
+                        <summary>@T("Already have a Pantone code?", "มีรหัส Pantone อยู่แล้วหรือไม่?")</summary>
+                        <div class="finish-pantone-content">
+                            <div>
+                                <p>@T("Use Pantone's official Color Finder, then paste the complete customer-supplied code. MALIEV does not reproduce or estimate Pantone data.", "ใช้เครื่องมือ Color Finder อย่างเป็นทางการของ Pantone แล้วกรอกรหัสเต็มที่ลูกค้าให้มา MALIEV ไม่คัดลอกหรือประมาณค่าข้อมูล Pantone")</p>
+                                <a href="https://www.pantone.com/na/en-us/color-finder" target="_blank" rel="noopener noreferrer">@T("Open official Pantone Color Finder", "เปิด Pantone Color Finder อย่างเป็นทางการ") <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                            </div>
+                            <div class="finish-pantone-input">
+                                <label for="finish-pantone-code">@T("Optional complete Pantone code", "รหัส Pantone แบบเต็ม (ไม่บังคับ)")</label>
+                                <input id="finish-pantone-code" type="text" maxlength="80" placeholder="@T("Example: PANTONE 18-1540 TCX", "ตัวอย่าง: PANTONE 18-1540 TCX")" data-pantone-input />
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <p class="finish-attribution">@T("Colour data:", "ข้อมูลสี:") <a href="https://freiefarbe.de/en/thema-farbe/hlc-colour-atlas/" target="_blank" rel="noopener noreferrer">HLC Colour Atlas v2.03 by freieFarbe e.V.</a> · CC BY-ND 4.0</p>
+            </section>
+
+            <div class="service-card-grid">
+        <figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/printing/printing-finish-color-approval.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("Technician comparing a 3D-printed part with color swatches and a reference image", "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง")" /><figcaption class="service-card-body"><h3>@T("Color references need a standard", "กำหนดสีให้ชัดเจนด้วยรหัส Pantone หรือ RAL")</h3><p>@T("A photo or screen can shift with lighting, camera, and display settings. Provide a Pantone or RAL code, or a physical swatch, when an exact match matters. Otherwise we use the closest available color and record that limitation.", "ภาพถ่ายหรือหน้าจออาจแสดงสีต่างกันตามแสง กล้อง และการตั้งค่าหน้าจอ หากต้องการสีที่ตรง ควรแจ้งรหัส Pantone หรือ RAL หรือส่งชิ้นตัวอย่างจริง หากไม่มีข้อมูลดังกล่าว เราจะเลือกสีที่ใกล้เคียงที่สุดและแจ้งให้ทราบก่อนผลิต")</p></figcaption></figure>
+        <figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/printing/printing-finish-surface-prep.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("Technician spray-priming a 3D-printed part before painting", "ช่างกำลังพ่นรองพื้นด้วยปืนสเปรย์บนชิ้นงานพิมพ์ 3 มิติก่อนพ่นสี")" /><figcaption class="service-card-body"><h3>@T("Surface preparation affects the result", "การเตรียมผิวมีผลต่อผลงาน")</h3><p>@T("Layer lines, support marks, seams, and print texture may need sanding, filler, heat welding, primer, or other preparation before paint. The selected level of preparation changes cost, lead time, and visible detail.", "รอยชั้น รอยซัพพอร์ต รอยต่อ และผิวจากการพิมพ์อาจต้องขัด ฟิลเลอร์ เชื่อมด้วยความร้อน ลงรองพื้น หรือเตรียมผิวแบบอื่นก่อนพ่นสี ระดับงานที่เลือกมีผลต่อราคา เวลา และรายละเอียดที่มองเห็น")</p></figcaption></figure>
+        <figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/printing/printing-finish-clear-coat.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("Raw 3D print, matte clear coat, and standard gloss clear coat shown side by side", "เปรียบเทียบชิ้นงานพิมพ์ 3 มิติแบบดิบ เคลือบใสด้าน และเคลือบใสมาตรฐานแบบเงา")" /><figcaption class="service-card-body"><h3>@T("Raw print, matte, or standard gloss", "พ่นเคลือบใส: ระบุผิวด้านหรือผิวเงา")</h3><p>@T("The raw print shows the original layer texture; a matte clear coat diffuses reflections; standard clear coat is shiny and produces stronger reflections. Specify the required finish before painting begins. Changing the sheen later can require re-preparation and repainting, which is an additional change order.", "ก่อนเริ่มงานควรระบุว่าต้องการชิ้นงานดิบ พ่นสีอย่างเดียว หรือพ่นเคลือบใสเพิ่มเติม หากต้องการเคลือบใส ให้ระบุผิวด้านหรือผิวเงาให้ชัดเจน เพราะแต่ละแบบให้การสะท้อนแสงและสัมผัสต่างกัน หากมีการเปลี่ยนรายละเอียดหลังเริ่มงาน อาจต้องเตรียมผิวและพ่นใหม่ ซึ่งมีผลต่อราคาและระยะเวลา")</p></figcaption></figure>
+            </div>
+            <div class="service-note"><strong>@T("Approval checkpoint", "ยืนยันก่อนผลิต")</strong> @T("Before we paint, confirm the color standard, sheen, visible surfaces, and acceptance reference. If a requirement changes after approval, we will re-quote the additional work before proceeding.", "ก่อนพ่นสีควรยืนยันมาตรฐานสี ระดับความเงา ผิวที่มองเห็น และข้อมูลอ้างอิงสำหรับตรวจรับ หากมีการเปลี่ยนหลังยืนยัน เราจะประเมินราคาแก้ไขเพิ่มเติมก่อนดำเนินการ")</div>
+        </div>
+    </section>
+
+    <section id="finishing-split-assembly" class="service-section service-section-soft"><div class="service-container service-split"><div class="service-copy"><h2>@T("When a part is too large for one print", "เมื่อชิ้นงานใหญ่เกินพื้นที่พิมพ์")</h2><p>@T("We can divide a large model into smaller sections, then join and refinish it as one assembly. Before printing, we review split lines, alignment keys, fasteners, visible surfaces, final dimensions, and the loads around the joint.", "เราสามารถแบ่งโมเดลขนาดใหญ่ออกเป็นส่วนย่อย แล้วต่อและเก็บผิวให้เป็นชิ้นงานเดียว ก่อนพิมพ์เราจะทบทวนแนวแบ่ง จุดจัดแนว ตัวยึด ผิวที่มองเห็น ขนาดสุดท้าย และแรงบริเวณรอยต่อ")</p><p>@T("Depending on the material and use, joining may use adhesive, heat welding, epoxy, automotive putty, or wood filler. We can sand, prime, paint, and clear-coat the assembled part when that scope is included in the quote.", "ขึ้นกับวัสดุและการใช้งาน การต่ออาจใช้กาว เชื่อมด้วยความร้อน อีพ็อกซี ฟิลเลอร์รถยนต์ หรือฟิลเลอร์ไม้ และเราสามารถขัด ลงรองพื้น พ่นสี และเคลือบใสหลังประกอบได้เมื่อรวมขอบเขตนี้ไว้ในใบเสนอราคา")</p><p class="service-tool-reference"><strong>@T("Optional customer tool:", "เครื่องมือเสริมสำหรับลูกค้า:")</strong> @T("Mesh Splitter runs separately in your browser and can divide an oversized STL to fit your printer's build volume.", "Mesh Splitter เป็นเครื่องมือแยกต่างหากที่ทำงานบนเบราว์เซอร์ ช่วยแบ่งไฟล์ STL ขนาดใหญ่ให้พอดีกับพื้นที่พิมพ์ของคุณ") <a href="https://shop.maliev.com/tools/mesh-splitter" target="_blank" rel="noopener noreferrer">@T("Open Mesh Splitter", "เปิด Mesh Splitter") <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a></p><div class="service-note">@T("Seams may remain visible, and the joining method affects strength, tolerance, price, and lead time. Tell us which surfaces must look seamless and how the finished part will be used.", "รอยต่ออาจยังมองเห็นได้ และวิธีต่อมีผลต่อความแข็งแรง ค่าคลาดเคลื่อน ราคา และระยะเวลา แจ้งผิวที่ต้องการให้เรียบต่อเนื่องและลักษณะการใช้งานของชิ้นงาน")</div></div><figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/printing/printing-split-assembly.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("Technician joining two large 3D-printed sections and spreading automotive body filler with a putty spreader", "ช่างกำลังต่อชิ้นงานพิมพ์ 3 มิติขนาดใหญ่สองส่วนและใช้เกรียงปาดฟิลเลอร์รถยนต์อุดรอยต่อ")" /><figcaption class="service-card-body"><h3>@T("Split, join, smooth, and finish", "แบ่ง ต่อ ขัด และเก็บผิว")</h3><p>@T("Assembly and surface finishing are quoted as a defined production step, not an assumption after printing.", "การประกอบและการเก็บผิวเป็นขั้นตอนผลิตที่ต้องระบุในใบเสนอราคา ไม่ใช่งานที่ถือว่ารวมโดยอัตโนมัติหลังพิมพ์")</p></figcaption></figure></div></section>
+
+    <section id="finishing-brief" class="service-section"><div class="service-container"><header class="service-heading center"><h2>@T("Make the finish and assembly expectations explicit", "ระบุความต้องการเก็บผิวและประกอบให้ชัดเจน")</h2><p>@T("The more complete the brief is before production, the more accurately we can price the work and avoid avoidable change orders.", "ยิ่งส่งข้อมูลครบก่อนผลิต เราจะยิ่งประเมินราคาได้แม่นยำและลดงานแก้ไขที่ป้องกันได้")</p></header><div class="service-card-grid">
+        <article class="service-card"><h3>@T("Color & sheen", "สีและระดับความเงา")</h3><p>@T("State the Pantone or RAL code, physical swatch, paint system, and whether the clear coat should be matte, satin, or gloss. A single image alone cannot guarantee an exact match.", "ระบุรหัส Pantone หรือ RAL ชิ้นตัวอย่างจริง ระบบสี และต้องการเคลือบใสแบบด้าน ซาติน หรือเงา ภาพเดียวไม่สามารถรับประกันสีตรงได้")</p></article>
+        <article class="service-card"><h3>@T("Split & assembly", "การแบ่งและประกอบ")</h3><p>@T("Tell us which parts may be split, how they will be aligned, which seams are visible, and whether joining, filler, sanding, heat welding, primer, or paint is required.", "แจ้งส่วนที่แบ่งได้ วิธีจัดแนว รอยต่อที่มองเห็น และต้องการต่อ ฟิลเลอร์ ขัด เชื่อมด้วยความร้อน รองพื้น หรือพ่นสีหรือไม่")</p></article>
+        <article class="service-card"><h3>@T("Use & acceptance", "การใช้งานและเกณฑ์ตรวจรับ")</h3><p>@T("Share the final dimensions, handling or load, environment, quantity, reference photos, and acceptance sample. We will use these details to define the finish scope and quote.", "ส่งขนาดสุดท้าย แรงหรือการจับถือ สภาพแวดล้อม จำนวน ภาพอ้างอิง และชิ้นตัวอย่างตรวจรับ เพื่อกำหนดขอบเขตงานและประเมินราคา")</p></article>
+    </div></div></section>
+
+    <section id="finishing-faq" class="service-section service-section-soft"><div class="service-container"><header class="service-heading center"><h2>@T("Finishing and colour questions", "คำถามเรื่องการเก็บผิวและสี")</h2></header><div class="service-faq">
+        <details><summary>@T("Can you match a paint color from one reference image?", "สามารถเทียบสีจากภาพอ้างอิงภาพเดียวได้หรือไม่?")</summary><p>@T("A photo or screen is affected by lighting and display settings. Provide a Pantone or RAL code, or a physical swatch, when an exact match matters. Without one, we use the closest available paint and the result may differ from the image.", "ภาพถ่ายหรือหน้าจอได้รับผลจากแสงและการแสดงผล หากต้องการสีตรงควรส่งรหัส Pantone หรือ RAL หรือชิ้นตัวอย่างจริง หากไม่มี เราจะใช้สีที่ใกล้เคียงที่สุดและผลลัพธ์อาจต่างจากภาพ")</p></details>
+        <details><summary>@T("Can I choose matte, satin, or gloss clear coat?", "เลือกเคลือบใสแบบด้าน ซาติน หรือเงาได้หรือไม่?")</summary><p>@T("Yes. Confirm the sheen before painting begins. Standard clear coat is gloss unless another option is agreed. Changing to matte or satin later can require extra preparation, repainting, price, and lead time.", "ได้ กรุณายืนยันระดับความเงาก่อนเริ่มพ่นสี เคลือบใสมาตรฐานเป็นแบบเงาหากไม่ได้ตกลงอย่างอื่น การเปลี่ยนเป็นด้านหรือซาตินภายหลังอาจต้องเตรียมผิว พ่นสีใหม่ และเพิ่มราคาและเวลา")</p></details>
+        <details><summary>@T("Can you split and assemble a part that is too large to print?", "สามารถแบ่งและประกอบชิ้นงานที่ใหญ่เกินเครื่องพิมพ์ได้หรือไม่?")</summary><p>@T("Yes. We can quote split planning, joining, filler, sanding, primer, paint, and clear coat together. Tell us which seams are visible and what final dimensions and loads the assembly must meet.", "ได้ เราสามารถประเมินการวางแนวแบ่ง การต่อ ฟิลเลอร์ การขัด รองพื้น สี และเคลือบใสร่วมกัน แจ้งรอยต่อที่มองเห็น รวมถึงขนาดและแรงที่ชิ้นงานประกอบต้องรองรับ")</p></details>
+        <details><summary>@T("Will the seam be invisible after assembly?", "หลังประกอบแล้วรอยต่อจะมองไม่เห็นหรือไม่?")</summary><p>@T("We can reduce a seam with joining, automotive putty or wood filler, sanding, and paint, but visibility depends on geometry, lighting, and acceptance requirements. We will identify the expected finish in the quote.", "เราสามารถลดรอยต่อด้วยการต่อ ฟิลเลอร์รถยนต์หรือฟิลเลอร์ไม้ การขัด และพ่นสี แต่การมองเห็นขึ้นกับทรง แสง และเกณฑ์ตรวจรับ โดยจะระบุระดับผิวที่คาดหวังในใบเสนอราคา")</p></details>
+        <details><summary>@T("Can I change the finish after painting begins?", "เปลี่ยนรายละเอียดการเก็บผิวหลังเริ่มพ่นสีได้หรือไม่?")</summary><p>@T("You can request a change, but a different color, sheen, or clear-coat type after approval may require additional materials, labor, and schedule. We will confirm the change order before proceeding.", "สามารถขอเปลี่ยนได้ แต่การเปลี่ยนสี ระดับความเงา หรือชนิดเคลือบใสหลังยืนยันอาจต้องใช้วัสดุ แรงงาน และเวลาเพิ่ม เราจะยืนยันค่าใช้จ่ายก่อนดำเนินการ")</p></details>
+        <details><summary>@T("What should I confirm before production?", "ควรยืนยันข้อมูลใดก่อนเริ่มผลิต?")</summary><p>@T("Confirm the color standard, sheen, visible surfaces, split and joining plan, final dimensions, quantity, use environment, and acceptance reference before production starts.", "ควรยืนยันมาตรฐานสี ระดับความเงา ผิวที่มองเห็น แผนแบ่งและต่อชิ้นงาน ขนาดสุดท้าย จำนวน สภาพการใช้งาน และข้อมูลอ้างอิงสำหรับตรวจรับก่อนเริ่มผลิต")</p></details>
+    </div></div></section>
+
+    <ServiceLocation />
+
+    <section class="service-cta-wrap"><div class="service-container service-cta"><div><h2>@T("Send us the finish requirements", "ส่งรายละเอียดงานเก็บผิวให้เรา")</h2><p>@T("Share the colour standard, sheen, visible surfaces, and how the part will be used. We will define the finishing scope and quote it as a production step. Quoting is free and takes minutes.", "แจ้งมาตรฐานสี ระดับความเงา ผิวที่มองเห็น และลักษณะการใช้งาน เราจะกำหนดขอบเขตงานเก็บผิวและประเมินราคาเป็นขั้นตอนผลิต การขอราคาไม่มีค่าใช้จ่ายและใช้เวลาไม่กี่นาที")</p><p class="service-cta-assurance"><i class="fas fa-lock" aria-hidden="true"></i>@T("Your files stay confidential. We sign an NDA on request.", "ไฟล์ของคุณถูกเก็บเป็นความลับ และเราพร้อมลงนาม NDA เมื่อคุณต้องการ") <a href="/Legal/NonDisclosureAgreement">@T("Read our NDA", "อ่าน NDA ของเรา")</a></p></div><div class="service-actions"><a class="service-button service-button-yellow" href="/quotation?item=3D-Printing">@T("Request a finishing quote", "ขอใบเสนอราคางานเก็บผิว") <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a class="service-button service-button-secondary" href="/InstantQuotation/3D-Printing">@T("Price the print first", "ประเมินราคางานพิมพ์ก่อน")</a></div></div></section>
+</main>
+@code {
+    private bool isThai => CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => isThai ? thai : english;
+
+    private string FaqJson => JsonSerializer.Serialize(new Dictionary<string, object>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "FAQPage",
+        ["mainEntity"] = new object[]
+        {
+            Question("Can you match a paint color from one reference image?", "สามารถเทียบสีจากภาพอ้างอิงภาพเดียวได้หรือไม่?", "A screen or photo is a visual reference, not a measured color standard. Provide a Pantone or RAL code, or a physical swatch, when the color must be controlled. Without one, we use the closest available paint and the result may differ under different lighting.", "ภาพถ่ายหรือหน้าจอเป็นเพียงข้อมูลอ้างอิง ไม่ใช่มาตรฐานสีที่วัดได้ หากต้องควบคุมสีควรส่งรหัส Pantone หรือ RAL หรือชิ้นตัวอย่างจริง หากไม่มี เราจะใช้สีที่ใกล้เคียงที่สุดและสีอาจต่างกันตามแสง"),
+            Question("Can I choose matte, satin, or gloss clear coat?", "เลือกเคลือบใสแบบด้าน ซาติน หรือเงาได้หรือไม่?", "Yes. Specify the required sheen before painting starts. A later change from standard gloss to matte or satin requires additional preparation and repainting, so it may change the price and lead time.", "ได้ กรุณาระบุระดับความเงาที่ต้องการก่อนเริ่มพ่นสี การเปลี่ยนจากเคลือบเงามาตรฐานเป็นด้านหรือซาตินภายหลังต้องเตรียมผิวและพ่นสีใหม่ จึงอาจมีค่าใช้จ่ายและระยะเวลาเพิ่ม"),
+            Question("Can you split and assemble a part that is too large to print?", "สามารถแบ่งและประกอบชิ้นงานที่ใหญ่เกินเครื่องพิมพ์ได้หรือไม่?", "Yes. We can review split lines, alignment, joining, sanding, filler, primer, paint, and clear coat as one finishing scope. The seam, joining method, final tolerance, and access to the joint should be agreed before production.", "ได้ เราสามารถประเมินแนวแบ่ง การจัดแนว การต่อชิ้นงาน การขัด ฟิลเลอร์ รองพื้น สี และเคลือบใสเป็นขอบเขตงานเดียว โดยต้องตกลงเรื่องรอยต่อ วิธีต่อ ค่าคลาดเคลื่อน และการเข้าถึงรอยต่อก่อนผลิต"),
+            Question("Will the seam be invisible after assembly?", "หลังประกอบแล้วรอยต่อจะมองไม่เห็นหรือไม่?", "A seam can often be reduced with joining, automotive putty or wood filler, sanding, and paint, but it cannot be promised invisible in every geometry or lighting condition. We will identify visible surfaces and acceptance expectations in the quote.", "รอยต่อสามารถลดให้เห็นน้อยลงด้วยการต่อ ฟิลเลอร์รถยนต์หรือฟิลเลอร์ไม้ การขัด และการพ่นสี แต่ไม่สามารถรับประกันว่าจะมองไม่เห็นในทุกทรงและทุกสภาพแสง เราจะระบุผิวที่มองเห็นและเกณฑ์ยอมรับไว้ในใบเสนอราคา"),
+            Question("Can I change the finish after painting begins?", "เปลี่ยนรายละเอียดการเก็บผิวหลังเริ่มพ่นสีได้หรือไม่?", "You can request a change, but switching color, sheen, or clear-coat type after work starts may require extra materials, labor, and schedule. We will confirm the change order before proceeding.", "สามารถขอเปลี่ยนได้ แต่การเปลี่ยนสี ระดับความเงา หรือชนิดเคลือบใสหลังเริ่มงานอาจต้องใช้วัสดุ แรงงาน และเวลาเพิ่ม เราจะยืนยันค่าใช้จ่ายก่อนดำเนินการ"),
+            Question("What should I confirm before production?", "ควรยืนยันข้อมูลใดก่อนเริ่มผลิต?", "Confirm the color standard, finish sheen, visible surfaces, split and joining plan, final dimensions, quantity, use environment, and acceptance photos or samples before production starts.", "ควรยืนยันมาตรฐานสี ระดับความเงา ผิวที่มองเห็น แผนแบ่งและต่อชิ้นงาน ขนาดสุดท้าย จำนวน สภาพการใช้งาน และภาพหรือชิ้นตัวอย่างสำหรับเกณฑ์ยอมรับก่อนเริ่มผลิต")
+        }
+    });
+
+    private Dictionary<string, object> Question(string englishName, string thaiName, string englishAnswer, string thaiAnswer) => new()
+    {
+        ["@type"] = "Question",
+        ["name"] = T(englishName, thaiName),
+        ["acceptedAnswer"] = new Dictionary<string, object>
+        {
+            ["@type"] = "Answer",
+            ["text"] = T(englishAnswer, thaiAnswer)
+        }
+    };
+}

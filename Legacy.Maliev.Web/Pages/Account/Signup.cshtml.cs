@@ -38,7 +38,7 @@ public sealed class Signup(
     [BindProperty]
     [Required]
     [DataType(DataType.Password)]
-    [StringLength(1024, MinimumLength = 6)]
+    [StringLength(1024, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
 
     [BindProperty]
@@ -81,7 +81,7 @@ public sealed class Signup(
             return Page();
         }
 
-        if (!await antiBotVerifier.VerifyAsync(RecaptchaToken, "account_signup", cancellationToken))
+        if (!await antiBotVerifier.VerifyAsync(RecaptchaToken, "submit", cancellationToken))
         {
             ModelState.AddModelError(string.Empty, "Security verification failed. Please try again.");
             return Page();

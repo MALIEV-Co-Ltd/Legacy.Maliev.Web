@@ -50,11 +50,20 @@
     }
     <HeadOutlet />
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <PublicGoogleTagManagerHead Model="googleTagManagerModel" />
     <link rel="stylesheet" href="@siteStyle" />
     <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
     <link rel="shortlink" href="https://www.maliev.com/" />
+    <script>
+        document.documentElement.dataset.motion = "ready";
+        window.__malievMotionFailsafe = window.setTimeout(function () {
+            document.documentElement.removeAttribute("data-motion");
+        }, 2500);
+    </script>
 </head>
 <body class="@(requiresInstantQuotationBootstrap ? "instant-quotation-shell" : null)">
     <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>

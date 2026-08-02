@@ -2,15 +2,15 @@
 @inject IStringLocalizer<SignupContent> Localizer
 
 <div data-migration-component="signup-content" data-migration-renderer="blazor-static-ssr">
-    <div class="validation-summary-errors @(Model.AllErrors.Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
+    <div class="validation-summary-errors @(Model.ErrorsFor(string.Empty).Count > 0 ? string.Empty : "validation-summary-valid")" role="alert">
         <ul>
-            @if (Model.AllErrors.Count == 0)
+            @if (Model.ErrorsFor(string.Empty).Count == 0)
             {
                 <li style="display:none"></li>
             }
             else
             {
-                @foreach (var error in Model.AllErrors)
+                @foreach (var error in Model.ErrorsFor(string.Empty))
                 {
                     <li>@error</li>
                 }
@@ -36,7 +36,8 @@
         </div>
         <div class="maliev-form-field">
             <label for="Password">@Localizer["Password"]</label>
-            <input autocomplete="new-password" type="password" id="Password" minlength="6" maxlength="1024" name="Password" required aria-invalid="@AriaInvalid("Password")" aria-describedby="Password-error" data-password-primary />
+            <input autocomplete="new-password" type="password" id="Password" minlength="8" maxlength="1024" name="Password" required aria-invalid="@AriaInvalid("Password")" aria-describedby="Password-help Password-error" data-password-primary />
+            <span id="Password-help" class="maliev-form-help">@Localizer["At least 8 characters."]</span>
             <span id="Password-error" class="@(HasError("Password") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Password")</span>
         </div>
         <div class="maliev-form-field">
@@ -47,8 +48,10 @@
     </div>
 
     <input type="hidden" name="g-recaptcha-response" id="signup-recaptcha-response" value="" data-recaptcha-response />
-    <p>@Localizer["By signing up, you agree to our"] <a href="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a> @Localizer["and"] <a href="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a>.</p>
-    <button type="submit" formaction="/Account/Signup?handler=SignUp" id="submit-button">@Localizer["Sign Up"]</button>
+    <p class="maliev-form-help">@Localizer["By signing up, you agree to our"] <a href="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a> @Localizer["and"] <a href="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a>.</p>
+    <p class="maliev-form-help">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
+    <p id="signup-recaptcha-error" class="maliev-form-error" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
+    <button type="submit" class="maliev-button" formaction="/Account/Signup?handler=SignUp" id="submit-button"><span data-submit-label>@Localizer["Sign Up"]</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
 </div>
 
 @code {

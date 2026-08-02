@@ -14,8 +14,19 @@ public sealed record QuotationFormDisplayModel(
     string? RecaptchaToken,
     string RecaptchaSiteKey,
     bool CountryServiceAvailable,
+    bool IsAuthenticatedCustomer,
+    bool CustomerProfileAvailable,
     IReadOnlyList<QuotationCountryOption> Countries,
-    IReadOnlyDictionary<string, IReadOnlyList<string>> ValidationErrors)
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ValidationErrors,
+    string? FinderFiles = null,
+    string? FinderService = null,
+    string? FinderMaterial = null,
+    string? FinderQuantity = null,
+    string? FinderEndUse = null,
+    string? FinderPerformance = null,
+    string? FinderEnvironment = null,
+    string? FinderRecommendations = null,
+    string? FinderPath = null)
 {
     public IReadOnlyList<string> ErrorsFor(string fieldName) =>
         ValidationErrors.TryGetValue(fieldName, out var errors) ? errors : [];

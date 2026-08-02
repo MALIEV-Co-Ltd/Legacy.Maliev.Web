@@ -3,11 +3,13 @@
 
 <main class="service-page" data-migration-component="custom-manufacturing-content" data-migration-route-owner="@RouteOwner">
     <ServiceBreadcrumb ServiceKey="Custom Manufacturing" />
+    <ServicePageToc />
     <section class="service-hero" aria-labelledby="custom-manufacturing-title">
+        <img class="service-hero-media" src="/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Idea sketch, technical drawing, CAD model, and finished machined part", "ภาพไอเดีย แบบร่าง CAD และชิ้นงานโลหะที่ผลิตเสร็จ")" />
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("Made-to-order project intake", "เริ่มต้นงานผลิตตามแบบ")</p>
             <h1 id="custom-manufacturing-title">@T("Custom Part Manufacturing: Start with Your Drawing, Material, Quantity, and Use", "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน")</h1>
-            <p class="service-hero-lead">@T("If you are not sure whether CNC machining or 3D printing fits your part, send the drawing or sample, material, quantity, critical features, and intended use. MALIEV will route the request for an appropriate manufacturing review. Existing parts that need geometry capture may start with 3D scanning and reverse engineering.", "หากยังไม่แน่ใจว่าควรใช้ CNC หรือ 3D Printing ส่งแบบ ตัวอย่างชิ้นงาน วัสดุ จำนวน จุดสำคัญ และการใช้งานให้ MALIEV ช่วยกำหนดเส้นทางประเมินที่เหมาะสม งานที่ต้องสร้างแบบจากชิ้นงานเดิมจะถูกส่งต่อไปยังการสแกน 3D และ Reverse Engineering ตามความจำเป็น")</p>
+            <p class="service-hero-lead">@T("If you are not sure whether CNC machining, 3D printing, or low-volume injection molding fits your part, send the drawing or sample, material, quantity, critical features, and intended use. MALIEV will route the request for an appropriate manufacturing review. Existing parts that need geometry capture may start with 3D scanning and reverse engineering.", "หากยังไม่แน่ใจว่าควรใช้ CNC, 3D Printing หรือฉีดพลาสติกจำนวนน้อย ส่งแบบ ตัวอย่างชิ้นงาน วัสดุ จำนวน จุดสำคัญ และการใช้งานให้ MALIEV ช่วยกำหนดเส้นทางประเมินที่เหมาะสม งานที่ต้องสร้างแบบจากชิ้นงานเดิมจะถูกส่งต่อไปยังการสแกน 3D และ Reverse Engineering ตามความจำเป็น")</p>
             <div class="service-actions">
                 <a class="service-button service-button-primary" href="/Quotation?item=custom-manufacturing">@T("Send files for review", "ส่งไฟล์เพื่อประเมิน") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
                 <a class="service-button service-button-secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line">@T("Discuss on LINE", "ปรึกษาทาง LINE")</a>
@@ -23,6 +25,15 @@
             <article><div><h2>@T("Use and critical points", "การใช้งานและจุดสำคัญ")</h2><p>@T("Explain interfaces, fits, loads, environment, and important surfaces.", "อธิบายจุดประกอบ ฟิต แรง สภาพแวดล้อม และผิวสำคัญ")</p></div></article>
         </div>
     </section>
+
+    <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
+        <strong>@T("On this page", "ในหน้านี้")</strong>
+        <a href="#choose-process-title">@T("Choose the route", "เลือกเส้นทาง")</a>
+        <a href="#review-process-title">@T("Workflow", "ขั้นตอน")</a>
+        <a href="#intake-checklist-title">@T("Project checklist", "รายการข้อมูล")</a>
+        <a href="#service-pricing">@T("Planning price", "ราคาเพื่อการวางแผน")</a>
+        <a href="#custom-faq-title">@T("FAQ", "คำถามที่พบบ่อย")</a>
+    </nav>
 
     <section class="service-section" aria-labelledby="choose-process-title">
         <div class="service-container">
@@ -46,6 +57,11 @@
                     <h3>@T("Start with 3D scanning", "เริ่มจากงานสแกน 3D")</h3>
                     <p>@T("Use this route when the physical part is the primary source and you need geometry capture, reverse-engineering input, or comparison data. Scanning is an input step and does not automatically create a production-ready design.", "เลือกทางนี้เมื่อชิ้นงานจริงเป็นข้อมูลหลัก และต้องเก็บรูปทรง สร้างข้อมูลสำหรับ Reverse Engineering หรือเปรียบเทียบกับแบบ การสแกนเป็นขั้นตอนสร้างข้อมูลและไม่ได้ทำให้แบบพร้อมผลิตโดยอัตโนมัติ")</p>
                     <p><a href="/Services/3D-Scanning">@T("Review 3D scanning", "ดูบริการสแกน 3D")</a></p>
+                </article>
+                <article class="service-card">
+                    <h3>@T("Start with low-volume injection molding", "เริ่มจากงานฉีดพลาสติกจำนวนน้อย")</h3>
+                    <p>@T("Use this route when you have a mold and need a pneumatic PIMM review for a batch up to 1,000 parts. Larger requirements may be better served by owning the machine.", "เลือกทางนี้เมื่อมีแม่พิมพ์และต้องการประเมินงานด้วยเครื่อง PIMM ระบบลมสำหรับจำนวนไม่เกิน 1,000 ชิ้น หากจำนวนมากกว่านี้อาจเหมาะกับการซื้อเครื่องเป็นของตนเอง")</p>
+                    <p><a href="/Services/Low-Volume-Injection-Molding">@T("Review low-volume injection molding", "ดูบริการฉีดพลาสติกจำนวนน้อย")</a></p>
                 </article>
             </div>
         </div>
@@ -99,6 +115,21 @@
                 <details><summary>@FaqExistingPartQuestion</summary><p>@FaqExistingPartAnswer</p></details>
                 <details><summary>@FaqInputQuestion</summary><p>@FaqInputAnswer</p></details>
             </div>
+        </div>
+    </section>
+
+    <section id="service-pricing" class="service-section service-section-soft service-pricing-section" aria-labelledby="service-pricing-title">
+        <div class="service-container">
+            <header class="service-heading center">
+                <p class="service-eyebrow">@T("Planning price", "ราคาเพื่อการวางแผน")</p>
+                <h2 id="service-pricing-title">@T("Indicative starting prices", "ราคาเริ่มต้นเพื่อการประเมิน")</h2>
+                <p>@T("Use these starting points to choose a service. The final quotation is confirmed after we review geometry, material, quantity, finish, tolerances, and delivery requirements.", "ใช้ราคาเริ่มต้นเหล่านี้เพื่อเลือกบริการ โดยจะยืนยันราคาจริงหลังตรวจสอบรูปทรง วัสดุ จำนวน ผิวสำเร็จ ค่าความคลาดเคลื่อน และกำหนดส่ง")</p>
+            </header>
+            <div class="service-card-grid service-pricing-grid">
+                <article class="service-card service-pricing-card"><h3>@T("Project review", "ประเมินโครงการ")</h3><p>@T("Send your file, sample, material, quantity, and intended use so we can recommend the right route.", "ส่งไฟล์ ตัวอย่าง วัสดุ จำนวน และการใช้งาน เพื่อให้เราแนะนำกระบวนการที่เหมาะสม")</p><strong>@T("Quote after project review", "ประเมินราคาหลังตรวจสอบโครงการ")</strong></article>
+                <article class="service-card service-pricing-card"><h3>@T("Process selection", "การเลือกกระบวนการ")</h3><p>@T("CNC, 3D printing, scanning, design, molding, or casting may each suit a different requirement.", "CNC พิมพ์ 3 มิติ สแกน ออกแบบ ฉีดพลาสติก หรือหล่อซิลิโคนอาจเหมาะกับโจทย์ที่ต่างกัน")</p><strong>@T("Matched to your requirements", "เลือกให้เหมาะกับความต้องการ")</strong></article>
+            </div>
+            <p class="service-pricing-note">@T("Prices are planning references, not a binding offer. We will confirm the scope, tax, delivery, and any revision or finishing work before production.", "ราคาเป็นข้อมูลเพื่อการวางแผน ไม่ใช่ข้อเสนอผูกพัน เราจะยืนยันขอบเขต ภาษี การจัดส่ง รวมถึงงานแก้ไขและเก็บผิวก่อนเริ่มผลิต")</p>
         </div>
     </section>
 

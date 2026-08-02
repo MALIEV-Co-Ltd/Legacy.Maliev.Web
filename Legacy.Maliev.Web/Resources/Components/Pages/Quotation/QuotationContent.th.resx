@@ -238,6 +238,7 @@
   <data name="Email your request to" xml:space="preserve"><value>ส่งรายละเอียดทางอีเมลมาที่</value></data>
   <data name="or contact our team through these channels." xml:space="preserve"><value>หรือติดต่อทีมงานผ่านช่องทางเหล่านี้</value></data>
   <data name="Request a manual quotation" xml:space="preserve"><value>ขอใบเสนอราคาจากทีมงาน</value></data>
+  <data name="Manual quotation request" xml:space="preserve"><value>ขอใบเสนอราคาด้วยตนเอง</value></data>
   <data name="Complete the form below. Required fields are marked with an asterisk." xml:space="preserve"><value>กรอกแบบฟอร์มด้านล่าง ช่องที่จำเป็นจะแสดงด้วยเครื่องหมายดอกจัน</value></data>
   <data name="Contact details" xml:space="preserve"><value>ข้อมูลผู้ติดต่อ</value></data>
   <data name="Required" xml:space="preserve"><value>จำเป็น</value></data>
@@ -248,4 +249,31 @@
   <data name="Upload files up to 100 MB total" xml:space="preserve"><value>อัปโหลดไฟล์รวมไม่เกิน 100 MB</value></data>
   <data name="You may select multiple files. ZIP related files together to preserve references and folder structure." xml:space="preserve"><value>เลือกได้หลายไฟล์ ควร ZIP ไฟล์ที่เกี่ยวข้องเพื่อรักษาการอ้างอิงและโครงสร้างโฟลเดอร์</value></data>
   <data name="For larger files, use" xml:space="preserve"><value>สำหรับไฟล์ขนาดใหญ่ กรุณาใช้</value></data>
+  <data name="Contact MALIEV" xml:space="preserve"><value>ติดต่อ MALIEV</value></data>
+  <data name="We could not retrieve your customer profile. Please update your profile or contact us directly." xml:space="preserve"><value>ไม่สามารถโหลดข้อมูลลูกค้าของคุณได้ กรุณาอัปเดตโปรไฟล์หรือติดต่อเราโดยตรง</value></data>
+  <data name="Drawings and reference files (optional)" xml:space="preserve"><value>แบบงานและไฟล์อ้างอิง (ไม่บังคับ)</value></data>
+  <data name="Project requirements" xml:space="preserve"><value>รายละเอียดความต้องการของงาน</value></data>
+  <data name="Protected by reCAPTCHA Enterprise. Google’s Privacy Policy and Terms of Service apply." xml:space="preserve"><value>แบบฟอร์มนี้ได้รับการปกป้องโดย reCAPTCHA Enterprise และอยู่ภายใต้นโยบายความเป็นส่วนตัวและข้อกำหนดในการให้บริการของ Google</value></data>
+  <data name="Select a country" xml:space="preserve"><value>เลือกประเทศ</value></data>
+  <data name="Submit quotation request" xml:space="preserve"><value>ส่งคำขอใบเสนอราคา</value></data>
+  <data name="Tax identification (optional)" xml:space="preserve"><value>เลขประจำตัวผู้เสียภาษี (ไม่บังคับ)</value></data>
+  <data name="Telephone" xml:space="preserve"><value>โทรศัพท์</value></data>
+  <data name="Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage." xml:space="preserve"><value>อัปโหลดได้สูงสุด 10 ไฟล์ รวมไม่เกิน 100 MB ทุกไฟล์จะถูกตรวจสอบมัลแวร์ก่อนจัดเก็บ</value></data>
+  <data name="Please enter a valid email address" xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
+  <data name="You can use" xml:space="preserve"><value>คุณสามารถใช้บริการ</value></data>
+  <data name="For Google Drive, set sharing permission so our team can access the files." xml:space="preserve"><value>หากใช้ Google Drive กรุณาตั้งค่าการแชร์ให้ทีมงานของเราสามารถเข้าถึงไฟล์ได้</value></data>
+  <data name="Choose files or drop them here" xml:space="preserve"><value>เลือกไฟล์หรือลากไฟล์มาวางที่นี่</value></data>
+  <data name="Multiple files are supported" xml:space="preserve"><value>รองรับการเลือกหลายไฟล์</value></data>
+  <data name="Remove" xml:space="preserve"><value>ลบ</value></data>
+  <data name="This site is protected by reCAPTCHA and the Google" xml:space="preserve"><value>เว็บไซต์นี้ได้รับการปกป้องโดย reCAPTCHA และนโยบายของ Google</value></data>
+  <data name="Privacy Policy" xml:space="preserve"><value>นโยบายความเป็นส่วนตัว</value></data>
+  <data name="and" xml:space="preserve"><value>และ</value></data>
+  <data name="Terms of Service" xml:space="preserve"><value>ข้อกำหนดในการให้บริการของ Google</value></data>
+  <data name="apply." xml:space="preserve"><value>มีผลบังคับใช้</value></data>
+  <data name="We could not verify that you are human. Please try again." xml:space="preserve"><value>ไม่สามารถยืนยันว่าคุณเป็นมนุษย์ได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="Submitting..." xml:space="preserve"><value>กำลังส่ง...</value></data>
+  <data name="Email address is required" xml:space="preserve"><value>กรุณากรอกอีเมล</value></data>
+  <data name="Please enter your first name" xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
+  <data name="Please enter your last name" xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
+  <data name="Please enter your message" xml:space="preserve"><value>กรุณากรอกข้อความ</value></data>
 </root>

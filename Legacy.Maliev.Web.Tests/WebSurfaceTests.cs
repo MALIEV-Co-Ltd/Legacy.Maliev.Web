@@ -26,7 +26,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                         new Dictionary<string, string?>
                         {
                             ["Recaptcha:SiteKey"] = "test-site-key",
-                            ["Recaptcha:ProjectId"] = "test-project"
+                            ["Recaptcha:ProjectId"] = "test-project",
+                            ["GoogleMaps:EmbedApiKey"] = "test-map-key"
                         }));
                 builder.ConfigureServices(services =>
                 {
@@ -1675,6 +1676,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://googleads.g.doubleclick.net", policy, StringComparison.Ordinal);
+        Assert.Contains("'wasm-unsafe-eval'", policy, StringComparison.Ordinal);
+        Assert.Contains("https://storage.googleapis.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://cloudflareinsights.com", policy, StringComparison.Ordinal);
+        Assert.Contains("https://www.recaptcha.net", policy, StringComparison.Ordinal);
         Assert.Contains("https://*.google-analytics.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://*.analytics.google.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://*.googletagmanager.com", policy, StringComparison.Ordinal);
@@ -2541,8 +2546,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "Email confirmation", "We could not confirm your email", "Request a new confirmation email or contact support.", "The confirmation link is invalid or expired.", "Back to sign in")]
-    [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "ขออีเมลยืนยันใหม่หรือติดต่อฝ่ายช่วยเหลือ", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
+    [InlineData("en", "Email confirmation", "We could not confirm your email", "Please review the details below or request a new confirmation email.", "The confirmation link is invalid or expired.", "Back to sign in")]
+    [InlineData("th", "ยืนยันอีเมล", "ไม่สามารถยืนยันอีเมลได้", "โปรดตรวจสอบรายละเอียดด้านล่างหรือขออีเมลยืนยันใหม่", "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว", "กลับไปหน้าเข้าสู่ระบบ")]
     public async Task EmailConfirmation_InvalidChallengeRendersLocalizedSafeStaticSsrResult(
         string culture,
         string eyebrow,
@@ -2654,7 +2659,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"password\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"RememberMe\" value=\"true\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"RememberMe\" type=\"hidden\" value=\"false\"", source, StringComparison.Ordinal);
+        Assert.Contains("type=\"hidden\" name=\"RememberMe\" value=\"false\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -2763,9 +2768,23 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("ClientSecret", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ContactPage_UsesConfiguredPlaceEmbedWithLazyAccessibleIframe()
+    {
+        var source = await client.GetStringAsync("/contact?culture=en");
+        var expectedUrl = "https://www.google.com/maps/embed/v1/place?q=place_id:ChIJZ9VSFP2F4jARdmoz755rwQU&amp;key=test-map-key";
+
+        Assert.Contains(expectedUrl, source, StringComparison.Ordinal);
+        Assert.Contains("title=\"Map showing the MALIEV workshop\"", source, StringComparison.Ordinal);
+        Assert.Contains("loading=\"lazy\"", source, StringComparison.Ordinal);
+        Assert.Contains("allowfullscreen", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("maps.google.com", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
-    [InlineData("en", "Contact", "Let’s build something useful.", "Send an enquiry", "First name", "Submit enquiry")]
-    [InlineData("th", "Contact", "Let’s build something useful.", "Send an enquiry", "ชื่อ", "Submit enquiry")]
+    [InlineData("en", "Talk to our team", "How can we help?", "Send us a message", "First name", "Submit")]
+    [InlineData("th", "พูดคุยกับทีมงาน", "เราช่วยอะไรคุณได้บ้าง?", "ส่งข้อความถึงเรา", "ชื่อ", "ส่งข้อความ")]
     public async Task ContactPage_RendersLocalizedStaticSsrFieldsInsideRazorPostBoundary(
         string culture,
         string eyebrow,
@@ -2787,8 +2806,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("action=\"/Contact?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains(submitLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains($"action=\"/Contact?handler=SubmitRequest&amp;culture={culture}\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"FirstName\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
@@ -2821,7 +2840,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"contact-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error contact-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
         Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
@@ -2839,8 +2858,33 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.Contains("100 MB", source, StringComparison.Ordinal);
+        Assert.Contains("What helps us quote accurately", source, StringComparison.Ordinal);
+        Assert.Contains("Preparing your files", source, StringComparison.Ordinal);
+        Assert.Contains("manufacturing@maliev.com", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://wetransfer.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Legal/NonDisclosureAgreement\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("AIza", source, StringComparison.Ordinal);
         Assert.DoesNotContain("PayPal", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "/quotation/3d-printing", "I want: 3d-printing")]
+    [InlineData("th", "/quotation/3d-printing", "สินค้าที่ต้องการ: 3d-printing")]
+    [InlineData("en", "/quotation/3d-printing/sls", "Please use: sls")]
+    [InlineData("th", "/quotation/3d-printing/sls", "ระบบเทคโนโลยี: sls")]
+    [InlineData("en", "/quotation/3d-printing/sls/pa12", "Material: pa12")]
+    [InlineData("th", "/quotation/3d-printing/sls/pa12", "วัสดุ: pa12")]
+    public async Task QuotationPage_OptionalLegacySegmentsFeedTheLocalizedPrefill(
+        string culture,
+        string route,
+        string expectedPrefill)
+    {
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(expectedPrefill, source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -2861,7 +2905,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("action=\"/Quotation?handler=SubmitRequest\"", source, StringComparison.Ordinal);
+        Assert.Contains(
+            $"action=\"/Quotation?handler=SubmitRequest&amp;culture={culture}\"",
+            source,
+            StringComparison.Ordinal);
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"SubmissionId\"", source, StringComparison.Ordinal);
@@ -2875,6 +2922,121 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QuotationPage_AuthenticatedCustomerRendersTrustedProfileInsteadOfEditableIdentity()
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync("/quotation?culture=en");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-authenticated-customer=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("Ada Lovelace", source, StringComparison.Ordinal);
+        Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
+        Assert.Contains("Thailand", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"FirstName\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Email\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuotationPage_NormalBrowserPostPreservesEnglishCulture()
+    {
+        var source = await client.GetStringAsync("/quotation?culture=en");
+        var actionMatch = Regex.Match(
+            source,
+            "<form[^>]*action=\"([^\"]+)\"[^>]*id=\"quotation-form\"|<form[^>]*id=\"quotation-form\"[^>]*action=\"([^\"]+)\"",
+            RegexOptions.CultureInvariant);
+        Assert.True(actionMatch.Success, "The quotation form must publish its browser POST action.");
+        var action = WebUtility.HtmlDecode(
+            actionMatch.Groups[1].Success ? actionMatch.Groups[1].Value : actionMatch.Groups[2].Value);
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=en");
+        form["SubmissionId"] = Guid.NewGuid().ToString();
+        form["ServiceContext"] = "custom_manufacturing";
+        form["FirstName"] = "Mali";
+        form["LastName"] = "Ev";
+        form["Email"] = "not-an-email";
+        form["Country"] = "Thailand";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(action, new FormUrlEncodedContent(form));
+        var responseSource = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<html lang=\"en\">", responseSource, StringComparison.Ordinal);
+        Assert.Contains(">First name<", WebUtility.HtmlDecode(responseSource), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuotationPost_AuthenticatedCustomerIgnoresForgedBrowserIdentity()
+    {
+        await SignInAsync();
+        var quotation = Assert.IsType<StubQuotationClient>(
+            configuredFactory.Services.GetRequiredService<IQuotationClient>());
+        quotation.LastSubmission = null;
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=en");
+        form["SubmissionId"] = Guid.Parse("11111111-2222-3333-4444-555555555555").ToString();
+        form["ServiceContext"] = "custom_manufacturing";
+        form["FirstName"] = "Mallory";
+        form["LastName"] = "Attacker";
+        form["Email"] = "attacker@example.com";
+        form["Phone"] = "+66-forged";
+        form["Company"] = "Forged Company";
+        form["TaxNumber"] = "forged-tax";
+        form["Country"] = "Forged Country";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/quotation?handler=SubmitRequest&culture=en",
+            new FormUrlEncodedContent(form));
+
+        var responseSource = await response.Content.ReadAsStringAsync();
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected the trusted authenticated quotation to persist, but received {response.StatusCode}: {responseSource}");
+        Assert.Equal("/Quotation?culture=en", response.Headers.Location?.OriginalString);
+        var submission = Assert.IsType<QuotationRequestSubmission>(quotation.LastSubmission);
+        Assert.Equal("Ada", submission.FirstName);
+        Assert.Equal("Lovelace", submission.LastName);
+        Assert.Equal("customer@example.com", submission.Email);
+        Assert.Equal("Thailand", submission.Country);
+        Assert.NotEqual("Forged Company", submission.CompanyName);
+        Assert.NotEqual("forged-tax", submission.TaxIdentification);
+    }
+
+    [Fact]
+    public async Task QuotationPost_AuthenticatedCustomerWithUnavailableProfileFailsClosedWithoutPersistence()
+    {
+        await SignInAsync();
+        var account = Assert.IsType<StubCustomerAccountClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+        account.ProfileGetResultOverride = new CustomerAccountProfileResult(null, false, false);
+        var quotation = Assert.IsType<StubQuotationClient>(
+            configuredFactory.Services.GetRequiredService<IQuotationClient>());
+        quotation.LastSubmission = null;
+        var form = await GetAntiforgeryFormAsync("/quotation?culture=th");
+        form["SubmissionId"] = Guid.NewGuid().ToString();
+        form["ServiceContext"] = "custom_manufacturing";
+        form["FirstName"] = "Mallory";
+        form["LastName"] = "Attacker";
+        form["Email"] = "attacker@example.com";
+        form["Country"] = "Forged Country";
+        form["Message"] = "Please quote these parts";
+        form["g-recaptcha-response"] = "browser-token";
+
+        using var response = await client.PostAsync(
+            "/quotation?handler=SubmitRequest&culture=th",
+            new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(quotation.LastSubmission);
+        Assert.Contains("ไม่สามารถโหลดข้อมูลลูกค้าของคุณได้", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("We could not retrieve your customer profile", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2897,7 +3059,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"not-an-email\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"Email-error\"", source, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"Email-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"Email-error quotation-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
         Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
@@ -2916,7 +3078,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(22, routes.Length);
+        Assert.Equal(26, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
@@ -3078,11 +3240,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     private sealed class StubQuotationClient : IQuotationClient
     {
+        public QuotationRequestSubmission? LastSubmission { get; set; }
+
         public Task<QuotationRequestResult> CreateRequestAsync(
             QuotationRequestSubmission submission,
             string idempotencyKey,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new QuotationRequestResult(1, true, true));
+            CancellationToken cancellationToken)
+        {
+            LastSubmission = submission;
+            return Task.FromResult(new QuotationRequestResult(1, true, true));
+        }
     }
 
     private sealed class StubQuotationFileClient : IQuotationFileClient

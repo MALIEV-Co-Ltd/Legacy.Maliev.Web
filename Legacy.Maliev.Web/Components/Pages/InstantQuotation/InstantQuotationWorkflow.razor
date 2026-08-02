@@ -236,6 +236,13 @@
             <div class="instant-quote__configuration-footer">
                 <dl data-workflow-order-summary data-workflow-order-total aria-live="polite" aria-atomic="true">
                     <div class="instant-quote__summary-detail"><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
+                    @if (OrderQuote is { MinimumOrderSurcharge: > 0 } orderQuote)
+                    {
+                        <div data-workflow-minimum-order-surcharge>
+                            <dt>@Localizer["Minimum order surcharge"] (@Localizer["minimum"] @Money(orderQuote.MinimumOrderPrice))</dt>
+                            <dd>@Money(orderQuote.MinimumOrderSurcharge)</dd>
+                        </div>
+                    }
                     <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
                     <div class="instant-quote__summary-detail"><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
                     <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
@@ -244,6 +251,23 @@
                         <dd>@LeadTime</dd>
                     </div>
                 </dl>
+
+                @if (PriceNeedsEngineeringReview)
+                {
+                    <p data-price-confidence class="instant-quote__price-confidence instant-quote__price-confidence--review" role="status">
+                        <span aria-hidden="true">!</span>
+                        @(AllPartsNeedEngineeringReview
+                            ? Localizer["Needs engineer review — the model is not watertight, so this price is an approximation."]
+                            : Localizer["Needs engineer review — some parts are not watertight, so part of this price is an approximation."])
+                    </p>
+                }
+                else if (OrderQuote is not null)
+                {
+                    <p data-price-confidence class="instant-quote__price-confidence instant-quote__price-confidence--firm" role="status">
+                        <span aria-hidden="true">✓</span>
+                        @Localizer["Firm price — calculated from measured volume."]
+                    </p>
+                }
 
                 <div class="instant-quote__configuration-actions">
                     <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>

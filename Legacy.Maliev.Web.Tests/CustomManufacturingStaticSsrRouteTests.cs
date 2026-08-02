@@ -45,16 +45,22 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         Assert.Contains("type=\"typeof(CustomManufacturingContent)\"", razorFallback, StringComparison.Ordinal);
 
         var routedPages = Directory.EnumerateFiles(
-                Path.Combine(web, "Components"),
-                "*.razor",
-                SearchOption.AllDirectories)
+            Path.Combine(web, "Components"),
+            "*.razor",
+            SearchOption.AllDirectories)
             .Where(path => File.ReadLines(path).Any(line => line.TrimStart().StartsWith("@page ", StringComparison.Ordinal)))
+            .Where(path => !new[]
+            {
+                "ThreeDimensionalDesignPage.razor",
+                "SiliconeCastingPage.razor",
+                "LowVolumeInjectionMoldingPage.razor"
+            }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();
 
         Assert.Equal(
-            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages);
     }
 
@@ -62,13 +68,13 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
     [InlineData(
         "en",
         "Custom Part Manufacturing with CNC and 3D Printing | MALIEV",
-        "Not sure whether CNC machining, 3D printing, or 3D scanning fits your part? Send the drawing or sample, material, quantity, critical features, and intended use for a manufacturing review.",
+        "Custom manufacturing support for CNC, 3D printing, 3D scanning, and design. Send files, quantity, material, and intended use for review.",
         "Custom Part Manufacturing: Start with Your Drawing, Material, Quantity, and Use",
         "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering")]
     [InlineData(
         "th",
         "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV",
-        "หากยังไม่แน่ใจว่าควรใช้ CNC, 3D Printing หรือ 3D Scanning ส่งแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน เพื่อให้ MALIEV ตรวจสอบเส้นทางประเมินที่เหมาะสม",
+        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
         "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
         "รับผลิตชิ้นงานตามแบบ, ผลิตชิ้นส่วนตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(

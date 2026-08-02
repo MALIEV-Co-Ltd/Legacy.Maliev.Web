@@ -59,7 +59,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["address"] = CreateAddress(),
         ["contactPoint"] = new[]
         {
-            CreateContactPoint("+66818030404", "customer service", "info@maliev.com", includeEmail: true),
+            CreateContactPoint("+66898950690", "customer service", "info@maliev.com", includeEmail: true),
             CreateContactPoint("+66898950690", "sales", "manufacturing@maliev.com", includeEmail: true)
         },
         ["sameAs"] = SocialLinks,
@@ -76,7 +76,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["logo"] = "https://www.maliev.com/src/images/navbar_logo_black.png",
         ["url"] = "https://www.maliev.com",
         ["hasMap"] = SocialNetworks.GoogleMaps,
-        ["telephone"] = "+66818030404",
+        ["telephone"] = "+66898950690",
         ["priceRange"] = "$$",
         ["address"] = CreateAddress(),
         ["geo"] = new Dictionary<string, object>
@@ -96,7 +96,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
             }
         },
         ["sameAs"] = SocialLinks,
-        ["contactPoint"] = CreateContactPoint("+66818030404", "customer service", string.Empty, includeEmail: false),
+        ["contactPoint"] = CreateContactPoint("+66898950690", "customer service", string.Empty, includeEmail: false),
         ["description"] = isThai
             ? "บริการรับผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์ 3 มิติ งานสแกน 3 มิติ และ Reverse Engineering จากปากเกร็ด นนทบุรี พร้อมประเมินโครงการออนไลน์"
             : "Custom part manufacturing, CNC machining, 3D printing, 3D scanning, and reverse-engineering services from Pak Kret, Nonthaburi, with online project review.",

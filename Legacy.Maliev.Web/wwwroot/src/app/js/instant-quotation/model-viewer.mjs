@@ -60,6 +60,32 @@ export function validateStandaloneGltfDocument(source) {
   return document;
 }
 
+/**
+ * Normalizes preview geometry before it is displayed or measured.
+ * Indexed meshes (notably 3MF) share vertices between faces; expanding them
+ * before normal generation keeps their faceting consistent with STL/OBJ/CAD
+ * triangle-soup previews. Flat shading is intentional: this surface explains
+ * the tessellation being priced, rather than smoothing it into a misleading blob.
+ */
+export function ensurePreviewGeometryNormals(object) {
+  object?.traverse?.(child => {
+    if (!child.isMesh || !child.geometry) return;
+    const indexed = child.geometry.getIndex?.();
+    if (indexed && typeof child.geometry.toNonIndexed === 'function') {
+      const previousGeometry = child.geometry;
+      child.geometry = previousGeometry.toNonIndexed();
+      previousGeometry.dispose?.();
+    }
+    child.geometry.computeVertexNormals?.();
+    for (const material of asArray(child.material)) {
+      if (!material) continue;
+      material.flatShading = true;
+      material.needsUpdate = true;
+    }
+  });
+  return object;
+}
+
 export function createCanvasResizeController({ renderer, camera, canvas, devicePixelRatio }) {
   let previousWidth = null;
   let previousHeight = null;
@@ -335,20 +361,25 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   const extension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
   const buffer = await file.arrayBuffer();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
+  let object;
   if (extension === 'stl') {
     const geometry = new STLLoader().parse(buffer);
-    return new THREE.Mesh(geometry, defaultMaterial());
-  }
-  if (extension === 'obj') return new OBJLoader().parse(new TextDecoder().decode(buffer));
-  if (extension === '3mf') return new ThreeMFLoader().parse(buffer);
-  if (extension === 'glb' || extension === 'gltf') {
+    object = new THREE.Mesh(geometry, defaultMaterial());
+  } else if (extension === 'obj') {
+    object = new OBJLoader().parse(new TextDecoder().decode(buffer));
+  } else if (extension === '3mf') {
+    object = new ThreeMFLoader().parse(buffer);
+  } else if (extension === 'glb' || extension === 'gltf') {
     const input = extension === 'gltf' ? new TextDecoder().decode(buffer) : buffer;
     if (extension === 'gltf') validateStandaloneGltfDocument(input);
     const result = await new GLTFLoader().parseAsync(input, '');
-    return orientGltfForPrinting(result.scene);
+    object = orientGltfForPrinting(result.scene);
+  } else if (['stp', 'step', 'igs', 'iges'].includes(extension)) {
+    object = await loadCadModel(buffer, extension, signal);
+  } else {
+    throw new TypeError('Unsupported standalone model file.');
   }
-  if (['stp', 'step', 'igs', 'iges'].includes(extension)) return loadCadModel(buffer, extension, signal);
-  throw new TypeError('Unsupported standalone model file.');
+  return ensurePreviewGeometryNormals(object);
 }
 
 async function loadCadModel(buffer, extension, signal) {
@@ -401,7 +432,7 @@ function frameObject(object, camera, controls) {
 }
 
 function defaultMaterial() {
-  return new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.64, metalness: 0.04 });
+  return new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.64, metalness: 0.04, flatShading: true });
 }
 
 function disposeObject(object) {

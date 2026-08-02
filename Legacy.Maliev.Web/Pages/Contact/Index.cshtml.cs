@@ -16,6 +16,8 @@ public sealed class Index(
     INotificationClient notificationClient,
     IAntiBotVerifier antiBotVerifier,
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
+    IOptions<GoogleMapsOptions> googleMapsOptions,
+    IContactTrustedCustomerLoader trustedCustomerLoader,
     ILogger<Index> logger) : PageModel
 {
     private const string RecaptchaAction = "submit";
@@ -61,6 +63,12 @@ public sealed class Index(
 
     public string RecaptchaSiteKey => recaptchaOptions.Value.SiteKey;
 
+    public string Culture => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "th" ? "th" : "en";
+
+    public ContactMapDisplayModel Map => ContactMapDisplayModel.Create(googleMapsOptions);
+
+    public bool IsAuthenticatedCustomer { get; private set; }
+
     public bool CountryServiceAvailable { get; private set; } = true;
 
     public ContactFormDisplayModel DisplayModel => new(
@@ -73,6 +81,7 @@ public sealed class Index(
         Message,
         RecaptchaToken,
         RecaptchaSiteKey,
+        IsAuthenticatedCustomer,
         CountryServiceAvailable,
         Countries.Select(country => new ContactCountryOption(country.Name)).ToArray(),
         ModelState
@@ -92,12 +101,14 @@ public sealed class Index(
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
+        await LoadTrustedCustomerAsync(cancellationToken);
         return Page();
     }
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
+        await LoadTrustedCustomerAsync(cancellationToken);
         if (!ModelState.IsValid)
         {
             return Page();
@@ -141,7 +152,7 @@ public sealed class Index(
         Notification = notificationsSent
             ? $"Thank you for contacting us. Your reference number is #{referenceNumber}."
             : $"Contact request #{referenceNumber} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference.";
-        return RedirectToPage("Index");
+        return RedirectToPage("Index", new { culture = Culture });
     }
 
     private async Task<bool> SendNotificationsAsync(
@@ -191,6 +202,46 @@ public sealed class Index(
         if (!result.ServiceAvailable)
         {
             ModelState.AddModelError(string.Empty, "Could not retrieve countries from the server.");
+        }
+    }
+
+    private async Task LoadTrustedCustomerAsync(CancellationToken cancellationToken)
+    {
+        var result = await trustedCustomerLoader.LoadAsync(HttpContext, Countries, cancellationToken);
+        IsAuthenticatedCustomer = result.IsAuthenticated;
+        if (!result.IsAuthenticated)
+        {
+            return;
+        }
+
+        foreach (var field in new[] { nameof(Company), nameof(Country), nameof(Email), nameof(FirstName), nameof(LastName), nameof(Phone) })
+        {
+            ModelState.Remove(field);
+        }
+
+        if (result.Customer is null)
+        {
+            ModelState.AddModelError(string.Empty, "Could not retrieve your customer profile. Please update your profile or contact us directly.");
+            return;
+        }
+
+        FirstName = result.Customer.FirstName;
+        LastName = result.Customer.LastName;
+        Email = result.Customer.Email;
+        Phone = result.Customer.Phone;
+        Company = result.Customer.Company;
+        Country = result.Customer.Country;
+        AddRequiredTrustedValue(nameof(FirstName), FirstName, "Please enter your first name");
+        AddRequiredTrustedValue(nameof(LastName), LastName, "Please enter your last name");
+        AddRequiredTrustedValue(nameof(Email), Email, "Email address is required");
+        AddRequiredTrustedValue(nameof(Country), Country, "Please select your country");
+    }
+
+    private void AddRequiredTrustedValue(string field, string? value, string error)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            ModelState.AddModelError(field, error);
         }
     }
 
