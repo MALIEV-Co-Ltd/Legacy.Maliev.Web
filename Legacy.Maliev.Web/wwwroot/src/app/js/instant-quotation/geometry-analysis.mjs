@@ -91,10 +91,9 @@ export function analyzeUploadDerivedGeometry(object3D) {
     volumeMethod = 'half-bounding-box-fallback';
   }
 
-  const minimumDimension = Math.min(dimensionXmm, dimensionYmm, dimensionZmm);
   const maximumDimension = Math.max(dimensionXmm, dimensionYmm, dimensionZmm);
-  const oddlySmall = minimumDimension > 0
-    && minimumDimension < geometryAnalysisLimits.minimumDimensionMm;
+  const oddlySmall = maximumDimension > 0
+    && maximumDimension < geometryAnalysisLimits.minimumDimensionMm;
   const oddlyLarge = maximumDimension > geometryAnalysisLimits.maximumDimensionMm;
 
   return {
@@ -295,6 +294,11 @@ function analyzeMeshQuality(triangles, diagonal) {
 
 function minimumThickness(profiles, dimensionXmm, dimensionYmm, dimensionZmm) {
   let minimum = null;
+  const boundingThickness = Math.min(
+    dimensionXmm || Infinity,
+    dimensionYmm || Infinity,
+    dimensionZmm || Infinity);
+  const finiteBoundingThickness = Number.isFinite(boundingThickness) ? boundingThickness : 0;
   if (profiles) {
     for (let index = 0; index < profiles.area.length; index += 1) {
       if (profiles.perimeter[index] > 1e-6 && profiles.area[index] > 0) {
@@ -303,12 +307,8 @@ function minimumThickness(profiles, dimensionXmm, dimensionYmm, dimensionZmm) {
       }
     }
   }
-  if (minimum !== null) return minimum;
-  const fallback = Math.min(
-    dimensionXmm || Infinity,
-    dimensionYmm || Infinity,
-    dimensionZmm || Infinity);
-  return Number.isFinite(fallback) ? fallback : 0;
+  if (minimum === null) return finiteBoundingThickness;
+  return finiteBoundingThickness > 0 ? Math.min(minimum, finiteBoundingThickness) : minimum;
 }
 
 function dfmCodes(quality, oddlySmall, oddlyLarge) {

@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Legacy.Maliev.Web.Application.Pricing
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
 <section class="instant-quote__workflow"
@@ -95,7 +96,9 @@
             }
             @foreach (var part in Parts)
             {
+                var partNumber = PartNumber(part.PartId);
                 <article data-workflow-part data-part-id="@part.PartId">
+                    <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4>@part.DisplayFileName</h4>
                     <button type="button"
                             aria-label="@Localizer["View {0}", part.DisplayFileName]"
@@ -123,7 +126,8 @@
                 @foreach (var part in ConfigurationParts)
                 {
                     var geometry = part.Geometry;
-                    var oddlySmall = Math.Min(geometry.DimensionXmm, Math.Min(geometry.DimensionYmm, geometry.DimensionZmm)) is > 0 and < 3;
+                    var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
+                    var oddlySmall = maximumDimension is > 0 and < 3;
                     var oddlyLarge = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm)) > 350;
                     var hasWarning = !geometry.TopologyChecked
                         || geometry.NonWatertight
@@ -179,8 +183,9 @@
 
             @foreach (var part in ConfigurationParts)
             {
+                var partNumber = PartNumber(part.PartId);
                 <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
-                    <legend>@part.DisplayFileName — @Localizer["Settings"]</legend>
+                    <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
                     <label for="material-@part.PartId">@Localizer["Material"]</label>
                     <select id="material-@part.PartId"
                             name="material"
@@ -209,7 +214,53 @@
                            max="1000"
                            value="@part.Configuration.Quantity"
                            @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
+                    <fieldset data-workflow-build-preference>
+                        <legend>@Localizer["Build preference"]</legend>
+                        <label>
+                            <input type="radio"
+                                   name="build-preference-@part.PartId"
+                                   value="quality"
+                                   checked="@(part.Configuration.BuildPreference is BuildPreference.Quality)"
+                                   @onchange="() => ChangeBuildPreferenceAsync(part.PartId, BuildPreference.Quality)" />
+                            <strong>@Localizer["Quality"]</strong>
+                            <span>@Localizer["0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill"]</span>
+                        </label>
+                        <label>
+                            <input type="radio"
+                                   name="build-preference-@part.PartId"
+                                   value="standard"
+                                   checked="@(part.Configuration.BuildPreference is BuildPreference.Standard)"
+                                   @onchange="() => ChangeBuildPreferenceAsync(part.PartId, BuildPreference.Standard)" />
+                            <strong>@Localizer["Standard"]</strong>
+                            <span>@Localizer["0.20 mm layers, 3 walls, 15% sparse infill"]</span>
+                        </label>
+                        <label>
+                            <input type="radio"
+                                   name="build-preference-@part.PartId"
+                                   value="strength"
+                                   checked="@(part.Configuration.BuildPreference is BuildPreference.Strength)"
+                                   @onchange="() => ChangeBuildPreferenceAsync(part.PartId, BuildPreference.Strength)" />
+                            <strong>@Localizer["Strength"]</strong>
+                            <span>@Localizer["6 walls, 2 mm top and bottom shells, denser sparse infill"]</span>
+                        </label>
+                    </fieldset>
                 </fieldset>
+
+                @if (part.Quote is not null)
+                {
+                    <details data-workflow-material-comparison>
+                        <summary>@Localizer["Compare material prices"]</summary>
+                        <ul>
+                            @foreach (var materialPrice in part.Quote.MaterialPrices)
+                            {
+                                <li data-workflow-material-price="@materialPrice.MaterialKey">
+                                    <span>@Localizer[MaterialDisplayName(materialPrice.MaterialKey)]</span>
+                                    <strong>@Money(materialPrice.UnitPrice) @Localizer["per piece"]</strong>
+                                </li>
+                            }
+                        </ul>
+                    </details>
+                }
 
                 <dl data-workflow-part-price data-workflow-part-pricing>
                     <div>

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
@@ -49,6 +50,23 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.Equal(created.SubmissionId, found.SubmissionId);
         Assert.True(removed);
         Assert.Null(await fixture.Store.GetAsync(created.SessionId, "customer-42", default));
+    }
+
+    [Fact]
+    public async Task CreateGet_BuildPreference_PersistsPerPartInProtectedCache()
+    {
+        var fixture = CreateFixture();
+        var state = new InstantQuotationOrderState(
+            [Part(
+                "PLA",
+                Enumerable.Repeat(500.0, 64).ToArray(),
+                Enumerable.Repeat(80.0, 64).ToArray(),
+                BuildPreference.Strength)]);
+
+        var created = await fixture.Store.CreateAsync("customer-42", state, default);
+        var found = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
+
+        Assert.Equal(BuildPreference.Strength, found!.Parts.Single().Configuration.BuildPreference);
     }
 
     [Fact]
@@ -230,7 +248,11 @@ public sealed class InstantQuotationSessionStoreTests
         ]);
     }
 
-    private static InstantQuotationPart Part(string materialKey, double[] areas, double[] perimeters)
+    private static InstantQuotationPart Part(
+        string materialKey,
+        double[] areas,
+        double[] perimeters,
+        BuildPreference buildPreference = BuildPreference.Standard)
     {
         var claim = new InstantQuotationGeometryClaim(
             1,
@@ -257,7 +279,7 @@ public sealed class InstantQuotationSessionStoreTests
             "part.stl",
             upload.UploadReference!,
             AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
-            new InstantQuotationPartConfiguration(materialKey, "Black", 1));
+            new InstantQuotationPartConfiguration(materialKey, "Black", 1, buildPreference));
     }
 
     private sealed record Fixture(

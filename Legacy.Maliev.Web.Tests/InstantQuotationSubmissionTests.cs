@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -40,11 +41,13 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Contains("Orders", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("1 - bracket.stl", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Material: ABS", call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains("Build: Strength (6 walls, 2 mm shells, denser infill)", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Quantity: 2 piece(s)", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains(
-            "Geometry warning: Non-watertight mesh; Non-manifold edges; Multi-body mesh (2 bodies); Dimension below 3 mm",
+            "Geometry warning: Non-watertight mesh; Non-manifold edges; Multi-body mesh (2 bodies)",
             call.Submission.Message,
             StringComparison.Ordinal);
+        Assert.DoesNotContain("Dimension below 3 mm", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Total price:", call.Submission.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(UploadFileIdText, call.Submission.Message, StringComparison.Ordinal);
         Assert.Equal([UploadFileIdText], upload.UploadReferences.Select(item => item.Value));
@@ -728,7 +731,7 @@ public sealed class InstantQuotationSubmissionTests
             false,
             false,
             0.8),
-        new InstantQuotationPartConfiguration("ABS", "Black", quantity));
+        new InstantQuotationPartConfiguration("ABS", "Black", quantity, BuildPreference.Strength));
 
     private static InstantQuotationPart PartWithDfm(int quantity = 1) => new(
         Guid.Parse("11111111-2222-3333-4444-555555555555"),
@@ -750,7 +753,7 @@ public sealed class InstantQuotationSubmissionTests
             true,
             true,
             0.5),
-        new InstantQuotationPartConfiguration("ABS", "Black", quantity));
+        new InstantQuotationPartConfiguration("ABS", "Black", quantity, BuildPreference.Strength));
 
     private static InstantQuotationFinalizationResult SuccessfulFinalization() =>
         InstantQuotationFinalizationResult.Succeeded(

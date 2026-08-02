@@ -288,6 +288,45 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         int quantity,
         CancellationToken cancellationToken)
     {
+        await UpdateConfigurationCoreAsync(
+            partId,
+            materialKey,
+            color,
+            quantity,
+            null,
+            cancellationToken);
+    }
+
+    public async Task UpdateConfigurationAsync(
+        Guid partId,
+        string materialKey,
+        string color,
+        int quantity,
+        BuildPreference buildPreference,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.IsDefined(buildPreference))
+        {
+            throw new ArgumentOutOfRangeException(nameof(buildPreference));
+        }
+
+        await UpdateConfigurationCoreAsync(
+            partId,
+            materialKey,
+            color,
+            quantity,
+            buildPreference,
+            cancellationToken);
+    }
+
+    private async Task UpdateConfigurationCoreAsync(
+        Guid partId,
+        string materialKey,
+        string color,
+        int quantity,
+        BuildPreference? buildPreference,
+        CancellationToken cancellationToken)
+    {
         ThrowIfDisposed();
         EnsureInitialized();
         var material = PricingCatalog.ResolveMaterial(materialKey)
@@ -310,7 +349,11 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             var previous = entry.Part!;
             entry.Part = previous with
             {
-                Configuration = new InstantQuotationPartConfiguration(material.Key, color, quantity),
+                Configuration = new InstantQuotationPartConfiguration(
+                    material.Key,
+                    color,
+                    quantity,
+                    buildPreference ?? previous.Configuration.BuildPreference),
             };
             entry.HasConfigured = true;
             await PersistAndPriceAsync(cancellationToken);

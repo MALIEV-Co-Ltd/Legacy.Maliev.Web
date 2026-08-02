@@ -270,7 +270,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
 public sealed record InstantQuotationPartConfiguration(
     string MaterialKey,
     string Color,
-    int Quantity);
+    int Quantity,
+    BuildPreference BuildPreference = BuildPreference.Standard);
 
 public sealed record InstantQuotationPart(
     Guid PartId,
@@ -278,6 +279,10 @@ public sealed record InstantQuotationPart(
     InstantQuotationUploadReference UploadReference,
     AuthoritativeInstantQuotationGeometry Geometry,
     InstantQuotationPartConfiguration Configuration);
+
+public sealed record InstantQuotationMaterialPrice(
+    string MaterialKey,
+    double UnitPrice);
 
 public sealed record InstantQuotationPartQuote(
     Guid PartId,
@@ -291,7 +296,9 @@ public sealed record InstantQuotationPartQuote(
     double BoundingCm3PerUnit,
     double UnitPrice,
     double Subtotal,
-    IReadOnlyList<BulkTier> Tiers);
+    IReadOnlyList<BulkTier> Tiers,
+    BuildPreference BuildPreference,
+    IReadOnlyList<InstantQuotationMaterialPrice> MaterialPrices);
 
 public sealed record InstantQuotationOrderQuote(
     IReadOnlyList<InstantQuotationPartQuote> Parts,

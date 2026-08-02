@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -552,6 +553,37 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal(2, pricing.QuoteCalls);
         Assert.Equal(updated.PartId, Assert.Single(store.LastSavedState!.Parts).PartId);
         Assert.Equal("PETG", Assert.Single(store.LastSavedState.Parts).Configuration.MaterialKey);
+    }
+
+    [Fact]
+    public async Task BuildPreferenceChange_PersistsOnlySelectedPartAndRecomputesAuthoritativeQuote()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        await using var workflow = CreateWorkflow(client: client, store: store, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("part.stl", "opaque", Geometry());
+        await uploading;
+        var part = Assert.Single(workflow.Parts);
+
+        await workflow.UpdateConfigurationAsync(
+            part.PartId,
+            part.Configuration.MaterialKey,
+            part.Configuration.Color,
+            part.Configuration.Quantity,
+            BuildPreference.Quality,
+            default);
+
+        var updated = Assert.Single(workflow.Parts);
+        Assert.Equal(BuildPreference.Quality, updated.Configuration.BuildPreference);
+        Assert.Equal("PLA", updated.Configuration.MaterialKey);
+        Assert.Equal("Black", updated.Configuration.Color);
+        Assert.Equal(1, updated.Configuration.Quantity);
+        Assert.Equal(2, pricing.QuoteCalls);
+        Assert.Equal(BuildPreference.Quality, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
     }
 
     [Fact]

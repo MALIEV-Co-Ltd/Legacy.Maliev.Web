@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { patchThreeMfLoader } from './three-mf-loader-patch.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(root, 'wwwroot', 'dist');
@@ -16,6 +17,16 @@ const common = {
   minify: true,
   sourcemap: false,
   target: ['es2022'],
+};
+
+const threeMfLoaderPatchPlugin = {
+  name: 'maliev-three-mf-external-components',
+  setup(assetBuild) {
+    assetBuild.onLoad({ filter: /[\\/]3MFLoader\.js$/ }, async args => ({
+      contents: patchThreeMfLoader(await readFile(args.path, 'utf8')),
+      loader: 'js',
+    }));
+  },
 };
 
 await build({
@@ -41,6 +52,7 @@ await build({
   outfile: instantQuotationViewer,
   platform: 'browser',
   format: 'esm',
+  plugins: [threeMfLoaderPatchPlugin],
 });
 
 const viewerSource = await readFile(instantQuotationViewer, 'utf8');

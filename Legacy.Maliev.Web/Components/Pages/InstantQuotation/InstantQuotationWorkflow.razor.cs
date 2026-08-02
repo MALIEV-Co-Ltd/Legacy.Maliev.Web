@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
@@ -546,6 +547,35 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
         return UpdateConfigurationAsync(part, part.Configuration.MaterialKey, part.Configuration.Color, quantity);
     }
+
+    private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
+    {
+        var part = Parts.Single(item => item.PartId == partId);
+        return workflow?.UpdateConfigurationAsync(
+            part.PartId,
+            part.Configuration.MaterialKey,
+            part.Configuration.Color,
+            part.Configuration.Quantity,
+            buildPreference,
+            default) ?? Task.CompletedTask;
+    }
+
+    private int PartNumber(Guid partId)
+    {
+        for (var index = 0; index < Parts.Count; index++)
+        {
+            if (Parts[index].PartId == partId)
+            {
+                return index + 1;
+            }
+        }
+
+        return 0;
+    }
+
+    private string MaterialDisplayName(string materialKey) => Materials
+        .SingleOrDefault(item => string.Equals(item.Key, materialKey, StringComparison.Ordinal))?.DisplayName
+        ?? materialKey;
 
     private Task UpdateConfigurationAsync(
         InstantQuotationWorkflowPartViewModel part,

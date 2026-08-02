@@ -13,6 +13,13 @@ public enum FdmFlowClass
     Flexible,
 }
 
+public enum BuildPreference
+{
+    Standard = 0,
+    Quality,
+    Strength,
+}
+
 public sealed class MaterialInfo
 {
     public required string Key { get; init; }

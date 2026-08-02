@@ -441,4 +441,14 @@
   <data name="Needs engineer review — some parts are not watertight, so part of this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — ชิ้นงานบางส่วนไม่ปิดสนิท ราคาบางส่วนจึงเป็นการประมาณ</value></data>
   <data name="Minimum order surcharge" xml:space="preserve"><value>ค่าธรรมเนียมยอดสั่งซื้อขั้นต่ำ</value></data>
   <data name="minimum" xml:space="preserve"><value>ขั้นต่ำ</value></data>
+  <data name="Build preference" xml:space="preserve"><value>รูปแบบการพิมพ์</value></data>
+  <data name="Quality" xml:space="preserve"><value>เน้นคุณภาพผิว</value></data>
+  <data name="Standard" xml:space="preserve"><value>มาตรฐาน</value></data>
+  <data name="Strength" xml:space="preserve"><value>เน้นความแข็งแรง</value></data>
+  <data name="0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill" xml:space="preserve"><value>ชั้นพิมพ์ 0.12 มม. ลดความเร็วและความเร่ง ใช้อินฟิลล์แบบ Gyroid</value></data>
+  <data name="0.20 mm layers, 3 walls, 15% sparse infill" xml:space="preserve"><value>ชั้นพิมพ์ 0.20 มม. ผนัง 3 ชั้น อินฟิลล์ 15%</value></data>
+  <data name="6 walls, 2 mm top and bottom shells, denser sparse infill" xml:space="preserve"><value>ผนัง 6 ชั้น ผิวบนและล่างหนา 2 มม. และใช้อินฟิลล์ที่หนาแน่นขึ้น</value></data>
+  <data name="Compare material prices" xml:space="preserve"><value>เปรียบเทียบราคาวัสดุ</value></data>
+  <data name="per piece" xml:space="preserve"><value>ต่อชิ้น</value></data>
+  <data name="Part {0}" xml:space="preserve"><value>ชิ้นงานที่ {0}</value></data>
 </root>

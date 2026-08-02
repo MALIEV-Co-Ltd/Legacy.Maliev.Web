@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  BoxGeometry,
   BufferGeometry,
   Float32BufferAttribute,
   Group,
@@ -43,10 +44,10 @@ test('analyzes indexed triangles in world space with the production geometry con
   assert.equal(result.nonManifold, false);
   assert.equal(result.bodyCount, 1);
   assert.equal(result.topologyChecked, true);
-  assert.equal(result.oddlySmall, true);
+  assert.equal(result.oddlySmall, false);
   assert.equal(result.oddlyLarge, false);
   assert.equal(result.volumeMethod, 'signed-mesh-volume');
-  assert.deepEqual(result.dfmCodes, ['dimension-too-small']);
+  assert.deepEqual(result.dfmCodes, []);
   assert.doesNotThrow(() => JSON.stringify(result));
 });
 
@@ -98,15 +99,24 @@ test('quantizes topology, reports disconnected bodies and non-manifold edges, an
   assert.equal(result.nonWatertight, true);
   assert.equal(result.nonManifold, true);
   assert.equal(result.bodyCount, 2);
-  assert.equal(result.oddlySmall, true);
+  assert.equal(result.oddlySmall, false);
   assert.equal(result.oddlyLarge, true);
   assert.deepEqual(result.dfmCodes, [
     'non-watertight',
     'non-manifold',
     'multiple-bodies',
-    'dimension-too-small',
     'dimension-too-large',
   ]);
+});
+
+test('bounds thin-part thickness by the smallest overall model extent', () => {
+  const result = analyzeUploadDerivedGeometry(new Mesh(new BoxGeometry(100, 100, 0.5)));
+
+  assert.ok(result.minThicknessMm > 0);
+  assert.ok(result.minThicknessMm <= 0.5);
+  assert.equal(result.oddlySmall, false);
+  assert.equal(result.oddlyLarge, false);
+  assert.deepEqual(result.dfmCodes, []);
 });
 
 test('uses 24 profile samples and skips topology above the production limits', () => {
