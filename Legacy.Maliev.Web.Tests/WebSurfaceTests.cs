@@ -143,7 +143,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("Something did not work properly", content, StringComparison.Ordinal);
-        Assert.Contains("Request ID", content, StringComparison.Ordinal);
+        Assert.Contains("Incident ID", content, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"error-content\"", content, StringComparison.Ordinal);
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
@@ -155,8 +155,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     [Theory]
     [InlineData("en", 404, "Error | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
     [InlineData("th", 404, "ข้อผิดพลาด | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
-    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please try again. If the problem continues, contact support and include the request ID below.", "Back to the home page", "Contact support")]
-    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดลองอีกครั้ง หากยังพบปัญหา โปรดติดต่อฝ่ายช่วยเหลือพร้อมแจ้งรหัสคำขอด้านล่าง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.", "Back to the home page", "Contact support")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrForStatusCode(
         string culture,
         int statusCode,
@@ -185,10 +185,6 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("action=\"/member/quotations/view?handler=Decision\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"accepted\" value=\"true\"", source, StringComparison.Ordinal);
-        Assert.Contains("name=\"accepted\" value=\"false\"", source, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -667,6 +663,10 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("action=\"/member/quotations/view?handler=Decision\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"accepted\" value=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"accepted\" value=\"false\"", source, StringComparison.Ordinal);
 
         var invocation = Assert.IsType<QuotationDetailInvocation>(quotationClient.LastDetailInvocation);
         Assert.Equal(42, invocation.CustomerId);
