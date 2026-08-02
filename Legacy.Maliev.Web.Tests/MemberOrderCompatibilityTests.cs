@@ -3,11 +3,11 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class MemberOrderCompatibilityTests
 {
     [Fact]
-    public void CompatibilityRoutes_UseAuthenticatedEndpointsWithoutRazorOrRetiredCoupling()
+    public void MemberOrderRoutes_RestoreProductionFlowsWithoutRetiredCoupling()
     {
         var root = FindRepositoryRoot();
         var orders = Path.Combine(root, "Legacy.Maliev.Web", "Areas", "Member", "Pages", "Orders");
-        var retiredFiles = new[]
+        var requiredFiles = new[]
         {
             "3D-Printing.cshtml",
             "3D-Printing.cshtml.cs",
@@ -15,12 +15,11 @@ public sealed class MemberOrderCompatibilityTests
             "3D-Scanning.cshtml.cs",
             "CNC-Machining.cshtml",
             "CNC-Machining.cshtml.cs",
-            "ServiceOrderCompatibilityPage.cs",
         };
 
-        foreach (var retiredFile in retiredFiles)
+        foreach (var requiredFile in requiredFiles)
         {
-            Assert.False(File.Exists(Path.Combine(orders, retiredFile)), $"Retired Razor artifact remains: {retiredFile}");
+            Assert.True(File.Exists(Path.Combine(orders, requiredFile)), $"Production order artifact is missing: {requiredFile}");
         }
 
         Assert.False(File.Exists(Path.Combine(
@@ -61,16 +60,13 @@ public sealed class MemberOrderCompatibilityTests
         var endpointPath = Path.Combine(root, "Legacy.Maliev.Web", "MemberCompatibilityEndpointRouteBuilderExtensions.cs");
         Assert.True(File.Exists(endpointPath));
         var source = File.ReadAllText(endpointPath);
-        Assert.Contains("/member/orders/cnc-machining", source, StringComparison.Ordinal);
-        Assert.Contains("/member/orders/3d-printing", source, StringComparison.Ordinal);
-        Assert.Contains("/member/orders/3d-scanning", source, StringComparison.Ordinal);
+        Assert.Contains("/member/orders/material-options", source, StringComparison.Ordinal);
         Assert.Contains("/member/quotations/paymentsuccess", source, StringComparison.Ordinal);
         Assert.Contains("/member/account/manage/createpassword", source, StringComparison.Ordinal);
-        Assert.Contains("/Quotation?item=CNC-Machining", source, StringComparison.Ordinal);
-        Assert.Contains("/Quotation?item=3D-Printing", source, StringComparison.Ordinal);
-        Assert.Contains("/Quotation?item=3D-Scanning", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Quotation?item=CNC-Machining", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Quotation?item=3D-Printing", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Quotation?item=3D-Scanning", source, StringComparison.Ordinal);
         Assert.Contains("RequireAuthorization", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("MapPost", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DbContext", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Prediction", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Barcode", source, StringComparison.OrdinalIgnoreCase);
@@ -79,6 +75,21 @@ public sealed class MemberOrderCompatibilityTests
 
         var program = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Program.cs"));
         Assert.Contains("app.MapMemberCompatibilityEndpoints();", program, StringComparison.Ordinal);
+        Assert.Contains("/Orders/3D-Printing", program, StringComparison.Ordinal);
+        Assert.Contains("/Orders/3D-Scanning", program, StringComparison.Ordinal);
+        Assert.Contains("/Orders/CNC-Machining", program, StringComparison.Ordinal);
+
+        var component = File.ReadAllText(Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOrderCreationPage.razor"));
+        Assert.Contains("@page \"/Member/Orders/3D-Printing\"", component, StringComparison.Ordinal);
+        Assert.Contains("@page \"/Member/Orders/3D-Scanning\"", component, StringComparison.Ordinal);
+        Assert.Contains("@page \"/Member/Orders/CNC-Machining\"", component, StringComparison.Ordinal);
+        Assert.Contains("IAntiforgery", component, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

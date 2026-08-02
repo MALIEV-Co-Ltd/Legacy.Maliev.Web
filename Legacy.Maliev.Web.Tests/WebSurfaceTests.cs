@@ -41,6 +41,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.RemoveAll<ICustomerProfileClient>();
                     services.RemoveAll<ICustomerAccountClient>();
                     services.RemoveAll<ICustomerOrderClient>();
+                    services.RemoveAll<ICustomerOrderCatalogClient>();
+                    services.RemoveAll<ICustomerOrderSubmissionService>();
                     services.RemoveAll<ICustomerQuotationClient>();
                     services.RemoveAll<IAntiBotVerifier>();
                     services.AddSingleton<ICareerClient, StubCareerClient>();
@@ -53,6 +55,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                     services.AddSingleton<ICustomerProfileClient, StubCustomerProfileClient>();
                     services.AddSingleton<ICustomerAccountClient, StubCustomerAccountClient>();
                     services.AddSingleton<ICustomerOrderClient, StubCustomerOrderClient>();
+                    services.AddSingleton<ICustomerOrderCatalogClient, StubCustomerOrderCatalogClient>();
+                    services.AddSingleton<ICustomerOrderSubmissionService, StubCustomerOrderSubmissionService>();
                     services.AddSingleton<ICustomerQuotationClient, StubCustomerQuotationClient>();
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
@@ -379,12 +383,147 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{historyLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{cncLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/quotation?item=CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/quotation?item=3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/member/orders/3D-Scanning\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("/member/orders/3d-printing", "en", "Additive Manufacturing", "/Member/Orders/3D-Printing?handler=Submit")]
+    [InlineData("/member/orders/3d-printing", "th", "งานผลิตแบบเพิ่มเนื้อวัสดุ", "/Member/Orders/3D-Printing?handler=Submit")]
+    [InlineData("/member/orders/3d-scanning", "en", "3D Scanning", "/Member/Orders/3D-Scanning?handler=Submit")]
+    [InlineData("/member/orders/cnc-machining", "en", "CNC Manufacturing", "/Member/Orders/CNC-Machining?handler=Submit")]
+    public async Task MemberOrderCreation_RendersAuthenticatedLocalizedStaticSsrForm(
+        string route,
+        string culture,
+        string heading,
+        string action)
+    {
+        await SignInAsync();
+
+        using var response = await client.GetAsync($"{route}?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+        var decoded = WebUtility.HtmlDecode(source);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"member-order-creation-content\"", source, StringComparison.Ordinal);
+        Assert.Contains($">{heading}<", decoded, StringComparison.Ordinal);
+        Assert.Contains($"action=\"{action}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+        Assert.Contains("name=\"OperationId\"", source, StringComparison.Ordinal);
+        Assert.Contains("noindex,follow", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CustomerId", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_SubmitsTrustedCustomerAndValidatedCatalogSelection()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/orders/3d-printing?culture=en");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        var operationId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form["__RequestVerificationToken"]), "__RequestVerificationToken");
+        content.Add(new StringContent("Bracket"), "Name");
+        content.Add(new StringContent("2"), "Quantity");
+        content.Add(new StringContent("10"), "ProcessId");
+        content.Add(new StringContent("20"), "MaterialId");
+        content.Add(new StringContent("30"), "ColorId");
+        content.Add(new StringContent("40"), "SurfaceFinishId");
+        content.Add(new StringContent("true"), "AllowSocialMedia");
+        content.Add(new StringContent("true"), "AcceptTermsAndConditions");
+        content.Add(new StringContent(operationId.ToString()), "OperationId");
+
+        using var response = await client.PostAsync("/member/orders/3d-printing?handler=Submit&culture=en", content);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders/View?itemID=81", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<OrderSubmissionInvocation>(submission.LastInvocation);
+        Assert.Equal(42, invocation.CustomerId);
+        Assert.Equal("customer@example.com", invocation.CustomerEmail);
+        Assert.Equal(operationId, invocation.OperationId);
+        Assert.Equal(CustomerOrderKind.Additive, invocation.Draft.Kind);
+        Assert.Equal("Bracket", invocation.Draft.Name);
+        Assert.Equal(10, invocation.Draft.ProcessId);
+        Assert.Equal(20, invocation.Draft.MaterialId);
+        Assert.Equal(30, invocation.Draft.ColorId);
+        Assert.Equal(40, invocation.Draft.SurfaceFinishId);
+        Assert.Equal(2, invocation.Draft.Quantity);
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_RejectsMissingAntiforgeryBeforeSubmission()
+    {
+        await SignInAsync();
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent("Bracket"), "Name");
+
+        using var response = await client.PostAsync("/member/orders/3d-printing?handler=Submit", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(submission.LastInvocation);
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_MaterialOptionsRequireAuthenticationAndReturnControlledShape()
+    {
+        using var anonymous = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        using var challenge = await anonymous.GetAsync("/member/orders/material-options?materialId=20");
+        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+
+        await SignInAsync();
+        using var response = await client.GetAsync("/member/orders/material-options?materialId=20");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var payload = JsonDocument.Parse(source);
+        Assert.Equal("Black", payload.RootElement.GetProperty("colors")[0].GetProperty("name").GetString());
+        Assert.Equal("As printed", payload.RootElement.GetProperty("surfaceFinishes")[0].GetProperty("name").GetString());
+        Assert.Equal(2, payload.RootElement.EnumerateObject().Count());
+    }
+
+    [Fact]
+    public async Task MemberOrderCreation_RejectsUnlinkedMaterialOptionsBeforeSubmission()
+    {
+        await SignInAsync();
+        var form = await GetAntiforgeryFormAsync("/member/orders/3d-printing?culture=en");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form["__RequestVerificationToken"]), "__RequestVerificationToken");
+        content.Add(new StringContent("Bracket"), "Name");
+        content.Add(new StringContent("2"), "Quantity");
+        content.Add(new StringContent("10"), "ProcessId");
+        content.Add(new StringContent("20"), "MaterialId");
+        content.Add(new StringContent("999"), "ColorId");
+        content.Add(new StringContent("40"), "SurfaceFinishId");
+        content.Add(new StringContent("true"), "AcceptTermsAndConditions");
+        content.Add(new StringContent(Guid.NewGuid().ToString()), "OperationId");
+
+        using var response = await client.PostAsync("/member/orders/3d-printing?handler=Submit&culture=en", content);
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Please select a valid color.", source, StringComparison.Ordinal);
+        Assert.Null(submission.LastInvocation);
     }
 
     [Theory]
@@ -3795,6 +3934,57 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
                 false));
         }
     }
+
+    private sealed class StubCustomerOrderCatalogClient : ICustomerOrderCatalogClient
+    {
+        private static readonly CustomerOrderCatalog Catalog = new(
+            [new CustomerOrderCatalogProcess(10, 1, "FDM"), new CustomerOrderCatalogProcess(11, 2, "Structured light")],
+            [new CustomerOrderCatalogMaterialGroup(1, "Thermoplastics")],
+            [new CustomerOrderCatalogMaterial(20, 1, "PLA")],
+            [new CustomerOrderFileFormat(1, "STEP", ".step"), new CustomerOrderFileFormat(2, "STL", ".stl")]);
+
+        public Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderCatalogResult(
+                kind == CustomerOrderKind.Scanning
+                    ? Catalog with { Processes = [new CustomerOrderCatalogProcess(11, 2, "Structured light")] }
+                    : Catalog,
+                true,
+                true));
+
+        public Task<CustomerOrderMaterialOptionsResult> GetMaterialOptionsAsync(int materialId, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerOrderMaterialOptionsResult(
+                materialId == 20
+                    ? new CustomerOrderMaterialOptions(
+                        [new CustomerOrderCatalogOption(30, "Black")],
+                        [new CustomerOrderCatalogOption(40, "As printed")])
+                    : null,
+                true,
+                materialId == 20));
+    }
+
+    private sealed class StubCustomerOrderSubmissionService : ICustomerOrderSubmissionService
+    {
+        public OrderSubmissionInvocation? LastInvocation { get; private set; }
+
+        public void Reset() => LastInvocation = null;
+
+        public Task<CustomerOrderSubmissionResult> SubmitAsync(
+            int trustedCustomerId,
+            string trustedCustomerEmail,
+            CustomerOrderDraft draft,
+            Guid operationId,
+            CancellationToken cancellationToken)
+        {
+            LastInvocation = new(trustedCustomerId, trustedCustomerEmail, draft, operationId);
+            return Task.FromResult(new CustomerOrderSubmissionResult(81, true, true, true, true, false, true, true));
+        }
+    }
+
+    private sealed record OrderSubmissionInvocation(
+        int CustomerId,
+        string CustomerEmail,
+        CustomerOrderDraft Draft,
+        Guid OperationId);
 
     private sealed record OrderInvocation(int CustomerId, int OrderId);
 

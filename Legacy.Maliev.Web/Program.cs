@@ -279,6 +279,24 @@ builder.Services.AddRazorPages(options =>
             "Member",
             "/Orders/History",
             model => model.Selectors.Clear());
+        foreach (var page in new[]
+        {
+            "/Orders/3D-Printing",
+            "/Orders/3D-Scanning",
+            "/Orders/CNC-Machining",
+        })
+        {
+            options.Conventions.AddAreaPageRouteModelConvention(
+                "Member",
+                page,
+                model =>
+                {
+                    foreach (var selector in model.Selectors)
+                    {
+                        selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                    }
+                });
+        }
         options.Conventions.AddAreaPageRouteModelConvention(
             "Member",
             "/Quotations/Index",

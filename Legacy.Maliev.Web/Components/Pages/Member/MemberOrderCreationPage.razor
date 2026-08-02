@@ -1,0 +1,77 @@
+@page "/Member/Orders/3D-Printing"
+@page "/Member/Orders/3D-Scanning"
+@page "/Member/Orders/CNC-Machining"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ICustomerOrderCatalogClient CatalogClient
+@inject IAntiforgery Antiforgery
+@inject IStringLocalizer<MemberOrderCreationContent> Localizer
+
+<PageTitle>@Localizer[model.Title + " order | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<div data-migration-route-owner="blazor-static-ssr">
+    <MemberWorkspaceShell>
+        <section class="maliev-section" aria-labelledby="member-order-create-title">
+            <form method="post" action="@model.FormAction" enctype="multipart/form-data" class="maliev-panel maliev-form" data-terms-gated-form>
+                @if (tokens is not null)
+                {
+                    <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                }
+                <MemberOrderCreationContent Model="model" />
+            </form>
+        </section>
+    </MemberWorkspaceShell>
+</div>
+
+@code {
+    private MemberOrderCreationDisplayModel model = default!;
+    private AntiforgeryTokenSet? tokens;
+    [SupplyParameterFromQuery(Name = "process")] public string? Process { get; set; }
+    [SupplyParameterFromQuery(Name = "material")] public string? Material { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        var kind = context.Request.Path.Value?.ToLowerInvariant() switch
+        {
+            "/member/orders/3d-printing" => CustomerOrderKind.Additive,
+            "/member/orders/3d-scanning" => CustomerOrderKind.Scanning,
+            "/member/orders/cnc-machining" => CustomerOrderKind.Machining,
+            _ => throw new InvalidOperationException("The requested order type is unsupported."),
+        };
+        var result = await CatalogClient.GetAsync(kind, context.RequestAborted);
+        var processId = result.Catalog?.Processes.FirstOrDefault(item =>
+            string.Equals(item.Name, Process, StringComparison.CurrentCultureIgnoreCase))?.Id ?? 0;
+        var materialId = result.Catalog?.Materials.FirstOrDefault(item =>
+            string.Equals(item.Name, Material, StringComparison.CurrentCultureIgnoreCase))?.Id ?? 0;
+        var materialOptions = materialId > 0
+            ? (await CatalogClient.GetMaterialOptionsAsync(materialId, context.RequestAborted)).Options
+            : null;
+        model = new(
+            kind,
+            result.Catalog,
+            materialOptions?.Colors ?? [],
+            materialOptions?.SurfaceFinishes ?? [],
+            string.Empty,
+            null,
+            1,
+            processId,
+            materialId,
+            0,
+            0,
+            true,
+            false,
+            true,
+            null,
+            null,
+            null,
+            Guid.NewGuid().ToString("D"),
+            null,
+            result.Catalog is null ? ["Order options are temporarily unavailable."] : []);
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+}
