@@ -11,6 +11,7 @@ namespace Legacy.Maliev.Web.Areas.Member.Pages;
 public sealed class Index(
     IAccountSessionManager sessionManager,
     ICustomerAccountClient accountClient,
+    ICountryClient countryClient,
     ICustomerOrderClient orderClient,
     ICustomerQuotationClient quotationClient) : PageModel
 {
@@ -30,6 +31,7 @@ public sealed class Index(
             HttpContext,
             sessionManager,
             accountClient,
+            countryClient,
             orderClient,
             quotationClient,
             cancellationToken);

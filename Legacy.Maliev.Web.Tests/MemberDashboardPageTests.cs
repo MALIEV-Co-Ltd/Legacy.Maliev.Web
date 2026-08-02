@@ -27,6 +27,10 @@ public sealed class MemberDashboardPageTests
         Assert.Equal(9, Assert.Single(page.RecentQuotations).Id);
         Assert.Contains(page.Notices, value => value.Contains("billing address", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(page.Notices, value => value.Contains("open quotation", StringComparison.OrdinalIgnoreCase));
+        Assert.Null(page.DisplayModel.BillingAddress);
+        Assert.Null(page.DisplayModel.ShippingAddress);
+        Assert.Equal(107, Assert.Single(page.DisplayModel.RecentQuotations).Total);
+        Assert.EndsWith("T00:00:00.0000000", Assert.Single(page.DisplayModel.RecentOrders).CreatedDate, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -49,7 +53,7 @@ public sealed class MemberDashboardPageTests
         IAccountSessionManager session,
         ICustomerAccountClient account,
         ICustomerOrderClient orders,
-        ICustomerQuotationClient quotations) => new(session, account, orders, quotations)
+        ICustomerQuotationClient quotations) => new(session, account, new StubCountryClient(), orders, quotations)
         {
             PageContext = new PageContext { HttpContext = new DefaultHttpContext() },
         };
@@ -158,6 +162,12 @@ public sealed class MemberDashboardPageTests
 
         public Task<CustomerOrderDetailsResult> GetAsync(int customerId, int orderId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<CustomerOrderOperationResult> CancelAsync(int customerId, int orderId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class StubCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>([], true));
     }
 
     private sealed class StubQuotationClient(CustomerQuotationPage page) : ICustomerQuotationClient

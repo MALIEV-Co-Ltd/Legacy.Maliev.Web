@@ -9,6 +9,7 @@ public static class MemberOverviewLoader
         HttpContext context,
         IAccountSessionManager sessionManager,
         ICustomerAccountClient accountClient,
+        ICountryClient countryClient,
         ICustomerOrderClient orderClient,
         ICustomerQuotationClient quotationClient,
         CancellationToken cancellationToken)
@@ -20,11 +21,13 @@ public static class MemberOverviewLoader
         }
 
         var profileTask = accountClient.GetProfileAsync(customerId.Value, cancellationToken);
+        var countriesTask = countryClient.GetCountriesAsync(cancellationToken);
         var ordersTask = orderClient.ListAsync(customerId.Value, "OrderCreatedDate_Descending", null, 1, 5, cancellationToken);
         var quotationsTask = quotationClient.ListAsync(customerId.Value, "QuotationCreatedDate_Descending", null, 1, 5, cancellationToken);
-        await Task.WhenAll(profileTask, ordersTask, quotationsTask);
+        await Task.WhenAll(profileTask, countriesTask, ordersTask, quotationsTask);
 
         var profile = await profileTask;
+        var countries = await countriesTask;
         var orders = await ordersTask;
         var quotations = await quotationsTask;
         var recentOrders = orders.Page?.Items ?? [];
@@ -59,15 +62,37 @@ public static class MemberOverviewLoader
         var displayModel = new MemberOverviewDisplayModel(
             profile.Profile?.FirstName,
             notices,
+            CreateAddress(profile.Profile?.BillingAddress, profile.Profile?.Company?.Name, countries.Value),
+            CreateAddress(profile.Profile?.ShippingAddress, null, countries.Value),
             recentOrders.Select(order => new MemberOrderSummaryDisplayModel(
                 order.Id,
                 order.Name,
-                order.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")).ToArray(),
+                order.CreatedDate?.ToString("O") ?? "-")).ToArray(),
             recentQuotations.Select(quotation => new MemberQuotationSummaryDisplayModel(
                 quotation.Id,
+                quotation.Period,
+                quotation.Total,
                 quotation.Accepted,
-                quotation.ExpirationDate.ToString("yyyy-MM-dd"))).ToArray());
+                quotation.ExpirationDate.ToString("O"))).ToArray());
         return new MemberOverviewLoadResult(profile.Profile, recentOrders, recentQuotations, notices, displayModel);
+    }
+
+    private static MemberAddressSummaryDisplayModel? CreateAddress(
+        CustomerAddress? address,
+        string? companyName,
+        IReadOnlyList<Country>? countries)
+    {
+        if (address is null) return null;
+
+        return new(
+            companyName,
+            address.Building,
+            address.AddressLine1,
+            address.AddressLine2,
+            address.City,
+            address.State,
+            address.PostalCode,
+            countries?.FirstOrDefault(country => country.Id == address.CountryId)?.Name);
     }
 }
 

@@ -1,0 +1,22 @@
+<address>
+    @foreach (var line in Lines)
+    {
+        <span>@line</span><br />
+    }
+</address>
+
+@code {
+    [Parameter, EditorRequired]
+    public MemberAddressSummaryDisplayModel Address { get; set; } = default!;
+
+    private IEnumerable<string> Lines => new[]
+    {
+        Address.CompanyName,
+        Address.Building,
+        Address.AddressLine1,
+        Address.AddressLine2,
+        Address.City,
+        Address.State,
+        string.Join(' ', new[] { Address.PostalCode, Address.CountryName }.Where(value => !string.IsNullOrWhiteSpace(value))),
+    }.Where(value => !string.IsNullOrWhiteSpace(value))!;
+}

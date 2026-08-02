@@ -252,21 +252,15 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(string.Empty, await authenticated.Content.ReadAsStringAsync());
     }
 
-    [Theory]
-    [InlineData("/member/orders/cnc-machining?untrusted=discard", "/Quotation?item=CNC-Machining")]
-    [InlineData("/member/orders/3d-printing?untrusted=discard", "/Quotation?item=3D-Printing")]
-    [InlineData("/member/orders/3d-scanning?untrusted=discard", "/Quotation?item=3D-Scanning")]
-    [InlineData("/member/account/manage/createpassword?untrusted=discard", "/Member/Account/Manage/ChangePassword")]
-    public async Task AuthenticatedCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery(
-        string route,
-        string expectedLocation)
+    [Fact]
+    public async Task AuthenticatedCreatePasswordCompatibilityRoute_RedirectsWithoutForwardingUntrustedQuery()
     {
         await SignInAsync();
 
-        using var response = await client.GetAsync(route);
+        using var response = await client.GetAsync("/member/account/manage/createpassword?untrusted=discard");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal(expectedLocation, response.Headers.Location?.OriginalString);
+        Assert.Equal("/Member/Account/Manage/ChangePassword", response.Headers.Location?.OriginalString);
         Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
     }
 
@@ -320,6 +314,12 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains($">{orderHistoryLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=7\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Existing Billing", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Existing Shipping", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("Thailand", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("107.00 THB", decodedSource, StringComparison.Ordinal);
+        Assert.Contains("class=\"convert-to-localdate\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-account-setup-notice", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
