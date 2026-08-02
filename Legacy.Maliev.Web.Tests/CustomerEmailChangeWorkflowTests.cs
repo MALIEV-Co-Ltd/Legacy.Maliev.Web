@@ -86,6 +86,26 @@ public sealed class CustomerEmailChangeWorkflowTests
         Assert.Equal(0, authentication.CompletionCalls);
     }
 
+    [Fact]
+    public async Task Complete_CompletedIdentityReconcilesStaleCurrentProfile()
+    {
+        var authentication = new StubAuthenticationClient
+        {
+            Validation = PendingValidation(completed: true),
+        };
+        var account = new StubAccountClient("old@example.com");
+        var workflow = new CustomerEmailChangeWorkflow(
+            authentication,
+            account,
+            NullLogger<CustomerEmailChangeWorkflow>.Instance);
+
+        var result = await workflow.CompleteAsync("new@example.com", "opaque-token", default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(["new@example.com"], account.EmailUpdates);
+        Assert.Equal(0, authentication.CompletionCalls);
+    }
+
     private static CustomerEmailChangeValidationResult PendingValidation(bool completed = false) =>
         new(true, true, true, 42, "old@example.com", "new@example.com", completed);
 

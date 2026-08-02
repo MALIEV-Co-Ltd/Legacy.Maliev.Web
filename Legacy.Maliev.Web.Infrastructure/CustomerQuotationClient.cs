@@ -113,7 +113,7 @@ internal sealed class CustomerQuotationClient(
             int? invoiceId = null;
             if (accepted)
             {
-                var invoice = await CreateInvoiceAsync(quotationId, operationId, token, cancellationToken);
+                var invoice = await CreateInvoiceAsync(customerId, quotationId, operationId, token, cancellationToken);
                 if (!invoice.Succeeded)
                 {
                     return invoice;
@@ -161,6 +161,7 @@ internal sealed class CustomerQuotationClient(
     }
 
     private async Task<CustomerQuotationDecisionResult> CreateInvoiceAsync(
+        int customerId,
         int quotationId,
         Guid operationId,
         string token,
@@ -175,9 +176,13 @@ internal sealed class CustomerQuotationClient(
         }
 
         var preview = await previewResponse.Content.ReadFromJsonAsync<InvoiceCreationPreview>(cancellationToken);
-        if (preview is null || preview.QuotationId != quotationId)
+        if (preview is null
+            || preview.QuotationId != quotationId
+            || preview.CustomerId != customerId)
         {
-            return new(false, false, true, false, null);
+            logger.LogWarning(
+                "Accounting invoice preview did not match the authenticated quotation ownership boundary.");
+            return new(false, true, true, false, null);
         }
 
         var input = new CreateInvoiceFromQuotationRequest(

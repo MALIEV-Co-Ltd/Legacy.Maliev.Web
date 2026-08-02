@@ -258,7 +258,7 @@
   <data name="Submit quotation request" xml:space="preserve"><value>ส่งคำขอใบเสนอราคา</value></data>
   <data name="Tax identification (optional)" xml:space="preserve"><value>เลขประจำตัวผู้เสียภาษี (ไม่บังคับ)</value></data>
   <data name="Telephone" xml:space="preserve"><value>โทรศัพท์</value></data>
-  <data name="Up to 10 files and 100 MB combined. Every upload is malware-scanned before storage." xml:space="preserve"><value>อัปโหลดได้สูงสุด 10 ไฟล์ รวมไม่เกิน 100 MB ทุกไฟล์จะถูกตรวจสอบมัลแวร์ก่อนจัดเก็บ</value></data>
+  <data name="Upload multiple files up to 100 MB combined. Every upload is malware-scanned before storage." xml:space="preserve"><value>อัปโหลดหลายไฟล์ได้ โดยมีขนาดรวมไม่เกิน 100 MB ทุกไฟล์จะได้รับการตรวจสอบมัลแวร์ก่อนจัดเก็บ</value></data>
   <data name="Please enter a valid email address" xml:space="preserve"><value>กรุณากรอกอีเมลที่ถูกต้อง</value></data>
   <data name="You can use" xml:space="preserve"><value>คุณสามารถใช้บริการ</value></data>
   <data name="For Google Drive, set sharing permission so our team can access the files." xml:space="preserve"><value>หากใช้ Google Drive กรุณาตั้งค่าการแชร์ให้ทีมงานของเราสามารถเข้าถึงไฟล์ได้</value></data>

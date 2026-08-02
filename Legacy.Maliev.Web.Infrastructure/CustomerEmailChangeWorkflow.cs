@@ -60,9 +60,19 @@ internal sealed class CustomerEmailChangeWorkflow(
 
         if (validation.Completed)
         {
-            return profileIsNew
-                ? new(true, true, true)
-                : new(false, true, true);
+            if (profileIsCurrent)
+            {
+                var reconciliation = await customerClient.UpdateEmailAsync(
+                    validation.CustomerId.Value,
+                    validation.NewEmail,
+                    cancellationToken);
+                return new(
+                    reconciliation.Succeeded,
+                    reconciliation.ServiceAvailable,
+                    reconciliation.Authorized);
+            }
+
+            return new(true, true, true);
         }
 
         if (!profileIsNew)
