@@ -10,7 +10,10 @@ public sealed record CustomerTokenSet(
 public sealed record CustomerAuthenticationResult(
     CustomerTokenSet? Tokens,
     bool ServiceAvailable,
-    int? DatabaseId = null);
+    int? DatabaseId = null,
+    CustomerLoginRequiredAction? RequiredAction = null);
+
+public sealed record CustomerLoginRequiredAction(string Action, string Token);
 
 public sealed record CustomerIdentityRegistration(
     bool Succeeded,
@@ -80,6 +83,11 @@ public interface ICustomerAuthenticationClient
         string email,
         CancellationToken cancellationToken);
 
+    Task<CustomerActionChallenge> RecoverEmailConfirmationAsync(
+        string email,
+        string recoveryToken,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
     Task<bool> CompleteEmailConfirmationAsync(
         string email,
         string token,
@@ -104,6 +112,12 @@ public interface ICustomerAuthenticationClient
         string token,
         string password,
         CancellationToken cancellationToken);
+
+    Task<bool> CompleteInitialPasswordAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 
     Task<CustomerCredentialOperationResult> ChangeEmailAsync(
         string accessToken,

@@ -1,15 +1,12 @@
 namespace Legacy.Maliev.Web.Components.Pages.Account;
 
-public sealed record LoginFormDisplayModel(
+public sealed record SetInitialPasswordFormDisplayModel(
     string Email,
-    bool RememberMe,
+    string Token,
     string? ReturnUrl,
-    string? Notification,
-    string? EmailConfirmationRecoveryToken,
+    bool RememberMe,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ValidationErrors)
 {
-    public IReadOnlyList<string> AllErrors => ValidationErrors.Values.SelectMany(errors => errors).ToArray();
-
     public IReadOnlyList<string> ErrorsFor(string fieldName) =>
         ValidationErrors.TryGetValue(fieldName, out var errors) ? errors : [];
 

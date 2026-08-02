@@ -14,6 +14,8 @@ public enum AccountSignInStatus
     Succeeded,
     InvalidCredentials,
     ServiceUnavailable,
+    EmailConfirmationRequired,
+    InitialPasswordRequired,
 }
 
 public interface IAccountSessionManager
@@ -28,6 +30,7 @@ public interface IAccountSessionManager
     Task SignOutAsync(HttpContext context, CancellationToken cancellationToken);
     Task<string?> GetAccessTokenAsync(HttpContext context, CancellationToken cancellationToken);
     Task<int?> GetCustomerDatabaseIdAsync(HttpContext context, CancellationToken cancellationToken);
+    CustomerLoginRequiredAction? GetPendingAction(HttpContext context) => null;
 }
 
 internal sealed class AccountSessionManager(
@@ -35,6 +38,7 @@ internal sealed class AccountSessionManager(
     IAccountSessionStore store,
     TimeProvider timeProvider) : IAccountSessionManager
 {
+    private static readonly object PendingActionKey = new();
     private static readonly TimeSpan RefreshSkew = TimeSpan.FromMinutes(2);
     internal const string SessionIdClaim = "legacy_session_id";
 
@@ -46,6 +50,17 @@ internal sealed class AccountSessionManager(
         CancellationToken cancellationToken)
     {
         var result = await authenticationClient.LoginAsync(email, password, cancellationToken);
+        if (result.RequiredAction is not null)
+        {
+            context.Items[PendingActionKey] = result.RequiredAction;
+            return result.RequiredAction.Action switch
+            {
+                "confirm_email" => AccountSignInStatus.EmailConfirmationRequired,
+                "set_initial_password" => AccountSignInStatus.InitialPasswordRequired,
+                _ => AccountSignInStatus.InvalidCredentials,
+            };
+        }
+
         if (result.Tokens is null || result.DatabaseId is null or <= 0)
         {
             return result.ServiceAvailable
@@ -87,6 +102,11 @@ internal sealed class AccountSessionManager(
             });
         return AccountSignInStatus.Succeeded;
     }
+
+    public CustomerLoginRequiredAction? GetPendingAction(HttpContext context) =>
+        context.Items.TryGetValue(PendingActionKey, out var value)
+            ? value as CustomerLoginRequiredAction
+            : null;
 
     public async Task SignOutAsync(HttpContext context, CancellationToken cancellationToken)
     {

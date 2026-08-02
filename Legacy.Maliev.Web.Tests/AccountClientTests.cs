@@ -42,6 +42,63 @@ public sealed class AccountClientTests
         Assert.Equal(42, result.DatabaseId);
     }
 
+    [Theory]
+    [InlineData("confirm_email")]
+    [InlineData("set_initial_password")]
+    public async Task Login_ActionRequired_MapsOnlyOpaqueActionFromConflict(string action)
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.Conflict,
+            $$"""{"action":"{{action}}","token":"opaque-action-token"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.LoginAsync("customer@example.com", "validated-password", default);
+
+        Assert.Null(result.Tokens);
+        Assert.Equal(action, result.RequiredAction?.Action);
+        Assert.Equal("opaque-action-token", result.RequiredAction?.Token);
+        Assert.DoesNotContain("opaque-action-token", handler.RequestUri, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecoverEmailConfirmation_UsesServiceBearerAndJsonOnlyRecoveryGrant()
+    {
+        var handler = new RecordingHandler(_ => Json(
+            HttpStatusCode.OK,
+            """{"accepted":true,"token":"fresh-confirmation-token"}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.RecoverEmailConfirmationAsync(
+            "customer@example.com",
+            "opaque-recovery-token",
+            default);
+
+        Assert.Equal("fresh-confirmation-token", result.Token);
+        Assert.Equal("Bearer service-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/email-confirmation/recover", handler.RequestUri);
+        Assert.DoesNotContain("opaque-recovery-token", handler.RequestUri, StringComparison.Ordinal);
+        Assert.Contains("\"token\":\"opaque-recovery-token\"", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CompleteInitialPassword_UsesServiceBearerAndKeepsCredentialOutOfRoute()
+    {
+        var handler = new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var client = CreateClient(handler);
+
+        var result = await client.CompleteInitialPasswordAsync(
+            "customer@example.com",
+            "opaque-setup-token",
+            "customer-owned-password",
+            default);
+
+        Assert.True(result);
+        Assert.Equal("Bearer service-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/initial-password/complete", handler.RequestUri);
+        Assert.DoesNotContain("customer-owned-password", handler.RequestUri, StringComparison.Ordinal);
+        Assert.Contains("\"password\":\"customer-owned-password\"", handler.Body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Register_UsesServiceBearerAndJsonOnlyPassword()
     {

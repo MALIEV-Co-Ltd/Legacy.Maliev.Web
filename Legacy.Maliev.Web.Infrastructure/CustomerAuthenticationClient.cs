@@ -30,6 +30,18 @@ internal sealed class CustomerAuthenticationClient(
                 return new(null, true);
             }
 
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                var action = await response.Content.ReadFromJsonAsync<LoginActionResponse>(cancellationToken);
+                return action is null || string.IsNullOrWhiteSpace(action.Token)
+                    ? new(null, true)
+                    : new(
+                        null,
+                        true,
+                        null,
+                        new CustomerLoginRequiredAction(action.Action, action.Token));
+            }
+
             response.EnsureSuccessStatusCode();
             var tokens = await response.Content.ReadFromJsonAsync<CustomerTokenSet>(cancellationToken);
             return new(tokens, true, ExtractDatabaseId(tokens?.AccessToken));
@@ -127,6 +139,15 @@ internal sealed class CustomerAuthenticationClient(
             new CompleteActionRequest(email, token),
             cancellationToken);
 
+    public Task<CustomerActionChallenge> RecoverEmailConfirmationAsync(
+        string email,
+        string recoveryToken,
+        CancellationToken cancellationToken) =>
+        CompleteChallengeAsync(
+            "email-confirmation/recover",
+            new CompleteActionRequest(email, recoveryToken),
+            cancellationToken);
+
     public async Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(
         string email,
         string token,
@@ -192,6 +213,16 @@ internal sealed class CustomerAuthenticationClient(
         CancellationToken cancellationToken) =>
         CompleteActionAsync(
             "password-reset/complete",
+            new CompletePasswordResetRequest(email, token, password),
+            cancellationToken);
+
+    public Task<bool> CompleteInitialPasswordAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken) =>
+        CompleteActionAsync(
+            "initial-password/complete",
             new CompletePasswordResetRequest(email, token, password),
             cancellationToken);
 
@@ -292,6 +323,31 @@ internal sealed class CustomerAuthenticationClient(
         return new(challenge?.Accepted == true, challenge?.Token, true, true);
     }
 
+    private async Task<CustomerActionChallenge> CompleteChallengeAsync(
+        string action,
+        object content,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendServiceRequestAsync(
+            HttpMethod.Post,
+            $"auth/v1/customer-self-service/{action}",
+            content,
+            cancellationToken);
+        if (response is null)
+        {
+            return new(false, null, false, false);
+        }
+
+        var authorized = response.StatusCode is not HttpStatusCode.Unauthorized and not HttpStatusCode.Forbidden;
+        if (!authorized || !response.IsSuccessStatusCode)
+        {
+            return new(false, null, (int)response.StatusCode < 500, authorized);
+        }
+
+        var challenge = await response.Content.ReadFromJsonAsync<ChallengeResponse>(cancellationToken);
+        return new(challenge?.Accepted == true, challenge?.Token, true, true);
+    }
+
     private async Task<bool> CompleteActionAsync(
         string action,
         object content,
@@ -383,6 +439,7 @@ internal sealed class CustomerAuthenticationClient(
     }
 
     private sealed record LoginRequest(string UserName, string Password, int IdentityKind);
+    private sealed record LoginActionResponse(string Action, string Token);
     private sealed record RefreshRequest(string RefreshToken);
     private sealed record RegisterRequest(int DatabaseId, string Email, string Password);
     private sealed record ActionRequest(string Email);

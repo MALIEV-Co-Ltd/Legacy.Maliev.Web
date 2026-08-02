@@ -2831,6 +2831,97 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task Login_TemporaryPasswordRedirectsToSingleUseSetupWithoutCreatingSession()
+    {
+        var form = await GetAntiforgeryFormAsync("/account/login?culture=en");
+        form["Email"] = "customer@example.com";
+        form["Password"] = "temporary-password";
+        form["RememberMe"] = "true";
+        form["ReturnUrl"] = "/Member/Orders";
+
+        using var response = await client.PostAsync(
+            "/account/login?handler=Login&culture=en",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith("/Account/SetInitialPassword?", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        Assert.Contains("token=opaque-setup-token-12345678901234567890", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        Assert.Contains("returnUrl=%2FMember%2FOrders", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            response.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith("__Host-Maliev.Legacy.Session=", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Login_UnconfirmedCredentialOffersContextualResendAndSendsFreshSingleUseLink()
+    {
+        var notification = Assert.IsType<StubNotificationClient>(
+            configuredFactory.Services.GetRequiredService<INotificationClient>());
+        notification.Reset();
+        var form = await GetAntiforgeryFormAsync("/account/login?culture=en");
+        form["Email"] = "customer@example.com";
+        form["Password"] = "unconfirmed-password";
+        form["RememberMe"] = "false";
+
+        using var login = await client.PostAsync(
+            "/account/login?handler=Login&culture=en",
+            new FormUrlEncodedContent(form));
+        var loginSource = await login.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        Assert.Contains("name=\"EmailConfirmationRecoveryToken\" value=\"opaque-recovery-token-12345678901234567890\"", loginSource, StringComparison.Ordinal);
+        Assert.Contains("handler=ResendEmailConfirmation", loginSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("unconfirmed-password", loginSource, StringComparison.Ordinal);
+
+        form.Remove("Password");
+        form["EmailConfirmationRecoveryToken"] = "opaque-recovery-token-12345678901234567890";
+        using var resend = await client.PostAsync(
+            "/account/login?handler=ResendEmailConfirmation&culture=en",
+            new FormUrlEncodedContent(form));
+
+        var resendSource = await resend.Content.ReadAsStringAsync();
+        Assert.True(
+            resend.StatusCode == HttpStatusCode.Redirect,
+            $"Expected redirect, received {resend.StatusCode}. Body: {resendSource}");
+        Assert.NotNull(notification.LastNotification);
+        Assert.Equal("customer@example.com", notification.LastNotification.To);
+        Assert.Contains("fresh-confirmation-token-12345678901234567890", notification.LastNotification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("opaque-recovery-token-12345678901234567890", notification.LastNotification.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SetInitialPassword_ValidPostConsumesChallengeThenCreatesHardenedSession()
+    {
+        const string setupToken = "opaque-setup-token-12345678901234567890";
+        var notification = Assert.IsType<StubNotificationClient>(
+            configuredFactory.Services.GetRequiredService<INotificationClient>());
+        notification.Reset();
+        var form = await GetAntiforgeryFormAsync(
+            $"/Account/SetInitialPassword?culture=en&email=customer%40example.com&token={setupToken}&returnUrl=%2FMember%2FOrders");
+        form["Email"] = "customer@example.com";
+        form["Token"] = setupToken;
+        form["Password"] = "customer-owned-password";
+        form["ConfirmPassword"] = "customer-owned-password";
+        form["RememberMe"] = "true";
+        form["ReturnUrl"] = "/Member/Orders";
+
+        using var response = await client.PostAsync(
+            "/Account/SetInitialPassword?handler=Complete&culture=en",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders", response.Headers.Location?.OriginalString);
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("__Host-Maliev.Legacy.Session=", StringComparison.Ordinal));
+        Assert.DoesNotContain(setupToken, cookie, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer-owned-password", cookie, StringComparison.Ordinal);
+        Assert.NotNull(notification.LastNotification);
+        Assert.Equal("customer@example.com", notification.LastNotification.To);
+        Assert.DoesNotContain(setupToken, notification.LastNotification.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer-owned-password", notification.LastNotification.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Login_DoesNotPromoteUntrustedQueryTextIntoTrustedAlert()
     {
         using var response = await client.GetAsync(
@@ -3613,15 +3704,28 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         }
 
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerAuthenticationResult(
-                new CustomerTokenSet(
-                    "sensitive-access-token",
-                    "sensitive-refresh-token",
-                    "Bearer",
-                    900,
-                    DateTimeOffset.UtcNow.AddDays(1)),
-                true,
-                42));
+            Task.FromResult(password switch
+            {
+                "temporary-password" => new CustomerAuthenticationResult(
+                    null,
+                    true,
+                    null,
+                    new CustomerLoginRequiredAction("set_initial_password", "opaque-setup-token-12345678901234567890")),
+                "unconfirmed-password" => new CustomerAuthenticationResult(
+                    null,
+                    true,
+                    null,
+                    new CustomerLoginRequiredAction("confirm_email", "opaque-recovery-token-12345678901234567890")),
+                _ => new CustomerAuthenticationResult(
+                    new CustomerTokenSet(
+                        "sensitive-access-token",
+                        "sensitive-refresh-token",
+                        "Bearer",
+                        900,
+                        DateTimeOffset.UtcNow.AddDays(1)),
+                    true,
+                    42),
+            });
 
         public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerAuthenticationResult(null, true));
@@ -3636,6 +3740,15 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken) =>
             Task.FromResult(!string.Equals(token, "invalid-token", StringComparison.Ordinal));
+
+        public Task<CustomerActionChallenge> RecoverEmailConfirmationAsync(
+            string email,
+            string recoveryToken,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                string.Equals(recoveryToken, "opaque-recovery-token-12345678901234567890", StringComparison.Ordinal)
+                    ? new CustomerActionChallenge(true, "fresh-confirmation-token-12345678901234567890", true, true)
+                    : new CustomerActionChallenge(false, null, true, true));
 
         public Task<CustomerEmailChangeValidationResult> ValidateEmailChangeAsync(string email, string token, CancellationToken cancellationToken) =>
             Task.FromResult(
@@ -3654,6 +3767,13 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         public Task<bool> CompletePasswordResetAsync(string email, string token, string password, CancellationToken cancellationToken) =>
             Task.FromResult(true);
+
+        public Task<bool> CompleteInitialPasswordAsync(
+            string email,
+            string token,
+            string password,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(string.Equals(token, "opaque-setup-token-12345678901234567890", StringComparison.Ordinal));
 
         public Task<CustomerCredentialOperationResult> ChangeEmailAsync(
             string accessToken,

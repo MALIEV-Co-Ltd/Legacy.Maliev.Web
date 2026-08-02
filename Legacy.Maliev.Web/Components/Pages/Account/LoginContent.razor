@@ -21,6 +21,21 @@
     </ul>
 </div>
 
+@if (!string.IsNullOrWhiteSpace(Model.EmailConfirmationRecoveryToken))
+{
+    <input type="hidden" name="EmailConfirmationRecoveryToken" value="@Model.EmailConfirmationRecoveryToken" />
+    <div class="maliev-alert mb-3" role="alert">
+        <i class="fas fa-envelope" aria-hidden="true"></i>
+        <div>
+            <strong>@Localizer["Email verification required"]</strong>
+            <p>@Localizer["Please verify your email before signing in."]</p>
+            <button type="submit" class="maliev-button maliev-button--secondary" formaction="@ResendAction">
+                @Localizer["Resend verification email"]
+            </button>
+        </div>
+    </div>
+}
+
 <input type="hidden" id="ReturnUrl" name="ReturnUrl" value="@Model.ReturnUrl" />
 <div class="maliev-form-field">
     <label for="Email">@Localizer["Email"]</label>
@@ -49,4 +64,7 @@
 
     private static string FormAction =>
         $"/Account/Login?handler=Login&culture={Uri.EscapeDataString(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)}";
+
+    private static string ResendAction =>
+        $"/Account/Login?handler=ResendEmailConfirmation&culture={Uri.EscapeDataString(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)}";
 }

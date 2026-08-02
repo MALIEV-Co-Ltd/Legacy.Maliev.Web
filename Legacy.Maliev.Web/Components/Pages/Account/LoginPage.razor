@@ -58,7 +58,7 @@
 </main>
 
 @code {
-    private LoginFormDisplayModel model = new(string.Empty, false, null, null, new Dictionary<string, IReadOnlyList<string>>());
+    private LoginFormDisplayModel model = new(string.Empty, false, null, null, null, new Dictionary<string, IReadOnlyList<string>>());
     private AntiforgeryTokenSet? tokens;
 
     [SupplyParameterFromQuery(Name = "email")]
@@ -84,6 +84,7 @@
             false,
             IsLocalUrl(ReturnUrl) ? ReturnUrl : null,
             notification,
+            null,
             new Dictionary<string, IReadOnlyList<string>>());
         tokens = Antiforgery.GetAndStoreTokens(context);
     }
