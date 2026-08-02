@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  configureFilePickerForPlatform,
   createWorkflowPreviewInterop,
   supportedPreviewExtensions,
 } from '../wwwroot/src/app/js/instant-quotation/workflow-interop.mjs';
@@ -70,6 +71,69 @@ test('supports the exact nine standalone quotation extensions', () => {
   assert.deepEqual(supportedPreviewExtensions, [
     'stl', 'obj', '3mf', 'glb', 'gltf', 'stp', 'step', 'igs', 'iges',
   ]);
+});
+
+for (const extension of supportedPreviewExtensions) {
+  test(`admits a selected .${extension} file to preview analysis before upload`, async () => {
+    const selected = modelFile(`fixture.${extension}`);
+    const loaded = [];
+    const { interop, statuses } = harness(async file => {
+      loaded.push(file);
+      return disposableObject();
+    });
+
+    const [key] = interop.beginSelection({ files: [selected] });
+    const claim = await interop.getGeometryClaim(key);
+
+    assert.deepEqual(loaded, [selected]);
+    assert.equal(typeof claim.sha256, 'string');
+    assert.equal(claim.sha256.length, 64);
+    assert.deepEqual(statuses, []);
+  });
+}
+
+test('iOS file picker removes the unsupported accept filter but retains the application allowlist', () => {
+  const attributes = new Map([['accept', '.stl,model/stl,application/sla']]);
+  const input = {
+    dataset: {},
+    getAttribute: name => attributes.get(name) ?? null,
+    removeAttribute: name => attributes.delete(name),
+  };
+
+  assert.equal(configureFilePickerForPlatform(input, {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)',
+    platform: 'iPhone',
+    maxTouchPoints: 5,
+  }), true);
+  assert.equal(input.dataset.acceptedTypes, '.stl,model/stl,application/sla');
+  assert.equal(input.getAttribute('accept'), null);
+});
+
+test('iPadOS Mac-touch fallback is enabled while desktop browsers retain accept filtering', () => {
+  const createInput = () => {
+    const attributes = new Map([['accept', '.stl,model/stl']]);
+    return {
+      dataset: {},
+      getAttribute: name => attributes.get(name) ?? null,
+      removeAttribute: name => attributes.delete(name),
+    };
+  };
+  const ipad = createInput();
+  const desktop = createInput();
+
+  assert.equal(configureFilePickerForPlatform(ipad, {
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+    platform: 'MacIntel',
+    maxTouchPoints: 5,
+  }), true);
+  assert.equal(ipad.getAttribute('accept'), null);
+  assert.equal(configureFilePickerForPlatform(desktop, {
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+    platform: 'MacIntel',
+    maxTouchPoints: 0,
+  }), false);
+  assert.equal(desktop.getAttribute('accept'), '.stl,model/stl');
+  assert.equal(desktop.dataset.acceptedTypes, undefined);
 });
 
 test('returns a same-file upload-derived geometry claim with lowercase SHA-256', async () => {
