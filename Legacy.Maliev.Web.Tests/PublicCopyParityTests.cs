@@ -47,9 +47,9 @@ public sealed class PublicCopyParityTests
         var quotation = ReadWebFile("Components", "Pages", "Quotation", "QuotationFormFields.razor");
         var guidance = ReadWebFile("Components", "Pages", "Quotation", "QuotationGuidanceContent.razor");
 
-        Assert.Contains("โปรเจ็ค", knowledge, StringComparison.Ordinal);
-        Assert.Contains("โปรเจ็ค", guidelines, StringComparison.Ordinal);
-        Assert.Contains("โปรเจ็ค", workflow, StringComparison.Ordinal);
+        Assert.Contains("โปรเจกต์", knowledge, StringComparison.Ordinal);
+        Assert.Contains("โปรเจกต์", guidelines, StringComparison.Ordinal);
+        Assert.Contains("โปรเจกต์", workflow, StringComparison.Ordinal);
         Assert.Contains("data-live-email", contact, StringComparison.Ordinal);
         Assert.Contains("data-auto-country", contact, StringComparison.Ordinal);
         Assert.Contains("data-live-email", quotation, StringComparison.Ordinal);

@@ -264,7 +264,7 @@
   <data name="Discuss your design" xml:space="preserve"><value>ปรึกษางานออกแบบ</value></data>
   <data name="Silicone Casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
   <data name="Silicone poured into a 3D-printed mold" xml:space="preserve"><value>เทซิลิโคนลงในแม่พิมพ์พิมพ์ 3 มิติ</value></data>
-  <data name="Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน</value></data>
+  <data name="Create short-run silicone parts using a 3D-printed mold, with material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน</value></data>
   <data name="Discuss silicone casting" xml:space="preserve"><value>ปรึกษางานหล่อซิลิโคน</value></data>
   <data name="Low-volume Injection Molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
   <data name="Pneumatic PIMM injection molding machine" xml:space="preserve"><value>เครื่องฉีดพลาสติก PIMM ระบบลม</value></data>

@@ -102,7 +102,7 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         Assert.Contains(
             culture == "th"
                 ? "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน"
-                : "with the material and finish reviewed for the application.",
+                : "with material and finish reviewed for the application.",
             source,
             StringComparison.Ordinal);
         Assert.Contains("landing-hero-cnc.webp", source, StringComparison.Ordinal);

@@ -1909,7 +1909,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("/services", "en", "Manufacturing services", "/services/cnc-machining")]
-    [InlineData("/services", "th", "บริการผลิตชิ้นงาน", "/services/cnc-machining")]
+    [InlineData("/services", "th", "บริการผลิตชิ้นส่วน", "/services/cnc-machining")]
     [InlineData("/about/socialmedia", "en", "MALIEV on social media", "https://www.youtube.com")]
     [InlineData("/about/socialmedia", "th", "MALIEV บนโซเชียลมีเดีย", "https://www.youtube.com")]
     public async Task ReadOnlyPublicRoute_RendersLocalizedBlazorStaticSsrContent(
@@ -2136,7 +2136,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "FDM & Resin 3D Printing", "Professional 3D Printing for Prototypes and Functional Parts", "How much does 3D printing cost?")]
-    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
