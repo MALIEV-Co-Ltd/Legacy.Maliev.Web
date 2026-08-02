@@ -41,9 +41,27 @@ internal sealed class ContactClient(
                 return new ContactSubmissionResult(null, true, false);
             }
 
-            response.EnsureSuccessStatusCode();
+            if (response.StatusCode != HttpStatusCode.Created)
+            {
+                return new ContactSubmissionResult(
+                    null,
+                    (int)response.StatusCode < 500 && !response.IsSuccessStatusCode,
+                    true);
+            }
+
+            if (!string.Equals(
+                    response.Content.Headers.ContentType?.MediaType,
+                    "application/json",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("Contact service returned an unexpected success content type.");
+                return new ContactSubmissionResult(null, false, true);
+            }
+
             var created = await response.Content.ReadFromJsonAsync<ContactRequestResponse>(cancellationToken);
-            return new ContactSubmissionResult(created?.Id, true, true);
+            return created is { Id: > 0 }
+                ? new ContactSubmissionResult(created.Id, true, true)
+                : new ContactSubmissionResult(null, false, true);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -53,7 +71,7 @@ internal sealed class ContactClient(
     }
 
     private static bool IsTransient(Exception exception, CancellationToken cancellationToken) =>
-        exception is HttpRequestException
+        exception is HttpRequestException or System.Text.Json.JsonException or NotSupportedException
         || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
 
     private sealed record ContactRequestResponse(int Id);
