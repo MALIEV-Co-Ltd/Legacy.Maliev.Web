@@ -7,10 +7,10 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedHead = '370fe2010b9b63646151222fac3959eebed85dc4'
+$expectedHead = '8049024cc7122fdb967a983bb0921b450386878f'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$manifestPath = Join-Path $repositoryRoot 'docs\complete-source-history-parity-through-370fe20.md'
-$deltaLedgerPath = Join-Path $repositoryRoot 'docs\source-parity-through-370fe20.md'
+$manifestPath = Join-Path $repositoryRoot 'docs\complete-source-history-parity-through-8049024.md'
+$deltaLedgerPath = Join-Path $repositoryRoot 'docs\source-parity-through-8049024.md'
 
 if (-not (Test-Path -LiteralPath (Join-Path $SourceRoot '.git'))) {
     throw "The read-only source repository was not found at '$SourceRoot'."

@@ -172,8 +172,45 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
         Assert.Contains("What file formats should I send?", content, StringComparison.Ordinal);
         Assert.Contains("แนะนำไฟล์ STEP หรือไฟล์ solid CAD พร้อมแบบ PDF", content, StringComparison.Ordinal);
-        Assert.Contains("Production quantities", pricing, StringComparison.Ordinal);
-        Assert.Contains("Unit price changes with quantity, material, setup, tooling, and finishing requirements.", pricing, StringComparison.Ordinal);
+        Assert.Contains("Black oxide for steel", pricing, StringComparison.Ordinal);
+        Assert.Contains("Starts at approximately THB 1,500 per batch", pricing, StringComparison.Ordinal);
+        Assert.Contains("รมดำสำหรับชิ้นงานเหล็ก", pricing, StringComparison.Ordinal);
+        Assert.Contains("เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", pricing, StringComparison.Ordinal);
+        Assert.Contains("Standard aluminium anodizing", pricing, StringComparison.Ordinal);
+        Assert.Contains("Starts at approximately THB 2,500 per lot; depends on part size and processing complexity", pricing, StringComparison.Ordinal);
+        Assert.Contains("อะโนไดซ์อะลูมิเนียมมาตรฐาน", pricing, StringComparison.Ordinal);
+        Assert.Contains("เริ่มต้นประมาณ 2,500 บาทต่อชุด ขึ้นอยู่กับขนาดชิ้นงานและความยากในการชุบ", pricing, StringComparison.Ordinal);
+        Assert.Contains("Hard or custom-colour anodizing", pricing, StringComparison.Ordinal);
+        Assert.Contains("Plan approximately THB 6,000–15,000+ per lot", pricing, StringComparison.Ordinal);
+        Assert.Contains("ฮาร์ดอะโนไดซ์หรือสีพิเศษ", pricing, StringComparison.Ordinal);
+        Assert.Contains("วางแผนประมาณ 6,000–15,000+ บาทต่อชุดงาน", pricing, StringComparison.Ordinal);
+        Assert.Contains("total coated area", pricing, StringComparison.Ordinal);
+        Assert.Contains("coating thickness", pricing, StringComparison.Ordinal);
+        Assert.Contains("surface preparation", pricing, StringComparison.Ordinal);
+        Assert.DoesNotContain("Production quantities", pricing, StringComparison.Ordinal);
+        Assert.DoesNotContain("supplier", pricing, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("โรงงานชุบ", pricing, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Starts at approximately THB 1,500 per batch", "Starts at approximately THB 2,500 per lot; depends on part size and processing complexity", "Plan approximately THB 6,000–15,000+ per lot")]
+    [InlineData("th", "เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", "เริ่มต้นประมาณ 2,500 บาทต่อชุด ขึ้นอยู่กับขนาดชิ้นงานและความยากในการชุบ", "วางแผนประมาณ 6,000–15,000+ บาทต่อชุดงาน")]
+    public async Task Route_RendersExactLocalizedCncFinishingEstimates(
+        string culture,
+        string blackOxide,
+        string standardAnodizing,
+        string customAnodizing)
+    {
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}&tracking=excluded");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(blackOxide, source, StringComparison.Ordinal);
+        Assert.Contains(standardAnodizing, source, StringComparison.Ordinal);
+        Assert.Contains(customAnodizing, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("THB 4,500–8,000", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("4,500–8,000 บาท", source, StringComparison.Ordinal);
     }
 
     [Fact]
