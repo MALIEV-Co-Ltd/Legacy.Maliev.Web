@@ -1,12 +1,12 @@
-# Maliev.Web source parity through `370fe20`
+# Maliev.Web source parity through `8049024`
 
 ## Audit boundary
 
-- Read-only source: `R:\maliev-web`, `main`, `370fe2010b9b63646151222fac3959eebed85dc4`.
+- Read-only source: `R:\maliev-web`, `main`, `8049024cc7122fdb967a983bb0921b450386878f`.
 - Migrated target: `Legacy.Maliev.Web` on .NET 10 and Blazor static SSR, with interactive islands only where required.
-- Audited range: `dcc088f..370fe20` (79 commits).
-- Complete Web/Web-test history: 298 commits, independently inventoried in
-  `docs/complete-source-history-parity-through-370fe20.md` and verified against
+- Audited range: `dcc088f..8049024` (81 commits).
+- Complete Web/Web-test history: 300 commits, independently inventoried in
+  `docs/complete-source-history-parity-through-8049024.md` and verified against
   the read-only source by `scripts/verify-complete-source-history-parity.ps1`.
 - Production deployment is outside this audit. The source repository was not modified.
 - Local-only Claude settings and Impeccable critique artifacts are intentionally excluded.
@@ -97,6 +97,8 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 | `ad8cbb7` | Migrated | Robots permits general and Google AI crawlers while keeping private routes disallowed; SEO tests. |
 | `ab2e481` | Migrated | Localized account/inquiry forms, guarded score-based reCAPTCHA, credential leak prevention and password/email workflows. |
 | `370fe20` | Migrated | Runtime motion/responsive regression contracts and geometry tests; IBM-font expectation and Impeccable artifacts are excluded as described above. |
+| `d913fcd` | Migrated | CNC pricing cards now expose black oxide, standard anodizing, and hard/custom anodizing planning estimates without naming the outsourced supplier. |
+| `8049024` | Migrated | Standard anodizing now uses the final bilingual THB 2,500 starting estimate with part-size and processing-complexity qualification. |
 
 ## Aggregate evidence at audit completion
 

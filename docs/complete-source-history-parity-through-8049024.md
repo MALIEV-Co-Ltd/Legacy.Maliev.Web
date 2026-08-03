@@ -1,23 +1,23 @@
-# Complete Maliev.Web source-history parity through `370fe20`
+# Complete Maliev.Web source-history parity through `8049024`
 
 ## Scope and result
 
-This is the full-history companion to `docs/source-parity-through-370fe20.md`.
+This is the full-history companion to `docs/source-parity-through-8049024.md`.
 It inventories every commit reachable from source `main` that touches
 `Maliev.Web` or `Maliev.Web.Tests`, from the initial commit through
-`370fe2010b9b63646151222fac3959eebed85dc4`.
+`8049024cc7122fdb967a983bb0921b450386878f`.
 
-- Source commits affecting Web or Web tests: **298**.
+- Source commits affecting Web or Web tests: **300**.
 - Pre-extraction through `a40ae59`: **105**.
 - After extraction through `dcc088f`: **123**.
-- After `dcc088f` through the source head: **70**.
-- The nine repository-only commits in the later 79-commit delta remain recorded
+- After `dcc088f` through the source head: **72**.
+- The nine repository-only commits in the later 81-commit delta remain recorded
   in the companion ledger and are deliberately not counted as Maliev.Web commits.
 - Source repository: read-only. Production deployment: not authorized.
 
 Disposition totals in this inventory:
 
-- Migrated: **251**
+- Migrated: **253**
 - Validation translated: **16**
 - No unique change: **3**
 - Superseded safely: **6**
@@ -344,11 +344,13 @@ service, or owner Aspire acceptance.
 | `ad8cbb7` | 2026-08-01 | Migrated | Search/measurement | Allow Google AI crawler access |
 | `ab2e481` | 2026-08-01 | Migrated | Account | Harden localized account and inquiry forms |
 | `370fe20` | 2026-08-01 | Migrated | Foundation | Refresh shared UI and browser regression contracts |
+| `d913fcd` | 2026-08-03 | Migrated | Public UI | Publish CNC finishing price estimates |
+| `8049024` | 2026-08-03 | Migrated | Public UI | Lower public anodizing starting estimate |
 
 ## Machine verification
 
 `CompleteSourceHistoryParityManifestTests` freezes the source head, exact
-cohort counts, all 298 unique hashes, allowed dispositions, and the absence of
+cohort counts, all 300 unique hashes, allowed dispositions, and the absence of
 unresolved `Gap` rows. Source-aware verification recomputes the history
 directly from read-only `R:\\maliev-web` before release.
 
@@ -356,4 +358,3 @@ This inventory proves review coverage, not production readiness. Aspire,
 production-identical PostgreSQL reconciliation and rollback, consolidated-secret
 projection, Workload Identity, Search Console/Safe Browsing, and owner approval
 remain separate release gates.
-
