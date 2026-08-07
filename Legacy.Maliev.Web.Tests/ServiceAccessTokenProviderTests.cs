@@ -51,6 +51,16 @@ public sealed class ServiceAccessTokenProviderTests
         Assert.Null(token);
     }
 
+    [Fact]
+    public async Task Token_InvalidAuthPayloadFailsClosedWithoutEscapingToPageRendering()
+    {
+        var provider = CreateProvider(new InvalidJsonHandler());
+
+        var token = await provider.GetAccessTokenAsync(CancellationToken.None);
+
+        Assert.Null(token);
+    }
+
     private static ServiceAccessTokenProvider CreateProvider(
         HttpMessageHandler handler,
         string clientSecret = "configured-secret")
@@ -108,5 +118,16 @@ public sealed class ServiceAccessTokenProviderTests
             CancellationToken cancellationToken) =>
             Task.FromException<HttpResponseMessage>(
                 new TimeoutRejectedException("auth service timeout"));
+    }
+
+    private sealed class InvalidJsonHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{invalid", Encoding.UTF8, "application/json")
+            });
     }
 }
