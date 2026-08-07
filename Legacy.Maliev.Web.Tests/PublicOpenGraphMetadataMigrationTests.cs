@@ -57,19 +57,20 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<WebApp
         var model = File.ReadAllText(modelPath);
         Assert.Contains("CanonicalUrlPolicy.GetLocalizedUrl", model, StringComparison.Ordinal);
         Assert.DoesNotContain("Request.Host", model, StringComparison.Ordinal);
-        Assert.DoesNotContain("Request.Query", model, StringComparison.Ordinal);
+        Assert.Contains("Request.Query[\"culture\"]", model, StringComparison.Ordinal);
         Assert.DoesNotContain("AccessToken", model, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RefreshToken", model, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
-    [InlineData("en", "Legal information | MALIEV", "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.", "https://www.maliev.com/legal?culture=en")]
-    [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV", "ตรวจสอบนโยบายของ MALIEV เกี่ยวกับการใช้เว็บไซต์ ความเป็นส่วนตัว และข้อมูลงานผลิตที่เป็นความลับ", "https://www.maliev.com/legal")]
+    [InlineData("en", "Legal information | MALIEV", "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.", "https://www.maliev.com/legal?culture=en", "en_US")]
+    [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV", "รวมข้อมูลด้านกฎหมาย นโยบายความเป็นส่วนตัว ข้อกำหนดการใช้งาน และข้อตกลงรักษาความลับสำหรับการติดต่อและโปรเจ็คงานผลิตกับ MALIEV", "https://www.maliev.com/legal", "th_TH")]
     public async Task OpenGraphMetadata_PreservesValuesAndUsesCanonicalLocalizedUrl(
         string culture,
         string title,
         string description,
-        string canonicalUrl)
+        string canonicalUrl,
+        string locale)
     {
         using var response = await client.GetAsync($"/legal?culture={culture}&tracking=excluded");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
@@ -78,16 +79,16 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<WebApp
         Assert.Contains("data-migration-component=\"public-open-graph-metadata\"", source, StringComparison.Ordinal);
         Assert.Equal(1, CountMeta(source, "og:image"));
         Assert.Equal(1, CountMeta(source, "og:image:alt", "Online Manufacturing - MALIEV"));
-        Assert.Equal(1, CountMeta(source, "og:image:height", "239"));
-        Assert.Equal(1, CountMeta(source, "og:image:width", "159"));
-        Assert.Equal(1, CountMeta(source, "og:locale", culture));
+        Assert.Equal(0, CountMeta(source, "og:image:height"));
+        Assert.Equal(0, CountMeta(source, "og:image:width"));
+        Assert.Equal(1, CountMeta(source, "og:locale", locale));
         Assert.Equal(1, CountMeta(source, "og:title", title));
         Assert.Equal(1, CountMeta(source, "og:description", description));
         Assert.Equal(1, CountMeta(source, "og:type", "website"));
         Assert.Equal(1, CountMeta(source, "og:url", canonicalUrl));
         Assert.Equal(1, CountMeta(source, "og:site_name", "Maliev Manufacturing"));
         Assert.Equal(0, CountMeta(source, "fb:app_id"));
-        Assert.DoesNotContain("content=", GetMeta(source, "og:image"), StringComparison.Ordinal);
+        Assert.Contains("https://www.maliev.com/src/images/landing/landing-hero-cnc.webp", GetMeta(source, "og:image"), StringComparison.Ordinal);
         Assert.DoesNotContain("untrusted-request-host.example", ExtractOpenGraphMetadata(source), StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractOpenGraphMetadata(source), StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);

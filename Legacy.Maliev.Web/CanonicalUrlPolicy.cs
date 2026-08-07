@@ -64,6 +64,15 @@ namespace Legacy.Maliev.Web
                 return canonicalAlias;
             }
 
+            // Keep the long-standing Instant Quotation route casing valid for
+            // saved links and form POST redirects. The lower-case alias is the
+            // indexable sitemap entry, but it must not make existing links
+            // redirect before the scoped interactive bootstrap runs.
+            if (lookupPath.Equals("/instantquotation/3d-printing", StringComparison.OrdinalIgnoreCase))
+            {
+                return path;
+            }
+
             return PublicSearchRouteCatalog.TryGetCanonicalPath(lookupPath, out string canonicalPath)
                 ? canonicalPath
                 : path;

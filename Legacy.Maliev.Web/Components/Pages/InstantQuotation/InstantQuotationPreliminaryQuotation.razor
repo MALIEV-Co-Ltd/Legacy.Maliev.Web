@@ -1,0 +1,203 @@
+@using System.Globalization
+@using Microsoft.JSInterop
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Application.Pricing
+@inject IJSRuntime JavaScript
+@inject IWebHostEnvironment WebHostEnvironment
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+<section class="instant-quote__preliminary-quotation" aria-labelledby="instant-quote-preliminary-heading">
+    <h4 id="instant-quote-preliminary-heading" class="instant-quote__sr-only">@Localizer["Preliminary quotation"]</h4>
+    <button id="preliminary-quotation-button"
+            type="button"
+            disabled="@(!CanBuildPreliminaryQuotation)"
+            aria-disabled="@(!CanBuildPreliminaryQuotation).ToString().ToLowerInvariant()"
+            @onclick="OpenPreliminaryQuotationAsync">
+        @Localizer["Print preliminary quotation"]
+    </button>
+    <p class="instant-quote__sr-only" role="note">@Localizer["Temporary browser-side quotation preview for review only. The final quotation is issued after engineering review."]</p>
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<InstantQuotationWorkflowPartViewModel> Parts { get; set; } = [];
+
+    [Parameter]
+    public InstantQuotationOrderQuote? Quote { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; set; } = [];
+
+    private bool CanBuildPreliminaryQuotation => Quote is not null
+        && Parts.Count > 0
+        && Parts.All(static part => part.Quote is not null);
+
+    private async Task OpenPreliminaryQuotationAsync()
+    {
+        if (!CanBuildPreliminaryQuotation || Quote is null)
+        {
+            return;
+        }
+
+        var snapshot = new PreliminaryQuotationSnapshot(
+            CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
+            CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("th", StringComparison.OrdinalIgnoreCase) ? "บาท" : "THB",
+            LogoDataUri(),
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["preliminaryQuotation"] = Localizer["Preliminary quotation"].Value,
+                ["preliminaryQuotationNote"] = Localizer["Review only · print or download as PDF"].Value,
+                ["preliminaryQuotationPrint"] = Localizer["Print"].Value,
+                ["preliminaryQuotationDownloadPdf"] = Localizer["Download as PDF"].Value,
+                ["preliminaryQuotationDownloadPdfHint"] = Localizer["Opens the print dialog; choose Save as PDF"].Value,
+                ["preliminaryQuotationClose"] = Localizer["Close"].Value,
+                ["reviewOnly"] = Localizer["Preliminary quotation for review only."].Value,
+                ["generated"] = Localizer["Generated from the current estimate"].Value,
+                ["preliminaryQuotationGenerated"] = Localizer["Prepared"].Value,
+                ["preliminaryQuotationParts"] = Localizer["Part details"].Value,
+                ["parts"] = Localizer["Parts"].Value,
+                ["part"] = Localizer["Part"].Value,
+                ["material"] = Localizer["Material"].Value,
+                ["color"] = Localizer["Color"].Value,
+                ["buildPreference"] = Localizer["Build preference"].Value,
+                ["quantity"] = Localizer["Quantity"].Value,
+                ["unitPrice"] = Localizer["Unit price"].Value,
+                ["lineSubtotal"] = Localizer["Subtotal"].Value,
+                ["printTime"] = Localizer["Estimated print time per part"].Value,
+                ["dimensions"] = Localizer["Dimensions"].Value,
+                ["volume"] = Localizer["Volume"].Value,
+                ["surfaceArea"] = Localizer["Surface area"].Value,
+                ["minThickness"] = Localizer["Min. thickness"].Value,
+                ["dfmAnalysis"] = Localizer["DFM Analysis"].Value,
+                ["dfmClear"] = Localizer["No automatic DFM warnings were found. Engineering review is still required."].Value,
+                ["summaryTitle"] = Localizer["Price and lead-time summary"].Value,
+                ["printingSubtotal"] = Localizer["3D printing subtotal"].Value,
+                ["minimumOrderMinimum"] = Localizer["minimum"].Value,
+                ["surcharge"] = Localizer["Minimum order surcharge"].Value,
+                ["shipping"] = Localizer["Estimated shipping"].Value,
+                ["vat"] = Localizer["VAT"].Value,
+                ["leadTime"] = Localizer["Lead time"].Value,
+                ["afterConfirmed"] = Localizer["after order confirmation"].Value,
+                ["grandTotal"] = Localizer["Grand total"].Value,
+                ["reviewIntro"] = Localizer["Review each item, the complete price, and estimated lead time before entering your contact details."].Value,
+            },
+            Parts.Select((part, index) => CreatePartSnapshot(part, index + 1)).ToArray(),
+            new PreliminaryQuotationTotals(
+                Quote.ItemsSubtotal,
+                Quote.MinimumOrderPrice,
+                Quote.MinimumOrderSurcharge,
+                Quote.ShippingCost,
+                Quote.Vat,
+                Quote.FinalOrderPrice,
+                Quote.LeadTimeMinimumDays,
+                Quote.LeadTimeMaximumDays));
+
+        await JavaScript.InvokeVoidAsync("malievPreliminaryQuotation.open", snapshot);
+    }
+
+    private PreliminaryQuotationPart CreatePartSnapshot(InstantQuotationWorkflowPartViewModel part, int partNumber)
+    {
+        var quote = part.Quote ?? throw new InvalidOperationException("A preliminary quotation requires a complete part quote.");
+        var geometry = part.Geometry;
+        var warnings = new List<string>();
+        if (!geometry.TopologyChecked)
+        {
+            warnings.Add(Localizer["Detailed topology checks were skipped for this large mesh. Engineering review is required."].Value);
+        }
+        if (geometry.NonWatertight)
+        {
+            warnings.Add(Localizer["Non-watertight mesh"].Value);
+        }
+        if (geometry.NonManifold)
+        {
+            warnings.Add(Localizer["Non-manifold edges"].Value);
+        }
+        if (geometry.BodyCount > 1)
+        {
+            warnings.Add(Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount].Value);
+        }
+        var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
+        if (maximumDimension is > 0 and < 3)
+        {
+            warnings.Add(Localizer["A dimension is below 3 mm."].Value);
+        }
+        if (maximumDimension > 350)
+        {
+            warnings.Add(Localizer["A dimension exceeds 350 mm."].Value);
+        }
+
+        return new PreliminaryQuotationPart(
+            part.PartId.ToString("D"),
+            partNumber,
+            part.DisplayFileName,
+            MaterialName(part.Configuration.MaterialKey),
+            Localizer[part.Configuration.Color].Value,
+            BuildPreferenceLabel(part.Configuration.BuildPreference),
+            part.Configuration.Quantity,
+            quote.UnitPrice,
+            quote.Subtotal,
+            quote.PrintTimeMinutesPerUnit,
+            geometry.DimensionXmm,
+            geometry.DimensionYmm,
+            geometry.DimensionZmm,
+            geometry.VolumeMm3 / 1_000,
+            geometry.SurfaceAreaMm2 / 100,
+            geometry.MinThicknessMm,
+            warnings);
+    }
+
+    private string LogoDataUri()
+    {
+        var logoPath = Path.Combine(WebHostEnvironment.WebRootPath, "src", "images", "navbar_logo_black.png");
+        return File.Exists(logoPath)
+            ? $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(logoPath))}"
+            : string.Empty;
+    }
+
+    private string MaterialName(string key) => Materials
+        .SingleOrDefault(item => string.Equals(item.Key, key, StringComparison.Ordinal))?.DisplayName ?? key;
+
+    private string BuildPreferenceLabel(BuildPreference preference) => preference switch
+    {
+        BuildPreference.Quality => Localizer["Quality"].Value,
+        BuildPreference.Strength => Localizer["Strength"].Value,
+        _ => Localizer["Standard"].Value,
+    };
+
+    private sealed record PreliminaryQuotationSnapshot(
+        string Locale,
+        string Currency,
+        string LogoDataUri,
+        IReadOnlyDictionary<string, string> Text,
+        IReadOnlyList<PreliminaryQuotationPart> Parts,
+        PreliminaryQuotationTotals Totals);
+
+    private sealed record PreliminaryQuotationPart(
+        string PartId,
+        int PartNumber,
+        string FileName,
+        string Material,
+        string Color,
+        string BuildPreference,
+        int Quantity,
+        double UnitPrice,
+        double Subtotal,
+        double PrintTimeMinutes,
+        double DimensionXmm,
+        double DimensionYmm,
+        double DimensionZmm,
+        double VolumeCm3,
+        double SurfaceAreaCm2,
+        double MinThicknessMm,
+        IReadOnlyList<string> DfmWarnings);
+
+    private sealed record PreliminaryQuotationTotals(
+        double Subtotal,
+        double MinimumOrderPrice,
+        double MinimumOrderSurcharge,
+        double Shipping,
+        double Vat,
+        double Total,
+        int LeadTimeMinimumDays,
+        int LeadTimeMaximumDays);
+}

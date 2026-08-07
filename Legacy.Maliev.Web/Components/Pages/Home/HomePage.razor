@@ -8,20 +8,22 @@
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
     var title = isThai
-        ? "รับผลิตชิ้นงานตามแบบ | MALIEV"
+        ? "รับผลิตชิ้นส่วนตามแบบ | MALIEV"
         : "Custom Manufacturing Services | MALIEV";
     var description = isThai
-        ? "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ"
+        ? "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ"
         : "Custom CNC, 3D printing, 3D scanning, and design services for prototypes and production parts in Bangkok and Nonthaburi.";
     var keywords = isThai
-        ? "รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ"
+        ? "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ"
         : "custom part manufacturing thailand, 3d printing thailand, 3d scanning thailand, 3d design thailand, silicone casting thailand, low volume injection molding thailand, cnc machining thailand";
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
+    <link rel="preload" as="image" href="/src/images/landing/landing-hero-cnc.webp" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    <PublicWebsiteStructuredData />
 </HeadContent>
 <HomeContent RouteOwner="blazor-static-ssr" />

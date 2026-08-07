@@ -17,6 +17,7 @@
             <article data-workflow-review-part aria-labelledby="instant-quote-review-part-@part.PartId">
                 <img class="instant-quote__review-thumbnail"
                      data-review-thumbnail
+                     data-review-part-id="@part.PartId"
                      data-part-id="@InstantQuotationWorkflow.ViewerPartKey(part.PartId)"
                      src="/src/images/3d-canvas-placeholder.svg"
                      alt="" />
@@ -59,6 +60,7 @@
     </section>
 
     <p role="note">@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
+    <InstantQuotationPreliminaryQuotation Parts="@Parts" Quote="@Quote" Materials="@Materials" />
     <div class="instant-quote__actions" role="group" aria-label="@Localizer["Quotation steps"]">
         <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
         <button type="button" @onclick="OnContinue">@Localizer["Customer details"]</button>

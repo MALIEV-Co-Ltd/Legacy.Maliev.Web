@@ -98,7 +98,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["sameAs"] = SocialLinks,
         ["contactPoint"] = CreateContactPoint("+66898950690", "customer service", string.Empty, includeEmail: false),
         ["description"] = isThai
-            ? "บริการรับผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์ 3 มิติ งานสแกน 3 มิติ และ Reverse Engineering จากปากเกร็ด นนทบุรี พร้อมประเมินโครงการออนไลน์"
+            ? "บริการรับผลิตชิ้นส่วนตามแบบ งาน CNC งานพิมพ์ 3 มิติ งานสแกน 3 มิติ และ Reverse Engineering จากปากเกร็ด นนทบุรี พร้อมประเมินโปรเจ็คออนไลน์"
             : "Custom part manufacturing, CNC machining, 3D printing, 3D scanning, and reverse-engineering services from Pak Kret, Nonthaburi, with online project review.",
         ["email"] = "info@maliev.com",
         ["foundingDate"] = "2018-01",

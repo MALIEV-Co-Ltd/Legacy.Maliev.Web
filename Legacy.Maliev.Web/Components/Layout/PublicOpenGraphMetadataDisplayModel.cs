@@ -19,13 +19,22 @@ public sealed record PublicOpenGraphMetadataDisplayModel(
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+        var currentCulture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+        var requestedCulture = context.Request.Query["culture"].ToString();
+        var culture = string.Equals(requestedCulture, "en", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(requestedCulture, "th", StringComparison.OrdinalIgnoreCase)
+            ? requestedCulture.ToLowerInvariant()
+            : currentCulture;
+        culture = string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "th";
+        var imageText = GetText(image);
 
         return new PublicOpenGraphMetadataDisplayModel(
-            GetText(image),
+            string.IsNullOrWhiteSpace(imageText)
+                ? "https://www.maliev.com/src/images/landing/landing-hero-cnc.webp"
+                : imageText,
             GetText(title),
             GetText(description),
-            culture,
+            string.Equals(culture, "th", StringComparison.OrdinalIgnoreCase) ? "th_TH" : "en_US",
             CanonicalUrlPolicy.GetLocalizedUrl(context.Request.Path, culture));
     }
 

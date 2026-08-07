@@ -451,4 +451,23 @@
   <data name="Compare material prices" xml:space="preserve"><value>เปรียบเทียบราคาวัสดุ</value></data>
   <data name="per piece" xml:space="preserve"><value>ต่อชิ้น</value></data>
   <data name="Part {0}" xml:space="preserve"><value>ชิ้นงานที่ {0}</value></data>
+  <data name="Preliminary quotation" xml:space="preserve"><value>ใบเสนอราคาเบื้องต้น</value></data>
+  <data name="Preliminary quotation for review only." xml:space="preserve"><value>ใบเสนอราคานี้จัดทำเพื่อใช้ตรวจสอบเบื้องต้นเท่านั้น</value></data>
+  <data name="Temporary browser-side quotation preview for review only. The final quotation is issued after engineering review." xml:space="preserve"><value>ตัวอย่างใบเสนอราคาเบื้องต้นในเบราว์เซอร์สำหรับตรวจสอบเท่านั้น ใบเสนอราคาฉบับจริงจะออกให้หลังทีมวิศวกรตรวจสอบ</value></data>
+  <data name="Generated from the current estimate" xml:space="preserve"><value>สร้างจากผลประเมินราคาปัจจุบัน</value></data>
+  <data name="Print preliminary quotation" xml:space="preserve"><value>พิมพ์ใบเสนอราคาเบื้องต้น</value></data>
+  <data name="Review only · print or download as PDF" xml:space="preserve"><value>สำหรับตรวจสอบเท่านั้น · พิมพ์หรือดาวน์โหลดเป็น PDF</value></data>
+  <data name="Download as PDF" xml:space="preserve"><value>ดาวน์โหลดเป็น PDF</value></data>
+  <data name="Opens the print dialog; choose Save as PDF" xml:space="preserve"><value>เปิดหน้าต่างพิมพ์ แล้วเลือกบันทึกเป็น PDF</value></data>
+  <data name="Prepared" xml:space="preserve"><value>จัดทำเมื่อ</value></data>
+  <data name="Part details" xml:space="preserve"><value>รายละเอียดชิ้นงาน</value></data>
+  <data name="Estimated print time per part" xml:space="preserve"><value>เวลาพิมพ์โดยประมาณต่อชิ้น</value></data>
+  <data name="3D printing subtotal" xml:space="preserve"><value>ค่าพิมพ์ 3D (ยอดรวมชิ้นงาน)</value></data>
+  <data name="DFM Analysis" xml:space="preserve"><value>การตรวจสอบเพื่อการผลิต</value></data>
+  <data name="after order confirmation" xml:space="preserve"><value>หลังยืนยันคำสั่งซื้อ</value></data>
+  <data name="Grand total" xml:space="preserve"><value>ยอดรวมสุทธิ</value></data>
+  <data name="Print" xml:space="preserve"><value>พิมพ์</value></data>
+  <data name="Part" xml:space="preserve"><value>ชิ้นงาน</value></data>
+  <data name="Print time" xml:space="preserve"><value>เวลาพิมพ์</value></data>
+  <data name="Estimated shipping" xml:space="preserve"><value>ค่าจัดส่งโดยประมาณ</value></data>
 </root>

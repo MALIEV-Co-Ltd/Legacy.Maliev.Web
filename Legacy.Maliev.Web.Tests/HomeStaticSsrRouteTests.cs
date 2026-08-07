@@ -50,11 +50,11 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         "Ready to bring your ideas to life?")]
     [InlineData(
         "th",
-        "รับผลิตชิ้นงานตามแบบ | MALIEV",
-        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ",
-        "รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ",
+        "รับผลิตชิ้นส่วนตามแบบ | MALIEV",
+        "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ",
+        "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ",
         "แม่นยำ รวดเร็ว เชื่อถือได้",
-        "บริการผลิตชิ้นงานต้นแบบและชิ้นส่วนสำหรับการผลิตจริง",
+        "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง",
         "บริการของเรา",
         "ขั้นตอนการสั่งงาน",
         "ทำไมต้องเลือก MALIEV",
@@ -108,6 +108,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         Assert.Contains("landing-hero-cnc.webp", source, StringComparison.Ordinal);
         Assert.Contains("landing-hero-printing.webp", source, StringComparison.Ordinal);
         Assert.Contains("landing-hero-scanning.webp", source, StringComparison.Ordinal);
+        Assert.Contains("width=\"1672\" height=\"941\" loading=\"eager\" fetchpriority=\"high\"", source, StringComparison.Ordinal);
+        Assert.Contains("rel=\"preload\" as=\"image\" href=\"/src/images/landing/landing-hero-cnc.webp\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"public-website-structured-data\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);

@@ -12,6 +12,7 @@ public sealed class TechnicalSeoParityTests
 
         Assert.Contains("User-agent: *", robots, StringComparison.Ordinal);
         Assert.Contains("Allow: /", robots, StringComparison.Ordinal);
+        Assert.DoesNotContain("Disallow: /instantquotation/*", robots, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("User-agent: Google-Extended", robots, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Disallow: /account/*", robots, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Disallow: /member/", robots, StringComparison.OrdinalIgnoreCase);
