@@ -234,6 +234,31 @@ public sealed class AccountSessionStoreTests
     }
 
     [Fact]
+    public async Task LocalRefreshLocks_AreRemovedAfterRelease()
+    {
+        var services = new ServiceCollection()
+            .AddDataProtection()
+            .Services
+            .AddDistributedMemoryCache()
+            .BuildServiceProvider();
+        var store = new DistributedAccountSessionStore(
+            services.GetRequiredService<IDistributedCache>(),
+            services.GetRequiredService<IDataProtectionProvider>(),
+            services,
+            TimeProvider.System,
+            NullLogger<DistributedAccountSessionStore>.Instance);
+
+        for (var index = 0; index < 256; index++)
+        {
+            await using var refreshLock = await store.AcquireRefreshLockAsync($"session-{index}", default);
+            Assert.NotNull(refreshLock);
+            Assert.Equal(1, store.LocalLockCount);
+        }
+
+        Assert.Equal(0, store.LocalLockCount);
+    }
+
+    [Fact]
     public async Task ConcurrentAccessTokenRequests_RotateRefreshTokenOnlyOnce()
     {
         var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);

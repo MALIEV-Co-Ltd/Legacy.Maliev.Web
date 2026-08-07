@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
@@ -37,7 +36,19 @@ internal sealed class DistributedAccountSessionStore(
     private static readonly TimeSpan LockWait = TimeSpan.FromSeconds(5);
     private readonly IDataProtector protector = dataProtectionProvider.CreateProtector(
         "Legacy.Maliev.Web.AccountSession.v1");
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> localLocks = new(StringComparer.Ordinal);
+    private readonly object localLockRegistrySync = new();
+    private readonly Dictionary<string, LocalLockEntry> localLocks = new(StringComparer.Ordinal);
+
+    internal int LocalLockCount
+    {
+        get
+        {
+            lock (localLockRegistrySync)
+            {
+                return localLocks.Count;
+            }
+        }
+    }
 
     public async Task<AccountSession?> GetAsync(
         string sessionId,
@@ -86,9 +97,17 @@ internal sealed class DistributedAccountSessionStore(
         var multiplexer = services.GetService<IConnectionMultiplexer>();
         if (multiplexer is null)
         {
-            var semaphore = localLocks.GetOrAdd(sessionId, static _ => new SemaphoreSlim(1, 1));
-            await semaphore.WaitAsync(cancellationToken);
-            return new LocalLock(semaphore);
+            var entry = AcquireLocalLockEntry(sessionId);
+            try
+            {
+                await entry.Semaphore.WaitAsync(cancellationToken);
+                return new LocalLock(this, sessionId, entry);
+            }
+            catch
+            {
+                ReleaseLocalLockEntry(sessionId, entry);
+                throw;
+            }
         }
 
         var database = multiplexer.GetDatabase();
@@ -111,11 +130,57 @@ internal sealed class DistributedAccountSessionStore(
 
     private static string Key(string sessionId) => $"{CacheKeyPrefix}{sessionId}";
 
-    private sealed class LocalLock(SemaphoreSlim semaphore) : IAsyncDisposable
+    private LocalLockEntry AcquireLocalLockEntry(string sessionId)
     {
+        lock (localLockRegistrySync)
+        {
+            if (!localLocks.TryGetValue(sessionId, out var entry))
+            {
+                entry = new LocalLockEntry();
+                localLocks.Add(sessionId, entry);
+            }
+
+            entry.ReferenceCount++;
+            return entry;
+        }
+    }
+
+    private void ReleaseLocalLockEntry(string sessionId, LocalLockEntry entry)
+    {
+        lock (localLockRegistrySync)
+        {
+            entry.ReferenceCount--;
+            if (entry.ReferenceCount == 0 &&
+                localLocks.Remove(sessionId, out var removed) &&
+                ReferenceEquals(removed, entry))
+            {
+                entry.Semaphore.Dispose();
+            }
+        }
+    }
+
+    private sealed class LocalLockEntry
+    {
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+        public int ReferenceCount { get; set; }
+    }
+
+    private sealed class LocalLock(
+        DistributedAccountSessionStore owner,
+        string sessionId,
+        LocalLockEntry entry) : IAsyncDisposable
+    {
+        private int disposed;
+
         public ValueTask DisposeAsync()
         {
-            semaphore.Release();
+            if (Interlocked.Exchange(ref disposed, 1) == 0)
+            {
+                entry.Semaphore.Release();
+                owner.ReleaseLocalLockEntry(sessionId, entry);
+            }
+
             return ValueTask.CompletedTask;
         }
     }
