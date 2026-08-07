@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Polly.Timeout;
 
 namespace Legacy.Maliev.Web.Infrastructure;
 
@@ -99,7 +100,7 @@ internal sealed class ServiceAccessTokenProvider(
         token is not null && token.ExpiresAt - RefreshSkew > timeProvider.GetUtcNow();
 
     private static bool IsTransient(Exception exception, CancellationToken cancellationToken) =>
-        exception is HttpRequestException
+        exception is HttpRequestException or TimeoutRejectedException
         || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
 
     private sealed record CachedToken(string Token, DateTimeOffset ExpiresAt);

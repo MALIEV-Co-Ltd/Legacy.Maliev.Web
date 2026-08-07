@@ -3,6 +3,7 @@ using System.Text;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Polly.Timeout;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -40,8 +41,18 @@ public sealed class ServiceAccessTokenProviderTests
         Assert.Equal(0, handler.CallCount);
     }
 
+    [Fact]
+    public async Task Token_AuthTimeoutFailsClosedWithoutEscapingToPageRendering()
+    {
+        var provider = CreateProvider(new TimeoutHandler());
+
+        var token = await provider.GetAccessTokenAsync(CancellationToken.None);
+
+        Assert.Null(token);
+    }
+
     private static ServiceAccessTokenProvider CreateProvider(
-        CountingHandler handler,
+        HttpMessageHandler handler,
         string clientSecret = "configured-secret")
     {
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://auth/") };
@@ -88,5 +99,14 @@ public sealed class ServiceAccessTokenProviderTests
                 Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
             };
         }
+    }
+
+    private sealed class TimeoutHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromException<HttpResponseMessage>(
+                new TimeoutRejectedException("auth service timeout"));
     }
 }
