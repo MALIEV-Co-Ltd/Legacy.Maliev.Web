@@ -181,7 +181,7 @@
         {
             return new(null, false);
         }
-        catch (TimeoutException)
+        catch (Exception exception) when (exception is TimeoutException or Polly.Timeout.TimeoutRejectedException)
         {
             return new(null, false);
         }
@@ -203,7 +203,7 @@
         {
             return null;
         }
-        catch (TimeoutException)
+        catch (Exception exception) when (exception is TimeoutException or Polly.Timeout.TimeoutRejectedException)
         {
             return null;
         }
@@ -225,7 +225,7 @@
         {
             return new(null, false, false);
         }
-        catch (TimeoutException)
+        catch (Exception exception) when (exception is TimeoutException or Polly.Timeout.TimeoutRejectedException)
         {
             return new(null, false, false);
         }

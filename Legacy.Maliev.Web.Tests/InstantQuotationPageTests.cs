@@ -83,6 +83,13 @@ public sealed class InstantQuotationPageTests
             "Pages",
             "InstantQuotation",
             "ThreeDimensionalPrintingEstimateContent.razor");
+        var instantQuotationPage = Path.Combine(
+            root,
+            "Legacy.Maliev.Web",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "InstantQuotationPage.razor");
         var browserModule = Path.Combine(
             root,
             "Legacy.Maliev.Web",
@@ -118,6 +125,7 @@ public sealed class InstantQuotationPageTests
             File.ReadAllText(page),
             File.ReadAllText(model),
             File.ReadAllText(component),
+            File.ReadAllText(instantQuotationPage),
             File.ReadAllText(workflow),
             File.ReadAllText(calculator),
             File.ReadAllText(browserModule),
@@ -129,6 +137,7 @@ public sealed class InstantQuotationPageTests
         Assert.Contains("<fieldset", source, StringComparison.Ordinal);
         Assert.Contains("string.Equals(material.Key, \"PLA\"", source, StringComparison.Ordinal);
         Assert.Contains("@Localizer[", source, StringComparison.Ordinal);
+        Assert.Contains("Polly.Timeout.TimeoutRejectedException", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DbContext", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Prediction", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("PayPal", source, StringComparison.OrdinalIgnoreCase);
