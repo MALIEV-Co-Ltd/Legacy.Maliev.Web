@@ -4149,13 +4149,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             [new CustomerOrderCatalogMaterial(20, 1, "PLA")],
             [new CustomerOrderFileFormat(1, "STEP", ".step"), new CustomerOrderFileFormat(2, "STL", ".stl")]);
 
-        public Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderCatalogResult(
+        public async Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+            return new CustomerOrderCatalogResult(
                 kind == CustomerOrderKind.Scanning
                     ? Catalog with { Processes = [new CustomerOrderCatalogProcess(11, 2, "Structured light")] }
                     : Catalog,
                 true,
-                true));
+                true);
+        }
 
         public Task<CustomerOrderMaterialOptionsResult> GetMaterialOptionsAsync(int materialId, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerOrderMaterialOptionsResult(

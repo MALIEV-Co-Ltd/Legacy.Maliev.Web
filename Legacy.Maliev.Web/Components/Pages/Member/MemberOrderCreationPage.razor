@@ -43,6 +43,11 @@
             "/member/orders/cnc-machining" => CustomerOrderKind.Machining,
             _ => throw new InvalidOperationException("The requested order type is unsupported."),
         };
+
+        // Static SSR may render once while the first service call is still awaiting.
+        // Seed a complete, empty model before that await so the render tree never
+        // dereferences the uninitialized model during a real network round-trip.
+        model = CreateDisplayModel(kind, null, null, 0, 0);
         var result = await CatalogClient.GetAsync(kind, context.RequestAborted);
         var processId = result.Catalog?.Processes.FirstOrDefault(item =>
             string.Equals(item.Name, Process, StringComparison.CurrentCultureIgnoreCase))?.Id ?? 0;
@@ -51,9 +56,23 @@
         var materialOptions = materialId > 0
             ? (await CatalogClient.GetMaterialOptionsAsync(materialId, context.RequestAborted)).Options
             : null;
-        model = new(
+        model = CreateDisplayModel(
             kind,
             result.Catalog,
+            materialOptions,
+            processId,
+            materialId);
+        tokens = Antiforgery.GetAndStoreTokens(context);
+    }
+
+    private static MemberOrderCreationDisplayModel CreateDisplayModel(
+        CustomerOrderKind kind,
+        CustomerOrderCatalog? catalog,
+        CustomerOrderMaterialOptions? materialOptions,
+        int processId,
+        int materialId) => new(
+            kind,
+            catalog,
             materialOptions?.Colors ?? [],
             materialOptions?.SurfaceFinishes ?? [],
             string.Empty,
@@ -71,7 +90,5 @@
             null,
             Guid.NewGuid().ToString("D"),
             null,
-            result.Catalog is null ? ["Order options are temporarily unavailable."] : []);
-        tokens = Antiforgery.GetAndStoreTokens(context);
-    }
+            catalog is null ? ["Order options are temporarily unavailable."] : []);
 }
