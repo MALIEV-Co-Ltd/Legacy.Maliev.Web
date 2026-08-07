@@ -1947,6 +1947,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://googleads.g.doubleclick.net", policy, StringComparison.Ordinal);
+        var imageSourceDirective = policy.Split(';', StringSplitOptions.TrimEntries)
+            .Single(static directive => directive.StartsWith("img-src ", StringComparison.Ordinal));
+        Assert.Contains("https://pagead2.googlesyndication.com", imageSourceDirective, StringComparison.Ordinal);
         Assert.Contains("'wasm-unsafe-eval'", policy, StringComparison.Ordinal);
         Assert.Contains("https://storage.googleapis.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://cloudflareinsights.com", policy, StringComparison.Ordinal);
