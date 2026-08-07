@@ -134,6 +134,9 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
   **5 passed**; targeted WebSurface chunks all passed.
 - Browser modules: **101 passed, 0 failed, 0 skipped**; `npm audit` reports
   **0 vulnerabilities**.
+- A resource-safe class-group run completed **1,322 passed, 0 failed, 0
+  skipped** across 16 fresh testhosts, covering the discovered .NET test
+  cases without the monolithic host's memory growth.
 
 The single-process full assembly run remains a release gate: the testhost
 exceeded the available resource budget (over 10 GB) before emitting a summary
