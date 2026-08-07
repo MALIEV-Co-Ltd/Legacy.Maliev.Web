@@ -16,18 +16,18 @@ public sealed partial class CompleteSourceHistoryParityManifestTests
             Disposition = match.Groups[2].Value,
         }).ToArray();
 
-        Assert.Equal(300, rows.Length);
+        Assert.Equal(311, rows.Length);
         Assert.Equal(rows.Length, rows.Select(row => row.Hash).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal("5fac706", rows[0].Hash);
         Assert.Equal("a40ae59", rows[104].Hash);
         Assert.Equal("dcc088f", rows[227].Hash);
-        Assert.Equal("8049024", rows[^1].Hash);
+        Assert.Equal("48e628c", rows[^1].Hash);
         Assert.DoesNotContain(rows, row => row.Disposition is "Gap");
 
         var inventory = string.Join('\n', rows.Select(row => row.Hash));
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(inventory)))
             .ToLowerInvariant();
-        Assert.Equal("e1bd498dc63b4170f9522a229ee8199e5af6ad683c8386ff77ef7513858307e9", digest);
+        Assert.Equal("c9678c9f70d96e77b06c5f2b2cfec82bd337795329c24fd6b939496d3ce802e8", digest);
     }
 
     [Fact]
@@ -38,13 +38,13 @@ public sealed partial class CompleteSourceHistoryParityManifestTests
             .GroupBy(value => value, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
-        Assert.Equal(253, rows["Migrated"]);
-        Assert.Equal(16, rows["Validation translated"]);
+        Assert.Equal(261, rows["Migrated"]);
+        Assert.Equal(19, rows["Validation translated"]);
         Assert.Equal(3, rows["No unique change"]);
         Assert.Equal(6, rows["Superseded safely"]);
         Assert.Equal(4, rows["Excluded tooling"]);
         Assert.Equal(18, rows["Release gate"]);
-        Assert.Equal(300, rows.Values.Sum());
+        Assert.Equal(311, rows.Values.Sum());
     }
 
     private static string ManifestPath() => Path.Combine(

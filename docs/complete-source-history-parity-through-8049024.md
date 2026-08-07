@@ -1,24 +1,24 @@
-# Complete Maliev.Web source-history parity through `8049024`
+# Complete Maliev.Web source-history parity through `48e628c`
 
 ## Scope and result
 
 This is the full-history companion to `docs/source-parity-through-8049024.md`.
 It inventories every commit reachable from source `main` that touches
 `Maliev.Web` or `Maliev.Web.Tests`, from the initial commit through
-`8049024cc7122fdb967a983bb0921b450386878f`.
+`48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 
-- Source commits affecting Web or Web tests: **300**.
+- Source commits affecting Web or Web tests: **311**.
 - Pre-extraction through `a40ae59`: **105**.
 - After extraction through `dcc088f`: **123**.
-- After `dcc088f` through the source head: **72**.
-- The nine repository-only commits in the later 81-commit delta remain recorded
+- After `dcc088f` through the source head: **83**.
+- The nine repository-only commits in the later 92-commit delta remain recorded
   in the companion ledger and are deliberately not counted as Maliev.Web commits.
 - Source repository: read-only. Production deployment: not authorized.
 
 Disposition totals in this inventory:
 
-- Migrated: **253**
-- Validation translated: **16**
+- Migrated: **261**
+- Validation translated: **19**
 - No unique change: **3**
 - Superseded safely: **6**
 - Excluded tooling: **4**
@@ -346,11 +346,22 @@ service, or owner Aspire acceptance.
 | `370fe20` | 2026-08-01 | Migrated | Foundation | Refresh shared UI and browser regression contracts |
 | `d913fcd` | 2026-08-03 | Migrated | Public UI | Publish CNC finishing price estimates |
 | `8049024` | 2026-08-03 | Migrated | Public UI | Lower public anodizing starting estimate |
+| `5f11642` | 2026-08-04 | Migrated | Search/measurement | Improve mobile LCP and search discoverability |
+| `dbcf5d8` | 2026-08-05 | Migrated | Search/measurement | Align Thai SEO with part manufacturing intent |
+| `24d001a` | 2026-08-05 | Validation translated | Quality | Stabilize quotation pricing browser assertions |
+| `acce138` | 2026-08-05 | Validation translated | Search/measurement | Add comprehensive SEO release contracts |
+| `0880eb1` | 2026-08-06 | Migrated | Quotation | Add temporary preliminary quotation PDF preview |
+| `e8eaf82` | 2026-08-06 | Migrated | Quotation | Use the canonical MALIEV logo in the preview |
+| `00a7c41` | 2026-08-06 | Migrated | Quotation | Keep the preliminary quotation action on order review |
+| `25a1e12` | 2026-08-06 | Migrated | Quotation | Separate preliminary quotation print actions |
+| `57844bb` | 2026-08-06 | Migrated | Quotation | Show per-part print time in the quotation preview |
+| `8cbc28f` | 2026-08-06 | Migrated | Quotation | Enlarge preliminary quotation thumbnails |
+| `48e628c` | 2026-08-06 | Validation translated | Quality | Target quotation customer continuation |
 
 ## Machine verification
 
 `CompleteSourceHistoryParityManifestTests` freezes the source head, exact
-cohort counts, all 300 unique hashes, allowed dispositions, and the absence of
+cohort counts, all 311 unique hashes, allowed dispositions, and the absence of
 unresolved `Gap` rows. Source-aware verification recomputes the history
 directly from read-only `R:\\maliev-web` before release.
 

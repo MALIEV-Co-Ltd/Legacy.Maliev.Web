@@ -1,11 +1,11 @@
-# Maliev.Web source parity through `8049024`
+# Maliev.Web source parity through `48e628c`
 
 ## Audit boundary
 
-- Read-only source: `R:\maliev-web`, `main`, `8049024cc7122fdb967a983bb0921b450386878f`.
+- Read-only source: `R:\maliev-web`, `main`, `48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 - Migrated target: `Legacy.Maliev.Web` on .NET 10 and Blazor static SSR, with interactive islands only where required.
-- Audited range: `dcc088f..8049024` (81 commits).
-- Complete Web/Web-test history: 300 commits, independently inventoried in
+- Audited range: `dcc088f..48e628c` (92 commits).
+- Complete Web/Web-test history: 311 commits, independently inventoried in
   `docs/complete-source-history-parity-through-8049024.md` and verified against
   the read-only source by `scripts/verify-complete-source-history-parity.ps1`.
 - Production deployment is outside this audit. The source repository was not modified.
@@ -99,15 +99,49 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 | `370fe20` | Migrated | Runtime motion/responsive regression contracts and geometry tests; IBM-font expectation and Impeccable artifacts are excluded as described above. |
 | `d913fcd` | Migrated | CNC pricing cards now expose black oxide, standard anodizing, and hard/custom anodizing planning estimates without naming the outsourced supplier. |
 | `8049024` | Migrated | Standard anodizing now uses the final bilingual THB 2,500 starting estimate with part-size and processing-complexity qualification. |
+| `5f11642` | Migrated | Mobile LCP/search discoverability: hero fetch priority, localized metadata, schema, route catalog, robots, and reduced-motion behavior. |
+| `dbcf5d8` | Migrated | Thai service/home SEO intent now consistently describes custom part manufacturing. |
+| `24d001a` | Validation translated | Quotation pricing browser assertions are represented by the Legacy interactive and browser-module contracts. |
+| `acce138` | Validation translated | Comprehensive SEO release checks are represented by Legacy SSR metadata, schema, robots, route, and crawler contracts. |
+| `0880eb1` | Migrated | Review-only browser preliminary quotation preview with A4 print/PDF actions and complete part/order details. |
+| `e8eaf82` | Migrated | Preview uses the canonical MALIEV logo data URI. |
+| `00a7c41` | Migrated | Preview action is rendered only in the order review island. |
+| `25a1e12` | Migrated | Print, download-as-PDF, and close actions remain separate and localized. |
+| `57844bb` | Migrated | Preview reports authoritative print time per part rather than multiplying by quantity. |
+| `8cbc28f` | Migrated | Preview thumbnails use the enlarged 156px A4 layout and safe crop fallback. |
+| `48e628c` | Validation translated | Customer-continuation coverage is represented by the Legacy review/customer route and source parity tests. |
 
 ## Aggregate evidence at audit completion
 
 - Release build: zero warnings and zero errors.
 - Non-HTTP .NET partition: 1,013 passed, 0 failed.
 - HTTP surface partitions: 113 + 42 + 107 = 262 passed, 0 failed.
-- Browser modules: 88 passed, 0 failed.
+- Browser modules: 101 passed, 0 failed.
 - npm audit: zero vulnerabilities.
 - Formatting: no changes required.
+
+## Latest delta validation (2026-08-07)
+
+- Source verification is exact: 311 Web/Web-test commits, 92 commits after
+  `dcc088f`, and no writes to the read-only source repository.
+- Release build: 0 warnings, 0 errors. `dotnet format --verify-no-changes` and
+  `git diff --check` are clean.
+- Latest SEO, localization, route, and preliminary-quotation regression slice:
+  **28 passed, 0 failed, 0 skipped**.
+- Instant Quotation partition: **430 passed, 0 failed, 0 skipped**.
+- Public/member route partition: **378 passed, 0 failed, 0 skipped**.
+- Runtime integration: **7 passed**; Redis and submission-cache integration:
+  **5 passed**; targeted WebSurface chunks all passed.
+- Browser modules: **101 passed, 0 failed, 0 skipped**; `npm audit` reports
+  **0 vulnerabilities**.
+
+The single-process full assembly run remains a release gate: the testhost
+exceeded the available resource budget (over 10 GB) before emitting a summary
+and was terminated without an assertion failure. The same tests pass in
+isolated partitions, but the resource-safe whole-assembly command still needs
+to be completed before production release. No Aspire, GKE, PostgreSQL,
+Secret Manager, or production application was changed or deployed by this
+parity slice.
 
 ## Remaining release gates
 
