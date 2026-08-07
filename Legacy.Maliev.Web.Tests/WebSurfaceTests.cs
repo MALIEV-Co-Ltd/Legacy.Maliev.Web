@@ -1950,6 +1950,11 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         var imageSourceDirective = policy.Split(';', StringSplitOptions.TrimEntries)
             .Single(static directive => directive.StartsWith("img-src ", StringComparison.Ordinal));
         Assert.Contains("https://pagead2.googlesyndication.com", imageSourceDirective, StringComparison.Ordinal);
+        var connectSourceDirective = policy.Split(';', StringSplitOptions.TrimEntries)
+            .Single(static directive => directive.StartsWith("connect-src ", StringComparison.Ordinal));
+        Assert.Contains("https://www.googleadservices.com", connectSourceDirective, StringComparison.Ordinal);
+        Assert.Contains("https://googleads.g.doubleclick.net", connectSourceDirective, StringComparison.Ordinal);
+        Assert.Contains("https://pagead2.googlesyndication.com", connectSourceDirective, StringComparison.Ordinal);
         Assert.Contains("'wasm-unsafe-eval'", policy, StringComparison.Ordinal);
         Assert.Contains("https://storage.googleapis.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://cloudflareinsights.com", policy, StringComparison.Ordinal);
