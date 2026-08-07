@@ -157,7 +157,7 @@ public sealed class InstantQuotationPageTests
             "ThreeDimensionalPrintingEstimateContent.razor"));
         var model = File.ReadAllText(Path.Combine(web, "Pages", "InstantQuotation", "3D-Printing.cshtml.cs"));
 
-        Assert.Contains("@page \"/InstantQuotation/3D-Printing\"", page, StringComparison.Ordinal);
+        Assert.Contains("@page \"/instantquotation/3d-printing\"", page, StringComparison.Ordinal);
         Assert.Contains("IStringLocalizer<ThreeDimensionalPrintingEstimateContent>", page, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", page, StringComparison.Ordinal);
         Assert.Contains("<ThreeDimensionalPrintingEstimateContent", page, StringComparison.Ordinal);

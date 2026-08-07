@@ -740,6 +740,32 @@ body.instant-quotation-shell #main-content {
     color: #687583;
 }
 
+.instant-quote__preliminary-quotation {
+    display: flex;
+    justify-content: flex-end;
+    margin: 1rem 0;
+}
+
+.instant-quote__preliminary-quotation button {
+    border: 1px solid #0b5ed7;
+    border-radius: .45rem;
+    padding: .55rem .85rem;
+    color: #0b5ed7;
+    background: #fff;
+    font-weight: 600;
+}
+
+.instant-quote__preliminary-quotation button:not(:disabled):hover,
+.instant-quote__preliminary-quotation button:not(:disabled):focus-visible {
+    color: #fff;
+    background: #0b5ed7;
+}
+
+.instant-quote__preliminary-quotation button:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
 .instant-quote__workflow [data-workflow-review-part] dl {
     display: grid;
     grid-column: 1 / -1;

@@ -61,7 +61,7 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<WebAppli
     [InlineData(
         "th",
         "บริการผลิตชิ้นส่วน | MALIEV",
-        "บริการผลิตชิ้นงานตามแบบ งาน CNC งานพิมพ์และออกแบบ 3 มิติ งานหล่อซิลิโคน งานฉีดพลาสติกจำนวนน้อย และงานสแกน 3 มิติในประเทศไทย",
+        "รับผลิตชิ้นส่วนตามแบบ งาน CNC งานพิมพ์และออกแบบ 3 มิติ งานหล่อซิลิโคน งานฉีดพลาสติกจำนวนน้อย และงานสแกน 3 มิติในประเทศไทย",
         "บริการผลิตชิ้นส่วน")]
     public async Task ServicesRoute_RendersCompleteLocalizedStaticDocument(
         string culture,

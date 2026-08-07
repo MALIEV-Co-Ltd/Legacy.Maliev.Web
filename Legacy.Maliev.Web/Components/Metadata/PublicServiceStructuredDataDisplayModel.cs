@@ -52,9 +52,9 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "https://www.maliev.com/services/silicone-casting",
                 "https://www.maliev.com/src/images/services/silicone-casting/silicone-casting-workflow.webp"),
             ["Custom Manufacturing"] = new(
-                "รับผลิตชิ้นงานตามแบบ",
+                "รับผลิตชิ้นส่วนตามแบบ",
                 "Custom Part Manufacturing",
-                "ช่วยกำหนดเส้นทางประเมินระหว่าง CNC, 3D Printing และ 3D Scanning จากแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน ก่อนส่งต่อไปยังบริการเฉพาะทาง",
+                "ประเมินงานรับผลิตชิ้นส่วนตามแบบและกำหนดเส้นทางระหว่าง CNC, 3D Printing และ 3D Scanning จากแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน ก่อนส่งต่อไปยังบริการเฉพาะทาง",
                 "Manufacturing process selection for projects that may need CNC machining, 3D printing, or 3D scanning, based on the drawing or sample, material, quantity, critical features, and intended use.",
                 "https://www.maliev.com/services/custom-manufacturing",
                 "https://www.maliev.com/src/images/services/custom-manufacturing/custom-manufacturing-story.webp"),

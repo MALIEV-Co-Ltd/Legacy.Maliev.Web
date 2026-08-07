@@ -1,0 +1,21 @@
+@using System.Globalization
+@using System.Text.Json
+
+@{
+    var schema = new Dictionary<string, object>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "WebSite",
+        ["@id"] = "https://www.maliev.com/#website",
+        ["name"] = "MALIEV",
+        ["alternateName"] = "Maliev Manufacturing",
+        ["url"] = "https://www.maliev.com/",
+        ["inLanguage"] = CultureInfo.CurrentUICulture.Name,
+        ["publisher"] = new Dictionary<string, string>
+        {
+            ["@id"] = "https://www.maliev.com/#organization"
+        }
+    };
+}
+
+<script type="application/ld+json" data-migration-component="public-website-structured-data" data-migration-renderer="blazor-static-ssr">@((MarkupString)JsonSerializer.Serialize(schema))</script>

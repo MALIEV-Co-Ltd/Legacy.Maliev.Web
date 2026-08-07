@@ -5,7 +5,6 @@ Disallow: /career/view?returnUrl=
 Disallow: /career?size=
 Disallow: /career?handler=
 Disallow: /quotation/*
-Disallow: /instantquotation/*
 Disallow: /login/*
 Disallow: /signup/*
 Disallow: /account/*

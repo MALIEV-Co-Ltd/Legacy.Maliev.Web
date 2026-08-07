@@ -1962,7 +1962,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "Precision. Speed. Reliability.", "Manufacturing Services for Prototypes and Production Parts", "Why customers work with MALIEV")]
-    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "บริการผลิตชิ้นงานต้นแบบและชิ้นส่วนสำหรับการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
+    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
     public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
         string culture,
         string eyebrow,
@@ -3440,7 +3440,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(26, routes.Length);
+        Assert.Equal(27, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));

@@ -4,10 +4,12 @@ using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
@@ -58,7 +60,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             .Where(path => File.ReadAllText(path).Contains("@rendermode", StringComparison.Ordinal))
             .ToArray();
 
-        Assert.Contains("@page \"/InstantQuotation/3D-Printing\"", page, StringComparison.Ordinal);
+        Assert.Contains("@page \"/instantquotation/3d-printing\"", page, StringComparison.Ordinal);
         Assert.Contains("<PageTitle>", page, StringComparison.Ordinal);
         Assert.Contains("<HeadContent>", page, StringComparison.Ordinal);
         Assert.DoesNotContain("@rendermode", page, StringComparison.Ordinal);
@@ -459,6 +461,15 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             .AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IJSRuntime, NullJsRuntime>()
+            .AddSingleton<IWebHostEnvironment>(_ => new TestWebHostEnvironment
+            {
+                EnvironmentName = "Testing",
+                ApplicationName = typeof(Program).Assembly.GetName().Name ?? "Legacy.Maliev.Web",
+                ContentRootPath = FindRepositoryRoot(),
+                WebRootPath = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot"),
+                ContentRootFileProvider = new NullFileProvider(),
+                WebRootFileProvider = new NullFileProvider(),
+            })
             .BuildServiceProvider();
         var loggerFactory = services.GetRequiredService<ILoggerFactory>();
         await using var renderer = new HtmlRenderer(services, loggerFactory);
@@ -495,6 +506,21 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             string identifier,
             CancellationToken cancellationToken,
             object?[]? args) => ValueTask.FromResult(default(TValue)!);
+    }
+
+    private sealed class TestWebHostEnvironment : IWebHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = string.Empty;
+
+        public string ApplicationName { get; set; } = string.Empty;
+
+        public string WebRootPath { get; set; } = string.Empty;
+
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
+
+        public string ContentRootPath { get; set; } = string.Empty;
+
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private sealed class StubCountryClient : ICountryClient

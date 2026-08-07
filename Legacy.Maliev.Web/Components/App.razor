@@ -18,12 +18,12 @@
     var appScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/app.min.js");
     var requestPath = context.Request.Path.Value;
     var requiresInstantQuotationBootstrap = string.Equals(
-            requestPath,
+            requestPath?.TrimEnd('/'),
             "/InstantQuotation/3D-Printing",
             StringComparison.OrdinalIgnoreCase)
         || string.Equals(
-            requestPath,
-            "/InstantQuotation/3D-Printing/",
+            requestPath?.TrimEnd('/'),
+            "/instantquotation/3d-printing",
             StringComparison.OrdinalIgnoreCase);
     var baseHref = context.Request.PathBase.HasValue
         ? $"{context.Request.PathBase.Value!.TrimEnd('/')}/"

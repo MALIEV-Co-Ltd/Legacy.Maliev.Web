@@ -88,6 +88,20 @@
     transform: none;
 }
 
+/* Let above-the-fold mobile hero media paint immediately. Desktop retains the
+   authored registration motion while narrow screens prioritize LCP and avoid
+   content appearing late behind the reveal gate. */
+@media (max-width: 47.99rem) {
+    [data-motion="ready"] .landing-hero-copy > *,
+    [data-motion="ready"] .service-hero-copy > *,
+    [data-motion="ready"] .inquiry-hero__content > *,
+    [data-motion="ready"] .landing-collage img {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
 /* Reduced motion: the arrival is instant, but nothing may stay hidden. Repeats
    the hidden selectors at equal specificity and later in the file, so it wins
    without !important. */

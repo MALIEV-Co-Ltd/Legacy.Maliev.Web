@@ -7,7 +7,7 @@
          aria-labelledby="instant-quote-workflow-heading"
          aria-busy="@IsBusy.ToString().ToLowerInvariant()"
          data-workflow-state="@State.ToString().ToLowerInvariant()">
-    <h2 id="instant-quote-workflow-heading" class="instant-quote__sr-only">@Localizer["Instant Pricing"]</h2>
+    <h1 id="instant-quote-workflow-heading" class="instant-quote__sr-only">@Localizer["Instant Pricing"]</h1>
 
     <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
     <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>

@@ -50,7 +50,7 @@ public sealed class LegalIndexStaticSsrRouteTests : IClassFixture<WebApplication
     [InlineData(
         "th",
         "ข้อมูลทางกฎหมาย | MALIEV",
-        "ตรวจสอบนโยบายของ MALIEV เกี่ยวกับการใช้เว็บไซต์ ความเป็นส่วนตัว และข้อมูลงานผลิตที่เป็นความลับ",
+        "รวมข้อมูลด้านกฎหมาย นโยบายความเป็นส่วนตัว ข้อกำหนดการใช้งาน และข้อตกลงรักษาความลับสำหรับการติดต่อและโปรเจ็คงานผลิตกับ MALIEV",
         "ข้อมูลทางกฎหมาย")]
     public async Task LegalRoute_RendersLocalizedStaticSsrWithSeoAnalyticsAndDocumentParity(
         string culture,

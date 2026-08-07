@@ -62,7 +62,7 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
 
     [Theory]
     [InlineData("en", "Manufacturing company specializing in CNC machining", "Custom part manufacturing, CNC machining")]
-    [InlineData("th", "บริษัทรับผลิตชิ้นส่วนตามแบบ", "บริการรับผลิตชิ้นงานตามแบบ")]
+    [InlineData("th", "บริษัทรับผลิตชิ้นส่วนตามแบบ", "บริการรับผลิตชิ้นส่วนตามแบบ")]
     public async Task BusinessStructuredData_RendersParseableLocalizedSemanticContracts(
         string culture,
         string organizationDescriptionPrefix,

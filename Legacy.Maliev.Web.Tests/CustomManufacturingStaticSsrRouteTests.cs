@@ -73,10 +73,10 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering")]
     [InlineData(
         "th",
-        "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV",
-        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
-        "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
-        "รับผลิตชิ้นงานตามแบบ, ผลิตชิ้นส่วนตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing")]
+        "รับผลิตชิ้นส่วนตามแบบด้วย CNC และ 3D Printing | MALIEV",
+        "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
+        "รับผลิตชิ้นส่วนตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
+        "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
@@ -137,7 +137,7 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
 
     [Theory]
     [InlineData("en", "Custom Part Manufacturing", "Which manufacturing process should I choose?")]
-    [InlineData("th", "รับผลิตชิ้นงานตามแบบ", "ควรเลือกกระบวนการผลิตแบบใด?")]
+    [InlineData("th", "รับผลิตชิ้นส่วนตามแบบ", "ควรเลือกกระบวนการผลิตแบบใด?")]
     public async Task Route_PreservesServiceAndFaqStructuredData(
         string culture,
         string serviceName,

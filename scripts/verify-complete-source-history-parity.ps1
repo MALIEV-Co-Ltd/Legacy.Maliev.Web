@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$expectedHead = '8049024cc7122fdb967a983bb0921b450386878f'
+$expectedHead = '48e628cf7803264bd0b09bfa7a55b15b47e192dd'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $repositoryRoot 'docs\complete-source-history-parity-through-8049024.md'
 $deltaLedgerPath = Join-Path $repositoryRoot 'docs\source-parity-through-8049024.md'
