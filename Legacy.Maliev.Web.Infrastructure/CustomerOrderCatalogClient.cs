@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Logging;
+using Polly.Timeout;
 
 namespace Legacy.Maliev.Web.Infrastructure;
 
@@ -184,7 +185,7 @@ internal sealed class CustomerOrderCatalogClient(
         }, StringComparer.OrdinalIgnoreCase).ToArray();
 
     private static bool IsTransient(Exception exception, CancellationToken cancellationToken) =>
-        exception is HttpRequestException or JsonException
+        exception is HttpRequestException or JsonException or TimeoutRejectedException
         || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
 
     private interface IReadResult

@@ -4,6 +4,7 @@ using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Polly.Timeout;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -52,6 +53,21 @@ public sealed class CustomerOrderCatalogClientTests
         Assert.True(result.ServiceAvailable);
         Assert.Empty(result.Catalog!.Materials);
         Assert.Empty(result.Catalog.MaterialGroups);
+        Assert.Empty(catalog.Requests);
+    }
+
+    [Fact]
+    public async Task Get_TimeoutFailsClosedWithUnavailableCatalog()
+    {
+        var orders = new RecordingHandler(_ => throw new TimeoutRejectedException("catalog timeout"));
+        var catalog = new RecordingHandler(_ => throw new InvalidOperationException("Catalog should not be called after order timeout."));
+        var client = CreateClient(orders, catalog);
+
+        var result = await client.GetAsync(CustomerOrderKind.Additive, CancellationToken.None);
+
+        Assert.False(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Null(result.Catalog);
         Assert.Empty(catalog.Requests);
     }
 
