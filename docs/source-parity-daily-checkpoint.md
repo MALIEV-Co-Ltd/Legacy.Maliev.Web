@@ -55,10 +55,11 @@ or Google configuration publication.
 | `258ed4aef122737511e27c8aac35130b59d4b30e` | Generated .NET 8 XML documentation artifact; no runtime or compatible tracked artifact to port. | The target does not track a root generated documentation XML file. The meaningful middleware XML comments are present in the .NET 10 source and the Release build remains warning-free. |
 | `1fd86b69736bcb078eea1676f94676f687d12d86` | Merge-only integration of `791126c` and `d690804`; no independent runtime change remains to port. | Both parent outcomes are already accounted by Legacy commits `73548c8` and `0950ac1`; the merge commit has no additional non-parent patch to reproduce. |
 | `fecf680446c29d926386c14738fbf0e60c911638` | Legacy Razor/CSS alignment fix for the removed material-card info button; architecture-equivalent behavior is owned by the Blazor workflow. | The target has no `.iq-mat-info` or `.iq-mat-title-row` UI. Material choice and comparison are rendered by `InstantQuotationWorkflow.razor` using a native select and details disclosure, so copying the source CSS would be unreachable dead code. |
+| `73f045c0f950953bc1ef9b8397e1a16d05dbe543` | Missing email-confirmation input is already rejected by the migrated server routes with a stricter HTTP 400 boundary. | Both the Blazor static-SSR route and retained Razor fallback require non-empty email and token before invoking AuthService. Focused confirmation and surface contracts pass 8/8. |
 
 ## Remaining gate
 
-The other 98 committed source changes after `48e628c` remain pending commit-by-commit
+The other 97 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
