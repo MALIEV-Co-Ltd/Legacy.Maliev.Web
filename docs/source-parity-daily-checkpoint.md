@@ -9,8 +9,8 @@ or Google configuration publication.
 
 - Proven historical Legacy Web checkpoint: `48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 - Source branch inspected: `main`.
-- Source head inspected on 2026-08-29: `4533669fa5231368f17c4b59b17c3e2f52e24a89`.
-- Committed source changes after the historical checkpoint: 125.
+- Source head inspected on 2026-08-29: `25418c95b5ac79400029ce274541f0e51728da3e`.
+- Committed source changes after the historical checkpoint: 126.
 - Daily automation: `daily-legacy-maliev-migration-parity`, scheduled for 08:00 Asia/Bangkok.
 - Uncommitted source files are deliberately excluded from parity accounting.
 
@@ -59,6 +59,11 @@ or Google configuration publication.
 | `a6dc2aa` | Compact the 3D-printing tolerance comparison | `Legacy.Maliev.Web` | `19b42e1` | Final compact comparison is retained in the target-native service component |
 | `ff01035` | Permit required Google Ads measurement endpoints in the public CSP | `Legacy.Maliev.Web` | `305c0cd`, `88c1f22` | CSP contract explicitly covers Ads scripts, image beacons, and connection endpoints without wildcard directives |
 | `8777004` | Return 404 when CareerService reports a missing offer | `Legacy.Maliev.Web` | `d7d5d5f` | Migrated Career detail route distinguishes missing from unavailable and covers missing ID with HTTP 404 |
+| `3b8bfe3` | Persist the customer-visible accepted quotation outcome without treating a browser conversion as business acceptance | `Legacy.Maliev.QuotationService` | `0040af0` | Release build: 0 warnings/errors; full QuotationService suite: 98/98; independent review approved accepted/declined transition, deletion, and availability contracts |
+| `7ebbc97` | Preserve the accepted quotation outcome through employee workflow transitions and reporting | `Legacy.Maliev.QuotationService` | `0040af0` | Same independently reviewed 98/98 target-native PostgreSQL suite; customer reaccept-after-decline is rejected while employee override remains authorized |
+| `460e9c8` | Replace the low-volume injection hero PNG with the final responsive WebP delivery contract | `Legacy.Maliev.Web` | `87dcaa2`, `3763745` | Release build: 0 warnings/errors; affected static-SSR/service/asset suite: 58/58; browser modules: 109/109; source/target asset hashes match; independent review approved |
+| `84a0790` | Publish the verified PP injection-molded home card and bilingual source-derived part proof | `Legacy.Maliev.Web` | `87dcaa2`, `3763745` | Exact EN/TH proof copy and responsive assets migrated; intrinsic 1700x925 dimensions covered; deterministic CSS hashes match; npm audit: 0 vulnerabilities |
+| `c1e0ef4` (injection portion) | Preserve the final injection-proof asset naming and responsive presentation while leaving the unrelated CNC portion for its own slice | `Legacy.Maliev.Web` | `87dcaa2`, `3763745` | Injection page is two-column at tablet and one-column at <=47.99rem without changing the separately scoped printing mosaic; reduced-motion and semantic figure contracts pass |
 
 ## Supporting migration maintenance
 
@@ -93,7 +98,7 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 65 committed source changes after `48e628c` remain pending commit-by-commit
+The other 62 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
@@ -104,8 +109,11 @@ combines the migrated CNC/3D copy with a still-pending persisted-attribution con
 `5619e1a` combines the migrated industrial/metal review with quotation-intent and
 analytics work.
 
-Source commit `4533669` adds the original UploadService Kubernetes Workload Identity
-binding. The Legacy FileService already owns an isolated `legacy-maliev-file` Kubernetes
+Source commits `4533669` and `25418c9` add and harden the original UploadService
+Kubernetes Workload Identity and storage-authorization boundary. The storage failure and
+signed-URL rollback behavior is tracked in `Legacy.Maliev.FileService` issue #13; the
+runtime code is migrated independently from the source deployment scripts. The Legacy
+FileService already owns an isolated `legacy-maliev-file` Kubernetes
 service account and GCP principal in GitOps, but there is intentionally no Legacy
 application Deployment before the Aspire/release gate. This source outcome therefore
 remains pending until the future FileService Deployment explicitly selects that service
