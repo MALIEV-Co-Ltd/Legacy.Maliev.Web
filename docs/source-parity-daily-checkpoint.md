@@ -37,12 +37,25 @@ or Google configuration publication.
 | `0d002991028cefb6d0b0fb13e1d65dfdeea3f2da` | Lead English 3D-printing search and hero copy with instant FDM/resin pricing while routing industrial processes to engineering review | `Legacy.Maliev.Web` | `1ef2f17` | Release build: 0 warnings/errors; 3D-printing static-SSR/fallback suite: 19/19; final localized metadata and engineering-review section covered; format clean |
 | `e101c2bd4c4680c29571496e7842edf635d4ac6a` | Normalize dash-only optional company/tax placeholders and require exactly 13 ASCII digits for a supplied Thai tax ID | `Legacy.Maliev.Web` | `6036b17` | Release build: 0 warnings/errors; affected Instant Quotation suite: 452/452; browser modules: 103/103; npm audit: 0 vulnerabilities; format and secret scan clean |
 | `1f1f9aa9e3c9ff907adf80a553c616864a5a9337` | Expose four allowlisted public WebMCP tools without submission, upload, authentication, network, storage, credential, or field-value access | `Legacy.Maliev.Web` | `1929e18` | Release build: 0 warnings/errors; focused/affected .NET integration: 30/30 after merge; browser modules: 107/107; npm audit: 0 vulnerabilities; format clean |
+| `602ef7d` | Replace the provisional proof tile with a source-anchored responsive production-part gallery and route-owned interaction | `Legacy.Maliev.Web` | `127a3c8` | Release build: 0 warnings/errors; exact gallery contracts: 3/3; affected static-SSR, fallback, and asset contracts: 8/8; browser modules: 109/109; npm audit: 0 vulnerabilities; format clean |
+| `2300a5c` | Correct production-part composition and add the PC-ESD sample | `Legacy.Maliev.Web` | `127a3c8` | Covered by the exact 20-tile, 60-asset ordinal/hash gallery contract and responsive browser-module tests |
+| `6a657ad` | Expand the production gallery from the initial proof set to the complete deferred disclosure | `Legacy.Maliev.Web` | `127a3c8` | Twelve deferred tiles, one-way accessible expansion, and deferred responsive source loading are contract-tested |
+| `7eaeeb5` | Preserve the approved crop and framing of expanded production samples | `Legacy.Maliev.Web` | `127a3c8` | Final source-derived WebP assets and responsive framing rules are covered by manifest and layout contracts |
+| `dd3644f` | Redesign the expanded production-photo Bento grid | `Legacy.Maliev.Web` | `127a3c8` | Final desktop/tablet/mobile Bento CSS and exact assets are migrated; browser module and CSS contracts pass |
+| `2c0b97c` | Remove image-corner borders from Bento tiles | `Legacy.Maliev.Web` | `127a3c8` | Final borderless media treatment is asserted by the migrated gallery/CSS contract |
+| `2602699` | Rebalance expanded gallery tile spans | `Legacy.Maliev.Web` | `127a3c8` | Final expanded-grid span rules are preserved in the migrated responsive stylesheet |
+| `97fb3bb` | Preserve image framing across expanded Bento tiles | `Legacy.Maliev.Web` | `127a3c8` | Final object-position, aspect, and tile framing rules are preserved with responsive image contracts |
+| `9b45c15` | Correct mobile 3D service Bento behavior | `Legacy.Maliev.Web` | `127a3c8` | Mobile and sub-360px gallery rules are migrated with reduced-motion and accessibility behavior intact |
+| `600e79a` | Preserve service Bento grids at mobile breakpoints | `Legacy.Maliev.Web` | `127a3c8` | Final shared responsive service-page rules are bundled deterministically and covered by asset contracts |
+| `19cae9f` | Fill the mobile production-gallery grid without broken gaps | `Legacy.Maliev.Web` | `127a3c8` | Final compact-grid placement is migrated and validated against the 20-tile composition |
+| `6de82fd` | Align the Thai 3D-printing search entry, production-proof link, and final responsive gallery framing | `Legacy.Maliev.Web` | `1ef2f17`, `127a3c8`, `09e9d44` | Current bilingual title/hero assertions and gallery contracts pass; broad affected 3D/service/asset suite: 68/68 |
 
 ## Supporting migration maintenance
 
 | Legacy commit | Outcome | Validation |
 | --- | --- | --- |
 | `65be64c` | Pin patched `SSH.NET` 2026.0.0 over the vulnerable Testcontainers transitive version | Restore succeeded; NuGet vulnerable-package audit reports none; Release build: 0 warnings/errors |
+| `09e9d44` | Replace stale pre-gallery 3D title and hero assertions with the final production contract | Release build: 0 warnings/errors; affected 3D, service-page, and asset suite: 68/68 |
 
 ## Classified source commits without a runtime port
 
@@ -59,17 +72,16 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 97 committed source changes after `48e628c` remain pending commit-by-commit
+The other 85 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
 configuration, and changes owned by non-Web `Legacy.Maliev.*` services.
 
-Three later source commits are deliberately not counted as complete yet. `42ece27`
+Two later source commits are deliberately not counted as complete yet. `42ece27`
 combines the migrated CNC/3D copy with a still-pending persisted-attribution contract;
 `5619e1a` combines the migrated industrial/metal review with quotation-intent and
-analytics work; and `6de82fd` combines the migrated final Thai search entry with the
-still-pending production-proof link, responsive gallery, and browser framing checks.
+analytics work.
 
 The complete Legacy Web test suite currently has an independent resource defect: the
 test host exceeded 13 GB working set without producing a result. The affected bounded
