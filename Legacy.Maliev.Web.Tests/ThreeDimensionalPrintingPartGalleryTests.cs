@@ -63,6 +63,7 @@ public sealed class ThreeDimensionalPrintingPartGalleryTests
     [Fact]
     public void PrintingPartGallery_UsesFinalResponsiveAndReducedMotionContracts()
     {
+        var content = ReadRepositoryFile("Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor");
         var css = ReadRepositoryFile("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "service-pages.css");
         var motionCss = ReadRepositoryFile("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "motion.css");
         var motionScript = ReadRepositoryFile("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "motion.js");
@@ -79,6 +80,10 @@ public sealed class ThreeDimensionalPrintingPartGalleryTests
         Assert.Contains(".service-part-bento-tile .service-part-bento-media", css, StringComparison.Ordinal);
         Assert.Contains(".service-part-bento > figure", motionScript, StringComparison.Ordinal);
         Assert.Contains("[data-motion=\"ready\"] .service-part-bento > figure", motionCss, StringComparison.Ordinal);
+        Assert.Contains(
+            "data-src=\"/src/images/services/printing/part-bento-abs-fan.webp\" data-srcset=\"/src/images/services/printing/part-bento-abs-fan-640.webp 640w, /src/images/services/printing/part-bento-abs-fan-1024.webp 1024w, /src/images/services/printing/part-bento-abs-fan.webp 1536w\" sizes=\"(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 64vw\"",
+            content,
+            StringComparison.Ordinal);
     }
 
     [Fact]

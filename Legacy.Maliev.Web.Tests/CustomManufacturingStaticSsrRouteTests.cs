@@ -175,6 +175,7 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
             var source = WebUtility.HtmlDecode(await client.GetStringAsync($"{route}?culture={contract.Culture}"));
 
             Assert.Contains("href=\"/Services/Custom-Manufacturing\"", source, StringComparison.Ordinal);
+            Assert.Contains("class=\"service-hero-followup\"", source, StringComparison.Ordinal);
             Assert.Contains(contract.Prompt, source, StringComparison.Ordinal);
         }
     }

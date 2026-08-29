@@ -42,6 +42,7 @@
 .service-hero-points li { display: flex; align-items: center; gap: .5rem; }
 .service-hero-points i, .service-hero-points .svg-inline--fa { width: 1rem; height: 1rem; color: #72a8ff; }
 .service-actions { display: flex; flex-wrap: wrap; gap: .85rem; margin-top: 1.75rem; }
+.service-hero-followup { margin: 1.25rem 0 0; line-height: 1.6; }
 .service-button { display: inline-flex; min-height: 3.1rem; align-items: center; justify-content: center; gap: .7rem; padding: .75rem 1.45rem; border: 1px solid transparent; border-radius: var(--service-radius-sm); font-weight: 600; text-decoration: none; transition: transform .18s ease, background .18s ease; }
 .service-button:hover { transform: translateY(-1px); }
 /* Press lands the button back on the surface faster than it lifted off it. */
