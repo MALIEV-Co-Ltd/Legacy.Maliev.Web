@@ -3,7 +3,7 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class FacebookRetirementContractTests
 {
     [Fact]
-    public void ProductionWebSource_DefaultDeniesFacebookExceptExactMessengerTokens()
+    public void ProductionWebSource_DoesNotRestoreRetiredFacebookSdkOrPixelRuntime()
     {
         var root = FindRepositoryRoot();
         var productionRoots = new[]
@@ -28,15 +28,13 @@ public sealed class FacebookRetirementContractTests
             $"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}dist{Path.DirectorySeparatorChar}",
         };
-        var ignoredFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        var forbiddenTokens = new[]
         {
-            Path.Combine("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "app.css"),
-        };
-        var allowedTokensByFile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [Path.Combine("Legacy.Maliev.Web", "Components", "Analytics", "PublicContactChannelAnalytics.razor")] = "facebook_messenger",
-            [Path.Combine("Legacy.Maliev.Web", "Components", "Layout", "SocialLinks.razor")] = "fa-facebook-messenger",
-            [Path.Combine("Legacy.Maliev.Web", "Components", "Pages", "Contact", "ContactPage.razor")] = "fa-facebook-messenger",
+            "connect.facebook.net",
+            "_FacebookSdkPartial",
+            "facebook-jssdk",
+            "fb:app_id",
+            "fbq(",
         };
 
         var violations = productionRoots
@@ -46,21 +44,10 @@ public sealed class FacebookRetirementContractTests
             .Select(path =>
             {
                 var relativePath = Path.GetRelativePath(root, path);
-                if (ignoredFiles.Contains(relativePath))
-                {
-                    return null;
-                }
-
                 var source = File.ReadAllText(path);
-                if (allowedTokensByFile.TryGetValue(relativePath, out var allowedToken))
-                {
-                    Assert.Equal(1, source.Split(allowedToken, StringSplitOptions.None).Length - 1);
-                    source = source.Replace(allowedToken, string.Empty, StringComparison.Ordinal);
-                }
-
-                return source.Contains("facebook", StringComparison.OrdinalIgnoreCase)
-                    ? $"{relativePath} contains a non-allowlisted Facebook reference"
-                    : null;
+                var token = forbiddenTokens.FirstOrDefault(candidate =>
+                    source.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+                return token is null ? null : $"{relativePath} contains retired token '{token}'";
             })
             .Where(violation => violation is not null)
             .ToArray();
