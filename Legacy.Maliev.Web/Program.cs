@@ -479,6 +479,7 @@ app.UseStaticFiles();
 app.UseCookiePolicy();
 app.UseRequestLocalization();
 app.UseMiddleware<CanonicalUrlRedirectMiddleware>();
+app.UseMiddleware<QuotationRouteRedirectMiddleware>();
 app.UseRouting();
 app.UseCors();
 app.UseRateLimiter();

@@ -4,7 +4,6 @@ Disallow: /career/*
 Disallow: /career/view?returnUrl=
 Disallow: /career?size=
 Disallow: /career?handler=
-Disallow: /quotation/*
 Disallow: /login/*
 Disallow: /signup/*
 Disallow: /account/*

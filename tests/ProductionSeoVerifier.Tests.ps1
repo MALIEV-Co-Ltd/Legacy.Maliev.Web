@@ -42,7 +42,6 @@ $expectedPaths = @(
     '/about/socialmedia',
     '/contact',
     '/career',
-    '/quotation',
     '/instantquotation/3d-printing',
     '/knowledges',
     '/knowledges/guidelines',

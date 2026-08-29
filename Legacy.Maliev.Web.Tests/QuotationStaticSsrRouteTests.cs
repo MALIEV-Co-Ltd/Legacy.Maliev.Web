@@ -29,7 +29,9 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<WebApplicationF
         Assert.Contains("ICountryClient", route, StringComparison.Ordinal);
         Assert.Contains("IAccountSessionManager", route, StringComparison.Ordinal);
         Assert.Contains("ICustomerAccountClient", route, StringComparison.Ordinal);
-        Assert.Contains("@page \"/Quotation/{RouteItem?}/{RouteProcess?}/{RouteMaterial?}\"", route, StringComparison.Ordinal);
+        Assert.DoesNotContain("RouteItem", route, StringComparison.Ordinal);
+        Assert.Contains("<meta name=\"robots\" content=\"noindex,follow\"", route, StringComparison.Ordinal);
+        Assert.Contains("ViewData[\"Robots\"] = \"noindex,follow\"", fallback, StringComparison.Ordinal);
         Assert.DoesNotContain("IQuotationClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("IQuotationFileClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("INotificationClient", route, StringComparison.Ordinal);

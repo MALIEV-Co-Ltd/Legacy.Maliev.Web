@@ -35,7 +35,6 @@ namespace Legacy.Maliev.Web.Pages
             new PublicSearchRoute("/about/socialmedia", "monthly", 0.7),
             new PublicSearchRoute("/contact", "monthly", 0.8),
             new PublicSearchRoute("/career", "monthly", 0.7),
-            new PublicSearchRoute("/quotation", "yearly", 0.8),
             new PublicSearchRoute("/instantquotation/3d-printing", "monthly", 0.9),
             new PublicSearchRoute("/knowledges", "monthly", 0.8),
             new PublicSearchRoute("/knowledges/guidelines", "monthly", 0.7),

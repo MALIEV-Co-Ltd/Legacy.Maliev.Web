@@ -3238,26 +3238,6 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "/quotation/3d-printing", "I want: 3d-printing")]
-    [InlineData("th", "/quotation/3d-printing", "สินค้าที่ต้องการ: 3d-printing")]
-    [InlineData("en", "/quotation/3d-printing/sls", "Please use: sls")]
-    [InlineData("th", "/quotation/3d-printing/sls", "ระบบเทคโนโลยี: sls")]
-    [InlineData("en", "/quotation/3d-printing/sls/pa12", "Material: pa12")]
-    [InlineData("th", "/quotation/3d-printing/sls/pa12", "วัสดุ: pa12")]
-    public async Task QuotationPage_OptionalLegacySegmentsFeedTheLocalizedPrefill(
-        string culture,
-        string route,
-        string expectedPrefill)
-    {
-        using var response = await client.GetAsync($"{route}?culture={culture}");
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(expectedPrefill, source, StringComparison.Ordinal);
-        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-    }
-
-    [Theory]
     [InlineData("en", "First name", "I want: 3d-printing")]
     [InlineData("th", "ชื่อ", "สินค้าที่ต้องการ: 3d-printing")]
     public async Task QuotationPage_RendersLocalizedStaticSsrFieldsInsideRazorMultipartBoundary(
@@ -3448,9 +3428,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(27, routes.Length);
+        Assert.Equal(26, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
-        Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
+        Assert.DoesNotContain(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
         Assert.DoesNotContain("/account", xml, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<!DOCTYPE html>", xml, StringComparison.OrdinalIgnoreCase);
