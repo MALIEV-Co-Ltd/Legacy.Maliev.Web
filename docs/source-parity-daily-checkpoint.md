@@ -9,8 +9,8 @@ or Google configuration publication.
 
 - Proven historical Legacy Web checkpoint: `48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 - Source branch inspected: `main`.
-- Source head inspected on 2026-08-29: `54ad353a386dc9476f779f9b3fdf152b93b135c9`.
-- Committed source changes after the historical checkpoint: 123.
+- Source head inspected on 2026-08-29: `6de82fd9760e86c71ddba3085879a63b43faff9f`.
+- Committed source changes after the historical checkpoint: 124.
 - Daily automation: `daily-legacy-maliev-migration-parity`, scheduled for 08:00 Asia/Bangkok.
 - Uncommitted source files are deliberately excluded from parity accounting.
 
@@ -30,6 +30,11 @@ or Google configuration publication.
 | `55fa9615f3ffc85c771e31a773184b80bde6b894` | Integrate the complete responsive service-image delivery contract | `Legacy.Maliev.Web` | `73548c8` | Accounted by the earlier target-native responsive-image slice: 22/22 source image blobs match; affected service suite: 113/113; dedicated responsive contracts: 17/17 |
 | `d6908049549f75b5e13c1858f4e5e2c2e0276752` | Make the quotation route middleware activatable and align the production SEO route inventory after quotation became a noindex utility | `Legacy.Maliev.Web` | `0950ac1` | Public constructor/invoker reflection contract included; Release build: 0 warnings/errors; focused quotation, sitemap, and SEO suite: 30/30; production SEO Pester contracts: 32/32 |
 | `791126cb1ae2a92774ec72528b84bff4d0d6a499` | Emit browser-resolvable root-relative responsive service image candidate URLs | `Legacy.Maliev.Web` | `73548c8` | Accounted by the target-native responsive-image slice; rendered-route tests resolve the responsive candidates and no tilde-prefixed candidate URLs remain |
+| `c317caca8fb60b775bedd6d2830b05518a442c72` | Publish nationwide CNC metadata, a truthful ISO 2768-1 class m reference, and an explicit drawing/engineering-review boundary | `Legacy.Maliev.Web` | `35f8df3` | Release build: 0 warnings/errors; CNC route suite: 23/23; affected SEO/service suite: 76/76; production SEO verifier: 34/34; format clean |
+| `f4ec3657106b09cfd90f68e70d5290043586375b` | Expose the knowledge centre through public footer/navigation discovery | `Legacy.Maliev.Web` | `f6c8461` | Release build: 0 warnings/errors; shared-footer route contracts: 3/3; format clean |
+| `21e4c05fa5e1b65a77eab155d93ced1cd01fb8d0` | Publish standard anodizing pricing with a THB 1,100 batch minimum, THB 800 handling, 60 sq. in. inclusion, and THB 5/sq. in. excess | `Legacy.Maliev.Web` | `ba2bcfc` | Release build: 0 warnings/errors; CNC service suite: 23/23; old THB 2,500 contract forbidden; format clean |
+| `803013d3bc72e694e899e89cc688fc223e881d5b` | Reject malformed Career page-size input with HTTP 400 before invoking the service client | `Legacy.Maliev.Web` | `35d9f17` | Existing .NET 10 fail-closed behavior proved by a new integration regression; Career suite: 7/7; Release build: 0 warnings/errors; format clean |
+| `0d002991028cefb6d0b0fb13e1d65dfdeea3f2da` | Lead English 3D-printing search and hero copy with instant FDM/resin pricing while routing industrial processes to engineering review | `Legacy.Maliev.Web` | `1ef2f17` | Release build: 0 warnings/errors; 3D-printing static-SSR/fallback suite: 19/19; final localized metadata and engineering-review section covered; format clean |
 
 ## Supporting migration maintenance
 
@@ -49,11 +54,17 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 106 committed source changes after `48e628c` remain pending commit-by-commit
+The other 102 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
 configuration, and changes owned by non-Web `Legacy.Maliev.*` services.
+
+Three later source commits are deliberately not counted as complete yet. `42ece27`
+combines the migrated CNC/3D copy with a still-pending persisted-attribution contract;
+`5619e1a` combines the migrated industrial/metal review with quotation-intent and
+analytics work; and `6de82fd` combines the migrated final Thai search entry with the
+still-pending production-proof link, responsive gallery, and browser framing checks.
 
 The complete Legacy Web test suite currently has an independent resource defect: the
 test host exceeded 13 GB working set without producing a result. The affected bounded
