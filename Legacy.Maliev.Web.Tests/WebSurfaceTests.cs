@@ -2390,7 +2390,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "CNC Milling & Turning", "Precision CNC Machining for One-Off and Production Parts", "Can you machine only one piece?")]
-    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
+    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับ CNC อะลูมิเนียมชิ้นเดียวได้หรือไม่?")]
     public async Task CncMachiningRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
