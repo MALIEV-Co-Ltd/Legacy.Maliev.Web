@@ -122,6 +122,18 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
+    public async Task CareerRoute_RejectsMalformedPageSize()
+    {
+        var clientStub = new CapturingCareerClient();
+        await using var routeFactory = CreateFactory(clientStub);
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync("/career?handler=ChangeItemCount&size=invalid-size");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(clientStub.LastRequest);
+    }
+
+    [Fact]
     public async Task DisabledCareerRoute_UsesTheRetainedRazorFallback()
     {
         var clientStub = new CapturingCareerClient();
