@@ -7,6 +7,7 @@ namespace Legacy.Maliev.Web
     using Legacy.Maliev.Web.Pages;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Http.Extensions;
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -16,6 +17,10 @@ namespace Legacy.Maliev.Web
     /// </summary>
     public static class CanonicalUrlPolicy
     {
+        private const string CultureQueryKey = "culture";
+        private const string EnglishCulture = "en";
+        private const string ThaiCulture = "th";
+
         /// <summary>
         /// The only public origin emitted in canonical URLs and sitemaps.
         /// </summary>
@@ -101,9 +106,63 @@ namespace Legacy.Maliev.Web
         public static string GetLocalizedUrl(PathString requestPath, string culture)
         {
             string canonicalUrl = GetCanonicalUrl(requestPath);
-            return string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase)
-                ? string.Concat(canonicalUrl, "?culture=en")
+            return string.Equals(culture, EnglishCulture, StringComparison.OrdinalIgnoreCase)
+                ? string.Concat(canonicalUrl, "?culture=", EnglishCulture)
                 : canonicalUrl;
+        }
+
+        /// <summary>
+        /// Builds a safe local language-switch return URL using the explicit public culture contract.
+        /// </summary>
+        /// <param name="returnUrl">The local path supplied by the language selector.</param>
+        /// <param name="culture">The selected two-letter public culture name.</param>
+        /// <returns>A local return URL with the English culture query when applicable.</returns>
+        internal static string GetLocalizedReturnUrl(string? returnUrl, string culture)
+        {
+            string target = string.IsNullOrWhiteSpace(returnUrl) ? "~/" : returnUrl;
+            bool isApplicationRelative = target.StartsWith("~/", StringComparison.Ordinal)
+                && (target.Length == 2 || target[2] is not ('/' or '\\'));
+            bool isRootRelative = target.StartsWith("/", StringComparison.Ordinal)
+                && (target.Length == 1 || target[1] is not ('/' or '\\'));
+            if (!isApplicationRelative && !isRootRelative)
+            {
+                target = "~/";
+            }
+
+            string path = target;
+            int queryIndex = target.IndexOf('?', StringComparison.Ordinal);
+            if (queryIndex >= 0)
+            {
+                path = target[..queryIndex];
+            }
+
+            QueryBuilder query = new();
+            if (string.Equals(culture, EnglishCulture, StringComparison.OrdinalIgnoreCase))
+            {
+                query.Add(CultureQueryKey, EnglishCulture);
+            }
+
+            return string.Concat(path, query.ToQueryString().Value);
+        }
+
+        /// <summary>
+        /// Normalizes untrusted language-switch input to a supported public culture.
+        /// </summary>
+        /// <param name="culture">The untrusted culture name.</param>
+        /// <returns>The supported culture name, or Thai when the input is unsupported.</returns>
+        internal static string NormalizeSupportedCulture(string? culture)
+        {
+            if (string.Equals(culture, EnglishCulture, StringComparison.OrdinalIgnoreCase))
+            {
+                return EnglishCulture;
+            }
+
+            if (string.Equals(culture, ThaiCulture, StringComparison.OrdinalIgnoreCase))
+            {
+                return ThaiCulture;
+            }
+
+            return ThaiCulture;
         }
 
         /// <summary>

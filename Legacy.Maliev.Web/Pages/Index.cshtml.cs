@@ -10,12 +10,9 @@ public sealed class IndexModel : PageModel
     {
     }
 
-    public IActionResult OnPostSetLanguage(string culture, string returnUrl)
+    public IActionResult OnPostSetLanguage(string? culture, string? returnUrl)
     {
-        if (culture is not ("th" or "en"))
-        {
-            culture = "th";
-        }
+        culture = CanonicalUrlPolicy.NormalizeSupportedCulture(culture);
 
         Response.Cookies.Append(
             CookieRequestCultureProvider.DefaultCookieName,
@@ -29,6 +26,6 @@ public sealed class IndexModel : PageModel
                 Secure = true
             });
 
-        return LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? "~/" : returnUrl);
+        return LocalRedirect(CanonicalUrlPolicy.GetLocalizedReturnUrl(returnUrl, culture));
     }
 }
