@@ -268,6 +268,7 @@
   <data name="Discuss silicone casting" xml:space="preserve"><value>ปรึกษางานหล่อซิลิโคน</value></data>
   <data name="Low-volume Injection Molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
   <data name="Pneumatic PIMM injection molding machine" xml:space="preserve"><value>เครื่องฉีดพลาสติก PIMM ระบบลม</value></data>
+  <data name="Blue polypropylene injection-molded mounting component" xml:space="preserve"><value>ชิ้นงานฉีดโพลีโพรพิลีนสีน้ำเงินสำหรับยึดติด</value></data>
   <data name="Low-volume molding for up to 1,000 parts on our pneumatic machine, with shot weights up to 50 g and plastics melting at no more than 350 °C. Larger runs: consider buying the PIMM machine from shop.maliev.com." xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้นด้วยเครื่องระบบลม รองรับน้ำหนักฉีดสูงสุด 50 กรัม และพลาสติกที่มีอุณหภูมิหลอมไม่เกิน 350 °C หากมากกว่า 1,000 ชิ้น แนะนำซื้อเครื่อง PIMM จาก shop.maliev.com</value></data>
   <data name="Find the right service" xml:space="preserve"><value>ค้นหาบริการที่เหมาะกับคุณ</value></data>
   <data name="Discuss injection molding" xml:space="preserve"><value>ปรึกษางานฉีดพลาสติก</value></data>

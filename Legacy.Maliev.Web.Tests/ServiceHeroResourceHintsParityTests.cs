@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -12,7 +13,7 @@ public sealed class ServiceHeroResourceHintsParityTests
         { "CncMachiningPage.razor", "/src/images/services/cnc/cnc-hero.webp" },
         { "CustomManufacturingPage.razor", "/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" },
         { "FinishingAndColorPage.razor", "/src/images/services/printing/printing-finish-color-approval.webp" },
-        { "LowVolumeInjectionMoldingPage.razor", "/src/images/services/injection-molding/injection-service-hero-wide.png" },
+        { "LowVolumeInjectionMoldingPage.razor", "/src/images/services/injection-molding/injection-service-hero-wide.webp" },
         { "SiliconeCastingPage.razor", "/src/images/services/silicone-casting/silicone-casting-workflow.webp" },
     };
 
@@ -22,7 +23,9 @@ public sealed class ServiceHeroResourceHintsParityTests
     {
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Components", "Pages", "Services", fileName));
 
-        Assert.Contains($"<link rel=\"preload\" as=\"image\" href=\"{imagePath}\" fetchpriority=\"high\" />", source, StringComparison.Ordinal);
+        Assert.Matches(
+            $"<link(?=[^>]*rel=\"preload\")(?=[^>]*as=\"image\")(?=[^>]*href=\"{Regex.Escape(imagePath)}\")(?=[^>]*fetchpriority=\"high\")[^>]*>",
+            source);
     }
 
     private static string FindRepositoryRoot()

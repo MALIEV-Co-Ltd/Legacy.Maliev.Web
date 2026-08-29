@@ -25,7 +25,7 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<WebAppli
     [InlineData("ThreeDimensionalDesignPage.razor", "ThreeDimensionalDesignContent.razor", "design/design-workflow.webp", "design/design-workflow", 1536)]
     [InlineData("SiliconeCastingPage.razor", "SiliconeCastingContent.razor", "silicone-casting/silicone-casting-workflow.webp", "silicone-casting/silicone-casting-workflow", 1536)]
     [InlineData("FinishingAndColorPage.razor", "FinishingAndColorPage.razor", "printing/printing-finish-color-approval.webp", "printing/printing-finish-color-approval", 1536)]
-    [InlineData("LowVolumeInjectionMoldingPage.razor", "LowVolumeInjectionMoldingContent.razor", "injection-molding/injection-service-hero-wide.png", "injection-molding/injection-service-hero-wide", 2172)]
+    [InlineData("LowVolumeInjectionMoldingPage.razor", "LowVolumeInjectionMoldingContent.razor", "injection-molding/injection-service-hero-wide.webp", "injection-molding/injection-service-hero-wide", 2172)]
     public void ServiceHero_ProvidesResponsivePreloadAndImageSources(
         string pageName,
         string contentName,

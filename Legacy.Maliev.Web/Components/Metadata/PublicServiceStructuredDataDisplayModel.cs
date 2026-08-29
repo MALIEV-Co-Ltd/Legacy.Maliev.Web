@@ -64,7 +64,7 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "รับฉีดพลาสติกจำนวนน้อยสำหรับงานทดลองและงานผลิตซ้ำไม่เกิน 1,000 ชิ้น ด้วยเครื่องระบบลม รองรับน้ำหนักฉีดสูงสุด 50 กรัม และพลาสติกที่มีอุณหภูมิหลอมไม่เกิน 350 °C",
                 "Low-volume injection molding for pilot runs and repeat batches up to 1,000 parts on a pneumatic PIMM machine, with shot weights up to 50 g and plastics melting at no more than 350 °C.",
                 "https://www.maliev.com/services/low-volume-injection-molding",
-                "https://www.maliev.com/src/images/services/injection-molding/injection-service-hero-wide.png"),
+                "https://www.maliev.com/src/images/services/injection-molding/injection-service-hero-wide.webp"),
             ["Finishing and Color"] = new(
                 "บริการเก็บผิวและทำสีชิ้นงานพิมพ์ 3 มิติ",
                 "3D Print Finishing and Colour Services",
