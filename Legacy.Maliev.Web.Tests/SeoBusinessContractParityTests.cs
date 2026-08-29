@@ -63,7 +63,7 @@ public sealed class SeoBusinessContractParityTests
         {
             ["/"] = ["รับผลิตชิ้นส่วน", "Custom Manufacturing Services"],
             ["/services"] = ["บริการผลิตชิ้นส่วน", "Manufacturing services"],
-            ["/services/custom-manufacturing"] = ["รับผลิตชิ้นส่วนตามแบบ", "Custom Part Manufacturing"],
+            ["/services/custom-manufacturing"] = ["รับผลิตชิ้นงานตามแบบ", "Custom Part Manufacturing"],
             ["/services/3d-design"] = ["รับออกแบบ 3 มิติ", "3D Design"],
             ["/services/silicone-casting"] = ["รับหล่อซิลิโคน", "Silicone Casting"],
             ["/services/low-volume-injection-molding"] = ["รับฉีดพลาสติก", "Low-Volume Injection Molding"],
