@@ -112,7 +112,8 @@ analytics work.
 Source commits `4533669` and `25418c9` add and harden the original UploadService
 Kubernetes Workload Identity and storage-authorization boundary. The storage failure and
 signed-URL rollback behavior is tracked in `Legacy.Maliev.FileService` issue #13; the
-runtime code is migrated independently from the source deployment scripts. The Legacy
+runtime code is migrated by FileService commits `a0305d3`, `e2a6d19`, and `fb136ba`
+and validated by its 390/390 suite independently from the source deployment scripts. The Legacy
 FileService already owns an isolated `legacy-maliev-file` Kubernetes
 service account and GCP principal in GitOps, but there is intentionally no Legacy
 application Deployment before the Aspire/release gate. This source outcome therefore
