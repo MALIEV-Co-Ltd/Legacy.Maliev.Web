@@ -9,8 +9,8 @@ or Google configuration publication.
 
 - Proven historical Legacy Web checkpoint: `48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 - Source branch inspected: `main`.
-- Source head inspected on 2026-08-29: `6de82fd9760e86c71ddba3085879a63b43faff9f`.
-- Committed source changes after the historical checkpoint: 124.
+- Source head inspected on 2026-08-29: `4533669fa5231368f17c4b59b17c3e2f52e24a89`.
+- Committed source changes after the historical checkpoint: 125.
 - Daily automation: `daily-legacy-maliev-migration-parity`, scheduled for 08:00 Asia/Bangkok.
 - Uncommitted source files are deliberately excluded from parity accounting.
 
@@ -72,7 +72,7 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 85 committed source changes after `48e628c` remain pending commit-by-commit
+The other 86 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
@@ -82,6 +82,14 @@ Two later source commits are deliberately not counted as complete yet. `42ece27`
 combines the migrated CNC/3D copy with a still-pending persisted-attribution contract;
 `5619e1a` combines the migrated industrial/metal review with quotation-intent and
 analytics work.
+
+Source commit `4533669` adds the original UploadService Kubernetes Workload Identity
+binding. The Legacy FileService already owns an isolated `legacy-maliev-file` Kubernetes
+service account and GCP principal in GitOps, but there is intentionally no Legacy
+application Deployment before the Aspire/release gate. This source outcome therefore
+remains pending until the future FileService Deployment explicitly selects that service
+account and the GitOps contract proves the binding; the source deploy script itself must
+not be copied into the Legacy release architecture.
 
 The complete Legacy Web test suite currently has an independent resource defect: the
 test host exceeded 13 GB working set without producing a result. The affected bounded
