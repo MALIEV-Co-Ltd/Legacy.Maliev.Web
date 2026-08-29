@@ -71,6 +71,43 @@ public sealed class NotificationClientTests
         Assert.Empty(handler.Requests);
     }
 
+    [Fact]
+    public async Task SendIdempotent_UsesCanonicalStableOperationKey()
+    {
+        var operationId = Guid.Parse("3c12214d-8794-4dd0-a812-d32040752010");
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.Equal(
+                operationId.ToString("D"),
+                request.Headers.GetValues("Idempotency-Key").Single());
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var client = new NotificationClient(
+            new NamedHttpClientFactory(new HttpClient(handler) { BaseAddress = new Uri("http://notifications/") }),
+            new StubTokenProvider("service-token"),
+            NullLogger<NotificationClient>.Instance);
+        var notification = new EmailNotification(
+            "customer@example.com",
+            "Welcome",
+            "<p>Welcome</p>",
+            null,
+            null,
+            null);
+
+        Assert.True((await client.SendIdempotentAsync(
+            NotificationChannel.Info,
+            notification,
+            operationId,
+            CancellationToken.None)).Sent);
+        Assert.True((await client.SendIdempotentAsync(
+            NotificationChannel.Info,
+            notification,
+            operationId,
+            CancellationToken.None)).Sent);
+
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
     private sealed class StubTokenProvider(string? token) : IServiceAccessTokenProvider
     {
         public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken) => ValueTask.FromResult(token);

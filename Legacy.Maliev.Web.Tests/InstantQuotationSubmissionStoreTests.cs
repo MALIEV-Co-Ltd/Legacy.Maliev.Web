@@ -165,6 +165,85 @@ public sealed class InstantQuotationSubmissionStoreTests
     }
 
     [Fact]
+    public async Task FulfillmentCheckpoint_ProtectsTemporaryCredentialAndRoundTripsStageData()
+    {
+        var storage = new FakeAtomicStorage();
+        var store = CreateStore(storage);
+        await using var lease = await store.TryAcquireAsync("submission-a", "owner-a", default);
+        Assert.NotNull(lease);
+        var file = new InstantQuotationFinalizedFile(
+            Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+            "private-quotation-files",
+            "instant-quotation/42/part.stl",
+            "part.stl",
+            "model/stl",
+            100,
+            new string('a', 64));
+        var persisted = Persisted("submission-a");
+        var filesLinked = persisted with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.FilesLinked,
+            FinalizedFiles = [file],
+        };
+        var customer = filesLinked with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.CustomerProvisioned,
+            CustomerId = 71,
+            CustomerCreated = true,
+        };
+        var provisioning = customer with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning,
+            OrderIds = [],
+        };
+        var orderCheckpoint = provisioning with { OrderIds = [901] };
+        var orders = orderCheckpoint with { Status = InstantQuotationSubmissionCheckpointStatus.OrdersProvisioned };
+        var prepared = orders with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.IdentityPrepared,
+            TemporaryPassword = "Temporary-Credential-B8!",
+        };
+        var identity = prepared with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned,
+            IdentityCreated = true,
+        };
+        var welcome = identity with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.WelcomePrepared,
+            WelcomeConfirmationToken = "opaque-confirmation-token",
+        };
+
+        Assert.True(await lease.TryPutAsync(persisted, null, default));
+        Assert.True(await lease.TryPutAsync(filesLinked, InstantQuotationSubmissionCheckpointStatus.Persisted, default));
+        Assert.True(await lease.TryPutAsync(customer, InstantQuotationSubmissionCheckpointStatus.FilesLinked, default));
+        Assert.True(await lease.TryPutAsync(provisioning, InstantQuotationSubmissionCheckpointStatus.CustomerProvisioned, default));
+        Assert.True(await lease.TryPutAsync(orderCheckpoint, InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning, default));
+        Assert.True(await lease.TryPutAsync(orders, InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning, default));
+        Assert.True(await lease.TryPutAsync(prepared, InstantQuotationSubmissionCheckpointStatus.OrdersProvisioned, default));
+        Assert.True(await lease.TryPutAsync(identity, InstantQuotationSubmissionCheckpointStatus.IdentityPrepared, default));
+        Assert.True(await lease.TryPutAsync(welcome, InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned, default));
+
+        var read = await lease.ReadAsync(default);
+        Assert.True(read.LeaseValid);
+        Assert.Equal(InstantQuotationSubmissionCheckpointStatus.WelcomePrepared, read.Checkpoint?.Status);
+        Assert.Equal(71, read.Checkpoint?.CustomerId);
+        Assert.True(read.Checkpoint?.CustomerCreated);
+        Assert.Equal("Temporary-Credential-B8!", read.Checkpoint?.TemporaryPassword);
+        Assert.Equal("opaque-confirmation-token", read.Checkpoint?.WelcomeConfirmationToken);
+        Assert.Equal([901], read.Checkpoint?.OrderIds);
+        Assert.Equal(file, Assert.Single(read.Checkpoint?.FinalizedFiles ?? []));
+        Assert.DoesNotContain(
+            "Temporary-Credential-B8!",
+            Encoding.UTF8.GetString(storage.LastPayload!),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "opaque-confirmation-token",
+            Encoding.UTF8.GetString(storage.LastPayload!),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task StateChangingOperations_CancellationAtCommit_ReturnCommittedOutcome()
     {
         using var acquireCancellation = new CancellationTokenSource();
@@ -458,7 +537,6 @@ public sealed class InstantQuotationSubmissionStoreTests
             }
 
             if ((existing is null && status != "Persisted")
-                || (existing?.Status == "Persisted" && status != "Completed")
                 || existing?.Status == "Completed")
             {
                 return Task.FromResult(false);

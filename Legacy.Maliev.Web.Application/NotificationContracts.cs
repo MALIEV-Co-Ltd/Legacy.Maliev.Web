@@ -27,4 +27,10 @@ public interface INotificationClient
         NotificationChannel channel,
         EmailNotification notification,
         CancellationToken cancellationToken);
+
+    Task<NotificationResult> SendIdempotentAsync(
+        NotificationChannel channel,
+        EmailNotification notification,
+        Guid operationId,
+        CancellationToken cancellationToken) => SendAsync(channel, notification, cancellationToken);
 }

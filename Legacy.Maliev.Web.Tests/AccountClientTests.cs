@@ -152,16 +152,40 @@ public sealed class AccountClientTests
     {
         var handler = new RecordingHandler(request => Json(
             HttpStatusCode.Created,
-            """{"succeeded":true,"identityId":"identity-1","databaseId":42,"email":"customer@example.com"}"""));
+            """{"succeeded":true,"identityId":"identity-1","databaseId":42,"email":"customer@example.com","created":true}"""));
         var client = CreateClient(handler);
 
         var result = await client.RegisterAsync(42, "customer@example.com", "correct-password", default);
 
         Assert.True(result.Succeeded);
+        Assert.True(result.Created);
         Assert.Equal("Bearer service-token", handler.Authorization);
         Assert.Equal("auth/v1/customer-self-service/register", handler.RequestUri);
         Assert.DoesNotContain("correct-password", handler.RequestUri, StringComparison.Ordinal);
         Assert.Contains("\"databaseId\":42", handler.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveRegistration_UsesServiceBearerAndJsonOnlyPassword()
+    {
+        var handler = new RecordingHandler(request => Json(
+            HttpStatusCode.OK,
+            """{"succeeded":true,"identityId":"identity-1","databaseId":42,"email":"customer@example.com","created":false}"""));
+        var client = CreateClient(handler);
+
+        var result = await client.ResolveRegistrationAsync(
+            42,
+            "customer@example.com",
+            "new-temporary-password",
+            default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("Bearer service-token", handler.Authorization);
+        Assert.Equal("auth/v1/customer-self-service/register/resolve", handler.RequestUri);
+        Assert.Contains("\"databaseId\":42", handler.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("new-temporary-password", handler.RequestUri, StringComparison.Ordinal);
+        Assert.Contains("\"password\":\"new-temporary-password\"", handler.Body, StringComparison.Ordinal);
+        Assert.False(result.Created);
     }
 
     [Fact]

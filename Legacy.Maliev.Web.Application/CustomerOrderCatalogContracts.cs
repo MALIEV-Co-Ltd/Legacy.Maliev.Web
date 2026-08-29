@@ -12,6 +12,9 @@ public sealed record CustomerOrderCatalogMaterial(int Id, int MaterialGroupId, s
 /// <summary>Describes one selectable material color or surface finish.</summary>
 public sealed record CustomerOrderCatalogOption(int Id, string Name);
 
+/// <summary>Describes a currency accepted by the legacy order contract.</summary>
+public sealed record CustomerOrderCurrency(int Id, string ShortName);
+
 /// <summary>Describes one accepted order attachment format.</summary>
 public sealed record CustomerOrderFileFormat(int Id, string? Name, string? Extension);
 
@@ -51,4 +54,9 @@ public interface ICustomerOrderCatalogClient
     Task<CustomerOrderMaterialOptionsResult> GetMaterialOptionsAsync(
         int materialId,
         CancellationToken cancellationToken);
+
+    /// <summary>Resolves one order currency by its stable short name.</summary>
+    Task<ServiceResponse<CustomerOrderCurrency>> GetCurrencyAsync(
+        string shortName,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 }

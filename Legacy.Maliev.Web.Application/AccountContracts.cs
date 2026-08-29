@@ -20,7 +20,11 @@ public sealed record CustomerIdentityRegistration(
     bool Succeeded,
     string? IdentityId,
     int? DatabaseId,
-    string? Email);
+    string? Email,
+    bool ServiceAvailable = true,
+    bool Authorized = true,
+    bool Conflict = false,
+    bool Created = false);
 
 public sealed record CustomerActionChallenge(
     bool Accepted,
@@ -85,6 +89,13 @@ public interface ICustomerAuthenticationClient
         string email,
         string password,
         CancellationToken cancellationToken);
+
+    Task<CustomerIdentityRegistration> ResolveRegistrationAsync(
+        int databaseId,
+        string email,
+        string password,
+        CancellationToken cancellationToken) => Task.FromResult(
+            new CustomerIdentityRegistration(false, null, null, null, ServiceAvailable: false));
 
     Task<CustomerActionChallenge> RequestEmailConfirmationAsync(
         string email,
@@ -164,6 +175,12 @@ public interface ICustomerProfileClient
         CancellationToken cancellationToken);
 
     Task<bool> DeleteAsync(int customerId, CancellationToken cancellationToken);
+
+    Task<InstantQuotationCustomerProvisionResult> ProvisionInstantQuotationAsync(
+        InstantQuotationCustomerSubmission customer,
+        int billingCountryId,
+        int shippingCountryId,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 }
 
 public sealed record CustomerAddress(

@@ -10,8 +10,8 @@ namespace Legacy.Maliev.Web.Infrastructure;
 
 internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmissionStore
 {
-    internal const int CurrentVersion = 1;
-    internal const string ProtectorPurpose = "Legacy.Maliev.Web.InstantQuotationSubmissionCheckpoint.v1";
+    internal const int CurrentVersion = 2;
+    internal const string ProtectorPurpose = "Legacy.Maliev.Web.InstantQuotationSubmissionCheckpoint.v2";
     internal const string KeyPrefix = "legacy:web:instant-quotation-submission:";
     internal static readonly TimeSpan LeaseLifetime = TimeSpan.FromMinutes(2);
     internal static readonly TimeSpan CheckpointLifetime = DistributedInstantQuotationSessionStore.SessionLifetime;
@@ -185,7 +185,15 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                 checkpoint.SubmissionId,
                 checkpoint.RequestReference,
                 checkpoint.Status,
-                checkpoint.SnapshotDigest);
+                checkpoint.SnapshotDigest,
+                checkpoint.FinalizedFiles,
+                checkpoint.CustomerId,
+                checkpoint.CustomerCreated,
+                checkpoint.TemporaryPassword,
+                checkpoint.IdentityCreated,
+                checkpoint.OrderIds,
+                checkpoint.WelcomeConfirmationToken,
+                checkpoint.CompensationRequired);
             var payload = JsonSerializer.SerializeToUtf8Bytes(persisted);
             var protectedPayload = protector.Protect(payload);
             try
@@ -230,26 +238,85 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             && string.Equals(checkpoint.SubmissionId, submissionId, StringComparison.Ordinal)
             && checkpoint.RequestReference > 0
             && Enum.IsDefined(checkpoint.Status)
-            && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest);
+            && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest)
+            && IsValidStageData(checkpoint.Status, checkpoint.FinalizedFiles, checkpoint.CustomerId, checkpoint.IdentityCreated, checkpoint.OrderIds, checkpoint.WelcomeConfirmationToken);
 
         private bool IsValid(InstantQuotationSubmissionCheckpoint checkpoint) =>
             string.Equals(checkpoint.SubmissionId, submissionId, StringComparison.Ordinal)
             && checkpoint.RequestReference > 0
             && Enum.IsDefined(checkpoint.Status)
-            && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest);
+            && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest)
+            && IsValidStageData(checkpoint.Status, checkpoint.FinalizedFiles, checkpoint.CustomerId, checkpoint.IdentityCreated, checkpoint.OrderIds, checkpoint.WelcomeConfirmationToken);
 
         private static bool IsValidTransition(
             InstantQuotationSubmissionCheckpointStatus? expected,
             InstantQuotationSubmissionCheckpointStatus status) =>
-            (expected is null && status == InstantQuotationSubmissionCheckpointStatus.Persisted)
-            || (expected == InstantQuotationSubmissionCheckpointStatus.Persisted
-                && status == InstantQuotationSubmissionCheckpointStatus.Completed);
+            expected is null
+                ? status == InstantQuotationSubmissionCheckpointStatus.Persisted
+                : status == InstantQuotationSubmissionCheckpointStatus.Completed
+                    ? expected is InstantQuotationSubmissionCheckpointStatus.Persisted
+                        or InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent
+                        or InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned
+                    : status == expected
+                        ? status == InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning
+                        : (expected == InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning
+                                && status == InstantQuotationSubmissionCheckpointStatus.FilesLinked)
+                            || (int)status == (int)expected.Value + 1;
+
+        private static bool IsValidStageData(
+            InstantQuotationSubmissionCheckpointStatus status,
+            IReadOnlyList<InstantQuotationFinalizedFile>? files,
+            int? customerId,
+            bool identityCreated,
+            IReadOnlyList<int>? orderIds,
+            string? welcomeConfirmationToken)
+        {
+            // Retain read compatibility for pre-fulfillment completed checkpoints.
+            if (status == InstantQuotationSubmissionCheckpointStatus.Completed
+                && files is null
+                && customerId is null
+                && orderIds is null)
+            {
+                return true;
+            }
+
+            if (status >= InstantQuotationSubmissionCheckpointStatus.FilesLinked
+                && (files is not { Count: > 0 } || files.Any(file => file.FileId == Guid.Empty)))
+            {
+                return false;
+            }
+
+            if (status >= InstantQuotationSubmissionCheckpointStatus.CustomerProvisioned
+                && customerId is not > 0)
+            {
+                return false;
+            }
+
+            if (status >= InstantQuotationSubmissionCheckpointStatus.OrdersProvisioned
+                && (orderIds is not { Count: > 0 } || orderIds.Any(orderId => orderId <= 0)))
+            {
+                return false;
+            }
+
+            return !identityCreated
+                || status < InstantQuotationSubmissionCheckpointStatus.WelcomePrepared
+                || status == InstantQuotationSubmissionCheckpointStatus.Completed
+                || !string.IsNullOrWhiteSpace(welcomeConfirmationToken);
+        }
 
         private static InstantQuotationSubmissionCheckpoint ToCheckpoint(PersistedCheckpoint persisted) => new(
             persisted.SubmissionId!,
             persisted.RequestReference,
             persisted.Status,
-            persisted.SnapshotDigest!);
+            persisted.SnapshotDigest!,
+            persisted.FinalizedFiles,
+            persisted.CustomerId,
+            persisted.CustomerCreated,
+            persisted.TemporaryPassword,
+            persisted.IdentityCreated,
+            persisted.OrderIds,
+            persisted.WelcomeConfirmationToken,
+            persisted.CompensationRequired);
     }
 
     private sealed record PersistedCheckpoint(
@@ -257,7 +324,15 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
         string? SubmissionId,
         int RequestReference,
         InstantQuotationSubmissionCheckpointStatus Status,
-        string? SnapshotDigest);
+        string? SnapshotDigest,
+        IReadOnlyList<InstantQuotationFinalizedFile>? FinalizedFiles,
+        int? CustomerId,
+        bool CustomerCreated,
+        string? TemporaryPassword,
+        bool IdentityCreated,
+        IReadOnlyList<int>? OrderIds,
+        string? WelcomeConfirmationToken,
+        bool CompensationRequired = false);
 }
 
 internal sealed record InstantQuotationSubmissionAtomicRead(
@@ -326,7 +401,7 @@ internal sealed class RedisInstantQuotationSubmissionAtomicStorage(IConnectionMu
             end
         else
             local ttl = redis.call('PTTL', KEYS[2])
-            if ttl <= 0 or current ~= ARGV[2] or ARGV[2] ~= 'Persisted' or ARGV[3] ~= 'Completed' then
+            if ttl <= 0 or current ~= ARGV[2] then
                 return 0
             end
         end

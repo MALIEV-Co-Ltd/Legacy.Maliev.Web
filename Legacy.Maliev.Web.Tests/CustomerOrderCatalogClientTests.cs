@@ -87,6 +87,23 @@ public sealed class CustomerOrderCatalogClientTests
         Assert.Equal(["materials/5/colors", "materials/5/surfacefinishes"], catalog.Requests.Select(request => request.Path));
     }
 
+    [Fact]
+    public async Task GetCurrency_LoadsCurrencyFromCatalogService()
+    {
+        var orders = new RecordingHandler(_ => throw new InvalidOperationException("OrderService does not own currencies."));
+        var catalog = new RecordingHandler(request => request.Path == "currencies"
+            ? Json("[{\"id\":764,\"shortName\":\"THB\",\"longName\":\"Thai Baht\"}]")
+            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var client = CreateClient(orders, catalog);
+
+        var result = await client.GetCurrencyAsync("THB", CancellationToken.None);
+
+        Assert.True(result.ServiceAvailable);
+        Assert.Equal(764, result.Value?.Id);
+        Assert.Empty(orders.Requests);
+        Assert.Equal("currencies", Assert.Single(catalog.Requests).Path);
+    }
+
     private static CustomerOrderCatalogClient CreateClient(RecordingHandler orders, RecordingHandler catalog)
     {
         var clients = new Dictionary<string, HttpClient>(StringComparer.Ordinal)

@@ -44,20 +44,20 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("name=\"@Model.AntiforgeryFieldName\"", form, StringComparison.Ordinal);
         Assert.Contains("value=\"@Model.AntiforgeryRequestToken\"", form, StringComparison.Ordinal);
 
-        foreach (var field in new[] { "FirstName", "LastName", "Email", "Telephone", "Country" })
+        foreach (var field in new[] { "FirstName", "LastName", "Email", "Mobile", "Country" })
         {
             Assert.Contains($"name=\"{field}\"", form, StringComparison.Ordinal);
             Assert.Contains($"id=\"instant-quote-{field.ToLowerInvariant()}\"", form, StringComparison.Ordinal);
             Assert.Contains("required", FieldTag(form, field), StringComparison.Ordinal);
         }
 
-        foreach (var field in new[] { "Company", "TaxNumber" })
+        foreach (var field in new[] { "Telephone", "Company", "TaxNumber" })
         {
             Assert.Contains($"name=\"{field}\"", form, StringComparison.Ordinal);
             Assert.DoesNotContain("required", FieldTag(form, field), StringComparison.Ordinal);
         }
 
-        foreach (var field in new[] { "FirstName", "LastName", "Email", "Telephone", "Company" })
+        foreach (var field in new[] { "FirstName", "LastName", "Email", "Mobile", "Telephone", "Company" })
         {
             Assert.Contains("maxlength=\"50\"", FieldTag(form, field), StringComparison.Ordinal);
         }
@@ -82,10 +82,10 @@ public sealed class InstantQuotationReviewCustomerTests
 
         Assert.Contains("@Localizer[\"Project details\"]", form, StringComparison.Ordinal);
         Assert.Contains("@Localizer[\"Describe your project, material, quantity, tolerance, surface finish, deadline, or any other important details...\"]", form, StringComparison.Ordinal);
-        Assert.Contains("<value>รายละเอียดโปรเจ็ค</value>", thaiResources, StringComparison.Ordinal);
-        Assert.Contains("<value>อธิบายโปรเจ็ค วัสดุ จำนวน ค่าความคลาดเคลื่อน ผิวสำเร็จ กำหนดส่ง หรือรายละเอียดสำคัญอื่น ๆ</value>", thaiResources, StringComparison.Ordinal);
-        Assert.DoesNotContain("<value>รายละเอียดโครงการ</value>", thaiResources, StringComparison.Ordinal);
-        Assert.DoesNotContain("<value>อธิบายโครงการ ", thaiResources, StringComparison.Ordinal);
+        Assert.Contains("<value>รายละเอียดโครงการ</value>", thaiResources, StringComparison.Ordinal);
+        Assert.Contains("<value>อธิบายโครงการ วัสดุ จำนวน ค่าความคลาดเคลื่อน ผิวสำเร็จ กำหนดส่ง หรือรายละเอียดสำคัญอื่น ๆ</value>", thaiResources, StringComparison.Ordinal);
+        Assert.DoesNotContain("<value>รายละเอียดโปรเจ็ค</value>", thaiResources, StringComparison.Ordinal);
+        Assert.DoesNotContain("<value>อธิบายโปรเจ็ค ", thaiResources, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -61,6 +61,33 @@ public sealed class InstantQuotationSubmissionTests
     }
 
     [Fact]
+    public async Task Submit_WithFulfillmentClient_ContinuesFromScannedFilesThroughDurableOrderCompletion()
+    {
+        var persisted = new RecordingSubmissionStore();
+        var fulfillment = new RecordingFulfillmentClient();
+        var service = new InstantQuotationSubmissionService(
+            new RecordingSessionStore(Session(Part()), owner: null),
+            new InstantQuotationPricingService(),
+            new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true)),
+            persisted,
+            new RecordingUploadClient(null, SuccessfulFinalization()),
+            SuccessfulRequestFileClient.Instance,
+            fulfillment);
+
+        var result = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        Assert.Equal(417, result.RequestReference);
+        Assert.Equal(1, fulfillment.CustomerCalls);
+        Assert.Equal(1, fulfillment.IdentityCalls);
+        Assert.Equal([0], fulfillment.OrderPartIndexes);
+        Assert.Equal(1, fulfillment.WelcomeCalls);
+        Assert.Equal(InstantQuotationSubmissionCheckpointStatus.Completed, persisted.Checkpoint?.Status);
+        Assert.Equal([901], persisted.Checkpoint?.OrderIds);
+        Assert.Null(persisted.Checkpoint?.TemporaryPassword);
+    }
+
+    [Fact]
     public async Task Submit_LeaseRenewalFailure_FailsClosedBeforeCreatingRequest()
     {
         var quotation = new RecordingQuotationClient(_ =>
@@ -678,13 +705,15 @@ public sealed class InstantQuotationSubmissionTests
         RecordingSubmissionStore persisted,
         RecordingUploadClient upload,
         InstantQuotationSessionState session,
-        IInstantQuotationRequestFileClient? requestFileClient = null) => new(
+        IInstantQuotationRequestFileClient? requestFileClient = null,
+        IInstantQuotationFulfillmentClient? fulfillmentClient = null) => new(
             new RecordingSessionStore(session, Owner),
             new InstantQuotationPricingService(),
             quotation,
             persisted,
             upload,
-            requestFileClient ?? SuccessfulRequestFileClient.Instance);
+            requestFileClient ?? SuccessfulRequestFileClient.Instance,
+            fulfillmentClient);
 
     private static InstantQuotationCustomerSubmission Customer(
         string firstName = "Mali",
@@ -702,7 +731,14 @@ public sealed class InstantQuotationSubmissionTests
             country,
             companyName,
             taxIdentification,
-            description);
+            description,
+            "0890000000",
+            "1",
+            "Billing Road",
+            null,
+            "Bangkok",
+            "Bangkok",
+            "10110");
 
     private static InstantQuotationSessionState Session(params InstantQuotationPart[] parts) => new(
         SessionId,
@@ -986,6 +1022,70 @@ public sealed class InstantQuotationSubmissionTests
             InstantQuotationFinalizedFile file,
             string idempotencyKey,
             CancellationToken cancellationToken) => Task.FromResult(Success);
+    }
+
+    private sealed class RecordingFulfillmentClient : IInstantQuotationFulfillmentClient
+    {
+        public int CustomerCalls { get; private set; }
+        public int IdentityCalls { get; private set; }
+        public List<int> OrderPartIndexes { get; } = [];
+        public int WelcomeCalls { get; private set; }
+
+        public Task<InstantQuotationWelcomePreparationResult> PrepareWelcomeAsync(
+            InstantQuotationCustomerSubmission customer,
+            CancellationToken cancellationToken) => Task.FromResult(
+                new InstantQuotationWelcomePreparationResult("confirmation-token", true, true));
+
+        public Task<InstantQuotationCustomerProvisionResult> ProvisionCustomerAsync(
+            string? ownerIdentity,
+            InstantQuotationCustomerSubmission customer,
+            CancellationToken cancellationToken)
+        {
+            CustomerCalls++;
+            return Task.FromResult(new InstantQuotationCustomerProvisionResult(71, true, true, true));
+        }
+
+        public Task<InstantQuotationIdentityProvisionResult> ProvisionIdentityAsync(
+            int customerId,
+            InstantQuotationCustomerSubmission customer,
+            string temporaryPassword,
+            CancellationToken cancellationToken)
+        {
+            IdentityCalls++;
+            return Task.FromResult(new InstantQuotationIdentityProvisionResult(true, true, true));
+        }
+
+        public Task<InstantQuotationOrderProvisionResult> ProvisionOrderAsync(
+            string submissionId,
+            int partIndex,
+            int customerId,
+            string? customerDescription,
+            InstantQuotationPart part,
+            InstantQuotationPartQuote quote,
+            int leadTimeDays,
+            InstantQuotationFinalizedFile file,
+            CancellationToken cancellationToken)
+        {
+            OrderPartIndexes.Add(partIndex);
+            return Task.FromResult(new InstantQuotationOrderProvisionResult(901 + partIndex, true, true, true, false));
+        }
+
+        public Task<bool> CompensateOrderAsync(int orderId, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+
+        public Task<bool> CompensateCustomerAsync(int customerId, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+
+        public Task<NotificationResult> SendWelcomeAsync(
+            InstantQuotationCustomerSubmission customer,
+            string temporaryPassword,
+            string confirmationToken,
+            Guid operationId,
+            CancellationToken cancellationToken)
+        {
+            WelcomeCalls++;
+            return Task.FromResult(new NotificationResult(true, true, true));
+        }
     }
 
     private sealed class RecordingRequestFileClient(

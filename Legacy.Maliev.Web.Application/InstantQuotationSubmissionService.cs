@@ -12,7 +12,8 @@ internal sealed class InstantQuotationSubmissionService(
     IQuotationClient quotationClient,
     IInstantQuotationSubmissionStore submissionStore,
     IInstantQuotationUploadClient uploadClient,
-    IInstantQuotationRequestFileClient requestFileClient) : IInstantQuotationSubmissionService
+    IInstantQuotationRequestFileClient requestFileClient,
+    IInstantQuotationFulfillmentClient? fulfillmentClient = null) : IInstantQuotationSubmissionService
 {
     private const int SubmissionIdLength = 64;
 
@@ -96,7 +97,7 @@ internal sealed class InstantQuotationSubmissionService(
             return Rejected(InstantQuotationProblemCategory.Validation);
         }
 
-        var snapshotDigest = CreateSnapshotDigest(session, quote);
+        var snapshotDigest = CreateSnapshotDigest(session, quote, customer);
         InstantQuotationSubmissionCheckpointRead checkpointRead;
         try
         {
@@ -167,6 +168,8 @@ internal sealed class InstantQuotationSubmissionService(
             ownerIdentity,
             acquiredSubmissionLease,
             checkpoint,
+            customer,
+            quote,
             cancellationToken);
     }
 
@@ -262,8 +265,24 @@ internal sealed class InstantQuotationSubmissionService(
         string? ownerIdentity,
         IInstantQuotationSubmissionLease submissionLease,
         InstantQuotationSubmissionCheckpoint checkpoint,
+        InstantQuotationCustomerSubmission customer,
+        InstantQuotationOrderQuote quote,
         CancellationToken cancellationToken)
     {
+        if (checkpoint.Status >= InstantQuotationSubmissionCheckpointStatus.FilesLinked)
+        {
+            return fulfillmentClient is null
+                ? Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected)
+                : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
+                    session,
+                    quote,
+                    ownerIdentity,
+                    customer,
+                    submissionLease,
+                    checkpoint,
+                    cancellationToken);
+        }
+
         InstantQuotationSubmissionCheckpointRead fencedRead;
         try
         {
@@ -409,6 +428,47 @@ internal sealed class InstantQuotationSubmissionService(
             }
         }
 
+        if (fulfillmentClient is not null)
+        {
+            var filesLinkedCheckpoint = checkpoint with
+            {
+                Status = InstantQuotationSubmissionCheckpointStatus.FilesLinked,
+                FinalizedFiles = finalization.Files.OrderBy(file => file.FileId).ToArray(),
+            };
+            if (!await RenewLeaseAsync(submissionLease, cancellationToken))
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+            }
+
+            bool filesLinkedStored;
+            try
+            {
+                filesLinkedStored = await submissionLease.TryPutAsync(
+                    filesLinkedCheckpoint,
+                    InstantQuotationSubmissionCheckpointStatus.Persisted,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            }
+            catch (TimeoutException)
+            {
+                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            }
+
+            return filesLinkedStored
+                ? await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
+                    session,
+                    quote,
+                    ownerIdentity,
+                    customer,
+                    submissionLease,
+                    filesLinkedCheckpoint,
+                    cancellationToken)
+                : Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+        }
+
         var completedCheckpoint = checkpoint with
         {
             Status = InstantQuotationSubmissionCheckpointStatus.Completed,
@@ -541,12 +601,11 @@ internal sealed class InstantQuotationSubmissionService(
         return warnings;
     }
 
-    private static bool IsValidCustomer(InstantQuotationCustomerSubmission customer)
+    private bool IsValidCustomer(InstantQuotationCustomerSubmission customer)
     {
         if (string.IsNullOrWhiteSpace(customer.FirstName)
             || string.IsNullOrWhiteSpace(customer.LastName)
             || string.IsNullOrWhiteSpace(customer.Email)
-            || string.IsNullOrWhiteSpace(customer.TelephoneNumber)
             || string.IsNullOrWhiteSpace(customer.Country)
             || ExceedsLength(customer.FirstName, 50)
             || ExceedsLength(customer.LastName, 50)
@@ -556,6 +615,28 @@ internal sealed class InstantQuotationSubmissionService(
             || ExceedsLength(customer.CompanyName, 50)
             || ExceedsLength(customer.TaxIdentification, 50)
             || customer.Description?.Length > 512)
+        {
+            return false;
+        }
+
+        if (fulfillmentClient is null)
+        {
+            if (string.IsNullOrWhiteSpace(customer.TelephoneNumber))
+            {
+                return false;
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(customer.MobileNumber)
+            || string.IsNullOrWhiteSpace(customer.BillingAddressLine1)
+            || string.IsNullOrWhiteSpace(customer.BillingCity)
+            || string.IsNullOrWhiteSpace(customer.BillingProvince)
+            || string.IsNullOrWhiteSpace(customer.BillingPostalCode)
+            || (!customer.ShipToBillingAddress
+                && (string.IsNullOrWhiteSpace(customer.ShippingAddressLine1)
+                    || string.IsNullOrWhiteSpace(customer.ShippingCity)
+                    || string.IsNullOrWhiteSpace(customer.ShippingProvince)
+                    || string.IsNullOrWhiteSpace(customer.ShippingPostalCode)
+                    || string.IsNullOrWhiteSpace(customer.ShippingCountry))))
         {
             return false;
         }
@@ -577,7 +658,8 @@ internal sealed class InstantQuotationSubmissionService(
 
     private static string CreateSnapshotDigest(
         InstantQuotationSessionState session,
-        InstantQuotationOrderQuote quote)
+        InstantQuotationOrderQuote quote,
+        InstantQuotationCustomerSubmission customer)
     {
         var snapshot = new StringBuilder();
         AppendSnapshotValue(snapshot, session.SessionId);
@@ -641,6 +723,29 @@ internal sealed class InstantQuotationSubmissionService(
         AppendSnapshotValue(snapshot, quote.FinalOrderPrice);
         AppendSnapshotValue(snapshot, quote.LeadTimeMinimumDays);
         AppendSnapshotValue(snapshot, quote.LeadTimeMaximumDays);
+        AppendSnapshotValue(snapshot, customer.FirstName.Trim());
+        AppendSnapshotValue(snapshot, customer.LastName.Trim());
+        AppendSnapshotValue(snapshot, customer.Email.Trim());
+        AppendSnapshotValue(snapshot, customer.TelephoneNumber ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.MobileNumber ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.Country.Trim());
+        AppendSnapshotValue(snapshot, customer.CompanyName ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.TaxIdentification ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.BillingBuilding ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.BillingAddressLine1 ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.BillingAddressLine2 ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.BillingCity ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.BillingProvince ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.BillingPostalCode ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShipToBillingAddress);
+        AppendSnapshotValue(snapshot, customer.ShippingBuilding ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShippingAddressLine1 ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShippingAddressLine2 ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShippingCity ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShippingProvince ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShippingPostalCode ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.ShippingCountry ?? string.Empty);
+        AppendSnapshotValue(snapshot, customer.Description ?? string.Empty);
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(snapshot.ToString())));
     }
 

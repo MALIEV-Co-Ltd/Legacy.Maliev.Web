@@ -40,7 +40,12 @@ public sealed record CustomerOrderDraft(
     int? ColorId,
     int Quantity,
     bool AllowSocialMedia,
-    IReadOnlyList<ICustomerOrderUploadFile> Files);
+    IReadOnlyList<ICustomerOrderUploadFile> Files,
+    decimal? UnitPrice = null,
+    int? CurrencyId = null,
+    int? LeadTime = null,
+    string? Comment = null,
+    bool AllowCancellation = true);
 
 /// <summary>Identifies one scanned object returned by FileService.</summary>
 public sealed record CustomerOrderUploadedObject(string Bucket, string ObjectName);
@@ -85,6 +90,9 @@ public interface ICustomerOrderSubmissionTransport
         int orderId,
         string idempotencyKey,
         CancellationToken cancellationToken);
+
+    /// <summary>Deletes or confirms absence of an order owned by a failed durable fulfillment.</summary>
+    Task<bool> DeleteAsync(int orderId, CancellationToken cancellationToken) => Task.FromResult(false);
 
     /// <summary>Uploads optional attachments through malware-scanning FileService.</summary>
     Task<CustomerOrderUploadResult> UploadAsync(

@@ -150,6 +150,42 @@ internal sealed class CustomerOrderCatalogClient(
         }
     }
 
+    public async Task<ServiceResponse<CustomerOrderCurrency>> GetCurrencyAsync(
+        string shortName,
+        CancellationToken cancellationToken)
+    {
+        var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return new(null, false);
+        }
+
+        try
+        {
+            var currencies = await ReadListAsync<CustomerOrderCurrency>(
+                "catalog",
+                "currencies",
+                token,
+                cancellationToken);
+            if (!currencies.Authorized)
+            {
+                tokenProvider.Invalidate(token);
+            }
+
+            return new(
+                currencies.Items.FirstOrDefault(currency => string.Equals(
+                    currency.ShortName,
+                    shortName,
+                    StringComparison.OrdinalIgnoreCase)),
+                currencies.ServiceAvailable && currencies.Authorized);
+        }
+        catch (Exception exception) when (IsTransient(exception, cancellationToken))
+        {
+            logger.LogWarning("Catalog service was unavailable while resolving a currency.");
+            return new(null, false);
+        }
+    }
+
     private async Task<ReadResult<T>> ReadListAsync<T>(
         string clientName,
         string route,

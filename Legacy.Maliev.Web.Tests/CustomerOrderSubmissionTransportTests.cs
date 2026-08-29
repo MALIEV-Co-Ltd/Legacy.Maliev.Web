@@ -23,20 +23,25 @@ public sealed class CustomerOrderSubmissionTransportTests
             Assert.Equal(7, json.RootElement.GetProperty("surfaceFinishId").GetInt32());
             Assert.Equal(9, json.RootElement.GetProperty("colorId").GetInt32());
             Assert.False(json.RootElement.GetProperty("allowSocialMedia").GetBoolean());
-            Assert.True(json.RootElement.GetProperty("allowCancellation").GetBoolean());
+            Assert.False(json.RootElement.GetProperty("allowCancellation").GetBoolean());
             Assert.False(json.RootElement.GetProperty("allowPayment").GetBoolean());
+            Assert.Equal(3250m, json.RootElement.GetProperty("unitPrice").GetDecimal());
+            Assert.Equal(764, json.RootElement.GetProperty("currencyId").GetInt32());
+            Assert.Equal(7, json.RootElement.GetProperty("leadTime").GetInt32());
+            Assert.Equal("Created from persisted instant quotation request.", json.RootElement.GetProperty("comment").GetString());
             Assert.False(json.RootElement.TryGetProperty("email", out _));
             Assert.Equal(
                 [
                     "allowCancellation", "allowPayment", "allowSocialMedia", "colorId", "comment",
                     "currencyId", "customerId", "description", "discountPercent", "employeeId",
-                    "finishedDate", "leadTime", "manufactured", "materialId", "name", "processId",
-                    "promisedDate", "quantity", "surfaceFinishId", "trackingNumber", "unitPrice",
+                    "finishedDate", "leadTime", "manufactured", "materialId", "name", "operationKey",
+                    "processId", "promisedDate", "quantity", "surfaceFinishId", "trackingNumber", "unitPrice",
                 ],
                 json.RootElement.EnumerateObject()
                     .Select(property => property.Name)
                     .Order(StringComparer.Ordinal)
                     .ToArray());
+            Assert.Equal("legacy-web-member-order-25b70f86", json.RootElement.GetProperty("operationKey").GetString());
             return Json(HttpStatusCode.Created, "{\"id\":731}");
         });
         var transport = CreateTransport(orders: orders);
@@ -189,7 +194,12 @@ public sealed class CustomerOrderSubmissionTransportTests
         9,
         2,
         false,
-        files);
+        files,
+        UnitPrice: 3250m,
+        CurrencyId: 764,
+        LeadTime: 7,
+        Comment: "Created from persisted instant quotation request.",
+        AllowCancellation: false);
 
     private static HttpResponseMessage Json(HttpStatusCode status, string body) => new(status)
     {
