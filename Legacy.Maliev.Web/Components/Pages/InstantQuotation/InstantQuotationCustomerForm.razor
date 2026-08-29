@@ -79,8 +79,8 @@
             @FieldError("TaxNumber")
         </div>
         <div>
-            <label for="instant-quote-description">@Localizer["Description"]</label>
-            <textarea id="instant-quote-description" name="Description" maxlength="512" aria-invalid="@AriaInvalid("Description")" aria-describedby="@ErrorId("Description")">@Model.Description</textarea>
+            <label for="instant-quote-description">@Localizer["Project details"]</label>
+            <textarea id="instant-quote-description" name="Description" maxlength="512" placeholder="@Localizer["Describe your project, material, quantity, tolerance, surface finish, deadline, or any other important details..."]" aria-invalid="@AriaInvalid("Description")" aria-describedby="@ErrorId("Description")">@Model.Description</textarea>
             @FieldError("Description")
         </div>
 

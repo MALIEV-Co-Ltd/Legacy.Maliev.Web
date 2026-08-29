@@ -81,6 +81,10 @@ public sealed partial class CustomManufacturingParityTests : IClassFixture<WebAp
 
         Assert.Contains("service-page-toc", component, StringComparison.Ordinal);
         Assert.Contains("service-pricing-section", component, StringComparison.Ordinal);
+        Assert.Contains("ประเมินโปรเจ็ค", component, StringComparison.Ordinal);
+        Assert.Contains("ประเมินราคาหลังตรวจสอบโปรเจ็ค", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ประเมินโครงการ", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ตรวจสอบโครงการ", component, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"custom-faq-title\"", component, StringComparison.Ordinal);
         Assert.Contains("decoding=\"async\"", component, StringComparison.Ordinal);
 

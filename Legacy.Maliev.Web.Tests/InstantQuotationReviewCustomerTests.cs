@@ -74,6 +74,21 @@ public sealed class InstantQuotationReviewCustomerTests
     }
 
     [Fact]
+    public void CustomerForm_PreservesLatestProductionProjectDetailsPresentation()
+    {
+        var form = ReadComponent("InstantQuotationCustomerForm.razor");
+        var thaiResources = File.ReadAllText(
+            Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources", "Components", "Pages", "InstantQuotation", "ThreeDimensionalPrintingEstimateContent.th.resx"));
+
+        Assert.Contains("@Localizer[\"Project details\"]", form, StringComparison.Ordinal);
+        Assert.Contains("@Localizer[\"Describe your project, material, quantity, tolerance, surface finish, deadline, or any other important details...\"]", form, StringComparison.Ordinal);
+        Assert.Contains("<value>รายละเอียดโปรเจ็ค</value>", thaiResources, StringComparison.Ordinal);
+        Assert.Contains("<value>อธิบายโปรเจ็ค วัสดุ จำนวน ค่าความคลาดเคลื่อน ผิวสำเร็จ กำหนดส่ง หรือรายละเอียดสำคัญอื่น ๆ</value>", thaiResources, StringComparison.Ordinal);
+        Assert.DoesNotContain("<value>รายละเอียดโครงการ</value>", thaiResources, StringComparison.Ordinal);
+        Assert.DoesNotContain("<value>อธิบายโครงการ ", thaiResources, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StaticPage_MintsBoundaryDataAndPassesOnlyDisplayModelToInteractiveIsland()
     {
         var page = ReadComponent("InstantQuotationPage.razor");

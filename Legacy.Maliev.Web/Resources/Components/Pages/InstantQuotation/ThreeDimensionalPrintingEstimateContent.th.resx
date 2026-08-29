@@ -126,6 +126,12 @@
   <data name="Description" xml:space="preserve">
     <value>ข้อมูลเพิ่มเติมเกี่ยวกับงาน</value>
   </data>
+  <data name="Project details" xml:space="preserve">
+    <value>รายละเอียดโปรเจ็ค</value>
+  </data>
+  <data name="Describe your project, material, quantity, tolerance, surface finish, deadline, or any other important details..." xml:space="preserve">
+    <value>อธิบายโปรเจ็ค วัสดุ จำนวน ค่าความคลาดเคลื่อน ผิวสำเร็จ กำหนดส่ง หรือรายละเอียดสำคัญอื่น ๆ</value>
+  </data>
   <data name="Email" xml:space="preserve">
     <value>อีเมล</value>
   </data>
