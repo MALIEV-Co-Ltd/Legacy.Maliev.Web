@@ -215,9 +215,15 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Contains("รมดำสำหรับชิ้นงานเหล็ก", pricing, StringComparison.Ordinal);
         Assert.Contains("เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", pricing, StringComparison.Ordinal);
         Assert.Contains("Standard aluminium anodizing", pricing, StringComparison.Ordinal);
-        Assert.Contains("Starts at approximately THB 2,500 per lot; depends on part size and processing complexity", pricing, StringComparison.Ordinal);
+        Assert.Contains("Minimum THB 1,100 per batch", pricing, StringComparison.Ordinal);
+        Assert.Contains("includes the THB 800 batch handling fee and up to 60 sq. in.", pricing, StringComparison.Ordinal);
+        Assert.Contains("Additional coated area is THB 5 per sq. in.", pricing, StringComparison.Ordinal);
         Assert.Contains("อะโนไดซ์อะลูมิเนียมมาตรฐาน", pricing, StringComparison.Ordinal);
-        Assert.Contains("เริ่มต้นประมาณ 2,500 บาทต่อชุด ขึ้นอยู่กับขนาดชิ้นงานและความยากในการชุบ", pricing, StringComparison.Ordinal);
+        Assert.Contains("ขั้นต่ำ 1,100 บาทต่อชุดงาน", pricing, StringComparison.Ordinal);
+        Assert.Contains("รวมค่าดำเนินการต่อชุด 800 บาทและพื้นที่ผิวรวมไม่เกิน 60 ตร.นิ้ว", pricing, StringComparison.Ordinal);
+        Assert.Contains("พื้นที่ผิวส่วนเกินคิด 5 บาทต่อตร.นิ้ว", pricing, StringComparison.Ordinal);
+        Assert.DoesNotContain("THB 2,500 per lot", pricing, StringComparison.Ordinal);
+        Assert.DoesNotContain("2,500 บาทต่อชุด", pricing, StringComparison.Ordinal);
         Assert.Contains("Hard or custom-colour anodizing", pricing, StringComparison.Ordinal);
         Assert.Contains("Plan approximately THB 6,000–15,000+ per lot", pricing, StringComparison.Ordinal);
         Assert.Contains("ฮาร์ดอะโนไดซ์หรือสีพิเศษ", pricing, StringComparison.Ordinal);
@@ -231,8 +237,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
     }
 
     [Theory]
-    [InlineData("en", "Starts at approximately THB 1,500 per batch", "Starts at approximately THB 2,500 per lot; depends on part size and processing complexity", "Plan approximately THB 6,000–15,000+ per lot")]
-    [InlineData("th", "เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", "เริ่มต้นประมาณ 2,500 บาทต่อชุด ขึ้นอยู่กับขนาดชิ้นงานและความยากในการชุบ", "วางแผนประมาณ 6,000–15,000+ บาทต่อชุดงาน")]
+    [InlineData("en", "Starts at approximately THB 1,500 per batch", "Minimum THB 1,100 per batch", "Plan approximately THB 6,000–15,000+ per lot")]
+    [InlineData("th", "เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", "ขั้นต่ำ 1,100 บาทต่อชุดงาน", "วางแผนประมาณ 6,000–15,000+ บาทต่อชุดงาน")]
     public async Task Route_RendersExactLocalizedCncFinishingEstimates(
         string culture,
         string blackOxide,
