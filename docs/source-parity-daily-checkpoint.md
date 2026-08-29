@@ -35,6 +35,8 @@ or Google configuration publication.
 | `21e4c05fa5e1b65a77eab155d93ced1cd01fb8d0` | Publish standard anodizing pricing with a THB 1,100 batch minimum, THB 800 handling, 60 sq. in. inclusion, and THB 5/sq. in. excess | `Legacy.Maliev.Web` | `ba2bcfc` | Release build: 0 warnings/errors; CNC service suite: 23/23; old THB 2,500 contract forbidden; format clean |
 | `803013d3bc72e694e899e89cc688fc223e881d5b` | Reject malformed Career page-size input with HTTP 400 before invoking the service client | `Legacy.Maliev.Web` | `35d9f17` | Existing .NET 10 fail-closed behavior proved by a new integration regression; Career suite: 7/7; Release build: 0 warnings/errors; format clean |
 | `0d002991028cefb6d0b0fb13e1d65dfdeea3f2da` | Lead English 3D-printing search and hero copy with instant FDM/resin pricing while routing industrial processes to engineering review | `Legacy.Maliev.Web` | `1ef2f17` | Release build: 0 warnings/errors; 3D-printing static-SSR/fallback suite: 19/19; final localized metadata and engineering-review section covered; format clean |
+| `e101c2bd4c4680c29571496e7842edf635d4ac6a` | Normalize dash-only optional company/tax placeholders and require exactly 13 ASCII digits for a supplied Thai tax ID | `Legacy.Maliev.Web` | `6036b17` | Release build: 0 warnings/errors; affected Instant Quotation suite: 452/452; browser modules: 103/103; npm audit: 0 vulnerabilities; format and secret scan clean |
+| `1f1f9aa9e3c9ff907adf80a553c616864a5a9337` | Expose four allowlisted public WebMCP tools without submission, upload, authentication, network, storage, credential, or field-value access | `Legacy.Maliev.Web` | `1929e18` | Release build: 0 warnings/errors; focused/affected .NET integration: 30/30 after merge; browser modules: 107/107; npm audit: 0 vulnerabilities; format clean |
 
 ## Supporting migration maintenance
 
@@ -54,7 +56,7 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 102 committed source changes after `48e628c` remain pending commit-by-commit
+The other 100 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
