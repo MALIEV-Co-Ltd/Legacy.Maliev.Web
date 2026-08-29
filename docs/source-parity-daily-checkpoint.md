@@ -63,7 +63,10 @@ or Google configuration publication.
 | `7ebbc97` | Preserve the accepted quotation outcome through employee workflow transitions and reporting | `Legacy.Maliev.QuotationService` | `0040af0` | Same independently reviewed 98/98 target-native PostgreSQL suite; customer reaccept-after-decline is rejected while employee override remains authorized |
 | `460e9c8` | Replace the low-volume injection hero PNG with the final responsive WebP delivery contract | `Legacy.Maliev.Web` | `87dcaa2`, `3763745` | Release build: 0 warnings/errors; affected static-SSR/service/asset suite: 58/58; browser modules: 109/109; source/target asset hashes match; independent review approved |
 | `84a0790` | Publish the verified PP injection-molded home card and bilingual source-derived part proof | `Legacy.Maliev.Web` | `87dcaa2`, `3763745` | Exact EN/TH proof copy and responsive assets migrated; intrinsic 1700x925 dimensions covered; deterministic CSS hashes match; npm audit: 0 vulnerabilities |
-| `c1e0ef4` (injection portion) | Preserve the final injection-proof asset naming and responsive presentation while leaving the unrelated CNC portion for its own slice | `Legacy.Maliev.Web` | `87dcaa2`, `3763745` | Injection page is two-column at tablet and one-column at <=47.99rem without changing the separately scoped printing mosaic; reduced-motion and semantic figure contracts pass |
+| `c1e0ef4` | Preserve the final injection and CNC production-proof asset naming and responsive presentation | `Legacy.Maliev.Web` | `87dcaa2`, `3763745`, `cc708f0`, `cadc876` | Both production-proof galleries now retain their source-derived responsive assets, bilingual copy, semantic figures, reduced-motion behavior, and independently reviewed parity contracts |
+| `c97aa4c` | Publish the final 19-item CNC production gallery with exact provenance, bilingual copy, and CTA destinations | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | Exact ordered fixture locks 19 tiles, 11 deferred tiles, 57 source-identical WebP blobs, EN/TH copy, intrinsic dimensions, responsive sources, social links, and quotation/contact CTAs |
+| `5b37938` | Preserve the final wide-screen CNC gallery framing | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | CNC-scoped desktop media-block assertions lock the final 14-column composition without relying on unrelated service rules |
+| `df37579` | Preserve CNC gallery framing through tablet and compact breakpoints | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | Exact tablet, mobile, and sub-360 media-block assertions lock the 12-, 3-, and 2-column layouts; Release build: 0 warnings/errors; focused suite: 39/39; browser modules: 109/109; deterministic asset rebuild clean; npm audit: 0 vulnerabilities; independent review approved |
 
 ## Supporting migration maintenance
 
@@ -98,7 +101,7 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 62 committed source changes after `48e628c` remain pending commit-by-commit
+The other 58 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
