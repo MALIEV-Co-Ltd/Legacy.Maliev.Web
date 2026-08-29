@@ -42,7 +42,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["logo"] = new Dictionary<string, object>
         {
             ["@type"] = "ImageObject",
-            ["url"] = "https://www.maliev.com/src/images/navbar_logo_black.png",
+            ["url"] = "https://www.maliev.com/src/images/navbar_logo_black.webp",
             ["width"] = 653,
             ["height"] = 150
         },
@@ -72,8 +72,8 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["@type"] = "LocalBusiness",
         ["@id"] = "https://www.maliev.com/#organization",
         ["name"] = "Maliev Co., Ltd.",
-        ["image"] = "https://www.maliev.com/src/images/navbar_logo_black.png",
-        ["logo"] = "https://www.maliev.com/src/images/navbar_logo_black.png",
+        ["image"] = "https://www.maliev.com/src/images/navbar_logo_black.webp",
+        ["logo"] = "https://www.maliev.com/src/images/navbar_logo_black.webp",
         ["url"] = "https://www.maliev.com",
         ["hasMap"] = SocialNetworks.GoogleMaps,
         ["telephone"] = "+66898950690",

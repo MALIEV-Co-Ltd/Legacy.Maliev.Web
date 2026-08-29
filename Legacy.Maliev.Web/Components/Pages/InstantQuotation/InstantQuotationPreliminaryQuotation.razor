@@ -148,7 +148,7 @@
 
     private string LogoDataUri()
     {
-        var logoPath = Path.Combine(WebHostEnvironment.WebRootPath, "src", "images", "navbar_logo_black.png");
+        var logoPath = Path.Combine(WebHostEnvironment.WebRootPath, "src", "images", "navbar_logo_black.webp");
         return File.Exists(logoPath)
             ? $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(logoPath))}"
             : string.Empty;

@@ -1,6 +1,6 @@
 /* sprite flags */
 .sprite-flags {
-    background-image: url('/src/images/Flags/sprite-flags.png');
+    background-image: url('/src/images/Flags/sprite-flags.webp');
     background-repeat: no-repeat;
     display: block;
 }
@@ -19,7 +19,7 @@
 
 /* sprite payments */
 .sprite-payments {
-    background-image: url('/src/images/Payments/sprite-payments.png');
+    background-image: url('/src/images/Payments/sprite-payments.webp');
     background-repeat: no-repeat;
     display: block;
 }
@@ -92,7 +92,7 @@
 
 /* sprite shipping couriers */
 .sprite-shippingcouriers {
-    background-image: url('/src/images/ShippingCouriers/sprite-shippingcouriers.png');
+    background-image: url('/src/images/ShippingCouriers/sprite-shippingcouriers.webp');
     background-repeat: no-repeat;
     display: block;
 }

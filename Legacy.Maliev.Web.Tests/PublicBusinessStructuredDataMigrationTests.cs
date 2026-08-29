@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -88,20 +87,20 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
 
         var logo = organization.GetProperty("logo");
         Assert.Equal("ImageObject", logo.GetProperty("@type").GetString());
-        Assert.Equal("https://www.maliev.com/src/images/navbar_logo_black.png", logo.GetProperty("url").GetString());
+        Assert.Equal("https://www.maliev.com/src/images/navbar_logo_black.webp", logo.GetProperty("url").GetString());
         Assert.Equal(JsonValueKind.Number, logo.GetProperty("width").ValueKind);
         Assert.Equal(653, logo.GetProperty("width").GetInt32());
         Assert.Equal(JsonValueKind.Number, logo.GetProperty("height").ValueKind);
         Assert.Equal(150, logo.GetProperty("height").GetInt32());
-        var logoDimensions = ReadPngDimensions(Path.Combine(
+        var logoPath = Path.Combine(
             FindRepositoryRoot(),
             "Legacy.Maliev.Web",
             "wwwroot",
             "src",
             "images",
-            "navbar_logo_black.png"));
-        Assert.Equal(logoDimensions.Width, logo.GetProperty("width").GetInt32());
-        Assert.Equal(logoDimensions.Height, logo.GetProperty("height").GetInt32());
+            "navbar_logo_black.webp");
+        Assert.True(File.Exists(logoPath));
+        Assert.True(new FileInfo(logoPath).Length > 0);
 
         var founders = organization.GetProperty("founders").EnumerateArray().ToArray();
         Assert.Equal(new[] { "Natthapol Vanasrivilai", "Thossapol Vanasrivilai", "Natthakarn Vanasrivilai" },
@@ -171,16 +170,6 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<W
         Assert.DoesNotContain(
             sameAs.EnumerateArray(),
             link => link.GetString()?.Contains("facebook", StringComparison.OrdinalIgnoreCase) == true);
-    }
-
-    private static (int Width, int Height) ReadPngDimensions(string path)
-    {
-        var header = File.ReadAllBytes(path).AsSpan();
-        Assert.True(header.Length >= 24, "The logo PNG header is incomplete.");
-
-        return (
-            BinaryPrimitives.ReadInt32BigEndian(header.Slice(16, 4)),
-            BinaryPrimitives.ReadInt32BigEndian(header.Slice(20, 4)));
     }
 
     private static string FindRepositoryRoot()

@@ -235,7 +235,7 @@
             + '<button type="button" class="secondary" onclick="window.close();">' + text(snapshot, 'preliminaryQuotationClose') + '</button>'
             + '</div><span class="iq-preliminary-quotation-toolbar-meta">A4 · ' + text(snapshot, 'preliminaryQuotationNote') + ' · ' + text(snapshot, 'preliminaryQuotationDownloadPdfHint') + '</span></div>'
             + '<main class="iq-preliminary-quotation-sheet"><header class="iq-preliminary-quotation-header"><div><img class="iq-preliminary-quotation-logo" src="'
-            + escapeHtml(snapshot.logoDataUri || '/src/images/navbar_logo_black.png') + '" alt="MALIEV"><p class="iq-preliminary-quotation-kicker">3D printing service</p></div>'
+            + escapeHtml(snapshot.logoDataUri || '/src/images/navbar_logo_black.webp') + '" alt="MALIEV"><p class="iq-preliminary-quotation-kicker">3D printing service</p></div>'
             + '<div class="iq-preliminary-quotation-title"><h1>' + text(snapshot, 'preliminaryQuotation') + '</h1><p>' + text(snapshot, 'reviewOnly') + '</p></div></header>'
             + '<div class="iq-preliminary-quotation-meta"><span><strong>' + text(snapshot, 'preliminaryQuotationGenerated') + ':</strong> ' + generatedAt(snapshot) + '</span><span><strong>' + text(snapshot, 'quantity') + ':</strong> ' + escapeHtml(String(parts.length)) + '</span></div>'
             + '<h2 class="iq-preliminary-quotation-section-title">' + text(snapshot, 'preliminaryQuotationParts') + '</h2>' + partMarkup

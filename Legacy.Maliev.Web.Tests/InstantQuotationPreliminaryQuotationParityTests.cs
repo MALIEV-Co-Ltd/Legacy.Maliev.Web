@@ -34,7 +34,7 @@ public sealed class InstantQuotationPreliminaryQuotationParityTests
 
         foreach (var marker in new[]
         {
-            "navbar_logo_black.png",
+            "navbar_logo_black.webp",
             "PrintPreliminaryQuotation",
             "DownloadPreliminaryQuotationPdf",
             "window.print()",
