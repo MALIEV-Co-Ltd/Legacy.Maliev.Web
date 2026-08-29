@@ -23,7 +23,7 @@
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
-    <link rel="preload" as="image" href="/src/images/services/printing/printing-hero.webp" fetchpriority="high" />
+    <link rel="preload" as="image" href="/src/images/services/printing/printing-hero.webp" imagesrcset="/src/images/services/printing/printing-hero-640.webp 640w, /src/images/services/printing/printing-hero-960.webp 960w, /src/images/services/printing/printing-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Printing"))" />

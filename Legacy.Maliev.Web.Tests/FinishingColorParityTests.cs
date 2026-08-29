@@ -17,7 +17,7 @@ public sealed class FinishingColorParityTests : IClassFixture<WebApplicationFact
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
         var page = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "FinishingAndColorPage.razor"));
-        var entry = File.ReadAllText(Path.Combine(web, "assets", "app-entry.js"));
+        var entry = File.ReadAllText(Path.Combine(web, "assets", "route-service-finishing.js"));
         var vendor = File.ReadAllText(Path.Combine(web, "assets", "vendor-entry.js"));
         var atlas = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "hlc-colour-atlas-data.js"));
         var core = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "finish-color-matcher-core.js"));

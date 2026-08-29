@@ -48,7 +48,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
             "Pages",
             "Services",
             "ThreeDimensionalPrintingContent.razor"));
-        var appEntry = File.ReadAllText(Path.Combine(web, "assets", "app-entry.js"));
+        var appEntry = File.ReadAllText(Path.Combine(web, "assets", "route-service-printing.js"));
         var comparisonScript = File.ReadAllText(Path.Combine(
             web,
             "wwwroot",
