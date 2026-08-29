@@ -2414,8 +2414,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "FDM & Resin 3D Printing", "Professional 3D Printing for Prototypes and Functional Parts", "How much does 3D printing cost?")]
-    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("en", "FDM, Resin & Industrial Additive", "Upload a 3D File for Instant FDM & Resin Pricing", "How much does 3D printing cost?")]
+    [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "พิมพ์ 3D ราคาเท่าไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,

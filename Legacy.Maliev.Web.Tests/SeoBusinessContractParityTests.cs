@@ -102,8 +102,8 @@ public sealed class SeoBusinessContractParityTests
 
         foreach (var source in new[] { component, fallback })
         {
-            Assert.Contains("Custom 3D Printing in Thailand | FDM & Resin | MALIEV", source, StringComparison.Ordinal);
-            Assert.Contains("รับพิมพ์ 3D ตามแบบ | FDM เรซิ่น จัดส่งทั่วไทย | MALIEV", source, StringComparison.Ordinal);
+            Assert.Contains("Custom 3D Printing in Thailand | Upload for Instant Pricing | MALIEV", source, StringComparison.Ordinal);
+            Assert.Contains("รับปริ้น 3D รับพิมพ์ 3 มิติ | ประเมินราคาออนไลน์ | MALIEV", source, StringComparison.Ordinal);
             var titleBoundary = source[..source.IndexOf("Description", StringComparison.OrdinalIgnoreCase)];
             Assert.DoesNotContain("Bangkok", titleBoundary, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("กรุงเทพ", titleBoundary, StringComparison.Ordinal);
