@@ -9,11 +9,11 @@
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var title = T(
-        "CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts",
-        "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต");
+        "CNC Machining Services Across Thailand | One-Off and Production Parts",
+        "รับงาน CNC ตามแบบทั่วประเทศไทย | งานชิ้นเดียวถึงงานผลิต");
     var description = T(
-        "CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.",
-        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม");
+        "CNC milling and turning for customers across Thailand, from one-off parts and prototypes to jigs and repeat production. Send CAD and drawings for a quote.",
+        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ");
     var keywords = T(
         "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi",
         "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC");
@@ -73,10 +73,10 @@
                         "Often yes, but the correct route may include measurement or 3D scanning, reverse engineering, material identification, and a review of wear or damage. The original design intent cannot always be recovered from a worn sample.",
                         "หลายกรณีทำได้ แต่อาจต้องวัดหรือสแกน 3D ทำ Reverse Engineering ตรวจชนิดวัสดุ และประเมินการสึกหรอ ไม่สามารถกู้เจตนาการออกแบบเดิมทั้งหมดจากชิ้นงานที่สึกได้เสมอ")),
                 CreateQuestion(
-                    T("Do you guarantee the same tolerance for every feature?", "ทุกฟีเจอร์ใช้ค่าคลาดเคลื่อนเดียวกันหรือไม่?"),
+                    T("What general tolerance applies to CNC parts?", "งาน CNC ใช้ค่าคลาดเคลื่อนทั่วไปใด?"),
                     T(
-                        "No. Achievable tolerance depends on geometry, size, material, setup, process, and inspection method. Critical tolerances must be identified and agreed before production.",
-                        "ไม่ใช่ ค่าที่ทำได้ขึ้นกับรูปทรง ขนาด วัสดุ การจับยึด กระบวนการ และวิธีตรวจ ต้องระบุและตกลงจุดสำคัญก่อนผลิต"))
+                        "Unless the drawing or quotation specifies otherwise, ISO 2768-1 tolerance class m is the default and applies only to linear and angular dimensions without individual tolerance indications. Drawing-specific requirements override the general tolerance. Critical or tighter tolerances require engineering review and explicit confirmation in the quotation before production.",
+                        "หากแบบงานหรือใบเสนอราคาไม่ได้ระบุเป็นอย่างอื่น ISO 2768-1 ระดับ m เป็นค่าคลาดเคลื่อนทั่วไปเริ่มต้น และใช้เฉพาะขนาดเชิงเส้นและเชิงมุมที่ไม่ได้กำหนดค่าคลาดเคลื่อนเป็นรายจุด ข้อกำหนดเฉพาะในแบบงานมีผลเหนือกว่าค่าคลาดเคลื่อนทั่วไป ค่าคลาดเคลื่อนสำคัญหรือแคบกว่าต้องผ่านการตรวจสอบทางวิศวกรรมและยืนยันอย่างชัดเจนในใบเสนอราคาก่อนผลิต"))
             }
         };
 

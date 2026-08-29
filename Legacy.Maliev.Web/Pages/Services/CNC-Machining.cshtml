@@ -5,8 +5,8 @@
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
-    ViewData["Title"] = T("CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts", "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต");
-    ViewData["Description"] = T("CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.", "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม");
+    ViewData["Title"] = T("CNC Machining Services Across Thailand | One-Off and Production Parts", "รับงาน CNC ตามแบบทั่วประเทศไทย | งานชิ้นเดียวถึงงานผลิต");
+    ViewData["Description"] = T("CNC milling and turning for customers across Thailand, from one-off parts and prototypes to jigs and repeat production. Send CAD and drawings for a quote.", "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ");
     ViewData["Keywords"] = T("CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi", "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC");
     var faqJson = CncMachiningPage.CreateFaqJson();
 }

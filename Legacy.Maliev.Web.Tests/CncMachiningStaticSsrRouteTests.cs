@@ -66,14 +66,14 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
     [Theory]
     [InlineData(
         "en",
-        "CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts",
-        "CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.",
+        "CNC Machining Services Across Thailand | One-Off and Production Parts",
+        "CNC milling and turning for customers across Thailand, from one-off parts and prototypes to jigs and repeat production. Send CAD and drawings for a quote.",
         "Precision CNC Machining for One-Off and Production Parts",
         "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi")]
     [InlineData(
         "th",
-        "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต",
-        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม",
+        "รับงาน CNC ตามแบบทั่วประเทศไทย | งานชิ้นเดียวถึงงานผลิต",
+        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ",
         "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต",
         "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
@@ -157,6 +157,42 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Equal("CNC Machining", service.RootElement.GetProperty("serviceType").GetString());
         Assert.Equal(7, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+    }
+
+    [Theory]
+    [InlineData(
+        "en",
+        "What general tolerance applies to CNC parts?",
+        "Unless the drawing or quotation specifies otherwise, ISO 2768-1 tolerance class m is the default and applies only to linear and angular dimensions without individual tolerance indications.",
+        "Drawing-specific requirements override the general tolerance.",
+        "Critical or tighter tolerances require engineering review and explicit confirmation in the quotation before production.")]
+    [InlineData(
+        "th",
+        "งาน CNC ใช้ค่าคลาดเคลื่อนทั่วไปใด?",
+        "หากแบบงานหรือใบเสนอราคาไม่ได้ระบุเป็นอย่างอื่น ISO 2768-1 ระดับ m เป็นค่าคลาดเคลื่อนทั่วไปเริ่มต้น และใช้เฉพาะขนาดเชิงเส้นและเชิงมุมที่ไม่ได้กำหนดค่าคลาดเคลื่อนเป็นรายจุด",
+        "ข้อกำหนดเฉพาะในแบบงานมีผลเหนือกว่าค่าคลาดเคลื่อนทั่วไป",
+        "ค่าคลาดเคลื่อนสำคัญหรือแคบกว่าต้องผ่านการตรวจสอบทางวิศวกรรมและยืนยันอย่างชัดเจนในใบเสนอราคาก่อนผลิต")]
+    public async Task Route_PublishesTheReviewedGeneralToleranceContract(
+        string culture,
+        string question,
+        string scope,
+        string precedence,
+        string confirmation)
+    {
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(question, source, StringComparison.Ordinal);
+        Assert.Contains(scope, source, StringComparison.Ordinal);
+        Assert.Contains(precedence, source, StringComparison.Ordinal);
+        Assert.Contains(confirmation, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ISO 2763", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ISO 9001", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ISO 13485", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("AS9100", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("IATF", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -243,7 +279,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>CNC Machining Services in Bangkok &amp; Nonthaburi | One-Off and Production Parts</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>CNC Machining Services Across Thailand | One-Off and Production Parts</title>", source, StringComparison.Ordinal);
+        Assert.Contains("ISO 2768-1 tolerance class m", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
