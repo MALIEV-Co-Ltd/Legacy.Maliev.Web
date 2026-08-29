@@ -88,13 +88,92 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
                 "+66 80 000 0000",
                 "TH",
                 "Analytical Engines",
-                "TAX-42",
+                "0105559123456",
                 "Please quote this part."),
             call.Customer);
         AssertSafeCompletedTempData(tempData.Values, 718);
         Assert.DoesNotContain("Ada", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         Assert.DoesNotContain(response.Headers, header =>
             string.Join(',', header.Value).Contains("attacker", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("-")]
+    [InlineData(" -- ")]
+    [InlineData("—")]
+    public async Task DashOnlyOptionalCompanyAndTax_AreNormalizedBeforePersistence(string placeholder)
+    {
+        var service = new RecordingSubmissionService(Completed(725));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["Company"] = placeholder,
+                ["TaxNumber"] = placeholder,
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var call = Assert.Single(service.Calls);
+        Assert.Null(call.Customer.CompanyName);
+        Assert.Null(call.Customer.TaxIdentification);
+    }
+
+    [Fact]
+    public async Task HyphenatedCompanyAndValidTax_AreTrimmedAndPreserved()
+    {
+        var service = new RecordingSubmissionService(Completed(726));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["Company"] = "  A-B Manufacturing  ",
+                ["TaxNumber"] = "  0105559123456  ",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var call = Assert.Single(service.Calls);
+        Assert.Equal("A-B Manufacturing", call.Customer.CompanyName);
+        Assert.Equal("0105559123456", call.Customer.TaxIdentification);
+    }
+
+    [Theory]
+    [InlineData("123456789012")]
+    [InlineData("12345678901234")]
+    [InlineData("12345678901A3")]
+    public async Task NonEmptyTaxNumberWithoutExactlyThirteenDigits_IsRejected(string taxNumber)
+    {
+        var service = new RecordingSubmissionService(Completed(727));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["TaxNumber"] = taxNumber,
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(service.Calls);
+        Assert.Equal("validation", tempData.Values[ThreeDimensionalPrinting.ProblemCategoryTempDataKey]);
+        var fields = JsonSerializer.Deserialize<string[]>(
+            Assert.IsType<string>(tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.Equal(["TaxNumber"], fields);
     }
 
     [Fact]
@@ -346,7 +425,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             ["Email"] = " ada@example.com ",
             ["Telephone"] = " +66 80 000 0000 ",
             ["Company"] = " Analytical Engines ",
-            ["TaxNumber"] = " TAX-42 ",
+            ["TaxNumber"] = " 0105559123456 ",
             ["Country"] = " TH ",
             ["Description"] = " Please quote this part. ",
         };

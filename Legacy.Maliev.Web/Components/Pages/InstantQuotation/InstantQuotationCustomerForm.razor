@@ -35,7 +35,7 @@
             </ul>
         </div>
     }
-    <form method="post" action="/InstantQuotation/3D-Printing?handler=SubmitRequest">
+    <form method="post" action="/InstantQuotation/3D-Printing?handler=SubmitRequest" data-optional-customer-fields>
         <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryRequestToken" />
 
         <div>
@@ -75,7 +75,7 @@
         </div>
         <div>
             <label for="instant-quote-taxnumber">@Localizer["Tax number"]</label>
-            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" maxlength="50" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" />
+            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" autocomplete="off" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" />
             @FieldError("TaxNumber")
         </div>
         <div>

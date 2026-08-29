@@ -68,6 +68,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public string LastName { get; set; } = string.Empty;
 
     [BindProperty]
+    [RegularExpression(@"^[0-9]{13}$", ErrorMessage = "Thai tax ID must contain exactly 13 digits.")]
     [StringLength(50)]
     public string? TaxNumber { get; set; }
 
@@ -112,6 +113,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
+        NormalizeOptionalCustomerFields();
         if (!ModelState.IsValid)
         {
             var invalidFields = ModelState
@@ -158,8 +160,8 @@ public sealed class ThreeDimensionalPrinting : PageModel
                     Email.Trim(),
                     Telephone.Trim(),
                     Country.Trim(),
-                    NormalizeOptional(Company),
-                    NormalizeOptional(TaxNumber),
+                    Company,
+                    TaxNumber,
                     NormalizeOptional(Description)),
                 cancellationToken);
         }
@@ -179,6 +181,51 @@ public sealed class ThreeDimensionalPrinting : PageModel
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    internal void NormalizeOptionalCustomerFields()
+    {
+        Company = NormalizeOptionalCustomerText(Company);
+        TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
+        RevalidateOptionalCustomerField(nameof(Company));
+        RevalidateOptionalCustomerField(nameof(TaxNumber));
+    }
+
+    private void RevalidateOptionalCustomerField(string propertyName)
+    {
+        ModelState.Remove(propertyName);
+        var property = GetType().GetProperty(propertyName)
+            ?? throw new InvalidOperationException($"Customer field '{propertyName}' was not found.");
+        var validationResults = new List<ValidationResult>();
+        Validator.TryValidateProperty(
+            property.GetValue(this),
+            new ValidationContext(this) { MemberName = propertyName },
+            validationResults);
+        foreach (var validationResult in validationResults)
+        {
+            ModelState.AddModelError(
+                propertyName,
+                validationResult.ErrorMessage ?? "The customer field is invalid.");
+        }
+    }
+
+    private static string? NormalizeOptionalCustomerText(string? value)
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized)
+            || normalized.All(static character => character is '-'
+                or '\u2010'
+                or '\u2011'
+                or '\u2012'
+                or '\u2013'
+                or '\u2014'
+                or '\u2015'
+                or '\u2212'))
+        {
+            return null;
+        }
+
+        return normalized;
+    }
 
     private void StoreResult(InstantQuotationSubmissionResult result)
     {

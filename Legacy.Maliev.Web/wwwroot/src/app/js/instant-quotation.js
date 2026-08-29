@@ -2,6 +2,7 @@ import {
     requestInstantEstimate,
     wireInstantEstimate,
 } from './instant-quotation-controller.mjs';
+import { wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
 
 const form = document.querySelector('[data-instant-estimate]');
 const status = document.getElementById('estimate-status');
@@ -44,6 +45,8 @@ if (form instanceof HTMLFormElement
             requestInstantEstimate(values, signal, window.fetch.bind(window), window.location.href),
     });
 }
+
+document.querySelectorAll('form[data-optional-customer-fields]').forEach(wireOptionalQuotationFields);
 
 function value(values, key) {
     return values.get(key)?.toString() ?? '';

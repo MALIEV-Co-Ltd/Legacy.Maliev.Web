@@ -57,10 +57,15 @@ public sealed class InstantQuotationReviewCustomerTests
             Assert.DoesNotContain("required", FieldTag(form, field), StringComparison.Ordinal);
         }
 
-        foreach (var field in new[] { "FirstName", "LastName", "Email", "Telephone", "Company", "TaxNumber" })
+        foreach (var field in new[] { "FirstName", "LastName", "Email", "Telephone", "Company" })
         {
             Assert.Contains("maxlength=\"50\"", FieldTag(form, field), StringComparison.Ordinal);
         }
+
+        var taxNumber = FieldTag(form, "TaxNumber");
+        Assert.Contains("maxlength=\"13\"", taxNumber, StringComparison.Ordinal);
+        Assert.Contains("pattern=\"[0-9]{13}\"", taxNumber, StringComparison.Ordinal);
+        Assert.Contains("inputmode=\"numeric\"", taxNumber, StringComparison.Ordinal);
 
         Assert.Contains("name=\"Description\"", form, StringComparison.Ordinal);
         Assert.Contains("maxlength=\"512\"", FieldTag(form, "Description"), StringComparison.Ordinal);
