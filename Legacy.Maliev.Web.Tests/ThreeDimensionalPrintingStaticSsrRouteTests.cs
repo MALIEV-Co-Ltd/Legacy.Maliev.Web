@@ -120,13 +120,13 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
     [Theory]
     [InlineData(
         "en",
-        "3D Printing Services Bangkok | MALIEV",
+        "Custom 3D Printing in Thailand | FDM & Resin | MALIEV",
         "Order FDM and resin 3D printed parts in engineering materials. Compare material uses, prepare files, and upload CAD for instant 3D printing pricing.",
         "Professional 3D Printing for Prototypes and Functional Parts",
         "3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing")]
     [InlineData(
         "th",
-        "รับพิมพ์ 3D กรุงเทพและนนทบุรี | MALIEV",
+        "รับพิมพ์ 3D ตามแบบ | FDM เรซิ่น จัดส่งทั่วไทย | MALIEV",
         "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่นสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์",
         "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง",
         "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี, รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิ่น")]
@@ -266,7 +266,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>3D Printing Services Bangkok | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Custom 3D Printing in Thailand | FDM &amp; Resin | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);

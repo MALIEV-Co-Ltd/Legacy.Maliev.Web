@@ -90,6 +90,28 @@ public sealed class SeoBusinessContractParityTests
     }
 
     [Fact]
+    public void ThreeDimensionalPrintingTitleRepresentsNationwideService()
+    {
+        var component = Read("Services/ThreeDimensionalPrintingPage.razor");
+        var fallback = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "Pages",
+            "Services",
+            "3D-Printing.cshtml"));
+
+        foreach (var source in new[] { component, fallback })
+        {
+            Assert.Contains("Custom 3D Printing in Thailand | FDM & Resin | MALIEV", source, StringComparison.Ordinal);
+            Assert.Contains("รับพิมพ์ 3D ตามแบบ | FDM เรซิ่น จัดส่งทั่วไทย | MALIEV", source, StringComparison.Ordinal);
+            var titleBoundary = source[..source.IndexOf("Description", StringComparison.OrdinalIgnoreCase)];
+            Assert.DoesNotContain("Bangkok", titleBoundary, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("กรุงเทพ", titleBoundary, StringComparison.Ordinal);
+            Assert.DoesNotContain("นนทบุรี", titleBoundary, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void RobotsAndSitemapKeepPrivateSurfacesOutOfSearch()
     {
         var robots = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "robots.txt"));

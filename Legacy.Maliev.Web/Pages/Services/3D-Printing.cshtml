@@ -5,7 +5,7 @@
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
-    ViewData["Title"] = T("3D Printing Services Bangkok | MALIEV", "รับพิมพ์ 3D กรุงเทพและนนทบุรี | MALIEV");
+    ViewData["Title"] = T("Custom 3D Printing in Thailand | FDM & Resin | MALIEV", "รับพิมพ์ 3D ตามแบบ | FDM เรซิ่น จัดส่งทั่วไทย | MALIEV");
     ViewData["Description"] = T("Order FDM and resin 3D printed parts in engineering materials. Compare material uses, prepare files, and upload CAD for instant 3D printing pricing.", "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่นสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์");
     ViewData["Keywords"] = T("3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing", "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี, รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิ่น");
     var faqJson = ThreeDimensionalPrintingPage.CreateFaqJson();
