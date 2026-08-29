@@ -128,8 +128,8 @@ public sealed class AssetDeliveryContractTests
     public void InstantQuotationAssets_AreBundledAndKeepPricingOnServerEndpoints()
     {
         var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
-        var appEntry = File.ReadAllText(Path.Combine(web, "assets", "app-entry.js"));
-        var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "site-entry.css"));
+        var appEntry = File.ReadAllText(Path.Combine(web, "assets", "route-instant-quotation.js"));
+        var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "route-instant-quotation.css"));
         var browserModule = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "instant-quotation.js"));
         var controllerModule = File.ReadAllText(Path.Combine(
             web,

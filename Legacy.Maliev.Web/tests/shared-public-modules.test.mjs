@@ -10,8 +10,16 @@ const cssRoot = new URL('../wwwroot/src/app/css/', import.meta.url);
 
 const readSource = name => readFile(new URL(name, sourceRoot), 'utf8');
 
-test('the production app entry keeps shared native service modules in the bundle', async () => {
-    const entry = await readFile(new URL('../assets/app-entry.js', import.meta.url), 'utf8');
+test('production entries keep native service modules in route-owned bundles', async () => {
+    const shared = await readFile(new URL('../assets/app-entry.js', import.meta.url), 'utf8');
+    const entries = await Promise.all([
+        readFile(new URL('../assets/route-service-printing.js', import.meta.url), 'utf8'),
+        readFile(new URL('../assets/route-service-finder.js', import.meta.url), 'utf8'),
+        readFile(new URL('../assets/route-service-toc.js', import.meta.url), 'utf8'),
+        readFile(new URL('../assets/route-service-scanning.js', import.meta.url), 'utf8'),
+        readFile(new URL('../assets/route-instant-quotation.js', import.meta.url), 'utf8'),
+    ]);
+    const entry = entries.join('\n');
 
     for (const module of [
         'material-comparison.js',
@@ -23,6 +31,7 @@ test('the production app entry keeps shared native service modules in the bundle
     }
 
     assert.match(entry, /instant-quotation\.js/);
+    assert.doesNotMatch(shared, /material-comparison|service-finder|service-toc|scanning-workflow|instant-quotation/);
     assert.doesNotMatch(entry, /jquery|wowjs|animate\.css/i);
 });
 
@@ -67,9 +76,12 @@ test('material detail properties keep each label and value in the same grid item
     assert.match(styles, /\.service-material-detail-properties\s*>\s*\.service-material-detail-property\s*\{\s*display:\s*grid;/);
 });
 
-test('shared service presentation styles are bundled through the deterministic CSS entry', async () => {
-    const entry = await readFile(new URL('../assets/site-entry.css', import.meta.url), 'utf8');
+test('service presentation styles are bundled through deterministic route entries', async () => {
+    const shared = await readFile(new URL('../assets/site-entry.css', import.meta.url), 'utf8');
+    const entry = await readFile(new URL('../assets/route-services-index.css', import.meta.url), 'utf8');
     assert.match(entry, /service-finder\.css/);
+    assert.match(entry, /service-pages\.css/);
+    assert.doesNotMatch(shared, /service-(?:finder|pages)\.css/);
     assert.match(await readFile(new URL('service-finder.css', cssRoot), 'utf8'), /prefers-reduced-motion/);
     assert.match(await readFile(new URL('service-pages.css', cssRoot), 'utf8'), /scanning-workflow/);
 });

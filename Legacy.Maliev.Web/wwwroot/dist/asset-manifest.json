@@ -3,11 +3,29 @@
     "vendor.min.js",
     "app.min.js"
   ],
+  "routeScripts": [
+    "route-inquiry.js",
+    "route-instant-quotation.js",
+    "route-member-order.js",
+    "route-service-finder.js",
+    "route-service-finishing.js",
+    "route-service-printing.js",
+    "route-service-scanning.js",
+    "route-service-toc.js"
+  ],
   "routeScopedModules": {
     "instantQuotationViewer": "instant-quotation-viewer.mjs",
     "instantQuotationWorkflow": "instant-quotation-workflow.mjs"
   },
   "styles": [
     "site.min.css"
+  ],
+  "routeStyles": [
+    "route-about.css",
+    "route-home.css",
+    "route-inquiry.css",
+    "route-instant-quotation.css",
+    "route-services.css",
+    "route-services-index.css"
   ]
 }

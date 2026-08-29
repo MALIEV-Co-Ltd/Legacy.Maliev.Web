@@ -14,8 +14,14 @@
     var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(context, TempDataDictionaryFactory);
     var suppressIdentityNavigation = context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase);
     var siteStyle = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/site.min.css");
+    var routeStyles = PublicRouteAssets.GetStyles(context.Request.Path)
+        .Select(asset => FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, $"/dist/{asset}"))
+        .ToArray();
     var vendorScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/vendor.min.js");
     var appScript = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/app.min.js");
+    var routeScripts = PublicRouteAssets.GetScripts(context.Request.Path)
+        .Select(asset => FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, $"/dist/{asset}"))
+        .ToArray();
     var requestPath = context.Request.Path.Value;
     var requiresInstantQuotationBootstrap = string.Equals(
             requestPath?.TrimEnd('/'),
@@ -56,6 +62,10 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <PublicGoogleTagManagerHead Model="googleTagManagerModel" />
     <link rel="stylesheet" href="@siteStyle" />
+    @foreach (var routeStyle in routeStyles)
+    {
+        <link rel="stylesheet" href="@routeStyle" />
+    }
     <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
     <link rel="shortlink" href="https://www.maliev.com/" />
     <script>
@@ -81,6 +91,10 @@
     <PublicContactChannelAnalytics />
     <script src="@vendorScript"></script>
     <script src="@appScript"></script>
+    @foreach (var routeScript in routeScripts)
+    {
+        <script src="@routeScript"></script>
+    }
     @if (requiresInstantQuotationBootstrap)
     {
         <script src="@blazorBootstrap"></script>

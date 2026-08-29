@@ -54,13 +54,14 @@ public sealed class AboutPageContractTests : IClassFixture<WebApplicationFactory
     public void AboutPage_UsesDedicatedStaticStylesWithoutMotionOrFontOverrides()
     {
         var root = FindRepositoryRoot();
-        var entry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "site-entry.css"));
+        var entry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "route-about.css"));
+        var sharedEntry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "site-entry.css"));
         var stylesPath = Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "about-page.css");
 
         Assert.True(File.Exists(stylesPath), "The About page stylesheet must exist.");
         var styles = File.ReadAllText(stylesPath);
         Assert.Contains("about-page.css", entry, StringComparison.Ordinal);
-        Assert.DoesNotContain("timeline.css", entry, StringComparison.Ordinal);
+        Assert.DoesNotContain("about-page.css", sharedEntry, StringComparison.Ordinal);
         Assert.Contains(".about-page", styles, StringComparison.Ordinal);
         Assert.Contains(".about-record", styles, StringComparison.Ordinal);
         Assert.DoesNotContain("animation:", styles, StringComparison.OrdinalIgnoreCase);

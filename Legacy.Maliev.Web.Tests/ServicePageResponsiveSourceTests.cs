@@ -10,7 +10,7 @@ public sealed class ServicePageResponsiveSourceTests
         var toc = Read("Legacy.Maliev.Web", "Components", "Shared", "ServicePageToc.razor");
         var css = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "service-pages.css");
         var js = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "service-toc.js");
-        var entry = Read("Legacy.Maliev.Web", "assets", "app-entry.js");
+        var entry = Read("Legacy.Maliev.Web", "assets", "route-service-toc.js");
 
         Assert.Contains("data-service-toc", toc, StringComparison.Ordinal);
         Assert.Contains("data-service-toc-list", toc, StringComparison.Ordinal);
