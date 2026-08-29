@@ -67,6 +67,7 @@ or Google configuration publication.
 | `c97aa4c` | Publish the final 19-item CNC production gallery with exact provenance, bilingual copy, and CTA destinations | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | Exact ordered fixture locks 19 tiles, 11 deferred tiles, 57 source-identical WebP blobs, EN/TH copy, intrinsic dimensions, responsive sources, social links, and quotation/contact CTAs |
 | `5b37938` | Preserve the final wide-screen CNC gallery framing | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | CNC-scoped desktop media-block assertions lock the final 14-column composition without relying on unrelated service rules |
 | `df37579` | Preserve CNC gallery framing through tablet and compact breakpoints | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | Exact tablet, mobile, and sub-360 media-block assertions lock the 12-, 3-, and 2-column layouts; Release build: 0 warnings/errors; focused suite: 39/39; browser modules: 109/109; deterministic asset rebuild clean; npm audit: 0 vulnerabilities; independent review approved |
+| `6509356` | Enforce WebP delivery for every reachable public raster-image reference while removing superseded PNG/JPEG/GIF/ICO assets | `Legacy.Maliev.Web` | `965409c` | Fifteen source-derived WebP assets are locked by exact byte length and SHA-256; public source and generated bundles contain no non-WebP raster references; Release build: 0 warnings/errors; affected suite: 79/79; browser modules: 109/109; deterministic asset rebuild: 37/37 unchanged; npm audit: 0 vulnerabilities |
 
 ## Supporting migration maintenance
 
@@ -101,7 +102,7 @@ or Google configuration publication.
 
 ## Remaining gate
 
-The other 58 committed source changes after `48e628c` remain pending commit-by-commit
+The other 57 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
