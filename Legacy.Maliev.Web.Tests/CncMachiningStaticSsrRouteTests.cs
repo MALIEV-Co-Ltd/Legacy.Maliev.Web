@@ -72,8 +72,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi")]
     [InlineData(
         "th",
-        "รับงาน CNC ตามแบบทั่วประเทศไทย | งานชิ้นเดียวถึงงานผลิต",
-        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ",
+        "รับงาน CNC ตามแบบทั่วประเทศไทย | อะลูมิเนียมชิ้นเดียวถึงงานผลิต",
+        "MALIEV รับ CNC อะลูมิเนียมชิ้นเดียวและผลิตชิ้นงานตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ส่ง CAD แบบ 2D วัสดุ และจำนวนเพื่อให้ตรวจสอบและเสนอราคา",
         "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต",
         "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
@@ -137,7 +137,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
 
     [Theory]
     [InlineData("en", "CNC Machining Services", "Can you machine only one piece?")]
-    [InlineData("th", "บริการรับงาน CNC ตามแบบ", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
+    [InlineData("th", "บริการรับงาน CNC ตามแบบ", "รับ CNC อะลูมิเนียมชิ้นเดียวได้หรือไม่?")]
     public async Task Route_PreservesServiceAndFaqStructuredData(
         string culture,
         string serviceName,
@@ -203,7 +203,9 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
         Assert.Contains("We accept one-off parts when the geometry, material, and project scope are feasible.", content, StringComparison.Ordinal);
-        Assert.Contains("รับงานชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง", content, StringComparison.Ordinal);
+        Assert.Contains("รับงาน CNC อะลูมิเนียมชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง", content, StringComparison.Ordinal);
+        Assert.Contains("รวมงานอะลูมิเนียมชิ้นเดียว", content, StringComparison.Ordinal);
+        Assert.Contains("ส่ง CAD แบบ 2D ระบุวัสดุและจำนวนเพื่อให้ตรวจสอบก่อนเสนอราคา", content, StringComparison.Ordinal);
         Assert.Contains("CNC machining starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
         Assert.Contains("What file formats should I send?", content, StringComparison.Ordinal);
