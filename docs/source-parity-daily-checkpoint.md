@@ -68,6 +68,8 @@ or Google configuration publication.
 | `5b37938` | Preserve the final wide-screen CNC gallery framing | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | CNC-scoped desktop media-block assertions lock the final 14-column composition without relying on unrelated service rules |
 | `df37579` | Preserve CNC gallery framing through tablet and compact breakpoints | `Legacy.Maliev.Web` | `cc708f0`, `cadc876` | Exact tablet, mobile, and sub-360 media-block assertions lock the 12-, 3-, and 2-column layouts; Release build: 0 warnings/errors; focused suite: 39/39; browser modules: 109/109; deterministic asset rebuild clean; npm audit: 0 vulnerabilities; independent review approved |
 | `6509356` | Enforce WebP delivery for every reachable public raster-image reference while removing superseded PNG/JPEG/GIF/ICO assets | `Legacy.Maliev.Web` | `965409c` | Fifteen source-derived WebP assets are locked by exact byte length and SHA-256; public source and generated bundles contain no non-WebP raster references; Release build: 0 warnings/errors; affected suite: 79/79; browser modules: 109/109; deterministic asset rebuild: 37/37 unchanged; npm audit: 0 vulnerabilities |
+| `f9b8237` | Apply the shared follow-up spacing to the 3D-printing and 3D-scanning process-guidance links | `Legacy.Maliev.Web` | `1dda94c` | The same target-native hook is rendered on CNC, 3D-printing, and 3D-scanning in English and Thai; exact source and generated CSS contracts pass; Release build: 0 warnings/errors; focused suite: 19/19; browser modules: 109/109; deterministic assets: 21/21 unchanged |
+| `48f2a26` | Select the 1536-pixel ABS production-part candidate at the final desktop gallery width | `Legacy.Maliev.Web` | `127a3c8`, `1dda94c` | Existing target markup already carries the exact 64vw desktop `sizes` contract and 1536-pixel source candidate; the translated exact-markup regression now freezes it alongside the final gallery contract |
 
 ## Supporting migration maintenance
 
@@ -99,10 +101,11 @@ or Google configuration publication.
 | `b9476b9` | Source packaged-asset deployment validation; architecture-equivalent checks live in Legacy CI. | The target build and browser asset contracts validate generated bundles without inheriting the old deployment entry point. |
 | `92e8ad5` | Source shell-removal maintenance for its deployment validator; no target runtime change. | Legacy uses its separate public workflow/reusable-action architecture. |
 | `bf3b8d7` | Source removal of the retired Popper v1 path is already satisfied. | The target bundles Bootstrap's supported Popper v2 dependency and contains no legacy Popper v1 loader path. |
+| `acdeb8d` | Selectively superseded by the approved target typography contract. Only its service follow-up spacing dependency is portable and is migrated by `1dda94c`; its font replacement is not. | Legacy Web deliberately retains the owner-approved self-hosted `Inter, Noto Sans Thai, sans-serif` stack and matching delivery tests. Importing the source IBM Plex Latin experiment would reverse that explicit migration decision. |
 
 ## Remaining gate
 
-The other 57 committed source changes after `48e628c` remain pending commit-by-commit
+The other 54 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
