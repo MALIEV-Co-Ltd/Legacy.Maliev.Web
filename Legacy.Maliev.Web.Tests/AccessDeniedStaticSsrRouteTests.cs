@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class AccessDeniedStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class AccessDeniedStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public AccessDeniedStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public AccessDeniedStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

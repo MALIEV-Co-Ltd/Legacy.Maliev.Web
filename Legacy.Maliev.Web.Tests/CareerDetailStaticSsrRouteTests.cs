@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CareerDetailStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CareerDetailStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

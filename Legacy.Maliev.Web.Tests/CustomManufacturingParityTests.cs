@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class CustomManufacturingParityTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class CustomManufacturingParityTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CustomManufacturingParityTests(WebApplicationFactory<Program> factory)
+    public CustomManufacturingParityTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Theory]

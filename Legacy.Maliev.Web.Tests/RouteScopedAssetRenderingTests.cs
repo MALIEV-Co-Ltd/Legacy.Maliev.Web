@@ -3,18 +3,17 @@ namespace Legacy.Maliev.Web.Tests;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-public sealed class RouteScopedAssetRenderingTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class RouteScopedAssetRenderingTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public RouteScopedAssetRenderingTests(WebApplicationFactory<Program> factory)
+    public RouteScopedAssetRenderingTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost"),
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
     }
 
     [Theory]

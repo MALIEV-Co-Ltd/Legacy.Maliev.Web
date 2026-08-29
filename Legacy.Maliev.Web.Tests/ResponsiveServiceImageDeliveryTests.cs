@@ -3,18 +3,17 @@ namespace Legacy.Maliev.Web.Tests;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public ResponsiveServiceImageDeliveryTests(WebApplicationFactory<Program> factory)
+    public ResponsiveServiceImageDeliveryTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost"),
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
     }
 
     [Theory]

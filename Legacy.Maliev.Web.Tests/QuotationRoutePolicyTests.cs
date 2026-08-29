@@ -8,11 +8,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class QuotationRoutePolicyTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class QuotationRoutePolicyTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public QuotationRoutePolicyTests(WebApplicationFactory<Program> factory)
+    public QuotationRoutePolicyTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder =>
         {
@@ -129,6 +129,8 @@ public sealed class QuotationRoutePolicyTests : IClassFixture<WebApplicationFact
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
         Assert.Equal("noindex, follow", unknown.Headers.GetValues("X-Robots-Tag").Single());
     }
+
+    public void Dispose() => factory.Dispose();
 
     private sealed class StubCountryClient : ICountryClient
     {

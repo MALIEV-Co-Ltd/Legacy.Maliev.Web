@@ -6,13 +6,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CareerIndexStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CareerIndexStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class AboutPageContractTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class AboutPageContractTests : IClassFixture<TestingWebApplicationFactory>
 {
     private static readonly string[] EvidenceUrls =
     [
@@ -19,14 +19,13 @@ public sealed class AboutPageContractTests : IClassFixture<WebApplicationFactory
 
     private readonly HttpClient client;
 
-    public AboutPageContractTests(WebApplicationFactory<Program> factory)
+    public AboutPageContractTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost"),
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
     }
 
     [Fact]

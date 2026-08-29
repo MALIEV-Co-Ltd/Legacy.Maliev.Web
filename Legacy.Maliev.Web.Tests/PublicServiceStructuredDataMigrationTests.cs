@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class PublicServiceStructuredDataMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class PublicServiceStructuredDataMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public PublicServiceStructuredDataMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicServiceStructuredDataMigrationTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

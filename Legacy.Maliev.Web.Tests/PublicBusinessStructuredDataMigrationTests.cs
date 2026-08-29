@@ -6,14 +6,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public PublicBusinessStructuredDataMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicBusinessStructuredDataMigrationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
-            .CreateClient();
+        client = factory.CreateClient();
     }
 
     [Fact]

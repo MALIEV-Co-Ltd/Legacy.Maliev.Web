@@ -2,13 +2,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class MemberStaticSsrRouteOwnerTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class MemberStaticSsrRouteOwnerTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public MemberStaticSsrRouteOwnerTests(WebApplicationFactory<Program> factory)
+    public MemberStaticSsrRouteOwnerTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Theory]

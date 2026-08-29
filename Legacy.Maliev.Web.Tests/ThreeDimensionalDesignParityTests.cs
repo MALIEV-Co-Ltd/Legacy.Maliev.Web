@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class ThreeDimensionalDesignParityTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class ThreeDimensionalDesignParityTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public ThreeDimensionalDesignParityTests(WebApplicationFactory<Program> factory)
+    public ThreeDimensionalDesignParityTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

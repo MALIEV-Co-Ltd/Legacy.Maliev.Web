@@ -11,12 +11,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private readonly WebApplicationFactory<Program> configuredFactory;
     private readonly HttpClient client;
 
-    public WebSurfaceTests(WebApplicationFactory<Program> factory)
+    public WebSurfaceTests(TestingWebApplicationFactory factory)
     {
         configuredFactory = factory.WithWebHostBuilder(builder =>
             {
@@ -4272,6 +4272,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             return Task.FromResult(DecisionResultOverride ?? new CustomerQuotationDecisionResult(true, true, true, false, accepted ? 23 : null));
         }
     }
+
+    public void Dispose() => configuredFactory.Dispose();
 
     private sealed record QuotationListInvocation(
         int CustomerId,

@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class SharedFooterMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public SharedFooterMigrationTests(WebApplicationFactory<Program> factory)
+    public SharedFooterMigrationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing")).CreateClient();
+        client = factory.CreateClient();
     }
 
     [Fact]

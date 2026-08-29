@@ -2,13 +2,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class ForgotPasswordStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ForgotPasswordStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public ForgotPasswordStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public ForgotPasswordStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CustomManufacturingStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CustomManufacturingStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

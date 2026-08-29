@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class SiliconeCastingParityTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class SiliconeCastingParityTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public SiliconeCastingParityTests(WebApplicationFactory<Program> factory)
+    public SiliconeCastingParityTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

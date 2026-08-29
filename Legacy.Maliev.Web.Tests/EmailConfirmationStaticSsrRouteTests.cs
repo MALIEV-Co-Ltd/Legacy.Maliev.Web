@@ -2,13 +2,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public EmailConfirmationStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public EmailConfirmationStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

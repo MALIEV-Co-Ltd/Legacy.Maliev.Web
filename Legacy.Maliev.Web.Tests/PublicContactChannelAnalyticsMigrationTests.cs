@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public PublicContactChannelAnalyticsMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicContactChannelAnalyticsMigrationTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
