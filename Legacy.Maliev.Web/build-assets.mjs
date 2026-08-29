@@ -48,6 +48,7 @@ const routeScripts = {
   'route-instant-quotation': path.join(assets, 'route-instant-quotation.js'),
   'route-member-order': path.join(assets, 'route-member-order.js'),
   'route-service-finder': path.join(assets, 'route-service-finder.js'),
+  'route-service-cnc': path.join(assets, 'route-service-cnc.js'),
   'route-service-finishing': path.join(assets, 'route-service-finishing.js'),
   'route-service-printing': path.join(assets, 'route-service-printing.js'),
   'route-service-scanning': path.join(assets, 'route-service-scanning.js'),

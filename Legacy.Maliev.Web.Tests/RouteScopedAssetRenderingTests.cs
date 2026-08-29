@@ -21,6 +21,7 @@ public sealed class RouteScopedAssetRenderingTests : IClassFixture<WebApplicatio
     [InlineData("/", "route-home.css", null)]
     [InlineData("/services", "route-services-index.css", "route-service-finder.js")]
     [InlineData("/services/3d-printing", "route-services.css", "route-service-printing.js")]
+    [InlineData("/services/cnc-machining", "route-services.css", "route-service-cnc.js")]
     [InlineData("/about", "route-about.css", null)]
     public async Task PublicRoutes_RenderOnlyTheirOwnedAssets(string route, string style, string? script)
     {

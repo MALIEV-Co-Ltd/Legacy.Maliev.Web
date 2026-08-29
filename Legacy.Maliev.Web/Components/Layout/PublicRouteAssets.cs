@@ -67,6 +67,11 @@ public static class PublicRouteAssets
             return ["route-service-printing.js"];
         }
 
+        if (path == "/services/cnc-machining")
+        {
+            return ["route-service-cnc.js"];
+        }
+
         if (path == "/services/3d-scanning")
         {
             return ["route-service-scanning.js"];

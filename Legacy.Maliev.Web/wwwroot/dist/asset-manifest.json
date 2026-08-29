@@ -8,6 +8,7 @@
     "route-instant-quotation.js",
     "route-member-order.js",
     "route-service-finder.js",
+    "route-service-cnc.js",
     "route-service-finishing.js",
     "route-service-printing.js",
     "route-service-scanning.js",

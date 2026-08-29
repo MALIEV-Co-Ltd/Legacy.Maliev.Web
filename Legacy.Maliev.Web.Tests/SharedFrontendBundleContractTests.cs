@@ -49,7 +49,7 @@ public sealed class SharedFrontendBundleContractTests
     [InlineData("/services/3d-printing", "route-service-printing.js")]
     [InlineData("/services/3d-scanning", "route-service-scanning.js")]
     [InlineData("/services/finishing-and-color", "route-service-finishing.js")]
-    [InlineData("/services/cnc-machining", "route-service-toc.js")]
+    [InlineData("/services/cnc-machining", "route-service-cnc.js")]
     [InlineData("/InstantQuotation/3D-Printing", "route-instant-quotation.js")]
     [InlineData("/Member/Orders/CNC-Machining", "route-member-order.js")]
     public void RouteScripts_AreSelectedOnlyForTheirOwner(string path, string expected)
@@ -78,7 +78,7 @@ public sealed class SharedFrontendBundleContractTests
             "route-about.css", "route-home.css", "route-inquiry.css",
             "route-instant-quotation.css", "route-services.css", "route-services-index.css",
             "route-inquiry.js", "route-instant-quotation.js", "route-member-order.js",
-            "route-service-finder.js", "route-service-finishing.js", "route-service-printing.js",
+            "route-service-cnc.js", "route-service-finder.js", "route-service-finishing.js", "route-service-printing.js",
             "route-service-scanning.js", "route-service-toc.js",
         };
 

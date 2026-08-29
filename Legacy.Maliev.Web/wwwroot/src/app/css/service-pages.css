@@ -710,6 +710,8 @@
 #injection-part-proof .service-part-bento-card--cta .service-button-secondary { border-color: rgba(255,255,255,.65); color: #fff; }
 #printing-part-proof .service-part-bento { grid-template-rows: repeat(4, clamp(11rem, 14vw, 14rem)); grid-template-areas: "hero hero hero hero hero hero petg petg petg pacf pacf pacf" "hero hero hero hero hero hero petg petg petg tpu tpu tpu" "mjf mjf mjf mjf mjf resin resin resin resin pcesd pcesd pcesd" "mjf mjf mjf mjf mjf pa6 pa6 pa6 pa6 pcesd pcesd pcesd"; }
 #printing-part-proof .service-part-bento--expanded { grid-template-rows: repeat(8, clamp(10.5rem, 12vw, 12rem)); grid-template-areas: "abs abs abs abs abs abs abs abs bluecast bluecast bluecast bluecast" "abs abs abs abs abs abs abs abs bluecast bluecast bluecast bluecast" "abs abs abs abs abs abs abs abs castwax castwax castwax castwax" "asa asa asa asa placf placf placf placf castwax castwax castwax castwax" "hips hips hips hips hips pla pla pla abshipscube abshipscube abshipscube abshipscube" "hips hips hips hips hips pla pla pla abshipscube abshipscube abshipscube abshipscube" "rubber rubber rubber petgshell petgshell petgshell resinframe resinframe resinframe tpuhandle tpuhandle tpuhandle" "rubber rubber rubber petgshell petgshell petgshell resinframe resinframe resinframe tpuhandle tpuhandle tpuhandle"; margin-top: 1rem; }
+#cnc-part-proof .service-part-bento--cnc { grid-template-columns: repeat(14, minmax(0, 1fr)); grid-template-rows: repeat(4, clamp(10.5rem, 12vw, 12.5rem)); grid-template-areas: "cncrelief cncrelief cncrelief cncrelief cncrelief cncrelief cncrelief cnclinkage cnclinkage cnclinkage cnclinkage cncplate cncplate cncplate" "cncrelief cncrelief cncrelief cncrelief cncrelief cncrelief cncrelief cncmolds cncmolds cncmolds cncshaft cncshaft cncshaft cncshaft" "cnccontroller cnccontroller cnccontroller cnccontroller cnccontroller cnccontroller cnccontroller cncsprocket cncsprocket cncsprocket cncsprocket cncbrass cncbrass cncbrass" "cnccontroller cnccontroller cnccontroller cnccontroller cnccontroller cnccontroller cnccontroller cncsprocket cncsprocket cncsprocket cncsprocket cncbrass cncbrass cncbrass"; }
+#cnc-part-proof .service-part-bento--cnc-expanded { grid-template-rows: repeat(6, clamp(12.5rem, 15vw, 14rem)); grid-template-areas: "cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cnccover cnccover cnccover cnccover cnccover" "cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cnccover cnccover cnccover cnccover cnccover" "cnchousing cnchousing cnchousing cncrail cncrail cncrail cncrail cncrail cncrail cncmicro cncmicro cncmicro" "cnchousing cnchousing cnchousing cncrail cncrail cncrail cncrail cncrail cncrail cncmicro cncmicro cncmicro" "cncbracket cncbracket cncbracket cncdies cncdies cncdies cncdies cncdies cncstainless cncstainless cncstainless cncstainless" "cncbracket cncbracket cncbracket cncscale cncscale cncscale cncbillet cncbillet cncbillet cncdisc cncdisc cncdisc"; margin-top: 1rem; }
 .service-part-bento--expanded[hidden] { display: none; }
 .service-part-bento-tile { position: relative; min-width: 0; min-height: 0; overflow: hidden; margin: 0; border: 0; border-radius: var(--service-radius-md); background: #07182d; box-shadow: var(--service-shadow-sm); outline: 0; isolation: isolate; }
 .service-part-bento-tile--hero { grid-area: hero; }
@@ -732,6 +734,25 @@
 .service-part-bento-tile--petgshell { grid-area: petgshell; }
 .service-part-bento-tile--resinframe { grid-area: resinframe; }
 .service-part-bento-tile--tpuhandle { grid-area: tpuhandle; }
+.service-part-bento-tile--cnc-relief { grid-area: cncrelief; }
+.service-part-bento-tile--cnc-linkage { grid-area: cnclinkage; }
+.service-part-bento-tile--cnc-sprocket { grid-area: cncsprocket; }
+.service-part-bento-tile--cnc-plate { grid-area: cncplate; }
+.service-part-bento-tile--cnc-controller { grid-area: cnccontroller; }
+.service-part-bento-tile--cnc-shaft { grid-area: cncshaft; }
+.service-part-bento-tile--cnc-brass { grid-area: cncbrass; }
+.service-part-bento-tile--cnc-molds { grid-area: cncmolds; }
+.service-part-bento-tile--cnc-cover { grid-area: cnccover; }
+.service-part-bento-tile--cnc-folding { grid-area: cncfolding; }
+.service-part-bento-tile--cnc-scale { grid-area: cncscale; }
+.service-part-bento-tile--cnc-housing { grid-area: cnchousing; }
+.service-part-bento-tile--cnc-billet { grid-area: cncbillet; }
+.service-part-bento-tile--cnc-micro { grid-area: cncmicro; }
+.service-part-bento-tile--cnc-rail { grid-area: cncrail; }
+.service-part-bento-tile--cnc-bracket { grid-area: cncbracket; }
+.service-part-bento-tile--cnc-disc { grid-area: cncdisc; }
+.service-part-bento-tile--cnc-dies { grid-area: cncdies; }
+.service-part-bento-tile--cnc-stainless { grid-area: cncstainless; }
 .service-part-bento-tile .service-part-bento-media { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; object-fit: cover; transition: transform .55s var(--motion-ease, cubic-bezier(.16, 1, .3, 1)), filter .4s ease; }
 #printing-part-proof .service-part-bento--expanded .service-part-bento-media { object-fit: cover; }
 .service-part-bento-overlay { position: absolute; z-index: 1; right: 0; bottom: 0; left: 0; padding: 1.05rem 1.2rem 1.15rem; border-top: 1px solid var(--service-line); background: #fff; box-shadow: 0 -.75rem 1.8rem rgba(16,44,78,.1); color: var(--service-ink); opacity: 0; pointer-events: none; transform: translateY(100%); transition: opacity .3s ease, transform .42s var(--motion-ease, cubic-bezier(.16, 1, .3, 1)); }
@@ -763,6 +784,8 @@
     #injection-part-proof .service-part-bento-card--feature { min-height: 26rem; }
     #printing-part-proof .service-part-bento:not(.service-part-bento--expanded) { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: clamp(22rem, 55vw, 32rem) clamp(14rem, 28vw, 16rem) repeat(2, clamp(16rem, 34vw, 19rem)); grid-template-areas: "hero hero hero hero hero hero" "petg petg pacf pacf tpu tpu" "mjf mjf mjf resin resin resin" "pcesd pcesd pcesd pa6 pa6 pa6"; }
     #printing-part-proof .service-part-bento--expanded { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(8, clamp(7rem, 13vw, 9rem)); }
+    #cnc-part-proof .service-part-bento--cnc { grid-template-columns: repeat(14, minmax(0, 1fr)); }
+    #cnc-part-proof .service-part-bento--cnc-expanded { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-areas: "cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cnccover cnccover cnccover cnccover cnccover" "cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cncfolding cnccover cnccover cnccover cnccover cnccover" "cnchousing cnchousing cnchousing cncrail cncrail cncrail cncrail cncrail cncrail cncmicro cncmicro cncmicro" "cnchousing cnchousing cnchousing cncrail cncrail cncrail cncrail cncrail cncrail cncmicro cncmicro cncmicro" "cncbracket cncbracket cncbracket cncdies cncdies cncdies cncdies cncdies cncstainless cncstainless cncstainless cncstainless" "cncbracket cncbracket cncbracket cncscale cncscale cncscale cncscale cncbillet cncbillet cncdisc cncdisc cncdisc"; }
     .service-part-bento-cta { align-items: flex-start; flex-direction: column; }
 }
 
@@ -772,10 +795,15 @@
     #injection-part-proof .service-part-bento-card--feature, #injection-part-proof .service-part-bento-card--process, #injection-part-proof .service-part-bento-card--guidance, #injection-part-proof .service-part-bento-card--cta { grid-column: auto; min-height: 0; }
     #injection-part-proof .service-part-bento-card--feature .service-part-bento-media { min-height: 18rem; }
     #printing-part-proof .service-part-bento:not(.service-part-bento--expanded),
-    #printing-part-proof .service-part-bento--expanded { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: clamp(3rem, 13.333vw, 3.5rem); grid-auto-flow: dense; }
+    #printing-part-proof .service-part-bento--expanded,
+    #cnc-part-proof .service-part-bento--cnc,
+    #cnc-part-proof .service-part-bento--cnc-expanded { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: clamp(3rem, 13.333vw, 3.5rem); grid-auto-flow: dense; }
     #printing-part-proof .service-part-bento:not(.service-part-bento--expanded) { grid-template-rows: repeat(15, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "hero hero hero" "hero hero hero" "hero hero hero" "hero hero hero" "petg mjf mjf" "petg mjf mjf" "pacf resin resin" "pacf resin resin" "pcesd pcesd pa6" "pcesd pcesd pa6" "pcesd pcesd pa6" "tpu tpu tpu" "tpu tpu tpu" "tpu tpu tpu" "tpu tpu tpu"; }
     #printing-part-proof .service-part-bento--expanded { grid-template-rows: repeat(12, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "abs abs bluecast" "abs abs bluecast" "abs abs castwax" "asa asa castwax" "asa asa pla" "hips hips pla" "hips hips rubber" "hips hips rubber" "placf placf abshipscube" "placf placf abshipscube" "petgshell resinframe tpuhandle" "petgshell resinframe tpuhandle"; }
-    #printing-part-proof .service-part-bento-tile { min-height: 0; aspect-ratio: auto; }
+    #cnc-part-proof .service-part-bento--cnc { grid-template-rows: repeat(29, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "cncrelief cncrelief cncrelief" "cncrelief cncrelief cncrelief" "cncrelief cncrelief cncrelief" "cncrelief cncrelief cncrelief" "cnclinkage cnclinkage cncbrass" "cnclinkage cnclinkage cncbrass" "cnclinkage cnclinkage cncbrass" "cncsprocket cncsprocket cncsprocket" "cncsprocket cncsprocket cncsprocket" "cncsprocket cncsprocket cncsprocket" "cncsprocket cncsprocket cncsprocket" "cncsprocket cncsprocket cncsprocket" "cncsprocket cncsprocket cncsprocket" "cncplate cncplate cncplate" "cncplate cncplate cncplate" "cncplate cncplate cncplate" "cncplate cncplate cncplate" "cnccontroller cnccontroller cnccontroller" "cnccontroller cnccontroller cnccontroller" "cnccontroller cnccontroller cnccontroller" "cnccontroller cnccontroller cnccontroller" "cncshaft cncshaft cncshaft" "cncshaft cncshaft cncshaft" "cncshaft cncshaft cncshaft" "cncshaft cncshaft cncshaft" "cncmolds cncmolds cncmolds" "cncmolds cncmolds cncmolds" "cncmolds cncmolds cncmolds" "cncmolds cncmolds cncmolds"; }
+    #cnc-part-proof .service-part-bento--cnc-expanded { grid-template-rows: repeat(20, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "cnccover cncscale cncscale" "cnccover cncscale cncscale" "cnccover cncscale cncscale" "cnchousing cncrail cncrail" "cnchousing cncrail cncrail" "cnchousing cncrail cncrail" "cncmicro cncdies cncdies" "cncmicro cncdies cncdies" "cncmicro cncdies cncdies" "cncbracket cncstainless cncstainless" "cncbracket cncstainless cncstainless" "cncbracket cncstainless cncstainless" "cncbillet cncfolding cncfolding" "cncbillet cncfolding cncfolding" "cncdisc cncdisc cncdisc" "cncdisc cncdisc cncdisc" "cncdisc cncdisc cncdisc" "cncdisc cncdisc cncdisc" "cncdisc cncdisc cncdisc" "cncdisc cncdisc cncdisc"; }
+    #printing-part-proof .service-part-bento-tile,
+    #cnc-part-proof .service-part-bento-tile { min-height: 0; aspect-ratio: auto; }
     .service-part-bento-overlay { padding: .65rem .7rem .7rem; }
     .service-part-bento-overlay h3 { font-size: .82rem; }
     .service-part-bento-overlay p { margin-top: .2rem; font-size: .68rem; line-height: 1.35; }
@@ -789,9 +817,13 @@
 @media (max-width: 359px) {
     .service-part-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #printing-part-proof .service-part-bento:not(.service-part-bento--expanded),
-    #printing-part-proof .service-part-bento--expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #printing-part-proof .service-part-bento--expanded,
+    #cnc-part-proof .service-part-bento--cnc,
+    #cnc-part-proof .service-part-bento--cnc-expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #printing-part-proof .service-part-bento:not(.service-part-bento--expanded) { grid-template-rows: repeat(12, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "hero hero" "hero hero" "hero hero" "hero hero" "petg mjf" "petg mjf" "pacf resin" "pacf resin" "pcesd pcesd" "pcesd pcesd" "tpu pa6" "tpu pa6"; }
     #printing-part-proof .service-part-bento--expanded { grid-template-rows: repeat(18, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "abs abs" "abs abs" "abs abs" "asa asa" "asa asa" "bluecast castwax" "bluecast castwax" "hips hips" "hips hips" "hips hips" "pla rubber" "pla rubber" "placf placf" "placf placf" "abshipscube petgshell" "abshipscube petgshell" "resinframe tpuhandle" "resinframe tpuhandle"; }
+    #cnc-part-proof .service-part-bento--cnc { grid-template-rows: repeat(21, clamp(3.25rem, 13.333vw, 3.5rem)); grid-template-areas: "cncrelief cncrelief" "cncrelief cncrelief" "cncrelief cncrelief" "cnclinkage cnclinkage" "cnclinkage cnclinkage" "cnclinkage cnclinkage" "cncsprocket cncbrass" "cncsprocket cncbrass" "cncsprocket cncbrass" "cncplate cncplate" "cncplate cncplate" "cncplate cncplate" "cnccontroller cnccontroller" "cnccontroller cnccontroller" "cnccontroller cnccontroller" "cncshaft cncshaft" "cncshaft cncshaft" "cncshaft cncshaft" "cncmolds cncmolds" "cncmolds cncmolds" "cncmolds cncmolds"; }
+    #cnc-part-proof .service-part-bento--cnc-expanded { grid-template-rows: repeat(24, clamp(3.25rem, 13.333vw, 3.5rem)); grid-template-areas: "cncfolding cncfolding" "cncfolding cncfolding" "cncfolding cncfolding" "cncscale cncscale" "cncscale cncscale" "cncscale cncscale" "cncrail cncrail" "cncrail cncrail" "cncrail cncrail" "cncdies cncdies" "cncdies cncdies" "cncdies cncdies" "cncstainless cncstainless" "cncstainless cncstainless" "cncstainless cncstainless" "cnccover cnchousing" "cnccover cnchousing" "cnccover cnchousing" "cncbillet cncdisc" "cncbillet cncdisc" "cncbillet cncdisc" "cncmicro cncbracket" "cncmicro cncbracket" "cncmicro cncbracket"; }
 }
 
 @media (prefers-reduced-motion: reduce) {
