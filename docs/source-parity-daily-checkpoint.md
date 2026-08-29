@@ -49,6 +49,16 @@ or Google configuration publication.
 | `600e79a` | Preserve service Bento grids at mobile breakpoints | `Legacy.Maliev.Web` | `127a3c8` | Final shared responsive service-page rules are bundled deterministically and covered by asset contracts |
 | `19cae9f` | Fill the mobile production-gallery grid without broken gaps | `Legacy.Maliev.Web` | `127a3c8` | Final compact-grid placement is migrated and validated against the 20-tile composition |
 | `6de82fd` | Align the Thai 3D-printing search entry, production-proof link, and final responsive gallery framing | `Legacy.Maliev.Web` | `1ef2f17`, `127a3c8`, `09e9d44` | Current bilingual title/hero assertions and gallery contracts pass; broad affected 3D/service/asset suite: 68/68 |
+| `c1ae969` | Model authenticated quotation profile ownership without exposing editable trusted identity fields | `Legacy.Maliev.Web` | `fd4849e` | Target-native BFF/profile boundary verified with the authenticated quotation and submission suite: 28/28 |
+| `7e2f009` | Prefill authenticated quotation details from the owned customer profile | `Legacy.Maliev.Web` | `fd4849e` | Trusted profile loading and rendered authenticated identity are covered by the 28/28 focused suite |
+| `e863a3f` | Complete authenticated quotation profile handling | `Legacy.Maliev.Web` | `fd4849e` | The migrated workflow preserves owned-profile rendering, server authorization, and fail-closed service behavior |
+| `371aa2f` | Gate retry on a persisted quotation before profile completion | `Legacy.Maliev.Web` | `fd4849e` | Submission endpoint and review/customer regression contracts pass in the 28/28 focused suite |
+| `a86b618` | Format the authenticated quotation profile implementation | `Legacy.Maliev.Web` | `fd4849e` | No independent behavior; the final target-native implementation builds and its focused contracts pass |
+| `b2f5e0c` | Preserve the persisted quotation before profile completion | `Legacy.Maliev.Web` | `fd4849e` | Persist-first retry behavior is covered by the migrated submission/review contracts |
+| `f591716` | Distill the 3D-printing tolerance comparison | `Legacy.Maliev.Web` | `19b42e1` | Current tolerance section remains present and is covered by `ThreeDimensionalPrintingParityTests` |
+| `a6dc2aa` | Compact the 3D-printing tolerance comparison | `Legacy.Maliev.Web` | `19b42e1` | Final compact comparison is retained in the target-native service component |
+| `ff01035` | Permit required Google Ads measurement endpoints in the public CSP | `Legacy.Maliev.Web` | `305c0cd`, `88c1f22` | CSP contract explicitly covers Ads scripts, image beacons, and connection endpoints without wildcard directives |
+| `8777004` | Return 404 when CareerService reports a missing offer | `Legacy.Maliev.Web` | `d7d5d5f` | Migrated Career detail route distinguishes missing from unavailable and covers missing ID with HTTP 404 |
 
 ## Supporting migration maintenance
 
@@ -69,10 +79,21 @@ or Google configuration publication.
 | `1fd86b69736bcb078eea1676f94676f687d12d86` | Merge-only integration of `791126c` and `d690804`; no independent runtime change remains to port. | Both parent outcomes are already accounted by Legacy commits `73548c8` and `0950ac1`; the merge commit has no additional non-parent patch to reproduce. |
 | `fecf680446c29d926386c14738fbf0e60c911638` | Legacy Razor/CSS alignment fix for the removed material-card info button; architecture-equivalent behavior is owned by the Blazor workflow. | The target has no `.iq-mat-info` or `.iq-mat-title-row` UI. Material choice and comparison are rendered by `InstantQuotationWorkflow.razor` using a native select and details disclosure, so copying the source CSS would be unreachable dead code. |
 | `73f045c0f950953bc1ef9b8397e1a16d05dbe543` | Missing email-confirmation input is already rejected by the migrated server routes with a stricter HTTP 400 boundary. | Both the Blazor static-SSR route and retained Razor fallback require non-empty email and token before invoking AuthService. Focused confirmation and surface contracts pass 8/8. |
+| `97b6a5d` | Superseded by the final privacy-reviewed quotation analytics contract; do not port `journey_id` or the broader joinable browser payload. | Target exact-schema tests permit only the #153 allowlists and keep internal correlation identifiers out of browser analytics. |
+| `e6701e7` | Rejected: consent does not authorize emitting Identity-derived GA4 `user_id`. | The final contract forbids user, session, credential, and authentication identifiers; target consent gating does not alter event payloads. |
+| `a318dc6` | Superseded: do not port `maliev_analytics_ready` or a User-ID-dependent initial page view. | The target loads GTM only after the four-field consent update, providing stricter ordering without identity emission. |
+| `0712180` | Historical authenticated-quotation design document; runtime outcomes are represented by the target-native BFF/profile implementation. | No compatible runtime artifact to copy; source deployment instructions are outside the Legacy architecture. |
+| `e04164e` | Historical implementation plan for authenticated quotation profiles. | Required behavior is covered by target commit `fd4849e` and the 28/28 authenticated quotation/retry suite. |
+| `e05680d` | Source reference-document refresh with no independent runtime behavior. | Final profile/retry behavior is represented by the migrated implementation and tests. |
+| `2f5c07d` | Source-only local customer fixture; do not port production-facing fixture data. | Aspire/local PostgreSQL test data is owned by the isolated migration/test topology, not public Web source. |
+| `a26fac7` | Source deployment-script asset gate; not compatible with the Legacy reusable workflow and deterministic asset pipeline. | Legacy assets are rebuilt deterministically and validated by repository-native CI contracts rather than copying the source deploy script. |
+| `b9476b9` | Source packaged-asset deployment validation; architecture-equivalent checks live in Legacy CI. | The target build and browser asset contracts validate generated bundles without inheriting the old deployment entry point. |
+| `92e8ad5` | Source shell-removal maintenance for its deployment validator; no target runtime change. | Legacy uses its separate public workflow/reusable-action architecture. |
+| `bf3b8d7` | Source removal of the retired Popper v1 path is already satisfied. | The target bundles Bootstrap's supported Popper v2 dependency and contains no legacy Popper v1 loader path. |
 
 ## Remaining gate
 
-The other 86 committed source changes after `48e628c` remain pending commit-by-commit
+The other 65 committed source changes after `48e628c` remain pending commit-by-commit
 classification and migration. They include public Web SEO, structured data, responsive
 assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
 authentication/profile behavior, service tracing and logging, pricing, operational
