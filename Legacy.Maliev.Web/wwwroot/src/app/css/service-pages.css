@@ -680,3 +680,95 @@
     #scanning-onsite-checklist .scanning-checklist-item { break-inside: avoid; border-color: #c7ced6; background: #fff; color: #111; }
     #scanning-onsite-checklist .scanning-checklist-footer { border-color: #9aa9ba; color: #222; }
 }
+
+/* Source-anchored production part proof for the 3D-printing route. */
+.service-hero-proof { margin: .85rem 0 0; }
+.service-hero-proof-link { display: inline-flex; align-items: center; gap: .55rem; color: #fff; font-size: .9rem; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(255,255,255,.55); text-underline-offset: .2em; }
+.service-hero-proof-link:hover { text-decoration-color: currentColor; }
+.service-hero-proof-link i, .service-hero-proof-link .svg-inline--fa { width: 1rem; height: 1rem; color: #9dc2f5; }
+.service-part-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-flow: row; gap: 1rem; margin-top: 2rem; }
+#printing-part-proof .service-part-bento { grid-template-rows: repeat(4, clamp(11rem, 14vw, 14rem)); grid-template-areas: "hero hero hero hero hero hero petg petg petg pacf pacf pacf" "hero hero hero hero hero hero petg petg petg tpu tpu tpu" "mjf mjf mjf mjf mjf resin resin resin resin pcesd pcesd pcesd" "mjf mjf mjf mjf mjf pa6 pa6 pa6 pa6 pcesd pcesd pcesd"; }
+#printing-part-proof .service-part-bento--expanded { grid-template-rows: repeat(8, clamp(10.5rem, 12vw, 12rem)); grid-template-areas: "abs abs abs abs abs abs abs abs bluecast bluecast bluecast bluecast" "abs abs abs abs abs abs abs abs bluecast bluecast bluecast bluecast" "abs abs abs abs abs abs abs abs castwax castwax castwax castwax" "asa asa asa asa placf placf placf placf castwax castwax castwax castwax" "hips hips hips hips hips pla pla pla abshipscube abshipscube abshipscube abshipscube" "hips hips hips hips hips pla pla pla abshipscube abshipscube abshipscube abshipscube" "rubber rubber rubber petgshell petgshell petgshell resinframe resinframe resinframe tpuhandle tpuhandle tpuhandle" "rubber rubber rubber petgshell petgshell petgshell resinframe resinframe resinframe tpuhandle tpuhandle tpuhandle"; margin-top: 1rem; }
+.service-part-bento--expanded[hidden] { display: none; }
+.service-part-bento-tile { position: relative; min-width: 0; min-height: 0; overflow: hidden; margin: 0; border: 0; border-radius: var(--service-radius-md); background: #07182d; box-shadow: var(--service-shadow-sm); outline: 0; isolation: isolate; }
+.service-part-bento-tile--hero { grid-area: hero; }
+.service-part-bento-tile--petg { grid-area: petg; }
+.service-part-bento-tile--pacf { grid-area: pacf; }
+.service-part-bento-tile--tpu { grid-area: tpu; }
+.service-part-bento-tile--mjf { grid-area: mjf; }
+.service-part-bento-tile--resin { grid-area: resin; }
+.service-part-bento-tile--pcesd { grid-area: pcesd; }
+.service-part-bento-tile--pa6 { grid-area: pa6; }
+.service-part-bento-tile--abs { grid-area: abs; }
+.service-part-bento-tile--asa { grid-area: asa; }
+.service-part-bento-tile--bluecast { grid-area: bluecast; }
+.service-part-bento-tile--castwax { grid-area: castwax; }
+.service-part-bento-tile--hips { grid-area: hips; }
+.service-part-bento-tile--pla { grid-area: pla; }
+.service-part-bento-tile--placf { grid-area: placf; }
+.service-part-bento-tile--rubber { grid-area: rubber; }
+.service-part-bento-tile--abshipscube { grid-area: abshipscube; }
+.service-part-bento-tile--petgshell { grid-area: petgshell; }
+.service-part-bento-tile--resinframe { grid-area: resinframe; }
+.service-part-bento-tile--tpuhandle { grid-area: tpuhandle; }
+.service-part-bento-tile .service-part-bento-media { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; object-fit: cover; transition: transform .55s var(--motion-ease, cubic-bezier(.16, 1, .3, 1)), filter .4s ease; }
+#printing-part-proof .service-part-bento--expanded .service-part-bento-media { object-fit: cover; }
+.service-part-bento-overlay { position: absolute; z-index: 1; right: 0; bottom: 0; left: 0; padding: 1.05rem 1.2rem 1.15rem; border-top: 1px solid var(--service-line); background: #fff; box-shadow: 0 -.75rem 1.8rem rgba(16,44,78,.1); color: var(--service-ink); opacity: 0; pointer-events: none; transform: translateY(100%); transition: opacity .3s ease, transform .42s var(--motion-ease, cubic-bezier(.16, 1, .3, 1)); }
+.service-part-bento-overlay h3 { margin: 0; color: var(--service-ink); font-size: clamp(1rem, 1.8vw, 1.3rem); }
+.service-part-bento-overlay p { margin: .35rem 0 0; color: var(--service-muted); font-size: .78rem; line-height: 1.5; }
+.service-part-bento-tile:hover .service-part-bento-overlay,
+.service-part-bento-tile:focus .service-part-bento-overlay { opacity: 1; transform: translateY(0); }
+.service-part-bento-tile:hover .service-part-bento-media,
+.service-part-bento-tile:focus .service-part-bento-media { filter: brightness(.96); transform: scale(1.025); }
+.service-part-bento-tile:focus-visible { outline: 3px solid #75aaff; outline-offset: 3px; }
+.service-part-gallery-controls { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 1.25rem; }
+.service-part-gallery-controls[hidden] { display: none; }
+.service-part-gallery-controls .service-button { flex: 0 0 auto; }
+.service-part-gallery-controls .service-button-secondary { border-color: var(--service-blue); background: #fff; color: var(--service-blue-dark); cursor: pointer; }
+.service-part-gallery-controls .service-button-secondary:hover { border-color: var(--service-blue-dark); background: #eaf2ff; color: var(--service-blue-dark); }
+.service-part-gallery-social { display: flex; align-items: center; justify-content: flex-end; gap: .9rem; color: var(--service-muted); font-size: .86rem; }
+.service-part-gallery-social a { display: inline-flex; width: 2.75rem; height: 2.75rem; align-items: center; justify-content: center; border: 1px solid var(--service-line); border-radius: var(--service-radius-sm); background: #fff; color: var(--service-blue-dark); font-size: 1rem; text-decoration: none; transition: border-color .18s ease, background .18s ease, color .18s ease; }
+.service-social-icon { display: block; width: 1.2rem; height: 1.2rem; }
+.service-part-gallery-social a:hover { border-color: var(--service-blue); background: var(--service-blue); color: #fff; }
+.service-part-gallery-social a:focus-visible { border-radius: var(--service-radius-sm); outline: 3px solid rgba(7,93,232,.24); outline-offset: 2px; }
+.service-part-bento-cta { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 1rem; padding: clamp(1.25rem, 3vw, 1.8rem); border: 1px solid #173e6f; border-radius: var(--service-radius-md); background: linear-gradient(135deg, #07182d, #0b315c); color: #fff; }
+.service-part-bento-cta h3 { margin: 0; color: #fff; font-size: clamp(1.05rem, 2vw, 1.3rem); }
+.service-part-bento-cta p { max-width: 46rem; margin: .45rem 0 0; color: #c8d6e8; font-size: .86rem; line-height: 1.6; }
+.service-part-bento-cta .service-actions { flex: 0 0 auto; margin: 0; }
+.service-part-bento-cta .service-button-secondary { border-color: rgba(255,255,255,.65); color: #fff; }
+
+@media (max-width: 63.99rem) {
+    #printing-part-proof .service-part-bento:not(.service-part-bento--expanded) { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: clamp(22rem, 55vw, 32rem) clamp(14rem, 28vw, 16rem) repeat(2, clamp(16rem, 34vw, 19rem)); grid-template-areas: "hero hero hero hero hero hero" "petg petg pacf pacf tpu tpu" "mjf mjf mjf resin resin resin" "pcesd pcesd pcesd pa6 pa6 pa6"; }
+    #printing-part-proof .service-part-bento--expanded { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(8, clamp(7rem, 13vw, 9rem)); }
+    .service-part-bento-cta { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 47.99rem) {
+    .service-part-bento { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+    #printing-part-proof .service-part-bento:not(.service-part-bento--expanded),
+    #printing-part-proof .service-part-bento--expanded { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: clamp(3rem, 13.333vw, 3.5rem); grid-auto-flow: dense; }
+    #printing-part-proof .service-part-bento:not(.service-part-bento--expanded) { grid-template-rows: repeat(15, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "hero hero hero" "hero hero hero" "hero hero hero" "hero hero hero" "petg mjf mjf" "petg mjf mjf" "pacf resin resin" "pacf resin resin" "pcesd pcesd pa6" "pcesd pcesd pa6" "pcesd pcesd pa6" "tpu tpu tpu" "tpu tpu tpu" "tpu tpu tpu" "tpu tpu tpu"; }
+    #printing-part-proof .service-part-bento--expanded { grid-template-rows: repeat(12, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "abs abs bluecast" "abs abs bluecast" "abs abs castwax" "asa asa castwax" "asa asa pla" "hips hips pla" "hips hips rubber" "hips hips rubber" "placf placf abshipscube" "placf placf abshipscube" "petgshell resinframe tpuhandle" "petgshell resinframe tpuhandle"; }
+    #printing-part-proof .service-part-bento-tile { min-height: 0; aspect-ratio: auto; }
+    .service-part-bento-overlay { padding: .65rem .7rem .7rem; }
+    .service-part-bento-overlay h3 { font-size: .82rem; }
+    .service-part-bento-overlay p { margin-top: .2rem; font-size: .68rem; line-height: 1.35; }
+    .service-part-gallery-controls { align-items: stretch; flex-direction: column; }
+    .service-part-gallery-controls .service-button { width: 100%; }
+    .service-part-gallery-social { flex-wrap: wrap; justify-content: flex-start; }
+    .service-part-gallery-social span { flex-basis: 100%; }
+    .service-part-bento-cta .service-actions { width: 100%; }
+}
+
+@media (max-width: 359px) {
+    .service-part-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #printing-part-proof .service-part-bento:not(.service-part-bento--expanded),
+    #printing-part-proof .service-part-bento--expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #printing-part-proof .service-part-bento:not(.service-part-bento--expanded) { grid-template-rows: repeat(12, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "hero hero" "hero hero" "hero hero" "hero hero" "petg mjf" "petg mjf" "pacf resin" "pacf resin" "pcesd pcesd" "pcesd pcesd" "tpu pa6" "tpu pa6"; }
+    #printing-part-proof .service-part-bento--expanded { grid-template-rows: repeat(18, clamp(3rem, 13.333vw, 3.5rem)); grid-template-areas: "abs abs" "abs abs" "abs abs" "asa asa" "asa asa" "bluecast castwax" "bluecast castwax" "hips hips" "hips hips" "hips hips" "pla rubber" "pla rubber" "placf placf" "placf placf" "abshipscube petgshell" "abshipscube petgshell" "resinframe tpuhandle" "resinframe tpuhandle"; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .service-part-bento-tile .service-part-bento-media,
+    .service-part-bento-overlay { transition: none; }
+}

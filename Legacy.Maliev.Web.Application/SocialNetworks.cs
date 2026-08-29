@@ -2,6 +2,7 @@ namespace Legacy.Maliev.Web.Application;
 
 public static class SocialNetworks
 {
+    public const string Facebook = "https://www.facebook.com/maliev.manufacturing/";
     public const string GoogleMaps = "https://goo.gl/maps/AXqLnqUu5dM2";
     public const string Instagram = "https://www.instagram.com/maliev.manufacturing/";
     public const string Threads = "https://www.threads.com/@maliev.manufacturing";

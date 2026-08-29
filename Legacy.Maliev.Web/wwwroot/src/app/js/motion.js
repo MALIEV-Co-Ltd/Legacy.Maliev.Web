@@ -32,6 +32,7 @@
         '.service-quick article',
         '.service-heading',
         '.service-card-grid > *',
+        '.service-part-bento > figure',
         '.service-process > li',
         '.service-pricing-grid > *',
         '.service-split > *',
