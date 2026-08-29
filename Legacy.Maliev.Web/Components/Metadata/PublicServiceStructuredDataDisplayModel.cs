@@ -66,10 +66,10 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "https://www.maliev.com/services/low-volume-injection-molding",
                 "https://www.maliev.com/src/images/services/injection-molding/injection-service-hero-wide.png"),
             ["Finishing and Color"] = new(
-                "บริการเก็บผิวและมาตรฐานสี",
-                "3D Printed Part Finishing and Colour Standards",
-                "กำหนดสี ระดับความเงา การเตรียมผิว รอยต่อ และเกณฑ์ตรวจรับสำหรับชิ้นงานพิมพ์ 3 มิติก่อนผลิต",
-                "Finishing guidance for 3D printed parts, including colour standards, sheen, surface preparation, seams, and acceptance criteria before production.",
+                "บริการเก็บผิวและทำสีชิ้นงานพิมพ์ 3 มิติ",
+                "3D Print Finishing and Colour Services",
+                "กำหนดและดำเนินงานเตรียมผิว อุดรอยต่อ พ่นสี และเคลือบชิ้นงานพิมพ์ 3 มิติ โดยยืนยันสี ระดับความเงา และเกณฑ์ตรวจรับก่อนผลิต",
+                "Surface preparation, seam filling, painting, and clear coating for 3D-printed parts, with colour, sheen, and acceptance criteria confirmed before production.",
                 "https://www.maliev.com/services/finishing-and-color",
                 "https://www.maliev.com/src/images/services/printing/printing-finish-color-approval.webp")
         };

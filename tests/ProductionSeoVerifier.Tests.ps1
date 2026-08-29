@@ -102,7 +102,7 @@ $validRouteMeasurement = @'
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KHDDLVRR');</script>
 <script>window.dataLayer.push({event:'maliev_contact_click',channel:'line',destination:'line_oa',context:'other'});</script>
 <script>window.dataLayer.push({event:'maliev_review_link_click',platform:'google_business_profile',context:'other'});</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","url":"https://www.maliev.com"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","url":"https://www.maliev.com"},{"@type":"Service","url":"__CANONICAL__"}]}</script>
 </head><body><main><h1>Public manufacturing page</h1></main><a href="https://line.me/ti/p/@maliev">LINE</a><a data-maliev-review-platform="google_business_profile" target="_blank" href="https://maps.google.com">review</a></body></html>
 '@
 
@@ -357,6 +357,36 @@ window.gtag('consent', 'default', {
         $result.Passed | Should Be $false
     }
 
+    It 'accepts a recursively nested Service node for a service detail page' {
+        $html = @'
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [{
+    "@type": "Organization",
+    "department": [{
+      "@type": "Service",
+      "url": "https://www.maliev.com/services/finishing-and-color"
+    }]
+  }]
+}
+</script>
+'@
+        $result = Invoke-ContractCheck 'Test-ServiceJsonLdContract' @{
+            Html = $html
+        }
+
+        $result.Passed | Should Be $true
+    }
+
+    It 'rejects structured data without a Service node for a service detail page' {
+        $result = Invoke-ContractCheck 'Test-ServiceJsonLdContract' @{
+            Html = '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization"}</script>'
+        }
+
+        $result.Passed | Should Be $false
+    }
+
     It 'accepts weekday 09:00 to 18:00 LocalBusiness hours' {
         $result = Invoke-ContractCheck 'Test-LocalBusinessHoursContract' @{
             Html = $validHomepage
@@ -537,6 +567,14 @@ window.gtag('consent', 'default', {
         @($result.Checks | Where-Object { -not $_.Passed }).Count | Should Be 0
         @($result.Checks | Where-Object Name -eq 'canonical_url').Count | Should Be $expectedPaths.Count
         @($result.Checks | Where-Object Name -eq 'public_page_seo').Count | Should Be $expectedPaths.Count
+        $servicePageChecks = @($result.Checks | Where-Object {
+            $_.Name -eq 'public_page_seo' -and $_.PageUri -match '/services/.+'
+        })
+        $servicePageChecks.Count | Should Be 8
+        @($servicePageChecks | Where-Object {
+            $actual = $_.Actual | ConvertFrom-Json
+            $actual.serviceJsonLdRequired -and $actual.serviceJsonLdPassed
+        }).Count | Should Be 8
         @($result.Checks | Where-Object Name -eq 'account_utility_noindex').Count | Should Be 1
     }
 

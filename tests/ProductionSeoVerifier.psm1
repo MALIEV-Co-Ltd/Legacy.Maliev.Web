@@ -355,6 +355,8 @@ function Test-PublicPageSeoContract {
 
         [bool]$JsonLdRequired = $false,
 
+        [bool]$ServiceJsonLdRequired = $false,
+
         [bool]$OpenGraphUrlRequired = $false,
 
         [bool]$OpenGraphImageRequired = $false,
@@ -483,6 +485,9 @@ function Test-PublicPageSeoContract {
     $jsonLdPassed = $invalidJsonLd -eq 0 `
         -and ((-not $JsonLdRequired) -or ($jsonLdTags.Count -gt 0)) `
         -and ((-not $JsonLdRequired) -or ($Html -match '(?i)https://schema\.org'))
+    $serviceJsonLdCheck = Test-ServiceJsonLdContract -Html $Html
+    $serviceJsonLdPassed = (-not $ServiceJsonLdRequired) -or $serviceJsonLdCheck.Passed
+    $serviceJsonLdActual = $serviceJsonLdCheck.Actual | ConvertFrom-Json
     $passed = $titlePassed `
         -and $descriptionPassed `
         -and $robotsPassed `
@@ -491,7 +496,8 @@ function Test-PublicPageSeoContract {
         -and $openGraphPassed `
         -and $headingPassed `
         -and -not [string]::IsNullOrWhiteSpace($lang) `
-        -and $jsonLdPassed
+        -and $jsonLdPassed `
+        -and $serviceJsonLdPassed
 
     $actual = [ordered]@{
         pageUri = $PageUri
@@ -509,6 +515,8 @@ function Test-PublicPageSeoContract {
         lang = $lang
         jsonLdCount = $jsonLdTags.Count
         invalidJsonLd = $invalidJsonLd
+        serviceJsonLdRequired = $ServiceJsonLdRequired
+        serviceJsonLdCount = $serviceJsonLdActual.serviceNodeCount
         titlePassed = $titlePassed
         descriptionPassed = $descriptionPassed
         robotsPassed = $robotsPassed
@@ -520,6 +528,7 @@ function Test-PublicPageSeoContract {
         headingPassed = $headingPassed
         languagePassed = -not [string]::IsNullOrWhiteSpace($lang)
         jsonLdPassed = $jsonLdPassed
+        serviceJsonLdPassed = $serviceJsonLdPassed
     } | ConvertTo-Json -Compress
 
     return New-ContractResult `
@@ -578,6 +587,37 @@ function Find-JsonLdNode {
 
         Find-JsonLdNode -Value $property.Value
     }
+}
+
+function Test-ServiceJsonLdContract {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Html
+    )
+
+    $serviceNodes = @()
+    $invalidJsonLd = 0
+    foreach ($match in [regex]::Matches($Html, '(?is)<script\b[^>]*type\s*=\s*["'']application/ld\+json["''][^>]*>(?<json>.*?)</script>')) {
+        try {
+            $json = $match.Groups['json'].Value | ConvertFrom-Json -ErrorAction Stop
+            $serviceNodes += @(Find-JsonLdNode -Value $json | Where-Object {
+                $types = @($_.'@type')
+                @($types | Where-Object { $_ -ceq 'Service' }).Count -gt 0
+            })
+        }
+        catch {
+            $invalidJsonLd++
+        }
+    }
+
+    return New-ContractResult `
+        -Name 'service_json_ld' `
+        -Passed ($invalidJsonLd -eq 0 -and $serviceNodes.Count -gt 0) `
+        -Expected 'At least one recursively discovered @type Service JSON-LD node' `
+        -Actual ([ordered]@{
+            serviceNodeCount = $serviceNodes.Count
+            invalidJsonLd = $invalidJsonLd
+        } | ConvertTo-Json -Compress)
 }
 
 function Test-LocalBusinessHoursContract {
@@ -888,6 +928,7 @@ function Invoke-ProductionSeoVerification {
             -Html ([string]$page.Content) `
             -CanonicalOrigin $origin `
             -JsonLdRequired (-not $path.StartsWith('/knowledges', [StringComparison]::OrdinalIgnoreCase)) `
+            -ServiceJsonLdRequired ($path.StartsWith('/services/', [StringComparison]::OrdinalIgnoreCase)) `
             -AllowMultipleH1 ($path -eq '/instantquotation/3d-printing')
         if ([int]$page.StatusCode -ne 200) {
             $publicSeoCheck.Passed = $false
@@ -941,6 +982,7 @@ Export-ModuleMember -Function @(
     'Test-CanonicalContract',
     'Test-PublicPageSeoContract',
     'Test-EnglishCookieCanonicalRedirectContract',
+    'Test-ServiceJsonLdContract',
     'Test-LocalBusinessHoursContract',
     'Test-PrivateCacheContract',
     'Test-AccountNoIndexContract',
