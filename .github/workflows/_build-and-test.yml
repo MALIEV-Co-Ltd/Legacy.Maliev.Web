@@ -42,6 +42,9 @@ jobs:
         run: npm run ci
       - name: Verify committed browser assets
         run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
+      - name: Verify frozen source-parity manifest
+        shell: pwsh
+        run: ./scripts/verify-complete-source-history-parity.ps1 -ManifestOnly
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@6017816fa67f369d785ed30794f002cfd6299af7
         with:

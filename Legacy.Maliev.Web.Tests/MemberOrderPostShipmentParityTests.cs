@@ -40,5 +40,14 @@ public sealed class MemberOrderPostShipmentParityTests
         [new CustomerOrderStatus(1, 7, 1, status, null, DateTime.UtcNow, DateTime.UtcNow)],
         []);
 
-    private static string SolutionRoot() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+    private static string SolutionRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Legacy.Maliev.Web.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
+    }
 }
