@@ -13,12 +13,14 @@ public sealed class InstantQuotationFulfillmentMappingTests
     public void DatabaseMaterialName_PreservesProductionCatalogMappings(string key, string expected) =>
         Assert.Equal(expected, InstantQuotationFulfillmentClient.DatabaseMaterialName(key));
 
-    [Fact]
-    public void OrderName_UsesSafeFileNameAndOrderServiceLimit()
+    [Theory]
+    [InlineData("C:\\untrusted\\")]
+    [InlineData("/untrusted/")]
+    public void OrderName_UsesSafeFileNameAndOrderServiceLimit(string untrustedPath)
     {
         var name = new string('a', 110) + ".stl";
 
-        var result = InstantQuotationFulfillmentClient.OrderName($"C:\\untrusted\\{name}");
+        var result = InstantQuotationFulfillmentClient.OrderName($"{untrustedPath}{name}");
 
         Assert.Equal(100, result.Length);
         Assert.DoesNotContain("untrusted", result, StringComparison.Ordinal);

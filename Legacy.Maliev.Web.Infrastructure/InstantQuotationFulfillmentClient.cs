@@ -319,7 +319,7 @@ internal sealed class InstantQuotationFulfillmentClient(
 
     internal static string OrderName(string displayFileName)
     {
-        var name = Path.GetFileName(displayFileName);
+        var name = Path.GetFileName(displayFileName.Replace('\\', '/'));
         return name.Length <= 100 ? name : name[..100];
     }
 
