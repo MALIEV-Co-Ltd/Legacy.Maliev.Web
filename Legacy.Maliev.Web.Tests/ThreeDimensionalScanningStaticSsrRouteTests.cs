@@ -84,6 +84,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
+                "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
                 "MemberAccountIndexPage.razor",
@@ -240,7 +241,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("Can every object be scanned?", content, StringComparison.Ordinal);
         Assert.Contains("The scanner needs line of sight and a stable optical response.", content, StringComparison.Ordinal);
         Assert.Contains("Can you scan at our factory or site?", content, StringComparison.Ordinal);
-        Assert.Contains("We provide onsite scanning when feasibility", content, StringComparison.Ordinal);
+        Assert.Contains("We provide onsite scanning when a part is very large", content, StringComparison.Ordinal);
         Assert.Contains("Direct scan mesh", pricing, StringComparison.Ordinal);
         Assert.Contains("เมชจากการสแกนโดยตรง", pricing, StringComparison.Ordinal);
         Assert.Contains("Quoted after site review", pricing, StringComparison.Ordinal);

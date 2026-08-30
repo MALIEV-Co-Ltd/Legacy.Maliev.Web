@@ -9,8 +9,8 @@ or Google configuration publication.
 
 - Proven historical Legacy Web checkpoint: `48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 - Source branch inspected: `main`.
-- Source head inspected on 2026-08-29: `25418c95b5ac79400029ce274541f0e51728da3e`.
-- Committed source changes after the historical checkpoint: 126.
+- Source head inspected on 2026-08-30: `7b4b2af697207d36a6e7b7784dddefa150193e97`.
+- Committed source changes after the historical checkpoint: 129.
 - Daily automation: `daily-legacy-maliev-migration-parity`, scheduled for 08:00 Asia/Bangkok.
 - Uncommitted source files are deliberately excluded from parity accounting.
 
@@ -70,6 +70,8 @@ or Google configuration publication.
 | `6509356` | Enforce WebP delivery for every reachable public raster-image reference while removing superseded PNG/JPEG/GIF/ICO assets | `Legacy.Maliev.Web` | `965409c` | Fifteen source-derived WebP assets are locked by exact byte length and SHA-256; public source and generated bundles contain no non-WebP raster references; Release build: 0 warnings/errors; affected suite: 79/79; browser modules: 109/109; deterministic asset rebuild: 37/37 unchanged; npm audit: 0 vulnerabilities |
 | `f9b8237` | Apply the shared follow-up spacing to the 3D-printing and 3D-scanning process-guidance links | `Legacy.Maliev.Web` | `1dda94c` | The same target-native hook is rendered on CNC, 3D-printing, and 3D-scanning in English and Thai; exact source and generated CSS contracts pass; Release build: 0 warnings/errors; focused suite: 19/19; browser modules: 109/109; deterministic assets: 21/21 unchanged |
 | `48f2a26` | Select the 1536-pixel ABS production-part candidate at the final desktop gallery width | `Legacy.Maliev.Web` | `127a3c8`, `1dda94c` | Existing target markup already carries the exact 64vw desktop `sizes` contract and 1536-pixel source candidate; the translated exact-markup regression now freezes it alongside the final gallery contract |
+| `c6ac93af03a0dafc506d9570aca96e4aed3b1643` | Add the consent-gated LINE friendship bridge, privacy-bounded quotation stage diagnostics, and source-attributed qualified-outcome reconciliation | `Legacy.Maliev.Web`, `Legacy.Maliev.QuotationService` | `9f16884`, `72e9fce`, `b3db595` | Web Release build: 0 warnings/errors; LINE/service/SEO suite: 78/78; Instant Quotation suite: 495/495. QuotationService Release build: 0 warnings/errors; full PostgreSQL suite: 155/155; format/package/secret checks clean. Direct GA4 credentials/outbox remain deliberately external; the immutable accepted-outcome plus employee-only aggregate readback is the target-native durable boundary. |
+| `7b4b2af697207d36a6e7b7784dddefa150193e97` | Publish verified nationwide file/parcel, appointment, onsite scanning/travel, replacement-part ownership, and PIMM installation coverage | `Legacy.Maliev.Web` | `9f16884` | Exact bilingual static-SSR and FAQ/JSON-LD contracts; LINE route/CSP configuration tests; Release build: 0 warnings/errors; focused affected suite: 78/78; format clean. |
 
 ## Supporting migration maintenance
 
@@ -102,6 +104,7 @@ or Google configuration publication.
 | `92e8ad5` | Source shell-removal maintenance for its deployment validator; no target runtime change. | Legacy uses its separate public workflow/reusable-action architecture. |
 | `bf3b8d7` | Source removal of the retired Popper v1 path is already satisfied. | The target bundles Bootstrap's supported Popper v2 dependency and contains no legacy Popper v1 loader path. |
 | `acdeb8d` | Selectively superseded by the approved target typography contract. Only its service follow-up spacing dependency is portable and is migrated by `1dda94c`; its font replacement is not. | Legacy Web deliberately retains the owner-approved self-hosted `Inter, Noto Sans Thai, sans-serif` stack and matching delivery tests. Importing the source IBM Plex Latin experiment would reverse that explicit migration decision. |
+| `63e5f99f3cef37b1f005b3399333ede53e560587` | Source audit-document clarification; no independent runtime artifact. Its confirmed service boundaries are implemented by the following `7b4b2af` runtime slice. | The commit changes only the source audit document. Target runtime copy, links, FAQ schema, and tests are accounted by Legacy Web commit `9f16884`. |
 
 ## Classification complete through the inspected source head
 
@@ -134,6 +137,14 @@ focused mapping regression passed 6/6 on Windows and Linux path forms, and the c
 suite passed 1,459/1,459 with a measured peak working set of 4.26 GB instead of the
 previous greater-than-13-GB failure mode. Formatting, package vulnerability, secret,
 browser-module, and deterministic-asset gates are clean.
+
+The 2026-08-30 delta adds three commits after the earlier 126-change checkpoint. All three are
+now classified: `c6ac93a` is migrated through target-native Web and QuotationService boundaries,
+`63e5f99` is documentation-only with its asserted behavior represented by the following runtime
+commit, and `7b4b2af` is migrated into bilingual static SSR, structured data, and tests. The
+employee-only quotation readback exposes aggregate attributed/unattributed counts but never source
+identifiers or PII, and Legacy QuotationService does not regain direct Measurement Protocol secret
+ownership.
 
 The daily automation must resume from the source head recorded above and classify only
 new committed source changes. Uncommitted source artifacts remain excluded. Any future
