@@ -1,0 +1,2016 @@
+{
+  "schemaVersion": "1.0",
+  "historicalCheckpoint": "48e628cf7803264bd0b09bfa7a55b15b47e192dd",
+  "sourceHead": "7b4b2af697207d36a6e7b7784dddefa150193e97",
+  "commitCount": 129,
+  "sequenceSha256": "5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306",
+  "evidencePolicy": "Every entry must name at least one owning Legacy repository, approved retirement, or non-runtime classification. The daily checkpoint supplies target-native validation evidence.",
+  "entries": [
+    {
+      "sequence": 1,
+      "sourceCommit": "25db5545b0f5f575f61616af2ba54ee45e656a20",
+      "subject": "Strengthen custom manufacturing search ownership",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 2,
+      "sourceCommit": "bf4c550cb28fd0432d9c178a7072d07d61e43e13",
+      "subject": "Ignore script templates in SEO verification",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 3,
+      "sourceCommit": "612cb5a93efb3cbf7d6c6c6122a76d9694804b51",
+      "subject": "perf: slim shared frontend bundles",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 4,
+      "sourceCommit": "a521f6969b7460240ed21925aad157142b489e8e",
+      "subject": "Improve mobile service image delivery",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 5,
+      "sourceCommit": "656ee29576839f16c9af8422283f321cdfe612cb",
+      "subject": "Fix invalid language switch culture failures",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 6,
+      "sourceCommit": "ffffbdd60daf573dc76038a5200784b530d36c55",
+      "subject": "docs: plan nationwide 3D printing title",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 7,
+      "sourceCommit": "95edbfbadda5a5e201733c9a83fb6b1eeea73df2",
+      "subject": "test: stabilize instant quotation browser fixture",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 8,
+      "sourceCommit": "d173d0bbc9c77958e2fd49f50cdb1d25531e33f6",
+      "subject": "seo: broaden 3D printing search title",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 9,
+      "sourceCommit": "80dd3df1d4de30586c6ecd84b848f4236eade3db",
+      "subject": "docs: define service ownership SEO release",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 10,
+      "sourceCommit": "dc534658f3d7d3271b2788e99517372ca787bf0e",
+      "subject": "docs: plan service ownership SEO rollout",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 11,
+      "sourceCommit": "e36435a51aa5471a19a790372fa6e43bc5f403c6",
+      "subject": "seo: contain quotation crawl routes",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 12,
+      "sourceCommit": "30a22afb243306726b820cbd0eaee0977600e331",
+      "subject": "seo: clarify manufacturing service ownership",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 13,
+      "sourceCommit": "7b1a8fd28c54f465c0ac966b3cf132ec49680bf7",
+      "subject": "seo: complete service structured data",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 14,
+      "sourceCommit": "c317caca8fb60b775bedd6d2830b05518a442c72",
+      "subject": "seo: publish CNC tolerance review contract",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 15,
+      "sourceCommit": "55fa9615f3ffc85c771e31a773184b80bde6b894",
+      "subject": "perf: deliver responsive service imagery",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 16,
+      "sourceCommit": "258ed4aef122737511e27c8aac35130b59d4b30e",
+      "subject": "docs: refresh quotation middleware reference",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 17,
+      "sourceCommit": "d6908049549f75b5e13c1858f4e5e2c2e0276752",
+      "subject": "test: enforce quotation utility release contract",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 18,
+      "sourceCommit": "791126cb1ae2a92774ec72528b84bff4d0d6a499",
+      "subject": "fix: resolve responsive service image URLs",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 19,
+      "sourceCommit": "1fd86b69736bcb078eea1676f94676f687d12d86",
+      "subject": "Merge remote-tracking branch 'origin/main'",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:merge-only"
+      ],
+      "sourceAreas": [],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 20,
+      "sourceCommit": "97b6a5d604ad6ede18b7e2047302d21566713455",
+      "subject": "Make instant quote funnel events joinable",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 21,
+      "sourceCommit": "e6701e75437e65f7d9ac078d5e8a176f0d363986",
+      "subject": "Add consent-gated GA4 User-ID",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 22,
+      "sourceCommit": "fecf680446c29d926386c14738fbf0e60c911638",
+      "subject": "Fix material card info alignment",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 23,
+      "sourceCommit": "56ce78eb5fa82953c7ffd8e8ae7ca99a9b3536c4",
+      "subject": "docs: design GA4 lifecycle measurement",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 24,
+      "sourceCommit": "1d8b87efffa1009a21ff06106281535b92fcbc4d",
+      "subject": "docs: plan GA4 lifecycle implementation",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 25,
+      "sourceCommit": "a318dc664cfa91441de7156b3bc2b48f7839af57",
+      "subject": "fix: order GA4 initial page view after user identity",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 26,
+      "sourceCommit": "e790933f67e7dd748e34ae805a8b85f268ce1aa1",
+      "subject": "feat: atomically enqueue accepted quotation analytics",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Data",
+        "Maliev.QuotationService.Tests",
+        "Maliev.SqlServer"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 27,
+      "sourceCommit": "f5d94f2568954368c685d753e865631612db7876",
+      "subject": "feat: attach consented GA context to quotation acceptance",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 28,
+      "sourceCommit": "2bb747212f8c722115e53691e10a522d8a793cf7",
+      "subject": "feat: deliver GA4 lifecycle events with durable retry",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.QuotationService",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Data",
+        "Maliev.QuotationService.Tests",
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 29,
+      "sourceCommit": "b60778f9cc03f6a591b5ee03b71cf12f999a604a",
+      "subject": "fix: inject Quotation Service runtime secrets",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 30,
+      "sourceCommit": "6d74fb5d1370e65d6e5322adf12f36e4cd2d8458",
+      "subject": "fix: resolve GA4 delivery worker in production",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 31,
+      "sourceCommit": "73f045c0f950953bc1ef9b8397e1a16d05dbe543",
+      "subject": "Fix missing email confirmation input failure",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 32,
+      "sourceCommit": "6c1a4921b3524dd575cab5b1f4aa5774ad9b8997",
+      "subject": "fix: restore employee quotation acceptance",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AuthService",
+        "Legacy.Maliev.Intranet",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.AuthService.Api",
+        "Maliev.AuthService.JwtToken",
+        "Maliev.AuthService.Tests",
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests",
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 33,
+      "sourceCommit": "07121804dad9f149b3b71dda80b220748c05c5cb",
+      "subject": "docs: specify authenticated quotation profile flow",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 34,
+      "sourceCommit": "e04164e271f75094a24e18c78e2ce1f9de324976",
+      "subject": "docs: plan authenticated quotation profile fix",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 35,
+      "sourceCommit": "c1ae969aef50a17ff7b80636fa6680cbce8df662",
+      "subject": "feat: model authenticated quotation profiles",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 36,
+      "sourceCommit": "7e2f00948db4bef52e465b80018ef1cbfc42e260",
+      "subject": "fix: prefill authenticated quotation details",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 37,
+      "sourceCommit": "e863a3f1c156bcfa664c41d08e0405c10b12553d",
+      "subject": "feat: complete authenticated quotation profiles",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 38,
+      "sourceCommit": "371aa2fb4db1e2a52e9a81db687832806b1a8fb0",
+      "subject": "test: cover authenticated quotation retry gate",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 39,
+      "sourceCommit": "a86b6188745254b191f24576957a38fc5accb9a8",
+      "subject": "style: format quotation profile implementation",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 40,
+      "sourceCommit": "2f5c07d1c984304888a3b6a4e31274a355f66afc",
+      "subject": "feat: add safe local quotation customer fixture",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 41,
+      "sourceCommit": "b2f5e0c1514d7ce886b8f4d9dae059b5ab359b86",
+      "subject": "fix: preserve quotation before profile completion",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 42,
+      "sourceCommit": "e05680dbbaa621d0ce41fb306f009cfd87f1fb3c",
+      "subject": "docs: refresh quotation profile reference",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 43,
+      "sourceCommit": "2ac5dc05e1b7bccfbb664d6e15b6f0350c9b7569",
+      "subject": "fix: restore AuthService production database configuration",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AuthService"
+      ],
+      "sourceAreas": [
+        "Maliev.AuthService.Api",
+        "Maliev.AuthService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 44,
+      "sourceCommit": "c7408ea1a24f7f6e433f71a233315bf4d1e9caa8",
+      "subject": "fix: supply AuthService JWT signing key",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AuthService"
+      ],
+      "sourceAreas": [
+        "Maliev.AuthService.Api",
+        "Maliev.AuthService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 45,
+      "sourceCommit": "ae251f9cdf7c2c7455979a3232eb907c7f4d5f11",
+      "subject": "Stop noisy Intranet certificate logging",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "sourceAreas": [
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 46,
+      "sourceCommit": "ff010351c1900edacb2d1aa3c1df9a1f864b5b8a",
+      "subject": "fix(web): allow Google Ads measurement endpoints",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 47,
+      "sourceCommit": "618e3598c3da50c60845320479d36ecb4fcec264",
+      "subject": "chore: ignore local diagnostic artifacts",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-maintenance"
+      ],
+      "sourceAreas": [
+        ".gitignore",
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 48,
+      "sourceCommit": "143f53ba0a1c81c78d252864ca131d42ed79dc1b",
+      "subject": "fix: require runtime secrets across production services",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AccountingService",
+        "Legacy.Maliev.AuthService",
+        "Legacy.Maliev.CareerService",
+        "Legacy.Maliev.CatalogService",
+        "Legacy.Maliev.ContactService",
+        "Legacy.Maliev.CountryService",
+        "Legacy.Maliev.CustomerService",
+        "Legacy.Maliev.DocumentService",
+        "Legacy.Maliev.EmployeeService",
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.NotificationService",
+        "Legacy.Maliev.OrderService",
+        "Legacy.Maliev.ProcurementService",
+        "Legacy.Maliev.QuotationService",
+        "Legacy.Maliev.Web",
+        "approved-retirement:deterministic-pricing",
+        "approved-retirement:per-service-logging"
+      ],
+      "sourceAreas": [
+        "Maliev.AuthService.Tests",
+        "Maliev.CountryService.Api",
+        "Maliev.CurrencyService.Api",
+        "Maliev.CustomerService.Api",
+        "Maliev.EmailService.Api",
+        "Maliev.EmployeeService.Api",
+        "Maliev.InvoiceService.Api",
+        "Maliev.JobService.Api",
+        "Maliev.LoggerService.Api",
+        "Maliev.MaterialService.Api",
+        "Maliev.MessageService.Api",
+        "Maliev.OrderService.Api",
+        "Maliev.OrderStatusService.Api",
+        "Maliev.PaymentService.Api",
+        "Maliev.PdfService.Api",
+        "Maliev.PredictionService.Api",
+        "Maliev.PurchaseOrderService.Api",
+        "Maliev.QuotationRequestService.Api",
+        "Maliev.ReceiptService.Api",
+        "Maliev.SupplierService.Api",
+        "Maliev.UploadService.Api",
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 49,
+      "sourceCommit": "d6d06a282125f01d119ac2beec7f8d335608328f",
+      "subject": "fix(auth): eliminate async callback build warning",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AuthService"
+      ],
+      "sourceAreas": [
+        "Maliev.AuthService.Api"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 50,
+      "sourceCommit": "2477f7b0c1ead9e04dce9b771a753e96f1c6cada",
+      "subject": "fix(web): default quotation shipping to billing address",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 51,
+      "sourceCommit": "a26fac7505854143f1b3069c97d01df3ae0fb1b4",
+      "subject": "fix(web): block releases with missing assets",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 52,
+      "sourceCommit": "8777004f1014707401ee150d548cf08e0923efa0",
+      "subject": "Fix missing career offer failure",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 53,
+      "sourceCommit": "283832f6c99fdf4445113be6f9ebb985b958c458",
+      "subject": "fix: guard nullable invoice view data",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "sourceAreas": [
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 54,
+      "sourceCommit": "7ebe7e4bf83a435ecb18afc29cf263424ed2bb74",
+      "subject": "Persist quotation journey attribution",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationRequestService.Api",
+        "Maliev.QuotationRequestService.Data",
+        "Maliev.QuotationRequestService.Tests",
+        "Maliev.SqlServer",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 55,
+      "sourceCommit": "f594761976070ae2ae5fdf527d281f29a6fbae2a",
+      "subject": "Fix journey migration compile order",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationRequestService.Tests",
+        "Maliev.SqlServer"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 56,
+      "sourceCommit": "3dcfb6fa2a538f135d83209910d4e29ab5cbbf0a",
+      "subject": "Set filtered-index migration options",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationRequestService.Tests",
+        "Maliev.SqlServer"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 57,
+      "sourceCommit": "a79283debd9111651e067ef80d20fa672bf2b0a4",
+      "subject": "Remove quotation API deploy warning",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationRequestService.Api"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 58,
+      "sourceCommit": "b9476b9635c494a3b8ea80b536a7622f9d6671b5",
+      "subject": "Harden packaged web asset validation",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 59,
+      "sourceCommit": "92e8ad50c5d33f7458e86bf9cd33eabbdb1eb220",
+      "subject": "Make web asset validation shell-free",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 60,
+      "sourceCommit": "c821605b7ecde5f79d01966888b116defb10650d",
+      "subject": "fix: stabilize invoice creation and quotation linking",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests",
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 61,
+      "sourceCommit": "f4ec3657106b09cfd90f68e70d5290043586375b",
+      "subject": "fix(seo): expose knowledge routes in navigation",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 62,
+      "sourceCommit": "f558a2805ce161a833cfd43ca1036ab095adcb31",
+      "subject": "feat(migration): copy legacy business data and guard incrementals",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.SqlServer",
+        "tools"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 63,
+      "sourceCommit": "4fde66c3b9c590ce66b5b1e51cc6c9adea33467e",
+      "subject": "fix(migration): stabilize evidence hashes on Windows",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-maintenance"
+      ],
+      "sourceAreas": [
+        ".gitattributes"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 64,
+      "sourceCommit": "bf3b8d7e04314b5f36384222878461adfdbc1ef5",
+      "subject": "chore(web): remove legacy Popper v1",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 65,
+      "sourceCommit": "c53603dc062a3f3072016cd7717738f05e59925c",
+      "subject": "chore(intranet): modernize frontend toolchain",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "sourceAreas": [
+        "Maliev.Intranet"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 66,
+      "sourceCommit": "062953f6287d62015c4c57b17127e3901afd96f3",
+      "subject": "fix(intranet): eliminate release build warnings",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "sourceAreas": [
+        "Maliev.Intranet"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 67,
+      "sourceCommit": "42ece27bb5f7a4a57bbfda435e4303346adc4677",
+      "subject": "fix(web): preserve consented persisted quote attribution",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 68,
+      "sourceCommit": "9682548c4a233d6dfdba287883141e57d638d44f",
+      "subject": "test(web): normalize consent contract line endings",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 69,
+      "sourceCommit": "21e4c05fa5e1b65a77eab155d93ced1cd01fb8d0",
+      "subject": "feat(web): publish standard anodizing pricing",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 70,
+      "sourceCommit": "5619e1aaef0c10b81e6b6c8241b8bdd2fab4825b",
+      "subject": "feat(web): preserve service intent in quotation leads",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 71,
+      "sourceCommit": "803013d3bc72e694e899e89cc688fc223e881d5b",
+      "subject": "fix(web): reject invalid career page size",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 72,
+      "sourceCommit": "0d002991028cefb6d0b0fb13e1d65dfdeea3f2da",
+      "subject": "feat(web): lead 3D printing search with instant pricing",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 73,
+      "sourceCommit": "d280196d3a38f8393df653c84727af80550e57cb",
+      "subject": "docs(measurement): record persisted lead trace",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 74,
+      "sourceCommit": "aa54f8074c2edcd5cc3a508a18120f9508e5ce18",
+      "subject": "test(quotations): support linked worktree roots",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 75,
+      "sourceCommit": "3b8bfe3658a1205b4811d063d44bec8cfa88d895",
+      "subject": "feat(quotations): reconcile accepted quotation outcomes",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.Intranet",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests",
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Data",
+        "Maliev.QuotationService.Tests",
+        "Maliev.SqlServer"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 76,
+      "sourceCommit": "cb0cc83341d7313f0b542bd9fa71a87e37b84792",
+      "subject": "fix(sql): defer qualified-outcome indexes",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Tests",
+        "Maliev.SqlServer"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 77,
+      "sourceCommit": "0131ea328556e1de5bbbb37479f0b289e0435e6c",
+      "subject": "fix(sql): configure filtered-index session",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Tests",
+        "Maliev.SqlServer"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 78,
+      "sourceCommit": "7ebbc97b0b93c6f71b8b5079ebd404e42c259338",
+      "subject": "feat(quotation): expose privacy-safe outcome readback",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.QuotationService"
+      ],
+      "sourceAreas": [
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 79,
+      "sourceCommit": "94148033a8385200b4b32f12cc32903de1c51a28",
+      "subject": "feat(web): correlate finder diagnostics per visit",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 80,
+      "sourceCommit": "84a0790b506bb212f03621e5efd9a88b7e0464ae",
+      "subject": "feat(web): show verified molded part photography",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 81,
+      "sourceCommit": "acdeb8dba5a9f7931a390af91d0eacffb546f519",
+      "subject": "fix(web): improve Thai service hero typography",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 82,
+      "sourceCommit": "f9b823738ff999a51089f0c71e1ad092d70df42d",
+      "subject": "fix(web): apply service hero followup spacing",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 83,
+      "sourceCommit": "460e9c83cc532632956a07f78d3199412d109182",
+      "subject": "Reduce injection service hero transfer size",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 84,
+      "sourceCommit": "a1bec42abfda4dbaa0f3b3361b311904291e3312",
+      "subject": "Fix stale service presentation contracts",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 85,
+      "sourceCommit": "c1e0ef467947a463e76b1cee349890e118aff5af",
+      "subject": "Add service part proof bento previews",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 86,
+      "sourceCommit": "f591716ab9682c5e56ab693402b49bc29fef6d08",
+      "subject": "Distill 3D printing tolerance comparison",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 87,
+      "sourceCommit": "a6dc2aab8877a5ec50ec128eb36739dffa0f8f3d",
+      "subject": "Compact 3D printing tolerance comparison",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 88,
+      "sourceCommit": "602ef7d97cd8d168d7de056fc06d7d6c8f36f4ec",
+      "subject": "Add source-anchored interactive part bento",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 89,
+      "sourceCommit": "2300a5c3f2ad0bd9e8144524827392d429a382ca",
+      "subject": "Fix production part Bento composition",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 90,
+      "sourceCommit": "6a657adf1206cfb8c1eb416b67c30e52a3b4c6c2",
+      "subject": "Expand production part gallery",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 91,
+      "sourceCommit": "7eaeeb5d02da5e219fcc403f667cc9e9c8ad433a",
+      "subject": "Polish expanded part gallery framing",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 92,
+      "sourceCommit": "dd3644ff19e6021e9002081e20f462d164d18dba",
+      "subject": "Redesign expanded production photo Bento grid",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 93,
+      "sourceCommit": "2c0b97cdc889984640b71179f65e50ffd64b635f",
+      "subject": "Remove Bento image corner borders",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 94,
+      "sourceCommit": "2602699be6d3f0f29ebb9b17dfb69ba2d33ca21f",
+      "subject": "Rebalance expanded parts Bento layout",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 95,
+      "sourceCommit": "d48ff25283248d3c63d974e820219a60ce0aaeba",
+      "subject": "Serve Font Awesome reliably in development",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 96,
+      "sourceCommit": "97fb3bb2d1e771bec75e9f3d20e1f36bb121253c",
+      "subject": "Preserve part framing in expanded Bento gallery",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 97,
+      "sourceCommit": "c97aa4c45d499b865d48e727d13d6cc57eff7ddd",
+      "subject": "Build CNC production-photo Bento gallery",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 98,
+      "sourceCommit": "5b3793853e631f2d64a172d9a17d62587d2282dd",
+      "subject": "Preserve complete CNC part framing in Bento gallery",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 99,
+      "sourceCommit": "48f2a26bee292c1f1447a17db48da28027aa209e",
+      "subject": "Serve sharper ABS Bento image on desktop",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 100,
+      "sourceCommit": "df37579b32190a52c661041db0ce1e0d9c50bc3a",
+      "subject": "Fix tablet Bento part framing",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 101,
+      "sourceCommit": "60b1426c8581729742d3eb6e455c0cf0d25e0460",
+      "subject": "Fix instant quotation orders when identity lookup fails",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 102,
+      "sourceCommit": "650935687acb284b768215807e37b6ce3c52ee85",
+      "subject": "Enforce WebP for public site images",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 103,
+      "sourceCommit": "f7084e1dac076758c26678ade555764aba914b07",
+      "subject": "Merge remote-tracking branch 'origin/main'",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:merge-only"
+      ],
+      "sourceAreas": [],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 104,
+      "sourceCommit": "e101c2bd4c4680c29571496e7842edf635d4ac6a",
+      "subject": "Validate optional quotation company and tax fields",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 105,
+      "sourceCommit": "9b45c1535f10718ef81d26d8b398570018eb674a",
+      "subject": "Fix mobile service bento grids",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 106,
+      "sourceCommit": "1e65a450debff4c016ab10ae07c8b0703055a07f",
+      "subject": "docs: define WebMCP and tracing rollout",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 107,
+      "sourceCommit": "baca341824ea727042095cf0a286d33c180a7892",
+      "subject": "docs: plan WebMCP and tracing implementation",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 108,
+      "sourceCommit": "abc057c985053c983ff3a23a78dcfe3ba1d0b2be",
+      "subject": "feat: add distributed trace fields to production logs",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "approved-retirement:per-service-logging"
+      ],
+      "sourceAreas": [
+        "Maliev.LoggerService.NLog",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 109,
+      "sourceCommit": "f0640fe0719b2eb6becda378bff08153d955be07",
+      "subject": "feat: standardize request failure tracing across services",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AccountingService",
+        "Legacy.Maliev.AuthService",
+        "Legacy.Maliev.CareerService",
+        "Legacy.Maliev.CatalogService",
+        "Legacy.Maliev.ContactService",
+        "Legacy.Maliev.CountryService",
+        "Legacy.Maliev.CustomerService",
+        "Legacy.Maliev.DocumentService",
+        "Legacy.Maliev.EmployeeService",
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.Intranet",
+        "Legacy.Maliev.NotificationService",
+        "Legacy.Maliev.OrderService",
+        "Legacy.Maliev.ProcurementService",
+        "Legacy.Maliev.QuotationService",
+        "Legacy.Maliev.Web",
+        "approved-retirement:deterministic-pricing",
+        "approved-retirement:per-service-logging",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.AuthService.Api",
+        "Maliev.CountryService.Api",
+        "Maliev.CurrencyService.Api",
+        "Maliev.CustomerService.Api",
+        "Maliev.EmailService.Api",
+        "Maliev.EmployeeService.Api",
+        "Maliev.Intranet",
+        "Maliev.InvoiceService.Api",
+        "Maliev.JobService.Api",
+        "Maliev.LoggerService.Api",
+        "Maliev.LoggerService.NLog",
+        "Maliev.MaterialService.Api",
+        "Maliev.MessageService.Api",
+        "Maliev.OrderService.Api",
+        "Maliev.OrderStatusService.Api",
+        "Maliev.PaymentService.Api",
+        "Maliev.PdfService.Api",
+        "Maliev.PredictionService.Api",
+        "Maliev.PurchaseOrderService.Api",
+        "Maliev.QuotationRequestService.Api",
+        "Maliev.QuotationService.Api",
+        "Maliev.ReceiptService.Api",
+        "Maliev.SupplierService.Api",
+        "Maliev.UploadService.Api",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 110,
+      "sourceCommit": "3d6506285a58671651d046e97a35fbb8885cea4f",
+      "subject": "feat: trace dependency and quotation fulfillment failures",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.ServiceDefaults",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Service.WebApi",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 111,
+      "sourceCommit": "1f1f9aa9e3c9ff907adf80a553c616864a5a9337",
+      "subject": "feat: expose safe public WebMCP tools",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 112,
+      "sourceCommit": "6989402798eb988b1a74a45c6411215d7fc85033",
+      "subject": "test: stabilize instant quotation browser validation",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 113,
+      "sourceCommit": "600e79ac9b2836f540cf1547d3efd20362912aae",
+      "subject": "Preserve bento grids on mobile service pages",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 114,
+      "sourceCommit": "9e51e6c5da29de8e617b65b59d46882cde6d3b64",
+      "subject": "Remove deprecated LoggerService and use native logging",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AccountingService",
+        "Legacy.Maliev.AuthService",
+        "Legacy.Maliev.CareerService",
+        "Legacy.Maliev.CatalogService",
+        "Legacy.Maliev.ContactService",
+        "Legacy.Maliev.CountryService",
+        "Legacy.Maliev.CustomerService",
+        "Legacy.Maliev.DocumentService",
+        "Legacy.Maliev.EmployeeService",
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.Intranet",
+        "Legacy.Maliev.NotificationService",
+        "Legacy.Maliev.OrderService",
+        "Legacy.Maliev.ProcurementService",
+        "Legacy.Maliev.QuotationService",
+        "Legacy.Maliev.ServiceDefaults",
+        "Legacy.Maliev.Web",
+        "approved-retirement:deterministic-pricing",
+        "approved-retirement:per-service-logging",
+        "classified-non-runtime:source-deployment",
+        "classified-non-runtime:source-solution"
+      ],
+      "sourceAreas": [
+        "deploy_all.ps1",
+        "deploy_api.ps1",
+        "gce-ingress-maliev.yaml",
+        "Maliev.AuthService.Api",
+        "Maliev.AuthService.Tests",
+        "Maliev.CountryService.Api",
+        "Maliev.CurrencyService.Api",
+        "Maliev.CustomerService.Api",
+        "Maliev.EmailService.Api",
+        "Maliev.EmployeeService.Api",
+        "Maliev.Intranet",
+        "Maliev.InvoiceService.Api",
+        "Maliev.JobService.Api",
+        "Maliev.LoggerService.Api",
+        "Maliev.LoggerService.Common",
+        "Maliev.LoggerService.Data",
+        "Maliev.LoggerService.NLog",
+        "Maliev.LoggerService.Tests",
+        "Maliev.MaterialService.Api",
+        "Maliev.MessageService.Api",
+        "Maliev.NativeLogging",
+        "Maliev.OrderService.Api",
+        "Maliev.OrderStatusService.Api",
+        "Maliev.PaymentService.Api",
+        "Maliev.PdfService.Api",
+        "Maliev.PredictionService.Api",
+        "Maliev.PredictionService.Data",
+        "Maliev.PurchaseOrderService.Api",
+        "Maliev.QuotationRequestService.Api",
+        "Maliev.QuotationService.Api",
+        "Maliev.ReceiptService.Api",
+        "Maliev.Service.WebApi",
+        "Maliev.sln",
+        "Maliev.SupplierService.Api",
+        "Maliev.UploadService.Api",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 115,
+      "sourceCommit": "19cae9fe4620ee89f1efbde09e01e0e5d370e357",
+      "subject": "Fill mobile service bento grids",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 116,
+      "sourceCommit": "72a71a26724345126a9bc4e36ff1e05270b7de56",
+      "subject": "Document persisted lead reconciliation",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 117,
+      "sourceCommit": "0fc91415d35550b48b002c2a36b01ec64089b1a8",
+      "subject": "Refresh measurement reconciliation readback",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 118,
+      "sourceCommit": "7b311e4e7f0dd80be0441abc2625dab295179f1a",
+      "subject": "Prevent order truncation failures and repair fleet diagnostics",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet",
+        "Legacy.Maliev.NotificationService",
+        "Legacy.Maliev.OrderService",
+        "Legacy.Maliev.ServiceDefaults",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.EmailService.Api",
+        "Maliev.EmailService.Client",
+        "Maliev.EmailService.Tests",
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests",
+        "Maliev.NativeLogging",
+        "Maliev.OrderService.Api",
+        "Maliev.OrderService.Data",
+        "Maliev.OrderService.Tests",
+        "Maliev.Service.WebApi",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 119,
+      "sourceCommit": "f79657bdd06b878dc99fe45fbf26c40eeffb25f0",
+      "subject": "Remove retired payment provider remnants",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web.Tests",
+        "tools"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 120,
+      "sourceCommit": "0e84bc0704b614631a6f0a2b1234060cefa0c301",
+      "subject": "Repair current-tree security validation",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration"
+      ],
+      "sourceAreas": [
+        "tools"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 121,
+      "sourceCommit": "c660de68b633618cb0c857a287020f5ed9c42683",
+      "subject": "Keep logging rollouts within cluster capacity",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AccountingService",
+        "Legacy.Maliev.ContactService",
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.OrderService",
+        "Legacy.Maliev.Web",
+        "approved-retirement:deterministic-pricing"
+      ],
+      "sourceAreas": [
+        "Maliev.MessageService.Api",
+        "Maliev.OrderStatusService.Api",
+        "Maliev.PredictionService.Api",
+        "Maliev.ReceiptService.Api",
+        "Maliev.UploadService.Api",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 122,
+      "sourceCommit": "a7d0a4517ef1cfef638763cb1092088a5932fa2f",
+      "subject": "Keep single-replica rollouts available",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AccountingService",
+        "Legacy.Maliev.ContactService",
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.OrderService",
+        "Legacy.Maliev.ProcurementService",
+        "Legacy.Maliev.Web",
+        "approved-retirement:deterministic-pricing"
+      ],
+      "sourceAreas": [
+        "Maliev.MessageService.Api",
+        "Maliev.OrderStatusService.Api",
+        "Maliev.PredictionService.Api",
+        "Maliev.PurchaseOrderService.Api",
+        "Maliev.ReceiptService.Api",
+        "Maliev.SupplierService.Api",
+        "Maliev.UploadService.Api",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 123,
+      "sourceCommit": "54ad353a386dc9476f779f9b3fdf152b93b135c9",
+      "subject": "Reserve rollout headroom on six-node cluster",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.CatalogService",
+        "Legacy.Maliev.CountryService",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.CountryService.Api",
+        "Maliev.CurrencyService.Api",
+        "Maliev.MaterialService.Api",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 124,
+      "sourceCommit": "6de82fd9760e86c71ddba3085879a63b43faff9f",
+      "subject": "Align Thai 3D printing search entry",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 125,
+      "sourceCommit": "4533669fa5231368f17c4b59b17c3e2f52e24a89",
+      "subject": "Fix upload service workload identity",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.UploadService.Api",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 126,
+      "sourceCommit": "25418c95b5ac79400029ce274541f0e51728da3e",
+      "subject": "Fix Upload Service storage authorization failures",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.FileService",
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.UploadService.Api",
+        "Maliev.UploadService.GoogleCloudStorage",
+        "Maliev.UploadService.Tests",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 127,
+      "sourceCommit": "c6ac93af03a0dafc506d9570aca96e4aed3b1643",
+      "subject": "Improve marketing measurement and search ownership",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.DataMigration",
+        "Legacy.Maliev.QuotationService",
+        "Legacy.Maliev.Web",
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs",
+        "Maliev.QuotationService.Api",
+        "Maliev.QuotationService.Data",
+        "Maliev.QuotationService.Tests",
+        "Maliev.SqlServer",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 128,
+      "sourceCommit": "63e5f99f3cef37b1f005b3399333ede53e560587",
+      "subject": "Record confirmed local service boundaries",
+      "disposition": "classified-non-runtime",
+      "owners": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    },
+    {
+      "sequence": 129,
+      "sourceCommit": "7b4b2af697207d36a6e7b7784dddefa150193e97",
+      "subject": "Publish verified service coverage details",
+      "disposition": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "evidence": "docs/source-parity-daily-checkpoint.md"
+    }
+  ]
+}

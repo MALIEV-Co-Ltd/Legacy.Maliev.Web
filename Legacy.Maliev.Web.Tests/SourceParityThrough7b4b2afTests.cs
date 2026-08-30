@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -139,6 +141,52 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
         Assert.Contains("`63e5f99f3cef37b1f005b3399333ede53e560587`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`7b4b2af697207d36a6e7b7784dddefa150193e97`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`a53b252`, `303f2f1`, `27f340e`", checkpoint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DailyManifest_FreezesEverySourceCommitInExactOrderWithoutGaps()
+    {
+        string manifestPath = Path.Combine(
+            FindRepositoryRoot(),
+            "docs",
+            "source-parity-delta-through-7b4b2af.json");
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        JsonElement root = document.RootElement;
+        JsonElement entries = root.GetProperty("entries");
+
+        Assert.Equal("1.0", root.GetProperty("schemaVersion").GetString());
+        Assert.Equal("48e628cf7803264bd0b09bfa7a55b15b47e192dd", root.GetProperty("historicalCheckpoint").GetString());
+        Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", root.GetProperty("sourceHead").GetString());
+        Assert.Equal(129, root.GetProperty("commitCount").GetInt32());
+        Assert.Equal(129, entries.GetArrayLength());
+
+        var commits = new List<string>(entries.GetArrayLength());
+        int expectedSequence = 1;
+        foreach (JsonElement entry in entries.EnumerateArray())
+        {
+            Assert.Equal(expectedSequence++, entry.GetProperty("sequence").GetInt32());
+            string commit = Assert.IsType<string>(entry.GetProperty("sourceCommit").GetString());
+            Assert.Matches("^[0-9a-f]{40}$", commit);
+            commits.Add(commit);
+
+            string disposition = Assert.IsType<string>(entry.GetProperty("disposition").GetString());
+            Assert.DoesNotContain("gap", disposition, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("pending", disposition, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("unclassified", disposition, StringComparison.OrdinalIgnoreCase);
+            Assert.NotEmpty(entry.GetProperty("owners").EnumerateArray());
+            Assert.All(entry.GetProperty("owners").EnumerateArray(), owner =>
+                Assert.False(
+                    (owner.GetString() ?? string.Empty).StartsWith("unmapped:", StringComparison.Ordinal),
+                    "Every source area must map to a reviewed Legacy owner or disposition."));
+            Assert.Equal("docs/source-parity-daily-checkpoint.md", entry.GetProperty("evidence").GetString());
+        }
+
+        string sequence = string.Join('\n', commits) + '\n';
+        string digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sequence))).ToLowerInvariant();
+        Assert.Equal("5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306", digest);
+        Assert.Equal(digest, root.GetProperty("sequenceSha256").GetString());
+        Assert.Equal("25db5545b0f5f575f61616af2ba54ee45e656a20", commits[0]);
+        Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", commits[^1]);
     }
 
     private static string Read(string root, params string[] segments) =>
