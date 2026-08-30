@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -154,12 +155,18 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
         JsonElement root = document.RootElement;
         JsonElement entries = root.GetProperty("entries");
 
-        Assert.Equal("1.0", root.GetProperty("schemaVersion").GetString());
+        Assert.Equal("1.1", root.GetProperty("schemaVersion").GetString());
         Assert.Equal("48e628cf7803264bd0b09bfa7a55b15b47e192dd", root.GetProperty("historicalCheckpoint").GetString());
         Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", root.GetProperty("sourceHead").GetString());
         Assert.Equal(129, root.GetProperty("commitCount").GetInt32());
         Assert.Equal(129, entries.GetArrayLength());
 
+        var allowedOwners = root.GetProperty("allowedOwners").EnumerateArray()
+            .Select(owner => Assert.IsType<string>(owner.GetString()))
+            .ToHashSet(StringComparer.Ordinal);
+        var allowedClassifications = root.GetProperty("allowedClassifications").EnumerateArray()
+            .Select(classification => Assert.IsType<string>(classification.GetString()))
+            .ToHashSet(StringComparer.Ordinal);
         var commits = new List<string>(entries.GetArrayLength());
         int expectedSequence = 1;
         foreach (JsonElement entry in entries.EnumerateArray())
@@ -169,22 +176,42 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
             Assert.Matches("^[0-9a-f]{40}$", commit);
             commits.Add(commit);
 
-            string disposition = Assert.IsType<string>(entry.GetProperty("disposition").GetString());
-            Assert.DoesNotContain("gap", disposition, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("pending", disposition, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("unclassified", disposition, StringComparison.OrdinalIgnoreCase);
-            Assert.NotEmpty(entry.GetProperty("owners").EnumerateArray());
-            Assert.All(entry.GetProperty("owners").EnumerateArray(), owner =>
-                Assert.False(
-                    (owner.GetString() ?? string.Empty).StartsWith("unmapped:", StringComparison.Ordinal),
-                    "Every source area must map to a reviewed Legacy owner or disposition."));
-            Assert.Equal("docs/source-parity-daily-checkpoint.md", entry.GetProperty("evidence").GetString());
+            string classification = Assert.IsType<string>(entry.GetProperty("classification").GetString());
+            Assert.Contains(classification, allowedClassifications);
+            Assert.DoesNotContain("gap", classification, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("pending", classification, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("unclassified", classification, StringComparison.OrdinalIgnoreCase);
+
+            string[] owners = [.. entry.GetProperty("owners").EnumerateArray()
+                .Select(owner => Assert.IsType<string>(owner.GetString()))];
+            Assert.All(owners, owner => Assert.Contains(owner, allowedOwners));
+            JsonElement[] targetEvidence = [.. entry.GetProperty("targetEvidence").EnumerateArray()];
+            Assert.Equal(owners.Length, targetEvidence.Length);
+            Assert.All(targetEvidence, target =>
+            {
+                string repository = Assert.IsType<string>(target.GetProperty("repository").GetString());
+                Assert.Contains(repository, owners);
+                Assert.Matches("^[0-9a-f]{40}$", Assert.IsType<string>(target.GetProperty("commit").GetString()));
+            });
+
+            int retirementCount = entry.GetProperty("retirements").GetArrayLength();
+            int exclusionCount = entry.GetProperty("exclusions").GetArrayLength();
+            Assert.True(owners.Length > 0 || retirementCount > 0 || exclusionCount > 0,
+                "Every source commit needs a canonical owner, approved retirement, or non-runtime exclusion.");
+            Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("validationEvidence").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("classificationRationale").GetString()));
         }
 
         string sequence = string.Join('\n', commits) + '\n';
         string digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sequence))).ToLowerInvariant();
         Assert.Equal("5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306", digest);
         Assert.Equal(digest, root.GetProperty("sequenceSha256").GetString());
+        string semanticJson = JsonSerializer.Serialize(
+            entries,
+            new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        string semanticDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(semanticJson))).ToLowerInvariant();
+        Assert.Equal("d2405f3251e2880974e8e25e47015f08b1a7736e1ce94612838a6b5979bb5fc9", semanticDigest);
+        Assert.Equal(semanticDigest, root.GetProperty("semanticSha256").GetString());
         Assert.Equal("25db5545b0f5f575f61616af2ba54ee45e656a20", commits[0]);
         Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", commits[^1]);
     }
