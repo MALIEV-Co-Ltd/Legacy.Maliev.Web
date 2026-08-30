@@ -128,6 +128,19 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
         Assert.DoesNotContain("javascript:", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void DailyCheckpoint_AccountsForEveryCommitThroughTheNewSourceHead()
+    {
+        string checkpoint = Read(FindRepositoryRoot(), "docs", "source-parity-daily-checkpoint.md");
+
+        Assert.Contains("7b4b2af697207d36a6e7b7784dddefa150193e97", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("Committed source changes after the historical checkpoint: 129", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("`c6ac93af03a0dafc506d9570aca96e4aed3b1643`", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("`63e5f99f3cef37b1f005b3399333ede53e560587`", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("`7b4b2af697207d36a6e7b7784dddefa150193e97`", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("`9f16884`, `72e9fce`, `b3db595`", checkpoint, StringComparison.Ordinal);
+    }
+
     private static string Read(string root, params string[] segments) =>
         File.ReadAllText(Path.Combine([root, .. segments]));
 

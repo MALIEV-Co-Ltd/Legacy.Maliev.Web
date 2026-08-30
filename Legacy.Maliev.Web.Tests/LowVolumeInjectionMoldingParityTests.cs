@@ -43,8 +43,8 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
         Assert.DoesNotContain("ai-enhanced", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("injection-volume-grid", source, StringComparison.Ordinal);
         Assert.Equal(3, ServiceCardMediaRegex().Matches(source).Count);
-        Assert.Equal(6, FaqDetailsRegex().Matches(source).Count);
-        Assert.Equal(6, FaqSchemaQuestionRegex().Matches(source).Count);
+        Assert.Equal(7, FaqDetailsRegex().Matches(source).Count);
+        Assert.Equal(7, FaqSchemaQuestionRegex().Matches(source).Count);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
