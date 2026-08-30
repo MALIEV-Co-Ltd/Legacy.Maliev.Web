@@ -42,6 +42,10 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("Recaptcha"));
         services.AddOptions<GoogleMapsOptions>()
             .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));
+        services.AddOptions<LineLiffOptions>()
+            .Bind(configuration.GetSection(LineLiffOptions.SectionName))
+            .Validate(static options => options.IsValid, "LineLiff:LiffId must be empty or a valid public LIFF identifier.")
+            .ValidateOnStart();
 
         AddClient(services, "auth", static endpoints => endpoints.Auth);
         AddClient(services, "accounting", static endpoints => endpoints.Accounting);

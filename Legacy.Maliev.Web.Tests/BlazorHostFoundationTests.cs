@@ -50,10 +50,14 @@ public sealed class BlazorHostFoundationTests : IClassFixture<TestingWebApplicat
                 "LowVolumeInjectionMoldingPage.razor"
             }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .ToArray();
-        Assert.Equal(48, routedPages.Length);
+        Assert.Equal(49, routedPages.Length);
+        Assert.Contains(routedPages, path => Path.GetFileName(path) == "LineContactPage.razor");
         Assert.Equal(
             ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberCreatePasswordPage.razor", "MemberOrderCreationPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
-            routedPages.Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal).ToArray());
+            routedPages.Select(path => Path.GetFileName(path)!)
+                .Where(name => name != "LineContactPage.razor")
+                .Order(StringComparer.Ordinal)
+                .ToArray());
     }
 
     [Theory]

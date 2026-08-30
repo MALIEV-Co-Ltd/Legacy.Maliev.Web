@@ -1,0 +1,104 @@
+@page "/contact/line"
+@using System.Globalization
+@using System.Text.Json
+@using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.Extensions.Options
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IOptions<LineLiffOptions> LineLiffOptions
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = T("Add MALIEV on LINE Official Account", "เพิ่มเพื่อน MALIEV บน LINE Official Account");
+    var description = T(
+        "Open MALIEV's LINE Official Account and confirm friendship before starting a manufacturing conversation.",
+        "เปิด LINE Official Account ของ MALIEV และยืนยันการเป็นเพื่อนก่อนเริ่มพูดคุยเรื่องงานผลิต");
+    var liffId = LineLiffOptions.Value.IsEnabled ? LineLiffOptions.Value.LiffId : null;
+}
+
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <meta name="robots" content="noindex,follow" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+    @if (liffId is not null)
+    {
+        <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    }
+</HeadContent>
+
+<main class="inquiry-page" data-migration-route-owner="blazor-static-ssr">
+    <section class="inquiry-hero inquiry-hero--contact" aria-labelledby="line-title">
+        <div class="inquiry-container inquiry-hero__content">
+            <p class="inquiry-eyebrow">LINE Official Account</p>
+            <h1 id="line-title">@T("Add MALIEV on LINE", "เพิ่มเพื่อน MALIEV บน LINE")</h1>
+            <p class="inquiry-hero__lead">@T(
+                "Add our official account, then send your process, drawing or model, material, quantity, and required date.",
+                "เพิ่มบัญชีทางการของเรา แล้วส่งกระบวนการที่ต้องการ แบบหรือโมเดล วัสดุ จำนวน และวันที่ต้องการ")</p>
+        </div>
+    </section>
+    <section class="inquiry-content">
+        <div class="inquiry-container">
+            <article class="inquiry-panel inquiry-panel--accent contact-line-card">
+                <img src="/src/images/line-qr-clean.svg" width="160" height="160" alt="@T("MALIEV LINE Official Account QR code", "คิวอาร์โค้ด LINE Official Account ของ MALIEV")" />
+                <div>
+                    <h2>@@maliev</h2>
+                    <p id="line-bridge-status" role="status" aria-live="polite">@T("Checking LINE friendship status…", "กำลังตรวจสอบสถานะเพื่อนบน LINE…")</p>
+                    <a class="btn btn-primary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line" target="_blank" rel="noopener" data-contact-placement="line_bridge_fallback">@T("Open LINE Official Account", "เปิด LINE Official Account")</a>
+                    <p><small>@T(
+                        "Opening or scanning the link is not counted as a confirmed friend or conversation. Confirmation is recorded only when LINE reports that the account is already your friend.",
+                        "การเปิดหรือสแกนลิงก์ยังไม่นับเป็นเพื่อนหรือการสนทนาที่ยืนยันแล้ว ระบบจะบันทึกการยืนยันเมื่อ LINE รายงานว่าบัญชีนี้เป็นเพื่อนของคุณแล้วเท่านั้น")</small></p>
+                </div>
+            </article>
+        </div>
+    </section>
+</main>
+
+<script>
+    (function () {
+        'use strict';
+        var status = document.getElementById('line-bridge-status');
+        var liffId = @((MarkupString)JsonSerializer.Serialize(liffId));
+
+        function ready(message) {
+            if (status && message) { status.textContent = message; }
+            document.body.dataset.lineBridgeReady = 'true';
+        }
+
+        if (!liffId || !window.liff) {
+            ready('@T("Use the button or QR code to open MALIEV on LINE.", "ใช้ปุ่มหรือคิวอาร์โค้ดเพื่อเปิด MALIEV บน LINE")');
+            return;
+        }
+
+        window.liff.init({ liffId: liffId }).then(function () {
+            if (!window.liff.isLoggedIn()) {
+                window.liff.login({ redirectUri: window.location.href });
+                return null;
+            }
+            return window.liff.getFriendship();
+        }).then(function (friendship) {
+            if (!friendship) { return; }
+            if (friendship.friendFlag === true && window.malievAnalytics && typeof window.malievAnalytics.emit === 'function') {
+                window.malievAnalytics.emit({
+                    event: 'line_friend_confirmed',
+                    channel: 'line',
+                    destination: 'line_oa',
+                    conversion_tier: 'secondary'
+                });
+                ready('@T("LINE confirms that MALIEV is your friend. You can start a chat now.", "LINE ยืนยันว่า MALIEV เป็นเพื่อนของคุณแล้ว คุณสามารถเริ่มแชตได้ทันที")');
+                return;
+            }
+            ready('@T("MALIEV is not yet confirmed as your LINE friend. Open the official account and tap Add.", "LINE ยังไม่ยืนยันว่า MALIEV เป็นเพื่อนของคุณ กรุณาเปิดบัญชีทางการแล้วแตะเพิ่มเพื่อน")');
+        }).catch(function () {
+            ready('@T("Friendship confirmation is temporarily unavailable. You can still open MALIEV on LINE.", "ขณะนี้ไม่สามารถยืนยันสถานะเพื่อนได้ แต่คุณยังสามารถเปิด MALIEV บน LINE ได้")');
+        });
+    })();
+</script>
+
+@code {
+    private bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+
+    private string T(string english, string thai) => IsThai ? thai : english;
+}

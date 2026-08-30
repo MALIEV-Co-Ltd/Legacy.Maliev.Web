@@ -32,6 +32,10 @@
                 return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
             }
 
+            if (host === window.location.hostname.toLowerCase() && path === '/contact/line') {
+                return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
+            }
+
             if ((host === 'm.me' || host === 'www.m.me') && path === '/maliev.manufacturing') {
                 return { eventName: 'messenger_click', channel: 'messenger', destination: 'facebook_messenger' };
             }
