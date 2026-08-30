@@ -9,8 +9,10 @@
 
         function classifyContact(anchor) {
             var url;
+            var baseHost;
             try {
                 url = new URL(anchor.href, document.baseURI);
+                baseHost = new URL(document.baseURI).hostname.toLowerCase();
             } catch (error) {
                 return null;
             }
@@ -32,7 +34,7 @@
                 return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
             }
 
-            if (host === window.location.hostname.toLowerCase() && path === '/contact/line') {
+            if (host === baseHost && path === '/contact/line') {
                 return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
             }
 
