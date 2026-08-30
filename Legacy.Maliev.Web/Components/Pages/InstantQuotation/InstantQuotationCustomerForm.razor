@@ -35,7 +35,7 @@
             </ul>
         </div>
     }
-    <form method="post" action="/InstantQuotation/3D-Printing?handler=SubmitRequest">
+    <form id="instant-quotation-form" method="post" action="/InstantQuotation/3D-Printing?handler=SubmitRequest" data-optional-customer-fields>
         <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryRequestToken" />
 
         <div>
@@ -54,8 +54,13 @@
             @FieldError("Email")
         </div>
         <div>
-            <label for="instant-quote-telephone">@Localizer["Telephone"] <span aria-hidden="true">*</span></label>
-            <input id="instant-quote-telephone" name="Telephone" value="@Model.Telephone" type="tel" autocomplete="tel" maxlength="50" required aria-invalid="@AriaInvalid("Telephone")" aria-describedby="@ErrorId("Telephone")" />
+            <label for="instant-quote-mobile">@Localizer["Mobile number"] <span aria-hidden="true">*</span></label>
+            <input id="instant-quote-mobile" name="Mobile" value="@Model.Mobile" type="tel" autocomplete="mobile tel" maxlength="50" required aria-invalid="@AriaInvalid("Mobile")" aria-describedby="@ErrorId("Mobile")" />
+            @FieldError("Mobile")
+        </div>
+        <div>
+            <label for="instant-quote-telephone">@Localizer["Office phone (optional)"]</label>
+            <input id="instant-quote-telephone" name="Telephone" value="@Model.Telephone" type="tel" autocomplete="tel" maxlength="50" aria-invalid="@AriaInvalid("Telephone")" aria-describedby="@ErrorId("Telephone")" />
             @FieldError("Telephone")
         </div>
         <div>
@@ -75,12 +80,50 @@
         </div>
         <div>
             <label for="instant-quote-taxnumber">@Localizer["Tax number"]</label>
-            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" maxlength="50" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" />
+            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" autocomplete="off" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" />
             @FieldError("TaxNumber")
         </div>
         <div>
-            <label for="instant-quote-description">@Localizer["Description"]</label>
-            <textarea id="instant-quote-description" name="Description" maxlength="512" aria-invalid="@AriaInvalid("Description")" aria-describedby="@ErrorId("Description")">@Model.Description</textarea>
+            <label for="instant-quote-tax-branch">@Localizer["Tax invoice issued to"]</label>
+            <select id="instant-quote-tax-branch" name="TaxBranch">
+                <option value="head-office" selected="@(Model.TaxBranch == "head-office")">@Localizer["Head office"]</option>
+                <option value="branch" selected="@(Model.TaxBranch == "branch")">@Localizer["Branch"]</option>
+            </select>
+        </div>
+        <div>
+            <label for="instant-quote-tax-branch-code">@Localizer["Branch code"]</label>
+            <input id="instant-quote-tax-branch-code" name="TaxBranchCode" value="@Model.TaxBranchCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" aria-invalid="@AriaInvalid("TaxBranchCode")" aria-describedby="@ErrorId("TaxBranchCode")" />
+            @FieldError("TaxBranchCode")
+        </div>
+
+        <fieldset class="instant-quote__address-fields">
+            <legend>@Localizer["Billing address"]</legend>
+            <div><label for="instant-quote-billing-building">@Localizer["Building"]</label><input id="instant-quote-billing-building" name="BillingBuilding" value="@Model.BillingBuilding" autocomplete="billing address-line1" maxlength="256" /></div>
+            <div><label for="instant-quote-billing-street1">@Localizer["Street address"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-street1" name="BillingStreet1" value="@Model.BillingStreet1" autocomplete="billing address-line1" maxlength="256" required aria-invalid="@AriaInvalid("BillingStreet1")" aria-describedby="@ErrorId("BillingStreet1")" />@FieldError("BillingStreet1")</div>
+            <div><label for="instant-quote-billing-street2">@Localizer["Sub-district"]</label><input id="instant-quote-billing-street2" name="BillingStreet2" value="@Model.BillingStreet2" autocomplete="billing address-line2" maxlength="256" /></div>
+            <div><label for="instant-quote-billing-city">@Localizer["City / district"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-city" name="BillingCity" value="@Model.BillingCity" autocomplete="billing address-level2" maxlength="256" required aria-invalid="@AriaInvalid("BillingCity")" aria-describedby="@ErrorId("BillingCity")" />@FieldError("BillingCity")</div>
+            <div><label for="instant-quote-billing-province">@Localizer["Province"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-province" name="BillingProvince" value="@Model.BillingProvince" autocomplete="billing address-level1" maxlength="256" required aria-invalid="@AriaInvalid("BillingProvince")" aria-describedby="@ErrorId("BillingProvince")" />@FieldError("BillingProvince")</div>
+            <div><label for="instant-quote-billing-postal">@Localizer["Postal code"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-postal" name="BillingPostalCode" value="@Model.BillingPostalCode" autocomplete="billing postal-code" maxlength="20" required aria-invalid="@AriaInvalid("BillingPostalCode")" aria-describedby="@ErrorId("BillingPostalCode")" />@FieldError("BillingPostalCode")</div>
+        </fieldset>
+
+        <div class="instant-quote__checkbox-field">
+            <input type="hidden" name="ShipToBillingAddress" value="false" />
+            <input id="instant-quote-ship-to-billing" type="checkbox" name="ShipToBillingAddress" value="true" checked="@Model.ShipToBillingAddress" />
+            <label for="instant-quote-ship-to-billing">@Localizer["Shipping address is the same as billing"]</label>
+        </div>
+        <fieldset class="instant-quote__address-fields" data-instant-quote-shipping-address>
+            <legend>@Localizer["Shipping address"]</legend>
+            <div><label for="instant-quote-shipping-building">@Localizer["Building"]</label><input id="instant-quote-shipping-building" name="ShippingBuilding" value="@Model.ShippingBuilding" autocomplete="shipping address-line1" maxlength="256" /></div>
+            <div><label for="instant-quote-shipping-street1">@Localizer["Street address"]</label><input id="instant-quote-shipping-street1" name="ShippingStreet1" value="@Model.ShippingStreet1" autocomplete="shipping address-line1" maxlength="256" aria-invalid="@AriaInvalid("ShippingStreet1")" aria-describedby="@ErrorId("ShippingStreet1")" />@FieldError("ShippingStreet1")</div>
+            <div><label for="instant-quote-shipping-street2">@Localizer["Sub-district"]</label><input id="instant-quote-shipping-street2" name="ShippingStreet2" value="@Model.ShippingStreet2" autocomplete="shipping address-line2" maxlength="256" /></div>
+            <div><label for="instant-quote-shipping-city">@Localizer["City / district"]</label><input id="instant-quote-shipping-city" name="ShippingCity" value="@Model.ShippingCity" autocomplete="shipping address-level2" maxlength="256" aria-invalid="@AriaInvalid("ShippingCity")" aria-describedby="@ErrorId("ShippingCity")" />@FieldError("ShippingCity")</div>
+            <div><label for="instant-quote-shipping-province">@Localizer["Province"]</label><input id="instant-quote-shipping-province" name="ShippingProvince" value="@Model.ShippingProvince" autocomplete="shipping address-level1" maxlength="256" aria-invalid="@AriaInvalid("ShippingProvince")" aria-describedby="@ErrorId("ShippingProvince")" />@FieldError("ShippingProvince")</div>
+            <div><label for="instant-quote-shipping-postal">@Localizer["Postal code"]</label><input id="instant-quote-shipping-postal" name="ShippingPostalCode" value="@Model.ShippingPostalCode" autocomplete="shipping postal-code" maxlength="20" aria-invalid="@AriaInvalid("ShippingPostalCode")" aria-describedby="@ErrorId("ShippingPostalCode")" />@FieldError("ShippingPostalCode")</div>
+            <div><label for="instant-quote-shipping-country">@Localizer["Country"]</label><select id="instant-quote-shipping-country" name="ShippingCountry" autocomplete="shipping country-name" aria-invalid="@AriaInvalid("ShippingCountry")" aria-describedby="@ErrorId("ShippingCountry")">@foreach (var country in Model.Countries){<option value="@country.Name" selected="@(string.Equals(country.Name, Model.ShippingCountry, StringComparison.OrdinalIgnoreCase))">@country.DisplayName</option>}</select>@FieldError("ShippingCountry")</div>
+        </fieldset>
+        <div>
+            <label for="instant-quote-description">@Localizer["Project details"]</label>
+            <textarea id="instant-quote-description" name="Description" maxlength="512" placeholder="@Localizer["Describe your project, material, quantity, tolerance, surface finish, deadline, or any other important details..."]" aria-invalid="@AriaInvalid("Description")" aria-describedby="@ErrorId("Description")">@Model.Description</textarea>
             @FieldError("Description")
         </div>
 
@@ -139,10 +182,21 @@
         "FirstName" => "instant-quote-firstname",
         "LastName" => "instant-quote-lastname",
         "Email" => "instant-quote-email",
+        "Mobile" => "instant-quote-mobile",
         "Telephone" => "instant-quote-telephone",
         "Country" => "instant-quote-country",
         "Company" => "instant-quote-company",
         "TaxNumber" => "instant-quote-taxnumber",
+        "TaxBranchCode" => "instant-quote-tax-branch-code",
+        "BillingStreet1" => "instant-quote-billing-street1",
+        "BillingCity" => "instant-quote-billing-city",
+        "BillingProvince" => "instant-quote-billing-province",
+        "BillingPostalCode" => "instant-quote-billing-postal",
+        "ShippingStreet1" => "instant-quote-shipping-street1",
+        "ShippingCity" => "instant-quote-shipping-city",
+        "ShippingProvince" => "instant-quote-shipping-province",
+        "ShippingPostalCode" => "instant-quote-shipping-postal",
+        "ShippingCountry" => "instant-quote-shipping-country",
         "Description" => "instant-quote-description",
         _ => "instant-quote-customer-heading",
     };
@@ -152,10 +206,21 @@
         "FirstName" => Localizer["First name"],
         "LastName" => Localizer["Last name"],
         "Email" => Localizer["Email"],
+        "Mobile" => Localizer["Mobile number"],
         "Telephone" => Localizer["Telephone"],
         "Country" => Localizer["Country"],
         "Company" => Localizer["Company"],
         "TaxNumber" => Localizer["Tax number"],
+        "TaxBranchCode" => Localizer["Branch code"],
+        "BillingStreet1" => Localizer["Billing street address"],
+        "BillingCity" => Localizer["Billing city"],
+        "BillingProvince" => Localizer["Billing province"],
+        "BillingPostalCode" => Localizer["Billing postal code"],
+        "ShippingStreet1" => Localizer["Shipping street address"],
+        "ShippingCity" => Localizer["Shipping city"],
+        "ShippingProvince" => Localizer["Shipping province"],
+        "ShippingPostalCode" => Localizer["Shipping postal code"],
+        "ShippingCountry" => Localizer["Shipping country"],
         "Description" => Localizer["Description"],
         _ => Localizer["Customer details"],
     };

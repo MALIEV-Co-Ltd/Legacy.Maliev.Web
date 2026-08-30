@@ -52,9 +52,9 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "https://www.maliev.com/services/silicone-casting",
                 "https://www.maliev.com/src/images/services/silicone-casting/silicone-casting-workflow.webp"),
             ["Custom Manufacturing"] = new(
-                "รับผลิตชิ้นส่วนตามแบบ",
+                "รับผลิตชิ้นงานตามแบบ",
                 "Custom Part Manufacturing",
-                "ประเมินงานรับผลิตชิ้นส่วนตามแบบและกำหนดเส้นทางระหว่าง CNC, 3D Printing และ 3D Scanning จากแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน ก่อนส่งต่อไปยังบริการเฉพาะทาง",
+                "ประเมินงานรับผลิตชิ้นงานตามแบบและกำหนดเส้นทางระหว่าง CNC, 3D Printing และ 3D Scanning จากแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน ก่อนส่งต่อไปยังบริการเฉพาะทาง",
                 "Manufacturing process selection for projects that may need CNC machining, 3D printing, or 3D scanning, based on the drawing or sample, material, quantity, critical features, and intended use.",
                 "https://www.maliev.com/services/custom-manufacturing",
                 "https://www.maliev.com/src/images/services/custom-manufacturing/custom-manufacturing-story.webp"),
@@ -64,12 +64,12 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "รับฉีดพลาสติกจำนวนน้อยสำหรับงานทดลองและงานผลิตซ้ำไม่เกิน 1,000 ชิ้น ด้วยเครื่องระบบลม รองรับน้ำหนักฉีดสูงสุด 50 กรัม และพลาสติกที่มีอุณหภูมิหลอมไม่เกิน 350 °C",
                 "Low-volume injection molding for pilot runs and repeat batches up to 1,000 parts on a pneumatic PIMM machine, with shot weights up to 50 g and plastics melting at no more than 350 °C.",
                 "https://www.maliev.com/services/low-volume-injection-molding",
-                "https://www.maliev.com/src/images/services/injection-molding/injection-service-hero-wide.png"),
+                "https://www.maliev.com/src/images/services/injection-molding/injection-service-hero-wide.webp"),
             ["Finishing and Color"] = new(
-                "บริการเก็บผิวและมาตรฐานสี",
-                "3D Printed Part Finishing and Colour Standards",
-                "กำหนดสี ระดับความเงา การเตรียมผิว รอยต่อ และเกณฑ์ตรวจรับสำหรับชิ้นงานพิมพ์ 3 มิติก่อนผลิต",
-                "Finishing guidance for 3D printed parts, including colour standards, sheen, surface preparation, seams, and acceptance criteria before production.",
+                "บริการเก็บผิวและทำสีชิ้นงานพิมพ์ 3 มิติ",
+                "3D Print Finishing and Colour Services",
+                "กำหนดและดำเนินงานเตรียมผิว อุดรอยต่อ พ่นสี และเคลือบชิ้นงานพิมพ์ 3 มิติ โดยยืนยันสี ระดับความเงา และเกณฑ์ตรวจรับก่อนผลิต",
+                "Surface preparation, seam filling, painting, and clear coating for 3D-printed parts, with colour, sheen, and acceptance criteria confirmed before production.",
                 "https://www.maliev.com/services/finishing-and-color",
                 "https://www.maliev.com/src/images/services/printing/printing-finish-color-approval.webp")
         };

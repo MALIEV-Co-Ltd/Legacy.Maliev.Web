@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class PublicServiceFaqStructuredDataParityTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class PublicServiceFaqStructuredDataParityTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public PublicServiceFaqStructuredDataParityTests(WebApplicationFactory<Program> factory)
+    public PublicServiceFaqStructuredDataParityTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Theory]

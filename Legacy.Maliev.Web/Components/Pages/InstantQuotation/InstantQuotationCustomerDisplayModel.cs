@@ -22,6 +22,24 @@ public sealed record InstantQuotationCustomerDisplayModel(
 
     public IReadOnlyList<string> InvalidFields { get; init; } = [];
 
+    public string Mobile { get; init; } = string.Empty;
+    public string BillingBuilding { get; init; } = string.Empty;
+    public string BillingStreet1 { get; init; } = string.Empty;
+    public string BillingStreet2 { get; init; } = string.Empty;
+    public string BillingCity { get; init; } = string.Empty;
+    public string BillingProvince { get; init; } = string.Empty;
+    public string BillingPostalCode { get; init; } = string.Empty;
+    public string TaxBranch { get; init; } = "head-office";
+    public string TaxBranchCode { get; init; } = string.Empty;
+    public bool ShipToBillingAddress { get; init; } = true;
+    public string ShippingBuilding { get; init; } = string.Empty;
+    public string ShippingStreet1 { get; init; } = string.Empty;
+    public string ShippingStreet2 { get; init; } = string.Empty;
+    public string ShippingCity { get; init; } = string.Empty;
+    public string ShippingProvince { get; init; } = string.Empty;
+    public string ShippingPostalCode { get; init; } = string.Empty;
+    public string ShippingCountry { get; init; } = string.Empty;
+
     public static InstantQuotationCustomerDisplayModel Empty { get; } = new(
         string.Empty,
         string.Empty,

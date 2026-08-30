@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CncMachiningStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CncMachiningStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -66,14 +66,14 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
     [Theory]
     [InlineData(
         "en",
-        "CNC Machining Services in Bangkok & Nonthaburi | One-Off and Production Parts",
-        "CNC milling and turning for one-off parts, prototypes, jigs and production. Common JIS metals and engineering plastics. Send CAD and drawings for a quote.",
+        "CNC Machining Services Across Thailand | One-Off and Production Parts",
+        "CNC milling and turning for customers across Thailand, from one-off parts and prototypes to jigs and repeat production. Send CAD and drawings for a quote.",
         "Precision CNC Machining for One-Off and Production Parts",
         "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi")]
     [InlineData(
         "th",
-        "รับงาน CNC ตามแบบ กรุงเทพและนนทบุรี | งานชิ้นเดียวถึงงานผลิต",
-        "MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน ตั้งแต่งานชิ้นเดียว ต้นแบบ จิ๊ก ไปจนถึงงานผลิตซ้ำ รองรับโลหะและพลาสติกวิศวกรรม",
+        "รับงาน CNC ตามแบบทั่วประเทศไทย | อะลูมิเนียมชิ้นเดียวถึงงานผลิต",
+        "MALIEV รับ CNC อะลูมิเนียมชิ้นเดียวและผลิตชิ้นงานตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ส่ง CAD แบบ 2D วัสดุ และจำนวนเพื่อให้ตรวจสอบและเสนอราคา",
         "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต",
         "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
@@ -137,7 +137,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
 
     [Theory]
     [InlineData("en", "CNC Machining Services", "Can you machine only one piece?")]
-    [InlineData("th", "บริการรับงาน CNC ตามแบบ", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
+    [InlineData("th", "บริการรับงาน CNC ตามแบบ", "รับ CNC อะลูมิเนียมชิ้นเดียวได้หรือไม่?")]
     public async Task Route_PreservesServiceAndFaqStructuredData(
         string culture,
         string serviceName,
@@ -159,6 +159,42 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
     }
 
+    [Theory]
+    [InlineData(
+        "en",
+        "What general tolerance applies to CNC parts?",
+        "Unless the drawing or quotation specifies otherwise, ISO 2768-1 tolerance class m is the default and applies only to linear and angular dimensions without individual tolerance indications.",
+        "Drawing-specific requirements override the general tolerance.",
+        "Critical or tighter tolerances require engineering review and explicit confirmation in the quotation before production.")]
+    [InlineData(
+        "th",
+        "งาน CNC ใช้ค่าคลาดเคลื่อนทั่วไปใด?",
+        "หากแบบงานหรือใบเสนอราคาไม่ได้ระบุเป็นอย่างอื่น ISO 2768-1 ระดับ m เป็นค่าคลาดเคลื่อนทั่วไปเริ่มต้น และใช้เฉพาะขนาดเชิงเส้นและเชิงมุมที่ไม่ได้กำหนดค่าคลาดเคลื่อนเป็นรายจุด",
+        "ข้อกำหนดเฉพาะในแบบงานมีผลเหนือกว่าค่าคลาดเคลื่อนทั่วไป",
+        "ค่าคลาดเคลื่อนสำคัญหรือแคบกว่าต้องผ่านการตรวจสอบทางวิศวกรรมและยืนยันอย่างชัดเจนในใบเสนอราคาก่อนผลิต")]
+    public async Task Route_PublishesTheReviewedGeneralToleranceContract(
+        string culture,
+        string question,
+        string scope,
+        string precedence,
+        string confirmation)
+    {
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(question, source, StringComparison.Ordinal);
+        Assert.Contains(scope, source, StringComparison.Ordinal);
+        Assert.Contains(precedence, source, StringComparison.Ordinal);
+        Assert.Contains(confirmation, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ISO 2763", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ISO 9001", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ISO 13485", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("AS9100", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("IATF", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void SourceVisibleCncCopyAndPricingRemainExact()
     {
@@ -167,7 +203,9 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
         Assert.Contains("We accept one-off parts when the geometry, material, and project scope are feasible.", content, StringComparison.Ordinal);
-        Assert.Contains("รับงานชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง", content, StringComparison.Ordinal);
+        Assert.Contains("รับงาน CNC อะลูมิเนียมชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง", content, StringComparison.Ordinal);
+        Assert.Contains("รวมงานอะลูมิเนียมชิ้นเดียว", content, StringComparison.Ordinal);
+        Assert.Contains("ส่ง CAD แบบ 2D ระบุวัสดุและจำนวนเพื่อให้ตรวจสอบก่อนเสนอราคา", content, StringComparison.Ordinal);
         Assert.Contains("CNC machining starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
         Assert.Contains("What file formats should I send?", content, StringComparison.Ordinal);
@@ -177,9 +215,15 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         Assert.Contains("รมดำสำหรับชิ้นงานเหล็ก", pricing, StringComparison.Ordinal);
         Assert.Contains("เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", pricing, StringComparison.Ordinal);
         Assert.Contains("Standard aluminium anodizing", pricing, StringComparison.Ordinal);
-        Assert.Contains("Starts at approximately THB 2,500 per lot; depends on part size and processing complexity", pricing, StringComparison.Ordinal);
+        Assert.Contains("Minimum THB 1,100 per batch", pricing, StringComparison.Ordinal);
+        Assert.Contains("includes the THB 800 batch handling fee and up to 60 sq. in.", pricing, StringComparison.Ordinal);
+        Assert.Contains("Additional coated area is THB 5 per sq. in.", pricing, StringComparison.Ordinal);
         Assert.Contains("อะโนไดซ์อะลูมิเนียมมาตรฐาน", pricing, StringComparison.Ordinal);
-        Assert.Contains("เริ่มต้นประมาณ 2,500 บาทต่อชุด ขึ้นอยู่กับขนาดชิ้นงานและความยากในการชุบ", pricing, StringComparison.Ordinal);
+        Assert.Contains("ขั้นต่ำ 1,100 บาทต่อชุดงาน", pricing, StringComparison.Ordinal);
+        Assert.Contains("รวมค่าดำเนินการต่อชุด 800 บาทและพื้นที่ผิวรวมไม่เกิน 60 ตร.นิ้ว", pricing, StringComparison.Ordinal);
+        Assert.Contains("พื้นที่ผิวส่วนเกินคิด 5 บาทต่อตร.นิ้ว", pricing, StringComparison.Ordinal);
+        Assert.DoesNotContain("THB 2,500 per lot", pricing, StringComparison.Ordinal);
+        Assert.DoesNotContain("2,500 บาทต่อชุด", pricing, StringComparison.Ordinal);
         Assert.Contains("Hard or custom-colour anodizing", pricing, StringComparison.Ordinal);
         Assert.Contains("Plan approximately THB 6,000–15,000+ per lot", pricing, StringComparison.Ordinal);
         Assert.Contains("ฮาร์ดอะโนไดซ์หรือสีพิเศษ", pricing, StringComparison.Ordinal);
@@ -193,8 +237,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
     }
 
     [Theory]
-    [InlineData("en", "Starts at approximately THB 1,500 per batch", "Starts at approximately THB 2,500 per lot; depends on part size and processing complexity", "Plan approximately THB 6,000–15,000+ per lot")]
-    [InlineData("th", "เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", "เริ่มต้นประมาณ 2,500 บาทต่อชุด ขึ้นอยู่กับขนาดชิ้นงานและความยากในการชุบ", "วางแผนประมาณ 6,000–15,000+ บาทต่อชุดงาน")]
+    [InlineData("en", "Starts at approximately THB 1,500 per batch", "Minimum THB 1,100 per batch", "Plan approximately THB 6,000–15,000+ per lot")]
+    [InlineData("th", "เริ่มต้นประมาณ 1,500 บาทต่อชุดงาน", "ขั้นต่ำ 1,100 บาทต่อชุดงาน", "วางแผนประมาณ 6,000–15,000+ บาทต่อชุดงาน")]
     public async Task Route_RendersExactLocalizedCncFinishingEstimates(
         string culture,
         string blackOxide,
@@ -243,7 +287,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<WebA
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>CNC Machining Services in Bangkok &amp; Nonthaburi | One-Off and Production Parts</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>CNC Machining Services Across Thailand | One-Off and Production Parts</title>", source, StringComparison.Ordinal);
+        Assert.Contains("ISO 2768-1 tolerance class m", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);

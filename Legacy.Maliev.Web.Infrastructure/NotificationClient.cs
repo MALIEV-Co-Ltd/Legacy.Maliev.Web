@@ -14,6 +14,20 @@ internal sealed class NotificationClient(
     public async Task<NotificationResult> SendAsync(
         NotificationChannel channel,
         EmailNotification notification,
+        CancellationToken cancellationToken) =>
+        await SendCoreAsync(channel, notification, operationId: null, cancellationToken);
+
+    public async Task<NotificationResult> SendIdempotentAsync(
+        NotificationChannel channel,
+        EmailNotification notification,
+        Guid operationId,
+        CancellationToken cancellationToken) =>
+        await SendCoreAsync(channel, notification, operationId, cancellationToken);
+
+    private async Task<NotificationResult> SendCoreAsync(
+        NotificationChannel channel,
+        EmailNotification notification,
+        Guid? operationId,
         CancellationToken cancellationToken)
     {
         var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
@@ -32,6 +46,10 @@ internal sealed class NotificationClient(
                 Content = JsonContent.Create(notification)
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            if (operationId.HasValue)
+            {
+                request.Headers.TryAddWithoutValidation("Idempotency-Key", operationId.Value.ToString("D"));
+            }
             using var response = await clientFactory.CreateClient("notifications")
                 .SendAsync(request, cancellationToken);
 

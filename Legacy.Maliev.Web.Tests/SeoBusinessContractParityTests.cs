@@ -63,7 +63,7 @@ public sealed class SeoBusinessContractParityTests
         {
             ["/"] = ["รับผลิตชิ้นส่วน", "Custom Manufacturing Services"],
             ["/services"] = ["บริการผลิตชิ้นส่วน", "Manufacturing services"],
-            ["/services/custom-manufacturing"] = ["รับผลิตชิ้นส่วนตามแบบ", "Custom Part Manufacturing"],
+            ["/services/custom-manufacturing"] = ["รับผลิตชิ้นงานตามแบบ", "Custom Part Manufacturing"],
             ["/services/3d-design"] = ["รับออกแบบ 3 มิติ", "3D Design"],
             ["/services/silicone-casting"] = ["รับหล่อซิลิโคน", "Silicone Casting"],
             ["/services/low-volume-injection-molding"] = ["รับฉีดพลาสติก", "Low-Volume Injection Molding"],
@@ -86,6 +86,28 @@ public sealed class SeoBusinessContractParityTests
             {
                 Assert.Contains("/quotation", source, StringComparison.OrdinalIgnoreCase);
             }
+        }
+    }
+
+    [Fact]
+    public void ThreeDimensionalPrintingTitleRepresentsNationwideService()
+    {
+        var component = Read("Services/ThreeDimensionalPrintingPage.razor");
+        var fallback = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "Pages",
+            "Services",
+            "3D-Printing.cshtml"));
+
+        foreach (var source in new[] { component, fallback })
+        {
+            Assert.Contains("Custom 3D Printing in Thailand | Upload for Instant Pricing | MALIEV", source, StringComparison.Ordinal);
+            Assert.Contains("รับปริ้น 3D รับพิมพ์ 3 มิติ | ประเมินราคาออนไลน์ | MALIEV", source, StringComparison.Ordinal);
+            var titleBoundary = source[..source.IndexOf("Description", StringComparison.OrdinalIgnoreCase)];
+            Assert.DoesNotContain("Bangkok", titleBoundary, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("กรุงเทพ", titleBoundary, StringComparison.Ordinal);
+            Assert.DoesNotContain("นนทบุรี", titleBoundary, StringComparison.Ordinal);
         }
     }
 

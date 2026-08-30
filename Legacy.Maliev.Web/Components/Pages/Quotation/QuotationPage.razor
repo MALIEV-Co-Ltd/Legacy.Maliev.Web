@@ -1,5 +1,4 @@
 @page "/Quotation"
-@page "/Quotation/{RouteItem?}/{RouteProcess?}/{RouteMaterial?}"
 @using System.Globalization
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
@@ -19,7 +18,7 @@
 @{
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-    var requestedItem = (RouteItem ?? Item ?? string.Empty).Trim().ToLowerInvariant();
+    var requestedItem = (Item ?? string.Empty).Trim().ToLowerInvariant();
     var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
     var title = isThai
         ? requestedItem switch
@@ -73,6 +72,7 @@
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
+    <meta name="robots" content="noindex,follow" />
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
@@ -195,15 +195,6 @@
     [SupplyParameterFromQuery(Name = "finish_sheen")]
     public string? FinishSheen { get; set; }
 
-    [Parameter]
-    public string? RouteItem { get; set; }
-
-    [Parameter]
-    public string? RouteProcess { get; set; }
-
-    [Parameter]
-    public string? RouteMaterial { get; set; }
-
     protected override async Task OnParametersSetAsync()
     {
         var context = HttpContextAccessor.HttpContext
@@ -218,9 +209,9 @@
             };
         var prefill = QuotationPrefill.Create(
             Culture,
-            RouteItem ?? Item,
-            RouteProcess ?? Process,
-            RouteMaterial ?? Material,
+            Item,
+            Process,
+            Material,
             FinishHex,
             FinishHlc,
             FinishLab,

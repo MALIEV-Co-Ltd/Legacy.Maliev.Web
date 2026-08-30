@@ -41,6 +41,34 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public string? Company { get; set; }
 
     [BindProperty]
+    [StringLength(256)]
+    public string? BillingBuilding { get; set; }
+
+    [BindProperty]
+    [Required]
+    [StringLength(256)]
+    public string BillingStreet1 { get; set; } = string.Empty;
+
+    [BindProperty]
+    [StringLength(256)]
+    public string? BillingStreet2 { get; set; }
+
+    [BindProperty]
+    [Required]
+    [StringLength(256)]
+    public string BillingCity { get; set; } = string.Empty;
+
+    [BindProperty]
+    [Required]
+    [StringLength(256)]
+    public string BillingProvince { get; set; } = string.Empty;
+
+    [BindProperty]
+    [Required]
+    [StringLength(20)]
+    public string BillingPostalCode { get; set; } = string.Empty;
+
+    [BindProperty]
     [Required]
     [StringLength(50)]
     public string Country { get; set; } = string.Empty;
@@ -68,13 +96,57 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public string LastName { get; set; } = string.Empty;
 
     [BindProperty]
+    [Required]
+    [StringLength(50)]
+    public string Mobile { get; set; } = string.Empty;
+
+    [BindProperty]
+    [RegularExpression(@"^[0-9]{13}$", ErrorMessage = "Thai tax ID must contain exactly 13 digits.")]
     [StringLength(50)]
     public string? TaxNumber { get; set; }
 
     [BindProperty]
-    [Required]
+    public string TaxBranch { get; set; } = "head-office";
+
+    [BindProperty]
+    [RegularExpression(@"^[0-9]{5}$")]
+    [StringLength(5)]
+    public string? TaxBranchCode { get; set; }
+
+    [BindProperty]
+    public bool ShipToBillingAddress { get; set; } = true;
+
+    [BindProperty]
+    [StringLength(256)]
+    public string? ShippingBuilding { get; set; }
+
+    [BindProperty]
+    [StringLength(256)]
+    public string? ShippingStreet1 { get; set; }
+
+    [BindProperty]
+    [StringLength(256)]
+    public string? ShippingStreet2 { get; set; }
+
+    [BindProperty]
+    [StringLength(256)]
+    public string? ShippingCity { get; set; }
+
+    [BindProperty]
+    [StringLength(256)]
+    public string? ShippingProvince { get; set; }
+
+    [BindProperty]
+    [StringLength(20)]
+    public string? ShippingPostalCode { get; set; }
+
+    [BindProperty]
     [StringLength(50)]
-    public string Telephone { get; set; } = string.Empty;
+    public string? ShippingCountry { get; set; }
+
+    [BindProperty]
+    [StringLength(50)]
+    public string? Telephone { get; set; }
 
     public void OnGet()
     {
@@ -112,6 +184,8 @@ public sealed class ThreeDimensionalPrinting : PageModel
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
+        NormalizeOptionalCustomerFields();
+        ValidateConditionalCustomerFields();
         if (!ModelState.IsValid)
         {
             var invalidFields = ModelState
@@ -156,11 +230,26 @@ public sealed class ThreeDimensionalPrinting : PageModel
                     FirstName.Trim(),
                     LastName.Trim(),
                     Email.Trim(),
-                    Telephone.Trim(),
+                    NormalizeOptional(Telephone),
                     Country.Trim(),
-                    NormalizeOptional(Company),
-                    NormalizeOptional(TaxNumber),
-                    NormalizeOptional(Description)),
+                    Company,
+                    FormattedTaxNumber(),
+                    NormalizeOptional(Description),
+                    Mobile.Trim(),
+                    NormalizeOptional(BillingBuilding),
+                    BillingStreet1.Trim(),
+                    NormalizeOptional(BillingStreet2),
+                    BillingCity.Trim(),
+                    BillingProvince.Trim(),
+                    BillingPostalCode.Trim(),
+                    ShipToBillingAddress,
+                    NormalizeOptional(ShippingBuilding),
+                    NormalizeOptional(ShippingStreet1),
+                    NormalizeOptional(ShippingStreet2),
+                    NormalizeOptional(ShippingCity),
+                    NormalizeOptional(ShippingProvince),
+                    NormalizeOptional(ShippingPostalCode),
+                    NormalizeOptional(ShippingCountry)),
                 cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -179,6 +268,95 @@ public sealed class ThreeDimensionalPrinting : PageModel
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    internal void NormalizeOptionalCustomerFields()
+    {
+        Company = NormalizeOptionalCustomerText(Company);
+        TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
+        TaxBranchCode = NormalizeOptionalCustomerText(TaxBranchCode);
+        RevalidateOptionalCustomerField(nameof(Company));
+        RevalidateOptionalCustomerField(nameof(TaxNumber));
+        RevalidateOptionalCustomerField(nameof(TaxBranchCode));
+    }
+
+    private void ValidateConditionalCustomerFields()
+    {
+        if (!string.IsNullOrWhiteSpace(TaxNumber)
+            && string.Equals(TaxBranch, "branch", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(TaxBranchCode))
+        {
+            ModelState.AddModelError(nameof(TaxBranchCode), "Branch code is required.");
+        }
+
+        if (ShipToBillingAddress)
+        {
+            return;
+        }
+
+        Require(nameof(ShippingStreet1), ShippingStreet1);
+        Require(nameof(ShippingCity), ShippingCity);
+        Require(nameof(ShippingProvince), ShippingProvince);
+        Require(nameof(ShippingPostalCode), ShippingPostalCode);
+        Require(nameof(ShippingCountry), ShippingCountry);
+    }
+
+    private void Require(string field, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            ModelState.AddModelError(field, "This shipping field is required.");
+        }
+    }
+
+    private string? FormattedTaxNumber()
+    {
+        if (string.IsNullOrWhiteSpace(TaxNumber))
+        {
+            return null;
+        }
+
+        var branch = string.Equals(TaxBranch, "branch", StringComparison.OrdinalIgnoreCase)
+            ? $"สาขาที่ {TaxBranchCode}"
+            : "สำนักงานใหญ่";
+        return $"{TaxNumber} ({branch})";
+    }
+
+    private void RevalidateOptionalCustomerField(string propertyName)
+    {
+        ModelState.Remove(propertyName);
+        var property = GetType().GetProperty(propertyName)
+            ?? throw new InvalidOperationException($"Customer field '{propertyName}' was not found.");
+        var validationResults = new List<ValidationResult>();
+        Validator.TryValidateProperty(
+            property.GetValue(this),
+            new ValidationContext(this) { MemberName = propertyName },
+            validationResults);
+        foreach (var validationResult in validationResults)
+        {
+            ModelState.AddModelError(
+                propertyName,
+                validationResult.ErrorMessage ?? "The customer field is invalid.");
+        }
+    }
+
+    private static string? NormalizeOptionalCustomerText(string? value)
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized)
+            || normalized.All(static character => character is '-'
+                or '\u2010'
+                or '\u2011'
+                or '\u2012'
+                or '\u2013'
+                or '\u2014'
+                or '\u2015'
+                or '\u2212'))
+        {
+            return null;
+        }
+
+        return normalized;
+    }
 
     private void StoreResult(InstantQuotationSubmissionResult result)
     {
@@ -231,6 +409,6 @@ public sealed class ThreeDimensionalPrinting : PageModel
     }
 
     private static readonly IReadOnlySet<string> ControlledValidationFields = new HashSet<string>(
-        [nameof(FirstName), nameof(LastName), nameof(Email), nameof(Telephone), nameof(Country), nameof(Company), nameof(TaxNumber), nameof(Description)],
+        [nameof(FirstName), nameof(LastName), nameof(Email), nameof(Mobile), nameof(Telephone), nameof(Country), nameof(Company), nameof(TaxNumber), nameof(TaxBranchCode), nameof(BillingStreet1), nameof(BillingCity), nameof(BillingProvince), nameof(BillingPostalCode), nameof(ShippingStreet1), nameof(ShippingCity), nameof(ShippingProvince), nameof(ShippingPostalCode), nameof(ShippingCountry), nameof(Description)],
         StringComparer.Ordinal);
 }

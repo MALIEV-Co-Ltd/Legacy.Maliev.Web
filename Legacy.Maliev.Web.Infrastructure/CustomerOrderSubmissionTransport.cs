@@ -39,17 +39,18 @@ internal sealed class CustomerOrderSubmissionTransport(
             draft.ColorId,
             draft.Quantity,
             Manufactured: 0,
-            UnitPrice: null,
+            draft.UnitPrice,
             DiscountPercent: null,
-            CurrencyId: null,
-            LeadTime: null,
+            draft.CurrencyId,
+            draft.LeadTime,
             PromisedDate: null,
             FinishedDate: null,
-            Comment: null,
+            draft.Comment,
             draft.AllowSocialMedia,
-            AllowCancellation: true,
+            draft.AllowCancellation,
             AllowPayment: false,
-            TrackingNumber: null);
+            TrackingNumber: null,
+            OperationKey: idempotencyKey);
 
         try
         {
@@ -96,6 +97,30 @@ internal sealed class CustomerOrderSubmissionTransport(
         {
             logger.LogWarning("Order service was unavailable while adding the initial customer order status.");
             return new(false, false, true, false);
+        }
+    }
+
+    public async Task<bool> DeleteAsync(int orderId, CancellationToken cancellationToken)
+    {
+        var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token)) return false;
+
+        try
+        {
+            using var request = Authorized(HttpMethod.Delete, $"orders/{orderId}", token);
+            using var response = await clientFactory.CreateClient("orders").SendAsync(request, cancellationToken);
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                tokenProvider.Invalidate(token);
+                return false;
+            }
+
+            return response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound;
+        }
+        catch (Exception exception) when (IsTransient(exception, cancellationToken))
+        {
+            logger.LogWarning("Order service was unavailable during instant quotation compensation.");
+            return false;
         }
     }
 
@@ -276,7 +301,8 @@ internal sealed class CustomerOrderSubmissionTransport(
         bool AllowSocialMedia,
         bool AllowCancellation,
         bool AllowPayment,
-        string? TrackingNumber);
+        string? TrackingNumber,
+        string OperationKey);
 
     private sealed record CreatedOrderResponse(int Id);
     private sealed record UploadResponse(IReadOnlyList<UploadedObjectResponse>? Object);

@@ -88,13 +88,186 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
                 "+66 80 000 0000",
                 "TH",
                 "Analytical Engines",
-                "TAX-42",
-                "Please quote this part."),
+                "0105559123456 (สำนักงานใหญ่)",
+                "Please quote this part.",
+                "+66 89 000 0000",
+                "88",
+                "Billing Road",
+                null,
+                "Bangkok",
+                "Bangkok",
+                "10110"),
             call.Customer);
         AssertSafeCompletedTempData(tempData.Values, 718);
         Assert.DoesNotContain("Ada", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         Assert.DoesNotContain(response.Headers, header =>
             string.Join(',', header.Value).Contains("attacker", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("-")]
+    [InlineData(" -- ")]
+    [InlineData("—")]
+    public async Task DashOnlyOptionalCompanyAndTax_AreNormalizedBeforePersistence(string placeholder)
+    {
+        var service = new RecordingSubmissionService(Completed(725));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["Company"] = placeholder,
+                ["TaxNumber"] = placeholder,
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var call = Assert.Single(service.Calls);
+        Assert.Null(call.Customer.CompanyName);
+        Assert.Null(call.Customer.TaxIdentification);
+    }
+
+    [Fact]
+    public async Task HyphenatedCompanyAndValidTax_AreTrimmedAndPreserved()
+    {
+        var service = new RecordingSubmissionService(Completed(726));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["Company"] = "  A-B Manufacturing  ",
+                ["TaxNumber"] = "  0105559123456  ",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var call = Assert.Single(service.Calls);
+        Assert.Equal("A-B Manufacturing", call.Customer.CompanyName);
+        Assert.Equal("0105559123456 (สำนักงานใหญ่)", call.Customer.TaxIdentification);
+    }
+
+    [Fact]
+    public async Task BranchTaxAndSeparateShipping_AreValidatedFormattedAndPreserved()
+    {
+        var service = new RecordingSubmissionService(Completed(728));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["TaxBranch"] = "branch",
+                ["TaxBranchCode"] = "00007",
+                ["ShipToBillingAddress"] = "false",
+                ["ShippingBuilding"] = "99",
+                ["ShippingStreet1"] = "Shipping Road",
+                ["ShippingStreet2"] = "Bang Na Nuea",
+                ["ShippingCity"] = "Bang Na",
+                ["ShippingProvince"] = "Bangkok",
+                ["ShippingPostalCode"] = "10260",
+                ["ShippingCountry"] = "Thailand",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var customer = Assert.Single(service.Calls).Customer;
+        Assert.Equal("0105559123456 (สาขาที่ 00007)", customer.TaxIdentification);
+        Assert.False(customer.ShipToBillingAddress);
+        Assert.Equal("99", customer.ShippingBuilding);
+        Assert.Equal("Shipping Road", customer.ShippingAddressLine1);
+        Assert.Equal("Bang Na Nuea", customer.ShippingAddressLine2);
+        Assert.Equal("Bang Na", customer.ShippingCity);
+        Assert.Equal("Bangkok", customer.ShippingProvince);
+        Assert.Equal("10260", customer.ShippingPostalCode);
+        Assert.Equal("Thailand", customer.ShippingCountry);
+    }
+
+    [Fact]
+    public async Task ShippingSelectionOmitted_DefaultsToBillingAddress()
+    {
+        var service = new RecordingSubmissionService(Completed(730));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(
+                new() { ["__RequestVerificationToken"] = token },
+                includeShipToBilling: false));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var customer = Assert.Single(service.Calls).Customer;
+        Assert.True(customer.ShipToBillingAddress);
+        Assert.Null(customer.ShippingAddressLine1);
+        Assert.Null(customer.ShippingCountry);
+    }
+
+    [Fact]
+    public async Task SeparateShippingWithoutRequiredFields_FailsWithOnlyControlledFieldNames()
+    {
+        var service = new RecordingSubmissionService(Completed(729));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["ShipToBillingAddress"] = "false",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(service.Calls);
+        var fields = JsonSerializer.Deserialize<string[]>(
+            Assert.IsType<string>(tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.Equal(
+            ["ShippingCity", "ShippingCountry", "ShippingPostalCode", "ShippingProvince", "ShippingStreet1"],
+            fields!);
+    }
+
+    [Theory]
+    [InlineData("123456789012")]
+    [InlineData("12345678901234")]
+    [InlineData("12345678901A3")]
+    public async Task NonEmptyTaxNumberWithoutExactlyThirteenDigits_IsRejected(string taxNumber)
+    {
+        var service = new RecordingSubmissionService(Completed(727));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["TaxNumber"] = taxNumber,
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(service.Calls);
+        Assert.Equal("validation", tempData.Values[ThreeDimensionalPrinting.ProblemCategoryTempDataKey]);
+        var fields = JsonSerializer.Deserialize<string[]>(
+            Assert.IsType<string>(tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.Equal(["TaxNumber"], fields);
     }
 
     [Fact]
@@ -337,7 +510,9 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         return match.Groups["value"].Value;
     }
 
-    private static FormUrlEncodedContent CustomerForm(Dictionary<string, string>? additions = null)
+    private static FormUrlEncodedContent CustomerForm(
+        Dictionary<string, string>? additions = null,
+        bool includeShipToBilling = true)
     {
         var fields = new Dictionary<string, string>
         {
@@ -345,11 +520,22 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             ["LastName"] = " Lovelace ",
             ["Email"] = " ada@example.com ",
             ["Telephone"] = " +66 80 000 0000 ",
+            ["Mobile"] = " +66 89 000 0000 ",
             ["Company"] = " Analytical Engines ",
-            ["TaxNumber"] = " TAX-42 ",
+            ["TaxNumber"] = " 0105559123456 ",
+            ["TaxBranch"] = "head-office",
             ["Country"] = " TH ",
             ["Description"] = " Please quote this part. ",
+            ["BillingBuilding"] = " 88 ",
+            ["BillingStreet1"] = " Billing Road ",
+            ["BillingCity"] = " Bangkok ",
+            ["BillingProvince"] = " Bangkok ",
+            ["BillingPostalCode"] = " 10110 ",
         };
+        if (includeShipToBilling)
+        {
+            fields["ShipToBillingAddress"] = "true";
+        }
         foreach (var (key, value) in additions ?? [])
         {
             fields[key] = value;

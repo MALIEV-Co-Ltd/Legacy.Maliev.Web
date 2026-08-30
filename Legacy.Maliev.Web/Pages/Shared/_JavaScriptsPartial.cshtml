@@ -1,2 +1,7 @@
+@using Legacy.Maliev.Web.Components.Layout
 <script src="~/dist/vendor.min.js" asp-append-version="true"></script>
 <script src="~/dist/app.min.js" asp-append-version="true"></script>
+@foreach (var routeScript in PublicRouteAssets.GetScripts(Context.Request.Path))
+{
+    <script src="~/dist/@routeScript" asp-append-version="true"></script>
+}

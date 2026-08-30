@@ -12,14 +12,14 @@ public sealed class SourceAssetParityTests
         var root = FindRepositoryRoot();
         foreach (var relativePath in new[]
         {
-            "Legacy.Maliev.Web/wwwroot/src/images/f-ogo_RGB_HEX-58.png",
-            "Legacy.Maliev.Web/wwwroot/src/images/services/injection-molding/injection-service-hero.png",
+            "Legacy.Maliev.Web/wwwroot/src/images/f-ogo_RGB_HEX-58.webp",
+            "Legacy.Maliev.Web/wwwroot/src/images/services/injection-molding/injection-service-hero.webp",
             "Legacy.Maliev.Web/wwwroot/src/images/services/scanning/art/scanning-art-cad-reconstruction.webp",
             "Legacy.Maliev.Web/wwwroot/src/images/services/scanning/art/scanning-art-deviation-analysis.webp",
-            "Legacy.Maliev.Web/wwwroot/favicon-16x16.png",
-            "Legacy.Maliev.Web/wwwroot/favicon-32x32.png",
-            "Legacy.Maliev.Web/wwwroot/apple-touch-icon.png",
-            "Legacy.Maliev.Web/wwwroot/favicon.png",
+            "Legacy.Maliev.Web/wwwroot/favicon-16x16.webp",
+            "Legacy.Maliev.Web/wwwroot/favicon-32x32.webp",
+            "Legacy.Maliev.Web/wwwroot/apple-touch-icon.webp",
+            "Legacy.Maliev.Web/wwwroot/favicon.webp",
         })
         {
             var path = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));

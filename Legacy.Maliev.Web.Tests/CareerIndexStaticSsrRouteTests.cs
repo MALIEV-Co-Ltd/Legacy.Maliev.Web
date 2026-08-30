@@ -6,13 +6,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CareerIndexStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CareerIndexStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -119,6 +119,18 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<WebApplicatio
         Assert.Equal(1, CountAlternate(source, "th", "https://www.maliev.com/career"));
         Assert.Equal(1, CountAlternate(source, "x-default", "https://www.maliev.com/career"));
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CareerRoute_RejectsMalformedPageSize()
+    {
+        var clientStub = new CapturingCareerClient();
+        await using var routeFactory = CreateFactory(clientStub);
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync("/career?handler=ChangeItemCount&size=invalid-size");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(clientStub.LastRequest);
     }
 
     [Fact]

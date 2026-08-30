@@ -140,16 +140,28 @@ internal sealed class CustomerAuthenticationClient(
             "auth/v1/customer-self-service/register",
             new RegisterRequest(databaseId, email, password),
             cancellationToken);
-        if (response is null || !response.IsSuccessStatusCode)
+        if (response is null)
         {
-            if (response is not null && response.StatusCode != HttpStatusCode.Conflict)
+            return new(false, null, null, null, ServiceAvailable: false);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            if (response.StatusCode != HttpStatusCode.Conflict)
             {
                 logger.LogWarning(
                     "Auth service rejected customer identity registration with status {StatusCode}.",
                     response.StatusCode);
             }
 
-            return new(false, null, null, null);
+            return new(
+                false,
+                null,
+                null,
+                null,
+                ServiceAvailable: (int)response.StatusCode < 500,
+                Authorized: response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden),
+                Conflict: response.StatusCode == HttpStatusCode.Conflict);
         }
 
         return await ReadJsonOrNullAsync<CustomerIdentityRegistration>(
@@ -157,6 +169,40 @@ internal sealed class CustomerAuthenticationClient(
                 "customer identity registration",
                 cancellationToken)
             ?? new(false, null, null, null);
+    }
+
+    public async Task<CustomerIdentityRegistration> ResolveRegistrationAsync(
+        int databaseId,
+        string email,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendServiceRequestAsync(
+            HttpMethod.Post,
+            "auth/v1/customer-self-service/register/resolve",
+            new ResolveRegistrationRequest(databaseId, email, password),
+            cancellationToken);
+        if (response is null)
+        {
+            return new(false, null, null, null, ServiceAvailable: false);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return new(
+                false,
+                null,
+                null,
+                null,
+                ServiceAvailable: (int)response.StatusCode < 500,
+                Authorized: response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden));
+        }
+
+        return await ReadJsonOrNullAsync<CustomerIdentityRegistration>(
+                response.Content,
+                "customer identity registration resolution",
+                cancellationToken)
+            ?? new(false, null, null, null, ServiceAvailable: false);
     }
 
     public Task<CustomerActionChallenge> RequestEmailConfirmationAsync(
@@ -570,6 +616,7 @@ internal sealed class CustomerAuthenticationClient(
     private sealed record LoginActionResponse(string Action, string Token);
     private sealed record RefreshRequest(string RefreshToken);
     private sealed record RegisterRequest(int DatabaseId, string Email, string Password);
+    private sealed record ResolveRegistrationRequest(int DatabaseId, string Email, string Password);
     private sealed record ActionRequest(string Email);
     private sealed record CompleteActionRequest(string Email, string Token);
     private sealed record CompletePasswordResetRequest(string Email, string Token, string Password);

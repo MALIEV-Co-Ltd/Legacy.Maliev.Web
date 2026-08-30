@@ -4,18 +4,17 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicDocumentLinksMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PublicDocumentLinksMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public PublicDocumentLinksMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicDocumentLinksMigrationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost")
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost")
+        });
     }
 
     [Fact]

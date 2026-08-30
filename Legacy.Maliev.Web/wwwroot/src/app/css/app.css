@@ -31,23 +31,15 @@ html[lang="th"] body {
     background-size: cover;
 }
 
-    .fixed-image.banner-manufacturing {
-        background-image: url(/src/images/mechanical_background.jpg);
-    }
-
-    .fixed-image.banner-conventional-manufacturing {
-        background-image: url(/src/images/conventional_manufacturing_background.jpg);
-    }
-
 .account-signup {
-    background-image: url(/src/images/account-signup.gif);
+    background-image: url(/src/images/account-signup.webp);
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
 }
 
 .account-signin {
-    background-image: url(/src/images/account-signin.gif);
+    background-image: url(/src/images/account-signin.webp);
     height: 100%;
     background-position: center;
     background-attachment: fixed;
@@ -56,7 +48,7 @@ html[lang="th"] body {
 }
 
 .account-forgotpassword {
-    background-image: url(/src/images/account-forget-password.gif);
+    background-image: url(/src/images/account-forget-password.webp);
     height: 100%;
     background-position: center;
     background-attachment: fixed;
@@ -66,7 +58,7 @@ html[lang="th"] body {
 
 .homepage-cover-1 {
     position: absolute;
-    background-image: url(/src/images/homepage-cover-1.jpg);
+    background-image: url(/src/images/homepage-cover-1.webp);
     background-size: auto 100%;
     background-position: bottom left;
     background-repeat: no-repeat;
@@ -78,7 +70,7 @@ html[lang="th"] body {
 
 .cnc-cover-1 {
     position: absolute;
-    background-image: url(/src/images/homepage-cover-1.jpg);
+    background-image: url(/src/images/homepage-cover-1.webp);
     background-size: auto 100%;
     background-position: bottom left;
     background-repeat: no-repeat;
@@ -86,80 +78,6 @@ html[lang="th"] body {
     right: 0;
     width: 100%;
     height: 100%;
-}
-
-.tdprinting-cover-1 {
-    background-image: url(/src/images/3dprinting-cover-1.gif);
-    background-size: auto 100%;
-    background-position: bottom left;
-    background-repeat: no-repeat;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.tdprinting-cover-2 {
-    background-image: url(/src/images/3dprinting-cover-2.gif);
-    background-size: auto 100%;
-    background-position: bottom left;
-    background-repeat: no-repeat;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.tdprinting-cover-3 {
-    background-image: url(/src/images/3dprinting-cover-3.gif);
-    background-size: auto 100%;
-    background-position: bottom left;
-    background-repeat: no-repeat;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.tdprinting-cover-4 {
-    background-image: url(/src/images/3dprinting-cover-4.gif);
-    background-size: auto 100%;
-    background-position: bottom left;
-    background-repeat: no-repeat;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.scanning-cover-1 {
-    background-image: url(/src/images/3dscanning-cover-1.gif);
-    background-size: auto 100%;
-    background-position: bottom left;
-    background-repeat: no-repeat;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.scanning-cover-2 {
-    background-image: url(/src/images/3dscanning-cover-2.gif);
-    background-size: auto 100%;
-    background-position: bottom left;
-    background-repeat: no-repeat;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.electrical-cover-1 {
-    background-image: url(/src/images/electrical-cover-1.gif);
-    height: 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
 }
 
 .footer-shadow {
@@ -172,21 +90,6 @@ html[lang="th"] body {
     max-width: 100vw;
     height: 300px;
 }
-
-    .banner.banner-abstract-1 {
-        background-image: url(/src/images/abstract-1.jpg);
-        background-position: center;
-        background-repeat: no-repeat;
-        background-size: cover;
-    }
-
-    .banner.banner-news {
-        background-image: url(/src/images/news.gif);
-        height: 100%;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-size: cover;
-    }
 
 .banner-text {
     text-align: center;
@@ -345,7 +248,7 @@ a {
     }
 
 .btn-facebook {
-    background: url(/src/images/f-ogo_RGB_HEX-58.png) no-repeat;
+    background: url(/src/images/f-ogo_RGB_HEX-58.webp) no-repeat;
     background-size: 25px;
     background-position-y: 4px;
     background-position-x: 5px;

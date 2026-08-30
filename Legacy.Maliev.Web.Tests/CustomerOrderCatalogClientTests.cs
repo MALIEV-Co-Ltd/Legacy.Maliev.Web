@@ -4,6 +4,7 @@ using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Polly.Timeout;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -56,6 +57,21 @@ public sealed class CustomerOrderCatalogClientTests
     }
 
     [Fact]
+    public async Task Get_TimeoutFailsClosedWithUnavailableCatalog()
+    {
+        var orders = new RecordingHandler(_ => throw new TimeoutRejectedException("catalog timeout"));
+        var catalog = new RecordingHandler(_ => throw new InvalidOperationException("Catalog should not be called after order timeout."));
+        var client = CreateClient(orders, catalog);
+
+        var result = await client.GetAsync(CustomerOrderKind.Additive, CancellationToken.None);
+
+        Assert.False(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Null(result.Catalog);
+        Assert.Empty(catalog.Requests);
+    }
+
+    [Fact]
     public async Task GetMaterialOptions_LoadsOnlyOwnedMaterialAssociations()
     {
         var catalog = new RecordingHandler(request => request.Path.EndsWith("/colors", StringComparison.Ordinal)
@@ -69,6 +85,23 @@ public sealed class CustomerOrderCatalogClientTests
         Assert.Equal("Black", Assert.Single(result.Options!.Colors).Name);
         Assert.Equal("As printed", Assert.Single(result.Options.SurfaceFinishes).Name);
         Assert.Equal(["materials/5/colors", "materials/5/surfacefinishes"], catalog.Requests.Select(request => request.Path));
+    }
+
+    [Fact]
+    public async Task GetCurrency_LoadsCurrencyFromCatalogService()
+    {
+        var orders = new RecordingHandler(_ => throw new InvalidOperationException("OrderService does not own currencies."));
+        var catalog = new RecordingHandler(request => request.Path == "currencies"
+            ? Json("[{\"id\":764,\"shortName\":\"THB\",\"longName\":\"Thai Baht\"}]")
+            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var client = CreateClient(orders, catalog);
+
+        var result = await client.GetCurrencyAsync("THB", CancellationToken.None);
+
+        Assert.True(result.ServiceAvailable);
+        Assert.Equal(764, result.Value?.Id);
+        Assert.Empty(orders.Requests);
+        Assert.Equal("currencies", Assert.Single(catalog.Requests).Path);
     }
 
     private static CustomerOrderCatalogClient CreateClient(RecordingHandler orders, RecordingHandler catalog)

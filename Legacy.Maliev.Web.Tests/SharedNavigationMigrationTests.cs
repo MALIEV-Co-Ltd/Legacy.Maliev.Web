@@ -4,18 +4,17 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class SharedNavigationMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class SharedNavigationMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public SharedNavigationMigrationTests(WebApplicationFactory<Program> factory)
+    public SharedNavigationMigrationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost")
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost")
+        });
     }
 
     [Fact]

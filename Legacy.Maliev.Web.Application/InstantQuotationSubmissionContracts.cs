@@ -8,11 +8,34 @@ public sealed record InstantQuotationCustomerSubmission(
     string Country,
     string? CompanyName,
     string? TaxIdentification,
-    string? Description);
+    string? Description,
+    string? MobileNumber = null,
+    string? BillingBuilding = null,
+    string? BillingAddressLine1 = null,
+    string? BillingAddressLine2 = null,
+    string? BillingCity = null,
+    string? BillingProvince = null,
+    string? BillingPostalCode = null,
+    bool ShipToBillingAddress = true,
+    string? ShippingBuilding = null,
+    string? ShippingAddressLine1 = null,
+    string? ShippingAddressLine2 = null,
+    string? ShippingCity = null,
+    string? ShippingProvince = null,
+    string? ShippingPostalCode = null,
+    string? ShippingCountry = null);
 
 public enum InstantQuotationSubmissionCheckpointStatus
 {
     Persisted,
+    FilesLinked,
+    CustomerProvisioned,
+    OrdersProvisioning,
+    OrdersProvisioned,
+    IdentityPrepared,
+    IdentityProvisioned,
+    WelcomePrepared,
+    WelcomeNotificationSent,
     Completed,
 }
 
@@ -20,7 +43,15 @@ public sealed record InstantQuotationSubmissionCheckpoint(
     string SubmissionId,
     int RequestReference,
     InstantQuotationSubmissionCheckpointStatus Status,
-    string SnapshotDigest);
+    string SnapshotDigest,
+    IReadOnlyList<InstantQuotationFinalizedFile>? FinalizedFiles = null,
+    int? CustomerId = null,
+    bool CustomerCreated = false,
+    string? TemporaryPassword = null,
+    bool IdentityCreated = false,
+    IReadOnlyList<int>? OrderIds = null,
+    string? WelcomeConfirmationToken = null,
+    bool CompensationRequired = false);
 
 public sealed record InstantQuotationSubmissionCheckpointRead(
     bool LeaseValid,

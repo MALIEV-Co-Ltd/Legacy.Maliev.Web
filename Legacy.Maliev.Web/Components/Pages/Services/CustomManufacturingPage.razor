@@ -10,10 +10,10 @@
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var title = T(
         "Custom Part Manufacturing with CNC and 3D Printing | MALIEV",
-        "รับผลิตชิ้นส่วนตามแบบด้วย CNC และ 3D Printing | MALIEV");
+        "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV");
     var description = T(
         "Custom manufacturing support for CNC, 3D printing, 3D scanning, and design. Send files, quantity, material, and intended use for review.",
-        "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน");
+        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน");
     var keywords = T(
         "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering",
         "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing");
@@ -23,7 +23,7 @@
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
-    <link rel="preload" as="image" href="/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" fetchpriority="high" />
+    <link rel="preload" as="image" href="/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" imagesrcset="/src/images/services/custom-manufacturing/custom-manufacturing-story-640.webp 640w, /src/images/services/custom-manufacturing/custom-manufacturing-story-960.webp 960w, /src/images/services/custom-manufacturing/custom-manufacturing-story.webp 1536w" imagesizes="100vw" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Custom Manufacturing"))" />

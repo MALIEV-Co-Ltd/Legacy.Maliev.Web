@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class SharedFooterMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public SharedFooterMigrationTests(WebApplicationFactory<Program> factory)
+    public SharedFooterMigrationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing")).CreateClient();
+        client = factory.CreateClient();
     }
 
     [Fact]
@@ -64,13 +64,14 @@ public sealed class SharedFooterMigrationTests : IClassFixture<WebApplicationFac
     }
 
     [Theory]
-    [InlineData("en", "Your trusted partner for CNC machining, 3D printing, and 3D scanning services.", "Business hours", "All rights reserved.")]
-    [InlineData("th", "พันธมิตรที่คุณไว้วางใจสำหรับงาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ", "เวลาทำการ", "สงวนลิขสิทธิ์")]
+    [InlineData("en", "Your trusted partner for CNC machining, 3D printing, and 3D scanning services.", "Business hours", "All rights reserved.", "Knowledge center")]
+    [InlineData("th", "พันธมิตรที่คุณไว้วางใจสำหรับงาน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ", "เวลาทำการ", "สงวนลิขสิทธิ์", "ศูนย์ความรู้")]
     public async Task PublicFooter_RendersLocalizedAccessibleContactAndSocialLinks(
         string culture,
         string description,
         string businessHours,
-        string rights)
+        string rights,
+        string knowledgeCenter)
     {
         using var response = await client.GetAsync($"/legal?culture={culture}");
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
@@ -80,6 +81,7 @@ public sealed class SharedFooterMigrationTests : IClassFixture<WebApplicationFac
         Assert.Contains(description, source, StringComparison.Ordinal);
         Assert.Contains(businessHours, source, StringComparison.Ordinal);
         Assert.Contains(rights, source, StringComparison.Ordinal);
+        Assert.Contains($"<a href=\"/Knowledges\">{knowledgeCenter}</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"mailto:info@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66818030404\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66898950690\"", source, StringComparison.Ordinal);

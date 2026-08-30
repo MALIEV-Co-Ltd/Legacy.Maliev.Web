@@ -2,13 +2,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class FinishingColorParityTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public FinishingColorParityTests(WebApplicationFactory<Program> factory)
+    public FinishingColorParityTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -17,7 +17,7 @@ public sealed class FinishingColorParityTests : IClassFixture<WebApplicationFact
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
         var page = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "FinishingAndColorPage.razor"));
-        var entry = File.ReadAllText(Path.Combine(web, "assets", "app-entry.js"));
+        var entry = File.ReadAllText(Path.Combine(web, "assets", "route-service-finishing.js"));
         var vendor = File.ReadAllText(Path.Combine(web, "assets", "vendor-entry.js"));
         var atlas = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "hlc-colour-atlas-data.js"));
         var core = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "finish-color-matcher-core.js"));

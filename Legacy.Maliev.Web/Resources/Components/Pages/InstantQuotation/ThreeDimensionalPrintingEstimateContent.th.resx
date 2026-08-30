@@ -126,6 +126,12 @@
   <data name="Description" xml:space="preserve">
     <value>ข้อมูลเพิ่มเติมเกี่ยวกับงาน</value>
   </data>
+  <data name="Project details" xml:space="preserve">
+    <value>รายละเอียดโครงการ</value>
+  </data>
+  <data name="Describe your project, material, quantity, tolerance, surface finish, deadline, or any other important details..." xml:space="preserve">
+    <value>อธิบายโครงการ วัสดุ จำนวน ค่าความคลาดเคลื่อน ผิวสำเร็จ กำหนดส่ง หรือรายละเอียดสำคัญอื่น ๆ</value>
+  </data>
   <data name="Email" xml:space="preserve">
     <value>อีเมล</value>
   </data>
@@ -470,4 +476,28 @@
   <data name="Part" xml:space="preserve"><value>ชิ้นงาน</value></data>
   <data name="Print time" xml:space="preserve"><value>เวลาพิมพ์</value></data>
   <data name="Estimated shipping" xml:space="preserve"><value>ค่าจัดส่งโดยประมาณ</value></data>
+  <data name="Mobile number" xml:space="preserve"><value>หมายเลขโทรศัพท์มือถือ</value></data>
+  <data name="Office phone (optional)" xml:space="preserve"><value>โทรศัพท์สำนักงาน (ไม่บังคับ)</value></data>
+  <data name="Tax invoice issued to" xml:space="preserve"><value>ออกใบกำกับภาษีในนาม</value></data>
+  <data name="Head office" xml:space="preserve"><value>สำนักงานใหญ่</value></data>
+  <data name="Branch" xml:space="preserve"><value>สาขา</value></data>
+  <data name="Branch code" xml:space="preserve"><value>รหัสสาขา</value></data>
+  <data name="Billing address" xml:space="preserve"><value>ที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Shipping address" xml:space="preserve"><value>ที่อยู่จัดส่ง</value></data>
+  <data name="Shipping address is the same as billing" xml:space="preserve"><value>ใช้ที่อยู่จัดส่งเดียวกับที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Building" xml:space="preserve"><value>อาคาร / เลขที่</value></data>
+  <data name="Street address" xml:space="preserve"><value>ถนน / ที่อยู่</value></data>
+  <data name="Sub-district" xml:space="preserve"><value>แขวง / ตำบล</value></data>
+  <data name="City / district" xml:space="preserve"><value>เขต / อำเภอ</value></data>
+  <data name="Province" xml:space="preserve"><value>จังหวัด</value></data>
+  <data name="Postal code" xml:space="preserve"><value>รหัสไปรษณีย์</value></data>
+  <data name="Billing street address" xml:space="preserve"><value>ถนน / ที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Billing city" xml:space="preserve"><value>เขต / อำเภอของที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Billing province" xml:space="preserve"><value>จังหวัดของที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Billing postal code" xml:space="preserve"><value>รหัสไปรษณีย์ของที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Shipping street address" xml:space="preserve"><value>ถนน / ที่อยู่จัดส่ง</value></data>
+  <data name="Shipping city" xml:space="preserve"><value>เขต / อำเภอของที่อยู่จัดส่ง</value></data>
+  <data name="Shipping province" xml:space="preserve"><value>จังหวัดของที่อยู่จัดส่ง</value></data>
+  <data name="Shipping postal code" xml:space="preserve"><value>รหัสไปรษณีย์ของที่อยู่จัดส่ง</value></data>
+  <data name="Shipping country" xml:space="preserve"><value>ประเทศปลายทาง</value></data>
 </root>

@@ -43,7 +43,7 @@ internal enum InstantQuotationUploadRetryDisposition
 
 public sealed record InstantQuotationUploadReference(string Value);
 
-internal sealed record InstantQuotationFinalizedFile(
+public sealed record InstantQuotationFinalizedFile(
     Guid FileId,
     string Bucket,
     string ObjectName,

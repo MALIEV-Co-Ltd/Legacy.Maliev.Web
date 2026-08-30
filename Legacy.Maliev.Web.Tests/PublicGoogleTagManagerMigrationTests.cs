@@ -9,13 +9,13 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public PublicGoogleTagManagerMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicGoogleTagManagerMigrationTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

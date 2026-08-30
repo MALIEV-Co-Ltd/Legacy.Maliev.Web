@@ -59,9 +59,16 @@
         var firstName = SafeClaim(context.User, ClaimTypes.GivenName);
         var lastName = SafeClaim(context.User, ClaimTypes.Surname);
         var email = SafeClaim(context.User, ClaimTypes.Email);
-        var telephone = SafeClaim(context.User, ClaimTypes.MobilePhone);
+        var mobile = SafeClaim(context.User, ClaimTypes.MobilePhone);
+        var telephone = string.Empty;
         var company = string.Empty;
         var taxNumber = string.Empty;
+        var billingBuilding = string.Empty;
+        var billingStreet1 = string.Empty;
+        var billingStreet2 = string.Empty;
+        var billingCity = string.Empty;
+        var billingProvince = string.Empty;
+        var billingPostalCode = string.Empty;
         var country = countries.FirstOrDefault(static item =>
                 string.Equals(item.Name, "Thailand", StringComparison.OrdinalIgnoreCase))?.Name
             ?? countries[0].Name;
@@ -78,9 +85,16 @@
                     firstName = profile.FirstName;
                     lastName = profile.LastName;
                     email = profile.Email;
-                    telephone = profile.Telephone ?? profile.Mobile ?? string.Empty;
+                    mobile = profile.Mobile ?? string.Empty;
+                    telephone = profile.Telephone ?? string.Empty;
                     company = profile.Company?.Name ?? string.Empty;
-                    taxNumber = profile.Company?.TaxNumber ?? string.Empty;
+                    taxNumber = TaxNumberOnly(profile.Company?.TaxNumber);
+                    billingBuilding = profile.BillingAddress?.Building ?? string.Empty;
+                    billingStreet1 = profile.BillingAddress?.AddressLine1 ?? string.Empty;
+                    billingStreet2 = profile.BillingAddress?.AddressLine2 ?? string.Empty;
+                    billingCity = profile.BillingAddress?.City ?? string.Empty;
+                    billingProvince = profile.BillingAddress?.State ?? string.Empty;
+                    billingPostalCode = profile.BillingAddress?.PostalCode ?? string.Empty;
                     var countryId = profile.BillingAddress?.CountryId ?? profile.ShippingAddress?.CountryId;
                     var matchedCountry = countryId is null
                         ? null
@@ -129,6 +143,14 @@
             problemCategory)
         {
             InvalidFields = invalidFields,
+            Mobile = mobile,
+            BillingBuilding = billingBuilding,
+            BillingStreet1 = billingStreet1,
+            BillingStreet2 = billingStreet2,
+            BillingCity = billingCity,
+            BillingProvince = billingProvince,
+            BillingPostalCode = billingPostalCode,
+            ShippingCountry = country,
         };
     }
 
@@ -155,7 +177,7 @@
         {
             var fields = JsonSerializer.Deserialize<string[]>(json ?? string.Empty) ?? [];
             return fields
-                .Where(static field => field is "FirstName" or "LastName" or "Email" or "Telephone" or "Country" or "Company" or "TaxNumber" or "Description")
+                .Where(static field => field is "FirstName" or "LastName" or "Email" or "Mobile" or "Telephone" or "Country" or "Company" or "TaxNumber" or "TaxBranchCode" or "BillingStreet1" or "BillingCity" or "BillingProvince" or "BillingPostalCode" or "ShippingStreet1" or "ShippingCity" or "ShippingProvince" or "ShippingPostalCode" or "ShippingCountry" or "Description")
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal)
                 .ToArray();
@@ -164,6 +186,17 @@
         {
             return [];
         }
+    }
+
+    private static string TaxNumberOnly(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var digits = new string(value.Where(char.IsDigit).Take(13).ToArray());
+        return digits.Length == 13 ? digits : string.Empty;
     }
 
     private static int? PositiveReference(object? value) =>
@@ -181,7 +214,7 @@
         {
             return new(null, false);
         }
-        catch (TimeoutException)
+        catch (Exception exception) when (exception is TimeoutException or Polly.Timeout.TimeoutRejectedException)
         {
             return new(null, false);
         }
@@ -203,7 +236,7 @@
         {
             return null;
         }
-        catch (TimeoutException)
+        catch (Exception exception) when (exception is TimeoutException or Polly.Timeout.TimeoutRejectedException)
         {
             return null;
         }
@@ -225,7 +258,7 @@
         {
             return new(null, false, false);
         }
-        catch (TimeoutException)
+        catch (Exception exception) when (exception is TimeoutException or Polly.Timeout.TimeoutRejectedException)
         {
             return new(null, false, false);
         }

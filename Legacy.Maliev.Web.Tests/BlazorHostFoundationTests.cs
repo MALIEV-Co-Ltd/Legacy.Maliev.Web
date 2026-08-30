@@ -3,18 +3,17 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class BlazorHostFoundationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class BlazorHostFoundationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public BlazorHostFoundationTests(WebApplicationFactory<Program> factory)
+    public BlazorHostFoundationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost")
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost")
+        });
     }
 
     [Fact]

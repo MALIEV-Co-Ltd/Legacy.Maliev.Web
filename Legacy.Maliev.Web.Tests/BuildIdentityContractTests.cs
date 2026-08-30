@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class BuildIdentityContractTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class BuildIdentityContractTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public BuildIdentityContractTests(WebApplicationFactory<Program> factory)
+    public BuildIdentityContractTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder =>
         {
@@ -84,6 +84,8 @@ public sealed class BuildIdentityContractTests : IClassFixture<WebApplicationFac
             "6e00796d263c45be73080fa292929a99dbb9af1d",
             Assert.Single(response.Headers.GetValues("X-Maliev-Build-Commit")));
     }
+
+    public void Dispose() => factory.Dispose();
 
     private sealed record BuildIdentityResponse(string Repository, string Branch, string Commit);
 }

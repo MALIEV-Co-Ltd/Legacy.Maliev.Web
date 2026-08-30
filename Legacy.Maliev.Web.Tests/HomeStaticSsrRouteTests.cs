@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public HomeStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public HomeStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -92,6 +92,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<WebApplicati
         Assert.Contains("href=\"/Contact\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "th" ? "ค้นหาบริการที่เหมาะกับคุณ" : "Find the right service", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
+        Assert.Contains("pp-injection-molded-component.webp", source, StringComparison.Ordinal);
+        Assert.Contains("width=\"1700\" height=\"925\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ชิ้นงานฉีดโพลีโพรพิลีนสีน้ำเงิน" : "Blue polypropylene injection-molded mounting component", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--directory-link", source, StringComparison.Ordinal);
         Assert.Contains(
             culture == "th"

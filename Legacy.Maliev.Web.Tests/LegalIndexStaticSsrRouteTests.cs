@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class LegalIndexStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class LegalIndexStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private static readonly string[] LegalDestinations =
     [
@@ -15,9 +15,9 @@ public sealed class LegalIndexStaticSsrRouteTests : IClassFixture<WebApplication
 
     private readonly WebApplicationFactory<Program> factory;
 
-    public LegalIndexStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public LegalIndexStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

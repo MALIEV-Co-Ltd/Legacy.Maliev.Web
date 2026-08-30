@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private static readonly string[] SocialDestinations =
     [
@@ -17,9 +17,9 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<WebApplicatio
 
     private readonly WebApplicationFactory<Program> factory;
 
-    public SocialMediaStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public SocialMediaStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

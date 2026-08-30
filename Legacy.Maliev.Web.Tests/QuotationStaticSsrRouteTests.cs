@@ -5,13 +5,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class QuotationStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public QuotationStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public QuotationStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -29,7 +29,9 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<WebApplicationF
         Assert.Contains("ICountryClient", route, StringComparison.Ordinal);
         Assert.Contains("IAccountSessionManager", route, StringComparison.Ordinal);
         Assert.Contains("ICustomerAccountClient", route, StringComparison.Ordinal);
-        Assert.Contains("@page \"/Quotation/{RouteItem?}/{RouteProcess?}/{RouteMaterial?}\"", route, StringComparison.Ordinal);
+        Assert.DoesNotContain("RouteItem", route, StringComparison.Ordinal);
+        Assert.Contains("<meta name=\"robots\" content=\"noindex,follow\"", route, StringComparison.Ordinal);
+        Assert.Contains("ViewData[\"Robots\"] = \"noindex,follow\"", fallback, StringComparison.Ordinal);
         Assert.DoesNotContain("IQuotationClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("IQuotationFileClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("INotificationClient", route, StringComparison.Ordinal);

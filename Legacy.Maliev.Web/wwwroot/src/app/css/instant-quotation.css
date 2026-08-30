@@ -54,6 +54,40 @@ body.instant-quotation-shell #main-content {
     color: #8e1111;
 }
 
+.instant-quote__address-fields {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem;
+}
+
+.instant-quote__address-fields > legend {
+  grid-column: 1 / -1;
+}
+
+.instant-quote__checkbox-field {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.instant-quote__checkbox-field input[type="checkbox"] {
+  width: 1.25rem;
+  min-height: 1.25rem;
+  margin: 0;
+}
+
+.instant-quote__checkbox-field label {
+  margin: 0;
+}
+
+#instant-quotation-form:has(#instant-quote-ship-to-billing:checked)
+  [data-instant-quote-shipping-address] {
+  display: none;
+}
+
 .instant-quote__validation-summary {
     margin: 1rem 0;
     padding: 1rem;

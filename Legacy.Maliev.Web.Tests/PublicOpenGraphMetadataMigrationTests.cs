@@ -4,18 +4,17 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
 
-    public PublicOpenGraphMetadataMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicOpenGraphMetadataMigrationTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://untrusted-request-host.example")
-            });
+        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://untrusted-request-host.example")
+        });
     }
 
     [Fact]

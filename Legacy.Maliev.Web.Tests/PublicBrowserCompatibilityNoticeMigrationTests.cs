@@ -7,14 +7,14 @@ using Microsoft.Extensions.Localization;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicBrowserCompatibilityNoticeMigrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PublicBrowserCompatibilityNoticeMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private const string MigrationMarker = "data-migration-component=\"public-browser-compatibility-notice\"";
     private readonly WebApplicationFactory<Program> factory;
 
-    public PublicBrowserCompatibilityNoticeMigrationTests(WebApplicationFactory<Program> factory)
+    public PublicBrowserCompatibilityNoticeMigrationTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]

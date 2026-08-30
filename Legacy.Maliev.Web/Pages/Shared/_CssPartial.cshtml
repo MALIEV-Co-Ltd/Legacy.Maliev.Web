@@ -1,1 +1,6 @@
+@using Legacy.Maliev.Web.Components.Layout
 <link rel="stylesheet" href="~/dist/site.min.css" asp-append-version="true" />
+@foreach (var routeStyle in PublicRouteAssets.GetStyles(Context.Request.Path))
+{
+    <link rel="stylesheet" href="~/dist/@routeStyle" asp-append-version="true" />
+}

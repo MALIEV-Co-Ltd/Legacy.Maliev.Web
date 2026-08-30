@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CustomManufacturingStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CustomManufacturingStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -73,9 +73,9 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering")]
     [InlineData(
         "th",
-        "รับผลิตชิ้นส่วนตามแบบด้วย CNC และ 3D Printing | MALIEV",
-        "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
-        "รับผลิตชิ้นส่วนตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
+        "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV",
+        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
+        "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
         "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
@@ -137,7 +137,7 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
 
     [Theory]
     [InlineData("en", "Custom Part Manufacturing", "Which manufacturing process should I choose?")]
-    [InlineData("th", "รับผลิตชิ้นส่วนตามแบบ", "ควรเลือกกระบวนการผลิตแบบใด?")]
+    [InlineData("th", "รับผลิตชิ้นงานตามแบบ", "ควรเลือกกระบวนการผลิตแบบใด?")]
     public async Task Route_PreservesServiceAndFaqStructuredData(
         string culture,
         string serviceName,
@@ -157,6 +157,27 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         Assert.Equal("Custom Manufacturing", service.RootElement.GetProperty("serviceType").GetString());
         Assert.Equal(4, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+    }
+
+    [Theory]
+    [InlineData("/services/cnc-machining", "Not sure CNC is the right process?", "ยังไม่แน่ใจว่าควรใช้ CNC หรือไม่?")]
+    [InlineData("/services/3d-printing", "Not sure 3D printing is the right process?", "ยังไม่แน่ใจว่าควรใช้ 3D Printing หรือไม่?")]
+    [InlineData("/services/3d-scanning", "Need a finished part but are unsure whether scanning is the first step?", "ต้องการผลิตชิ้นงานแต่ยังไม่แน่ใจว่าควรเริ่มจากการสแกนหรือไม่?")]
+    public async Task SpecialistServiceRoutes_LinkProcessUnknownIntentToCustomManufacturing(
+        string route,
+        string englishPrompt,
+        string thaiPrompt)
+    {
+        using var client = CreateClient(factory);
+
+        foreach (var contract in new[] { (Culture: "en", Prompt: englishPrompt), (Culture: "th", Prompt: thaiPrompt) })
+        {
+            var source = WebUtility.HtmlDecode(await client.GetStringAsync($"{route}?culture={contract.Culture}"));
+
+            Assert.Contains("href=\"/Services/Custom-Manufacturing\"", source, StringComparison.Ordinal);
+            Assert.Contains("class=\"service-hero-followup\"", source, StringComparison.Ordinal);
+            Assert.Contains(contract.Prompt, source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

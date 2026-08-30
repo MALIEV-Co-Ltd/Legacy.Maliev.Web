@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public PublicServiceExpansionStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public PublicServiceExpansionStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
         {
             ["ThreeDimensionalDesign"] = ["/services/3d-design", "design-title", "/src/images/services/design/design-workflow.webp", "design-workflow", "design-faq"],
             ["SiliconeCasting"] = ["/services/silicone-casting", "silicone-title", "/src/images/services/silicone-casting/silicone-casting-workflow.webp", "silicone-workflow", "silicone-faq"],
-            ["LowVolumeInjectionMolding"] = ["/services/low-volume-injection-molding", "injection-title", "/src/images/services/injection-molding/injection-service-hero-wide.png", "injection-workflow", "injection-faq"]
+            ["LowVolumeInjectionMolding"] = ["/services/low-volume-injection-molding", "injection-title", "/src/images/services/injection-molding/injection-service-hero-wide.webp", "injection-part-proof", "injection-workflow", "injection-faq"]
         };
 
         foreach (var pair in expected)
@@ -50,7 +50,10 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
             "images/services/silicone-casting/silicone-casting-workflow.webp",
             "images/services/silicone-casting/silicone-mold-prep.webp",
             "images/services/silicone-casting/silicone-pour-cure.webp",
-            "images/services/injection-molding/injection-service-hero-wide.png",
+            "images/services/injection-molding/injection-service-hero-wide.webp",
+            "images/services/injection-molding/part-bento-pp-source-derived-640.webp",
+            "images/services/injection-molding/part-bento-pp-source-derived-1024.webp",
+            "images/services/injection-molding/part-bento-pp-source-derived.webp",
             "images/services/injection-molding/pimm-50g-controller.webp",
             "images/services/injection-molding/pimm-50g-nozzle.webp",
             "images/services/injection-molding/pimm-sample-mold.webp"
@@ -86,7 +89,7 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
         Assert.Contains("data-finder-answer", services, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "landing", "service-directory-finder.png")));
         Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "custom-manufacturing", "custom-manufacturing-story.webp")));
-        Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "injection-molding", "injection-card-workshop.png")));
+        Assert.True(File.Exists(Path.Combine(web, "wwwroot", "src", "images", "services", "injection-molding", "pp-injection-molded-component.webp")));
     }
 
     [Theory]

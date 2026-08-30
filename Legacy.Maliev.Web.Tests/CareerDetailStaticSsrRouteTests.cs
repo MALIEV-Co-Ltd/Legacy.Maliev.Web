@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public CareerDetailStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public CareerDetailStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<WebApplicati
         Assert.Contains("<title>Manufacturing Engineer | Career@MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains("<meta property=\"og:title\" content=\"Manufacturing Engineer | Career@MALIEV\"", source, StringComparison.Ordinal);
-        Assert.Contains("<meta property=\"og:image\" content=\"https://www.maliev.com/src/images/career-3dprinting.jpg\"", source, StringComparison.Ordinal);
+        Assert.Contains("<meta property=\"og:image\" content=\"https://www.maliev.com/src/images/career-3dprinting.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{status}<", source, StringComparison.Ordinal);
         Assert.Contains($">{responsibilities}<", source, StringComparison.Ordinal);
         Assert.Contains("Build reliable manufacturing processes.", source, StringComparison.Ordinal);

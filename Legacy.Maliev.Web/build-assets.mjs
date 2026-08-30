@@ -43,6 +43,25 @@ await build({
   platform: 'browser',
 });
 
+const routeScripts = {
+  'route-inquiry': path.join(assets, 'route-inquiry.js'),
+  'route-instant-quotation': path.join(assets, 'route-instant-quotation.js'),
+  'route-member-order': path.join(assets, 'route-member-order.js'),
+  'route-service-finder': path.join(assets, 'route-service-finder.js'),
+  'route-service-cnc': path.join(assets, 'route-service-cnc.js'),
+  'route-service-finishing': path.join(assets, 'route-service-finishing.js'),
+  'route-service-printing': path.join(assets, 'route-service-printing.js'),
+  'route-service-scanning': path.join(assets, 'route-service-scanning.js'),
+  'route-service-toc': path.join(assets, 'route-service-toc.js'),
+};
+
+await build({
+  ...common,
+  entryPoints: routeScripts,
+  outdir: dist,
+  platform: 'browser',
+});
+
 const instantQuotationViewer = path.join(dist, 'instant-quotation-viewer.mjs');
 const instantQuotationWorkflow = path.join(dist, 'instant-quotation-workflow.mjs');
 
@@ -85,13 +104,31 @@ await build({
   outdir: dist,
 });
 
+const routeStyles = {
+  'route-about': path.join(assets, 'route-about.css'),
+  'route-home': path.join(assets, 'route-home.css'),
+  'route-inquiry': path.join(assets, 'route-inquiry.css'),
+  'route-instant-quotation': path.join(assets, 'route-instant-quotation.css'),
+  'route-services': path.join(assets, 'route-services.css'),
+  'route-services-index': path.join(assets, 'route-services-index.css'),
+};
+
+await build({
+  ...common,
+  entryPoints: routeStyles,
+  external: ['/src/images/*'],
+  outdir: dist,
+});
+
 await writeFile(
   path.join(dist, 'asset-manifest.json'),
   `${JSON.stringify({
     scripts: ['vendor.min.js', 'app.min.js'],
+    routeScripts: Object.keys(routeScripts).map(name => `${name}.js`),
     routeScopedModules: {
       instantQuotationViewer: 'instant-quotation-viewer.mjs',
       instantQuotationWorkflow: 'instant-quotation-workflow.mjs',
     },
     styles: ['site.min.css'],
+    routeStyles: Object.keys(routeStyles).map(name => `${name}.css`),
   }, null, 2)}\n`);

@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public ThreeDimensionalPrintingStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public ThreeDimensionalPrintingStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory;
     }
 
     [Fact]
@@ -120,15 +120,15 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
     [Theory]
     [InlineData(
         "en",
-        "3D Printing Services Bangkok | MALIEV",
-        "Order FDM and resin 3D printed parts in engineering materials. Compare material uses, prepare files, and upload CAD for instant 3D printing pricing.",
-        "Professional 3D Printing for Prototypes and Functional Parts",
+        "Custom 3D Printing in Thailand | Upload for Instant Pricing | MALIEV",
+        "Upload a 3D file for instant FDM and resin pricing from one part. Request engineering review for MJF, SLS, SLM, DMLS, and safety-critical parts.",
+        "Upload a 3D File for Instant FDM & Resin Pricing",
         "3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing")]
     [InlineData(
         "th",
-        "รับพิมพ์ 3D กรุงเทพและนนทบุรี | MALIEV",
-        "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่นสำหรับต้นแบบและชิ้นงานใช้งานจริง เลือกวัสดุ อัปโหลดไฟล์ และประเมินราคาออนไลน์",
-        "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง",
+        "รับปริ้น 3D รับพิมพ์ 3 มิติ | ประเมินราคาออนไลน์ | MALIEV",
+        "รับปริ้น 3D และรับพิมพ์ 3 มิติ ตั้งแต่ 1 ชิ้น อัปโหลด STL, STEP, OBJ หรือ 3MF ประเมินราคา FDM และเรซิ่นออนไลน์ ดูตัวอย่างชิ้นงานผลิตจริงจาก MALIEV",
+        "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา",
         "รับพิมพ์ 3D และรับปริ้น 3D กรุงเทพและนนทบุรี, รับปริ้น 3D, ปริ้น 3D ราคา, ร้านปริ้น 3D, สั่งพิมพ์ 3 มิติ, พิมพ์เรซิ่น")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
@@ -162,6 +162,8 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains("data-migration-component=\"service-pricing\"", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 300 บาท" : "Starts at approximately THB 300", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "เริ่มต้นประมาณ 500 บาท" : "Starts at approximately THB 500", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"printing-engineering-review\"", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ประเมินงานพิมพ์อุตสาหกรรมและโลหะ" : "Industrial & metal engineering review", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
@@ -266,7 +268,8 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>3D Printing Services Bangkok | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Custom 3D Printing in Thailand | Upload for Instant Pricing | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"printing-engineering-review\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);

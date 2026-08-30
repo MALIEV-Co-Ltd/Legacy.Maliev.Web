@@ -11,12 +11,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private readonly WebApplicationFactory<Program> configuredFactory;
     private readonly HttpClient client;
 
-    public WebSurfaceTests(WebApplicationFactory<Program> factory)
+    public WebSurfaceTests(TestingWebApplicationFactory factory)
     {
         configuredFactory = factory.WithWebHostBuilder(builder =>
             {
@@ -566,7 +566,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("class=\"data-table data-responsive\"", source, StringComparison.Ordinal);
         Assert.Contains("data-record-count=\"1\"", source, StringComparison.Ordinal);
         Assert.Contains("class=\"convert-to-localdate\"", source, StringComparison.Ordinal);
-        Assert.Contains("datetime=\"2026-08-15T00:00:00.0000000Z\"", source, StringComparison.Ordinal);
+        Assert.Contains("datetime=\"2099-08-15T00:00:00.0000000Z\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-current=\"page\">2</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/quotations/view?id=15\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/quotations?index=1&amp;size=25&amp;sort=QuotationCreatedDate_Ascending&amp;search=CNC\"", source, StringComparison.Ordinal);
@@ -1947,6 +1947,14 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("https://www.googleadservices.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://googleads.g.doubleclick.net", policy, StringComparison.Ordinal);
+        var imageSourceDirective = policy.Split(';', StringSplitOptions.TrimEntries)
+            .Single(static directive => directive.StartsWith("img-src ", StringComparison.Ordinal));
+        Assert.Contains("https://pagead2.googlesyndication.com", imageSourceDirective, StringComparison.Ordinal);
+        var connectSourceDirective = policy.Split(';', StringSplitOptions.TrimEntries)
+            .Single(static directive => directive.StartsWith("connect-src ", StringComparison.Ordinal));
+        Assert.Contains("https://www.googleadservices.com", connectSourceDirective, StringComparison.Ordinal);
+        Assert.Contains("https://googleads.g.doubleclick.net", connectSourceDirective, StringComparison.Ordinal);
+        Assert.Contains("https://pagead2.googlesyndication.com", connectSourceDirective, StringComparison.Ordinal);
         Assert.Contains("'wasm-unsafe-eval'", policy, StringComparison.Ordinal);
         Assert.Contains("https://storage.googleapis.com", policy, StringComparison.Ordinal);
         Assert.Contains("https://cloudflareinsights.com", policy, StringComparison.Ordinal);
@@ -2382,7 +2390,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
     [Theory]
     [InlineData("en", "CNC Milling & Turning", "Precision CNC Machining for One-Off and Production Parts", "Can you machine only one piece?")]
-    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับทำ CNC เพียง 1 ชิ้นหรือไม่?")]
+    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับ CNC อะลูมิเนียมชิ้นเดียวได้หรือไม่?")]
     public async Task CncMachiningRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
@@ -2406,8 +2414,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "FDM & Resin 3D Printing", "Professional 3D Printing for Prototypes and Functional Parts", "How much does 3D printing cost?")]
-    [InlineData("th", "บริการพิมพ์ FDM และเรซิน", "รับพิมพ์ 3D และรับปริ้น 3D สำหรับต้นแบบและชิ้นงานใช้งานจริง", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("en", "FDM, Resin & Industrial Additive", "Upload a 3D File for Instant FDM & Resin Pricing", "How much does 3D printing cost?")]
+    [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "พิมพ์ 3D ราคาเท่าไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
@@ -3230,26 +3238,6 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("en", "/quotation/3d-printing", "I want: 3d-printing")]
-    [InlineData("th", "/quotation/3d-printing", "สินค้าที่ต้องการ: 3d-printing")]
-    [InlineData("en", "/quotation/3d-printing/sls", "Please use: sls")]
-    [InlineData("th", "/quotation/3d-printing/sls", "ระบบเทคโนโลยี: sls")]
-    [InlineData("en", "/quotation/3d-printing/sls/pa12", "Material: pa12")]
-    [InlineData("th", "/quotation/3d-printing/sls/pa12", "วัสดุ: pa12")]
-    public async Task QuotationPage_OptionalLegacySegmentsFeedTheLocalizedPrefill(
-        string culture,
-        string route,
-        string expectedPrefill)
-    {
-        using var response = await client.GetAsync($"{route}?culture={culture}");
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(expectedPrefill, source, StringComparison.Ordinal);
-        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-    }
-
-    [Theory]
     [InlineData("en", "First name", "I want: 3d-printing")]
     [InlineData("th", "ชื่อ", "สินค้าที่ต้องการ: 3d-printing")]
     public async Task QuotationPage_RendersLocalizedStaticSsrFieldsInsideRazorMultipartBoundary(
@@ -3440,9 +3428,9 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(27, routes.Length);
+        Assert.Equal(26, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
-        Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
+        Assert.DoesNotContain(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
         Assert.DoesNotContain("/account", xml, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<!DOCTYPE html>", xml, StringComparison.OrdinalIgnoreCase);
@@ -4141,13 +4129,16 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             [new CustomerOrderCatalogMaterial(20, 1, "PLA")],
             [new CustomerOrderFileFormat(1, "STEP", ".step"), new CustomerOrderFileFormat(2, "STL", ".stl")]);
 
-        public Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderCatalogResult(
+        public async Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+            return new CustomerOrderCatalogResult(
                 kind == CustomerOrderKind.Scanning
                     ? Catalog with { Processes = [new CustomerOrderCatalogProcess(11, 2, "Structured light")] }
                     : Catalog,
                 true,
-                true));
+                true);
+        }
 
         public Task<CustomerOrderMaterialOptionsResult> GetMaterialOptionsAsync(int materialId, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerOrderMaterialOptionsResult(
@@ -4200,7 +4191,7 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             42,
             81,
             30,
-            new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2099, 8, 15, 0, 0, 0, DateTimeKind.Utc),
             100,
             7,
             107,
@@ -4281,6 +4272,8 @@ public sealed class WebSurfaceTests : IClassFixture<WebApplicationFactory<Progra
             return Task.FromResult(DecisionResultOverride ?? new CustomerQuotationDecisionResult(true, true, true, false, accepted ? 23 : null));
         }
     }
+
+    public void Dispose() => configuredFactory.Dispose();
 
     private sealed record QuotationListInvocation(
         int CustomerId,
