@@ -4,7 +4,7 @@ public sealed class WebContentSecurityPolicyMiddleware(RequestDelegate next)
 {
     private const string Policy =
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.googletagmanager.com https://*.googletagmanager.com https://tagmanager.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com; " +
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.googletagmanager.com https://*.googletagmanager.com https://tagmanager.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://static.line-scdn.net; " +
         "style-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com; " +
         "img-src 'self' data: blob: https://storage.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://www.google.co.th https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com; " +
         "font-src 'self' data:; " +
