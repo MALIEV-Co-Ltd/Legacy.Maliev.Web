@@ -455,6 +455,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 analyticsAttemptId,
                 InstantQuotationProblemCategory.Validation,
                 1);
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.FileValidation,
+                InstantQuotationStageResult.Failure,
+                entry.File.Length > MaximumFileSize
+                    ? InstantQuotationStageFailure.FileTooLarge
+                    : InstantQuotationStageFailure.UnreadableModel,
+                FileType(entry.File.FileName));
             return;
         }
 
@@ -467,8 +474,19 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 analyticsAttemptId,
                 InstantQuotationProblemCategory.Validation,
                 1);
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.FileValidation,
+                InstantQuotationStageResult.Failure,
+                InstantQuotationStageFailure.UnsupportedType,
+                FileType(entry.File.FileName));
             return;
         }
+
+        await analytics.RecordStageResultAsync(
+            InstantQuotationStage.FileValidation,
+            InstantQuotationStageResult.Success,
+            null,
+            FileType(entry.File.FileName));
 
         if (entry.File.GeometryClaim is null || !entry.File.GeometryClaim.IsValid())
         {
@@ -479,8 +497,19 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 analyticsAttemptId,
                 InstantQuotationProblemCategory.Validation,
                 1);
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.Parse,
+                InstantQuotationStageResult.Failure,
+                InstantQuotationStageFailure.UnreadableModel,
+                FileType(entry.File.FileName));
             return;
         }
+
+        await analytics.RecordStageResultAsync(
+            InstantQuotationStage.Parse,
+            InstantQuotationStageResult.Success,
+            null,
+            FileType(entry.File.FileName));
 
         try
         {
@@ -522,6 +551,11 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     analyticsAttemptId,
                     InstantQuotationProblemCategory.Unexpected,
                     1);
+                await analytics.RecordStageResultAsync(
+                    InstantQuotationStage.Upload,
+                    InstantQuotationStageResult.Failure,
+                    InstantQuotationStageFailure.Network,
+                    FileType(entry.File.FileName));
             }
         }
     }
@@ -534,6 +568,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         InstantQuotationProblemCategory? terminalFailure = null;
+        var successfulUpload = false;
         await stateGate.WaitAsync(cancellationToken);
         try
         {
@@ -613,6 +648,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
                     entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
                     await PersistAndPriceAsync(cancellationToken);
+                    successfulUpload = true;
                 }
             }
         }
@@ -621,9 +657,35 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             stateGate.Release();
         }
 
+        if (successfulUpload)
+        {
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.Upload,
+                InstantQuotationStageResult.Success,
+                null,
+                FileType(entry.File.FileName));
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.Pricing,
+                InstantQuotationStageResult.Success,
+                null,
+                FileType(entry.File.FileName));
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.OrderTotal,
+                InstantQuotationStageResult.Success,
+                null,
+                null);
+        }
+
         if (terminalFailure is { } failure)
         {
             await analytics.RecordUploadFailureAsync(analyticsAttemptId, failure, 1);
+            await analytics.RecordStageResultAsync(
+                InstantQuotationStage.Upload,
+                InstantQuotationStageResult.Failure,
+                failure is InstantQuotationProblemCategory.DependencyUnavailable
+                    ? InstantQuotationStageFailure.Network
+                    : InstantQuotationStageFailure.ServerRejected,
+                FileType(entry.File.FileName));
         }
     }
 
@@ -775,6 +837,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private static string NewOperationId() => Guid.NewGuid().ToString("N");
 
     private static string NewAnalyticsAttemptId() => $"analytics-{Guid.NewGuid():N}";
+
+    private static string? FileType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).TrimStart('.');
+        return extension.Length == 0 ? null : extension;
+    }
 
     private sealed class UploadEntry
     {
