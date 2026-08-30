@@ -1,5 +1,7 @@
 namespace Legacy.Maliev.Web.Tests;
 
+using System.Xml.Linq;
+
 public sealed class ArchitectureTests
 {
     [Fact]
@@ -40,6 +42,30 @@ public sealed class ArchitectureTests
 
         Assert.DoesNotContain("ServerCertificateCustomValidationCallback", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DangerousAcceptAnyServerCertificateValidator", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HttpResiliencePackage_UsesOneVersionAcrossRuntimeProjects()
+    {
+        var root = FindRepositoryRoot();
+        var projectFiles = new[]
+        {
+            Path.Combine(root, "Legacy.Maliev.Web", "Legacy.Maliev.Web.csproj"),
+            Path.Combine(root, "Legacy.Maliev.Web.Infrastructure", "Legacy.Maliev.Web.Infrastructure.csproj")
+        };
+
+        var versions = projectFiles
+            .Select(path => XDocument.Load(path)
+                .Descendants("PackageReference")
+                .Single(element => string.Equals(
+                    (string?)element.Attribute("Include"),
+                    "Microsoft.Extensions.Http.Resilience",
+                    StringComparison.Ordinal))
+                .Attribute("Version")?.Value)
+            .ToArray();
+
+        Assert.All(versions, version => Assert.Equal("10.9.0", version));
+        Assert.Single(versions.Distinct(StringComparer.Ordinal));
     }
 
     private static string FindRepositoryRoot()

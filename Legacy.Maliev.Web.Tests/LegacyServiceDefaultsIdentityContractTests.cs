@@ -2,6 +2,8 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
+    private const string ServiceDefaultsCommit = "3152a9612d8514597192a98eae31277aef8102ff";
+
     [Fact]
     public void WebProject_UsesLegacyServiceDefaultsOnly()
     {
@@ -21,6 +23,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
 
         Assert.Contains("github.com/MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults.git", dockerfile, StringComparison.Ordinal);
         Assert.Contains("/dependencies/Legacy.Maliev.ServiceDefaults", dockerfile, StringComparison.Ordinal);
+        Assert.Contains($"checkout {ServiceDefaultsCommit}", dockerfile, StringComparison.Ordinal);
         Assert.Contains("github.com/MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts.git", dockerfile, StringComparison.Ordinal);
         Assert.Contains("/dependencies/Legacy.Maliev.CompatibilityContracts", dockerfile, StringComparison.Ordinal);
         Assert.DoesNotContain("Maliev.Aspire", dockerfile, StringComparison.OrdinalIgnoreCase);
@@ -35,6 +38,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
 
         Assert.Contains("repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults", workflow, StringComparison.Ordinal);
         Assert.Contains("path: .dependencies/Legacy.Maliev.ServiceDefaults", workflow, StringComparison.Ordinal);
+        Assert.Contains($"ref: {ServiceDefaultsCommit}", workflow, StringComparison.Ordinal);
         Assert.Contains("repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts", workflow, StringComparison.Ordinal);
         Assert.Contains("path: .dependencies/Legacy.Maliev.CompatibilityContracts", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("MALIEV-Co-Ltd/Maliev.Aspire", workflow, StringComparison.OrdinalIgnoreCase);
