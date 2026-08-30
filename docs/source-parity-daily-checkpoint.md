@@ -103,32 +103,39 @@ or Google configuration publication.
 | `bf3b8d7` | Source removal of the retired Popper v1 path is already satisfied. | The target bundles Bootstrap's supported Popper v2 dependency and contains no legacy Popper v1 loader path. |
 | `acdeb8d` | Selectively superseded by the approved target typography contract. Only its service follow-up spacing dependency is portable and is migrated by `1dda94c`; its font replacement is not. | Legacy Web deliberately retains the owner-approved self-hosted `Inter, Noto Sans Thai, sans-serif` stack and matching delivery tests. Importing the source IBM Plex Latin experiment would reverse that explicit migration decision. |
 
-## Remaining gate
+## Classification complete through the inspected source head
 
-The other 54 committed source changes after `48e628c` remain pending commit-by-commit
-classification and migration. They include public Web SEO, structured data, responsive
-assets and layouts, consent-gated analytics and Ads measurement, quotation lifecycle,
-authentication/profile behavior, service tracing and logging, pricing, operational
-configuration, and changes owned by non-Web `Legacy.Maliev.*` services.
+All 126 committed source changes after `48e628c` and through source commit
+`25418c95b5ac79400029ce274541f0e51728da3e` have now been classified. The final
+54-change audit found 21 migrated or architecture-equivalent outcomes, 30 superseded,
+merge-only, generated, planning, deployment-only, or deliberately rejected outcomes,
+and three missing runtime outcomes. Those three runtime gaps were completed by the
+coordinated Web, AuthService, CustomerService, OrderService, and AppHost migration in
+PR #179 and its service-side companion pull requests.
 
-Two later source commits are deliberately not counted as complete yet. `42ece27`
-combines the migrated CNC/3D copy with a still-pending persisted-attribution contract;
-`5619e1a` combines the migrated industrial/metal review with quotation-intent and
-analytics work.
+The completed target-native flow preserves the persisted quotation before customer
+profile completion, verifies credentials on every identity replay, provisions the owned
+customer profile atomically, creates replay-safe orders and file links, resumes from a
+Data Protection-protected fulfillment checkpoint, and keeps notification delivery
+idempotent. It does not reintroduce the rejected identity-bearing analytics payloads or
+source deployment scripts.
 
 Source commits `4533669` and `25418c9` add and harden the original UploadService
-Kubernetes Workload Identity and storage-authorization boundary. The storage failure and
-signed-URL rollback behavior is tracked in `Legacy.Maliev.FileService` issue #13; the
-runtime code is migrated by FileService commits `a0305d3`, `e2a6d19`, and `fb136ba`
-and validated by its 390/390 suite independently from the source deployment scripts. The Legacy
-FileService already owns an isolated `legacy-maliev-file` Kubernetes
-service account and GCP principal in GitOps, but there is intentionally no Legacy
-application Deployment before the Aspire/release gate. This source outcome therefore
-remains pending until the future FileService Deployment explicitly selects that service
-account and the GitOps contract proves the binding; the source deploy script itself must
-not be copied into the Legacy release architecture.
+Kubernetes Workload Identity and storage-authorization boundary. Their runtime behavior
+is represented by the Legacy FileService fail-closed storage, signed-URL rollback, and
+authorization contracts. The future production Deployment must select the existing
+isolated `legacy-maliev-file` service account and pass the GitOps binding gate; this is a
+release/deployment gate, not an unclassified source-parity gap, and deployment remains
+unauthorized during Aspire review.
 
-The complete Legacy Web test suite currently has an independent resource defect: the
-test host exceeded 13 GB working set without producing a result. The affected bounded
-suites recorded above pass. The complete-suite resource issue must be isolated before this
-checkpoint can be promoted from focused validation to full-suite validation.
+Legacy Web main commit `895b866` includes the final parity integration and a bounded
+test-host lifecycle. Release build completed with zero warnings and zero errors, the
+focused mapping regression passed 6/6 on Windows and Linux path forms, and the complete
+suite passed 1,459/1,459 with a measured peak working set of 4.26 GB instead of the
+previous greater-than-13-GB failure mode. Formatting, package vulnerability, secret,
+browser-module, and deterministic-asset gates are clean.
+
+The daily automation must resume from the source head recorded above and classify only
+new committed source changes. Uncommitted source artifacts remain excluded. Any future
+source delta must be migrated or explicitly classified with evidence before the Legacy
+release gate can advance.
