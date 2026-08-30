@@ -1,7 +1,6 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -168,6 +167,14 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
             .Select(classification => Assert.IsType<string>(classification.GetString()))
             .ToHashSet(StringComparer.Ordinal);
         var commits = new List<string>(entries.GetArrayLength());
+        var semanticStream = new StringBuilder();
+        AppendCanonicalValue(semanticStream, "source-parity-semantic-stream-v1");
+        AppendCanonicalValue(semanticStream, Assert.IsType<string>(root.GetProperty("schemaVersion").GetString()));
+        AppendCanonicalValue(semanticStream, Assert.IsType<string>(root.GetProperty("historicalCheckpoint").GetString()));
+        AppendCanonicalValue(semanticStream, Assert.IsType<string>(root.GetProperty("sourceHead").GetString()));
+        AppendCanonicalValue(semanticStream, root.GetProperty("commitCount").GetInt32().ToString());
+        AppendCanonicalArray(semanticStream, root.GetProperty("allowedOwners"));
+        AppendCanonicalArray(semanticStream, root.GetProperty("allowedClassifications"));
         int expectedSequence = 1;
         foreach (JsonElement entry in entries.EnumerateArray())
         {
@@ -200,17 +207,33 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
                 "Every source commit needs a canonical owner, approved retirement, or non-runtime exclusion.");
             Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("validationEvidence").GetString()));
             Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("classificationRationale").GetString()));
+
+            AppendCanonicalValue(semanticStream, entry.GetProperty("sequence").GetInt32().ToString());
+            AppendCanonicalValue(semanticStream, commit);
+            AppendCanonicalValue(semanticStream, Assert.IsType<string>(entry.GetProperty("subject").GetString()));
+            AppendCanonicalValue(semanticStream, classification);
+            AppendCanonicalArray(semanticStream, entry.GetProperty("owners"));
+            AppendCanonicalArray(semanticStream, entry.GetProperty("retirements"));
+            AppendCanonicalArray(semanticStream, entry.GetProperty("exclusions"));
+            AppendCanonicalArray(semanticStream, entry.GetProperty("sourceAreas"));
+            AppendCanonicalValue(semanticStream, targetEvidence.Length.ToString());
+            foreach (JsonElement target in targetEvidence)
+            {
+                AppendCanonicalValue(semanticStream, Assert.IsType<string>(target.GetProperty("repository").GetString()));
+                AppendCanonicalValue(semanticStream, Assert.IsType<string>(target.GetProperty("commit").GetString()));
+            }
+
+            AppendCanonicalValue(semanticStream, Assert.IsType<string>(entry.GetProperty("validationEvidence").GetString()));
+            AppendCanonicalValue(semanticStream, Assert.IsType<string>(entry.GetProperty("classificationRationale").GetString()));
         }
 
         string sequence = string.Join('\n', commits) + '\n';
         string digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sequence))).ToLowerInvariant();
         Assert.Equal("5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306", digest);
         Assert.Equal(digest, root.GetProperty("sequenceSha256").GetString());
-        string semanticJson = JsonSerializer.Serialize(
-            entries,
-            new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
-        string semanticDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(semanticJson))).ToLowerInvariant();
-        Assert.Equal("d2405f3251e2880974e8e25e47015f08b1a7736e1ce94612838a6b5979bb5fc9", semanticDigest);
+        string semanticDigest = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(semanticStream.ToString()))).ToLowerInvariant();
+        Assert.Equal("599ddbe77400bd9407435c0ee4402d0f255648ef877d7dd4219327a961ef3f28", semanticDigest);
         Assert.Equal(semanticDigest, root.GetProperty("semanticSha256").GetString());
         Assert.Equal("25db5545b0f5f575f61616af2ba54ee45e656a20", commits[0]);
         Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", commits[^1]);
@@ -218,6 +241,19 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
 
     private static string Read(string root, params string[] segments) =>
         File.ReadAllText(Path.Combine([root, .. segments]));
+
+    private static void AppendCanonicalArray(StringBuilder builder, JsonElement values)
+    {
+        JsonElement[] items = [.. values.EnumerateArray()];
+        AppendCanonicalValue(builder, items.Length.ToString());
+        foreach (JsonElement item in items)
+        {
+            AppendCanonicalValue(builder, Assert.IsType<string>(item.GetString()));
+        }
+    }
+
+    private static void AppendCanonicalValue(StringBuilder builder, string value) =>
+        builder.Append(value.Length).Append(':').Append(value).Append('\n');
 
     private static string FindRepositoryRoot()
     {
