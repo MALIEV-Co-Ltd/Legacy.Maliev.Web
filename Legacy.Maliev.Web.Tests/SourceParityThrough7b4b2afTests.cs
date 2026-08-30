@@ -138,7 +138,7 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
         Assert.Contains("`c6ac93af03a0dafc506d9570aca96e4aed3b1643`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`63e5f99f3cef37b1f005b3399333ede53e560587`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`7b4b2af697207d36a6e7b7784dddefa150193e97`", checkpoint, StringComparison.Ordinal);
-        Assert.Contains("`9f16884`, `72e9fce`, `b3db595`", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("`a53b252`, `303f2f1`, `27f340e`", checkpoint, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] segments) =>
