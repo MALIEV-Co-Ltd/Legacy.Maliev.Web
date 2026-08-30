@@ -44,11 +44,38 @@ function Get-Sha256Text {
     }
 }
 
+function Add-CanonicalValue {
+    param(
+        [Parameter(Mandatory)] [Text.StringBuilder] $Builder,
+        [Parameter(Mandatory)] [AllowEmptyString()] [string] $Value
+    )
+    [void] $Builder.Append($Value.Length).Append(':').Append($Value).Append("`n")
+}
+
+function Add-CanonicalArray {
+    param(
+        [Parameter(Mandatory)] [Text.StringBuilder] $Builder,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [object[]] $Values
+    )
+    Add-CanonicalValue -Builder $Builder -Value ([string] $Values.Count)
+    foreach ($value in $Values) {
+        Add-CanonicalValue -Builder $Builder -Value ([string] $value)
+    }
+}
+
 $dailyManifest = Get-Content -LiteralPath $dailyManifestPath -Raw | ConvertFrom-Json
 $dailyEntries = @($dailyManifest.entries)
 $dailyManifestCommits = @($dailyEntries | ForEach-Object { [string] $_.sourceCommit })
 $allowedOwners = @($dailyManifest.allowedOwners)
 $allowedClassifications = @($dailyManifest.allowedClassifications)
+$semanticStream = New-Object Text.StringBuilder
+Add-CanonicalValue -Builder $semanticStream -Value 'source-parity-semantic-stream-v1'
+Add-CanonicalValue -Builder $semanticStream -Value ([string] $dailyManifest.schemaVersion)
+Add-CanonicalValue -Builder $semanticStream -Value ([string] $dailyManifest.historicalCheckpoint)
+Add-CanonicalValue -Builder $semanticStream -Value ([string] $dailyManifest.sourceHead)
+Add-CanonicalValue -Builder $semanticStream -Value ([string] [int] $dailyManifest.commitCount)
+Add-CanonicalArray -Builder $semanticStream -Values $allowedOwners
+Add-CanonicalArray -Builder $semanticStream -Values $allowedClassifications
 
 if ($dailyManifest.schemaVersion -ne '1.1' -or
     $dailyManifest.historicalCheckpoint -ne $historicalHead -or
@@ -92,6 +119,22 @@ for ($index = 0; $index -lt $dailyEntries.Count; $index++) {
     if ($owners.Count -eq 0 -and $retirements.Count -eq 0 -and $exclusions.Count -eq 0) {
         throw "Daily source-parity entry '$($entry.sourceCommit)' has no owner, retirement, or exclusion."
     }
+
+    Add-CanonicalValue -Builder $semanticStream -Value ([string] [int] $entry.sequence)
+    Add-CanonicalValue -Builder $semanticStream -Value ([string] $entry.sourceCommit)
+    Add-CanonicalValue -Builder $semanticStream -Value ([string] $entry.subject)
+    Add-CanonicalValue -Builder $semanticStream -Value $classification
+    Add-CanonicalArray -Builder $semanticStream -Values $owners
+    Add-CanonicalArray -Builder $semanticStream -Values $retirements
+    Add-CanonicalArray -Builder $semanticStream -Values $exclusions
+    Add-CanonicalArray -Builder $semanticStream -Values @($entry.sourceAreas)
+    Add-CanonicalValue -Builder $semanticStream -Value ([string] $targetEvidence.Count)
+    foreach ($target in $targetEvidence) {
+        Add-CanonicalValue -Builder $semanticStream -Value ([string] $target.repository)
+        Add-CanonicalValue -Builder $semanticStream -Value ([string] $target.commit)
+    }
+    Add-CanonicalValue -Builder $semanticStream -Value ([string] $entry.validationEvidence)
+    Add-CanonicalValue -Builder $semanticStream -Value ([string] $entry.classificationRationale)
 }
 
 $dailySequence = ($dailyManifestCommits -join "`n") + "`n"
@@ -99,8 +142,7 @@ $dailySequenceSha256 = Get-Sha256Text -Value $dailySequence
 if ($dailySequenceSha256 -ne $dailyManifest.sequenceSha256) {
     throw "Daily source-parity sequence digest mismatch: actual=$dailySequenceSha256, manifest=$($dailyManifest.sequenceSha256)."
 }
-$semanticJson = ConvertTo-Json -InputObject $dailyEntries -Depth 20 -Compress
-$semanticSha256 = Get-Sha256Text -Value $semanticJson
+$semanticSha256 = Get-Sha256Text -Value $semanticStream.ToString()
 if ($semanticSha256 -ne $dailyManifest.semanticSha256) {
     throw "Daily source-parity semantic digest mismatch: actual=$semanticSha256, manifest=$($dailyManifest.semanticSha256)."
 }

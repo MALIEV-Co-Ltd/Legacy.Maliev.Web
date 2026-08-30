@@ -4,8 +4,8 @@
   "sourceHead": "7b4b2af697207d36a6e7b7784dddefa150193e97",
   "commitCount": 129,
   "sequenceSha256": "5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306",
-  "semanticSha256": "d2405f3251e2880974e8e25e47015f08b1a7736e1ce94612838a6b5979bb5fc9",
-  "canonicalSemanticForm": "UTF-8 compact JSON of entries using the recorded property order",
+  "semanticSha256": "599ddbe77400bd9407435c0ee4402d0f255648ef877d7dd4219327a961ef3f28",
+  "canonicalSemanticForm": "source-parity-semantic-stream-v1: UTF-8 length-prefixed root boundary, allowlists, and entry fields in schema order, including array counts and target repository/commit pairs",
   "allowedOwners": [
     "Legacy.Maliev.AccountingService",
     "Legacy.Maliev.AuthService",
