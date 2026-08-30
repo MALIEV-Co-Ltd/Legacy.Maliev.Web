@@ -18,6 +18,11 @@ public sealed class InstantQuotationAnalyticsCoreTests
             1);
         await tracker.RecordEstimateShownAsync(1);
         await tracker.RecordReviewReachedAsync(1);
+        await tracker.RecordStageResultAsync(
+            InstantQuotationStage.Parse,
+            InstantQuotationStageResult.Success,
+            null,
+            "stl");
     }
 
     [Fact]
@@ -181,6 +186,112 @@ public sealed class InstantQuotationAnalyticsCoreTests
             "operation-1",
             InstantQuotationProblemCategory.Unexpected,
             1);
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationStage.FileValidation, "file_validation")]
+    [InlineData(InstantQuotationStage.Parse, "parse")]
+    [InlineData(InstantQuotationStage.Upload, "upload")]
+    [InlineData(InstantQuotationStage.Thumbnail, "thumbnail")]
+    [InlineData(InstantQuotationStage.Pricing, "pricing")]
+    [InlineData(InstantQuotationStage.OrderTotal, "order_total")]
+    public async Task StageResult_SuccessEmitsExactNonPiiPayload(
+        InstantQuotationStage stage,
+        string expectedStage)
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordStageResultAsync(
+            stage,
+            InstantQuotationStageResult.Success,
+            null,
+            "STL");
+
+        var payload = Assert.Single(sink.Payloads);
+        AssertJson(payload, new Dictionary<string, object>
+        {
+            ["event"] = "quote_stage_result",
+            ["service"] = "3d_printing",
+            ["stage"] = expectedStage,
+            ["result"] = "success",
+            ["file_type"] = "stl",
+        });
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationStageFailure.UnsupportedType, "unsupported_type")]
+    [InlineData(InstantQuotationStageFailure.FileTooLarge, "file_too_large")]
+    [InlineData(InstantQuotationStageFailure.UnreadableModel, "unreadable_model")]
+    [InlineData(InstantQuotationStageFailure.SnapshotUnavailable, "snapshot_unavailable")]
+    [InlineData(InstantQuotationStageFailure.ServerRejected, "server_rejected")]
+    [InlineData(InstantQuotationStageFailure.Network, "network")]
+    public async Task StageResult_FailureEmitsOnlyApprovedFailureCategory(
+        InstantQuotationStageFailure failure,
+        string expectedFailure)
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordStageResultAsync(
+            InstantQuotationStage.Upload,
+            InstantQuotationStageResult.Failure,
+            failure,
+            null);
+
+        var payload = Assert.Single(sink.Payloads);
+        AssertJson(payload, new Dictionary<string, object>
+        {
+            ["event"] = "quote_stage_result",
+            ["service"] = "3d_printing",
+            ["stage"] = "upload",
+            ["result"] = "failure",
+            ["failure_category"] = expectedFailure,
+        });
+    }
+
+    [Fact]
+    public async Task StageResult_DeduplicatesByExactPayloadWithoutEmittingInternalIdentifiers()
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordStageResultAsync(
+            InstantQuotationStage.Upload,
+            InstantQuotationStageResult.Success,
+            null,
+            "obj");
+        await tracker.RecordStageResultAsync(
+            InstantQuotationStage.Upload,
+            InstantQuotationStageResult.Success,
+            null,
+            "obj");
+
+        var payload = Assert.Single(sink.Payloads);
+        var json = JsonSerializer.Serialize(payload, payload.GetType());
+        Assert.DoesNotContain("operation", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("revision", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData((InstantQuotationStage)999, InstantQuotationStageResult.Success, null, "stl")]
+    [InlineData(InstantQuotationStage.Upload, (InstantQuotationStageResult)999, null, "stl")]
+    [InlineData(InstantQuotationStage.Upload, InstantQuotationStageResult.Success, InstantQuotationStageFailure.Network, "stl")]
+    [InlineData(InstantQuotationStage.Upload, InstantQuotationStageResult.Failure, null, "stl")]
+    [InlineData(InstantQuotationStage.Upload, InstantQuotationStageResult.Failure, (InstantQuotationStageFailure)999, "stl")]
+    [InlineData(InstantQuotationStage.Upload, InstantQuotationStageResult.Success, null, "../../secret.stl")]
+    public async Task StageResult_InvalidOrInconsistentInputFailsClosed(
+        InstantQuotationStage stage,
+        InstantQuotationStageResult result,
+        InstantQuotationStageFailure? failure,
+        string? fileType)
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordStageResultAsync(stage, result, failure, fileType);
+
+        Assert.Empty(sink.Payloads);
     }
 
     private static void AssertJson(

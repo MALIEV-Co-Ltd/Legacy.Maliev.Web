@@ -455,8 +455,25 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
             if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
             {
-                await InvokePreviewAsync("admit", key, ViewerPartKey(part.PartId));
-                selectedPreviewPartId ??= part.PartId;
+                try
+                {
+                    await previewInterop.InvokeVoidAsync("admit", key, ViewerPartKey(part.PartId));
+                    selectedPreviewPartId ??= part.PartId;
+                    await analytics.RecordStageResultAsync(
+                        InstantQuotationStage.Thumbnail,
+                        InstantQuotationStageResult.Success,
+                        null,
+                        FileType(part.DisplayFileName));
+                }
+                catch (JSException)
+                {
+                    await analytics.RecordStageResultAsync(
+                        InstantQuotationStage.Thumbnail,
+                        InstantQuotationStageResult.Failure,
+                        InstantQuotationStageFailure.SnapshotUnavailable,
+                        FileType(part.DisplayFileName));
+                    await ReportPreviewUnavailableAsync();
+                }
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
@@ -518,6 +535,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         previewUnavailable = true;
         return InvokeAsync(StateHasChanged);
+    }
+
+    private static string? FileType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).TrimStart('.');
+        return extension.Length == 0 ? null : extension;
     }
 
     private async Task ChangeMaterialAsync(Guid partId, ChangeEventArgs args)

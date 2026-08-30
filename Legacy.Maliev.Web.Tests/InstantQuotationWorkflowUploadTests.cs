@@ -284,7 +284,8 @@ public sealed class InstantQuotationWorkflowUploadTests
     public async Task InvalidClaim_IsRejectedBeforeUploadBoundary()
     {
         var client = new ControlledUploadClient();
-        await using var workflow = CreateWorkflow(client: client);
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
         await workflow.InitializeAsync(default);
 
         await workflow.UploadAsync(
@@ -294,6 +295,38 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Empty(client.UploadOperations);
         Assert.Empty(workflow.Parts);
         Assert.Equal(InstantQuotationProblemCategory.Validation, Assert.Single(workflow.Uploads).ProblemCategory);
+        Assert.Contains(analytics.StageResults, item =>
+            item.Stage is InstantQuotationStage.FileValidation
+            && item.Result is InstantQuotationStageResult.Success
+            && item.Failure is null
+            && item.FileType == "stl");
+        Assert.Contains(analytics.StageResults, item =>
+            item.Stage is InstantQuotationStage.Parse
+            && item.Result is InstantQuotationStageResult.Failure
+            && item.Failure is InstantQuotationStageFailure.UnreadableModel
+            && item.FileType == "stl");
+    }
+
+    [Fact]
+    public async Task AuthoritativeUpload_RecordsValidatedParseUploadPricingAndOrderTotalStages()
+    {
+        var client = new ControlledUploadClient();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
+        await workflow.InitializeAsync(default);
+
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("part.stl", "opaque-part", Geometry());
+        await uploading;
+
+        Assert.Collection(
+            analytics.StageResults,
+            item => Assert.Equal((InstantQuotationStage.FileValidation, InstantQuotationStageResult.Success, null, "stl"), item),
+            item => Assert.Equal((InstantQuotationStage.Parse, InstantQuotationStageResult.Success, null, "stl"), item),
+            item => Assert.Equal((InstantQuotationStage.Upload, InstantQuotationStageResult.Success, null, "stl"), item),
+            item => Assert.Equal((InstantQuotationStage.Pricing, InstantQuotationStageResult.Success, null, "stl"), item),
+            item => Assert.Equal((InstantQuotationStage.OrderTotal, InstantQuotationStageResult.Success, null, (string?)null), item));
     }
 
     [Fact]
@@ -997,6 +1030,19 @@ public sealed class InstantQuotationWorkflowUploadTests
 
     private sealed class RecordingAnalyticsTracker : IInstantQuotationAnalyticsTracker
     {
+        public List<(InstantQuotationStage Stage, InstantQuotationStageResult Result, InstantQuotationStageFailure? Failure, string? FileType)> StageResults { get; } = [];
+
+        public ValueTask RecordStageResultAsync(
+            InstantQuotationStage stage,
+            InstantQuotationStageResult result,
+            InstantQuotationStageFailure? failure,
+            string? fileType,
+            CancellationToken cancellationToken = default)
+        {
+            StageResults.Add((stage, result, failure, fileType));
+            return ValueTask.CompletedTask;
+        }
+
         public ValueTask RecordUploadStartAsync(
             string batchId,
             int fileCount,
