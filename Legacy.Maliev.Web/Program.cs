@@ -23,6 +23,7 @@ var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", 
 var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
 var useBlazorLegalRoute = builder.Configuration.GetValue("BlazorRouting:Legal", true);
 var useBlazorNonDisclosureAgreementRoute = builder.Configuration.GetValue("BlazorRouting:NonDisclosureAgreement", true);
+var useBlazorNoWeaponsRoute = builder.Configuration.GetValue("BlazorRouting:NoWeapons", true);
 var useBlazorAccessDeniedRoute = builder.Configuration.GetValue("BlazorRouting:AccessDenied", true);
 var useBlazorErrorRoute = builder.Configuration.GetValue("BlazorRouting:Error", true);
 var useBlazorAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:AccountIndex", true);
@@ -64,6 +65,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorSocialMediaRoute
     && useBlazorLegalRoute
     && useBlazorNonDisclosureAgreementRoute
+    && useBlazorNoWeaponsRoute
     && useBlazorAccessDeniedRoute
     && useBlazorErrorRoute
     && useBlazorAccountIndexRoute
@@ -144,6 +146,9 @@ builder.Services.AddRazorPages(options =>
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Legal/NonDisclosureAgreement",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
+            "/Legal/NoWeapons",
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
             "/Account/AccessDenied",

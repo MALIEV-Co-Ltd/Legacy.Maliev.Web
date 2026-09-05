@@ -94,6 +94,7 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
                 "MemberProfilePage.razor",
                 "MemberQuotationDetailPage.razor",
                 "MemberQuotationsIndexPage.razor",
+                "NoWeaponsPage.razor",
                 "NonDisclosureAgreementPage.razor",
                 "PrivacyPolicyPage.razor",
                 "QuotationPage.razor",

@@ -36,6 +36,7 @@ public sealed class SeoBusinessContractParityTests
             ["/legal/privacypolicy"] = ("Legal/PrivacyPolicyPage.razor", "Legal/PrivacyPolicyContent.razor"),
             ["/legal/termsconditions"] = ("Legal/TermsConditionsPage.razor", "Legal/TermsConditionsContent.razor"),
             ["/legal/nondisclosureagreement"] = ("Legal/NonDisclosureAgreementPage.razor", "Legal/NonDisclosureAgreementContent.razor"),
+            ["/no-weapons"] = ("Legal/NoWeaponsPage.razor", "Legal/NoWeaponsContent.razor"),
         };
 
     [Fact]

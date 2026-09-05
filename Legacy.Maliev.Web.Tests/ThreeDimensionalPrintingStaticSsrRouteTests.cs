@@ -100,6 +100,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "MemberProfilePage.razor",
                 "MemberQuotationDetailPage.razor",
                 "MemberQuotationsIndexPage.razor",
+                "NoWeaponsPage.razor",
                 "NonDisclosureAgreementPage.razor",
                 "PrivacyPolicyPage.razor",
                 "QuotationPage.razor",
