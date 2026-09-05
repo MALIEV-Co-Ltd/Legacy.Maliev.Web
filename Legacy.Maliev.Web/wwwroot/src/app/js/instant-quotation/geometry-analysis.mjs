@@ -268,6 +268,7 @@ function analyzeMeshQuality(triangles, diagonal) {
     const first = vertexKey(triangles[offset], triangles[offset + 1], triangles[offset + 2]);
     const second = vertexKey(triangles[offset + 3], triangles[offset + 4], triangles[offset + 5]);
     const third = vertexKey(triangles[offset + 6], triangles[offset + 7], triangles[offset + 8]);
+    if (first === second || second === third || third === first) continue;
     addNode(first);
     addNode(second);
     addNode(third);
