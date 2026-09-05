@@ -1271,10 +1271,11 @@ public sealed class BlazorMigrationContractTests
         Assert.Contains("render-mode=\"Static\"", page, StringComparison.Ordinal);
         Assert.Contains("param-Model=\"Model.DisplayModel\"", page, StringComparison.Ordinal);
         Assert.Contains("ViewData[\"SuppressIdentityNavigation\"] = true", page, StringComparison.Ordinal);
-        Assert.Contains("Response.StatusCode = code.Value", pageModel, StringComparison.Ordinal);
-        Assert.Contains("ErrorIncidentHandler.GetOrCreate(HttpContext", pageModel, StringComparison.Ordinal);
-        Assert.Contains("IncidentId = incident.IncidentId", pageModel, StringComparison.Ordinal);
-        Assert.Contains("OccurredAtUtc = incident.OccurredAtUtc", pageModel, StringComparison.Ordinal);
+        Assert.Contains("ErrorDisplayModelResolver.Resolve(HttpContext, code)", pageModel, StringComparison.Ordinal);
+        Assert.Contains("Response.StatusCode = resolved.StatusCode!.Value", pageModel, StringComparison.Ordinal);
+        Assert.Contains("IncidentId = resolved.IncidentId", pageModel, StringComparison.Ordinal);
+        Assert.Contains("OccurredAtUtc = resolved.OccurredAtUtc", pageModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("ErrorIncidentHandler.GetOrCreate", pageModel, StringComparison.Ordinal);
         Assert.Contains("Response.Headers.CacheControl = \"no-store\"", pageModel, StringComparison.Ordinal);
         Assert.Contains("Response.Headers[\"Referrer-Policy\"] = \"no-referrer\"", pageModel, StringComparison.Ordinal);
 

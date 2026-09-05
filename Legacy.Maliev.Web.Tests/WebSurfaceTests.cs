@@ -112,7 +112,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("data-migration-component=\"error-content\"", content, StringComparison.Ordinal);
-        Assert.Contains("<p class=\"maliev-eyebrow\">404</p>", content, StringComparison.Ordinal);
+        Assert.Contains("<main class=\"space-error\"", content, StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"error-title\">404", content, StringComparison.Ordinal);
         Assert.Contains("noindex", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
@@ -153,8 +154,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", 404, "Error | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
-    [InlineData("th", 404, "ข้อผิดพลาด | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 404, "404 — Page not found | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
+    [InlineData("th", 404, "404 — ไม่พบหน้าที่ต้องการ | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.", "Back to the home page", "Contact support")]
     [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrForStatusCode(
@@ -175,7 +176,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains("data-migration-component=\"error-content\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{description}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{homeLabel}<", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(homeLabel, decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{supportLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
@@ -201,7 +202,14 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
 
         Assert.Equal(expectedStatus, response.StatusCode);
         Assert.Contains("data-migration-component=\"error-content\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
+        if (expectedStatus == HttpStatusCode.NotFound)
+        {
+            Assert.DoesNotContain("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
+        }
         Assert.DoesNotContain("customer@example.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);

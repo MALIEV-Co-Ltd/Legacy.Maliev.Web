@@ -4,7 +4,7 @@
   "scripts": {
     "build": "node build-assets.mjs",
     "ci": "node install-assets.mjs && npm run build && npm run test:browser-module",
-    "test:browser-module": "node --test tests/contact-channel-analytics.test.mjs tests/finish-color-matcher-core.test.cjs tests/instant-quotation-controller.test.mjs tests/instant-quotation-geometry-analysis.test.mjs tests/instant-quotation-optional-fields.test.mjs tests/instant-quotation-preliminary.test.mjs tests/instant-quotation-three-mf-loader-patch.test.mjs tests/instant-quotation-upload-controller.test.mjs tests/instant-quotation-viewer.test.mjs tests/instant-quotation-workflow-interop.test.mjs tests/legacy-ui-without-jquery.test.mjs tests/member-order-form.test.mjs tests/scanning-comparison.test.mjs tests/service-part-gallery.test.mjs tests/shared-public-modules.test.mjs tests/webmcp.test.mjs"
+    "test:browser-module": "node --test tests/contact-channel-analytics.test.mjs tests/finish-color-matcher-core.test.cjs tests/instant-quotation-controller.test.mjs tests/instant-quotation-geometry-analysis.test.mjs tests/instant-quotation-optional-fields.test.mjs tests/instant-quotation-preliminary.test.mjs tests/instant-quotation-three-mf-loader-patch.test.mjs tests/instant-quotation-upload-controller.test.mjs tests/instant-quotation-viewer.test.mjs tests/instant-quotation-workflow-interop.test.mjs tests/legacy-ui-without-jquery.test.mjs tests/member-order-form.test.mjs tests/scanning-comparison.test.mjs tests/service-part-gallery.test.mjs tests/shared-public-modules.test.mjs tests/space-error-physics.test.cjs tests/webmcp.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",

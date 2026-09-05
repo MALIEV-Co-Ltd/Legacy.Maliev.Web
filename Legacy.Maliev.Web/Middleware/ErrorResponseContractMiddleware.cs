@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace Legacy.Maliev.Web.Middleware;
 
@@ -14,9 +15,23 @@ public sealed class ErrorResponseContractMiddleware(RequestDelegate next)
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers["Referrer-Policy"] = "no-referrer";
 
-        if (context.Request.Query.TryGetValue("code", out var values)
-            && int.TryParse(values.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var statusCode)
-            && statusCode is >= 400 and <= 599)
+        var hasExceptionContext = context.Features.Get<IExceptionHandlerFeature>()?.Error is not null;
+        var statusCodeReExecute = context.Features.Get<IStatusCodeReExecuteFeature>();
+        var hasTrustedFailureContext = hasExceptionContext || statusCodeReExecute is not null;
+        var statusCode = 0;
+        var hasValidPreviewStatus = context.Request.Query.TryGetValue("code", out var values)
+            && int.TryParse(values.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out statusCode)
+            && statusCode is >= 400 and <= 599;
+
+        if (!hasTrustedFailureContext && !hasValidPreviewStatus)
+        {
+            context.Response.Redirect("/");
+            return Task.CompletedTask;
+        }
+
+        var responseStatusCode = statusCodeReExecute?.OriginalStatusCode
+            ?? (!hasExceptionContext && hasValidPreviewStatus ? statusCode : (int?)null);
+        if (responseStatusCode is not null)
         {
             context.Response.OnStarting(
                 static state =>
@@ -25,7 +40,7 @@ public sealed class ErrorResponseContractMiddleware(RequestDelegate next)
                     response.StatusCode = code;
                     return Task.CompletedTask;
                 },
-                (context.Response, statusCode));
+                (context.Response, responseStatusCode.Value));
         }
 
         return next(context);

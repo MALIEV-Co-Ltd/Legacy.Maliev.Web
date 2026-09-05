@@ -3,9 +3,13 @@
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IStringLocalizer<ErrorContent> Localizer
 
-<PageTitle>@Localizer["Error | MALIEV"]</PageTitle>
+<PageTitle>@(displayModel.IsNotFound ? $"404 — {Localizer["Page not found"]} | MALIEV" : Localizer["Error | MALIEV"])</PageTitle>
 <HeadContent>
-    <meta name="robots" content="noindex,nofollow" />
+    <meta name="robots" content="@(displayModel.IsNotFound ? "noindex, follow" : "noindex,nofollow")" />
+    @if (displayModel.IsNotFound)
+    {
+        <meta name="theme-color" content="#020408" />
+    }
 </HeadContent>
 <ErrorContent Model="displayModel" RouteOwner="blazor-static-ssr" />
 
@@ -20,11 +24,19 @@
         var context = HttpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
 
-        var incident = ErrorIncidentHandler.GetOrCreate(context, DateTimeOffset.UtcNow);
-        displayModel = new(
-            Code == StatusCodes.Status404NotFound,
-            incident.IncidentId,
-            incident.OccurredAtUtc,
-            Code);
+        var requestedStatusCode = Code;
+        if (requestedStatusCode is null
+            && int.TryParse(context.Request.Query["code"], out var parsedStatusCode))
+        {
+            requestedStatusCode = parsedStatusCode;
+        }
+
+        var resolved = ErrorDisplayModelResolver.Resolve(context, requestedStatusCode);
+        if (resolved is null)
+        {
+            return;
+        }
+
+        displayModel = resolved;
     }
 }

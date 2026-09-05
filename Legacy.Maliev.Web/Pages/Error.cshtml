@@ -4,8 +4,16 @@
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<ErrorContent> ErrorLocalizer
 @{
-    ViewData["Title"] = ErrorLocalizer["Error | MALIEV"];
-    ViewData["Robots"] = "noindex,nofollow";
+    if (Model.DisplayModel.IsNotFound)
+    {
+        Layout = "_NotFoundLayout";
+        ViewData["Title"] = ErrorLocalizer["Page not found"];
+    }
+    else
+    {
+        ViewData["Title"] = ErrorLocalizer["Error | MALIEV"];
+        ViewData["Robots"] = "noindex,nofollow";
+    }
     ViewData["SuppressIdentityNavigation"] = true;
 }
 <component type="typeof(ErrorContent)" render-mode="Static" param-Model="Model.DisplayModel" />

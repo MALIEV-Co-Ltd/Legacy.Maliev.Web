@@ -21,6 +21,11 @@ public static class PublicRouteAssets
             return ["route-about.css"];
         }
 
+        if (path == "/error")
+        {
+            return ["route-error.css"];
+        }
+
         if (path == "/contact" || path.StartsWith("/quotation", StringComparison.OrdinalIgnoreCase))
         {
             return ["route-inquiry.css"];
@@ -47,6 +52,11 @@ public static class PublicRouteAssets
     public static IReadOnlyList<string> GetScripts(PathString requestPath)
     {
         var path = Normalize(requestPath);
+        if (path == "/error")
+        {
+            return ["route-error.js"];
+        }
+
         if (path == "/contact" || path.StartsWith("/quotation", StringComparison.OrdinalIgnoreCase))
         {
             return ["route-inquiry.js"];
