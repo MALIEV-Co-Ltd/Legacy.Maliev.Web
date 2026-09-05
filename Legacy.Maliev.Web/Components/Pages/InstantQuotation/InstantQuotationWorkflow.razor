@@ -271,6 +271,13 @@
                         <dt>@Localizer["Subtotal"]</dt>
                         <dd>@Money(part.Quote?.Subtotal)</dd>
                     </div>
+                    @if (part.Quote is { TechnicalFilamentMinimumApplied: true } technicalQuote)
+                    {
+                        <div data-technical-filament-minimum>
+                            <dt>@Localizer["Technical filament preparation minimum included"]</dt>
+                            <dd>+@Money(technicalQuote.TechnicalFilamentMinimumAdjustment)</dd>
+                        </div>
+                    }
                     @if (part.Quote is not null)
                     {
                         @foreach (var tier in part.Quote.Tiers)

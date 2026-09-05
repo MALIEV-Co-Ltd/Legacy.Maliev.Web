@@ -296,6 +296,9 @@ public sealed record InstantQuotationPartQuote(
     double BoundingCm3PerUnit,
     double UnitPrice,
     double Subtotal,
+    bool TechnicalFilamentMinimumApplied,
+    double TechnicalFilamentMinimumPrice,
+    double TechnicalFilamentMinimumAdjustment,
     IReadOnlyList<BulkTier> Tiers,
     BuildPreference BuildPreference,
     IReadOnlyList<InstantQuotationMaterialPrice> MaterialPrices);

@@ -446,6 +446,7 @@
   <data name="Needs engineer review — the model is not watertight, so this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — โมเดลไม่ปิดสนิท ราคานี้เป็นเพียงการประมาณ</value></data>
   <data name="Needs engineer review — some parts are not watertight, so part of this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — ชิ้นงานบางส่วนไม่ปิดสนิท ราคาบางส่วนจึงเป็นการประมาณ</value></data>
   <data name="Minimum order surcharge" xml:space="preserve"><value>ค่าธรรมเนียมยอดสั่งซื้อขั้นต่ำ</value></data>
+  <data name="Technical filament preparation minimum included" xml:space="preserve"><value>รวมค่าขั้นต่ำสำหรับการเตรียมเส้นพลาสติกทางเทคนิค</value></data>
   <data name="minimum" xml:space="preserve"><value>ขั้นต่ำ</value></data>
   <data name="Build preference" xml:space="preserve"><value>รูปแบบการพิมพ์</value></data>
   <data name="Quality" xml:space="preserve"><value>เน้นคุณภาพผิว</value></data>

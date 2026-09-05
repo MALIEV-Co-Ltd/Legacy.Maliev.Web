@@ -53,13 +53,16 @@ public static class PricingEngine
         var tiers = PricingCatalog.DiscountTiers.Select(tier => new BulkTier
         {
             MinQuantity = tier.MinQuantity,
-            UnitPrice = RoundUnitPrice(AllInUnitPrice(
-                complexityAdjustedCost,
-                setupLabor,
-                failureRate,
-                paymentGrossUp,
-                tier,
-                tier.MinQuantity)),
+            UnitPrice = ApplyTechnicalFilamentMinimumUnitPrice(
+                RoundUnitPrice(AllInUnitPrice(
+                    complexityAdjustedCost,
+                    setupLabor,
+                    failureRate,
+                    paymentGrossUp,
+                    tier,
+                    tier.MinQuantity)),
+                tier.MinQuantity,
+                material),
             Active = tier.MinQuantity == activeTier.MinQuantity,
         }).ToArray();
 
@@ -70,7 +73,9 @@ public static class PricingEngine
             paymentGrossUp,
             activeTier,
             normalizedQuantity);
-        var unitPrice = RoundUnitPrice(unroundedUnitPrice);
+        var calculatedUnitPrice = RoundUnitPrice(unroundedUnitPrice);
+        var unitPrice = ApplyTechnicalFilamentMinimumUnitPrice(calculatedUnitPrice, normalizedQuantity, material);
+        var calculatedSubtotal = calculatedUnitPrice * normalizedQuantity;
         var subtotal = unitPrice * normalizedQuantity;
         var boundingCm3 = (Math.Abs(geometry.FootprintMm2) * Math.Abs(geometry.HeightMm)) / 1_000.0;
 
@@ -83,8 +88,26 @@ public static class PricingEngine
             BoundingCm3PerUnit = boundingCm3,
             UnitPrice = unitPrice,
             Subtotal = subtotal,
+            TechnicalFilamentMinimumApplied = unitPrice > calculatedUnitPrice,
+            TechnicalFilamentMinimumPrice = material.RequiresDrying ? PricingCatalog.TechnicalFilamentMinimumPrice : 0,
+            TechnicalFilamentMinimumAdjustment = subtotal - calculatedSubtotal,
             Tiers = tiers,
         };
+    }
+
+    private static double ApplyTechnicalFilamentMinimumUnitPrice(
+        double unitPrice,
+        int quantity,
+        MaterialInfo material)
+    {
+        if (!material.RequiresDrying || (unitPrice * quantity) >= PricingCatalog.TechnicalFilamentMinimumPrice)
+        {
+            return unitPrice;
+        }
+
+        return Math.Max(
+            unitPrice,
+            RoundUnitPrice(PricingCatalog.TechnicalFilamentMinimumPrice / quantity));
     }
 
     public static double RoundUnitPrice(double unitPrice) =>

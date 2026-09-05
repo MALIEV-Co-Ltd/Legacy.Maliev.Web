@@ -35,6 +35,7 @@ public static class PricingCatalog
     public const int ResinMaxPartsPerPlate = 64;
     public const double PaymentFeeRate = 0.03;
     public const double VatRate = 0.07;
+    public const double TechnicalFilamentMinimumPrice = 500.0;
 
     public static readonly IReadOnlyList<DiscountTier> DiscountTiers = new FrozenList<DiscountTier>(
     [
@@ -175,7 +176,8 @@ public static class PricingCatalog
             double density,
             double costPerGram,
             FdmFlowClass flow,
-            double minLayerSeconds) => new()
+            double minLayerSeconds,
+            bool requiresDrying = false) => new()
             {
                 Key = key,
                 DisplayName = name,
@@ -184,6 +186,7 @@ public static class PricingCatalog
                 CostPerUnit = costPerGram,
                 FlowClass = flow,
                 MinLayerSeconds = minLayerSeconds,
+                RequiresDrying = requiresDrying,
             };
 
         MaterialInfo Resin(string key, string name, double costPerMl) => new()
@@ -199,22 +202,22 @@ public static class PricingCatalog
             Fdm("PLA", "PLA — Polylactic Acid", 1.24, 0.83, FdmFlowClass.Standard, 10),
             Fdm("PLA-CF", "PLA-CF — PLA + Carbon Fiber", 1.29, 1.925, FdmFlowClass.Engineering, 10),
             Fdm("PETG", "PETG — PET Glycol-modified", 1.27, 0.66, FdmFlowClass.Standard, 10),
-            Fdm("PETG-CF", "PETG-CF — PETG + Carbon Fiber", 1.29, 1.55, FdmFlowClass.Engineering, 10),
-            Fdm("PETG-ESD", "PETG-ESD — Electrostatic Discharge Safe", 1.31, 2.70, FdmFlowClass.Engineering, 10),
-            Fdm("PET-CF", "PET-CF — PET + Carbon Fiber", 1.30, 1.70, FdmFlowClass.Engineering, 10),
+            Fdm("PETG-CF", "PETG-CF — PETG + Carbon Fiber", 1.29, 1.55, FdmFlowClass.Engineering, 10, requiresDrying: true),
+            Fdm("PETG-ESD", "PETG-ESD — Electrostatic Discharge Safe", 1.31, 2.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
+            Fdm("PET-CF", "PET-CF — PET + Carbon Fiber", 1.30, 1.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
             Fdm("ABS", "ABS — Acrylonitrile Butadiene Styrene", 1.04, 0.76, FdmFlowClass.Standard, 5),
             Fdm("ABS-FR", "ABS-FR — Flame-Retardant ABS", 1.15, 1.60, FdmFlowClass.Standard, 5),
             Fdm("ASA", "ASA — Acrylonitrile Styrene Acrylate", 1.07, 0.86, FdmFlowClass.Standard, 5),
             Fdm("ASA-CF", "ASA-CF — ASA + Carbon Fiber", 1.11, 1.834, FdmFlowClass.Engineering, 5),
             Fdm("HIPS", "HIPS — High Impact Polystyrene", 1.04, 0.925, FdmFlowClass.Standard, 6),
-            Fdm("PC", "PC — Polycarbonate", 1.20, 1.05, FdmFlowClass.Engineering, 4),
-            Fdm("PC-FR", "PC-FR — Flame-Retardant Polycarbonate", 1.25, 2.15, FdmFlowClass.Engineering, 4),
-            Fdm("PC-ESD", "PC-ESD — ESD-Safe Polycarbonate (3DXTech)", 1.20, 3.80, FdmFlowClass.Engineering, 4),
-            Fdm("PA6", "PA6 — Nylon 6", 1.14, 1.95, FdmFlowClass.Engineering, 4),
-            Fdm("PA12", "PA12 — Nylon 12", 1.01, 2.034, FdmFlowClass.Engineering, 4),
-            Fdm("PA-CF", "PA-CF — Nylon + Carbon Fiber", 1.16, 3.534, FdmFlowClass.Engineering, 4),
-            Fdm("TPU", "TPU — Flexible Thermoplastic Polyurethane", 1.21, 1.05, FdmFlowClass.Flexible, 12),
-            Fdm("PVA", "PVA — Water-Soluble Support", 1.23, 2.568, FdmFlowClass.Standard, 8),
+            Fdm("PC", "PC — Polycarbonate", 1.20, 1.05, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PC-FR", "PC-FR — Flame-Retardant Polycarbonate", 1.25, 2.15, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PC-ESD", "PC-ESD — ESD-Safe Polycarbonate (3DXTech)", 1.20, 3.80, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PA6", "PA6 — Nylon 6", 1.14, 1.95, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PA12", "PA12 — Nylon 12", 1.01, 2.034, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PA-CF", "PA-CF — Nylon + Carbon Fiber", 1.16, 3.534, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("TPU", "TPU — Flexible Thermoplastic Polyurethane", 1.21, 1.05, FdmFlowClass.Flexible, 12, requiresDrying: true),
+            Fdm("PVA", "PVA — Water-Soluble Support", 1.23, 2.568, FdmFlowClass.Standard, 8, requiresDrying: true),
             Resin("M68", "Standard Resin (M68)", 2.14),
             Resin("K", "Tough Resin (K)", 2.14),
             Resin("G217", "Transparent Resin (G217)", 2.675),

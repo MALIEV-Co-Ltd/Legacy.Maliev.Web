@@ -105,6 +105,9 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             item.BoundingCm3PerUnit,
             item.UnitPrice,
             item.Subtotal,
+            item.TechnicalFilamentMinimumApplied,
+            item.TechnicalFilamentMinimumPrice,
+            item.TechnicalFilamentMinimumAdjustment,
             item.Tiers,
             configuration.BuildPreference,
             materialPrices);
