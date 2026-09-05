@@ -57,6 +57,7 @@ function snapshot() {
       quantity: 'Quantity',
       unitPrice: 'Unit price',
       lineSubtotal: 'Subtotal',
+      technicalFilamentMinimum: 'Technical filament preparation minimum included',
       printTime: 'Estimated print time per part',
       dimensions: 'Dimensions',
       volume: 'Volume',
@@ -85,6 +86,8 @@ function snapshot() {
       quantity: 2,
       unitPrice: 100,
       subtotal: 200,
+      technicalFilamentMinimumApplied: true,
+      technicalFilamentMinimumAdjustment: 300,
       printTimeMinutes: 60,
       dimensionXmm: 10,
       dimensionYmm: 20,
@@ -115,6 +118,8 @@ test('preliminary quotation opens a localized A4 review document with safe summa
   assert.match(harness.written, /PrintPreliminaryQuotation/);
   assert.match(harness.written, /DownloadPreliminaryQuotationPdf/);
   assert.match(harness.written, /Estimated print time per part/);
+  assert.match(harness.written, /Technical filament preparation minimum included/);
+  assert.match(harness.written, /300\.00 THB/);
   assert.match(harness.written, /DFM Analysis/);
   assert.match(harness.written, /156px/);
   assert.match(harness.written, /object-fit: contain/);
@@ -125,6 +130,15 @@ test('preliminary quotation opens a localized A4 review document with safe summa
   assert.equal(harness.events.length, 1);
   assert.equal(harness.events[0].event, 'preliminary_quotation_opened');
   assert.equal(harness.events[0].file_count, 1);
+});
+
+test('preliminary quotation omits the technical filament minimum when it is not applied', () => {
+  const harness = loadPreviewHarness();
+  const value = snapshot();
+  value.parts[0].technicalFilamentMinimumApplied = false;
+  harness.open(value);
+
+  assert.doesNotMatch(harness.written, /Technical filament preparation minimum included/);
 });
 
 test('preliminary quotation refuses an empty or missing-part snapshot', () => {

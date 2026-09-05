@@ -2,6 +2,7 @@
 @using System.Globalization
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
+@using Legacy.Maliev.Web.Pages.Shared
 @inject ICareerClient CareerClient
 @inject IConfiguration Configuration
 @inject IHttpContextAccessor HttpContextAccessor
@@ -56,15 +57,23 @@ else
     public int? PageIndex { get; set; }
 
     [SupplyParameterFromQuery(Name = "size")]
-    public int PageSize { get; set; }
+    public string? PageSize { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
+        var requestContext = HttpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        if (!PageSizeQuery.TryResolve(PageSize, out var pageSize))
+        {
+            requestContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            requestContext.Response.Headers.CacheControl = "no-store";
+            return;
+        }
+
         var currentSort = Enum.TryParse<CareerSort>(Sort, out var parsedSort)
             ? parsedSort
             : CareerSort.JobCreatedDate_Descending;
         var search = string.IsNullOrWhiteSpace(Search) ? null : Search.Trim();
-        var pageSize = Math.Clamp(PageSize > 0 ? PageSize : 25, 1, 100);
         var pageIndex = search is null ? Math.Max(PageIndex ?? 1, 1) : 1;
         var cancellationToken = HttpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
         try

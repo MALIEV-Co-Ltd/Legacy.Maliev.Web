@@ -3,6 +3,7 @@ import {
     wireInstantEstimate,
 } from './instant-quotation-controller.mjs';
 import { wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
+import { wireInstantQuotationAddressValidation } from './instant-quotation-address-validation.mjs';
 
 const form = document.querySelector('[data-instant-estimate]');
 const status = document.getElementById('estimate-status');
@@ -46,7 +47,29 @@ if (form instanceof HTMLFormElement
     });
 }
 
-document.querySelectorAll('form[data-optional-customer-fields]').forEach(wireOptionalQuotationFields);
+const wiredCustomerForms = new WeakSet();
+
+function wireCustomerForms(root) {
+    const forms = [];
+    if (root?.matches?.('form[data-optional-customer-fields]')) {
+        forms.push(root);
+    }
+    root?.querySelectorAll?.('form[data-optional-customer-fields]').forEach((candidate) => forms.push(candidate));
+    forms.forEach((customerForm) => {
+        if (wiredCustomerForms.has(customerForm)) {
+            return;
+        }
+
+        wiredCustomerForms.add(customerForm);
+        wireOptionalQuotationFields(customerForm);
+        wireInstantQuotationAddressValidation(customerForm);
+    });
+}
+
+wireCustomerForms(document);
+new MutationObserver((records) => records.forEach((record) =>
+    record.addedNodes.forEach((node) => wireCustomerForms(node))))
+    .observe(document.documentElement, { childList: true, subtree: true });
 
 function value(values, key) {
     return values.get(key)?.toString() ?? '';

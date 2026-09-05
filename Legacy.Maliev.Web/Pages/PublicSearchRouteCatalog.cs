@@ -47,6 +47,7 @@ namespace Legacy.Maliev.Web.Pages
             new PublicSearchRoute("/legal/privacypolicy", "yearly", 0.5),
             new PublicSearchRoute("/legal/termsconditions", "yearly", 0.5),
             new PublicSearchRoute("/legal/nondisclosureagreement", "yearly", 0.5),
+            new PublicSearchRoute("/no-weapons", "yearly", 0.5),
         };
 
         private static IReadOnlyDictionary<string, string> CanonicalPaths { get; } = Routes

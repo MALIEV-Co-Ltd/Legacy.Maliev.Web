@@ -62,28 +62,121 @@ export function validateStandaloneGltfDocument(source) {
 
 /**
  * Normalizes preview geometry before it is displayed or measured.
- * Indexed meshes (notably 3MF) share vertices between faces; expanding them
- * before normal generation keeps their faceting consistent with STL/OBJ/CAD
- * triangle-soup previews. Flat shading is intentional: this surface explains
- * the tessellation being priced, rather than smoothing it into a misleading blob.
+ * Indexed meshes such as 3MF share vertices between faces; expanding them before
+ * normal generation keeps their faceting consistent with STL/OBJ triangle soups.
+ * CAD keeps its native normals and B-rep ranges so its authored face boundaries
+ * can be rendered without turning triangulation diagonals into visible features.
  */
 export function ensurePreviewGeometryNormals(object) {
   object?.traverse?.(child => {
     if (!child.isMesh || !child.geometry) return;
+    const isCadGeometry = Array.isArray(child.geometry.userData?.cadFaceRanges)
+      && child.geometry.userData.cadFaceRanges.length > 0;
     const indexed = child.geometry.getIndex?.();
-    if (indexed && typeof child.geometry.toNonIndexed === 'function') {
+    if (!isCadGeometry && indexed && typeof child.geometry.toNonIndexed === 'function') {
       const previousGeometry = child.geometry;
       child.geometry = previousGeometry.toNonIndexed();
       previousGeometry.dispose?.();
     }
-    child.geometry.computeVertexNormals?.();
+    if (!child.geometry.getAttribute?.('normal')) child.geometry.computeVertexNormals?.();
     for (const material of asArray(child.material)) {
       if (!material) continue;
-      material.flatShading = true;
+      material.flatShading = !isCadGeometry;
       material.needsUpdate = true;
     }
   });
   return object;
+}
+
+export function addCadPreviewEdges(object) {
+  const meshes = [];
+  object?.traverse?.(child => {
+    if (child.isMesh && child.geometry) meshes.push(child);
+  });
+  let added = 0;
+  for (const mesh of meshes) {
+    if (mesh.children.some(child => child.userData?.cadFeatureEdges)) continue;
+    const boundaryGeometry = createCadFaceBoundaryGeometry(mesh.geometry);
+    const edgeGeometry = boundaryGeometry ?? new THREE.EdgesGeometry(mesh.geometry, 15);
+    const position = edgeGeometry.getAttribute('position');
+    if (!position || position.count === 0) {
+      edgeGeometry.dispose();
+      continue;
+    }
+    const edges = new THREE.LineSegments(edgeGeometry, new THREE.LineBasicMaterial({
+      color: 0x172033,
+      transparent: true,
+      opacity: 0.86,
+      depthTest: true,
+      depthWrite: false,
+    }));
+    edges.renderOrder = 6;
+    edges.userData.cadFeatureEdges = true;
+    edges.userData.cadEdgeSource = boundaryGeometry ? 'brep-face-boundaries' : 'feature-angle-fallback';
+    for (const material of asArray(mesh.material)) {
+      if (!material) continue;
+      material.polygonOffset = true;
+      material.polygonOffsetFactor = 1;
+      material.polygonOffsetUnits = 1;
+      material.needsUpdate = true;
+    }
+    mesh.add(edges);
+    added += 1;
+  }
+  return added;
+}
+
+function createCadFaceBoundaryGeometry(geometry) {
+  const ranges = geometry?.userData?.cadFaceRanges;
+  const position = geometry?.getAttribute?.('position');
+  const index = geometry?.getIndex?.();
+  if (!Array.isArray(ranges) || ranges.length === 0 || !position || !index) return null;
+  const bounds = new THREE.Box3().setFromBufferAttribute(position);
+  const grid = Math.max(bounds.getSize(new THREE.Vector3()).length() * 1e-7, 1e-7);
+  const segments = [];
+  const emitted = new Set();
+  const coordinateKey = vertex => [
+    Math.round(position.getX(vertex) / grid),
+    Math.round(position.getY(vertex) / grid),
+    Math.round(position.getZ(vertex) / grid),
+  ].join('_');
+
+  for (const range of ranges) {
+    const localEdges = new Map();
+    const addEdge = (left, right) => {
+      if (left === right) return;
+      const key = left < right ? `${left}|${right}` : `${right}|${left}`;
+      const existing = localEdges.get(key);
+      if (existing) existing.count += 1;
+      else localEdges.set(key, { left, right, count: 1 });
+    };
+    const first = Math.max(0, Number(range.first) || 0);
+    const last = Math.min(Math.floor(index.count / 3) - 1, Number(range.last));
+    for (let triangle = first; triangle <= last; triangle += 1) {
+      const offset = triangle * 3;
+      const a = index.getX(offset);
+      const b = index.getX(offset + 1);
+      const c = index.getX(offset + 2);
+      addEdge(a, b);
+      addEdge(b, c);
+      addEdge(c, a);
+    }
+    for (const edge of localEdges.values()) {
+      if (edge.count !== 1) continue;
+      const leftKey = coordinateKey(edge.left);
+      const rightKey = coordinateKey(edge.right);
+      const segmentKey = leftKey < rightKey ? `${leftKey}|${rightKey}` : `${rightKey}|${leftKey}`;
+      if (emitted.has(segmentKey)) continue;
+      emitted.add(segmentKey);
+      segments.push(
+        position.getX(edge.left), position.getY(edge.left), position.getZ(edge.left),
+        position.getX(edge.right), position.getY(edge.right), position.getZ(edge.right));
+    }
+  }
+  if (segments.length === 0) return null;
+  const edges = new THREE.BufferGeometry();
+  edges.setAttribute('position', new THREE.Float32BufferAttribute(segments, 3));
+  return edges;
 }
 
 export function createCanvasResizeController({ renderer, camera, canvas, devicePixelRatio }) {
@@ -379,7 +472,9 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   } else {
     throw new TypeError('Unsupported standalone model file.');
   }
-  return ensurePreviewGeometryNormals(object);
+  ensurePreviewGeometryNormals(object);
+  if (['stp', 'step', 'igs', 'iges'].includes(extension)) addCadPreviewEdges(object);
+  return object;
 }
 
 async function loadCadModel(buffer, extension, signal) {
@@ -389,12 +484,28 @@ async function loadCadModel(buffer, extension, signal) {
   const result = validateCadTessellation(extension === 'igs' || extension === 'iges'
     ? occt.ReadIgesFile(bytes, null)
     : occt.ReadStepFile(bytes, null));
+  return buildCadModel(result);
+}
+
+export function buildCadModel(result) {
+  validateCadTessellation(result);
   const group = new THREE.Group();
   for (const mesh of result.meshes ?? []) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(mesh.attributes.position.array, 3));
+    if (mesh.attributes.normal?.array) {
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(mesh.attributes.normal.array, 3));
+    }
     if (mesh.index?.array) geometry.setIndex(mesh.index.array);
-    geometry.computeVertexNormals();
+    if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
+    geometry.userData.cadFaceRanges = Array.isArray(mesh.brep_faces)
+      ? mesh.brep_faces
+        .map(face => ({ first: Number(face.first), last: Number(face.last) }))
+        .filter(face => Number.isSafeInteger(face.first)
+          && Number.isSafeInteger(face.last)
+          && face.first >= 0
+          && face.last >= face.first)
+      : [];
     group.add(new THREE.Mesh(geometry, defaultMaterial()));
   }
   return group;

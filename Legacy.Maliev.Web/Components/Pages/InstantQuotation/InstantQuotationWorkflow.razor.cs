@@ -552,16 +552,19 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             ? part.Configuration.Color
             : colors.First();
         await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity);
+        await UpdatePartAppearanceAsync(partId, color);
     }
 
-    private Task ChangeColorAsync(Guid partId, ChangeEventArgs args)
+    private async Task ChangeColorAsync(Guid partId, ChangeEventArgs args)
     {
         var part = Parts.Single(item => item.PartId == partId);
-        return UpdateConfigurationAsync(
+        var color = args.Value?.ToString() ?? part.Configuration.Color;
+        await UpdateConfigurationAsync(
             part,
             part.Configuration.MaterialKey,
-            args.Value?.ToString() ?? part.Configuration.Color,
+            color,
             part.Configuration.Quantity);
+        await UpdatePartAppearanceAsync(partId, color);
     }
 
     private Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
@@ -606,6 +609,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         string color,
         int quantity) => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
             ?? Task.CompletedTask;
+
+    private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
+        InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
+
+    private Task SelectReviewPartAsync(Guid partId) => SelectPreviewAsync(partId);
+
+    private async Task EditReviewPartAsync(Guid partId)
+    {
+        await SelectPreviewAsync(partId);
+        workflow?.ReturnToConfiguration();
+        pendingFocus = PendingWorkflowFocus.Configuration;
+    }
 
     private void EnterReview()
     {

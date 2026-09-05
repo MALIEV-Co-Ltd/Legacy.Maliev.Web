@@ -1,0 +1,21 @@
+@page "/no-weapons"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var title = isThai ? "นโยบายไม่รับผลิตอาวุธและชิ้นส่วนปืน | MALIEV" : "Weapons manufacturing policy | MALIEV";
+    var description = isThai
+        ? "MALIEV ไม่รับผลิต ประกอบ ซ่อมแซม หรือดัดแปลงอาวุธและชิ้นส่วนปืน อ่านเหตุผล ข้อกฎหมายไทยที่เกี่ยวข้อง และเอกสารกฎหมายฉบับอ้างอิง"
+        : "Why MALIEV does not manufacture, assemble, repair or modify weapons and firearm parts, with relevant Thai law and a downloadable reference Act.";
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
+</HeadContent>
+<NoWeaponsContent RouteOwner="blazor-static-ssr" />

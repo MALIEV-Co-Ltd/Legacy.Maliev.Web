@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  addCadPreviewEdges,
+  buildCadModel,
   colorDisconnectedBodies,
   createCanvasResizeController,
   createModelViewer,
@@ -38,6 +40,57 @@ test('indexed preview geometry is expanded and flat-shaded before analysis', () 
   assert.equal(mesh.geometry.getAttribute('normal').count, mesh.geometry.getAttribute('position').count);
   assert.equal(material.flatShading, true);
   assert.equal(material.version > 0, true);
+});
+
+test('CAD tessellation keeps native normals and B-rep face ranges for edge rendering', () => {
+  const nativeNormals = [
+    0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
+    0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+  ];
+  const model = buildCadModel({
+    success: true,
+    meshes: [{
+      attributes: {
+        position: { array: cubeVertices() },
+        normal: { array: nativeNormals },
+      },
+      index: { array: cubeIndices() },
+      brep_faces: cubeFaceRanges(),
+    }],
+  });
+  const mesh = model.children[0];
+
+  ensurePreviewGeometryNormals(model);
+
+  assert.notEqual(mesh.geometry.index, null);
+  assert.deepEqual(Array.from(mesh.geometry.getAttribute('normal').array), nativeNormals);
+  assert.deepEqual(mesh.geometry.userData.cadFaceRanges, cubeFaceRanges());
+});
+
+test('native CAD face boundaries render as depth-tested edges with recessed faces', () => {
+  const model = buildCadModel({
+    success: true,
+    meshes: [{
+      attributes: { position: { array: cubeVertices() } },
+      index: { array: cubeIndices() },
+      brep_faces: cubeFaceRanges(),
+    }],
+  });
+  const mesh = model.children[0];
+
+  assert.equal(addCadPreviewEdges(model), 1);
+
+  const edges = mesh.children[0];
+  assert.equal(edges.isLineSegments, true);
+  assert.equal(edges.userData.cadFeatureEdges, true);
+  assert.equal(edges.userData.cadEdgeSource, 'brep-face-boundaries');
+  assert.equal(edges.geometry.getAttribute('position').count, 24);
+  assert.equal(edges.material.depthTest, true);
+  assert.equal(edges.material.depthWrite, false);
+  assert.equal(mesh.material.polygonOffset, true);
+  assert.equal(mesh.material.polygonOffsetFactor, 1);
+  assert.equal(mesh.material.polygonOffsetUnits, 1);
+  assert.equal(addCadPreviewEdges(model), 0);
 });
 test('viewer retains camera state per part and exposes orbit keyboard alternatives', () => {
   const adapter = createAdapter();
@@ -337,6 +390,41 @@ function squarePyramidTriangles() {
     ...a, ...c, ...b, ...a, ...d, ...c,
     ...a, ...b, ...top, ...b, ...c, ...top,
     ...c, ...d, ...top, ...d, ...a, ...top,
+  ];
+}
+
+function cubeVertices() {
+  return [
+    0, 0, 0,
+    1, 0, 0,
+    1, 1, 0,
+    0, 1, 0,
+    0, 0, 1,
+    1, 0, 1,
+    1, 1, 1,
+    0, 1, 1,
+  ];
+}
+
+function cubeIndices() {
+  return [
+    0, 2, 1, 0, 3, 2,
+    4, 5, 6, 4, 6, 7,
+    0, 1, 5, 0, 5, 4,
+    1, 2, 6, 1, 6, 5,
+    2, 3, 7, 2, 7, 6,
+    3, 0, 4, 3, 4, 7,
+  ];
+}
+
+function cubeFaceRanges() {
+  return [
+    { first: 0, last: 1 },
+    { first: 2, last: 3 },
+    { first: 4, last: 5 },
+    { first: 6, last: 7 },
+    { first: 8, last: 9 },
+    { first: 10, last: 11 },
   ];
 }
 

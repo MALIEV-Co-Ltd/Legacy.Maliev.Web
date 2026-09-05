@@ -1,0 +1,16 @@
+@using System.Globalization
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, follow" />
+    <meta name="theme-color" content="#020408" />
+    <title>404 — @ViewData["Title"] | MALIEV</title>
+    <link rel="stylesheet" href="~/dist/route-error.css" asp-append-version="true" />
+</head>
+<body>
+    @RenderBody()
+    <script src="~/dist/route-error.js" asp-append-version="true" defer></script>
+</body>
+</html>

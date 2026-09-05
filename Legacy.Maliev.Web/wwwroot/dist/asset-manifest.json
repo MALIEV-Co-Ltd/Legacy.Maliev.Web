@@ -5,6 +5,7 @@
   ],
   "routeScripts": [
     "route-inquiry.js",
+    "route-error.js",
     "route-instant-quotation.js",
     "route-member-order.js",
     "route-service-finder.js",
@@ -25,6 +26,7 @@
     "route-about.css",
     "route-home.css",
     "route-inquiry.css",
+    "route-error.css",
     "route-instant-quotation.css",
     "route-services.css",
     "route-services-index.css"

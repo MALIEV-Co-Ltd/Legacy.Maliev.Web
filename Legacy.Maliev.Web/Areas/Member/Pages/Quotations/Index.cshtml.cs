@@ -1,6 +1,7 @@
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,11 @@ public sealed class Index(
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid || !PageSizeQuery.TryResolve(PageSize, out var pageSize))
+        {
+            return BadRequest();
+        }
+
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
         if (customerId is null)
         {
@@ -41,7 +47,7 @@ public sealed class Index(
         }
 
         PageIndex = Math.Max(PageIndex, 1);
-        PageSize = MemberListLoaders.NormalizePageSize(PageSize);
+        PageSize = pageSize;
         var result = await quotationClient.ListAsync(
             customerId.Value,
             string.IsNullOrWhiteSpace(Sort) ? "QuotationCreatedDate_Descending" : Sort,

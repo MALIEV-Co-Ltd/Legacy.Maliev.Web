@@ -60,7 +60,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
 
         Assert.Contains("LineContactPage.razor", routedPages);
         Assert.Equal(
-            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberCreatePasswordPage.razor", "MemberOrderCreationPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberCreatePasswordPage.razor", "MemberOrderCreationPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NoWeaponsPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages.Where(name => name != "LineContactPage.razor").ToArray());
     }
 
@@ -69,19 +69,22 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         "en",
         "CNC Machining Services Across Thailand | One-Off and Production Parts",
         "CNC milling and turning for customers across Thailand, from one-off parts and prototypes to jigs and repeat production. Send CAD and drawings for a quote.",
-        "Precision CNC Machining for One-Off and Production Parts",
+        "CNC milling and CNC turning from your CAD and drawing",
+        "Choose CNC milling for plates, housings, pockets, and fixtures, or CNC turning for shafts, bushes, pins, and other round parts. We machine metals and engineering plastics from one-off parts through repeat production for customers across Thailand.",
         "CNC machining Thailand, CNC aluminum, CNC one piece, machine shop Bangkok, CNC Nonthaburi")]
     [InlineData(
         "th",
         "รับงาน CNC ตามแบบทั่วประเทศไทย | อะลูมิเนียมชิ้นเดียวถึงงานผลิต",
         "MALIEV รับ CNC อะลูมิเนียมชิ้นเดียวและผลิตชิ้นงานตามไฟล์ CAD และแบบงาน สำหรับลูกค้าทั่วประเทศไทย ส่ง CAD แบบ 2D วัสดุ และจำนวนเพื่อให้ตรวจสอบและเสนอราคา",
-        "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต",
+        "โรงกลึง CNC รับกัดและรับกลึงตามแบบ",
+        "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิตซ้ำ MALIEV รับผลิตชิ้นงาน CNC ตามไฟล์ CAD และแบบงาน เลือกรับกัด CNC สำหรับเพลท ตัวเรือน ร่อง และฟิกซ์เจอร์ หรือรับกลึง CNC สำหรับเพลา บูช พิน และชิ้นงานทรงกลม พร้อมจัดส่งทั่วประเทศไทย",
         "รับ CNC อลูมิเนียม, รับกลึง CNC, โรงกลึง นนทบุรี, CNC งานชิ้นเดียว, โรงงาน CNC")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
         string description,
         string heading,
+        string lead,
         string keywords)
     {
         using var client = CreateClient(factory);
@@ -98,6 +101,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/cnc/cnc-hero.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -205,7 +209,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
 
         Assert.Contains("We accept one-off parts when the geometry, material, and project scope are feasible.", content, StringComparison.Ordinal);
         Assert.Contains("รับงาน CNC อะลูมิเนียมชิ้นเดียวเมื่อรูปทรง วัสดุ และขอบเขตงานผลิตได้จริง", content, StringComparison.Ordinal);
-        Assert.Contains("รวมงานอะลูมิเนียมชิ้นเดียว", content, StringComparison.Ordinal);
+        Assert.Contains("เลือกรับกัด CNC สำหรับเพลท ตัวเรือน ร่อง และฟิกซ์เจอร์", content, StringComparison.Ordinal);
         Assert.Contains("ส่ง CAD แบบ 2D ระบุวัสดุและจำนวนเพื่อให้ตรวจสอบก่อนเสนอราคา", content, StringComparison.Ordinal);
         Assert.Contains("CNC machining starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
@@ -289,6 +293,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("<title>CNC Machining Services Across Thailand | One-Off and Production Parts</title>", source, StringComparison.Ordinal);
+        Assert.Contains("CNC milling and CNC turning from your CAD and drawing", source, StringComparison.Ordinal);
         Assert.Contains("ISO 2768-1 tolerance class m", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"cnc-machining-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);

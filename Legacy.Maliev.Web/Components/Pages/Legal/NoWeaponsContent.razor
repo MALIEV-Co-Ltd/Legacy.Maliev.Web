@@ -1,0 +1,53 @@
+@using System.Globalization
+
+<main class="legal-page" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+    <header class="maliev-page-header">
+        <div class="maliev-container">
+            <h1>@T("Weapons manufacturing policy", "นโยบายไม่รับผลิตอาวุธและชิ้นส่วนปืน")</h1>
+            <p>@T("MALIEV’s service limits and the relevant Thai law", "ขอบเขตบริการของ MALIEV และกฎหมายไทยที่เกี่ยวข้อง")</p>
+        </div>
+    </header>
+    <div class="legal-shell maliev-container">
+        <nav class="legal-toc" aria-label="@T("On this page", "เนื้อหาในหน้านี้")">
+            <strong>@T("On this page", "เนื้อหาในหน้านี้")</strong>
+            <ul>
+                <li><a href="#policy">@T("Our policy", "นโยบายของบริษัท")</a></li>
+                <li><a href="#law">@T("Relevant law", "ข้อกฎหมายที่เกี่ยวข้อง")</a></li>
+                <li><a href="#components">@T("Component classification", "ขอบเขตของส่วนประกอบ")</a></li>
+                <li><a href="#questions">@T("Common questions", "คำถามที่พบบ่อย")</a></li>
+                <li><a href="#references">@T("Source documents", "เอกสารอ้างอิง")</a></li>
+            </ul>
+            <p><a href="/documents/arms-factory-act-2550.pdf">@T("Read the reference Act (Thai PDF)", "เปิดกฎหมายฉบับอ้างอิง (PDF)")</a></p>
+        </nav>
+        <article class="legal-document">
+            @if (IsThai)
+            {
+                <NoWeaponsThaiContent />
+            }
+            else
+            {
+                <NoWeaponsEnglishContent />
+            }
+            <section id="references" aria-labelledby="references-heading">
+                <h2 id="references-heading">@T("Sources and review date", "เอกสารอ้างอิงและวันที่ตรวจทาน")</h2>
+                <p>@T("Content reviewed on 3 September 2026", "ตรวจทานเนื้อหาเมื่อ 3 กันยายน 2569")</p>
+                <ol>
+                    <li><a href="/documents/arms-factory-act-2550.pdf" lang="th">พระราชบัญญัติโรงงานผลิตอาวุธของเอกชน พ.ศ. 2550 (PDF)</a> — @T("18-page original Gazette publication, volume 124, part 23 A, 4 May 2007; hosted by MALIEV.", "สำเนาราชกิจจานุเบกษา เล่ม 124 ตอนที่ 23 ก วันที่ 4 พฤษภาคม 2550 จำนวน 18 หน้า จัดเก็บบนเว็บไซต์ MALIEV")</li>
+                    <li><a href="https://www.thailandntr.com/en/goods/national-trade-and-customs-laws-and-rules/download/633">@T("Thailand National Trade Repository — Arms Factory Act", "ทะเบียนกฎหมาย Thailand National Trade Repository")</a></li>
+                    <li><a href="https://comment.ocs.go.th/main/download/1699413535/pdf/0945-2566_ความเห็นฉบับเต็ม">@T("Law Development Commission opinion 945/2566, pages 4–5 (Thai PDF)", "ความเห็นคณะกรรมการพัฒนากฎหมาย เรื่องเสร็จที่ 945/2566 หน้า 4–5")</a></li>
+                    <li><a href="https://mis5.dopa.go.th/law4/admin/uploads/20250127125447พระราชบัญญัติอาวุธปืน%202490.pdf">@T("Firearms, Ammunition, Explosives, Fireworks and Imitation Firearms Act B.E. 2490 — Department of Provincial Administration (Thai PDF)", "พระราชบัญญัติอาวุธปืน เครื่องกระสุนปืน วัตถุระเบิด ดอกไม้เพลิง และสิ่งเทียมอาวุธปืน พ.ศ. 2490 — กรมการปกครอง")</a></li>
+                </ol>
+                <p>@T("The hosted PDF is the original 2007 publication, not a consolidated current edition. Apply the law together with amendments, ministerial regulations and the facts of the work. This page explains company policy and relevant legal provisions; it does not determine the legal status of an individual part.", "PDF บนเว็บไซต์เป็นฉบับประกาศเดิม พ.ศ. 2550 ไม่ใช่ฉบับรวมการแก้ไขล่าสุด การใช้กฎหมายต้องอ่านร่วมกับกฎหมายแก้ไขเพิ่มเติม กฎกระทรวง และข้อเท็จจริงของงานนั้น หน้านี้อธิบายนโยบายของบริษัทและหลักกฎหมายที่เกี่ยวข้อง ไม่ใช่คำวินิจฉัยสถานะทางกฎหมายของชิ้นงานเฉพาะราย")</p>
+                <p><a href="/documents/arms-factory-act-2550.pdf" download="arms-factory-act-2550.pdf">@T("Download the reference PDF", "ดาวน์โหลด PDF ฉบับอ้างอิง")</a></p>
+            </section>
+        </article>
+    </div>
+</main>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
+    private static bool IsThai => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    private static string T(string english, string thai) => IsThai ? thai : english;
+}

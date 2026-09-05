@@ -105,13 +105,13 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<TestingWebApp
     }
 
     [Fact]
-    public async Task CareerRoute_ClampsInvalidPagingAndPreservesCanonicalDocumentLinks()
+    public async Task CareerRoute_NormalizesSortAndIndexAndPreservesCanonicalDocumentLinks()
     {
         var clientStub = new CapturingCareerClient();
         await using var routeFactory = CreateFactory(clientStub);
         using var client = CreateClient(routeFactory);
         var source = WebUtility.HtmlDecode(await client.GetStringAsync(
-            "/career?culture=en&sort=not-a-sort&index=-4&size=500&tracking=excluded"));
+            "/career?culture=en&sort=not-a-sort&index=-4&size=100&tracking=excluded"));
 
         Assert.Equal(new CareerRequest(CareerSort.JobCreatedDate_Descending, null, 1, 100), clientStub.LastRequest);
         Assert.Equal(1, CountLink(source, "canonical", "https://www.maliev.com/career?culture=en"));
@@ -119,6 +119,22 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.Equal(1, CountAlternate(source, "th", "https://www.maliev.com/career"));
         Assert.Equal(1, CountAlternate(source, "x-default", "https://www.maliev.com/career"));
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("101")]
+    [InlineData("2147483648")]
+    public async Task CareerRoute_RejectsOutOfRangePageSizeBeforeCallingCareerService(string size)
+    {
+        var clientStub = new CapturingCareerClient();
+        await using var routeFactory = CreateFactory(clientStub);
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync($"/career?size={size}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(clientStub.LastRequest);
     }
 
     [Fact]
@@ -144,6 +160,24 @@ public sealed class CareerIndexStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.Contains("<title>Career | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Equal(new CareerRequest(CareerSort.JobCreatedDate_Descending, null, 1, 25), clientStub.LastRequest);
+    }
+
+    [Theory]
+    [InlineData("invalid-size")]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("101")]
+    [InlineData("2147483648")]
+    public async Task DisabledCareerRoute_RejectsInvalidPageSizeBeforeCallingCareerService(string size)
+    {
+        var clientStub = new CapturingCareerClient();
+        await using var routeFactory = CreateFactory(clientStub, careerRouteEnabled: false);
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync($"/career?size={size}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(clientStub.LastRequest);
     }
 
     private WebApplicationFactory<Program> CreateFactory(

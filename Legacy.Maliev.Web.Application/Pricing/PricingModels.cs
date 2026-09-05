@@ -35,6 +35,8 @@ public sealed class MaterialInfo
     public FdmFlowClass FlowClass { get; init; }
 
     public double MinLayerSeconds { get; init; }
+
+    public bool RequiresDrying { get; init; }
 }
 
 public sealed class FdmEstimate
@@ -83,6 +85,12 @@ public sealed class ItemQuote
     public double UnitPrice { get; init; }
 
     public double Subtotal { get; init; }
+
+    public bool TechnicalFilamentMinimumApplied { get; init; }
+
+    public double TechnicalFilamentMinimumPrice { get; init; }
+
+    public double TechnicalFilamentMinimumAdjustment { get; init; }
 
     public IReadOnlyList<BulkTier> Tiers { get; init; } = [];
 }

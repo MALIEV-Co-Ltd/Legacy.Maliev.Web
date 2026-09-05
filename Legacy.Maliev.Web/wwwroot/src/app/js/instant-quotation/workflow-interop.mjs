@@ -4,6 +4,30 @@ export const supportedPreviewExtensions = Object.freeze([
   'stl', 'obj', '3mf', 'glb', 'gltf', 'stp', 'step', 'igs', 'iges',
 ]);
 
+const previewColors = Object.freeze({
+  Any: '#64748b',
+  Natural: '#64748b',
+  Clear: '#64748b',
+  Black: '#111827',
+  White: '#f8fafc',
+  Gray: '#6b7280',
+  Silver: '#c0c0c0',
+  Red: '#dc2626',
+  Orange: '#ea580c',
+  Yellow: '#eab308',
+  Green: '#16a34a',
+  Blue: '#2563eb',
+  Purple: '#9333ea',
+  Pink: '#db2777',
+});
+
+export function previewColorForSelection(value) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return /^#[0-9a-f]{6}$/i.test(normalized)
+    ? normalized.toLowerCase()
+    : previewColors[normalized] ?? previewColors.Any;
+}
+
 const supportedExtensions = new Set(supportedPreviewExtensions);
 const STALL_TIMEOUT_MS = 120_000;
 
@@ -288,6 +312,14 @@ export function createWorkflowPreviewInterop({
     }
     return rendered;
   }
+
+  function updatePartAppearance(partId, color) {
+    if (!viewer || !partKeys.has(partId)) return null;
+    viewer.select(partId);
+    viewer.setColor(previewColorForSelection(color));
+    const source = viewer.snapshot?.(partId);
+    return typeof source === 'string' && source.startsWith('data:image/') ? source : null;
+  }
   function status() { return availability; }
 
   function setUnavailable() {
@@ -338,6 +370,7 @@ export function createWorkflowPreviewInterop({
     fit,
     fullscreen,
     renderReviewThumbnails,
+    updatePartAppearance,
     status,
     dispose,
   });

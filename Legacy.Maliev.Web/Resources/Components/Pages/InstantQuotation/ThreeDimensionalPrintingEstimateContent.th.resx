@@ -446,6 +446,7 @@
   <data name="Needs engineer review — the model is not watertight, so this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — โมเดลไม่ปิดสนิท ราคานี้เป็นเพียงการประมาณ</value></data>
   <data name="Needs engineer review — some parts are not watertight, so part of this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — ชิ้นงานบางส่วนไม่ปิดสนิท ราคาบางส่วนจึงเป็นการประมาณ</value></data>
   <data name="Minimum order surcharge" xml:space="preserve"><value>ค่าธรรมเนียมยอดสั่งซื้อขั้นต่ำ</value></data>
+  <data name="Technical filament preparation minimum included" xml:space="preserve"><value>รวมค่าขั้นต่ำสำหรับการเตรียมเส้นพลาสติกทางเทคนิค</value></data>
   <data name="minimum" xml:space="preserve"><value>ขั้นต่ำ</value></data>
   <data name="Build preference" xml:space="preserve"><value>รูปแบบการพิมพ์</value></data>
   <data name="Quality" xml:space="preserve"><value>เน้นคุณภาพผิว</value></data>
@@ -485,19 +486,25 @@
   <data name="Billing address" xml:space="preserve"><value>ที่อยู่ออกใบกำกับภาษี</value></data>
   <data name="Shipping address" xml:space="preserve"><value>ที่อยู่จัดส่ง</value></data>
   <data name="Shipping address is the same as billing" xml:space="preserve"><value>ใช้ที่อยู่จัดส่งเดียวกับที่อยู่ออกใบกำกับภาษี</value></data>
-  <data name="Building" xml:space="preserve"><value>อาคาร / เลขที่</value></data>
+  <data name="Building" xml:space="preserve"><value>อาคาร/หมู่บ้าน (ไม่บังคับ)</value></data>
+  <data name="Examples: a building, village, or organization name." xml:space="preserve"><value>ตัวอย่าง: ชื่ออาคาร หมู่บ้าน หรือองค์กร</value></data>
+  <data name="This field contains address details. Move them to the separate address fields below." xml:space="preserve"><value>ช่องนี้มีรายละเอียดที่อยู่ กรุณาย้ายไปกรอกในช่องแยกด้านล่าง</value></data>
   <data name="Street address" xml:space="preserve"><value>ถนน / ที่อยู่</value></data>
   <data name="Sub-district" xml:space="preserve"><value>แขวง / ตำบล</value></data>
   <data name="City / district" xml:space="preserve"><value>เขต / อำเภอ</value></data>
   <data name="Province" xml:space="preserve"><value>จังหวัด</value></data>
   <data name="Postal code" xml:space="preserve"><value>รหัสไปรษณีย์</value></data>
   <data name="Billing street address" xml:space="preserve"><value>ถนน / ที่อยู่ออกใบกำกับภาษี</value></data>
+  <data name="Billing building" xml:space="preserve"><value>อาคาร/หมู่บ้านของที่อยู่ออกใบกำกับภาษี</value></data>
   <data name="Billing city" xml:space="preserve"><value>เขต / อำเภอของที่อยู่ออกใบกำกับภาษี</value></data>
   <data name="Billing province" xml:space="preserve"><value>จังหวัดของที่อยู่ออกใบกำกับภาษี</value></data>
   <data name="Billing postal code" xml:space="preserve"><value>รหัสไปรษณีย์ของที่อยู่ออกใบกำกับภาษี</value></data>
   <data name="Shipping street address" xml:space="preserve"><value>ถนน / ที่อยู่จัดส่ง</value></data>
+  <data name="Shipping building" xml:space="preserve"><value>อาคาร/หมู่บ้านของที่อยู่จัดส่ง</value></data>
   <data name="Shipping city" xml:space="preserve"><value>เขต / อำเภอของที่อยู่จัดส่ง</value></data>
   <data name="Shipping province" xml:space="preserve"><value>จังหวัดของที่อยู่จัดส่ง</value></data>
   <data name="Shipping postal code" xml:space="preserve"><value>รหัสไปรษณีย์ของที่อยู่จัดส่ง</value></data>
   <data name="Shipping country" xml:space="preserve"><value>ประเทศปลายทาง</value></data>
+  <data name="Edit" xml:space="preserve"><value>แก้ไข</value></data>
+  <data name="Edit {0}" xml:space="preserve"><value>แก้ไข {0}</value></data>
 </root>

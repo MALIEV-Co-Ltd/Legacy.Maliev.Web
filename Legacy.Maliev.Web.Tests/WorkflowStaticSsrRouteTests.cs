@@ -91,6 +91,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
                 "MemberProfilePage.razor",
                 "MemberQuotationDetailPage.razor",
                 "MemberQuotationsIndexPage.razor",
+                "NoWeaponsPage.razor",
                 "NonDisclosureAgreementPage.razor",
                 "PrivacyPolicyPage.razor",
                 "QuotationPage.razor",

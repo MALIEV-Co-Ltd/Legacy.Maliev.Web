@@ -109,6 +109,30 @@ test('quantizes topology, reports disconnected bodies and non-manifold edges, an
   ]);
 });
 
+test('collapsed CAD seam triangles do not invent topology defects', () => {
+  const closed = tetrahedronTriangles();
+  const collapsedSeam = [0, 0, 0, 1, 0, 0, 0, 0, 0];
+
+  const result = analyzeUploadDerivedGeometry(triangleSoupMesh([...closed, ...collapsedSeam]));
+
+  assert.equal(result.nonWatertight, false);
+  assert.equal(result.nonManifold, false);
+  assert.equal(result.bodyCount, 1);
+  assert.deepEqual(
+    result.dfmCodes.filter(code => ['non-watertight', 'non-manifold', 'multiple-bodies'].includes(code)),
+    []);
+});
+
+test('genuine open and multiply shared edges remain topology defects', () => {
+  const closed = tetrahedronTriangles();
+  const open = analyzeUploadDerivedGeometry(triangleSoupMesh(closed.slice(9)));
+  const shared = analyzeUploadDerivedGeometry(triangleSoupMesh([...closed, ...closed.slice(0, 9)]));
+
+  assert.equal(open.nonWatertight, true);
+  assert.equal(open.nonManifold, false);
+  assert.equal(shared.nonManifold, true);
+});
+
 test('bounds thin-part thickness by the smallest overall model extent', () => {
   const result = analyzeUploadDerivedGeometry(new Mesh(new BoxGeometry(100, 100, 0.5)));
 

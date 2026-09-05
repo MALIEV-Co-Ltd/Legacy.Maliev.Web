@@ -9,10 +9,10 @@
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var title = T(
-        "3D Scanning, Reverse Engineering & Deviation Analysis | Onsite Thailand",
+        "Reverse Engineering Thailand | 3D Scanning to Editable CAD | MALIEV",
         "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่");
     var description = T(
-        "In-house and onsite 3D scanning in Thailand. Understand raw meshes, reverse-engineered CAD, deviation analysis, preparation, limitations, and deliverable files.",
+        "Reverse engineering services in Thailand from 3D scan to editable CAD, with in-house and onsite scanning, deviation analysis, and defined deliverable files.",
         "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน");
     var keywords = T(
         "3D scanning service Thailand, onsite 3D scanning, reverse engineering Thailand, deviation analysis, 3D scan price",
@@ -23,7 +23,7 @@
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
-    <link rel="preload" as="image" href="/src/images/services/scanning/scanning-hero.webp" imagesrcset="/src/images/services/scanning/scanning-hero-640.webp 640w, /src/images/services/scanning/scanning-hero-960.webp 960w, /src/images/services/scanning/scanning-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
+    <link rel="preload" as="image" href="/src/images/services/scanning/scanning-hero.webp" imagesrcset="/src/images/services/scanning/scanning-hero-640.webp 640w, /src/images/services/scanning/scanning-hero-768.webp 768w, /src/images/services/scanning/scanning-hero-960.webp 960w, /src/images/services/scanning/scanning-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Scanning"))" />

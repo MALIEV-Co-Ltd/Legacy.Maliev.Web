@@ -176,6 +176,9 @@
                 + detail(text(snapshot, 'quantity'), escapeHtml(part.quantity))
                 + detail(text(snapshot, 'unitPrice'), money(snapshot, part.unitPrice), 'iq-preliminary-quotation-money')
                 + detail(text(snapshot, 'lineSubtotal'), money(snapshot, part.subtotal), 'iq-preliminary-quotation-money')
+                + (part.technicalFilamentMinimumApplied
+                    ? detail(text(snapshot, 'technicalFilamentMinimum'), '+' + money(snapshot, part.technicalFilamentMinimumAdjustment), 'iq-preliminary-quotation-money')
+                    : '')
                 + detail(text(snapshot, 'printTime'), measurement(snapshot, part.printTimeMinutes) + ' min')
                 + '</dl></div>'
                 + '<div class="iq-preliminary-quotation-measurements">'

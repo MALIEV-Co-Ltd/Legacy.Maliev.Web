@@ -36,6 +36,7 @@ public sealed class SeoBusinessContractParityTests
             ["/legal/privacypolicy"] = ("Legal/PrivacyPolicyPage.razor", "Legal/PrivacyPolicyContent.razor"),
             ["/legal/termsconditions"] = ("Legal/TermsConditionsPage.razor", "Legal/TermsConditionsContent.razor"),
             ["/legal/nondisclosureagreement"] = ("Legal/NonDisclosureAgreementPage.razor", "Legal/NonDisclosureAgreementContent.razor"),
+            ["/no-weapons"] = ("Legal/NoWeaponsPage.razor", "Legal/NoWeaponsContent.razor"),
         };
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class SeoBusinessContractParityTests
 
         foreach (var source in new[] { component, fallback })
         {
-            Assert.Contains("Custom 3D Printing in Thailand | Upload for Instant Pricing | MALIEV", source, StringComparison.Ordinal);
+            Assert.Contains("3D Printing Service Thailand | Instant FDM & Resin Pricing | MALIEV", source, StringComparison.Ordinal);
             Assert.Contains("รับปริ้น 3D รับพิมพ์ 3 มิติ | ประเมินราคาออนไลน์ | MALIEV", source, StringComparison.Ordinal);
             var titleBoundary = source[..source.IndexOf("Description", StringComparison.OrdinalIgnoreCase)];
             Assert.DoesNotContain("Bangkok", titleBoundary, StringComparison.OrdinalIgnoreCase);

@@ -45,6 +45,7 @@ await build({
 
 const routeScripts = {
   'route-inquiry': path.join(assets, 'route-inquiry.js'),
+  'route-error': path.join(assets, 'route-error.js'),
   'route-instant-quotation': path.join(assets, 'route-instant-quotation.js'),
   'route-member-order': path.join(assets, 'route-member-order.js'),
   'route-service-finder': path.join(assets, 'route-service-finder.js'),
@@ -108,6 +109,7 @@ const routeStyles = {
   'route-about': path.join(assets, 'route-about.css'),
   'route-home': path.join(assets, 'route-home.css'),
   'route-inquiry': path.join(assets, 'route-inquiry.css'),
+  'route-error': path.join(assets, 'route-error.css'),
   'route-instant-quotation': path.join(assets, 'route-instant-quotation.css'),
   'route-services': path.join(assets, 'route-services.css'),
   'route-services-index': path.join(assets, 'route-services-index.css'),
@@ -116,7 +118,7 @@ const routeStyles = {
 await build({
   ...common,
   entryPoints: routeStyles,
-  external: ['/src/images/*'],
+  external: ['/src/images/*', '/lib/ibm-plex/*'],
   outdir: dist,
 });
 

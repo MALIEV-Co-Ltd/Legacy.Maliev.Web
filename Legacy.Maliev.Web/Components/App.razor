@@ -13,6 +13,10 @@
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var googleTagManagerModel = PublicGoogleTagManagerDisplayModel.Create(context, TempDataDictionaryFactory);
     var suppressIdentityNavigation = context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase);
+    var isNotFoundError = suppressIdentityNavigation
+        && ((int.TryParse(context.Request.Query["code"], out var requestedErrorCode)
+                && requestedErrorCode == StatusCodes.Status404NotFound)
+            || context.Response.StatusCode == StatusCodes.Status404NotFound);
     var siteStyle = FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, "/dist/site.min.css");
     var routeStyles = PublicRouteAssets.GetStyles(context.Request.Path)
         .Select(asset => FileVersionProvider.AddFileVersionToPath(context.Request.PathBase, $"/dist/{asset}"))
@@ -60,37 +64,49 @@
     <link rel="icon" href="/favicon-16x16.webp" type="image/webp" sizes="16x16" />
     <link rel="icon" href="/favicon-32x32.webp" type="image/webp" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.webp" type="image/webp" sizes="180x180" />
-    <PublicGoogleTagManagerHead Model="googleTagManagerModel" />
-    <link rel="stylesheet" href="@siteStyle" />
+    @if (!isNotFoundError)
+    {
+        <PublicGoogleTagManagerHead Model="googleTagManagerModel" />
+        <link rel="stylesheet" href="@siteStyle" />
+    }
     @foreach (var routeStyle in routeStyles)
     {
         <link rel="stylesheet" href="@routeStyle" />
     }
-    <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
-    <link rel="shortlink" href="https://www.maliev.com/" />
-    <script>
-        document.documentElement.dataset.motion = "ready";
-        window.__malievMotionFailsafe = window.setTimeout(function () {
-            document.documentElement.removeAttribute("data-motion");
-        }, 2500);
-    </script>
+    @if (!isNotFoundError)
+    {
+        <PublicBusinessStructuredData Model="@(PublicBusinessStructuredDataDisplayModel.Create())" />
+        <link rel="shortlink" href="https://www.maliev.com/" />
+        <script>
+            document.documentElement.dataset.motion = "ready";
+            window.__malievMotionFailsafe = window.setTimeout(function () {
+                document.documentElement.removeAttribute("data-motion");
+            }, 2500);
+        </script>
+    }
 </head>
 <body class="@(requiresInstantQuotationBootstrap ? "instant-quotation-shell" : null)">
-    <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
-    <PublicGoogleTagManagerBody Model="googleTagManagerModel" />
-    <PublicCookieConsent Model="@(PublicCookieConsentDisplayModel.Create(context))" />
-    <PublicNavigation Model="@(PublicNavigationDisplayModel.Create(context, suppressIdentityNavigation))" />
-    <PublicBrowserCompatibilityNotice Model="@(PublicBrowserCompatibilityNoticeDisplayModel.Create(context))" />
+    @if (!isNotFoundError)
+    {
+        <a class="maliev-skip-link" href="#main-content">@Localizer["Skip to main content"]</a>
+        <PublicGoogleTagManagerBody Model="googleTagManagerModel" />
+        <PublicCookieConsent Model="@(PublicCookieConsentDisplayModel.Create(context))" />
+        <PublicNavigation Model="@(PublicNavigationDisplayModel.Create(context, suppressIdentityNavigation))" />
+        <PublicBrowserCompatibilityNotice Model="@(PublicBrowserCompatibilityNoticeDisplayModel.Create(context))" />
+    }
     <div id="main-content" tabindex="-1">
         <Routes />
     </div>
-    @if (!requiresInstantQuotationBootstrap)
+    @if (!requiresInstantQuotationBootstrap && !isNotFoundError)
     {
         <PublicFooter />
     }
-    <PublicContactChannelAnalytics />
-    <script src="@vendorScript"></script>
-    <script src="@appScript"></script>
+    @if (!isNotFoundError)
+    {
+        <PublicContactChannelAnalytics />
+        <script src="@vendorScript"></script>
+        <script src="@appScript"></script>
+    }
     @foreach (var routeScript in routeScripts)
     {
         <script src="@routeScript"></script>

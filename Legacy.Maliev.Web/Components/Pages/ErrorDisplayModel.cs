@@ -4,4 +4,8 @@ public sealed record ErrorDisplayModel(
     bool IsNotFound,
     string? IncidentId,
     DateTimeOffset OccurredAtUtc = default,
-    int? StatusCode = null);
+    int? StatusCode = null,
+    bool IsPreview = false)
+{
+    public bool ShowIncidentId => !string.IsNullOrWhiteSpace(IncidentId);
+}

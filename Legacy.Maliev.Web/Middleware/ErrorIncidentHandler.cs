@@ -56,6 +56,15 @@ internal static class ErrorIncidentHandler
         return incident;
     }
 
+    internal static bool TryGet(HttpContext context, out ErrorIncidentDetails? incident)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        incident = context.Items.TryGetValue(IncidentDetailsKey, out var value)
+            ? value as ErrorIncidentDetails
+            : null;
+        return incident is not null;
+    }
+
     private static void AddResponseHeader(HttpContext context, string incidentId)
     {
         if (!context.Response.HasStarted)

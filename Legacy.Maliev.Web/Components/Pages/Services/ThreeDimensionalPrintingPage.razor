@@ -9,10 +9,10 @@
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var title = T(
-        "Custom 3D Printing in Thailand | Upload for Instant Pricing | MALIEV",
+        "3D Printing Service Thailand | Instant FDM & Resin Pricing | MALIEV",
         "รับปริ้น 3D รับพิมพ์ 3 มิติ | ประเมินราคาออนไลน์ | MALIEV");
     var description = T(
-        "Upload a 3D file for instant FDM and resin pricing from one part. Request engineering review for MJF, SLS, SLM, DMLS, and safety-critical parts.",
+        "3D printing service in Thailand for prototypes and production parts. Upload a file for instant FDM and resin pricing or request an engineering review.",
         "รับปริ้น 3D และรับพิมพ์ 3 มิติ ตั้งแต่ 1 ชิ้น อัปโหลด STL, STEP, OBJ หรือ 3MF ประเมินราคา FDM และเรซิ่นออนไลน์ ดูตัวอย่างชิ้นงานผลิตจริงจาก MALIEV");
     var keywords = T(
         "3D printing service Thailand, 3D print price, order 3D print Bangkok, FDM printing, resin printing",
@@ -23,7 +23,7 @@
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
-    <link rel="preload" as="image" href="/src/images/services/printing/printing-hero.webp" imagesrcset="/src/images/services/printing/printing-hero-640.webp 640w, /src/images/services/printing/printing-hero-960.webp 960w, /src/images/services/printing/printing-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
+    <link rel="preload" as="image" href="/src/images/services/printing/printing-hero.webp" imagesrcset="/src/images/services/printing/printing-hero-640.webp 640w, /src/images/services/printing/printing-hero-768.webp 768w, /src/images/services/printing/printing-hero-960.webp 960w, /src/images/services/printing/printing-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Printing"))" />

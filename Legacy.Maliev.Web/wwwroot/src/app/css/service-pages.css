@@ -332,25 +332,22 @@
 .scanning-deliverable-footer > i, .scanning-deliverable-footer > .svg-inline--fa { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; color: var(--service-blue); }
 .scanning-deliverable-footer p { flex: 1; margin: 0; font-size: .86rem; line-height: 1.55; }
 .scanning-deliverable-footer .service-button { flex: 0 0 auto; min-height: 2.6rem; padding: .55rem .9rem; font-size: .8rem; }
-.scanning-checklist-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem; max-width: none; align-items: end; }
-.scanning-checklist-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .65rem; }
-.scanning-checklist-actions .service-button { min-height: 2.75rem; padding: .65rem 1rem; font: inherit; font-size: .82rem; cursor: pointer; }
-.scanning-checklist-intro { display: flex; align-items: flex-start; gap: .7rem; margin: 0 0 1.25rem; padding: .9rem 1rem; border: 1px solid #b8d1f0; border-radius: var(--service-radius-sm); background: #eaf2ff; color: #43556c; }
-.scanning-checklist-intro > i, .scanning-checklist-intro > .svg-inline--fa { flex: 0 0 auto; width: 1rem; height: 1rem; margin-top: .25rem; color: var(--service-blue); }
-.scanning-checklist-intro p { margin: 0; font-size: .84rem; line-height: 1.6; }
-.scanning-checklist-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.scanning-checklist-card { min-width: 0; margin: 0; padding: 1.2rem 1.2rem 1.25rem; border: 1px solid var(--service-line); border-radius: var(--service-radius-md); background: #fff; box-shadow: var(--service-shadow-sm); }
-.scanning-checklist-card legend { display: flex; width: 100%; max-width: 100%; align-items: center; gap: .65rem; padding: 0; color: var(--service-ink); font-size: 1rem; font-weight: 600; }
-.scanning-checklist-number { display: grid; flex: 0 0 2.1rem; width: 2.1rem; height: 2.1rem; place-items: center; border-radius: 50%; background: var(--service-blue); color: #fff; font-size: .76rem; }
-.scanning-checklist-card > p { margin: .7rem 0 .85rem; color: var(--service-muted); font-size: .83rem; line-height: 1.55; }
-.scanning-checklist-list { display: grid; gap: .55rem; }
-.scanning-checklist-item { display: grid; grid-template-columns: 1.15rem minmax(0, 1fr); gap: .6rem; align-items: flex-start; padding: .55rem .6rem; border: 1px solid #e3eaf2; border-radius: var(--service-radius-sm); background: #fbfdff; color: #4e5e73; font-size: .8rem; line-height: 1.55; cursor: pointer; }
-.scanning-checklist-item:hover { border-color: #a9c8ef; background: #f2f7ff; }
-.scanning-checklist-item input { width: 1.05rem; height: 1.05rem; margin: .16rem 0 0; accent-color: var(--service-blue); }
-.scanning-checklist-item input:focus-visible { outline: 3px solid #75aaff; outline-offset: 2px; }
-.scanning-checklist-footer { display: flex; align-items: flex-start; gap: .75rem; margin-top: 1.15rem; padding: 1rem 1.15rem; border: 1px solid #9fc2f2; border-radius: var(--service-radius-md); background: #fff; color: #40536c; }
-.scanning-checklist-footer > i, .scanning-checklist-footer > .svg-inline--fa { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: .15rem; color: var(--service-blue); }
-.scanning-checklist-footer p { margin: 0; font-size: .86rem; line-height: 1.6; }
+.scanning-onsite-checklist .service-container { max-width: 60rem; }
+.scanning-checklist-heading { max-width: 44rem; }
+.scanning-preparation-list { list-style: none; padding: 0; margin: 0; }
+.scanning-preparation-list > li { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 2rem; padding-block: 1.25rem; border-top: 1px solid var(--service-line); }
+.scanning-preparation-list h3, .scanning-preparation-detail-body h3 { margin: 0; color: var(--service-ink); font-size: 1.15rem; font-weight: 600; }
+.scanning-preparation-list p, .scanning-preparation-detail-body { margin: 0; color: var(--service-muted); font-size: 1rem; line-height: 1.7; }
+.scanning-preparation-details { margin-top: .75rem; border-block: 1px solid var(--service-line); }
+.scanning-preparation-details summary { padding-block: 1rem; color: var(--service-ink); font-weight: 600; cursor: pointer; }
+.scanning-preparation-details summary:focus-visible { outline: 3px solid var(--service-ink); outline-offset: 3px; }
+.scanning-preparation-detail-body { max-width: 72ch; padding-bottom: 1.25rem; }
+.scanning-preparation-detail-body h3 { margin-block: .5rem; }
+.scanning-preparation-detail-body ul { padding-left: 1.25rem; margin-block: .5rem 1.25rem; }
+.scanning-preparation-detail-body li + li { margin-top: .6rem; }
+.scanning-preparation-detail-body p { margin: 0; }
+.scanning-checklist-actions { margin-top: 1.25rem; }
+.scanning-checklist-actions .service-button { min-height: 2.75rem; padding: .65rem 1rem; font: inherit; font-size: .9rem; cursor: pointer; }
 .service-table-wrap { overflow-x: auto; border: 1px solid var(--service-line); border-radius: var(--service-radius-md); background: #fff; }
 .service-table { width: 100%; min-width: 42rem; border-collapse: collapse; }
 .service-table th, .service-table td { padding: 1rem; border-bottom: 1px solid var(--service-line); text-align: left; vertical-align: top; }
@@ -451,14 +448,14 @@
     .service-button { width: min(100%, 20rem); }
     .service-quick { margin-top: -2rem; }
     .injection-molding-page .service-quick { margin-top: -2rem; }
-    .service-quick-grid, .service-card-grid, .service-material-grid, .service-image-grid, .service-process, .service-split, .service-cta, .injection-gallery-grid, .injection-volume-grid, .scanning-answer-callout, .scanning-deliverable-grid, .scanning-checklist-heading, .scanning-checklist-grid { grid-template-columns: 1fr; }
+    .service-quick-grid, .service-card-grid, .service-material-grid, .service-image-grid, .service-process, .service-split, .service-cta, .injection-gallery-grid, .injection-volume-grid, .scanning-answer-callout, .scanning-deliverable-grid, .scanning-preparation-list > li { grid-template-columns: 1fr; }
     .scanning-answer-path { justify-content: flex-start; padding-top: 1rem; padding-left: 0; border-top: 1px solid #bdd3ef; border-left: 0; text-align: left; }
     .scanning-deliverable-details { grid-template-columns: 1fr; }
     .scanning-deliverable-details > div + div { margin-top: .9rem; margin-left: 0; padding-top: .9rem; padding-left: 0; border-left: 0; }
     .scanning-deliverable-footer { align-items: flex-start; flex-wrap: wrap; }
     .scanning-deliverable-footer p { flex-basis: calc(100% - 2rem); }
     .scanning-deliverable-footer .service-button { margin-left: 1.9rem; }
-    .scanning-checklist-actions { justify-content: flex-start; }
+    .scanning-preparation-list > li { gap: .45rem; }
     .scanning-checklist-actions .service-button { width: auto; }
     .scanning-workflow-steps { grid-template-columns: 1fr; gap: 0; }
     .scanning-workflow-steps::before { display: block; top: 1.8rem; right: auto; bottom: 1.8rem; left: 1.35rem; width: .2rem; height: auto; transform: scaleY(1); transform-origin: top center; }
@@ -675,11 +672,10 @@
     #scanning-onsite-checklist .service-heading h2 { color: #111; font-size: 22pt; }
     #scanning-onsite-checklist .service-heading p:last-child { color: #333; }
     #scanning-onsite-checklist .scanning-checklist-actions { display: none; }
-    #scanning-onsite-checklist .scanning-checklist-intro { margin-bottom: 1rem; border-color: #9aa9ba; background: #f3f5f7; color: #222; }
-    #scanning-onsite-checklist .scanning-checklist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
-    #scanning-onsite-checklist .scanning-checklist-card { break-inside: avoid; box-shadow: none; border-color: #a8b3bf; }
-    #scanning-onsite-checklist .scanning-checklist-item { break-inside: avoid; border-color: #c7ced6; background: #fff; color: #111; }
-    #scanning-onsite-checklist .scanning-checklist-footer { border-color: #9aa9ba; color: #222; }
+    #scanning-onsite-checklist .scanning-preparation-list > li { display: block; break-inside: avoid; }
+    #scanning-onsite-checklist .scanning-preparation-list h3 { margin-bottom: .4rem; }
+    #scanning-onsite-checklist details::details-content { content-visibility: visible; }
+    #scanning-onsite-checklist .scanning-preparation-detail-body { display: block !important; }
 }
 
 /* Source-anchored production part proof for the 3D-printing route. */

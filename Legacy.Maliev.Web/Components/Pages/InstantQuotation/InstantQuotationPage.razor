@@ -177,7 +177,7 @@
         {
             var fields = JsonSerializer.Deserialize<string[]>(json ?? string.Empty) ?? [];
             return fields
-                .Where(static field => field is "FirstName" or "LastName" or "Email" or "Mobile" or "Telephone" or "Country" or "Company" or "TaxNumber" or "TaxBranchCode" or "BillingStreet1" or "BillingCity" or "BillingProvince" or "BillingPostalCode" or "ShippingStreet1" or "ShippingCity" or "ShippingProvince" or "ShippingPostalCode" or "ShippingCountry" or "Description")
+                .Where(static field => field is "FirstName" or "LastName" or "Email" or "Mobile" or "Telephone" or "Country" or "Company" or "TaxNumber" or "TaxBranchCode" or "BillingBuilding" or "BillingStreet1" or "BillingCity" or "BillingProvince" or "BillingPostalCode" or "ShippingBuilding" or "ShippingStreet1" or "ShippingCity" or "ShippingProvince" or "ShippingPostalCode" or "ShippingCountry" or "Description")
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal)
                 .ToArray();
