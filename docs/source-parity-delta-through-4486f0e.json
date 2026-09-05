@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.1",
   "historicalCheckpoint": "48e628cf7803264bd0b09bfa7a55b15b47e192dd",
-  "sourceHead": "7b4b2af697207d36a6e7b7784dddefa150193e97",
-  "commitCount": 129,
-  "sequenceSha256": "5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306",
-  "semanticSha256": "599ddbe77400bd9407435c0ee4402d0f255648ef877d7dd4219327a961ef3f28",
+  "sourceHead": "4486f0e964e508e5eb7b43a59eeaec46cc052c67",
+  "commitCount": 159,
+  "sequenceSha256": "13fdab8b1cbfd8327e0603ea04d891e38dbbab4dca420803a6d74ff57be9b0da",
+  "semanticSha256": "5c3c36b5e6b3d224677e7acb1624fab035c585f6cc35de24b7f06ad8576fa0ae",
   "canonicalSemanticForm": "source-parity-semantic-stream-v1: UTF-8 length-prefixed root boundary, allowlists, and entry fields in schema order, including array counts and target repository/commit pairs",
   "allowedOwners": [
     "Legacy.Maliev.AccountingService",
@@ -24,7 +24,8 @@
     "Legacy.Maliev.ProcurementService",
     "Legacy.Maliev.QuotationService",
     "Legacy.Maliev.ServiceDefaults",
-    "Legacy.Maliev.Web"
+    "Legacy.Maliev.Web",
+    "Legacy.Maliev.Workflows"
   ],
   "allowedClassifications": [
     "already-satisfied",
@@ -3472,6 +3473,675 @@
       ],
       "validationEvidence": "docs/source-parity-daily-checkpoint.md#migrated-commits-after-the-historical-checkpoint",
       "classificationRationale": "The source outcome 'Publish verified service coverage details' is accounted for by Legacy.Maliev.Web under the target-native classification and validation recorded in the checkpoint."
+    },
+    {
+      "sequence": 130,
+      "sourceCommit": "11c1c03995a6aa12708781dc2e7e3b760c040105",
+      "subject": "Document approved marketing evidence gates",
+      "classification": "non-runtime-audit",
+      "owners": [],
+      "retirements": [],
+      "exclusions": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "targetEvidence": [],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Document approved marketing evidence gates' has no independent runtime artifact; it is classified explicitly and does not change migrated production behavior."
+    },
+    {
+      "sequence": 131,
+      "sourceCommit": "487d06df2f4614c53bead4b19d53d2613a46fd64",
+      "subject": "Add auditable paid-invoice attribution",
+      "classification": "architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.AccountingService"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.InvoiceService.Api",
+        "Maliev.InvoiceService.Data",
+        "Maliev.InvoiceService.Tests",
+        "Maliev.SqlServer",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.AccountingService",
+          "commit": "887ba566db3468e62d4d027a2fd7196dcecd7a5f"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Add auditable paid-invoice attribution' is preserved by Legacy.Maliev.AccountingService through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 132,
+      "sourceCommit": "e79640c8f30f6d030ac487e92f9914c974435164",
+      "subject": "Align CNC landing copy with search intent",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Align CNC landing copy with search intent' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 133,
+      "sourceCommit": "1e8da789aa371f5fca2e9ed4437ba26bbec27b22",
+      "subject": "Stabilize shared browser test execution",
+      "classification": "source-test-architecture-replaced",
+      "owners": [],
+      "retirements": [],
+      "exclusions": [
+        "source-test-architecture-replaced:target-native-browser-runner"
+      ],
+      "sourceAreas": [
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Stabilize shared browser test execution' has no independent runtime artifact; it is classified explicitly and does not change migrated production behavior."
+    },
+    {
+      "sequence": 134,
+      "sourceCommit": "18c9f126bbbb2aab33b9b46f069f6d6225348053",
+      "subject": "Keep contact page available during country lookup failures",
+      "classification": "already-satisfied-stricter",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Keep contact page available during country lookup failures' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 135,
+      "sourceCommit": "a07b98ce97b3d4d5593a5247ded663b1cadf4191",
+      "subject": "Keep 3D printing review colors and part list in sync",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Keep 3D printing review colors and part list in sync' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 136,
+      "sourceCommit": "8b7ff7a2ef26c10e35a74b4d3d5526ba01f0102c",
+      "subject": "Refresh quotation thumbnails when part colors change",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Refresh quotation thumbnails when part colors change' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 137,
+      "sourceCommit": "fb3595dd9c4b5f43e7b6165deed7cea9151f3147",
+      "subject": "Show native CAD edges and ignore collapsed seam topology",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Show native CAD edges and ignore collapsed seam topology' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 138,
+      "sourceCommit": "fb897820ae00a175ff63327986bf64bc3527195b",
+      "subject": "Add first-party weapons policy page and legal reference PDF",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Add first-party weapons policy page and legal reference PDF' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 139,
+      "sourceCommit": "eb1dce3cf9169c20647a61e9c8481db67e08f232",
+      "subject": "docs: define scan and CAD sample presentation",
+      "classification": "non-runtime-design",
+      "owners": [],
+      "retirements": [],
+      "exclusions": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "docs"
+      ],
+      "targetEvidence": [],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'docs: define scan and CAD sample presentation' has no independent runtime artifact; it is classified explicitly and does not change migrated production behavior."
+    },
+    {
+      "sequence": 140,
+      "sourceCommit": "e7d5fcca8d09aa98ff335ac178989a55a29ef9af",
+      "subject": "Show approved scan-to-CAD screenshot comparison",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Show approved scan-to-CAD screenshot comparison' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 141,
+      "sourceCommit": "e31a94baeb02d33c8484e886843c825c89a90b1c",
+      "subject": "Show scan and CAD edges in grey and fix comparison dragging",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Show scan and CAD edges in grey and fix comparison dragging' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 142,
+      "sourceCommit": "31d470efcc13b9c041a3aac0247e3eae79b90fe0",
+      "subject": "Refine scanning comparison controls and pointer focus",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Refine scanning comparison controls and pointer focus' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 143,
+      "sourceCommit": "1360173adfdd038cdb1f179cec886ac644a4bbc6",
+      "subject": "Create full-screen space 404 with floating photoreal astronaut",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Create full-screen space 404 with floating photoreal astronaut' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 144,
+      "sourceCommit": "c544f7145c12592d8e6069b690cc704858ed9b7f",
+      "subject": "Let visitors grab and throw the 404 astronaut",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Let visitors grab and throw the 404 astronaut' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 145,
+      "sourceCommit": "e58730b76764eaba2da1a9aa75c0fc4777170d40",
+      "subject": "Keep touch throw assertions outside the release gesture",
+      "classification": "source-test-architecture-replaced",
+      "owners": [],
+      "retirements": [],
+      "exclusions": [
+        "source-test-architecture-replaced:target-native-error-physics-tests"
+      ],
+      "sourceAreas": [
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Keep touch throw assertions outside the release gesture' has no independent runtime artifact; it is classified explicitly and does not change migrated production behavior."
+    },
+    {
+      "sequence": 146,
+      "sourceCommit": "9cb9e89de948637ac9931241f88e7cab8ee91b35",
+      "subject": "Distinguish error previews from actual request failures",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Distinguish error previews from actual request failures' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 147,
+      "sourceCommit": "6c6824f90550ec80ec46ed65a683a76e7ff532f2",
+      "subject": "Keep 404 recovery link backgrounds transparent",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Keep 404 recovery link backgrounds transparent' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 148,
+      "sourceCommit": "7255bd59625694a9da85b964ad6ffa32c1490cec",
+      "subject": "Validate aggregate outcome receipts without inferring qualification",
+      "classification": "architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Workflows"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "tools"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Workflows",
+          "commit": "6e3bb55f5ff3ee2b69dd6b4aee6333777ba0ed36"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Validate aggregate outcome receipts without inferring qualification' is preserved by Legacy.Maliev.Workflows through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 149,
+      "sourceCommit": "894e437e064c1e4b693b43fe45d15b6ac1d70168",
+      "subject": "Expose validated aggregate receipts through employee Intranet sessions",
+      "classification": "architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests",
+        "tools"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Intranet",
+          "commit": "736eeb74f53e9f8c58b1d0f5ddabf01d124262ea"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Expose validated aggregate receipts through employee Intranet sessions' is preserved by Legacy.Maliev.Intranet through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 150,
+      "sourceCommit": "21e30319ba782480e93a56c78b22f6db0fa7da20",
+      "subject": "docs: record approved enquiry qualification definition",
+      "classification": "non-runtime-reference",
+      "owners": [],
+      "retirements": [],
+      "exclusions": [
+        "classified-non-runtime:source-documentation"
+      ],
+      "sourceAreas": [
+        "tools"
+      ],
+      "targetEvidence": [],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'docs: record approved enquiry qualification definition' has no independent runtime artifact; it is classified explicitly and does not change migrated production behavior."
+    },
+    {
+      "sequence": 151,
+      "sourceCommit": "441828056b209f277c8009ea6e40fe408d77eb10",
+      "subject": "Simplify scan preparation into three practical notes",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Simplify scan preparation into three practical notes' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 152,
+      "sourceCommit": "22b4fa5064e223b3460bbe87fca48aca96b4f0ee",
+      "subject": "Add client-safe outcome readback route",
+      "classification": "architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Intranet",
+        "Maliev.Intranet.Tests",
+        "tools"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Intranet",
+          "commit": "736eeb74f53e9f8c58b1d0f5ddabf01d124262ea"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Add client-safe outcome readback route' is preserved by Legacy.Maliev.Intranet through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 153,
+      "sourceCommit": "b80a47f85ac064c66464bbb83c4329e3b5149e44",
+      "subject": "fix(web): reject full addresses in building fields",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'fix(web): reject full addresses in building fields' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 154,
+      "sourceCommit": "1cbc27f152f7f00a3e7e712935f52ab883c8ad71",
+      "subject": "Stabilize outcome route authentication test",
+      "classification": "source-test-architecture-replaced",
+      "owners": [
+        "Legacy.Maliev.Intranet"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Intranet.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Intranet",
+          "commit": "736eeb74f53e9f8c58b1d0f5ddabf01d124262ea"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Stabilize outcome route authentication test' is preserved by Legacy.Maliev.Intranet through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 155,
+      "sourceCommit": "7851975ee1da8fd4aaea23b6f17a5db56206f4d6",
+      "subject": "Improve service-page search performance and intent",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Improve service-page search performance and intent' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 156,
+      "sourceCommit": "dcff89963b113e82738476126a545b91a3087a60",
+      "subject": "feat(web): enforce technical filament quote minimum",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'feat(web): enforce technical filament quote minimum' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 157,
+      "sourceCommit": "0a7ae412d2992530516d2816d64d3b3113edc42e",
+      "subject": "fix(web): polish instant quotation validation UI",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'fix(web): polish instant quotation validation UI' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 158,
+      "sourceCommit": "78464760dea6a666a5d93ae87ceb7425f7aa4606",
+      "subject": "Improve English service keyword ownership",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "docs",
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'Improve English service keyword ownership' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+    },
+    {
+      "sequence": 159,
+      "sourceCommit": "4486f0e964e508e5eb7b43a59eeaec46cc052c67",
+      "subject": "fix(web): validate page size query input",
+      "classification": "migrated-or-architecture-equivalent",
+      "owners": [
+        "Legacy.Maliev.Web"
+      ],
+      "retirements": [],
+      "exclusions": [],
+      "sourceAreas": [
+        "Maliev.Web",
+        "Maliev.Web.Tests"
+      ],
+      "targetEvidence": [
+        {
+          "repository": "Legacy.Maliev.Web",
+          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+        }
+      ],
+      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
+      "classificationRationale": "The source outcome 'fix(web): validate page size query input' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
     }
   ]
 }

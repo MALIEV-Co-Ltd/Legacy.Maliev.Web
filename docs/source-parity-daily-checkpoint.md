@@ -9,8 +9,8 @@ or Google configuration publication.
 
 - Proven historical Legacy Web checkpoint: `48e628cf7803264bd0b09bfa7a55b15b47e192dd`.
 - Source branch inspected: `main`.
-- Source head inspected on 2026-08-30: `7b4b2af697207d36a6e7b7784dddefa150193e97`.
-- Committed source changes after the historical checkpoint: 129.
+- Source head inspected on 2026-09-05: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
+- Committed source changes after the historical checkpoint: 159.
 - Daily automation: `daily-legacy-maliev-migration-parity`, scheduled for 08:00 Asia/Bangkok.
 - Uncommitted source files are deliberately excluded from parity accounting.
 
@@ -150,3 +150,31 @@ The daily automation must resume from the source head recorded above and classif
 new committed source changes. Uncommitted source artifacts remain excluded. Any future
 source delta must be migrated or explicitly classified with evidence before the Legacy
 release gate can advance.
+
+## Source parity through 4486f0e
+
+The 2026-09-05 inspection extends the immutable source boundary from `7b4b2af` through
+`4486f0e964e508e5eb7b43a59eeaec46cc052c67`. The 30-commit delta has ordered sequence
+hash `4b803623fe8b3c7592bcfa1559b0476e86eeadf7bd222e8fb583c40fdbe38523`.
+Every committed source outcome in that interval is classified in
+`source-parity-delta-through-4486f0e.json`; uncommitted source files remain excluded.
+
+Runtime outcomes are preserved by protected Legacy main commits
+`1d58887f44c5d0300bb1c24d05d89c4a68f74bfa` (Web),
+`887ba566db3468e62d4d027a2fd7196dcecd7a5f` (AccountingService),
+`6e3bb55f5ff3ee2b69dd6b4aee6333777ba0ed36` (Workflows), and
+`736eeb74f53e9f8c58b1d0f5ddabf01d124262ea` (Intranet). These cover service-page search intent and responsive
+presentation; scan comparison and preparation; Instant Quotation review, thumbnail,
+CAD-edge, validation, and technical-filament pricing behavior; legal and error surfaces;
+strict page-size and address validation; persisted paid-invoice attribution; aggregate-only
+receipt validation; and employee-session outcome readback. Documentation-only commits and
+source-specific browser fixtures are explicitly classified rather than copied into the
+.NET 10 runtime.
+
+Validation completed with zero-warning Release builds, full affected repository suites
+(Web 1,581/1,581 .NET and 135/135 Node; AccountingService 65/65 plus PostgreSQL 18
+integration; Workflows 53/53 .NET, 13/13 Python, and 7/7 fixtures; Intranet 1,078/1,078
+unit and 92/92 browser tests), formatting and package checks, protected-branch CI, and the
+exact source-history verifier against the read-only source repository. No Legacy
+application deployment, traffic change, production database mutation, or cutover was
+performed by this parity checkpoint.

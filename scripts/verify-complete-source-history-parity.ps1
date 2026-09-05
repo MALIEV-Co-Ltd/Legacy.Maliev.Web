@@ -10,11 +10,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $historicalHead = '48e628cf7803264bd0b09bfa7a55b15b47e192dd'
-$expectedHead = '7b4b2af697207d36a6e7b7784dddefa150193e97'
+$expectedHead = '4486f0e964e508e5eb7b43a59eeaec46cc052c67'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $repositoryRoot 'docs\complete-source-history-parity-through-8049024.md'
 $deltaLedgerPath = Join-Path $repositoryRoot 'docs\source-parity-through-8049024.md'
-$dailyManifestPath = Join-Path $repositoryRoot 'docs\source-parity-delta-through-7b4b2af.json'
+$dailyManifestPath = Join-Path $repositoryRoot 'docs\source-parity-delta-through-4486f0e.json'
 
 function Assert-ExactSequence {
     param(
@@ -80,8 +80,8 @@ Add-CanonicalArray -Builder $semanticStream -Values $allowedClassifications
 if ($dailyManifest.schemaVersion -ne '1.1' -or
     $dailyManifest.historicalCheckpoint -ne $historicalHead -or
     $dailyManifest.sourceHead -ne $expectedHead -or
-    [int] $dailyManifest.commitCount -ne 129 -or
-    $dailyEntries.Count -ne 129) {
+    [int] $dailyManifest.commitCount -ne 159 -or
+    $dailyEntries.Count -ne 159) {
     throw 'The daily source-parity manifest boundary is invalid.'
 }
 
