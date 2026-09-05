@@ -8,11 +8,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebApplicationFactory>
+public sealed class SourceParityThrough4486f0eTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public SourceParityThrough7b4b2afTests(TestingWebApplicationFactory factory)
+    public SourceParityThrough4486f0eTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory;
     }
@@ -135,12 +135,13 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
     {
         string checkpoint = Read(FindRepositoryRoot(), "docs", "source-parity-daily-checkpoint.md");
 
-        Assert.Contains("7b4b2af697207d36a6e7b7784dddefa150193e97", checkpoint, StringComparison.Ordinal);
-        Assert.Contains("Committed source changes after the historical checkpoint: 129", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("4486f0e964e508e5eb7b43a59eeaec46cc052c67", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("Committed source changes after the historical checkpoint: 159", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`c6ac93af03a0dafc506d9570aca96e4aed3b1643`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`63e5f99f3cef37b1f005b3399333ede53e560587`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`7b4b2af697207d36a6e7b7784dddefa150193e97`", checkpoint, StringComparison.Ordinal);
         Assert.Contains("`a53b252`, `303f2f1`, `27f340e`", checkpoint, StringComparison.Ordinal);
+        Assert.Contains("`736eeb74f53e9f8c58b1d0f5ddabf01d124262ea` (Intranet)", checkpoint, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -149,16 +150,16 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
         string manifestPath = Path.Combine(
             FindRepositoryRoot(),
             "docs",
-            "source-parity-delta-through-7b4b2af.json");
+            "source-parity-delta-through-4486f0e.json");
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestPath));
         JsonElement root = document.RootElement;
         JsonElement entries = root.GetProperty("entries");
 
         Assert.Equal("1.1", root.GetProperty("schemaVersion").GetString());
         Assert.Equal("48e628cf7803264bd0b09bfa7a55b15b47e192dd", root.GetProperty("historicalCheckpoint").GetString());
-        Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", root.GetProperty("sourceHead").GetString());
-        Assert.Equal(129, root.GetProperty("commitCount").GetInt32());
-        Assert.Equal(129, entries.GetArrayLength());
+        Assert.Equal("4486f0e964e508e5eb7b43a59eeaec46cc052c67", root.GetProperty("sourceHead").GetString());
+        Assert.Equal(159, root.GetProperty("commitCount").GetInt32());
+        Assert.Equal(159, entries.GetArrayLength());
 
         var allowedOwners = root.GetProperty("allowedOwners").EnumerateArray()
             .Select(owner => Assert.IsType<string>(owner.GetString()))
@@ -229,14 +230,14 @@ public sealed class SourceParityThrough7b4b2afTests : IClassFixture<TestingWebAp
 
         string sequence = string.Join('\n', commits) + '\n';
         string digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sequence))).ToLowerInvariant();
-        Assert.Equal("5bd02bce8bcd86db8fb2c3607c7d17373515cd6eb983ae8395b39b6f8eae9306", digest);
+        Assert.Equal("13fdab8b1cbfd8327e0603ea04d891e38dbbab4dca420803a6d74ff57be9b0da", digest);
         Assert.Equal(digest, root.GetProperty("sequenceSha256").GetString());
         string semanticDigest = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(semanticStream.ToString()))).ToLowerInvariant();
-        Assert.Equal("599ddbe77400bd9407435c0ee4402d0f255648ef877d7dd4219327a961ef3f28", semanticDigest);
+        Assert.Equal("5c3c36b5e6b3d224677e7acb1624fab035c585f6cc35de24b7f06ad8576fa0ae", semanticDigest);
         Assert.Equal(semanticDigest, root.GetProperty("semanticSha256").GetString());
         Assert.Equal("25db5545b0f5f575f61616af2ba54ee45e656a20", commits[0]);
-        Assert.Equal("7b4b2af697207d36a6e7b7784dddefa150193e97", commits[^1]);
+        Assert.Equal("4486f0e964e508e5eb7b43a59eeaec46cc052c67", commits[^1]);
     }
 
     private static string Read(string root, params string[] segments) =>
