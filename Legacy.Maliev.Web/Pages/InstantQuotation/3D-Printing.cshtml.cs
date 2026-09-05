@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -186,6 +187,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     {
         NormalizeOptionalCustomerFields();
         ValidateConditionalCustomerFields();
+        ValidateBuildingFields();
         if (!ModelState.IsValid)
         {
             var invalidFields = ModelState
@@ -300,6 +302,78 @@ public sealed class ThreeDimensionalPrinting : PageModel
         Require(nameof(ShippingCountry), ShippingCountry);
     }
 
+    internal void ValidateBuildingFields()
+    {
+        const string error = "This field contains address details. Move them to the separate address fields.";
+
+        if (BuildingContainsAddressComponents(
+            BillingBuilding,
+            BillingStreet1,
+            BillingStreet2,
+            BillingCity,
+            BillingProvince,
+            BillingPostalCode))
+        {
+            ModelState.AddModelError(nameof(BillingBuilding), error);
+        }
+
+        if (!ShipToBillingAddress
+            && BuildingContainsAddressComponents(
+                ShippingBuilding,
+                ShippingStreet1,
+                ShippingStreet2,
+                ShippingCity,
+                ShippingProvince,
+                ShippingPostalCode))
+        {
+            ModelState.AddModelError(nameof(ShippingBuilding), error);
+        }
+    }
+
+    internal static bool BuildingContainsAddressComponents(
+        string? building,
+        params string?[]? addressComponents)
+    {
+        var normalizedBuilding = NormalizeAddressForComparison(building);
+        if (normalizedBuilding.Length == 0 || addressComponents is null)
+        {
+            return false;
+        }
+
+        var matches = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var component in addressComponents)
+        {
+            var normalizedComponent = NormalizeAddressForComparison(component);
+            if (normalizedComponent.Length < 3)
+            {
+                continue;
+            }
+
+            if (normalizedBuilding.Contains(normalizedComponent, StringComparison.Ordinal)
+                && matches.Add(normalizedComponent)
+                && matches.Count >= 2)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string NormalizeAddressForComparison(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Normalize(NormalizationForm.FormC)
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
+    }
+
     private void Require(string field, string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -409,6 +483,6 @@ public sealed class ThreeDimensionalPrinting : PageModel
     }
 
     private static readonly IReadOnlySet<string> ControlledValidationFields = new HashSet<string>(
-        [nameof(FirstName), nameof(LastName), nameof(Email), nameof(Mobile), nameof(Telephone), nameof(Country), nameof(Company), nameof(TaxNumber), nameof(TaxBranchCode), nameof(BillingStreet1), nameof(BillingCity), nameof(BillingProvince), nameof(BillingPostalCode), nameof(ShippingStreet1), nameof(ShippingCity), nameof(ShippingProvince), nameof(ShippingPostalCode), nameof(ShippingCountry), nameof(Description)],
+        [nameof(FirstName), nameof(LastName), nameof(Email), nameof(Mobile), nameof(Telephone), nameof(Country), nameof(Company), nameof(TaxNumber), nameof(TaxBranchCode), nameof(BillingBuilding), nameof(BillingStreet1), nameof(BillingCity), nameof(BillingProvince), nameof(BillingPostalCode), nameof(ShippingBuilding), nameof(ShippingStreet1), nameof(ShippingCity), nameof(ShippingProvince), nameof(ShippingPostalCode), nameof(ShippingCountry), nameof(Description)],
         StringComparer.Ordinal);
 }

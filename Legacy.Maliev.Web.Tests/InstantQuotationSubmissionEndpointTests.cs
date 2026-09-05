@@ -240,6 +240,76 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             fields!);
     }
 
+    [Fact]
+    public async Task FullAddressInBillingBuilding_IsRejectedBeforeTheServiceBoundary()
+    {
+        var service = new RecordingSubmissionService(Completed(730));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["BillingBuilding"] = "Analytical Engines, 88 Billing Road, Bangkok 10110",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(service.Calls);
+        Assert.Equal("validation", tempData.Values[ThreeDimensionalPrinting.ProblemCategoryTempDataKey]);
+        var fields = JsonSerializer.Deserialize<string[]>(
+            Assert.IsType<string>(tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.Equal(["BillingBuilding"], fields!);
+
+        using var feedback = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");
+        var source = WebUtility.HtmlDecode(await feedback.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, feedback.StatusCode);
+        Assert.Contains("id=\"instant-quote-billing-building\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-address-server-invalid=\"true\"", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "This field contains address details. Move them to the separate address fields below.",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("Examples: a building, village, or organization name.", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FullAddressInSeparateShippingBuilding_IsRejectedBeforeTheServiceBoundary()
+    {
+        var service = new RecordingSubmissionService(Completed(731));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["ShipToBillingAddress"] = "false",
+                ["ShippingBuilding"] = "Warehouse 99, Shipping Road, Chiang Mai 50000",
+                ["ShippingStreet1"] = "99 Shipping Road",
+                ["ShippingCity"] = "Chiang Mai",
+                ["ShippingProvince"] = "Chiang Mai",
+                ["ShippingPostalCode"] = "50000",
+                ["ShippingCountry"] = "TH",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(service.Calls);
+        var fields = JsonSerializer.Deserialize<string[]>(
+            Assert.IsType<string>(tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.Equal(["ShippingBuilding"], fields!);
+    }
+
     [Theory]
     [InlineData("123456789012")]
     [InlineData("12345678901234")]

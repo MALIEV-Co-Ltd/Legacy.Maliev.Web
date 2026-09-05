@@ -74,9 +74,9 @@ public sealed class InstantQuotationAccessibilityContractTests
         Assert.Contains("FieldError", customer, StringComparison.Ordinal);
 
         var fields = InstantQuotationPage.ControlledValidationFields(
-            "[\"Email\",\"FirstName\",\"Email\",\"RawServiceError\"]");
+            "[\"BillingBuilding\",\"Email\",\"FirstName\",\"ShippingBuilding\",\"Email\",\"RawServiceError\"]");
 
-        Assert.Equal(["Email", "FirstName"], fields);
+        Assert.Equal(["BillingBuilding", "Email", "FirstName", "ShippingBuilding"], fields);
     }
 
     [Theory]
