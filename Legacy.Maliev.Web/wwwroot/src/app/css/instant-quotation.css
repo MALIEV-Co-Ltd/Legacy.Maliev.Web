@@ -233,6 +233,28 @@ body.instant-quotation-shell #main-content {
     border-radius: .75rem;
 }
 
+.instant-quote__review-thumbnail-button {
+    display: grid;
+    width: 60px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: .55rem;
+    background: transparent;
+}
+
+.instant-quote__review-thumbnail-button[aria-pressed="true"] {
+    border-color: #0b57d0;
+    box-shadow: 0 0 0 2px rgba(11, 87, 208, .16);
+}
+
+.instant-quote__review-thumbnail-button:focus-visible,
+.instant-quote__review-edit:focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 2px;
+}
+
 .instant-quote__workflow [data-workflow-viewer] canvas {
     display: block;
     width: 100%;
@@ -765,6 +787,13 @@ body.instant-quotation-shell #main-content {
     object-fit: contain;
 }
 
+.instant-quote__review-edit {
+    grid-column: 2;
+    min-width: 44px;
+    min-height: 44px;
+    justify-self: start;
+}
+
 .instant-quote__review-identity h4 {
     margin: 0;
     overflow-wrap: anywhere;
@@ -936,7 +965,11 @@ body.instant-quotation-shell #main-content {
     }
 
     .instant-quote__workflow [data-workflow-review-part] {
-        grid-template-columns: 72px minmax(8rem, 1.25fr) minmax(0, 2.4fr);
+        grid-template-columns: 72px minmax(8rem, 1.25fr) minmax(0, 2.4fr) auto;
+    }
+
+    .instant-quote__review-thumbnail-button {
+        width: 72px;
     }
 
     .instant-quote__review-thumbnail {
@@ -947,6 +980,10 @@ body.instant-quotation-shell #main-content {
     .instant-quote__workflow [data-workflow-review-part] dl {
         grid-column: auto;
         grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .instant-quote__review-edit {
+        grid-column: auto;
     }
 }
 

@@ -343,6 +343,9 @@
             <InstantQuotationReview Parts="@Parts"
                                     Quote="@OrderQuote"
                                     Materials="@Materials"
+                                    SelectedPartId="@selectedPreviewPartId"
+                                    OnSelectPart="SelectReviewPartAsync"
+                                    OnEditPart="EditReviewPartAsync"
                                     OnBack="ReturnToConfiguration"
                                     OnContinue="EnterCustomerDetails" />
         </div>

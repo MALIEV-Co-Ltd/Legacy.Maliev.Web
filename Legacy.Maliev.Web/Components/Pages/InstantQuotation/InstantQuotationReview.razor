@@ -14,13 +14,20 @@
         {
             var quote = Quote?.Parts.SingleOrDefault(item => item.PartId == part.PartId);
             var partNumber = PartNumber(part.PartId);
-            <article data-workflow-review-part aria-labelledby="instant-quote-review-part-@part.PartId">
-                <img class="instant-quote__review-thumbnail"
-                     data-review-thumbnail
-                     data-review-part-id="@part.PartId"
-                     data-part-id="@InstantQuotationWorkflow.ViewerPartKey(part.PartId)"
-                     src="/src/images/3d-canvas-placeholder.svg"
-                     alt="" />
+            <article data-workflow-review-part data-review-part-id="@part.PartId" data-selected="@IsSelected(part.PartId).ToString().ToLowerInvariant()" aria-labelledby="instant-quote-review-part-@part.PartId">
+                <button type="button"
+                        class="instant-quote__review-thumbnail-button"
+                        data-review-select-part
+                        aria-label="@Localizer["View {0}", part.DisplayFileName]"
+                        aria-pressed="@IsSelected(part.PartId).ToString().ToLowerInvariant()"
+                        @onclick="() => OnSelectPart.InvokeAsync(part.PartId)">
+                    <img class="instant-quote__review-thumbnail"
+                         data-review-thumbnail
+                         data-review-part-id="@part.PartId"
+                         data-part-id="@InstantQuotationWorkflow.ViewerPartKey(part.PartId)"
+                         src="/src/images/3d-canvas-placeholder.svg"
+                         alt="" />
+                </button>
                 <div class="instant-quote__review-identity">
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
@@ -41,6 +48,11 @@
                         </div>
                     }
                 </dl>
+                <button type="button"
+                        class="instant-quote__review-edit"
+                        data-review-edit-part
+                        aria-label="@Localizer["Edit {0}", part.DisplayFileName]"
+                        @onclick="() => OnEditPart.InvokeAsync(part.PartId)">@Localizer["Edit"]</button>
             </article>
         }
     </div>
@@ -85,6 +97,15 @@
     public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; set; } = [];
 
     [Parameter]
+    public Guid? SelectedPartId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnSelectPart { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnEditPart { get; set; }
+
+    [Parameter]
     public EventCallback OnBack { get; set; }
 
     [Parameter]
@@ -103,6 +124,8 @@
         BuildPreference.Strength => Localizer["Strength"],
         _ => Localizer["Standard"],
     };
+
+    private bool IsSelected(Guid partId) => SelectedPartId == partId;
 
     private int PartNumber(Guid partId)
     {

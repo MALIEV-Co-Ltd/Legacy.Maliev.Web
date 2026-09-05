@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   configureFilePickerForPlatform,
   createWorkflowPreviewInterop,
+  previewColorForSelection,
   supportedPreviewExtensions,
 } from '../wwwroot/src/app/js/instant-quotation/workflow-interop.mjs';
 import { createModelViewer } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
@@ -45,6 +46,7 @@ function harness(
     addPart: (...args) => calls.push(['add', ...args]),
     select: (...args) => calls.push(['select', ...args]),
     remove: (...args) => calls.push(['remove', ...args]),
+    setColor: (...args) => calls.push(['color', ...args]),
     reset: () => calls.push(['reset']),
     fit: () => calls.push(['fit']),
     fullscreen: () => calls.push(['fullscreen']),
@@ -174,6 +176,30 @@ test('review thumbnails use admitted browser previews and preserve fallback when
     ['snapshot', 'part-a'],
     ['snapshot', 'missing'],
   ]);
+});
+
+test('part appearance updates select the requested part, apply a canonical preview color, and refresh only its thumbnail', async () => {
+  const { interop, calls } = harness();
+  const [firstKey, secondKey] = interop.beginSelection({
+    files: [modelFile('first.stl'), modelFile('second.stl')],
+  });
+  await Promise.all([interop.getGeometryClaim(firstKey), interop.getGeometryClaim(secondKey)]);
+  interop.attach({});
+  interop.admit(firstKey, 'part-a');
+  interop.admit(secondKey, 'part-b');
+
+  assert.equal(interop.updatePartAppearance('part-b', 'Blue'), 'data:image/png;base64,part-b');
+  assert.deepEqual(calls.slice(-3), [
+    ['select', 'part-b'],
+    ['color', '#2563eb'],
+    ['snapshot', 'part-b'],
+  ]);
+});
+
+test('preview colors accept custom hex and fail closed to the neutral material color', () => {
+  assert.equal(previewColorForSelection('#Aa00fF'), '#aa00ff');
+  assert.equal(previewColorForSelection('Blue'), '#2563eb');
+  assert.equal(previewColorForSelection('not-a-production-color'), '#64748b');
 });
 
 test('quarantined and released previews cannot yield stale geometry claims', async () => {

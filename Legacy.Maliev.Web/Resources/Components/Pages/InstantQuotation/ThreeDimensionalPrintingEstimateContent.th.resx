@@ -501,4 +501,6 @@
   <data name="Shipping province" xml:space="preserve"><value>จังหวัดของที่อยู่จัดส่ง</value></data>
   <data name="Shipping postal code" xml:space="preserve"><value>รหัสไปรษณีย์ของที่อยู่จัดส่ง</value></data>
   <data name="Shipping country" xml:space="preserve"><value>ประเทศปลายทาง</value></data>
+  <data name="Edit" xml:space="preserve"><value>แก้ไข</value></data>
+  <data name="Edit {0}" xml:space="preserve"><value>แก้ไข {0}</value></data>
 </root>
