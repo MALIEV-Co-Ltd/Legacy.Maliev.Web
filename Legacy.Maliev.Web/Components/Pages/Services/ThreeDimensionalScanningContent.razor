@@ -39,6 +39,39 @@
         <a href="#scanning-faq">@T("FAQ", "คำถามที่พบบ่อย")</a>
     </nav>
 
+    <section id="scanning-sample" class="service-section" aria-labelledby="scanning-sample-title">
+        <div class="service-container scanning-comparison-container">
+            <header class="service-heading">
+                <h2 id="scanning-sample-title">@T("What changes between a scan mesh and reconstructed CAD?", "เมชสแกนกับ CAD ที่สร้างใหม่ต่างกันอย่างไร?")</h2>
+                <p>@T("Compare two views of the same cast housing from a real project. Both use the same grey, viewpoint and framing. Triangle edges reveal the scan mesh; CAD edges outline the reconstructed surfaces.", "เปรียบเทียบตัวเรือนหล่อชิ้นเดียวกันจากงานจริง ทั้งสองภาพใช้สีเทา มุมมอง และกรอบภาพเดียวกัน เส้นสามเหลี่ยมแสดงโครงสร้างเมชสแกน ส่วนเส้นขอบ CAD แสดงพื้นผิวที่สร้างใหม่")</p>
+            </header>
+            <div class="scanning-comparison" data-scanning-comparison data-mode="side" data-scan-label="@T("Scan", "สแกน")" data-cad-label="CAD">
+                <div class="scanning-comparison-controls" data-comparison-controls hidden>
+                    <div class="scanning-comparison-buttons" role="group" aria-label="@T("Comparison view", "รูปแบบการเปรียบเทียบ")">
+                        <button type="button" data-comparison-mode="compare" aria-pressed="true">@T("Compare", "เปรียบเทียบ")</button>
+                        <button type="button" data-comparison-mode="scan" aria-pressed="false">@T("Scan", "สแกน")</button>
+                        <button type="button" data-comparison-mode="cad" aria-pressed="false">CAD</button>
+                        <button type="button" data-comparison-mode="side" aria-pressed="false">@T("Side by side", "แสดงคู่กัน")</button>
+                    </div>
+                    <p id="scanning-comparison-help">@T("Move the divider, or choose a full view. Focus the round handle to use the arrow keys.", "เลื่อนเส้นแบ่งหรือเลือกดูภาพเต็ม ใช้ปุ่มลูกศรเมื่อโฟกัสอยู่ที่ปุ่มวงกลม")</p>
+                </div>
+                <div class="scanning-comparison-stage" data-comparison-stage>
+                    <figure class="scanning-comparison-scan">
+                        <img src="/src/images/services/scanning/proof/cast-housing-scan-1500.webp?v=grey-edges-20260903" srcset="/src/images/services/scanning/proof/cast-housing-scan-480.webp?v=grey-edges-20260903 480w, /src/images/services/scanning/proof/cast-housing-scan-900.webp?v=grey-edges-20260903 900w, /src/images/services/scanning/proof/cast-housing-scan-1500.webp?v=grey-edges-20260903 1500w" sizes="(max-width: 1043px) 92vw, 960px" width="1500" height="1000" draggable="false" loading="lazy" decoding="async" alt="@T("Grey scan of a cast housing with triangular mesh edges, openings and captured surface detail.", "สแกนสีเทาของตัวเรือนหล่อ แสดงเส้นขอบเมชสามเหลี่ยม ช่องเปิด และรายละเอียดพื้นผิว")" />
+                        <figcaption>@T("Scan", "สแกน")</figcaption>
+                    </figure>
+                    <figure class="scanning-comparison-cad">
+                        <img src="/src/images/services/scanning/proof/cast-housing-cad-1500.webp?v=grey-edges-20260903" srcset="/src/images/services/scanning/proof/cast-housing-cad-480.webp?v=grey-edges-20260903 480w, /src/images/services/scanning/proof/cast-housing-cad-900.webp?v=grey-edges-20260903 900w, /src/images/services/scanning/proof/cast-housing-cad-1500.webp?v=grey-edges-20260903 1500w" sizes="(max-width: 1043px) 92vw, 960px" width="1500" height="1000" draggable="false" loading="lazy" decoding="async" alt="@T("Grey CAD of the same housing with surface edges, holes and ribs from the same viewpoint.", "CAD สีเทาของตัวเรือนเดียวกัน แสดงเส้นขอบพื้นผิว รู และครีบจากมุมมองเดียวกัน")" />
+                        <figcaption>CAD</figcaption>
+                    </figure>
+                    <span class="scanning-comparison-divider" aria-hidden="true"></span>
+                    <div class="scanning-comparison-handle" data-comparison-handle role="slider" tabindex="0" aria-label="@T("Scan and CAD comparison", "เปรียบเทียบสแกนและ CAD")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-orientation="horizontal" aria-describedby="scanning-comparison-help" hidden><span aria-hidden="true">↔</span></div>
+                </div>
+            </div>
+            <p class="scanning-comparison-note">@T("Scan-only mesh and CAD reconstruction are separate deliverables. These images show visible geometry differences; they do not establish dimensional accuracy or a deviation inspection result.", "เมชจากงานสแกนอย่างเดียวและงานสร้าง CAD เป็นขอบเขตส่งมอบแยกกัน ภาพนี้แสดงความต่างของรูปทรงที่มองเห็น ไม่ได้ระบุความแม่นยำด้านขนาดหรือผลการตรวจความคลาดเคลื่อน")</p>
+        </div>
+    </section>
+
     <section id="scanning-selection-guide" class="service-section scanning-selection-section">
         <div class="service-container">
             <header class="service-heading center">
@@ -250,79 +283,30 @@
     <section id="scanning-onsite-checklist" class="service-section service-section-soft scanning-onsite-checklist">
         <div class="service-container">
             <header class="service-heading scanning-checklist-heading">
-                <div>
-                    <p class="service-eyebrow">@T("Onsite 3D Scanning Checklist", "เช็กลิสต์เตรียมงานสแกน 3D นอกสถานที่")</p>
-                    <h2>@T("Prepare the site, the part, and the result you need", "เตรียมพื้นที่ ชิ้นงาน และผลลัพธ์ที่ต้องการให้พร้อม")</h2>
-                    <p>@T("Use this checklist before an onsite visit. You do not need every answer to contact us—we will review unknowns, feasibility, and assumptions with you.", "ใช้รายการนี้ก่อนนัดหมายสแกนนอกสถานที่ ไม่จำเป็นต้องมีคำตอบครบทุกข้อก่อนติดต่อ เราจะช่วยทบทวนสิ่งที่ยังไม่ทราบ ความเป็นไปได้ และสมมติฐานร่วมกัน")</p>
-                </div>
-                <div class="scanning-checklist-actions">
-                    <button class="service-button service-button-primary" type="button" onclick="window.print()">@T("Print / save as PDF", "พิมพ์ / บันทึกเป็น PDF") <i class="fas fa-file-pdf" aria-hidden="true"></i></button>
-                    <a class="service-button service-button-secondary" href="#scanning-faq">@T("Read the scan FAQ", "อ่านคำถามงานสแกน") <i class="fas fa-arrow-down" aria-hidden="true"></i></a>
-                </div>
+                <h2>@T("Before your scan", "เตรียมตัวก่อนสแกน")</h2>
+                <p>@T("Send what you have. We’ll help you work through the details before the visit.", "ส่งข้อมูลเท่าที่มี เราจะช่วยวางแผนรายละเอียดร่วมกันก่อนเข้าหน้างาน")</p>
             </header>
-            <div class="scanning-checklist-intro">
-                <i class="fas fa-circle-info" aria-hidden="true"></i>
-                <p>@T("The print button opens your browser's print dialog. Choose \"Save as PDF\" to download this localized checklist or print it for the onsite team.", "ปุ่มพิมพ์จะเปิดหน้าต่างพิมพ์ของเบราว์เซอร์ เลือก \"บันทึกเป็น PDF\" เพื่อดาวน์โหลดเช็กลิสต์ภาษาที่เลือก หรือพิมพ์ส่งให้ทีมงานหน้างาน")</p>
-            </div>
-            <div class="scanning-checklist-grid">
-                <fieldset class="scanning-checklist-card">
-                    <legend><span class="scanning-checklist-number">01</span><span>@T("Project brief and intended use", "รายละเอียดงานและการใช้งาน")</span></legend>
-                    <p>@T("Tell the team what success looks like before capture begins.", "บอกทีมงานให้ชัดว่าผลลัพธ์ที่ต้องการคืออะไร ก่อนเริ่มเก็บข้อมูล")</p>
-                    <div class="scanning-checklist-list">
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Identify the part or assembly, quantity, approximate size, weight, and whether it is fixed in place.", "ระบุชิ้นงานหรือชุดประกอบ จำนวน ขนาดโดยประมาณ น้ำหนัก และติดตั้งอยู่กับที่หรือไม่")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("State the intended use: visualization, archive, STL/OBJ/PLY mesh, watertight mesh for printing, editable CAD/STEP/DWG, or deviation analysis.", "ระบุการใช้งาน: แสดงผล เก็บข้อมูล เมช STL/OBJ/PLY เมชปิดสนิทสำหรับพิมพ์ CAD/STEP/DWG ที่แก้ไขได้ หรือ Deviation Analysis")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Mark the exact surfaces, features, dimensions, interfaces, or hidden areas that must be captured.", "ระบุผิว ฟีเจอร์ ขนาด ผิวประกอบ หรือพื้นที่ที่มองไม่เห็นซึ่งต้องการให้เก็บข้อมูลเป็นพิเศษ")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Tell us about any additional modifications needed after scanning, such as cleanup, hole filling, smoothing, CAD reconstruction, drawings, or reports.", "แจ้งงานปรับแก้เพิ่มเติมที่ต้องการหลังสแกน เช่น เก็บเมช ปิดรู ทำผิวเรียบ สร้าง CAD แบบเขียน หรือรายงาน")</span></label>
-                    </div>
-                </fieldset>
-                <fieldset class="scanning-checklist-card">
-                    <legend><span class="scanning-checklist-number">02</span><span>@T("Work area and site access", "พื้นที่ทำงานและการเข้าถึง")</span></legend>
-                    <p>@T("The team needs safe space to move around the part and stable conditions for repeated views.", "ทีมงานต้องมีพื้นที่ปลอดภัยสำหรับเดินรอบชิ้นงานและสภาพแวดล้อมที่คงที่สำหรับสแกนหลายมุม")</p>
-                    <div class="scanning-checklist-list">
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Provide at least one accessible 220V outlet near the work area and tell us about extension or site power restrictions.", "มีปลั๊กไฟ 220V อย่างน้อย 1 จุดใกล้พื้นที่ทำงาน และแจ้งข้อจำกัดเรื่องสายต่อหรือไฟของหน้างาน")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Clear a safe path and enough working clearance for the scanning team to walk around the required surfaces.", "เปิดทางและพื้นที่ทำงานให้ปลอดภัยเพียงพอ เพื่อให้ทีมงานเดินรอบผิวที่ต้องการสแกนได้")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Arrange access, loading/parking, lifts or stairs, site induction, PPE, permits, and a site contact who can approve decisions.", "เตรียมการเข้าพื้นที่ จุดจอดหรือขนย้าย ลิฟต์หรือบันได การอบรมหน้างาน PPE ใบอนุญาต และผู้ประสานงานที่อนุมัติได้")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Control direct sunlight, moving lights, rain, wind, vibration, dust, heat, and nearby moving machinery during capture.", "ควบคุมแสงแดดโดยตรง ไฟที่เคลื่อน ฝน ลม การสั่น ฝุ่น ความร้อน และเครื่องจักรที่เคลื่อนไหวระหว่างสแกน")</span></label>
-                    </div>
-                </fieldset>
-                <fieldset class="scanning-checklist-card">
-                    <legend><span class="scanning-checklist-number">03</span><span>@T("Workpiece preparation", "การเตรียมชิ้นงาน")</span></legend>
-                    <p>@T("The scan captures the physical condition present on the day, so prepare the surface and operating state carefully.", "การสแกนเก็บสภาพทางกายภาพที่มีอยู่ในวันทำงาน จึงควรเตรียมผิวและสภาพการทำงานให้เหมาะสม")</p>
-                    <div class="scanning-checklist-list">
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Clean and dry the part: remove grease, dust, oil, coolant, loose dirt, and temporary covers where safe.", "ทำความสะอาดและเช็ดให้แห้ง ล้างคราบจาระบี ฝุ่น น้ำมัน น้ำหล่อเย็น สิ่งสกปรก และวัสดุปิดชั่วคราวเมื่อปลอดภัย")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Make the part stationary and secure; stop mechanisms and agree safe isolation or lockout with the site owner.", "ทำให้ชิ้นงานอยู่นิ่งและยึดให้มั่นคง หยุดกลไก และตกลงการแยกพลังงานหรือ Lockout กับเจ้าของพื้นที่อย่างปลอดภัย")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Cool hot parts to a safe, stable condition and tell us about any process state that must be preserved.", "ลดอุณหภูมิชิ้นงานร้อนให้อยู่ในสภาพปลอดภัยและคงที่ พร้อมแจ้งสภาพกระบวนการที่ต้องการรักษาไว้")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Flag reflective, transparent, translucent, or very dark surfaces so removable spray, targets, or alternate capture methods can be approved.", "แจ้งผิวเงา ใส โปร่งแสง หรือดำมากล่วงหน้า เพื่อพิจารณาสเปรย์ล้างออกได้ เป้าสแกน หรือวิธีเก็บข้อมูลอื่นโดยขออนุมัติ")</span></label>
-                    </div>
-                </fieldset>
-                <fieldset class="scanning-checklist-card">
-                    <legend><span class="scanning-checklist-number">04</span><span>@T("Deviation analysis inputs", "ข้อมูลสำหรับ Deviation Analysis")</span></legend>
-                    <p>@T("Deviation analysis needs a reference and a defined interpretation—not only a scan file.", "Deviation Analysis ต้องมีข้อมูลอ้างอิงและวิธีแปลผลที่ชัดเจน ไม่ใช่แค่ไฟล์สแกน")</p>
-                    <div class="scanning-checklist-list">
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Provide the original or nominal CAD file, correct revision, units, coordinate system, and related drawing if available.", "เตรียมไฟล์ CAD ต้นฉบับหรือ CAD ต้นแบบ Revision ที่ถูกต้อง หน่วย ระบบพิกัด และแบบงานที่เกี่ยวข้องถ้ามี")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Define the deviation band, color scale, tolerance or pass/fail limits, such as the agreed positive and negative range in mm.", "กำหนดช่วง Deviation แถบสี ค่าคลาดเคลื่อน หรือเกณฑ์ผ่าน/ไม่ผ่าน เช่น ช่วงบวกและลบเป็นมิลลิเมตรที่ตกลง")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Identify points, surfaces, datums, sections, interfaces, and specific areas of interest for the report.", "ระบุจุด ผิว Datum ภาพตัด ผิวประกอบ และพื้นที่สนใจเฉพาะสำหรับรายงาน")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Confirm the alignment method, report views, labels, file format, and any regions that should be excluded or treated as unknown.", "ยืนยันวิธีจัดแนว มุมมองรายงาน ป้ายกำกับ รูปแบบไฟล์ และพื้นที่ที่ให้ตัดออกหรือระบุว่าไม่ทราบ")</span></label>
-                    </div>
-                </fieldset>
-                <fieldset class="scanning-checklist-card">
-                    <legend><span class="scanning-checklist-number">05</span><span>@T("Before the team arrives", "ก่อนทีมงานเข้าพื้นที่")</span></legend>
-                    <p>@T("A few final confirmations help the onsite session run safely and efficiently.", "การยืนยันขั้นสุดท้ายช่วยให้งานนอกสถานที่ปลอดภัยและดำเนินได้ราบรื่น")</p>
-                    <div class="scanning-checklist-list">
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Send site photos, approximate dimensions, location, access restrictions, and the best contact for the visit.", "ส่งรูปหน้างาน ขนาดโดยประมาณ สถานที่ ข้อจำกัดการเข้าถึง และชื่อผู้ประสานงานหลัก")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Confirm whether photography, reference targets, removable spray, partial disassembly, and temporary covers are permitted.", "ยืนยันว่าอนุญาตการถ่ายรูป การติดเป้า การใช้สเปรย์ล้างออกได้ การถอดบางส่วน และการเปิดฝาชั่วคราวหรือไม่")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Have the part in the agreed operating state and allow time for setup, targets, surface preparation, and repeat passes if needed.", "เตรียมชิ้นงานให้อยู่ในสภาพที่ตกลง และเผื่อเวลาตั้งเครื่อง ติดเป้า เตรียมผิว และสแกนซ้ำหากจำเป็น")</span></label>
-                        <label class="scanning-checklist-item"><input type="checkbox" /><span>@T("Review the assumptions, excluded areas, target files, and delivery recipient with the team before they leave.", "ทบทวนสมมติฐาน พื้นที่ที่ไม่รวม ไฟล์เป้าหมาย และผู้รับไฟล์กับทีมงานก่อนจบงาน")</span></label>
-                    </div>
-                </fieldset>
-            </div>
-            <div class="scanning-checklist-footer">
-                <i class="fas fa-clipboard-check" aria-hidden="true"></i>
-                <p>@T("If any item is not available yet, tell us early. We can assess the gap, propose a safe workaround, and state the assumption in the quotation.", "หากยังเตรียมข้อใดไม่ได้ ให้แจ้งเราล่วงหน้า เราจะช่วยประเมินช่องว่าง เสนอทางเลือกที่ปลอดภัย และระบุสมมติฐานไว้ในใบเสนอราคา")</p>
-            </div>
+            <ul class="scanning-preparation-list">
+                <li><h3>@T("Show us the part", "ส่งรูปชิ้นงานให้เราดู")</h3><p>@T("Share a few photos, approximate size and location, and what you want to do with the file. Point out any important features.", "ส่งรูป ขนาดโดยประมาณ สถานที่ และบอกว่าจะนำไฟล์ไปใช้อะไร พร้อมชี้จุดสำคัญที่ต้องการเก็บรายละเอียด")</p></li>
+                <li><h3>@T("Keep it clean and still", "เตรียมชิ้นงานให้สะอาดและนิ่ง")</h3><p>@T("Where safe, remove grease, dust, oil and loose covers. Tell us about hot, moving, fragile or shiny parts so we can agree on suitable preparation.", "เมื่อทำได้อย่างปลอดภัย ให้เช็ดคราบจาระบี ฝุ่น น้ำมัน และนำวัสดุปิดที่หลวมออก แจ้งเราหากชิ้นงานร้อน เคลื่อนไหว เปราะบาง หรือผิวเงา เพื่อวางแผนเตรียมงานให้เหมาะสม")</p></li>
+                <li><h3>@T("Leave room to work", "เปิดพื้นที่ให้ทำงานได้สะดวก")</h3><p>@T("Arrange safe access around the part, a nearby 220V outlet and a site contact. Let us know about safety rules or access restrictions in advance.", "เตรียมทางเข้าถึงและพื้นที่รอบชิ้นงานให้ปลอดภัย มีปลั๊กไฟ 220V ใกล้จุดทำงานและผู้ประสานงาน แจ้งข้อกำหนดความปลอดภัยหรือข้อจำกัดการเข้าพื้นที่ล่วงหน้า")</p></li>
+            </ul>
+            <details class="scanning-preparation-details">
+                <summary>@T("Site planning and deviation report details", "รายละเอียดหน้างานและรายงานเทียบ CAD")</summary>
+                <div class="scanning-preparation-detail-body">
+                    <h3>@T("For the onsite team", "สำหรับทีมงานหน้างาน")</h3>
+                    <ul>
+                        <li>@T("Flag parking, loading, stairs, permits, PPE and power restrictions. Plan stable lighting and protection from moving lights, rain, wind, vibration and nearby machinery.", "แจ้งเรื่องที่จอดรถ การขนย้าย บันได ใบอนุญาต PPE และข้อจำกัดไฟฟ้า เตรียมแสงให้คงที่และหลีกเลี่ยงไฟที่เคลื่อน ฝน ลม การสั่น และเครื่องจักรใกล้เคียง")</li>
+                        <li>@T("Agree on safe isolation, cooling and support for the part. Photography, targets, removable spray or partial disassembly need the site owner’s permission.", "ตกลงวิธีตัดแยกพลังงาน ลดอุณหภูมิ และรองรับชิ้นงานอย่างปลอดภัย การถ่ายรูป ติดเป้า ใช้สเปรย์ล้างออกได้ หรือถอดบางส่วนต้องได้รับอนุญาตจากเจ้าของพื้นที่")</li>
+                        <li>@T("Allow setup time and confirm the intended use, any additional modifications, excluded areas and delivery contact with the team.", "เผื่อเวลาตั้งเครื่อง และยืนยันการใช้งาน งานปรับแก้เพิ่มเติม ส่วนที่ไม่รวม และผู้รับไฟล์กับทีมงาน")</li>
+                    </ul>
+                    <h3>@T("For comparison against CAD", "สำหรับงานเทียบกับ CAD")</h3>
+                    <p>@T("Share the nominal CAD and drawing if available, with the revision and units. We’ll agree the alignment, deviation band, specific areas of interest and report format with you.", "ส่ง CAD ต้นแบบและแบบงานถ้ามี พร้อม Revision และหน่วย เราจะตกลงวิธีจัดแนว ช่วงค่าความต่าง จุดที่ต้องการตรวจ และรูปแบบรายงานร่วมกัน")</p>
+                </div>
+            </details>
+            <div class="scanning-checklist-actions"><button class="service-button service-button-secondary" type="button" onclick="window.print()">@T("Print / save as PDF", "พิมพ์ / บันทึกเป็น PDF") <i class="fas fa-print" aria-hidden="true"></i></button></div>
         </div>
     </section>
-
     <section id="scanning-limitations" class="service-section service-section-soft"><div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("What Scans Well—and What Does Not", "สิ่งที่สแกนได้ดีและข้อจำกัด")</p><h2>@T("3D scanning needs line of sight and a stable surface", "การสแกน 3D ต้องมองเห็นผิวและวัตถุต้องคงที่")</h2></header><div class="service-table-wrap"><table class="service-table"><thead><tr><th>@T("Condition", "ลักษณะวัตถุ")</th><th>@T("What usually happens", "ผลที่มักเกิด")</th><th>@T("Possible preparation", "แนวทางเตรียม")</th></tr></thead><tbody>
         <tr><td>@T("Matte, rigid, textured surfaces", "ผิวด้าน แข็ง และมีรายละเอียด")</td><td>@T("Usually provide stable visual geometry for registration and capture.", "มักให้ข้อมูลรูปทรงที่เสถียรต่อการจัดแนวและเก็บผิว")</td><td>@T("Clean, expose critical areas, and keep the object still.", "ทำความสะอาด เปิดจุดสำคัญ และรักษาให้นิ่ง")</td></tr>
         <tr><td>@T("Shiny, mirror-like, transparent, or translucent", "ผิวเงากระจก ใส หรือโปร่งแสง")</td><td>@T("Light reflects or passes through, causing missing, distorted, or noisy data.", "แสงสะท้อนหรือทะลุผ่าน ทำให้ข้อมูลขาด บิดเบือน หรือมีสัญญาณรบกวน")</td><td>@T("Controlled lighting, removable matte spray, targets, or another measurement method after review.", "ควบคุมแสง ใช้สเปรย์ผิวด้านล้างออก ติดเป้า หรือเลือกวิธีวัดอื่นหลังประเมิน")</td></tr>

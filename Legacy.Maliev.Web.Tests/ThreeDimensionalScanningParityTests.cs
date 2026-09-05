@@ -27,7 +27,10 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
         Assert.Equal(5, WorkflowImageRegex().Matches(source).Count);
         Assert.Equal(4, DeliverableCardRegex().Matches(source).Count);
         Assert.Equal(4, DeliverableImageRegex().Matches(source).Count);
-        Assert.Equal(5, ChecklistCardRegex().Matches(source).Count);
+        var preparation = PreparationListRegex().Match(source);
+        Assert.True(preparation.Success);
+        Assert.Equal(3, PreparationNoteRegex().Matches(preparation.Groups["notes"].Value).Count);
+        Assert.Contains("class=\"scanning-preparation-details\"", source, StringComparison.Ordinal);
         Assert.Contains("What You Receive at Each Stage", source, StringComparison.Ordinal);
         Assert.Contains("Can I order only 3D scanning and receive a DWG?", source, StringComparison.Ordinal);
         Assert.Contains("Print / save as PDF", source, StringComparison.Ordinal);
@@ -55,7 +58,8 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
         Assert.Contains("ServiceLocation", component, StringComparison.Ordinal);
         Assert.Contains("class=\"service-page-toc\"", component, StringComparison.Ordinal);
         Assert.Contains("data-scanning-step", component, StringComparison.Ordinal);
-        Assert.Contains("scanning-checklist-item", component, StringComparison.Ordinal);
+        Assert.Contains("scanning-preparation-list", component, StringComparison.Ordinal);
+        Assert.Contains("scanning-preparation-details", component, StringComparison.Ordinal);
         Assert.Contains("scanning-workflow-timeline.is-active", styles, StringComparison.Ordinal);
         Assert.Contains("scanning-workflow-step.is-visible", styles, StringComparison.Ordinal);
         Assert.Contains("@media print", styles, StringComparison.Ordinal);
@@ -102,6 +106,9 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
     [GeneratedRegex("class=\"scanning-deliverable-image\"")]
     private static partial Regex DeliverableImageRegex();
 
-    [GeneratedRegex("class=\"scanning-checklist-card\"")]
-    private static partial Regex ChecklistCardRegex();
+    [GeneratedRegex("<li><h3>[^<]+</h3><p>[^<]+</p></li>")]
+    private static partial Regex PreparationNoteRegex();
+
+    [GeneratedRegex("<ul class=\"scanning-preparation-list\">(?<notes>[\\s\\S]*?)</ul>")]
+    private static partial Regex PreparationListRegex();
 }

@@ -1,0 +1,36 @@
+.scanning-comparison-container { max-width: 60rem; }
+.scanning-comparison [hidden] { display: none !important; }
+.scanning-comparison-buttons { display: inline-flex; max-width: 100%; gap: 0; border: 1px solid #cbd0d5; border-radius: var(--service-radius-sm); background: #f4f5f6; }
+.scanning-comparison-buttons button { min-height: 44px; padding: .6rem 1rem; border: 0; border-radius: 0; background: transparent; color: #454b52; font: inherit; font-weight: 600; cursor: pointer; }
+.scanning-comparison-buttons button + button { border-left: 1px solid #cbd0d5; }
+.scanning-comparison-buttons button:first-child { border-radius: calc(var(--service-radius-sm) - 1px) 0 0 calc(var(--service-radius-sm) - 1px); }
+.scanning-comparison-buttons button:last-child { border-radius: 0 calc(var(--service-radius-sm) - 1px) calc(var(--service-radius-sm) - 1px) 0; }
+.scanning-comparison-buttons button:hover { background: #eaedef; }
+.scanning-comparison-buttons button[aria-pressed="true"] { color: #262b30; background: #dce0e4; }
+.scanning-comparison button:focus-visible { outline: 3px solid var(--service-ink); outline-offset: 4px; }
+.scanning-comparison-controls p, .scanning-comparison-note { color: var(--service-muted); line-height: 1.7; }
+.scanning-comparison-controls p { margin: .75rem 0; font-size: .9rem; }
+.scanning-comparison-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; position: relative; user-select: none; -webkit-user-select: none; }
+.scanning-comparison-stage figure { position: relative; margin: 0; overflow: hidden; border-radius: var(--service-radius-md); background: #f6f8fa; }
+.scanning-comparison-stage img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain; -webkit-user-drag: none; pointer-events: none; }
+.scanning-comparison-stage figcaption { padding: .65rem .85rem; font-weight: 600; background: var(--service-ink); color: #fff; }
+.scanning-comparison-divider { display: none; }
+.scanning-comparison[data-mode="compare"] .scanning-comparison-stage { display: block; aspect-ratio: 3 / 2; overflow: hidden; border-radius: var(--service-radius-md); touch-action: pan-y; cursor: ew-resize; }
+.scanning-comparison[data-mode="compare"] figure { position: absolute; inset: 0; border-radius: 0; }
+.scanning-comparison[data-mode="compare"] .scanning-comparison-cad { clip-path: inset(0 0 0 var(--comparison-position, 50%)); }
+.scanning-comparison[data-mode="compare"] figcaption { position: absolute; top: .65rem; left: .65rem; border-radius: var(--service-radius-sm); font-size: .85rem; }
+.scanning-comparison[data-mode="compare"] .scanning-comparison-cad figcaption { left: auto; right: .65rem; }
+.scanning-comparison[data-mode="compare"] .scanning-comparison-divider { display: block; position: absolute; top: 0; bottom: 0; left: var(--comparison-position, 50%); width: 2px; background: #fff; box-shadow: 0 0 0 1px var(--service-ink); pointer-events: none; }
+.scanning-comparison-handle { position: absolute; top: 50%; left: clamp(14px, var(--comparison-position, 50%), calc(100% - 14px)); transform: translate(-50%, -50%); width: 44px; height: 44px; display: grid; place-items: center; cursor: ew-resize; touch-action: none; outline: none; z-index: 2; }
+.scanning-comparison-handle span { box-sizing: border-box; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: var(--service-ink); color: #fff; font-size: 16px; line-height: 1; }
+.scanning-comparison-handle:focus-visible span { outline: 3px solid #545b62; outline-offset: 2px; }
+.scanning-comparison-handle[data-pointer-focus] span { outline: none; border-color: transparent; }
+.scanning-comparison[data-mode="scan"] .scanning-comparison-cad, .scanning-comparison[data-mode="cad"] .scanning-comparison-scan { display: none; }
+.scanning-comparison[data-mode="scan"] .scanning-comparison-stage, .scanning-comparison[data-mode="cad"] .scanning-comparison-stage { grid-template-columns: minmax(0, 1fr); }
+.scanning-comparison-note { margin: 1rem 0 1.25rem; }
+@media (max-width: 600px) {
+    .scanning-comparison-stage { grid-template-columns: minmax(0, 1fr); }
+    .scanning-comparison-buttons button { flex: 1 1 auto; padding-inline: .55rem; font-size: .85rem; white-space: nowrap; }
+    .scanning-comparison[data-mode="compare"] figcaption { top: .4rem; left: .4rem; padding: .4rem .5rem; font-size: .75rem; }
+    .scanning-comparison[data-mode="compare"] .scanning-comparison-cad figcaption { right: .4rem; }
+}
