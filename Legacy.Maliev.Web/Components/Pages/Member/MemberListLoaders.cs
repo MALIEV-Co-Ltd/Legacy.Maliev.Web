@@ -1,6 +1,7 @@
 using System.Globalization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Http;
 
 namespace Legacy.Maliev.Web.Components.Pages.Member;
@@ -19,7 +20,14 @@ public static class MemberListLoaders
         string? size,
         CancellationToken cancellationToken)
     {
-        var (pageIndex, pageSize, queryErrors) = ParsePaging(index, size);
+        if (!PageSizeQuery.TryResolve(size, out var pageSize))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.Headers.CacheControl = "no-store";
+            return MemberOrderHistoryDisplayModel.Empty;
+        }
+
+        var (pageIndex, queryErrors) = ParsePageIndex(index);
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(context, cancellationToken);
         if (customerId is null)
         {
@@ -90,7 +98,14 @@ public static class MemberListLoaders
         string? size,
         CancellationToken cancellationToken)
     {
-        var (pageIndex, pageSize, queryErrors) = ParsePaging(index, size);
+        if (!PageSizeQuery.TryResolve(size, out var pageSize))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.Headers.CacheControl = "no-store";
+            return MemberQuotationsIndexDisplayModel.Empty;
+        }
+
+        var (pageIndex, queryErrors) = ParsePageIndex(index);
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(context, cancellationToken);
         if (customerId is null)
         {
@@ -151,25 +166,16 @@ public static class MemberListLoaders
             page.HasNextPage ? BuildPageHref(path, page.TotalPages, pageSize, sort, search) : null);
     }
 
-    private static (int PageIndex, int PageSize, IReadOnlyList<string> Errors) ParsePaging(string? index, string? size)
+    private static (int PageIndex, IReadOnlyList<string> Errors) ParsePageIndex(string? index)
     {
         var validIndex = string.IsNullOrWhiteSpace(index)
             || int.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
-        var validSize = string.IsNullOrWhiteSpace(size)
-            || (int.TryParse(size, NumberStyles.Integer, CultureInfo.InvariantCulture, out var requestedSize)
-                && IsSupportedPageSize(requestedSize));
         var pageIndex = int.TryParse(index, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedIndex)
             ? Math.Max(parsedIndex, 1)
             : 1;
-        var pageSize = int.TryParse(size, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedSize)
-            ? NormalizePageSize(parsedSize)
-            : 25;
-        return (pageIndex, pageSize, validIndex && validSize ? [] : [InvalidQueryValuesMessage]);
+        return (pageIndex, validIndex ? [] : [InvalidQueryValuesMessage]);
     }
 
-    internal static int NormalizePageSize(int pageSize) => IsSupportedPageSize(pageSize) ? pageSize : 25;
-
-    private static bool IsSupportedPageSize(int pageSize) => pageSize is 25 or 50 or 100;
 
     private static IReadOnlyList<MemberPageLinkDisplayModel> BuildPageLinks(
         string path,

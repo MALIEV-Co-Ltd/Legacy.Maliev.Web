@@ -606,24 +606,20 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "One or more query values are invalid.")]
-    [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
-    public async Task MemberQuotationsIndex_MalformedPagingRendersLocalizedSafeValidation(
-        string culture,
-        string expectedMessage)
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task MemberQuotationsIndex_MalformedPageSizeReturnsBadRequestBeforeCallingService(string culture)
     {
         await SignInAsync();
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotationClient.ResetInvocation();
 
         using var response = await client.GetAsync(
-            $"/member/quotations?culture={culture}&index=not-a-number&size=also-invalid");
-        var source = await response.Content.ReadAsStringAsync();
-        var decodedSource = WebUtility.HtmlDecode(source);
+            $"/member/quotations?culture={culture}&index=1&size=also-invalid");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("class=\"validation-summary-errors\" role=\"alert\"", source, StringComparison.Ordinal);
-        Assert.Contains($">{expectedMessage}<", decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("FormatException", decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Input string was not in a correct format", decodedSource, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(quotationClient.LastInvocation);
     }
 
     [Theory]
@@ -856,22 +852,76 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "One or more query values are invalid.")]
-    [InlineData("th", "ค่าหนึ่งรายการหรือมากกว่าในคำค้นหาไม่ถูกต้อง")]
-    public async Task MemberOrderHistory_MalformedPagingRendersLocalizedSafeValidation(
-        string culture,
-        string expectedMessage)
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task MemberOrderHistory_MalformedPageSizeReturnsBadRequestBeforeCallingService(string culture)
     {
         await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        orderClient.ResetInvocations();
 
         using var response = await client.GetAsync(
-            $"/member/orders/history?culture={culture}&index=not-a-number&size=also-invalid");
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            $"/member/orders/history?culture={culture}&index=1&size=also-invalid");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(orderClient.LastListInvocation);
+    }
+
+    [Theory]
+    [InlineData("/member/orders/history", "0")]
+    [InlineData("/member/orders/history", "-1")]
+    [InlineData("/member/orders/history", "101")]
+    [InlineData("/member/orders/history", "2147483648")]
+    [InlineData("/member/quotations", "0")]
+    [InlineData("/member/quotations", "-1")]
+    [InlineData("/member/quotations", "101")]
+    [InlineData("/member/quotations", "2147483648")]
+    public async Task MemberListRoutes_OutOfRangePageSizeReturnsBadRequestBeforeCallingService(
+        string route,
+        string size)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        orderClient.ResetInvocations();
+        quotationClient.ResetInvocation();
+
+        using var response = await client.GetAsync($"{route}?index=1&size={size}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(orderClient.LastListInvocation);
+        Assert.Null(quotationClient.LastInvocation);
+    }
+
+    [Theory]
+    [InlineData("/member/orders/history")]
+    [InlineData("/member/quotations")]
+    public async Task MemberListRoutes_AcceptAnyPageSizeWithinSupportedRange(string route)
+    {
+        await SignInAsync();
+        var orderClient = Assert.IsType<StubCustomerOrderClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderClient>());
+        var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
+            configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        orderClient.ResetInvocations();
+        quotationClient.ResetInvocation();
+
+        using var response = await client.GetAsync($"{route}?index=1&size=30");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("FormatException", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Input string was not in a correct format", source, StringComparison.Ordinal);
+        if (route.Contains("orders", StringComparison.Ordinal))
+        {
+            Assert.Equal(30, Assert.IsType<OrderListInvocation>(orderClient.LastListInvocation).PageSize);
+            Assert.Null(quotationClient.LastInvocation);
+        }
+        else
+        {
+            Assert.Equal(30, Assert.IsType<QuotationListInvocation>(quotationClient.LastInvocation).PageSize);
+            Assert.Null(orderClient.LastListInvocation);
+        }
     }
 
     [Theory]

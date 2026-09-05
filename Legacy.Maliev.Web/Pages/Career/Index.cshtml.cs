@@ -1,5 +1,6 @@
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Career;
+using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -35,10 +36,15 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
         string? sort,
         string? search,
         int? index,
-        int size,
+        int? size,
         CancellationToken cancellationToken)
     {
-        ConfigureQuery(sort, search, index, size);
+        if (!ModelState.IsValid || !PageSizeQuery.TryResolve(size, out var pageSize))
+        {
+            return BadRequest();
+        }
+
+        ConfigureQuery(sort, search, index, pageSize);
         await LoadAsync(cancellationToken);
         return Page();
     }
@@ -47,7 +53,12 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
         int size,
         CancellationToken cancellationToken)
     {
-        ConfigureQuery(null, null, 1, size);
+        if (!ModelState.IsValid || !PageSizeQuery.TryResolve(size, out var pageSize))
+        {
+            return BadRequest();
+        }
+
+        ConfigureQuery(null, null, 1, pageSize);
         await LoadAsync(cancellationToken);
         return Page();
     }
@@ -56,17 +67,22 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
         string? sort,
         string? search,
         int? index,
-        int size,
+        int? size,
         CancellationToken cancellationToken)
     {
-        ConfigureQuery(sort, search, index, size);
+        if (!ModelState.IsValid || !PageSizeQuery.TryResolve(size, out var pageSize))
+        {
+            return BadRequest();
+        }
+
+        ConfigureQuery(sort, search, index, pageSize);
         await LoadAsync(cancellationToken);
         return new JsonResult(JobOffers.Items);
     }
 
     private void ConfigureQuery(string? sort, string? search, int? index, int size)
     {
-        PageSize = Math.Clamp(size > 0 ? size : 25, 1, 100);
+        PageSize = size;
         CurrentSort = Enum.TryParse<CareerSort>(sort, out var parsedSort)
             ? parsedSort
             : CareerSort.JobCreatedDate_Descending;
