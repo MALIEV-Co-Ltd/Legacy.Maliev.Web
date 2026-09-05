@@ -5,14 +5,14 @@
 @{
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
-    ViewData["Title"] = T("3D Scanning, Reverse Engineering & Deviation Analysis | Onsite Thailand", "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่");
-    ViewData["Description"] = T("In-house and onsite 3D scanning in Thailand. Understand raw meshes, reverse-engineered CAD, deviation analysis, preparation, limitations, and deliverable files.", "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน");
+    ViewData["Title"] = T("Reverse Engineering Thailand | 3D Scanning to Editable CAD | MALIEV", "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่");
+    ViewData["Description"] = T("Reverse engineering services in Thailand from 3D scan to editable CAD, with in-house and onsite scanning, deviation analysis, and defined deliverable files.", "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน");
     ViewData["Keywords"] = T("3D scanning service Thailand, onsite 3D scanning, reverse engineering Thailand, deviation analysis, 3D scan price", "รับสแกน 3D, สแกน 3D ราคา, สแกน 3D นอกสถานที่, Reverse Engineering, Deviation Analysis");
     var faqJson = ThreeDimensionalScanningPage.CreateFaqJson();
 }
 
 @section Head {
-    <link rel="preload" as="image" href="~/src/images/services/scanning/scanning-hero.webp" />
+    <link rel="preload" as="image" href="~/src/images/services/scanning/scanning-hero.webp" imagesrcset="/src/images/services/scanning/scanning-hero-640.webp 640w, /src/images/services/scanning/scanning-hero-768.webp 768w, /src/images/services/scanning/scanning-hero-960.webp 960w, /src/images/services/scanning/scanning-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
 }
 
 <component type="typeof(ThreeDimensionalScanningContent)" render-mode="Static" />

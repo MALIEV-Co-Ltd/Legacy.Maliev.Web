@@ -68,21 +68,24 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
     [Theory]
     [InlineData(
         "en",
-        "Custom Part Manufacturing with CNC and 3D Printing | MALIEV",
-        "Custom manufacturing support for CNC, 3D printing, 3D scanning, and design. Send files, quantity, material, and intended use for review.",
+        "Custom Manufacturing Review for Multi-Process Parts | MALIEV",
+        "Not sure which manufacturing process fits your part? Send files, quantity, material, and intended use for a multi-process manufacturing review.",
         "Custom Part Manufacturing: Start with Your Drawing, Material, Quantity, and Use",
+        "If you are not sure whether CNC machining, 3D printing, or low-volume injection molding fits your part, send the drawing or sample, material, quantity, critical features, and intended use. MALIEV will route the request for an appropriate manufacturing review. Existing parts that need geometry capture may start with 3D scanning and reverse engineering.",
         "custom part manufacturing Thailand, made to drawing, CNC or 3D printing, reverse engineering")]
     [InlineData(
         "th",
-        "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV",
-        "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ ส่งแบบ วัสดุ จำนวน และการใช้งานให้ MALIEV ประเมิน",
+        "รับผลิตชิ้นงานตามแบบหลายกระบวนการ | MALIEV",
+        "ยังไม่แน่ใจว่าชิ้นงานควรใช้กระบวนการผลิตใด? ส่งแบบ วัสดุ จำนวน และการใช้งานเพื่อประเมินงานผลิตหลายกระบวนการ",
         "รับผลิตชิ้นงานตามแบบ: เริ่มจากแบบ วัสดุ จำนวน และการใช้งาน",
+        "หากยังไม่แน่ใจว่าควรใช้ CNC, 3D Printing หรือฉีดพลาสติกจำนวนน้อย ส่งแบบ ตัวอย่างชิ้นงาน วัสดุ จำนวน จุดสำคัญ และการใช้งานให้ MALIEV ช่วยกำหนดเส้นทางประเมินที่เหมาะสม งานที่ต้องสร้างแบบจากชิ้นงานเดิมจะถูกส่งต่อไปยังการสแกน 3D และ Reverse Engineering ตามความจำเป็น",
         "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับทำชิ้นงาน, CNC หรือ 3D Printing")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
         string description,
         string heading,
+        string lead,
         string keywords)
     {
         using var client = CreateClient(factory);
@@ -98,6 +101,7 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"custom-manufacturing-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -211,7 +215,8 @@ public sealed partial class CustomManufacturingStaticSsrRouteTests : IClassFixtu
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>Custom Part Manufacturing with CNC and 3D Printing | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Custom Manufacturing Review for Multi-Process Parts | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("Not sure which manufacturing process fits your part?", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"custom-manufacturing-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);

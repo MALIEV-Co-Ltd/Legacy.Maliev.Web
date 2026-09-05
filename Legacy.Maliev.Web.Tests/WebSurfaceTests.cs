@@ -2389,8 +2389,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "CNC Milling & Turning", "Precision CNC Machining for One-Off and Production Parts", "Can you machine only one piece?")]
-    [InlineData("th", "บริการ CNC Milling และ Turning", "รับงาน CNC ตามแบบ ตั้งแต่งานชิ้นเดียวถึงงานผลิต", "รับ CNC อะลูมิเนียมชิ้นเดียวได้หรือไม่?")]
+    [InlineData("en", "CNC Milling & Turning", "CNC milling and CNC turning from your CAD and drawing", "Can you machine only one piece?")]
+    [InlineData("th", "โรงกลึง CNC · Milling และ Turning", "โรงกลึง CNC รับกัดและรับกลึงตามแบบ", "รับ CNC อะลูมิเนียมชิ้นเดียวได้หรือไม่?")]
     public async Task CncMachiningRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
@@ -2414,7 +2414,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "FDM, Resin & Industrial Additive", "Upload a 3D File for Instant FDM & Resin Pricing", "How much does 3D printing cost?")]
+    [InlineData("en", "FDM, Resin & Industrial Additive", "3D Printing Service in Thailand for Prototypes and Production Parts", "How much does 3D printing cost?")]
     [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "พิมพ์ 3D ราคาเท่าไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
@@ -2439,7 +2439,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "In-House & Onsite 3D Scanning", "3D Scanning, Reverse Engineering, and Deviation Analysis", "How much does 3D scanning cost?")]
+    [InlineData("en", "In-House & Onsite 3D Scanning", "Reverse Engineering Services in Thailand from 3D Scan to Editable CAD", "How much does 3D scanning cost?")]
     [InlineData("th", "บริการสแกน 3D ในสถานที่และนอกสถานที่", "รับสแกน 3D, Reverse Engineering และ Deviation Analysis", "สแกน 3D ราคาเท่าไร?")]
     public async Task ThreeDimensionalScanningRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,

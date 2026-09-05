@@ -7,11 +7,11 @@
     Func<string, string, string> T = (en, th) => isThai ? th : en;
 
     string pageTitle = T(
-        "Custom Part Manufacturing with CNC and 3D Printing | MALIEV",
-        "รับผลิตชิ้นงานตามแบบด้วย CNC และ 3D Printing | MALIEV");
+        "Custom Manufacturing Review for Multi-Process Parts | MALIEV",
+        "รับผลิตชิ้นงานตามแบบหลายกระบวนการ | MALIEV");
     string pageDescription = T(
-        "Not sure whether CNC machining, 3D printing, or 3D scanning fits your part? Send the drawing or sample, material, quantity, critical features, and intended use for a manufacturing review.",
-        "หากยังไม่แน่ใจว่าควรใช้ CNC, 3D Printing หรือ 3D Scanning ส่งแบบหรือตัวอย่าง วัสดุ จำนวน จุดสำคัญ และการใช้งาน เพื่อให้ MALIEV ตรวจสอบเส้นทางประเมินที่เหมาะสม");
+        "Not sure which manufacturing process fits your part? Send files, quantity, material, and intended use for a multi-process manufacturing review.",
+        "ยังไม่แน่ใจว่าชิ้นงานควรใช้กระบวนการผลิตใด? ส่งแบบ วัสดุ จำนวน และการใช้งานเพื่อประเมินงานผลิตหลายกระบวนการ");
     string faqProcessQuestion = T(
         "Which manufacturing process should I choose?",
         "ควรเลือกกระบวนการผลิตแบบใด?");
@@ -91,6 +91,10 @@
             },
         },
     };
+}
+
+@section Head {
+    <link rel="preload" as="image" href="~/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" imagesrcset="/src/images/services/custom-manufacturing/custom-manufacturing-story-640.webp 640w, /src/images/services/custom-manufacturing/custom-manufacturing-story-768.webp 768w, /src/images/services/custom-manufacturing/custom-manufacturing-story-960.webp 960w, /src/images/services/custom-manufacturing/custom-manufacturing-story.webp 1536w" imagesizes="100vw" fetchpriority="high" />
 }
 
 <component type="typeof(CustomManufacturingContent)" render-mode="Static" />

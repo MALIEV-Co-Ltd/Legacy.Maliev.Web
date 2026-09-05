@@ -121,21 +121,24 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
     [Theory]
     [InlineData(
         "en",
-        "3D Scanning, Reverse Engineering & Deviation Analysis | Onsite Thailand",
-        "In-house and onsite 3D scanning in Thailand. Understand raw meshes, reverse-engineered CAD, deviation analysis, preparation, limitations, and deliverable files.",
-        "3D Scanning, Reverse Engineering, and Deviation Analysis",
+        "Reverse Engineering Thailand | 3D Scanning to Editable CAD | MALIEV",
+        "Reverse engineering services in Thailand from 3D scan to editable CAD, with in-house and onsite scanning, deviation analysis, and defined deliverable files.",
+        "Reverse Engineering Services in Thailand from 3D Scan to Editable CAD",
+        "MALIEV provides reverse engineering in Thailand: capture real objects as digital geometry, rebuild editable CAD when needed, or compare a manufactured part with nominal CAD. We help define the correct deliverable before scanning begins.",
         "3D scanning service Thailand, onsite 3D scanning, reverse engineering Thailand, deviation analysis, 3D scan price")]
     [InlineData(
         "th",
         "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่",
         "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน",
         "รับสแกน 3D, Reverse Engineering และ Deviation Analysis",
+        "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ เพื่อแปลงวัตถุจริงเป็นข้อมูลดิจิทัล สร้าง CAD ที่แก้ไขได้ หรือเปรียบเทียบชิ้นงานกับ CAD ต้นแบบ โดยช่วยกำหนดผลส่งมอบก่อนเริ่มงาน",
         "รับสแกน 3D, สแกน 3D ราคา, สแกน 3D นอกสถานที่, Reverse Engineering, Deviation Analysis")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
         string description,
         string heading,
+        string lead,
         string keywords)
     {
         using var client = CreateClient(factory);
@@ -152,6 +155,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/scanning/scanning-hero.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"three-dimensional-scanning-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -277,7 +281,8 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>3D Scanning, Reverse Engineering &amp; Deviation Analysis | Onsite Thailand</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Reverse Engineering Thailand | 3D Scanning to Editable CAD | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("Reverse Engineering Services in Thailand from 3D Scan to Editable CAD", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"three-dimensional-scanning-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);

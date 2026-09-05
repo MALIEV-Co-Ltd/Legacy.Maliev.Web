@@ -35,7 +35,7 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
         var components = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Components", "Pages", "Services");
         var page = File.ReadAllText(Path.Combine(components, pageName));
         var content = File.ReadAllText(Path.Combine(components, contentName));
-        var responsiveSet = $"/src/images/services/{responsiveStem}-640.webp 640w, /src/images/services/{responsiveStem}-960.webp 960w, /src/images/services/{originalImage} {sourceWidth}w";
+        var responsiveSet = $"/src/images/services/{responsiveStem}-640.webp 640w, /src/images/services/{responsiveStem}-768.webp 768w, /src/images/services/{responsiveStem}-960.webp 960w, /src/images/services/{originalImage} {sourceWidth}w";
 
         Assert.Contains($"href=\"/src/images/services/{originalImage}\"", page, StringComparison.Ordinal);
         Assert.Contains($"imagesrcset=\"{responsiveSet}\"", page, StringComparison.Ordinal);
@@ -45,7 +45,7 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
 
         var imageRoot = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "images", "services");
         var originalPath = Path.Combine(imageRoot, originalImage.Replace('/', Path.DirectorySeparatorChar));
-        foreach (var width in new[] { "640", "960" })
+        foreach (var width in new[] { "640", "768", "960" })
         {
             var variantPath = Path.Combine(
                 imageRoot,
@@ -84,6 +84,27 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
     }
 
     [Theory]
+    [InlineData("3D-Printing.cshtml", "printing/printing-hero")]
+    [InlineData("CNC-Machining.cshtml", "cnc/cnc-hero")]
+    [InlineData("3D-Scanning.cshtml", "scanning/scanning-hero")]
+    [InlineData("Custom-Manufacturing.cshtml", "custom-manufacturing/custom-manufacturing-story")]
+    public void RetainedRazorFallbacks_ProvideRootRelative768HeroSources(string pageName, string responsiveStem)
+    {
+        var page = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "Pages",
+            "Services",
+            pageName));
+        var candidate = $"/src/images/services/{responsiveStem}-768.webp 768w";
+
+        Assert.Contains($"imagesrcset=\"/src/images/services/{responsiveStem}-640.webp 640w", page, StringComparison.Ordinal);
+        Assert.Contains(candidate, page, StringComparison.Ordinal);
+        Assert.Contains($"srcset=\"/src/images/services/{responsiveStem}-640.webp 640w", page, StringComparison.Ordinal);
+        Assert.DoesNotContain($"srcset=\"~/src/images/services/{responsiveStem}", page, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("/services/3d-printing", "printing/printing-hero")]
     [InlineData("/services/cnc-machining", "cnc/cnc-hero")]
     [InlineData("/services/3d-scanning", "scanning/scanning-hero")]
@@ -99,6 +120,7 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
 
         response.EnsureSuccessStatusCode();
         Assert.Contains($"/src/images/services/{responsiveStem}-640.webp 640w", html, StringComparison.Ordinal);
+        Assert.Contains($"/src/images/services/{responsiveStem}-768.webp 768w", html, StringComparison.Ordinal);
         Assert.Contains($"/src/images/services/{responsiveStem}-960.webp 960w", html, StringComparison.Ordinal);
         Assert.Contains("sizes=\"100vw\"", html, StringComparison.Ordinal);
     }
