@@ -2,7 +2,7 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
-    private const string ServiceDefaultsCommit = "3152a9612d8514597192a98eae31277aef8102ff";
+    private const string ServiceDefaultsCommit = "4e9126d318d372d9cf7165cbe73da8754439ee04";
 
     [Fact]
     public void WebProject_UsesLegacyServiceDefaultsOnly()
