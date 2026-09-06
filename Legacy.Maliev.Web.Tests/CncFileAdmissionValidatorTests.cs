@@ -6,6 +6,22 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class CncFileAdmissionValidatorTests
 {
+    [Fact]
+    public void StructuralAdmission_RejectsUnownedIgesParameterAfterValidPayloads()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "TestAssets", "cube.iges");
+        Assert.True(CncFileAdmissionValidator.IsValidIges(File.ReadAllBytes(path)));
+        var lines = File.ReadAllLines(path).ToList();
+        var terminateIndex = lines.FindIndex(line => line[72] == 'T');
+        var parameterCount = lines.Count(line => line[72] == 'P');
+        var startCount = lines.Count(line => line[72] == 'S');
+        var globalCount = lines.Count(line => line[72] == 'G');
+        var directoryCount = lines.Count(line => line[72] == 'D');
+        lines.Insert(terminateIndex, IgesParameterRecord("128,garbage;", 1, parameterCount + 1));
+        lines[terminateIndex + 1] = IgesRecord($"S{startCount}G{globalCount}D{directoryCount}P{parameterCount + 1}", 'T', 1);
+        Assert.False(CncFileAdmissionValidator.IsValidIges(Encoding.ASCII.GetBytes(string.Join("\n", lines))));
+    }
+
     [Theory]
     [InlineData("#26 = SURFACE_CURVE('',#27,(),.PCURVE_S1.);")]
     [InlineData("#26 = SURFACE_CURVE('',#27,(#31,#43),.BOGUS.);")]

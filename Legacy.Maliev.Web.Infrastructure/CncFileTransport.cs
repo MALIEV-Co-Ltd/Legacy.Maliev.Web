@@ -13,7 +13,7 @@ public sealed class CncFileTransport(IHttpClientFactory clientFactory, IServiceA
     /// <inheritdoc />
     public async Task<CncUploadTransportResult> UploadAsync(string reservedObjectPath, byte[] data, string contentType, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested) return new(CncUploadTransportOutcome.NotSent);
         if (!ValidPath(reservedObjectPath) || data is null || data.Length == 0 || data.Length > 25 * 1024 * 1024
             || !MediaTypeHeaderValue.TryParse(contentType, out var mediaType))
             return new(CncUploadTransportOutcome.NotSent);
@@ -35,28 +35,30 @@ public sealed class CncFileTransport(IHttpClientFactory clientFactory, IServiceA
         HttpClient client;
         try { client = clientFactory.CreateClient("files"); }
         catch (InvalidOperationException) { return new(CncUploadTransportOutcome.NotSent); }
+        HttpStatusCode? receivedStatus = null;
         try
         {
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            receivedStatus = response.StatusCode;
             if (response.StatusCode == HttpStatusCode.Unauthorized) tokenProvider.Invalidate(token);
             if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
                 or HttpStatusCode.NotFound or HttpStatusCode.RequestEntityTooLarge or HttpStatusCode.UnsupportedMediaType or HttpStatusCode.UnprocessableEntity)
-                return new(CncUploadTransportOutcome.Rejected);
-            if (response.StatusCode != HttpStatusCode.Created) return new(CncUploadTransportOutcome.Unknown);
+                return new(CncUploadTransportOutcome.Rejected, receivedStatus);
+            if (response.StatusCode != HttpStatusCode.Created) return new(CncUploadTransportOutcome.Unknown, receivedStatus);
             // Bound response bytes before parsing: transport replies must contain exactly one object.
             await response.Content.LoadIntoBufferAsync(65536, cancellationToken);
             using var json = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(cancellationToken));
             if (!json.RootElement.TryGetProperty("Object", out var objects) || objects.ValueKind != JsonValueKind.Array || objects.GetArrayLength() != 1)
-                return new(CncUploadTransportOutcome.Unknown);
+                return new(CncUploadTransportOutcome.Unknown, receivedStatus);
             var item = objects[0];
             if (!item.TryGetProperty("Bucket", out var bucket) || bucket.GetString() != Bucket
                 || !item.TryGetProperty("ObjectName", out var name) || name.GetString() != reservedObjectPath
                 || !item.TryGetProperty("Uri", out var uri) || !Uri.TryCreate(uri.GetString(), UriKind.Absolute, out var location) || location.Scheme != "https")
-                return new(CncUploadTransportOutcome.Unknown);
-            return new(CncUploadTransportOutcome.Uploaded);
+                return new(CncUploadTransportOutcome.Unknown, receivedStatus);
+            return new(CncUploadTransportOutcome.Uploaded, receivedStatus);
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or IOException)
-        { return new(CncUploadTransportOutcome.Unknown); }
+        { return new(CncUploadTransportOutcome.Unknown, receivedStatus); }
     }
 
     /// <inheritdoc />

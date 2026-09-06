@@ -469,6 +469,10 @@ else
         timeout: TimeSpan.FromSeconds(10));
 }
 
+builder.Services.AddScoped<CncProtectedUploadBindings>();
+builder.Services.AddScoped<CncQuotationSession>();
+builder.Services.AddScoped<CncUploadHandler>();
+
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
@@ -509,6 +513,13 @@ app.MapDefaultEndpoints("web");
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
+app.MapPost("/InstantQuotation/CNC-Machining", async (HttpContext context, CncUploadHandler handler) =>
+{
+    var requestedHandler = context.Request.Query["handler"];
+    return requestedHandler.Count == 1 && string.Equals(requestedHandler[0], "UploadFile", StringComparison.OrdinalIgnoreCase)
+        ? await handler.HandleAsync(context)
+        : Results.NotFound();
+}).WithMetadata(new RequireAntiforgeryTokenAttribute(true));
 if (useBlazorRouteHost)
 {
     var razorComponents = app.MapRazorComponents<App>()
