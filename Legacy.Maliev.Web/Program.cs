@@ -469,6 +469,11 @@ else
         timeout: TimeSpan.FromSeconds(10));
 }
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
+}
+
 var app = builder.Build();
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.UseStandardMiddleware();

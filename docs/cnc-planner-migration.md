@@ -20,6 +20,13 @@ tests pass. The 375-test source suite initially passed 361 tests; the 14 missing
 fixture/vendor failures were corrected and all 25 tests in the affected files
 passed on rerun. Required CI runs the entire source suite again before merge.
 
+The source receipt state machine is also ported with all five source tests and
+Development-only registration. It retains atomic whole-set claims, reservation
+rollback, non-expiring pending tombstones, and `IsSharedDistributedAtomic=false`.
+The latest source availability predicate is covered by eleven cases, ready for
+the pending CNC route. No production distributed receipt store is introduced.
+The integrated .NET suite passes all 1,618 tests.
+
 The following source commits touch only files included in this slice. Their final
 behavior is validated against the pinned source snapshot before marking complete.
 Commits that also change pages, C# browser tests, or other contracts remain open.
