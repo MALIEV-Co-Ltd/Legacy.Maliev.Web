@@ -1,0 +1,294 @@
+# Source commit migration register
+
+Published source main: `5ac7d045c51194edd9e64d8564f1b726b001be34`.
+Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
+
+Each unchecked entry requires classification, affected Legacy owner mapping, implementation PR and validation evidence. Listing is not proof of migration. Related commits may share a PR, but none may be omitted.
+
+- [ ] `078ddff4865636ea6410894ea2516f8609e0fc2f` — Document browser-local CNC instant quotation design
+- [ ] `9d044d43d023b7e0f13d72035ee862267a88a02c` — Plan browser-local CNC instant quotation implementation
+- [ ] `c7e0a3b7fb6e5d082bab2fe8884479bf663d86f8` — Add gated CNC instant quotation route
+- [ ] `7e37e7ca725fbc884634ca3b6236fc2eb04ae888` — Block CNC additive quotation fallback
+- [ ] `82c2aaa8c856524b89a64ac343f9f2cf19442eed` — Test missing CNC feature flag denial
+- [ ] `df7f405f0fcb0baa20de7fa98d24aa057f7710f5` — Add local aluminum stock pricing model
+- [ ] `33ce7e2b3351207c726ff5ea8d043aeb48aa6d2d` — Harden CNC stock rule boundaries
+- [ ] `4774cec98c9d6c7a58d40be8b1c4f03c5c76dccf` — Add opt-in CNC geometry analysis to model worker
+- [ ] `8eb6cad28814f7745d87cc53903e396f63c0c906` — Harden CNC worker geometry contracts
+- [ ] `e9f7042384ccacbebde5f8ad929c37e57cec47b9` — Add local CNC manufacturing planner
+- [ ] `20c259972341e1de14a63a8b403e9285d6826ae4` — Harden local CNC planning safeguards
+- [ ] `7b6a6e3453181a9f3dc3212ef764a2164ddf281d` — Rank CNC setups by worker coverage
+- [ ] `62e9116bc4c3e4232e6fbab207d9a50a6baa41e1` — Preserve canonical CNC setup identities
+- [ ] `34de8a40d2c3cbd497eef8891db97bf247aa1704` — Make CNC coverage ordering transitive
+- [ ] `53e553b925228e9a5b8f6d6e4aab6629da26f487` — Compose preliminary CNC prices locally
+- [ ] `7d5ed991cac25ffd61520509dec7b09aadf7d257` — Reject unpriceable CNC stock plans
+- [ ] `dcfc8e55e136e4fe8515a19b1330195ad531be98` — Add browser-local CNC quotation experience
+- [ ] `ccd80992e3df9d2d807e120bcd19754e1ed7e3dc` — Fix CNC quotation UI state and localization
+- [ ] `28116bede784ed023b83c01c84f68e28f78f017e` — Add CNC quotation boundary regressions
+- [ ] `cb56c7de8b46281968f22a0a658ac201860ad36a` — Cover unsupported CNC stock guidance
+- [ ] `3d7fae8ba2f65d1ccfee27dd8899174270a09709` — Localize CNC geometry review reasons
+- [ ] `6d2222cf36c58044f1588e024b9caf3a85e1de7b` — Cover fallback CNC review reason arrays
+- [ ] `288d7a9e70402d7a4024f45aa2809d6c335f7e30` — Persist untrusted CNC estimate snapshots for review
+- [ ] `c631899a7804c5465071698a651927ef1e1f848c` — Harden CNC snapshot persistence boundaries
+- [ ] `1ae0b51a9a53f65d6f9b3f072f1e8d8d6ce69552` — Enforce solid CAD and per-item CNC drawings
+- [ ] `c2b52198e8b10b1a251cbd9d252d897225d1cd94` — Bind CNC uploads to authoritative receipts
+- [ ] `b4d6be2f815026115dc0adbac5fde11bc82e4662` — Make CNC upload claims atomic and fail closed
+- [ ] `e5f5b561764aed4080de1977c4abe11f9b741937` — Harden CNC file admission and upload reservations
+- [ ] `29a8c2ee92ec8402a6d408a58bde669b4c958043` — Harden CNC admission and ambiguous upload cleanup
+- [ ] `e0c07ff502df062dadf2116e9d9431f5ab08c4d2` — Require complete CNC topology and proven cleanup
+- [ ] `ba3f34d61d98ca82c1ca421aba78600b33324f68` — Validate exact CNC spline entities
+- [ ] `120db56a5016abf3062eff16822ddd633b39a779` — Enforce exact CNC spline variants
+- [ ] `b0e530e1a28627203d9d49b1e2f867925529578f` — Bundle CNC quotation modules for production
+- [ ] `70ef90f73c7adcc04995168c4ffdb95d14c17486` — Cover CNC quotation workflows end to end
+- [ ] `4c3286860152f410e2bc13a2a7e8dab070556197` — Exercise real CNC solids and harden geometry admission
+- [ ] `b5da94042eb85f362f53d4a1d019fdbc35c8104c` — Bound recursive CNC STEP admission
+- [ ] `61674eb1b036be81cdfc45668e578ee3501b98be` — Validate CNC quotation behind development flag
+- [ ] `aae20e0ee232bd27eb34955b5daf4166f5dfd06f` — Harden CNC rollout integration boundaries
+- [ ] `e3c7eb47b2db8b8e45e0a2daf2dfccdc18762a65` — Enforce CNC upload limits before form binding
+- [ ] `2d4bbe871665915cf3b7e7e9af7d65252aa3b531` — Close CNC optional-route admission bypass
+- [ ] `5dc55ac1d997b6db123b405005d0fc2578406ac1` — Harden CNC upload route normalization
+- [ ] `a4c9256a79426ec5413dde25f9b8381032217df6` — Stabilize geometry fixture cleanup on Windows
+- [ ] `af0e4625b5f243db2319d3fc75fab09d29b7d623` — Fix first-load CNC upload ownership
+- [ ] `1d15ef63bc241ea761da557947c1127d03621a7f` — Accept valid STEP envelopes without server topology parsing
+- [ ] `fdcbaf67c61ee5fd42ed687b3cd8ab4ec8ded3ac` — Present customer-safe CNC estimates in local preview
+- [ ] `316cd586d9d8ac32c728c57ada87f2b6d620ed44` — feat(web): enrich CNC review manufacturing summary
+- [ ] `5f51e1dc2a2a840251aae96978b5ba3484bb7b9f` — fix(web): restore responsive navigation icons in development
+- [ ] `9dafe54535aa6f40a4c879757a6ef170e2c841cf` — feat(web): complete CNC estimate decision controls
+- [ ] `8dcaf82307404e4d6d98982959d52bcafdb3a82f` — fix(web): plan simple CNC blocks as top-and-flip jobs
+- [ ] `c9843fb3efca78a41148f44103f65e72b93788be` — docs(web): specify CNC estimator completion
+- [ ] `720fb840051725baa5f821fd737045603648cde8` — docs(web): plan CNC estimator completion
+- [ ] `201c4b4cfdac7511396599e9ac2ce329f53a4b79` — docs(web): widen CNC quotation header scope
+- [ ] `ddec0d3723dac5355292b349feb665e467253133` — feat(web): add CNC material and tool catalogs
+- [ ] `be827605b3cf371af51ca867ec359189f3f90ed6` — feat(web): detect CNC surfaces and rotational parts
+- [ ] `8739c6fcc876d97a638f3be48eff23fddec4c740` — fix(web): harden CNC rotational evidence
+- [ ] `b4147bb03b5598dcd594609e5c4551d852727f44` — fix(web): preserve CNC surface connectivity
+- [ ] `4f06c1ffc4aa2f8c78c2596740104cba6e151fa6` — fix(web): bound CNC surface topology state
+- [ ] `f6909acd2518d74cb21ed60f2f5ec1919bca2158` — fix(web): degrade overflowed CNC topology
+- [ ] `a40a51c760179eff95c6b242483f26b8a95846f1` — feat(web): select round plate or block CNC stock
+- [ ] `bbaf0cb98df72e92e7c5018d3eea3025b68f2447` — fix(web): integrate ranked CNC stock evidence
+- [ ] `1c4aa85ee74cc112b23f0af101d042c93836b670` — feat(web): plan CNC setups from tool reach
+- [ ] `8dc474fcec729db9546dffb544a8b5158f7f7259` — fix(web): keep CNC setup evidence conservative
+- [ ] `06791716aa69cefc458a7dd221292985c49a2281` — fix(web): prune empty CNC setups after assignment
+- [ ] `ac4db7abcd542ee3861e5ea7afc571c6c35a1f2f` — feat(web): price CNC materials finishes and evidence
+- [ ] `c287824d30ce95df981440341d8fa98bb82e5ec7` — fix(web): audit CNC preliminary price composition
+- [ ] `54e4d2942aa20313baa50b79627c49c93d2e9867` — fix(web): bound CNC preliminary line amounts
+- [ ] `0a8c735395f4ee2428441069a4d1ade60e81af7e` — fix(web): validate CNC line money exactly
+- [ ] `1e9d946c4f7d59e2c75695fcb9ee96c4af2d5123` — fix(web): gate CNC money before JSON conversion
+- [ ] `28df7e40e71bd538d479396e23f22daeab80a48f` — feat(web): polish CNC instant quotation controls
+- [ ] `e5130156c5fea41c55485f067be3b37c4a135447` — fix(web): align CNC decision pricing
+- [ ] `920d70764b3b0709d3a11ddb0614c8fee84ffb9d` — feat(web): visualize CNC stock setups and residuals
+- [ ] `982cd7c23b10450bbe5ade8a92ddc25f3c201480` — fix(web): render complete CNC overlay evidence
+- [ ] `4252fcc45763966014e15f12470e1da51a0f5ec5` — fix(web): bound CNC surface overlay work
+- [ ] `c4a3ce6a33d281fb994f128d9d50f806fe4592c3` — feat(web): keep CNC review summaries live and clear
+- [ ] `70247fba0e44e837cdcddd334dd61f7dba2f8157` — fix(web): preserve CNC review state and accessibility
+- [ ] `34cb06c42d900c18918933d1c1237026cc96c659` — fix(web): keep CNC batch metrics internally consistent
+- [ ] `ef103f36e8616062c4ec52965e5ea36ffd909983` — fix(web): make CNC stock evidence form-aware
+- [ ] `66d9a79b10173829d60703206bba618b8b14b1d8` — Harden CNC geometry planning and commercial pricing
+- [ ] `e87d18860546e29c54a065c591a86eabc8629440` — Add opt-in CNC CAD calibration replay
+- [ ] `33fe820f6d387b722450a3b0fa18fa0fba795fc3` — Protect CNC estimates from procurement variance
+- [ ] `34dc7c4ae860e90eb81351ecb0b7de58daec52e0` — Audit CNC pricing across real CAD corpus
+- [ ] `0cfe7e64d74683ff21e00c1726f2d7b82403db5e` — Calibrate CNC recovery and amortize batch time
+- [ ] `e3afb8a52851f5ee2b4fd55ca690bb3fb0f4a3dc` — Gate CNC production on approved pricing version
+- [ ] `49b6d7200695a8f5cfa78d8669be691113c012c7` — Price CNC sand blasting finish
+- [ ] `79060bdfcb8888898a9aba6cdd00343d97326917` — Price CNC material certificates explicitly
+- [ ] `2a6786caaa6471fa9a2a5e203585c54220e38ef3` — Correct CNC setup reach and ordering
+- [ ] `08f360c27fe7fd5e862faa479b7137394fcdf08a` — Add CNC setup toggles and stock containment
+- [ ] `bca38b5755e31e48fcc4ebd4ffe345203a0ff193` — Prevent CNC review detail clipping
+- [ ] `f7b78d48657cb819350afde86209759a8c901766` — Round CNC block stock to 5 mm increments
+- [ ] `6b793eff2156d49843fba2487ccb31e5839fb92a` — Align review source contracts with collapsed details
+- [ ] `541a9a3a6b62e3a479a224e6d4c0c0ff4a79c72c` — Update CNC stock and review regression contracts
+- [ ] `9785d61151d7b1feb6dbe6a8019c57588daa3b19` — Use native activation for quotation file picker
+- [ ] `aad49770990c36502922ec8c1b2a1ef160b0e9f1` — Fix multi-body CNC setup coverage
+- [ ] `6e6e2e896ab8cfecb429d529c691bdc4c3f6ef3a` — Fix CNC stock orientation and setup face overlays
+- [ ] `b69b443079dd3b44971361f54cf8857730174071` — Add categorized searchable CNC materials
+- [ ] `9b81ca9cfaa72b486fb98b1feecc513b63d8e0d5` — Retain side setup for multi-body CNC parts
+- [ ] `334222faf551a57cd64eb81d53c74f4385c85d3a` — Fix multi-body CNC setup accessibility
+- [ ] `b94ef6b19d211a593751ade8d1ff54f95b0abde6` — Polish CNC configurator metrics and grouping
+- [ ] `fc881db6a495283e39db39376e698ce908ff3c6d` — Project CNC access onto side-cutting faces
+- [ ] `9d6901cff1b1e54f80221619422354f4e2b8a5fa` — Keep CNC setup markers outside stock
+- [ ] `1f0ae1d1b4188d07846b9004521aaad6ab3328ce` — Fix CNC projected access and multi-body setups
+- [ ] `6a3b80dae8777f6cea51d34cb90be1ad3154b2df` — Block CNC pocket access without cutter clearance
+- [ ] `345a5c6d260adcdf1b21dc159bd11c7c6b9c22f1` — Fix CNC ray access and lateral slot setups
+- [ ] `84278e01fe577d39e7dd9de1e00baf1c350b2fec` — Fix winding-independent CNC flute access
+- [ ] `6c00db5489b025f3a6156d8afa78018617d050b9` — Add CNC delivery pricing and polish controls
+- [ ] `931395171d931c01ba939f63354696080daec6ab` — feat(viewer): add optional SpaceMouse navigation
+- [ ] `901bc779b4471e98d752e4f9ba9e1521e4a83f5e` — fix(viewer): use requested CNC toolbar icons
+- [ ] `b4ffdf6500d447661a6277a47fecad2e5fd99d60` — feat(cnc): expand supplier-backed material selection
+- [ ] `068fd4d1c4c6bad88745d7d5a33ba3dfa4115665` — docs(cnc): specify tool-envelope field analysis
+- [ ] `38f9e50472e87d0e65db9f4040b5497926839c79` — docs(cnc): plan tool-envelope field implementation
+- [ ] `32a76b196bd9aed8983759a4259d75443bb4db98` — fix(cnc): prioritize supported planes for stock orientation
+- [ ] `8ab82f588d12955018387190fbf1fd20cb78dd2d` — feat(cnc): build tessellation-independent surface field
+- [ ] `2d0210efcebd78e6b41ec49b4e112193ef35f059` — feat(cnc): classify tip and flute tool access
+- [ ] `f11b102c580338a60373edd1378f2d90fea41e46` — feat(cnc): select setups from field coverage
+- [ ] `a790dd206827dd30a91b37773a6a6880b6ae640a` — feat(cnc): price from spatial field evidence
+- [ ] `b385e19a1d8c34d61c7b0662fa69dbbc5190bb22` — feat(cnc): render field-derived accessibility overlays
+- [ ] `6caac447e146a46c8e3970283667113d9c90a82a` — fix(cnc): remove duplicate camera toolbar action
+- [ ] `4df8444ab57b6ba3bbf2b8747eaef95c89cf6840` — fix(cnc): cap spatial field worker memory
+- [ ] `0774c35aecef368f2ba431a286205ed1a0a892b5` — feat(cnc): expand tool-aware setup planning
+- [ ] `10a9b725a3e9c6c0d708528ff9ed1d64cf27dbdb` — fix(cnc): render continuous setup accessibility
+- [ ] `5187d47420683f2bb8b30b9252073ad8a6baf9cb` — fix(cnc): bound tool reach planning workload
+- [ ] `c40192a727ce467f24d3cff72ff892b63b8d95ca` — fix(cnc): render setup access from spatial field
+- [ ] `110c7deeff8814045520fb01bdc1aaf71f56e538` — fix(web): keep generated documentation out of source
+- [ ] `8ffc20632285789f619909c5aa1169f63192857f` — fix(cnc): refine accessibility rendering with CAD edges
+- [ ] `47f3772a20024d9cfff6fd64d012fde3504cdc04` — fix(cnc): sharpen accessibility surface rendering
+- [ ] `4db3c74ce546aded9d4d6168bb33fec4701693a8` — fix(cnc): price fixture-aware two-setup plans
+- [ ] `9002b6158fb4fdc83877b0fe7693e44f4f0f52cd` — fix(cnc): derive fixture manufacturing costs
+- [ ] `0baf5a0a5db5f0e3f92256c0657afb391f3ee05c` — fix(cnc): stabilize accessibility surface rendering
+- [ ] `d8561fed94108c82ef379654ddc8670f04bc21e8` — docs(cnc): define capability and fixture pricing design
+- [ ] `f7441f9738120f2d79900ab7d1d0f4b0aed76349` — docs(cnc): plan capability and fixture pricing implementation
+- [ ] `62d913ffdd6072225ae7fad090b0ebc24b83b579` — feat(cnc): define machine capability policy
+- [ ] `cbaad255115e87cfc8b8c0c31db75e9ffb683026` — feat(cnc): evaluate internal fixture clearance
+- [ ] `36ae0a61d529dcdc64f6f0287f4f6e339ea44d79` — fix(cnc): select only clearance-proven fixture plans
+- [ ] `e1ddb64debd4b5283032af2cf7642e830d2db857` — feat(cnc): price explicit machine capability classes
+- [ ] `8ad393021aae1966fde372adc7064125b5381b6e` — feat(cnc): show machine capability without fixture geometry
+- [ ] `b4b20f934ccc948cecc0e6d27c28f62f7352c127` — test(cnc): align pricing regressions with machine classes
+- [ ] `2b57f8c36dc04ed86203721a04e925a387bb5cdb` — fix(cnc): avoid false five-axis escalation
+- [ ] `f874a42cd584041a86a4447be891f657ebb2c6cf` — fix(cnc): plan translated mating fixtures in two setups
+- [ ] `0b4863fb9180eb935b869f36f6e81b8923b1e84d` — fix(cnc): render review-only decision prices safely
+- [ ] `99b607c848b2faae241e334aa0315ae5bbffb8ac` — fix(cnc): show CAD preview before setup analysis
+- [ ] `f837647ad3e22ae7455880a262a25e11420918e5` — feat(cnc): visualize cutter-limited residual material
+- [ ] `736b9fe82a118619c810e20713875108fdd09a16` — fix(cnc): render coherent remaining stock
+- [ ] `f5077dc6611e0cb49c99268046a87a6857c4c85b` — fix(cnc): keep axial threaded parts on 3-axis
+- [ ] `2cfeef077fcca061145865d03b5ae78bdf6dd039` — fix(cnc): render axial cylinders coherently
+- [ ] `376c23fcd42a9adacb5ea8e62ae978b3b05d7443` — fix(cnc): reject back-facing accessibility shading
+- [ ] `5ae33300bf85ec6644a2d794347b39fbf815f66c` — fix(web): resolve local development content root
+- [ ] `5539482c6e5a44befc396bd654abcc12eb6e781b` — fix(cnc): trust field access and clear setup labels
+- [ ] `68ab31a48642e510d0d01126cef04777fe75147c` — fix(cnc): keep empty facing passes priceable
+- [ ] `fb51f14c62bc5ab777186cd48c0a5569ef50126d` — fix(cnc): render clean CAD accessibility faces
+- [ ] `11aca5114e14ade76843dc2927551eaa417318d4` — fix(cnc): occlude rear setup faces
+- [ ] `573a016c49b2ee75b1eb8d4bf6d0b580c0e028e8` — fix(quotation): align material card pricing hierarchy
+- [ ] `00359aaf240ae20d6405721108307a868d3cb694` — fix(cnc): preserve CAD edges in setup view
+- [ ] `aaea2d783d594052d9b76f24666176bc016d001e` — fix(cnc): block access through bent surfaces
+- [ ] `ef67c9f316e94fefd0a1efe4c0f1b33d5a5bd17b` — fix(viewer): keep CAD topology edges visible
+- [ ] `5ef3515b1e96fb093c8d9d2ccf33efc6633bdc5f` — fix(cnc): stop curved access at setup horizon
+- [ ] `7445e813312d3a0721f61015df9760cfe967279c` — fix(cnc): remove redundant handle setups
+- [ ] `0d7b6cb9e5de3ed039c79ee6499acec414fb5add` — fix(cnc): project access on bent surfaces
+- [ ] `e2ef4b3535254de80cbbe76bf4763514a1d3a643` — fix(quotation): keep mobile CAD previews unobstructed
+- [ ] `848fd56017aec2cba9e71d85d9ffcec223a74ff7` — fix(quotation): preserve tablet summary columns
+- [ ] `26bf09013752eaf9f689ace16cd1334c22899e3e` — fix(cnc): block adjacent undercut occluders
+- [ ] `8dce8ea3a4a6f19b02af4d4dca4ac004ed54aa38` — fix(quotation): compact mobile setup pills
+- [ ] `a9639fded9aaecb75888292f8caa0c9379e1a8ae` — fix(cnc): complete lateral setup access
+- [ ] `75d29747ae0bea5656b9ba3d5f5cfe85df77b8d5` — fix(cnc): remove lateral accessibility banding
+- [ ] `9643dd811e01a05288f5b0a2035c43d8bc56f419` — fix(cnc): preserve tangent flute accessibility
+- [ ] `f12f47c5e0b93c50a9af2529fcbf725da940ff67` — fix(cnc): align setup pill focus treatment
+- [ ] `19b3726e10a088442d824ea11ff717645d97ce15` — fix(cnc): keep multi-file processing responsive
+- [ ] `3fc8bda0daf015d14dda05d206119b67d41ee6c6` — fix(cnc): occlude rear setup labels behind CAD
+- [ ] `a3ebede03fa6b1b30ce97c2c1d0fa706e6ea2ee6` — fix(cnc): render thumbnails for background parts
+- [ ] `39d4f855eb4de1f2460415b9d27d44969b95295d` — fix(cnc): group setup selectors into segments
+- [ ] `79b9502424e4e2cd01a83afdfe7c7d94767bd1fd` — fix(cnc): stage uploaded CAD processing progressively
+- [ ] `71132a488646c60fa877b0a014b7d72b01bb736a` — fix(quotation): force motion for local verification
+- [ ] `c8a4f768e404378dc013641f4ae3a733fefc4280` — fix(cnc): process uploaded parts progressively
+- [ ] `a3a113e9a40285bc0cc0f358aa4419a4fe0fbf0b` — fix(cnc): keep part progress on one line
+- [ ] `f95b4c620996484b878e61d9bb6007c13a47320e` — fix(cnc): withhold incomplete project price
+- [ ] `ca76b99e1d78571433404b519e032db314c8bc42` — fix(cnc): sync configurator prices to selected part
+- [ ] `88fdac773f2ca926718e7253ace2464404593268` — fix(cnc): derive setups from unresolved feature axes
+- [ ] `623d597043d534e633192044ea94a36872d05d36` — fix(cnc): reject spurious topology and setup evidence
+- [ ] `66d3924347b60c64925480096d1f1a7140c656cb` — feat(cnc): show spinner while project price is pending
+- [ ] `b6b6d629ad38996c6179427fce08259c859305ab` — feat(cnc): show batch pricing progress
+- [ ] `2854191ba75d2c9d46f1be878306e89e923b6148` — fix(cnc): honor flute reach in setup overlays
+- [ ] `9b98f09f07846b068bf1718d5311fe36021fb56c` — Stabilize CNC batch upload and pricing queues
+- [ ] `5f7075e5d746d3e4e315edcc40e02918c4f99b26` — Fix CNC residual overlays and pricing liveness
+- [ ] `c109e24587a9ccfedf6eb9de93a1a06cb8ea9f0e` — Update CNC setup planning localization
+- [ ] `58d5ba0e07f64c8c407dacc6a6c22168e4c79713` — Cache CNC pricing across part navigation
+- [ ] `0ea7e4f99d6e121a3f7d5af7f9b4f12ec7623a15` — Offload large CNC overlays from UI thread
+- [ ] `a821dae9888d86b2516b5704a9cc9341ec0af5c3` — Distill CNC overlay warning badge
+- [ ] `8f3f4063da6d3f07bc252d8038bd7a4c60e868ed` — Hide benign CNC residual status
+- [ ] `65d48bc2a1a336eedea6c5b01c70a6c2329d0972` — Respect partial CNC face visibility
+- [ ] `703e360275a9dd3b8727c9d9c80e590ea6f0da3d` — Fix CNC feature tooling and operation planning
+- [ ] `21770032e7166527a3531f2fe43421b366a7ef50` — Cache CNC pricing and streamline overlay states
+- [ ] `953549e5166c961e59cc74e9826761b3d4bb82de` — Fix CNC flute access and consolidate axial drilling setups
+- [ ] `fa9ba25976d9e26f0eb40d7e0949b2fa87ff382d` — Fix per-setup milling operations and local fillet finishing
+- [ ] `a08142337963583dbb1afa3df64dd178331a84df` — Shorten Thai thumbnail processing labels
+- [ ] `4db2acb3e3f0701e2dc1242cd0be17b1abce1252` — Clarify Thai overlay limit warning and right-align copy
+- [ ] `8ee2480e0bd4ace1aadb949023f9838756efcda5` — Group repeated machining operations in order review
+- [ ] `9fd03d9bad9432270e4a47b2e5dfe11269122aa3` — Treat combined CNC bodies as one machining volume
+- [ ] `894e34f072d8007d2ec197a4f0928741882a8ded` — Invalidate CNC workers when their JavaScript sources change
+- [ ] `68fb086ea357bc091dfbaf2f8759a91213b1dd68` — Correct CNC setup coverage and select fitting cleanup tools
+- [ ] `7b2ab11265001b46e01e6d053d40e91c6e39fbb8` — Use physical 10 mm cutter clearance in CNC tool selection
+- [ ] `3322c767d73c6f0dca1a0f3fa1f6381881562a69` — Avoid redundant CNC rest passes with accurate cutter contact clearance
+- [ ] `0677c2c022ec32165da6f1f641e0149a65030c71` — Recognize fitting flat-mill rim contact on sloped cavity faces
+- [ ] `481f951a588401275a064a4c7b73cdfacc534a9a` — Extract bounded STEP analytic surfaces for cutter contact validation
+- [ ] `0b6729d669d6012c6f5d7d19dde25f2b6b143a70` — Model market ball tools and stock preparation clearance
+- [ ] `ba2447e67e05bedb8b89d13722d25523296d479e` — Hand verified small-tool rest stock to ball finishing in CNC quotes
+- [ ] `b69432aeaee8e28f6b6cc70865ed2d1ca89f1d08` — Simplify CNC overlay legend and unify viewer controls background
+- [ ] `60d5afd08d5149cb48562a68fe78241359990e45` — Show unknown CNC thumbnail material without additive placeholder
+- [ ] `8cd4ca7677066f43dd313cefee82520eb2ae10fe` — fix(cnc): assign handle recesses to verified side-setup tools
+- [ ] `a7b4991c2c0de3dcebedbb9ac0fef9ec20500ee0` — Verify curved-surface ball contact and stock preparation evidence
+- [ ] `50169eab92e5a4c98000efd12bb00df85adce75f` — Plan verified ball finishing without redundant micro-flat passes
+- [ ] `6b11180f3cb932c6114a0a36f78cda6e9c7d6abf` — Adapt CNC review details to available panel width
+- [ ] `ddebe049f6077ff1ac94866d1040774095efb3ff` — Keep CNC material comparison prices independent of selection
+- [ ] `ec6a5e89ba939ff7cfdc355617dd79b09126e43e` — Fix local thread and countersink operation planning
+- [ ] `888234f59be9c6340124f97190bf7b679f227fcf` — Use CNC-specific DFM guidance without print splitting advice
+- [ ] `70e9be76f971f9b35b7e81756f07bc21fd23b28a` — Fix CNC spotting tool selection and hole operation order
+- [ ] `0343b931657c75542977d4bd95e3dc1d8aa1a73c` — Require per-part drawings for detected CNC threads
+- [ ] `e4699e45fa17498f5a62d2339e54d4d72f823ac7` — fix(cnc): consolidate connected feature cuts and facing-only setups
+- [ ] `764c346dc598756752b5969bb82661b91acec59c` — fix(cnc): allow manual thread review without drawing upload
+- [ ] `640a1d4248ce990dc95ef393cbfcff08546ec8a0` — fix(cnc): make detected threads advisory
+- [ ] `4433c7153b533142c1b135ecaf2a2ebf4c689ff0` — fix(cnc): deduplicate described modeled threads
+- [ ] `d6c7fd222eef119607013fc590882889f0023772` — Document instant quotation page separation
+- [ ] `da81340897ff7fdd3ab31f0dc7ffc1d6b4d1177b` — Plan instant quotation page separation
+- [ ] `448856e2cb2fa23e902c560c4292026157f83354` — Separate CNC and additive quotation pages
+- [ ] `a5e1d9950bd2aaef1a92868580e2b20e09a2c83c` — Cover dedicated instant quotation routes
+- [ ] `7226d0d98f20c3321ed37724e57adf62ad954b3b` — Clean extracted CNC quotation sources
+- [ ] `cad1d3f6e48784e42e0183b01fb531c7f4c08259` — Require spotting before HSS drilling
+- [ ] `c040c02f92ab7cc6fb52e544e36d7f255a0885a1` — Render CAD edges in initial CNC preview
+- [ ] `1c19ed6dcfcb2338733795676fa85789eb1a1031` — Correct CNC capability and overlay diagnostics
+- [ ] `619dc1b8a77807e230c0915b63ba64a20b74e62b` — Ignore insignificant CNC ball-contact residue
+- [ ] `5df293ec4d496be777db8dc4e37c5606eff8a172` — Show CNC metric placeholders until analysis completes
+- [ ] `f2293da4ce4e2be8853ee135cd69bc342e05e381` — Correct CNC side-thread operation planning
+- [ ] `02475b3e4015132cecb3f8e6777960e5b1bc8f15` — Prevent thread geometry from creating milling passes
+- [ ] `a0f5d4d417052e3a246595184b909953168b10e3` — Stage CNC material comparison pricing
+- [ ] `1e9923da53be301610dc8330e9fecfa3380db38f` — Shorten CNC review action label
+- [ ] `f56c1c2c0a9f8cf4d2d9070cd33829f2af34b234` — Correct CNC thread milling policy
+- [ ] `49ad2698d36477c558999e630568d9fb4ce10c29` — Fit CNC processing action label
+- [ ] `7d650fbc606206ee9a1b49a839510839b15c8ad9` — Correct rotational CNC feature ownership
+- [ ] `efbcf094a77b2e49d8590985bde845c855e0a367` — Document deterministic CNC manufacturing planner
+- [ ] `b10ae3d0275bbec63d7eb417752d68f73f1748ed` — Plan deterministic CNC manufacturing pipeline
+- [ ] `fc6dd8e8f2b10afc66f080bbb2a4ed1719dab864` — Add deterministic CNC plan contracts
+- [ ] `010b2c41be5c156b80fc41ea06dc3304376ba39e` — Seal CNC plan contract validation
+- [ ] `5ecce2c9e733dabcb1fc864d7a35965475ed36aa` — Keep CNC predecessor chains feature-local
+- [ ] `35cebc4eb68b5a26c77d0b21b7e26f15e1ec3bed` — Build canonical CNC topology in the browser
+- [ ] `3be593357f14c93505b0c609b5dff2d0942b38a6` — Fail closed unsupported CNC topology
+- [ ] `21b9778d5bf906ca4e8b144412c648e49a57ec06` — Fail closed duplicate CNC topology faces
+- [ ] `8b0e090b60499f1204fa7ad4745dd1547732e8ec` — Recognize exclusive CNC manufacturing features
+- [ ] `672a258a06f505bc2e43c2d709c06dd737d05c8f` — Harden CNC feature recognition evidence
+- [ ] `03b56290efe443a93fb646726926ed282e08e267` — Compile CNC operations from manufacturing features
+- [ ] `d270f3fb1e2fb0fbf66f8bc5fad14f50d2746cad` — Harden CNC operation graph compilation
+- [ ] `dddc1b51c046dada1f681a47e86f59eb2d00ef91` — Enforce CNC process contracts at final plan boundary
+- [ ] `89ea801e8ba850bfcba0f8ceb42574688c9f2b43` — Require exact CNC operation dependencies
+- [ ] `20ea0ddc0ee51be13a4fd3969b197a82ea975551` — Reject incomplete CNC feature operations
+- [ ] `6c5a46505deb9dc23aea21198e98ce5bc6ab6d2c` — Validate CNC unresolved compiler outcomes
+- [ ] `f3cc689f3cb22bf98a90fa9fa4dd6fdfc41f52c6` — Plan the minimum feasible CNC setups
+- [ ] `30912eee8850dc3e892ea85669d6c8bd387cc500` — Harden CNC setup feasibility evidence
+- [ ] `aa53f78aaf49513655f9545bd20651ae49131e9e` — Require complete CNC setup evidence
+- [ ] `8bfb6cb295740c6497bee8d3fe45dce1fd158402` — Validate CNC stock removal and tool envelopes
+- [ ] `8744175e55c0c1b275ca64f498332caa791c0533` — Recompute CNC validation from physical geometry
+- [ ] `01f4943950006bd51b0cfb8aff07544c86ac36ab` — Bind CNC stock validation to coordinate frames
+- [ ] `b29b4d6b0b25a5f1e13e4604540f8f508d771e12` — Price only validated CNC manufacturing plans
+- [ ] `1fc9db6e12733806758efcd6429638fa9bfcc7d4` — Harden CNC quote revision and plan identity
+- [ ] `34f5de923d6427044dfe916f77135517f472b428` — Show CNC prices only after final validation
+- [ ] `26001c297cf376598379329857a2c87e4b18a095` — Hide nonfinal CNC quotation details
+- [ ] `fa5b6fe4c75e7af8e258e3cb1d2dcfa2ab25fbd4` — Gate CNC facts on finalized batch
+- [ ] `583d76158c2b707268cd88fc212d8207a8b23ab0` — Keep rebuilt CNC review action gated
+- [ ] `be7ca379ac63c6e4f3d0081280a060993d070cc6` — Unify CNC submission readiness gate
+- [ ] `9958062ad14573cb5e5965e0c53d7d0ec92acf30` — Replace CNC heuristics with semantic manufacturing evidence
+- [ ] `bd187184c8170a866030fe4c2aca2aba85f2ea06` — Record CNC feature planner verification
+- [ ] `0584251663eb227cd96d8930e3135c41b6395fcf` — Enforce semantic CNC stock and fixture validation
+- [ ] `ba8f9da4a7c7f2e697f68380763c4aa1f52aca25` — Record independent CNC planner verification
+- [ ] `aee9e40a4e7e95385cd74f1cb91dc686d3903455` — Allow review after CNC price finalization
+- [ ] `afa4bd595dc9e71e8848ce73e1801e0d93305d4a` — Enforce canonical CNC solid and fixture validation
+- [ ] `0ad11f2a19d84c78d01e44ba549510e45a3ab13b` — Record canonical CNC validation verification
+- [ ] `964ae6b47a9a31c02bba9f2b084a4e14c8767175` — Bind CNC plans to authoritative validation geometry
+- [ ] `73893584f55cae362b6339006bedd5efd08dcae5` — Record authoritative CNC validation verification
+- [ ] `40dcb2325d620495cadf6a6c46996b802ac7c6f3` — Validate physical CNC thread-mill sweeps
+- [ ] `8e928fe9310c0c0d23bcc7c7e37fa62af249f172` — Record physical CNC thread sweep verification
+- [ ] `7da39ab2c3a6e4160442c04b2dc5e9e75d419d95` — Validate complete CNC thread tool sweeps
+- [ ] `7a0054e770897579d24fce73f01b2d82aaf55ebb` — Record complete CNC thread sweep verification
+- [ ] `12a803537f493eacce221eb283fbb459d2290195` — fix(cnc): validate bounded manufacturing features and tool sweeps
+- [ ] `54cd49c3cfc9db00cdefe5e934f69ac5b089ecf1` — test(cnc): expose terminal state on acceptance timeouts
+- [ ] `b603cf931113ed09397193fc5f0a0f4393119c67` — docs(cnc): record final architectural correction evidence
+- [ ] `81f2f39d371a681d58376ac3895a1409e69ef1ff` — fix(cnc): authenticate seam depth and cached plan evidence
+- [ ] `58eb417d3876cab510b8ae505d7bb469f15c206c` — docs(cnc): record authentication correction validation
+- [ ] `b1dc51ef5241ceb40a3c8a4e5c3f3a823d16b07e` — Merge deterministic CNC instant quotation planner
+- [ ] `03dc9a1271c16e6535934445e9dd6e3f30e8fffe` — Isolate generated XML documentation from source
+- [ ] `5ac7d045c51194edd9e64d8564f1b726b001be34` — Make native logging application-local
+
