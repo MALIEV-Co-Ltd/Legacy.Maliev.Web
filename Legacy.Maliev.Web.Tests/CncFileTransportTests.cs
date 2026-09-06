@@ -9,6 +9,17 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class CncFileTransportTests
 {
     [Fact]
+    public async Task Upload_CancelledBeforeSend_IsDefinitivelyNotSent()
+    {
+        var handler = new Handler(_ => throw new InvalidOperationException("No HTTP request is allowed."));
+        var client = new CncFileTransport(new Factory(handler), new Tokens());
+        var result = await client.UploadAsync("date/session/part.pdf", [1], "application/pdf", new CancellationToken(true));
+        Assert.Equal(CncUploadTransportOutcome.NotSent, result.Outcome);
+        Assert.Null(result.StatusCode);
+        Assert.Equal(0, handler.Count);
+    }
+
+    [Fact]
     public void ServiceRegistration_ProvidesScopedCncTransport()
     {
         var services = new ServiceCollection();
@@ -53,6 +64,7 @@ public sealed class CncFileTransportTests
         var client = new CncFileTransport(new Factory(handler), tokens);
         var result = await client.UploadAsync("date/session/part.pdf", [1, 2], "application/pdf", default);
         Assert.Equal(expected, result.Outcome);
+        Assert.Equal((HttpStatusCode)status, result.StatusCode);
         Assert.Equal(1, handler.Count);
         Assert.Equal(status == 401, tokens.Invalidated);
     }

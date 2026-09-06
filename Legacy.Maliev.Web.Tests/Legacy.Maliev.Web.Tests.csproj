@@ -13,6 +13,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <None Update="TestAssets\Cnc\box-20x30x40.step" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="TestAssets\cube.iges" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Legacy.Maliev.Web\Legacy.Maliev.Web.csproj" />

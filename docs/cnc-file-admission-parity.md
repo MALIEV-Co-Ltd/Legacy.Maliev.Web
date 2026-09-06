@@ -21,10 +21,16 @@ Source commits touching these files: `e5f5b56`, `29a8c2e`, `e0c07ff`, `ba3f34d`,
 
 ## Remaining integration
 
-- Dedicated CNC page and upload/submission handlers, including protected session/form/item/role binding and atomic receipt lifecycle.
-- PDF drawing transport: the source CNC handler uses generic `/Uploads` (multipart `files`, query `bucket`/`path`), not the CAD-only instant-quotation session API. Legacy FileService already preserves that generic contract, PascalCase `Object`/`Bucket`/`ObjectName`/`Uri` response, and private malware-scanned uploads. Implement a typed Web client for this existing boundary and confirmed cleanup via `DELETE /Uploads?bucket=...&objectName=...`; do not broaden the additive capability allowlist or route drawings through geometry pricing.
-- Preserve source 25 MiB model / 10 MiB drawing limits in the CNC route while retaining existing additive contracts.
-- Extract the source unowned-IGES-parameter fixture case (`TestAssets/cube.igs`).
+- Dedicated CNC GET page and final submission handler, including profile and browser integration.
+- Production shared atomic receipt store and historic Data Protection key-ring compatibility remain unproven. Matching protection purposes does not prove compatibility between different application discriminators or key rings.
 - Browser and typed service integration evidence for the actual CNC workflow.
 
-No route is enabled, deployment is performed, or database state changed by this helper port. Standalone validator tests are not proof of end-to-end upload or migration completion.
+## Protected upload integration
+
+PR #197 supplies the typed generic `/Uploads` transport and confirmed compensating deletion. The dedicated POST handler now preserves the protected `iq_session` cookie, form/item/role/filename/path bindings, three-hour lifetime, receipt reservation before object creation, and locked state when cleanup is ambiguous. It retains source 25 MiB model / 10 MiB drawing limits and STEP envelope admission. The route requires antiforgery and remains unavailable without the existing rollout and receipt-store gates; production cannot use the development in-memory store.
+
+The unowned IGES parameter regression uses the existing `cube.iges` fixture, whose Git blob exactly matches source `cube.igs`. HTTP-pipeline tests cover ambiguous admission rejection and route antiforgery metadata; handler tests cover protected bindings and transport outcomes. These are not live GCS, historic-token, browser, or full quotation-submission evidence.
+
+No deployment or database change is performed. This slice does not complete source-commit or end-to-end CNC parity.
+
+Validation for this integration: Release build 0 warnings/0 errors; 94 focused tests and 1,714 full Web tests passed with no skips. A failing-then-passing cancellation regression verifies that cancellation before transport entry returns `NotSent`, releases the reservation, and never attempts compensating deletion. Changed-file secret scanning passed. Live storage, browser, and container checks remain pending because this is not yet the complete CNC workflow or a deployed candidate.

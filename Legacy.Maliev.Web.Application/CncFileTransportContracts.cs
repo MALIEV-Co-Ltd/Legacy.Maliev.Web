@@ -14,7 +14,7 @@ public enum CncUploadTransportOutcome
 }
 
 /// <summary>Server-only result; unknown outcomes require exact-path cleanup before releasing receipts.</summary>
-public sealed record CncUploadTransportResult(CncUploadTransportOutcome Outcome);
+public sealed record CncUploadTransportResult(CncUploadTransportOutcome Outcome, System.Net.HttpStatusCode? StatusCode = null);
 
 /// <summary>Generic CNC model and drawing transport using a server-reserved storage path.</summary>
 public interface ICncFileTransport
