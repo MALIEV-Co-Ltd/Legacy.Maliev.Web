@@ -200,19 +200,19 @@ Each unchecked entry requires classification, affected Legacy owner mapping, imp
 - [ ] `a08142337963583dbb1afa3df64dd178331a84df` — Shorten Thai thumbnail processing labels
 - [ ] `4db2acb3e3f0701e2dc1242cd0be17b1abce1252` — Clarify Thai overlay limit warning and right-align copy
 - [ ] `8ee2480e0bd4ace1aadb949023f9838756efcda5` — Group repeated machining operations in order review
-- [ ] `9fd03d9bad9432270e4a47b2e5dfe11269122aa3` — Treat combined CNC bodies as one machining volume
+- [x] `9fd03d9bad9432270e4a47b2e5dfe11269122aa3` — Treat combined CNC bodies as one machining volume — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `894e34f072d8007d2ec197a4f0928741882a8ded` — Invalidate CNC workers when their JavaScript sources change
 - [ ] `68fb086ea357bc091dfbaf2f8759a91213b1dd68` — Correct CNC setup coverage and select fitting cleanup tools
-- [ ] `7b2ab11265001b46e01e6d053d40e91c6e39fbb8` — Use physical 10 mm cutter clearance in CNC tool selection
+- [x] `7b2ab11265001b46e01e6d053d40e91c6e39fbb8` — Use physical 10 mm cutter clearance in CNC tool selection — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `3322c767d73c6f0dca1a0f3fa1f6381881562a69` — Avoid redundant CNC rest passes with accurate cutter contact clearance
-- [ ] `0677c2c022ec32165da6f1f641e0149a65030c71` — Recognize fitting flat-mill rim contact on sloped cavity faces
-- [ ] `481f951a588401275a064a4c7b73cdfacc534a9a` — Extract bounded STEP analytic surfaces for cutter contact validation
-- [ ] `0b6729d669d6012c6f5d7d19dde25f2b6b143a70` — Model market ball tools and stock preparation clearance
+- [x] `0677c2c022ec32165da6f1f641e0149a65030c71` — Recognize fitting flat-mill rim contact on sloped cavity faces — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `481f951a588401275a064a4c7b73cdfacc534a9a` — Extract bounded STEP analytic surfaces for cutter contact validation — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `0b6729d669d6012c6f5d7d19dde25f2b6b143a70` — Model market ball tools and stock preparation clearance — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `ba2447e67e05bedb8b89d13722d25523296d479e` — Hand verified small-tool rest stock to ball finishing in CNC quotes
 - [ ] `b69432aeaee8e28f6b6cc70865ed2d1ca89f1d08` — Simplify CNC overlay legend and unify viewer controls background
 - [ ] `60d5afd08d5149cb48562a68fe78241359990e45` — Show unknown CNC thumbnail material without additive placeholder
 - [ ] `8cd4ca7677066f43dd313cefee82520eb2ae10fe` — fix(cnc): assign handle recesses to verified side-setup tools
-- [ ] `a7b4991c2c0de3dcebedbb9ac0fef9ec20500ee0` — Verify curved-surface ball contact and stock preparation evidence
+- [x] `a7b4991c2c0de3dcebedbb9ac0fef9ec20500ee0` — Verify curved-surface ball contact and stock preparation evidence — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `50169eab92e5a4c98000efd12bb00df85adce75f` — Plan verified ball finishing without redundant micro-flat passes
 - [ ] `6b11180f3cb932c6114a0a36f78cda6e9c7d6abf` — Adapt CNC review details to available panel width
 - [ ] `ddebe049f6077ff1ac94866d1040774095efb3ff` — Keep CNC material comparison prices independent of selection
@@ -223,18 +223,18 @@ Each unchecked entry requires classification, affected Legacy owner mapping, imp
 - [ ] `e4699e45fa17498f5a62d2339e54d4d72f823ac7` — fix(cnc): consolidate connected feature cuts and facing-only setups
 - [ ] `764c346dc598756752b5969bb82661b91acec59c` — fix(cnc): allow manual thread review without drawing upload
 - [ ] `640a1d4248ce990dc95ef393cbfcff08546ec8a0` — fix(cnc): make detected threads advisory
-- [ ] `4433c7153b533142c1b135ecaf2a2ebf4c689ff0` — fix(cnc): deduplicate described modeled threads
+- [x] `4433c7153b533142c1b135ecaf2a2ebf4c689ff0` — fix(cnc): deduplicate described modeled threads — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `d6c7fd222eef119607013fc590882889f0023772` — Document instant quotation page separation
 - [ ] `da81340897ff7fdd3ab31f0dc7ffc1d6b4d1177b` — Plan instant quotation page separation
 - [ ] `448856e2cb2fa23e902c560c4292026157f83354` — Separate CNC and additive quotation pages
 - [ ] `a5e1d9950bd2aaef1a92868580e2b20e09a2c83c` — Cover dedicated instant quotation routes
 - [ ] `7226d0d98f20c3321ed37724e57adf62ad954b3b` — Clean extracted CNC quotation sources
-- [ ] `cad1d3f6e48784e42e0183b01fb531c7f4c08259` — Require spotting before HSS drilling
+- [x] `cad1d3f6e48784e42e0183b01fb531c7f4c08259` — Require spotting before HSS drilling — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `c040c02f92ab7cc6fb52e544e36d7f255a0885a1` — Render CAD edges in initial CNC preview
 - [ ] `1c19ed6dcfcb2338733795676fa85789eb1a1031` — Correct CNC capability and overlay diagnostics
-- [ ] `619dc1b8a77807e230c0915b63ba64a20b74e62b` — Ignore insignificant CNC ball-contact residue
+- [x] `619dc1b8a77807e230c0915b63ba64a20b74e62b` — Ignore insignificant CNC ball-contact residue — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `5df293ec4d496be777db8dc4e37c5606eff8a172` — Show CNC metric placeholders until analysis completes
-- [ ] `f2293da4ce4e2be8853ee135cd69bc342e05e381` — Correct CNC side-thread operation planning
+- [x] `f2293da4ce4e2be8853ee135cd69bc342e05e381` — Correct CNC side-thread operation planning — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `02475b3e4015132cecb3f8e6777960e5b1bc8f15` — Prevent thread geometry from creating milling passes
 - [ ] `a0f5d4d417052e3a246595184b909953168b10e3` — Stage CNC material comparison pricing
 - [ ] `1e9923da53be301610dc8330e9fecfa3380db38f` — Shorten CNC review action label
@@ -244,26 +244,26 @@ Each unchecked entry requires classification, affected Legacy owner mapping, imp
 - [ ] `efbcf094a77b2e49d8590985bde845c855e0a367` — Document deterministic CNC manufacturing planner
 - [ ] `b10ae3d0275bbec63d7eb417752d68f73f1748ed` — Plan deterministic CNC manufacturing pipeline
 - [ ] `fc6dd8e8f2b10afc66f080bbb2a4ed1719dab864` — Add deterministic CNC plan contracts
-- [ ] `010b2c41be5c156b80fc41ea06dc3304376ba39e` — Seal CNC plan contract validation
-- [ ] `5ecce2c9e733dabcb1fc864d7a35965475ed36aa` — Keep CNC predecessor chains feature-local
+- [x] `010b2c41be5c156b80fc41ea06dc3304376ba39e` — Seal CNC plan contract validation — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `5ecce2c9e733dabcb1fc864d7a35965475ed36aa` — Keep CNC predecessor chains feature-local — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `35cebc4eb68b5a26c77d0b21b7e26f15e1ec3bed` — Build canonical CNC topology in the browser
-- [ ] `3be593357f14c93505b0c609b5dff2d0942b38a6` — Fail closed unsupported CNC topology
-- [ ] `21b9778d5bf906ca4e8b144412c648e49a57ec06` — Fail closed duplicate CNC topology faces
-- [ ] `8b0e090b60499f1204fa7ad4745dd1547732e8ec` — Recognize exclusive CNC manufacturing features
-- [ ] `672a258a06f505bc2e43c2d709c06dd737d05c8f` — Harden CNC feature recognition evidence
-- [ ] `03b56290efe443a93fb646726926ed282e08e267` — Compile CNC operations from manufacturing features
-- [ ] `d270f3fb1e2fb0fbf66f8bc5fad14f50d2746cad` — Harden CNC operation graph compilation
-- [ ] `dddc1b51c046dada1f681a47e86f59eb2d00ef91` — Enforce CNC process contracts at final plan boundary
-- [ ] `89ea801e8ba850bfcba0f8ceb42574688c9f2b43` — Require exact CNC operation dependencies
-- [ ] `20ea0ddc0ee51be13a4fd3969b197a82ea975551` — Reject incomplete CNC feature operations
-- [ ] `6c5a46505deb9dc23aea21198e98ce5bc6ab6d2c` — Validate CNC unresolved compiler outcomes
+- [x] `3be593357f14c93505b0c609b5dff2d0942b38a6` — Fail closed unsupported CNC topology — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `21b9778d5bf906ca4e8b144412c648e49a57ec06` — Fail closed duplicate CNC topology faces — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `8b0e090b60499f1204fa7ad4745dd1547732e8ec` — Recognize exclusive CNC manufacturing features — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `672a258a06f505bc2e43c2d709c06dd737d05c8f` — Harden CNC feature recognition evidence — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `03b56290efe443a93fb646726926ed282e08e267` — Compile CNC operations from manufacturing features — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `d270f3fb1e2fb0fbf66f8bc5fad14f50d2746cad` — Harden CNC operation graph compilation — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `dddc1b51c046dada1f681a47e86f59eb2d00ef91` — Enforce CNC process contracts at final plan boundary — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `89ea801e8ba850bfcba0f8ceb42574688c9f2b43` — Require exact CNC operation dependencies — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `20ea0ddc0ee51be13a4fd3969b197a82ea975551` — Reject incomplete CNC feature operations — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `6c5a46505deb9dc23aea21198e98ce5bc6ab6d2c` — Validate CNC unresolved compiler outcomes — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `f3cc689f3cb22bf98a90fa9fa4dd6fdfc41f52c6` — Plan the minimum feasible CNC setups
-- [ ] `30912eee8850dc3e892ea85669d6c8bd387cc500` — Harden CNC setup feasibility evidence
-- [ ] `aa53f78aaf49513655f9545bd20651ae49131e9e` — Require complete CNC setup evidence
-- [ ] `8bfb6cb295740c6497bee8d3fe45dce1fd158402` — Validate CNC stock removal and tool envelopes
-- [ ] `8744175e55c0c1b275ca64f498332caa791c0533` — Recompute CNC validation from physical geometry
-- [ ] `01f4943950006bd51b0cfb8aff07544c86ac36ab` — Bind CNC stock validation to coordinate frames
-- [ ] `b29b4d6b0b25a5f1e13e4604540f8f508d771e12` — Price only validated CNC manufacturing plans
+- [x] `30912eee8850dc3e892ea85669d6c8bd387cc500` — Harden CNC setup feasibility evidence — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `aa53f78aaf49513655f9545bd20651ae49131e9e` — Require complete CNC setup evidence — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `8bfb6cb295740c6497bee8d3fe45dce1fd158402` — Validate CNC stock removal and tool envelopes — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `8744175e55c0c1b275ca64f498332caa791c0533` — Recompute CNC validation from physical geometry — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `01f4943950006bd51b0cfb8aff07544c86ac36ab` — Bind CNC stock validation to coordinate frames — CNC planner slice; see [evidence](cnc-planner-migration.md).
+- [x] `b29b4d6b0b25a5f1e13e4604540f8f508d771e12` — Price only validated CNC manufacturing plans — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `1fc9db6e12733806758efcd6429638fa9bfcc7d4` — Harden CNC quote revision and plan identity
 - [ ] `34f5de923d6427044dfe916f77135517f472b428` — Show CNC prices only after final validation
 - [ ] `26001c297cf376598379329857a2c87e4b18a095` — Hide nonfinal CNC quotation details
@@ -275,13 +275,13 @@ Each unchecked entry requires classification, affected Legacy owner mapping, imp
 - [ ] `0584251663eb227cd96d8930e3135c41b6395fcf` — Enforce semantic CNC stock and fixture validation
 - [ ] `ba8f9da4a7c7f2e697f68380763c4aa1f52aca25` — Record independent CNC planner verification
 - [ ] `aee9e40a4e7e95385cd74f1cb91dc686d3903455` — Allow review after CNC price finalization
-- [ ] `afa4bd595dc9e71e8848ce73e1801e0d93305d4a` — Enforce canonical CNC solid and fixture validation
+- [x] `afa4bd595dc9e71e8848ce73e1801e0d93305d4a` — Enforce canonical CNC solid and fixture validation — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `0ad11f2a19d84c78d01e44ba549510e45a3ab13b` — Record canonical CNC validation verification
-- [ ] `964ae6b47a9a31c02bba9f2b084a4e14c8767175` — Bind CNC plans to authoritative validation geometry
+- [x] `964ae6b47a9a31c02bba9f2b084a4e14c8767175` — Bind CNC plans to authoritative validation geometry — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `73893584f55cae362b6339006bedd5efd08dcae5` — Record authoritative CNC validation verification
 - [ ] `40dcb2325d620495cadf6a6c46996b802ac7c6f3` — Validate physical CNC thread-mill sweeps
 - [ ] `8e928fe9310c0c0d23bcc7c7e37fa62af249f172` — Record physical CNC thread sweep verification
-- [ ] `7da39ab2c3a6e4160442c04b2dc5e9e75d419d95` — Validate complete CNC thread tool sweeps
+- [x] `7da39ab2c3a6e4160442c04b2dc5e9e75d419d95` — Validate complete CNC thread tool sweeps — CNC planner slice; see [evidence](cnc-planner-migration.md).
 - [ ] `7a0054e770897579d24fce73f01b2d82aaf55ebb` — Record complete CNC thread sweep verification
 - [ ] `12a803537f493eacce221eb283fbb459d2290195` — fix(cnc): validate bounded manufacturing features and tool sweeps
 - [ ] `54cd49c3cfc9db00cdefe5e934f69ac5b089ecf1` — test(cnc): expose terminal state on acceptance timeouts
@@ -291,4 +291,3 @@ Each unchecked entry requires classification, affected Legacy owner mapping, imp
 - [ ] `b1dc51ef5241ceb40a3c8a4e5c3f3a823d16b07e` — Merge deterministic CNC instant quotation planner
 - [ ] `03dc9a1271c16e6535934445e9dd6e3f30e8fffe` — Isolate generated XML documentation from source
 - [ ] `5ac7d045c51194edd9e64d8564f1b726b001be34` — Make native logging application-local
-
