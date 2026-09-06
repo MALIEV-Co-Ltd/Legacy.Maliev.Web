@@ -46,13 +46,15 @@ public sealed class ErrorIncidentCorrelationTests
         var entry = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Critical, entry.Level);
         Assert.Null(entry.Exception);
+        Assert.Equal("UnhandledRequestFailure", entry.Properties["EventName"]);
         Assert.Equal(incident.IncidentId, entry.Properties["IncidentId"]);
-        Assert.Equal(incident.OccurredAtUtc, entry.Properties["OccurredAtUtc"]);
+        Assert.Equal("2026-08-02T03:30:00.0000000+00:00", entry.Properties["OccurredAtUtc"]);
         Assert.Equal(500, entry.Properties["StatusCode"]);
-        Assert.Equal("POST", entry.Properties["RequestMethod"]);
-        Assert.Equal("/quotation", entry.Properties["RequestPath"]);
-        Assert.Equal(typeof(Program).Assembly.GetName().Name, entry.Properties["ServiceName"]);
-        Assert.Equal(exception.GetType().FullName, entry.Properties["ExceptionType"]);
+        Assert.Equal("POST", entry.Properties["Method"]);
+        Assert.Equal("/quotation", entry.Properties["Path"]);
+        Assert.Equal(typeof(Program).Assembly.GetName().Name, entry.Properties["Service"]);
+        Assert.Equal(nameof(InvalidOperationException), entry.Properties["ExceptionType"]);
+        Assert.Equal(8, entry.Properties.Count);
 
         var rendered = entry.RenderedMessage;
         Assert.DoesNotContain("sensitive-query-token", rendered, StringComparison.Ordinal);

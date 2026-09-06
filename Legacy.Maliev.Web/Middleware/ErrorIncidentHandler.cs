@@ -44,14 +44,15 @@ internal static class ErrorIncidentHandler
             : StatusCodes.Status500InternalServerError;
 
         logger.LogCritical(
-            "Unhandled request failure. IncidentId={IncidentId} OccurredAtUtc={OccurredAtUtc} StatusCode={StatusCode} RequestMethod={RequestMethod} RequestPath={RequestPath} ServiceName={ServiceName} ExceptionType={ExceptionType}",
-            incident.IncidentId,
-            incident.OccurredAtUtc,
-            statusCode,
-            context.Request.Method,
-            context.Request.Path.Value ?? string.Empty,
+            "{EventName} Service={Service} Method={Method} Path={Path} StatusCode={StatusCode} ExceptionType={ExceptionType} IncidentId={IncidentId} OccurredAtUtc={OccurredAtUtc}",
+            "UnhandledRequestFailure",
             typeof(Program).Assembly.GetName().Name ?? "Legacy.Maliev.Web",
-            exception.GetType().FullName ?? exception.GetType().Name);
+            context.Request.Method,
+            context.Request.Path.Value ?? "/",
+            statusCode,
+            exception.GetType().Name,
+            incident.IncidentId,
+            incident.OccurredAtUtc.ToUniversalTime().ToString("O"));
 
         return incident;
     }
