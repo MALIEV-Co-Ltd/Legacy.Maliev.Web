@@ -22,7 +22,7 @@ Source commits touching these files: `e5f5b56`, `29a8c2e`, `e0c07ff`, `ba3f34d`,
 ## Remaining integration
 
 - Dedicated CNC page and upload/submission handlers, including protected session/form/item/role binding and atomic receipt lifecycle.
-- PDF drawing transport: Web's capability store and FileService transport and FileService's producer currently publish an exact CAD-only extension contract. Do not simply reuse the additive geometry workflow for PDF drawings.
+- PDF drawing transport: the source CNC handler uses generic `/Uploads` (multipart `files`, query `bucket`/`path`), not the CAD-only instant-quotation session API. Legacy FileService already preserves that generic contract, PascalCase `Object`/`Bucket`/`ObjectName`/`Uri` response, and private malware-scanned uploads. Implement a typed Web client for this existing boundary and confirmed cleanup via `DELETE /Uploads?bucket=...&objectName=...`; do not broaden the additive capability allowlist or route drawings through geometry pricing.
 - Preserve source 25 MiB model / 10 MiB drawing limits in the CNC route while retaining existing additive contracts.
 - Extract the source unowned-IGES-parameter fixture case (`TestAssets/cube.igs`).
 - Browser and typed service integration evidence for the actual CNC workflow.
