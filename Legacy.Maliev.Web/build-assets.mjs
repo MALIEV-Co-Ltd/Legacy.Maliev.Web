@@ -8,6 +8,20 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(root, 'wwwroot', 'dist');
 const assets = path.join(root, 'assets');
 
+// The source CNC worker uses the classic-script Three.js API, independently of
+// the current module-based additive viewer. Keep its runtime pinned to source.
+const cncVendor = path.join(root, 'wwwroot', 'src', 'vendor', 'three');
+await mkdir(cncVendor, { recursive: true });
+for (const [source, name] of [
+  ['LICENSE', 'LICENSE'],
+  ['build/three.js', 'three.js'],
+  ['examples/js/loaders/STLLoader.js', 'STLLoader.js'],
+  ['examples/js/loaders/OBJLoader.js', 'OBJLoader.js'],
+]) {
+  await writeFile(path.join(cncVendor, name), await readFile(
+    path.join(root, 'node_modules', 'three-cnc-compat', source)));
+}
+
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 
