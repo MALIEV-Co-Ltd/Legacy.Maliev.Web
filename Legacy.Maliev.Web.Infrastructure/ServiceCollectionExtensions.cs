@@ -82,6 +82,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IInstantQuotationFileCapabilityStore, InstantQuotationFileCapabilityStore>();
         services.AddSingleton<IInstantQuotationSubmissionStore, InstantQuotationSubmissionStore>();
         services.AddScoped<InstantQuotationFileServiceTransport>();
+        services.AddScoped<ICncFileTransport, CncFileTransport>();
         services.AddScoped<IInstantQuotationUploadClient, InstantQuotationFileServiceUploadClient>();
         services.AddScoped<IAccountSessionManager, AccountSessionManager>();
         services.AddScoped<IContactTrustedCustomerLoader, ContactTrustedCustomerLoader>();
