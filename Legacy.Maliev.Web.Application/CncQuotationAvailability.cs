@@ -4,7 +4,7 @@ namespace Legacy.Maliev.Web.Application;
 public static class CncQuotationAvailability
 {
     /// <summary>The commercial calibration revision required by the migrated CNC planner.</summary>
-    public const string CommercialRulesVersion = "cnc-commercial-v5";
+    public const string CommercialRulesVersion = Pricing.CncCommercialCalibration.CommercialRulesVersion;
 
     /// <summary>Requires receipt storage in every environment and approved atomic storage in production.</summary>
     public static bool IsAvailable(
