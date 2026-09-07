@@ -472,6 +472,7 @@ else
 builder.Services.AddScoped<CncProtectedUploadBindings>();
 builder.Services.AddScoped<CncQuotationSession>();
 builder.Services.AddScoped<CncUploadHandler>();
+builder.Services.AddScoped<CncNotificationCoordinator>();
 
 if (builder.Environment.IsDevelopment())
 {
