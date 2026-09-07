@@ -14,6 +14,7 @@
     <PackageReference Include="Legacy.Maliev.ServiceDefaults" Version="$(SharedLibraryVersion)" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.10" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
