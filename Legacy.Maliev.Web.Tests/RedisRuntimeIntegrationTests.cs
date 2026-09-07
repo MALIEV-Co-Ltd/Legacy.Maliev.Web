@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -126,6 +127,98 @@ public sealed class RedisRuntimeIntegrationTests(RedisRuntimeFixture fixture)
         Assert.NotNull(releasedLock);
         await releasedLock.DisposeAsync();
     }
+
+    [Fact]
+    public void CncReceiptStore_IsDistributedOutsideDevelopment()
+    {
+        using var factory = fixture.CreateFactory();
+        var store = factory.Services.GetRequiredService<ICncUploadReceiptStore>();
+
+        Assert.IsType<RedisCncUploadReceiptStore>(store);
+        Assert.True(store.IsSharedDistributedAtomic);
+        Assert.NotNull(factory.Services.GetRequiredService<CncReceiptClaimCoordinator>());
+    }
+
+    [Fact]
+    public void CncReceiptStore_ReservesFinalizesAndClaimsAtomicallyAcrossInstances()
+    {
+        using var firstFactory = fixture.CreateFactory();
+        using var secondFactory = fixture.CreateFactory();
+        var first = firstFactory.Services.GetRequiredService<ICncUploadReceiptStore>();
+        var second = secondFactory.Services.GetRequiredService<ICncUploadReceiptStore>();
+        var multiplexer = firstFactory.Services.GetRequiredService<IConnectionMultiplexer>();
+        var database = multiplexer.GetDatabase();
+        var now = DateTimeOffset.UtcNow;
+        string session = $"cnc-session-{Guid.NewGuid():N}";
+        var model = Receipt("form", session, "item", "model", "protected-model", now.AddMinutes(10));
+        var drawing = Receipt("form", session, "item", "drawing", "protected-drawing", now.AddMinutes(10));
+
+        Assert.True(first.TryReserve(model, now, 2, out CncUploadReceiptReservation? modelReservation));
+        Assert.False(second.TryReserve(model, now, 2, out _));
+        first.Finalize(modelReservation!, now);
+        RedisKey key = RedisCncUploadReceiptStore.KeyPrefix
+            + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(session)));
+        Assert.NotNull(database.KeyTimeToLive(key));
+        Assert.True(second.TryReserve(drawing, now, 2, out CncUploadReceiptReservation? drawingReservation));
+        Assert.Null(database.KeyTimeToLive(key));
+        second.Finalize(drawingReservation!, now);
+        Assert.NotNull(database.KeyTimeToLive(key));
+        string stored = string.Join('\n', database.HashGetAll(key).Select(entry => entry.Value.ToString()));
+        Assert.DoesNotContain(session, stored, StringComparison.Ordinal);
+        Assert.DoesNotContain("form", stored, StringComparison.Ordinal);
+        Assert.DoesNotContain("item", stored, StringComparison.Ordinal);
+
+        Assert.False(first.TryClaimAll(
+            [Claim(model), new CncUploadReceiptClaim("form", session, "item", "drawing", "wrong")],
+            now,
+            out _));
+        Assert.True(second.TryClaimAll([Claim(model), Claim(drawing)], now, out CncUploadReceiptClaimSet? claimed));
+        Assert.Equal(2, claimed!.Receipts.Count);
+        Assert.False(first.TryClaimAll([Claim(model), Claim(drawing)], now, out _));
+
+        first.Restore(claimed, now);
+        Assert.True(second.TryClaimAll([Claim(model), Claim(drawing)], now, out _));
+    }
+
+    [Fact]
+    public void CncReceiptStore_RollbackPreservesPriorFinalizedReceiptAndEnforcesFormCap()
+    {
+        using var firstFactory = fixture.CreateFactory();
+        using var secondFactory = fixture.CreateFactory();
+        var first = firstFactory.Services.GetRequiredService<ICncUploadReceiptStore>();
+        var second = secondFactory.Services.GetRequiredService<ICncUploadReceiptStore>();
+        var now = DateTimeOffset.UtcNow;
+        string session = $"cnc-session-{Guid.NewGuid():N}";
+        var original = Receipt("form", session, "item", "model", "protected-original", now.AddMinutes(10));
+        var replacement = Receipt("form", session, "item", "model", "protected-replacement", now.AddMinutes(10));
+
+        Assert.True(first.TryReserve(original, now, 1, out CncUploadReceiptReservation? originalReservation));
+        first.Finalize(originalReservation!, now);
+        Assert.True(second.TryReserve(replacement, now, 1, out CncUploadReceiptReservation? replacementReservation));
+        Assert.False(first.TryReserve(
+            Receipt("form", session, "other", "model", "protected-other", now.AddMinutes(10)),
+            now,
+            1,
+            out _));
+
+        second.Rollback(replacementReservation!, now);
+        Assert.True(first.TryClaimAll([Claim(original)], now, out _));
+    }
+
+    private static CncUploadReceiptState Receipt(
+        string form,
+        string session,
+        string item,
+        string role,
+        string receipt,
+        DateTimeOffset expiry) => new(form, session, item, role, receipt, expiry);
+
+    private static CncUploadReceiptClaim Claim(CncUploadReceiptState receipt) => new(
+        receipt.FormId,
+        receipt.SessionId,
+        receipt.ItemId,
+        receipt.Role,
+        receipt.ProtectedReceipt);
 }
 
 public sealed class RedisRuntimeFixture : IAsyncLifetime
