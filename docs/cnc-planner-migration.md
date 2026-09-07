@@ -6,10 +6,21 @@ The CNC computation modules and model-viewer worker preserve the source contents
 (with line-ending normalization only). CAD fixtures are extracted from committed
 Git objects. Node regressions change only the repository directory prefix.
 
+The 2026-09-07 committed-object reconciliation removed the earlier
+line-ending qualification for the 22 files under
+`wwwroot/src/app/js/cnc-quotation`: every target file has the exact same Git blob
+identity as source `5ac7d04`. `CncPlannerSourceBlobParityTests` now freezes those
+22 source blob IDs without depending on the source checkout at test runtime.
+
 This slice includes 41 independent source regression files. Three page-dependent
 files remain with the pending page migration: cnc-access.test.cjs,
 cnc-ball-handoff-allocation.test.cjs, and cnc-detected-thread-requirements.test.cjs.
 No assertion in the included regression files is removed or skipped.
+
+This exact planner evidence does not close the public route gap. The committed
+source page, its page model, its generated browser bundle, and the three named
+page-dependent suites remain pending as one UI/runtime boundary; they must not be
+reported as complete merely because their computation modules are identical.
 
 The classic worker runtime uses a separate npm alias pinned to source Three.js
 0.129.0. The existing additive viewer remains on Three.js 0.185.1. The asset build
