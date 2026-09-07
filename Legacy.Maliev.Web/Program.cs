@@ -480,8 +480,13 @@ builder.Services.AddScoped<CncSubmissionEndpoint>();
 if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
-    builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 }
+else
+{
+    builder.Services.AddSingleton<ICncUploadReceiptStore, RedisCncUploadReceiptStore>();
+}
+
+builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 
 var app = builder.Build();
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
