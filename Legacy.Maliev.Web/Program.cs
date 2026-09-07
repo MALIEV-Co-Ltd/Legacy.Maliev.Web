@@ -473,6 +473,7 @@ builder.Services.AddScoped<CncProtectedUploadBindings>();
 builder.Services.AddScoped<CncQuotationSession>();
 builder.Services.AddScoped<CncUploadHandler>();
 builder.Services.AddScoped<CncNotificationCoordinator>();
+builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
 
 if (builder.Environment.IsDevelopment())
 {
