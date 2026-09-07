@@ -475,6 +475,7 @@ builder.Services.AddScoped<CncUploadHandler>();
 builder.Services.AddScoped<CncNotificationCoordinator>();
 builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
 builder.Services.AddScoped<CncReceiptClaimCoordinator>();
+builder.Services.AddScoped<CncSubmissionPersistenceCoordinator>();
 
 if (builder.Environment.IsDevelopment())
 {
