@@ -176,6 +176,24 @@ public sealed class CncFileTransportTests
         public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken) => ValueTask.FromResult(Token);
         public void Invalidate(string token) => Invalidated = true;
     }
+    [Fact]
+    public async Task Upload_AuthenticationCircuitRejectedBeforePost_IsNotSent()
+    {
+        var handler = new Handler(_ => throw new InvalidOperationException("Must not send"));
+        var result = await new CncFileTransport(new Factory(handler), new RejectedTokens())
+            .UploadAsync("date/session/part.pdf", [1], "application/pdf", default);
+        Assert.Equal(CncUploadTransportOutcome.NotSent, result.Outcome);
+        Assert.Null(result.StatusCode);
+        Assert.Equal(0, handler.Count);
+    }
+
+    private sealed class RejectedTokens : IServiceAccessTokenProvider
+    {
+        public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken)
+            => throw new Polly.CircuitBreaker.BrokenCircuitException();
+        public void Invalidate(string token) => throw new InvalidOperationException();
+    }
+
     private sealed class Handler(Func<HttpRequestMessage, Task<HttpResponseMessage>> send) : HttpMessageHandler
     {
         public int Count { get; private set; }

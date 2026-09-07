@@ -20,7 +20,7 @@ public sealed class CncFileTransport(IHttpClientFactory clientFactory, IServiceA
 
         string? token;
         try { token = await tokenProvider.GetAccessTokenAsync(cancellationToken); }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException)
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException or Polly.ExecutionRejectedException)
         { return new(CncUploadTransportOutcome.NotSent); }
         if (string.IsNullOrWhiteSpace(token)) return new(CncUploadTransportOutcome.NotSent);
 
