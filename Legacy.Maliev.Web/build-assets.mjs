@@ -1,4 +1,4 @@
-import { build } from 'esbuild';
+import { build, transform } from 'esbuild';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +17,7 @@ for (const [source, name] of [
   ['build/three.js', 'three.js'],
   ['examples/js/loaders/STLLoader.js', 'STLLoader.js'],
   ['examples/js/loaders/OBJLoader.js', 'OBJLoader.js'],
+  ['examples/js/controls/OrbitControls.js', 'OrbitControls.js'],
 ]) {
   await writeFile(path.join(cncVendor, name), await readFile(
     path.join(root, 'node_modules', 'three-cnc-compat', source)));
@@ -24,6 +25,24 @@ for (const [source, name] of [
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
+
+const cncPlannerRoot = path.join(root, 'wwwroot', 'src', 'app', 'js', 'cnc-quotation');
+const cncPlannerFiles = [
+  'cnc-plan-contracts.js',
+  'cnc-quotation-config.js',
+  'cnc-material-catalog.js',
+  'cnc-tool-library.js',
+  'cnc-stock.js',
+  'cnc-reach.js',
+  'cnc-fixture-clearance.js',
+  'cnc-machine-capability.js',
+  'cnc-setup-planner.js',
+  'cnc-planning.js',
+  'cnc-engine.js',
+];
+const cncPlannerSource = (await Promise.all(cncPlannerFiles.map(file => readFile(path.join(cncPlannerRoot, file), 'utf8')))).join('\n;\n');
+const cncPlannerBundle = await transform(cncPlannerSource, { legalComments: 'none', minify: true, target: 'es2022' });
+await writeFile(path.join(dist, 'cnc-quotation.min.js'), cncPlannerBundle.code);
 
 const common = {
   bundle: true,

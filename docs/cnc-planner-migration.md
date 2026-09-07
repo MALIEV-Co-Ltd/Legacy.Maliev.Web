@@ -12,31 +12,34 @@ line-ending qualification for the 22 files under
 identity as source `5ac7d04`. `CncPlannerSourceBlobParityTests` now freezes those
 22 source blob IDs without depending on the source checkout at test runtime.
 
-This slice includes 41 independent source regression files. Three page-dependent
-files remain with the pending page migration: cnc-access.test.cjs,
-cnc-ball-handoff-allocation.test.cjs, and cnc-detected-thread-requirements.test.cjs.
-No assertion in the included regression files is removed or skipped.
+The public route boundary is now included. The migrated Razor page retains the
+source workspace, responsive and accessibility contracts, worker handoffs, and
+same-origin upload and submission URLs. Its .NET 10 page model owns the protected
+session and per-tab form token while reusing the migrated PostgreSQL-backed
+submission boundary. The Three.js loaders, viewer scripts, worker, SpaceMouse
+modules, and production CNC planner bundle are built and delivered from the same
+origin.
 
-This exact planner evidence does not close the public route gap. The committed
-source page, its page model, its generated browser bundle, and the three named
-page-dependent suites remain pending as one UI/runtime boundary; they must not be
-reported as complete merely because their computation modules are identical.
+All 44 source regression files are included. The three formerly page-dependent
+files -- cnc-access.test.cjs, cnc-ball-handoff-allocation.test.cjs, and
+cnc-detected-thread-requirements.test.cjs -- change only the repository directory
+prefix. No assertion is removed or skipped.
 
 The classic worker runtime uses a separate npm alias pinned to source Three.js
 0.129.0. The existing additive viewer remains on Three.js 0.185.1. The asset build
 reproduces the worker vendor scripts and their license from the locked package.
 
-Local validation: Release build zero warnings/errors; 137 existing browser-module
-tests pass. The 375-test source suite initially passed 361 tests; the 14 missing
-fixture/vendor failures were corrected and all 25 tests in the affected files
-passed on rerun. Required CI runs the entire source suite again before merge.
+Local validation: Release build zero warnings/errors; all 137 browser-module tests,
+all 418 CNC engine tests, and all 2,002 .NET tests pass. The public route and seven
+required same-origin runtime assets are exercised through the ASP.NET Core test
+host, and the three page-dependent source suites pass all 43 cases. Required CI
+runs the complete suites again before merge.
 
 The source receipt state machine is also ported with all five source tests and
 Development-only registration. It retains atomic whole-set claims, reservation
 rollback, non-expiring pending tombstones, and `IsSharedDistributedAtomic=false`.
-The latest source availability predicate is covered by eleven cases, ready for
-the pending CNC route. No production distributed receipt store is introduced.
-The integrated .NET suite passes all 1,618 tests.
+The latest source availability predicate is covered by eleven cases and gates the
+public CNC route. No production distributed receipt store is introduced.
 
 The following source commits touch only files included in this slice. Their final
 behavior is validated against the pinned source snapshot before marking complete.
