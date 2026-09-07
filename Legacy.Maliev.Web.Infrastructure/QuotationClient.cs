@@ -158,5 +158,6 @@ internal sealed class QuotationClient(
         [property: JsonPropertyName("Done")] bool Done,
         [property: JsonPropertyName("CreatedDate")] DateTimeOffset CreatedDate,
         [property: JsonPropertyName("InternalComment")] string? InternalComment = null,
-        [property: JsonPropertyName("ModifiedDate")] DateTimeOffset? ModifiedDate = null);
+        [property: JsonPropertyName("ModifiedDate")] DateTimeOffset? ModifiedDate = null,
+        [property: JsonPropertyName("JourneyId")] Guid? JourneyId = null);
 }

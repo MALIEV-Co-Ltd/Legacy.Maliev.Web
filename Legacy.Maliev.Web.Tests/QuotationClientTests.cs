@@ -10,8 +10,10 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class QuotationClientTests
 {
-    [Fact]
-    public async Task CreateRequest_UsesAuthenticatedIdempotentLegacyContract()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CreateRequest_UsesAuthenticatedIdempotentLegacyContract(bool includesJourney)
     {
         var handler = new RecordingHandler(async request =>
         {
@@ -45,10 +47,12 @@ public sealed class QuotationClientTests
             Assert.Equal("0100000000000", properties["TaxIdentification"].GetString());
             Assert.Equal("Need CNC parts", properties["Message"].GetString());
             Assert.False(properties["Done"].GetBoolean());
-            var response = JsonResponse(
+            var responseBody =
                 """
                 {"Id":417,"FirstName":"Mali","LastName":"Ev","Email":"mali@example.com","TelephoneNumber":"020000000","Country":"Thailand","CompanyName":"MALIEV","TaxIdentification":"0100000000000","Message":"Need CNC parts","Done":false,"CreatedDate":"2026-07-19T08:00:00Z"}
-                """,
+                """;
+            if (includesJourney) responseBody = responseBody.Replace("\"Id\":417", "\"JourneyId\":null,\"Id\":417", StringComparison.Ordinal);
+            var response = JsonResponse(responseBody,
                 HttpStatusCode.Created);
             response.Headers.Location = new Uri("/quotationrequests/417", UriKind.Relative);
             return response;
