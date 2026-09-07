@@ -399,6 +399,9 @@ public sealed class AccountSessionStoreTests
                 true));
         }
 
+        public Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(string accessToken, int expectedCustomerId, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerSelfIdentityResult(CustomerSelfIdentityStatus.Unavailable));
+
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
             loginResult is null
                 ? throw new NotSupportedException()

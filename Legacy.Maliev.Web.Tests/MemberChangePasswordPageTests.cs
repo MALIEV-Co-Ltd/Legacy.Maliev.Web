@@ -112,6 +112,9 @@ public sealed class MemberChangePasswordPageTests
                 : Task.FromResult(Result);
         }
 
+        public Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(string accessToken, int expectedCustomerId, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerSelfIdentityResult(CustomerSelfIdentityStatus.Unavailable));
+
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task RevokeAsync(string refreshToken, CancellationToken cancellationToken) => throw new NotSupportedException();
