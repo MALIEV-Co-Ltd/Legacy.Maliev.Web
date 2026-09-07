@@ -2126,10 +2126,10 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         using var thai = await SubmitPersistedContactAsync("th");
 
         Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
-        Assert.Equal("request_quote", english.RootElement.GetProperty("event").GetString());
-        Assert.Equal("contact_request", english.RootElement.GetProperty("intent_type").GetString());
+        Assert.Equal("maliev_lead_submitted", english.RootElement.GetProperty("event").GetString());
+        Assert.Equal("contact", english.RootElement.GetProperty("lead_type").GetString());
         Assert.Equal("general_contact", english.RootElement.GetProperty("service").GetString());
-        Assert.Equal("persisted", english.RootElement.GetProperty("submission_status").GetString());
+        Assert.Equal("persisted", english.RootElement.GetProperty("lead_status").GetString());
     }
 
     [Fact]
@@ -2139,10 +2139,10 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         using var thai = await SubmitPersistedQuotationAsync("th");
 
         Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
-        Assert.Equal("request_quote", english.RootElement.GetProperty("event").GetString());
-        Assert.Equal("quotation_request", english.RootElement.GetProperty("intent_type").GetString());
-        Assert.Equal("cnc_machining", english.RootElement.GetProperty("service").GetString());
-        Assert.Equal("persisted", english.RootElement.GetProperty("submission_status").GetString());
+        Assert.Equal("maliev_lead_submitted", english.RootElement.GetProperty("event").GetString());
+        Assert.Equal("manual_quote", english.RootElement.GetProperty("lead_type").GetString());
+        Assert.Equal("custom_manufacturing", english.RootElement.GetProperty("service").GetString());
+        Assert.Equal("persisted", english.RootElement.GetProperty("lead_status").GetString());
     }
 
     [Fact]
@@ -2165,8 +2165,9 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         var source = landing.StatusCode == HttpStatusCode.MovedPermanently
             ? await client.GetStringAsync(landing.Headers.Location)
             : await landing.Content.ReadAsStringAsync();
-        Assert.Contains("window.malievAnalytics.emit({\"event\":\"request_quote\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"request_quote\"", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+        Assert.Contains("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("private@example.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Private project details", source, StringComparison.Ordinal);
     }

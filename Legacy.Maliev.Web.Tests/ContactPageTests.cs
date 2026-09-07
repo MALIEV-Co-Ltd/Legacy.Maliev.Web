@@ -48,13 +48,13 @@ public sealed class ContactPageTests
         var analyticsPayload = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("913", StringComparison.Ordinal));
         using var analyticsDocument = JsonDocument.Parse(analyticsPayload);
         var analyticsEvent = analyticsDocument.RootElement;
-        Assert.Equal("request_quote", analyticsEvent.GetProperty("event").GetString());
-        Assert.Equal("contact_request", analyticsEvent.GetProperty("intent_type").GetString());
+        Assert.Equal("maliev_lead_submitted", analyticsEvent.GetProperty("event").GetString());
+        Assert.Equal("contact", analyticsEvent.GetProperty("lead_type").GetString());
         Assert.Equal("general_contact", analyticsEvent.GetProperty("service").GetString());
         Assert.Equal("message-913", analyticsEvent.GetProperty("transaction_id").GetString());
-        Assert.Equal("persisted", analyticsEvent.GetProperty("submission_status").GetString());
+        Assert.Equal("persisted", analyticsEvent.GetProperty("lead_status").GetString());
         Assert.False(analyticsEvent.GetProperty("has_files").GetBoolean());
-        Assert.False(analyticsEvent.GetProperty("file_upload_completed").GetBoolean());
+        Assert.False(analyticsEvent.TryGetProperty("file_upload_completed", out _));
         Assert.DoesNotContain("mali@example.com", analyticsPayload, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Please contact me", analyticsPayload, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, notifications.Messages.Count);
