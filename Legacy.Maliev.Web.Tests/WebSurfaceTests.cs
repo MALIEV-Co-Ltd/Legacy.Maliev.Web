@@ -3807,6 +3807,9 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             EmailChangeResultOverride = null;
         }
 
+        public Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(string accessToken, int expectedCustomerId, CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerSelfIdentityResult(CustomerSelfIdentityStatus.Unavailable));
+
         public Task<CustomerAuthenticationResult> LoginAsync(string email, string password, CancellationToken cancellationToken) =>
             Task.FromResult(password switch
             {
