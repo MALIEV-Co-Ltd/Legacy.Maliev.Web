@@ -474,12 +474,13 @@ builder.Services.AddScoped<CncQuotationSession>();
 builder.Services.AddScoped<CncUploadHandler>();
 builder.Services.AddScoped<CncNotificationCoordinator>();
 builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
-builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 builder.Services.AddScoped<CncSubmissionPersistenceCoordinator>();
+builder.Services.AddScoped<CncSubmissionEndpoint>();
 
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
+    builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 }
 
 var app = builder.Build();
@@ -489,7 +490,9 @@ app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
 app.UseExceptionHandler("/Error");
 app.UseMiddleware<ErrorIncidentMiddleware>();
 app.UseWhen(
-    static context => !context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase),
+    static context => !context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase)
+        && !(HttpMethods.IsPost(context.Request.Method)
+            && context.Request.Path.Equals("/InstantQuotation/CNC-Machining", StringComparison.OrdinalIgnoreCase)),
     branch => branch.UseStatusCodePagesWithReExecute("/Error", "?code={0}"));
 app.UseMiddleware<ErrorResponseContractMiddleware>();
 app.UseResponseCompression();
@@ -517,11 +520,24 @@ app.MapDefaultEndpoints("web");
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapMemberCompatibilityEndpoints();
-app.MapPost("/InstantQuotation/CNC-Machining", async (HttpContext context, CncUploadHandler handler) =>
+app.MapPost("/InstantQuotation/CNC-Machining", async (
+    HttpContext context,
+    CncUploadHandler uploadHandler,
+    CncSubmissionEndpoint submissionHandler) =>
 {
     var requestedHandler = context.Request.Query["handler"];
-    return requestedHandler.Count == 1 && string.Equals(requestedHandler[0], "UploadFile", StringComparison.OrdinalIgnoreCase)
-        ? await handler.HandleAsync(context)
+    if (requestedHandler.Count != 1)
+    {
+        return Results.NotFound();
+    }
+
+    if (string.Equals(requestedHandler[0], "UploadFile", StringComparison.OrdinalIgnoreCase))
+    {
+        return await uploadHandler.HandleAsync(context);
+    }
+
+    return string.Equals(requestedHandler[0], "SubmitRequest", StringComparison.OrdinalIgnoreCase)
+        ? await submissionHandler.HandleAsync(context)
         : Results.NotFound();
 }).WithMetadata(new RequireAntiforgeryTokenAttribute(true));
 if (useBlazorRouteHost)
