@@ -44,6 +44,20 @@ public sealed record CustomerPasswordCreationResult(
     bool Authorized,
     bool AlreadyExists);
 
+public sealed record CustomerSelfIdentity(int CustomerId, string? Email, string? Mobile);
+
+public enum CustomerSelfIdentityStatus
+{
+    Succeeded,
+    NotAuthorized,
+    NotFound,
+    Unavailable,
+    InvalidResponse,
+    IdentityMismatch,
+}
+
+public sealed record CustomerSelfIdentityResult(CustomerSelfIdentityStatus Status, CustomerSelfIdentity? Identity = null);
+
 public sealed record CustomerEmailChangeValidationResult(
     bool Valid,
     bool ServiceAvailable,
@@ -73,6 +87,11 @@ public interface ICustomerEmailChangeWorkflow
 
 public interface ICustomerAuthenticationClient
 {
+    Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(
+        string accessToken,
+        int expectedCustomerId,
+        CancellationToken cancellationToken);
+
     Task<CustomerAuthenticationResult> LoginAsync(
         string email,
         string password,

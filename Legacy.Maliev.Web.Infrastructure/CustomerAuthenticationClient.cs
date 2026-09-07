@@ -14,6 +14,73 @@ internal sealed class CustomerAuthenticationClient(
     IServiceAccessTokenProvider serviceTokenProvider,
     ILogger<CustomerAuthenticationClient> logger) : ICustomerAuthenticationClient
 {
+    public async Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(string accessToken, int expectedCustomerId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expectedCustomerId);
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return new(CustomerSelfIdentityStatus.NotAuthorized);
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "auth/v1/customer-self-service/identity");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var response = await clientFactory.CreateClient("auth").SendAsync(request, cancellationToken);
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                return new(CustomerSelfIdentityStatus.NotAuthorized);
+            }
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new(CustomerSelfIdentityStatus.NotFound);
+            }
+            if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
+            {
+                return new(CustomerSelfIdentityStatus.Unavailable);
+            }
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                return new(CustomerSelfIdentityStatus.InvalidResponse);
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || root.EnumerateObject().Count(value => value.NameEquals("customerId")) != 1
+                || root.EnumerateObject().Count(value => value.NameEquals("email")) != 1
+                || root.EnumerateObject().Count(value => value.NameEquals("mobile")) != 1
+                || root.GetProperty("customerId").ValueKind != JsonValueKind.Number
+                || !root.GetProperty("customerId").TryGetInt32(out var customerId)
+                || customerId <= 0
+                || root.GetProperty("email").ValueKind is not (JsonValueKind.String or JsonValueKind.Null)
+                || root.GetProperty("mobile").ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+            {
+                return new(CustomerSelfIdentityStatus.InvalidResponse);
+            }
+            if (customerId != expectedCustomerId)
+            {
+                return new(CustomerSelfIdentityStatus.IdentityMismatch);
+            }
+
+            return new(CustomerSelfIdentityStatus.Succeeded,
+                new(customerId, root.GetProperty("email").GetString(), root.GetProperty("mobile").GetString()));
+        }
+        catch (JsonException)
+        {
+            return new(CustomerSelfIdentityStatus.InvalidResponse);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TimeoutException
+            or Polly.Timeout.TimeoutRejectedException or Polly.CircuitBreaker.BrokenCircuitException
+            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            // Do not log tokens, response bodies, contact fields, or exception text.
+            return new(CustomerSelfIdentityStatus.Unavailable);
+        }
+    }
+
     public async Task<CustomerAuthenticationResult> LoginAsync(
         string email,
         string password,
