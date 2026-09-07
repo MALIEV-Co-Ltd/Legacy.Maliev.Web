@@ -85,6 +85,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<InstantQuotationFileServiceTransport>();
         services.AddScoped<ICncFileTransport, CncFileTransport>();
         services.AddScoped<ICncFileFinalizationClient, CncFileFinalizationClient>();
+        services.AddScoped<ICncProfilePersistenceClient, CncProfilePersistenceClient>();
         services.AddScoped<IInstantQuotationUploadClient, InstantQuotationFileServiceUploadClient>();
         services.AddScoped<IAccountSessionManager, AccountSessionManager>();
         services.AddScoped<IContactTrustedCustomerLoader, ContactTrustedCustomerLoader>();
