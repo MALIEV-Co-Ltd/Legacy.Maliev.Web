@@ -474,6 +474,7 @@ builder.Services.AddScoped<CncQuotationSession>();
 builder.Services.AddScoped<CncUploadHandler>();
 builder.Services.AddScoped<CncNotificationCoordinator>();
 builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
+builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 
 if (builder.Environment.IsDevelopment())
 {
