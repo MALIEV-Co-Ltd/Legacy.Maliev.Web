@@ -24,7 +24,13 @@ missing identity, pre-cancellation, authentication circuit rejection before send
 post-send cancellation, unsuccessful status codes, malformed/incorrect response
 fields, and large escaped review records. All examples use synthetic data.
 
-Remaining integration gates: merge the PostgreSQL JourneyId producer, connect the
+The PostgreSQL JourneyId producer gate is satisfied by QuotationService PR #36,
+protected main `55a9689`, with 174 passing tests including a populated previous-schema
+upgrade preserving existing rows. This does not complete source commit `7ebe7e4`:
+its Web analytics, 3D and form changes have separate migration ownership.
+
+Remaining integration gates: connect the
 CNC submission coordinator, preserve profile fill-only semantics, move/link files,
 deliver source-equivalent notifications, and verify browser/receipt finalization
-contracts. This slice is not a deployment or full-feature parity approval.
+contracts. Production/local review data reconciliation remains separate and pending.
+This slice is not a deployment or full-feature parity approval.
