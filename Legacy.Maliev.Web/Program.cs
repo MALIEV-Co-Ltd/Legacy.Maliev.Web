@@ -477,7 +477,7 @@ builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
 builder.Services.AddScoped<CncSubmissionPersistenceCoordinator>();
 builder.Services.AddScoped<CncSubmissionEndpoint>();
 
-if (builder.Environment.IsDevelopment())
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
     builder.Services.AddScoped<CncReceiptClaimCoordinator>();
