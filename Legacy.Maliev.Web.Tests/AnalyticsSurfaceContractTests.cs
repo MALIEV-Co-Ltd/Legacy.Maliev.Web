@@ -65,7 +65,7 @@ public sealed class AnalyticsSurfaceContractTests
 
         Assert.Contains("pendingEvents", google, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.emit", google, StringComparison.Ordinal);
-        Assert.Contains("file_upload_complete", google, StringComparison.Ordinal);
+        Assert.Contains("BuildGenerateLeadConversionEvent", google, StringComparison.Ordinal);
         Assert.Contains("window.malievLoadGoogleTagManager", google, StringComparison.Ordinal);
         Assert.Contains("if (consentState === 'granted')", google, StringComparison.Ordinal);
         Assert.Contains("data-maliev-gtm-loader", google, StringComparison.Ordinal);

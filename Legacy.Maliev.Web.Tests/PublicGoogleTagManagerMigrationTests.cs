@@ -90,14 +90,16 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
     }
 
     [Fact]
-    public void QueuedCompletedUpload_RendersOnlyControlledLeadAndCompletionEvents()
+    public void QueuedInstantQuotation_RendersPersistedLeadAndGenerateLeadWithTheSameJourney()
     {
         var leadEvent = new LeadAnalyticsEvent(
-            "quotation_request",
-            "cnc_machining",
+            "instant_3d_quote",
+            "3d_printing",
             "quotation-714",
             hasFiles: true,
-            fileUploadCompleted: true);
+            intent: null,
+            finderPath: null,
+            journeyId: "11111111-2222-3333-4444-555555555555");
         var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
         {
             ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(leadEvent)
@@ -107,10 +109,13 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
             new TempDataDictionaryFactory(provider));
 
         Assert.Contains("window.malievAnalytics.emit", model.QueuedEventScript, StringComparison.Ordinal);
-        Assert.Contains("\"event\":\"request_quote\"", model.QueuedEventScript, StringComparison.Ordinal);
-        Assert.Contains("\"event\":\"file_upload_complete\"", model.QueuedEventScript, StringComparison.Ordinal);
-        Assert.Contains("\"service\":\"cnc_machining\"", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.Contains("\"event\":\"maliev_lead_submitted\"", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.Contains("\"event\":\"generate_lead\"", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.Contains("\"lead_type\":\"instant_3d_quote\"", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.Contains("\"service\":\"3d_printing\"", model.QueuedEventScript, StringComparison.Ordinal);
         Assert.Contains("\"transaction_id\":\"quotation-714\"", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.Equal(2, Regex.Matches(model.QueuedEventScript, "11111111-2222-3333-4444-555555555555").Count);
+        Assert.DoesNotContain("file_upload_completed", model.QueuedEventScript, StringComparison.Ordinal);
         Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -140,11 +145,13 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
     public void QueuedEvent_SaveFailureSuppressesEmissionWithoutBreakingThePage()
     {
         var leadEvent = new LeadAnalyticsEvent(
-            "quotation_request",
+            "instant_3d_quote",
             "3d_printing",
             "quotation-724",
             hasFiles: true,
-            fileUploadCompleted: true);
+            intent: null,
+            finderPath: null,
+            journeyId: "11111111-2222-3333-4444-555555555555");
         var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
         {
             ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(leadEvent)

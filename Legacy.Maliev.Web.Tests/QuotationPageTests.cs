@@ -122,13 +122,13 @@ public sealed class QuotationPageTests
         var analytics = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("713", StringComparison.Ordinal));
         using var analyticsDocument = JsonDocument.Parse(analytics);
         var analyticsEvent = analyticsDocument.RootElement;
-        Assert.Equal("request_quote", analyticsEvent.GetProperty("event").GetString());
-        Assert.Equal("quotation_request", analyticsEvent.GetProperty("intent_type").GetString());
-        Assert.Equal("cnc_machining", analyticsEvent.GetProperty("service").GetString());
+        Assert.Equal("maliev_lead_submitted", analyticsEvent.GetProperty("event").GetString());
+        Assert.Equal("manual_quote", analyticsEvent.GetProperty("lead_type").GetString());
+        Assert.Equal("custom_manufacturing", analyticsEvent.GetProperty("service").GetString());
         Assert.Equal("quotation-713", analyticsEvent.GetProperty("transaction_id").GetString());
-        Assert.Equal("persisted", analyticsEvent.GetProperty("submission_status").GetString());
+        Assert.Equal("persisted", analyticsEvent.GetProperty("lead_status").GetString());
         Assert.True(analyticsEvent.GetProperty("has_files").GetBoolean());
-        Assert.False(analyticsEvent.GetProperty("file_upload_completed").GetBoolean());
+        Assert.False(analyticsEvent.TryGetProperty("file_upload_completed", out _));
         Assert.DoesNotContain("mali@example.com", analytics, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, notifications.Messages.Count);
     }
@@ -151,7 +151,7 @@ public sealed class QuotationPageTests
         var analyticsEvent = analyticsDocument.RootElement;
         Assert.Equal("custom_manufacturing", analyticsEvent.GetProperty("service").GetString());
         Assert.True(analyticsEvent.GetProperty("has_files").GetBoolean());
-        Assert.True(analyticsEvent.GetProperty("file_upload_completed").GetBoolean());
+        Assert.False(analyticsEvent.TryGetProperty("file_upload_completed", out _));
     }
 
     private static QuotationPage CreatePage(

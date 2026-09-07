@@ -53,7 +53,9 @@ internal sealed class CncSubmissionPersistenceCoordinator(
         bool partial = false;
         if (profile is not null)
         {
-            CncProfilePersistenceResult profileResult = await profiles.CompleteAsync(profile, cancellationToken);
+            CncProfilePersistenceResult profileResult = await profiles.CompleteAsync(
+                profile with { QuotationRequestId = requestId },
+                cancellationToken);
             partial = profileResult.Outcome != CncProfilePersistenceOutcome.Completed;
         }
 

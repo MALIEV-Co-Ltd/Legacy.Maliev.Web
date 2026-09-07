@@ -43,16 +43,7 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         if (LeadAnalyticsEventQueue.TryConsume(tempData, out var leadEvent) && leadEvent is not null)
         {
             scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent)});");
-            if (leadEvent.FileUploadCompleted)
-            {
-                var fileUploadEvent = JsonSerializer.Serialize(new
-                {
-                    @event = "file_upload_complete",
-                    service = leadEvent.Service,
-                    transaction_id = leadEvent.TransactionId
-                });
-                scripts.Add($"window.malievAnalytics.emit({fileUploadEvent});");
-            }
+            scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent.BuildGenerateLeadConversionEvent())});");
         }
 
         if (CustomerJourneyAnalyticsEventQueue.TryConsume(tempData, out var journeyEvent)

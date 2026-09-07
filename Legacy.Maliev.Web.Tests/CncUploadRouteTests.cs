@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -30,6 +31,21 @@ public sealed class CncUploadRouteTests(TestingWebApplicationFactory factory)
         using var body = new MultipartFormDataContent();
         using var response = await client.PostAsync($"/InstantQuotation/CNC-Machining?{query}", body);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.DoesNotContain("Set-Cookie", response.Headers.Select(header => header.Key));
+    }
+
+    [Fact]
+    public async Task SubmitRequest_FailsClosedWhenTheReceiptStoreIsNotConfigured()
+    {
+        Assert.NotNull(factory.Services.GetRequiredService<CncSubmissionEndpoint>());
+        using var client = CreateClient();
+        using var body = new MultipartFormDataContent();
+
+        using var response = await client.PostAsync(
+            "/InstantQuotation/CNC-Machining?handler=SubmitRequest",
+            body);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.DoesNotContain("Set-Cookie", response.Headers.Select(header => header.Key));
     }
 

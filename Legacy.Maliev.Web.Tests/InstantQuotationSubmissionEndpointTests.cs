@@ -406,10 +406,10 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var secondGet = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
 
         Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
-        Assert.Contains("\"event\":\"request_quote\"", firstGet, StringComparison.Ordinal);
-        Assert.Contains("\"event\":\"file_upload_complete\"", firstGet, StringComparison.Ordinal);
-        Assert.DoesNotContain("\"event\":\"request_quote\"", secondGet, StringComparison.Ordinal);
-        Assert.DoesNotContain("\"event\":\"file_upload_complete\"", secondGet, StringComparison.Ordinal);
+        Assert.Contains("\"event\":\"maliev_lead_submitted\"", firstGet, StringComparison.Ordinal);
+        Assert.Contains("\"event\":\"generate_lead\"", firstGet, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"event\":\"maliev_lead_submitted\"", secondGet, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"event\":\"generate_lead\"", secondGet, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -656,19 +656,19 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     {
         var serialized = Assert.Single(
             values.Values.OfType<string>(),
-            value => value.Contains("\"event\":\"request_quote\"", StringComparison.Ordinal));
+            value => value.Contains("\"event\":\"maliev_lead_submitted\"", StringComparison.Ordinal));
         using var document = JsonDocument.Parse(serialized);
         var root = document.RootElement;
         Assert.Equal(
-            ["event", "file_upload_completed", "has_files", "intent_type", "service", "submission_status", "transaction_id"],
+            ["event", "has_files", "lead_status", "lead_type", "service", "transaction_id"],
             root.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
-        Assert.Equal("request_quote", root.GetProperty("event").GetString());
-        Assert.Equal("quotation_request", root.GetProperty("intent_type").GetString());
+        Assert.Equal("maliev_lead_submitted", root.GetProperty("event").GetString());
+        Assert.Equal("manual_quote", root.GetProperty("lead_type").GetString());
         Assert.Equal("3d_printing", root.GetProperty("service").GetString());
         Assert.Equal($"quotation-{reference}", root.GetProperty("transaction_id").GetString());
-        Assert.Equal("persisted", root.GetProperty("submission_status").GetString());
+        Assert.Equal("persisted", root.GetProperty("lead_status").GetString());
         Assert.True(root.GetProperty("has_files").GetBoolean());
-        Assert.Equal(fileUploadCompleted, root.GetProperty("file_upload_completed").GetBoolean());
+        Assert.False(root.TryGetProperty("file_upload_completed", out _));
     }
 
     private static string FindRepositoryRoot()

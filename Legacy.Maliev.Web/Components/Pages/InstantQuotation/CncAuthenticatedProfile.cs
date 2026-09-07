@@ -129,14 +129,23 @@ internal sealed class CncAuthenticatedProfile
     {
         var candidate = MergeMissing(submitted);
         foreach (var field in ContactFields) errors.Remove(field);
+        bool valid = TryValidateContact(candidate, errors);
+
+        merged = valid && errors.IsValid ? candidate : null;
+        return merged is not null;
+    }
+
+    internal static bool TryValidateContact(CncSubmission candidate, ModelStateDictionary errors)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(errors);
         foreach (var (field, message) in RequiredFields)
         {
             var value = typeof(CncSubmission).GetProperty(field)!.GetValue(candidate);
             if (!new RequiredAttribute().IsValid(value)) errors.AddModelError(field, message);
         }
 
-        merged = errors.IsValid ? candidate : null;
-        return merged is not null;
+        return errors.IsValid;
     }
 
     private static readonly string[] ContactFields =

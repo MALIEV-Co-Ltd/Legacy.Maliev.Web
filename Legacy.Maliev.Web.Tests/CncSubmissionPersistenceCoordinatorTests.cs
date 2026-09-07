@@ -7,6 +7,36 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class CncSubmissionPersistenceCoordinatorTests
 {
+    [Fact]
+    public async Task CreatedRequest_ProjectsTheConfirmedRequestIdIntoProfilePersistence()
+    {
+        var store = new RecordingReceiptStore();
+        var lease = new CncReceiptClaimLease(
+            store,
+            new CncUploadReceiptClaimSet(
+            [new CncUploadReceiptState("form", "session", "item", "model", "receipt", DateTimeOffset.MaxValue)]),
+            TimeProvider.System);
+        var profiles = new CapturingProfileClient();
+        var events = new List<string>();
+        var coordinator = new CncSubmissionPersistenceCoordinator(
+            new FixedRequestClient(new(CncRequestOutcome.Created, 42)),
+            profiles,
+            new LinkedFileClient(events),
+            new CncNotificationCoordinator(new SuccessfulSignedLinkClient(events), new SuccessfulNotificationClient(events)));
+        var customer = new CustomerAccountDetails(
+            7, "Nat", "V", "Nat V", null, null, null, "n@example.test", null,
+            null, null, null, null, null, null, null, null);
+        var completion = new CncProfileCompletion(
+            "Nat", "V", "n@example.test", "0800000000", null, string.Empty, string.Empty,
+            new(null, "Road", null, "Bangkok", "Bangkok", "10110"), "Thailand", true, null, null);
+
+        var result = await coordinator.ExecuteAsync(
+            ValidSubmission(), lease, Request(), new(0, 7, customer, completion), "session", StartedAt, OperationId, default);
+
+        Assert.Equal(CncSubmissionPersistenceOutcome.Completed, result.Outcome);
+        Assert.Equal(42, profiles.Request?.QuotationRequestId);
+    }
+
     private static readonly Guid JourneyId = Guid.Parse("d00f2ab4-0d1f-4f86-a1aa-c1b8c9486454");
     private static readonly Guid OperationId = Guid.Parse("895b50df-7b2d-47aa-aac0-9a28481da568");
     private static readonly DateTimeOffset StartedAt = new(2026, 9, 7, 8, 0, 0, TimeSpan.Zero);
@@ -141,6 +171,20 @@ public sealed class CncSubmissionPersistenceCoordinatorTests
     {
         public Task<CncProfilePersistenceResult> CompleteAsync(CncProfilePersistenceRequest request, CancellationToken cancellationToken) =>
             throw new Xunit.Sdk.XunitException("Profile persistence must not run before request creation.");
+    }
+
+    private sealed class CapturingProfileClient : ICncProfilePersistenceClient
+    {
+        internal CncProfilePersistenceRequest? Request { get; private set; }
+
+        public Task<CncProfilePersistenceResult> CompleteAsync(CncProfilePersistenceRequest request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(new CncProfilePersistenceResult(
+                request.QuotationRequestId,
+                CncProfilePersistenceOutcome.Completed,
+                CncProfilePersistenceStage.Complete));
+        }
     }
 
     private sealed class UnexpectedFileClient : ICncFileFinalizationClient
