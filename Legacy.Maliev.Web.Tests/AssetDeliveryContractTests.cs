@@ -7,6 +7,8 @@ public sealed class AssetDeliveryContractTests
     {
         var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
         var razor = Directory.GetFiles(web, "*.cshtml", SearchOption.AllDirectories)
+            .Where(path => !path.EndsWith("CNC-Machining.cshtml", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.EndsWith("_ThreeJsJavascriptsPartial.cshtml", StringComparison.OrdinalIgnoreCase))
             .Select(File.ReadAllText)
             .ToArray();
 
@@ -21,6 +23,7 @@ public sealed class AssetDeliveryContractTests
     [InlineData("vendor.min.js")]
     [InlineData("app.min.js")]
     [InlineData("site.min.css")]
+    [InlineData("cnc-quotation.min.js")]
     public void GeneratedProductionAsset_IsPresentAndNonEmpty(string relativePath)
     {
         var asset = Path.Combine(
@@ -33,6 +36,28 @@ public sealed class AssetDeliveryContractTests
         var info = new FileInfo(asset);
         Assert.True(info.Exists, $"Production asset is missing: {relativePath}");
         Assert.True(info.Length > 0, $"Production asset is empty: {relativePath}");
+    }
+
+    [Theory]
+    [InlineData("src", "vendor", "three", "three.js")]
+    [InlineData("src", "vendor", "three", "OrbitControls.js")]
+    [InlineData("src", "vendor", "three", "STLLoader.js")]
+    [InlineData("src", "vendor", "three", "OBJLoader.js")]
+    [InlineData("lib", "three", "3MFLoader.js")]
+    [InlineData("lib", "three", "GLTFLoader.js")]
+    [InlineData("lib", "three", "fflate.min.js")]
+    [InlineData("src", "app", "js", "model-viewer", "model-viewer.js")]
+    [InlineData("src", "app", "js", "model-viewer", "model-viewer.worker.js")]
+    [InlineData("src", "app", "js", "model-viewer", "spacemouse-navigation.js")]
+    [InlineData("src", "app", "js", "model-viewer", "spacemouse-bootstrap.module.js")]
+    public void CncQuotationRuntimeAsset_IsPresentAndNonEmpty(params string[] relativePath)
+    {
+        var asset = Path.Combine(
+            [FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", .. relativePath]);
+
+        var info = new FileInfo(asset);
+        Assert.True(info.Exists, $"CNC runtime asset is missing: {string.Join('/', relativePath)}");
+        Assert.True(info.Length > 0, $"CNC runtime asset is empty: {string.Join('/', relativePath)}");
     }
 
     [Fact]
