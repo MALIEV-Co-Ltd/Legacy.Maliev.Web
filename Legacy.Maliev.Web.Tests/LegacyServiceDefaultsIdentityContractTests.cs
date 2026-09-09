@@ -2,7 +2,9 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
-    private const string ServiceDefaultsCommit = "1a7e4ba3c3dfd8c8793e9ad7da2083dc4df6cf4f";
+    private const string ServiceDefaultsCommit = "9c4ac9d44a08bcd0aa2088348790ab863814669c";
+
+    private const string DotNetPatchVersion = "10.0.12";
 
     [Fact]
     public void WebProject_UsesLegacyServiceDefaultsOnly()
@@ -43,6 +45,31 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         Assert.Contains("path: .dependencies/Legacy.Maliev.CompatibilityContracts", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("MALIEV-Co-Ltd/Maliev.Aspire", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("MALIEV-Co-Ltd/Maliev.MessagingContracts", workflow, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void WebProjects_AlignDirectFrameworkPackagesWithServiceDefaults()
+    {
+        var root = FindRepositoryRoot();
+        var webProject = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Legacy.Maliev.Web.csproj"));
+        var testProject = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web.Tests", "Legacy.Maliev.Web.Tests.csproj"));
+
+        foreach (var package in new[]
+        {
+            "Microsoft.AspNetCore.Authentication.JwtBearer",
+            "Microsoft.AspNetCore.DataProtection.StackExchangeRedis",
+            "Microsoft.AspNetCore.OpenApi",
+            "Microsoft.EntityFrameworkCore",
+            "Microsoft.EntityFrameworkCore.Relational",
+            "Microsoft.Extensions.Caching.StackExchangeRedis",
+            "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore",
+        })
+        {
+            Assert.Contains($"Include=\"{package}\" Version=\"{DotNetPatchVersion}\"", webProject, StringComparison.Ordinal);
+        }
+
+        Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
+        Assert.DoesNotMatch("Microsoft\\.[^\"]+\" Version=\"10\\.0\\.(?:[0-9]|1[01])\"", webProject + testProject);
     }
 
     private static string FindRepositoryRoot()
