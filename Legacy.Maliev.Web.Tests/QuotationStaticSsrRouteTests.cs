@@ -59,6 +59,30 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CountryLookupUnavailable_KeepsQuotationPageAvailable(bool useBlazorRoute)
+    {
+        await using var unavailableFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Quotation", useBlazorRoute.ToString());
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, UnavailableCountryClient>();
+            });
+        });
+        using var client = unavailableFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+
+        using var response = await client.GetAsync("/quotation?culture=en&item=3d-printing");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Could not retrieve countries from the server", source, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -76,5 +100,11 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
             Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
                 [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)],
                 true));
+    }
+
+    private sealed class UnavailableCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>([], false));
     }
 }

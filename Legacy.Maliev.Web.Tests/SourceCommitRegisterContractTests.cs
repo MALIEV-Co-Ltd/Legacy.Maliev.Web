@@ -6,11 +6,11 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed partial class SourceCommitRegisterContractTests
 {
-    private const string SourceCheckpoint = "60c341c3993354f4423b812611e20d74692d9d09";
-    private const int ExpectedCommitCount = 322;
+    private const string SourceCheckpoint = "8f2b647421acae53a0a04f927747652a97bd8714";
+    private const int ExpectedCommitCount = 323;
     private const int FrozenHistoryCommitCount = 286;
     private const string FrozenHistorySha256 = "ebf9de7d1dbde6b281edd2cf836872c92763afde3073c26515efe3b7e89e3fc8";
-    private const string RegisterHistorySha256 = "fef518b339e7d82e83eb33a8a2c7b341b1ce240c7743cc62d90fc06656510d0f";
+    private const string RegisterHistorySha256 = "226eaca3056a900a76266e7cbf68c2b5123981213afc283459caa24a7f4abf0a";
 
     [Fact]
     public void Register_ClassifiesEverySourceCommitWithEvidence()
@@ -39,9 +39,9 @@ public sealed partial class SourceCommitRegisterContractTests
         Assert.Equal(RegisterHistorySha256, ComputeSequenceSha256(commits));
         Assert.Equal(
             [
-                "7e4d22850fb33ee24cd9b6e72a0e386f55f02b4b",
                 "aade6be7c7a8b82d100c30e8a6f5c10a09ab6711",
-                "60c341c3993354f4423b812611e20d74692d9d09"
+                "60c341c3993354f4423b812611e20d74692d9d09",
+                "8f2b647421acae53a0a04f927747652a97bd8714"
             ],
             commits[^3..]);
         Assert.DoesNotContain("- [ ]", register, StringComparison.Ordinal);
