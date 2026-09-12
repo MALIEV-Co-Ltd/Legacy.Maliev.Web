@@ -1,0 +1,17 @@
+{
+  "schema": "MalievPublicAffinePcurveBandFixtures.v1",
+  "generator": "AffinePcurveBand/generate-analytic-compound-fixtures.cpp",
+  "generatorSha256": "fff38a837fce40696b53fc40eeeb97cafd9fd3f6d5e2d706b627815012a1f0c4",
+  "recipeArguments": ["thread-small-bore", "reversed"],
+  "historicalManifest": "AffinePcurveBand/original-analytic-compound-fixtures.json",
+  "historicalManifestSha256": "d816af267a6ca7663e2fef1724329bad08d6ef07c3acdfb60f6d17247a27f1ca",
+  "historicalReceiptSha256": "ab3c717620cc84ad753e0d7ac378db451dd9cc5dee2cb09bc1a627e2fe0709f1",
+  "historicalReceiptUse": "Lineage only, not current acceptance or an active test input. Tests freshly import the retained STEP bytes.",
+  "sources": [{
+    "file": "AffinePcurveBand/analytic-compound-thread-small-bore-reversed.step",
+    "sha256": "30bd4a6363435b125681e26d7d43b7f15e7a124e4bda4f97a9e7a6823bbbc863",
+    "expectedFaces": 24,
+    "expectedSmallBoreDiameterMm": 0.8,
+    "expectedSmallBoreDepthMm": 4
+  }]
+}

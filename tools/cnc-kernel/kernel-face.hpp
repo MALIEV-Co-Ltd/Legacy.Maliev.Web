@@ -43,7 +43,8 @@ inline val Unavailable(const char* reason) {
 }
 #include "kernel-trims.hpp"
 namespace MalievKernel {
-inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIndex, ExportContext& context, bool millimeters=false) {
+inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIndex, ExportContext& context, bool millimeters=false,
+                      int nodeOffset=-1,int nodeCount=-1,int triangleOffset=-1,int triangleCount=-1) {
     const std::string bodyId = "body-" + std::to_string(bodyIndex);
     output.set("bodyId", bodyId);
     output.set("faceId", bodyId + "/face-" + std::to_string(faceIndex));
@@ -105,8 +106,9 @@ inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIn
         bounds.set("method", std::string("exact-bounds-expanded-by-native-topology-tolerance"));
         output.set("toleranceBounds", bounds);
     } else output.set("toleranceBounds", Unavailable("void_or_unbounded_face"));
-    TopLoc_Location meshLocation;
-    Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, meshLocation);
+    const TopLoc_Location& meshLocation=occtFace->KernelTriangulationLocation();
+    const Handle(Poly_Triangulation)& triangulation=occtFace->KernelTriangulation();
+    output.set("nativeTriangulation",TriangulationCorrespondence::Face(face,triangulation,meshLocation,faceId,nodeOffset,nodeCount,triangleOffset,triangleCount));
     if (!triangulation.IsNull() && triangulation->HasUVNodes()) {
         double maxDeviation = 0.0;
         for (int i = 1; i <= triangulation->NbNodes(); ++i) {
@@ -172,6 +174,6 @@ inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIn
         output.set("support", Unavailable("kernel_surface_export_failed"));
         output.set("bounds", Unavailable("kernel_surface_export_failed"));
     }
-    context.WriteTrims(occtFace->KernelFace(), output,millimeters);
+    context.WriteTrims(occtFace->KernelFace(), output,millimeters,occtFace->KernelTriangulation(),occtFace->KernelTriangulationLocation());
 }
 }

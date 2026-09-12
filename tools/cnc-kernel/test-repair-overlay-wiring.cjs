@@ -7,6 +7,17 @@ const source = fs.mkdtempSync(path.join(os.tmpdir(), 'cnc-overlay-wiring-'));
 try {
   const destination = path.join(source, 'occt-import-js', 'src');
   fs.mkdirSync(destination, { recursive: true });
+  // Repair helpers depend on headers supplied by the preceding real overlays.
+  // Exercise their actual copy blocks, not a duplicated test-only file list.
+  const base = fs.readFileSync(path.join(__dirname, 'apply-overlay.cjs'), 'utf8');
+  const baseStart = base.indexOf("fs.copyFileSync(path.join(__dirname, 'kernel-face.hpp')");
+  const baseEnd = base.indexOf('child.execFileSync(process.execPath', baseStart);
+  assert(baseStart >= 0 && baseEnd > baseStart, 'actual base overlay copy block exists');
+  vm.runInNewContext(base.slice(baseStart, baseEnd), { fs, path, source, __dirname });
+  const document = fs.readFileSync(path.join(__dirname, 'apply-document-overlay.cjs'), 'utf8');
+  const documentStart = document.indexOf("for (const file of ['kernel-document.hpp'");
+  assert(documentStart >= 0, 'actual document overlay copy block exists');
+  vm.runInNewContext(document.slice(documentStart), { fs, path, source, __dirname });
   const overlay = fs.readFileSync(path.join(__dirname, 'apply-repair-overlay.cjs'), 'utf8');
   const start = overlay.indexOf("fs.copyFileSync(path.join(__dirname,'kernel-native-interpretation-export.hpp')");
   assert(start >= 0, 'actual final overlay copy block exists');

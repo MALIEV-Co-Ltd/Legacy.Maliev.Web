@@ -3,6 +3,7 @@
 #include "kernel-rotational-band.hpp"
 // Native OCCT topology only. Included after kernel-face.hpp's scalar helpers.
 #include <BRep_Tool.hxx>
+#include "kernel-triangulation-correspondence.hpp"
 #include <BRepTools.hxx>
 #include <BRepTools_WireExplorer.hxx>
 #include <TopoDS.hxx>
@@ -190,7 +191,8 @@ struct ExportContext {
         o.set("status",std::string(valid?"complete":"partial")); complete=complete&&valid;
         return i;
     }
-    void WriteTrims(const TopoDS_Face& original,val& output,bool millimeters=false) {
+    void WriteTrims(const TopoDS_Face& original,val& output,bool millimeters=false,
+                    const Handle(Poly_Triangulation)& displayMesh=Handle(Poly_Triangulation)(),const TopLoc_Location& displayLocation=TopLoc_Location()) {
         sourceFaces.push_back(original); sourceFaceRecords.push_back(output);
         val trims=val::object(),wires=val::array(); output.set("trims",trims);
         trims.set("status",std::string("partial")); trims.set("wires",wires);
@@ -244,6 +246,7 @@ struct ExportContext {
                     auto nativeCurve=BRep_Tool::CurveOnSurface(edgeUse,face,first,last,&stored);
                     val pcurve=nativeCurve.IsNull()?Unavailable("missing_pcurve"):Curve(Geom2dAdaptor_Curve(nativeCurve));
                     use.set("pcurve",pcurve); use.set("range",Range(first,last)); use.set("isStored",stored);
+                    use.set("triangulationPolygon",TriangulationCorrespondence::Polygon(edgeUse,displayMesh,displayLocation,faceId,useId,prefix+"/edge-"+std::to_string(index),first,last));
                     const bool oriented=edgeUse.Orientation()==TopAbs_FORWARD||edgeUse.Orientation()==TopAbs_REVERSED;
                     const bool useComplete=oriented&&Exact(pcurve)&&std::isfinite(first)&&std::isfinite(last)&&!startId.empty()&&!endId.empty()&&edgeRecords[index-1]["status"].as<std::string>()=="complete";
                     use.set("status",std::string(useComplete?"complete":"partial")); wireComplete=wireComplete&&useComplete;

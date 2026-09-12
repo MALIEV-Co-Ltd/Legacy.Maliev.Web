@@ -717,6 +717,52 @@ inline std::vector<std::string> MemberSet(const std::string &s) {
   std::sort(v.begin(), v.end());
   return v;
 }
+inline bool SourceItemMembershipPreserved(const Boundary &boundary,
+                                          const Item &item) {
+  if (item.original.ShapeType() != TopAbs_EDGE)
+    return MemberSet(item.before.membership) == MemberSet(item.after.membership);
+  // Capture retains cumulative occurrence orientation for raw diagnostics.
+  // Only an F/R edge parent can be inverted to its local FORWARD convention;
+  // INTERNAL/EXTERNAL composition is not invertible and is not admitted here.
+  auto local = [&](const State &state,
+                   std::vector<std::pair<int, int>> &vertices) {
+    if (state.orientation != TopAbs_FORWARD && state.orientation != TopAbs_REVERSED)
+      return false;
+    std::istringstream input(state.membership);
+    std::string token;
+    while (input >> token) {
+      const auto colon = token.find(':');
+      if (colon == std::string::npos || colon == 0 || colon + 2 != token.size())
+        return false;
+      size_t id = 0;
+      for (size_t i = 0; i < colon; ++i) {
+        if (token[i] < '0' || token[i] > '9') return false;
+        const size_t digit = static_cast<size_t>(token[i] - '0');
+        if (id > (std::numeric_limits<size_t>::max() - digit) / 10) return false;
+        id = id * 10 + digit;
+      }
+      if (id >= boundary.items.size()) return false;
+      const auto &vertex = boundary.items[id];
+      if (vertex.original.IsNull() || vertex.mapped.IsNull() ||
+          vertex.original.ShapeType() != TopAbs_VERTEX ||
+          vertex.mapped.ShapeType() != TopAbs_VERTEX) return false;
+      int orientation = token[colon + 1] - '0';
+      if (orientation != TopAbs_FORWARD && orientation != TopAbs_REVERSED)
+        return false;
+      if (state.orientation == TopAbs_REVERSED)
+        orientation = orientation == TopAbs_FORWARD ? TopAbs_REVERSED : TopAbs_FORWARD;
+      vertices.emplace_back(static_cast<int>(id), orientation);
+      if (vertices.size() > 2) return false;
+    }
+    // A closed edge may use the same vertex twice, but the local endpoint
+    // occurrences must remain one FORWARD and one REVERSED, with multiplicity.
+    if (vertices.size() != 2 || vertices[0].second == vertices[1].second) return false;
+    std::sort(vertices.begin(), vertices.end());
+    return true;
+  };
+  std::vector<std::pair<int, int>> before, after;
+  return local(item.before, before) && local(item.after, after) && before == after;
+}
 inline bool SameCycle(const std::vector<std::pair<int, int>> &a,
                       const std::vector<std::pair<int, int>> &b) {
   if (a.size() != b.size())
@@ -1318,7 +1364,7 @@ inline ConeRegionResult AssessSourceConeRegion(Boundary &b, const Item &face) {
         retained.push_back(loop.uses[index]);
         const auto &source = b.items[use.edge];
         if (!source.sourceGeometryUnchanged ||
-            MemberSet(source.before.membership) != MemberSet(source.after.membership) ||
+            !SourceItemMembershipPreserved(b, source) ||
             source.before.first != use.first || source.before.last != use.last)
           throw Standard_Failure("cone source curve or full range changed");
         use.source = source.before.curve;
@@ -1809,7 +1855,7 @@ inline void End(const TopoDS_Shape &result,
       }
       if (item.original.ShapeType() == TopAbs_WIRE)
         continue;
-      if (MemberSet(item.before.membership) != MemberSet(item.after.membership))
+      if (!SourceItemMembershipPreserved(b, item))
         ++b.changedMembership;
     }
   }

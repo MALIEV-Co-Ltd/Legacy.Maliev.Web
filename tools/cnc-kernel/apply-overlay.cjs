@@ -16,7 +16,7 @@ function change(name, replacements) {
 }
 change('importer-utils.hpp', [['class OcctFace : public Face',
   'struct KernelMeshSource {\n    virtual const TopoDS_Shape& KernelShape() const = 0;\n    virtual bool IsStandaloneFaceGroup() const = 0;\n    virtual ~KernelMeshSource() = default;\n};\n\nclass OcctFace : public Face'], ['    OcctFace (const TopoDS_Face& face);',
-  '    OcctFace (const TopoDS_Face& face);\n    const TopoDS_Face& KernelFace () const { return face; }']]);
+  '    OcctFace (const TopoDS_Face& face);\n    const TopoDS_Face& KernelFace () const { return face; }\n    const Handle(Poly_Triangulation)& KernelTriangulation () const { return triangulation; }\n    const TopLoc_Location& KernelTriangulationLocation () const { return location; }']]);
 for (const [file, prefix] of [['importer-xcaf.cpp', 'Xcaf'], ['importer-brep.cpp', 'Brep']]) {
   change(file, ['ShapeMesh', 'StandaloneFacesMesh'].map(suffix => {
     const name = prefix + suffix;
@@ -29,7 +29,7 @@ change('js-interface.cpp', [
   ['            int brepFaceCount = 0;',
    '            int brepFaceCount = 0;\n            MalievKernel::ExportContext kernelContext(mMeshCount);'],
   ['                brepFaceObj.set ("first", triangleOffset);',
-   '                MalievKernel::WriteFace(face, brepFaceObj, mMeshCount, brepFaceCount, kernelContext);\n                brepFaceObj.set ("first", triangleOffset);'],
+   '                MalievKernel::WriteFace(face, brepFaceObj, mMeshCount, brepFaceCount, kernelContext, false, vertexOffset, vertexCount - vertexOffset, triangleOffset, triangleCount - triangleOffset);\n                brepFaceObj.set ("first", triangleOffset);'],
   ['            meshObj.set ("brep_faces", brepFaceArr);',
    '            meshObj.set ("brep_faces", brepFaceArr);\n            kernelContext.Finish(meshObj);\n            MalievKernel::WriteBody(mesh, meshObj, kernelContext);\n            meshObj.set ("bodyId", "body-" + std::to_string(mMeshCount));'],
   ['    resultObj.set ("root", rootNodeObj);', `    emscripten::val provenance = emscripten::val::object();
@@ -46,6 +46,8 @@ change('js-interface.cpp', [
     resultObj.set ("root", rootNodeObj);`]
 ]);
 fs.copyFileSync(path.join(__dirname, 'kernel-face.hpp'), path.join(source, 'occt-import-js/src/kernel-face.hpp'));
+fs.copyFileSync(path.join(__dirname, 'kernel-stock-frames.hpp'), path.join(source, 'occt-import-js/src/kernel-stock-frames.hpp'));
+fs.copyFileSync(path.join(__dirname, 'kernel-triangulation-correspondence.hpp'), path.join(source, 'occt-import-js/src/kernel-triangulation-correspondence.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-circular-revolution.hpp'), path.join(source, 'occt-import-js/src/kernel-circular-revolution.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-trims.hpp'), path.join(source, 'occt-import-js/src/kernel-trims.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-body.hpp'), path.join(source, 'occt-import-js/src/kernel-body.hpp'));
@@ -53,3 +55,4 @@ fs.copyFileSync(path.join(__dirname, 'kernel-region-measures.hpp'), path.join(so
 fs.copyFileSync(path.join(__dirname, 'kernel-rotational-band.hpp'), path.join(source, 'occt-import-js/src/kernel-rotational-band.hpp'));
 child.execFileSync(process.execPath, [path.join(__dirname, 'apply-document-overlay.cjs'), source], { stdio: 'inherit' });
 child.execFileSync(process.execPath, [path.join(__dirname, 'apply-repair-overlay.cjs'), source], { stdio: 'inherit' });
+child.execFileSync(process.execPath, [path.join(__dirname, 'apply-target-query-overlay.cjs'), source], { stdio: 'inherit' });
