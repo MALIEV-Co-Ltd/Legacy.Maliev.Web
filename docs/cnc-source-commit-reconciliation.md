@@ -198,6 +198,10 @@ serves the worker from that same workspace.
 
 The adaptation preserves the source contract while using the existing Legacy
 `WebApplicationFactory<Program>` and Blazor/Razor host instead of recreating the
-.NET 8 fixture. Focused identity and native-browser validation passed five tests
-after a zero-warning, zero-error Release build. No application runtime behavior,
-deployment configuration, database, or production environment is changed.
+.NET 8 fixture. The factory retains its single public parameterless constructor
+for xUnit collection-fixture discovery while the owned browser fixture uses an
+internal content-root constructor. Focused identity, native-browser, and source
+register validation passed 6 tests; the complete Web suite passed 2,014 of 2,014
+tests after a zero-warning, zero-error Release build. No application runtime
+behavior, deployment configuration, database, or production environment is
+changed.
