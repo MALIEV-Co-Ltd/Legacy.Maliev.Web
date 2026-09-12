@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
 const root = path.resolve(__dirname, '../../Legacy.Maliev.Web/wwwroot');
-const candidate = path.join(root, 'lib/occt-cnc/0f4759e678ea-191da5c8b62d');
+const candidate = require('./cnc-native-region-fixtures.cjs').asset;
 function runtime() {
     const c = vm.createContext({ console, TextEncoder, TextDecoder, crypto: webcrypto }); c.self = c;
     for (const name of ['cnc-plan-contracts', 'cnc-cad-document', 'cnc-native-topology.worker', 'cnc-topology.worker']) {

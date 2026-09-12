@@ -83,6 +83,11 @@
             feature.axialIntervalMm = b.profileInterval.axialMm; feature.boundaryIds = boundaries.map(function (boundary) { return boundary.boundaryId; });
             return feature;
         });
+        var threads = root.CncNativeThreadRecognition.recognize(topology, projection);
+        var threadOwned = new Set(threads.features.flatMap(function (f) { return f.primaryFaceIds; }));
+        features = features.filter(function (f) { return !threadOwned.has(f.primaryFaceIds[0]); });
+        features.forEach(function (f) { if (threads.unresolvedByFace[f.primaryFaceIds[0]]) { f.reason = threads.unresolvedByFace[f.primaryFaceIds[0]]; } });
+        features = features.concat(threads.features).sort(function (a, b) { return a.featureId.localeCompare(b.featureId); });
         var owners = features.flatMap(function (f) { return f.primaryFaceIds; });
         if (new Set(owners).size !== projection.regions.length || owners.length !== projection.regions.length) { throw new Error('native_owner_partition_invalid'); }
         var result = { contract: 'NativeFeatureDiagnostics.v1', diagnosticOnly: true, automaticPlanningEligible: false,

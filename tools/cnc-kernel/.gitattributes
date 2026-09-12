@@ -1,0 +1,3 @@
+# Native container runner must remain executable shell text after checkout.
+test-thread-transform-native.sh text eol=lf
+test-source-declared-cycle-native.sh text eol=lf

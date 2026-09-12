@@ -1,6 +1,7 @@
 #pragma once
 // MALIEV extension to occt-import-js, LGPL-2.1 (see upstream LICENSE.md).
 #include "importer-utils.hpp"
+#include "kernel-circular-revolution.hpp"
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
@@ -26,6 +27,14 @@ inline void Frame(val& o, const gp_Ax3& frame) {
     o.set("xDirection", Triple(frame.XDirection()));
     o.set("yDirection", Triple(frame.YDirection()));
     o.set("direct", frame.Direct());
+}
+inline void RevolutionRecord(val& o,const MalievCircularRevolution::CircleRevolution& r) {
+    o.set("type",std::string("circular_revolution"));
+    o.set("origin",Triple(r.axis.Location())); o.set("axis",Triple(r.axis.Direction()));
+    val circle=val::object(); circle.set("status",std::string("exact")); circle.set("type",std::string("circle"));
+    circle.set("origin",Triple(r.circle.Location())); circle.set("xDirection",Triple(r.circle.XAxis().Direction()));
+    circle.set("yDirection",Triple(r.circle.YAxis().Direction())); circle.set("radius",r.circle.Radius());
+    o.set("basisCircle",circle);
 }
 inline val Unavailable(const char* reason) {
     val o = val::object(); o.set("status", std::string("unavailable"));
@@ -147,6 +156,12 @@ inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIn
         gp_Torus p = surface.Torus(); support.set("type", std::string("torus"));
         Frame(support,p.Position()); support.set("majorRadius",p.MajorRadius());
         support.set("minorRadius",p.MinorRadius()); break;
+    }
+    case GeomAbs_SurfaceOfRevolution: {
+        MalievCircularRevolution::CircleRevolution r;
+        if (MalievCircularRevolution::Read(surface,r)) RevolutionRecord(support,r);
+        else { support.set("type",std::string("unsupported")); support.set("reason",std::string("unsupported_revolution_basis")); }
+        break;
     }
     default:
         support.set("type", std::string("unsupported"));

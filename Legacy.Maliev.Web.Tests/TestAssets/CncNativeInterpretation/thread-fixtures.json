@@ -1,0 +1,57 @@
+{
+  "contract": "PublicNativeThreadFixtures.v1",
+  "generator": "generate-thread-fixtures.cpp",
+  "generatorSha256": "25980783122324142b21740f8748030cb5561b591c64d6ed687eacb552cfdbb3",
+  "generatorImage": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "occtRevision": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "sources": [{
+    "file": "thread-external-rh.step",
+    "sha256": "4c83a7ba4c6eb7a89b2ead8efb8cf69c8c518a155035c1e3f1dcc93f946d967a",
+    "producingGeneratorSha256": "6914de9d05faca8807c40aa7bf1208f32a3e1fadb9d68580e98b43607ec3207f",
+    "definition": "Independent sewn external thread, 1 mm signed RH lead, one start, 4 mm axial depth; radius 6.3705/6.942 mm, 60 degree ruled profile, 0.125 mm crest width. Each full turn uses 64 cubic Hermite spans. Explicit construction vertex/sewing tolerance 0.00001 mm. No boolean or sweep and no customer CAD.",
+    "faces": 23,
+    "expectedThreads": 1
+  }, {
+    "file": "thread-external-lh.step",
+    "producingGeneratorSha256": "9f77748d002d9aa5fb39ad3f1d4827a75c61b853deec94b1317e592fa61794c7",
+    "sha256": "25034eaf58ea2b3a1040347e47032156cb604584ca78768663716062da3a6433",
+    "definition": "Same independent 4 mm external thread with signed lead -1 mm; intrinsic LH, not a reflected RH solid.",
+    "faces": 23,
+    "expectedThreads": 1
+  }, {
+    "file": "thread-nonhelical-connector.step",
+    "producingGeneratorSha256": "9f77748d002d9aa5fb39ad3f1d4827a75c61b853deec94b1317e592fa61794c7",
+    "sha256": "09d505c55f5c346db14eb5f72f6378416d351ba69ec08e487028e3a7f03f0c9e",
+    "definition": "Two finite RH thread regions joined by a zero-advance ruled radial connector. Exact cylindrical trim unions share connector circular edges and separate helical edges. Closed valid solid; current production interpretation unavailable. Not a trusted ownership counterexample.",
+    "faces": 31,
+    "expectedInterpretation": "review-required"
+  }, {
+    "file": "thread-external-rh-placed.step",
+    "producingGeneratorSha256": "25980783122324142b21740f8748030cb5561b591c64d6ed687eacb552cfdbb3",
+    "sha256": "6eee545492c1b44a61cc6ced0fbe3a3f3d19ab177a34281e672d701558c43ccd",
+    "definition": "RH reference under proper rotation about (1,2,3) by 0.713 rad and translation (17,-23,41) mm. Required invariance currently blocked by native correlated interval resource limit.",
+    "faces": 23,
+    "expectedInterpretation": "review-required"
+  }, {
+    "file": "thread-external-rh-reversed.step",
+    "producingGeneratorSha256": "25980783122324142b21740f8748030cb5561b591c64d6ed687eacb552cfdbb3",
+    "sha256": "0e3126583501fa8ac4d47c1578a009b8236b34ac7cbe34aa040da6681073a25c",
+    "definition": "Same physical RH reference with proper cylinder axis reversed, pcurve range endpoints/traversals reversed, and flank U rows reversed. Required invariance currently blocked by native metric assessment.",
+    "faces": 23,
+    "expectedInterpretation": "review-required"
+  }, {
+    "file": "thread-external-rh-placed-reversed.step",
+    "producingGeneratorSha256": "9f77748d002d9aa5fb39ad3f1d4827a75c61b853deec94b1317e592fa61794c7",
+    "sha256": "e10f3d0df3e68196ca2014ae503cf7625c9c3eaf7797e27032f95123e326786b",
+    "definition": "Combined proper placement and representation reversals of the RH reference; current native metric assessment unavailable.",
+    "faces": 23,
+    "expectedInterpretation": "review-required"
+  }, {
+    "file": "thread-external-lh-placed-reversed.step",
+    "producingGeneratorSha256": "9f77748d002d9aa5fb39ad3f1d4827a75c61b853deec94b1317e592fa61794c7",
+    "sha256": "2b93047e41b9e27b8da98e4fdcd6552c04113b7d6747e3de81ec8f2f28da3484",
+    "definition": "Combined proper placement and representation reversals of the independent LH reference; current native metric assessment unavailable.",
+    "faces": 23,
+    "expectedInterpretation": "review-required"
+  }]
+}

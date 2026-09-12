@@ -28,6 +28,8 @@ function ImportCncGeometryModule() {
     importScripts('/src/app/js/cnc-quotation/cnc-native-topology.worker.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-topology.worker.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-native-regions.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-native-thread-evidence.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-feature-recognition-thread.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-feature-recognition-prismatic.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-native-dispatch.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-feature-graph.worker.js' + query);

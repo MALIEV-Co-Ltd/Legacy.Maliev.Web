@@ -56,6 +56,48 @@ inline emscripten::val ExportState(const State &s) {
   v.set("rangeFirst", s.first);
   v.set("rangeLast", s.last);
   v.set("flags", s.flags);
+  v.set("orientation", s.orientation);
+  auto loops = emscripten::val::array();
+  auto exportUses = [](const std::vector<LoopUseDiagnostic> &uses) {
+    auto out = emscripten::val::array();
+    for (size_t i = 0; i < uses.size(); ++i) {
+      const auto &use = uses[i];
+      auto row = emscripten::val::object();
+      row.set("nativeItemId", use.item);
+      row.set("orientation", use.orientation);
+      row.set("startVertexItemId", use.startVertex);
+      row.set("endVertexItemId", use.endVertex);
+      row.set("pcurveAvailable", use.pcurveAvailable);
+      row.set("finiteIncreasingRange", use.finiteRange);
+      row.set("first", std::isfinite(use.first) ? emscripten::val(use.first) : emscripten::val::null());
+      row.set("last", std::isfinite(use.last) ? emscripten::val(use.last) : emscripten::val::null());
+      row.set("stored", use.stored);
+      row.set("seam", use.seam);
+      row.set("pcurveType", use.pcurveType);
+      row.set("pcurveGeometry", use.pcurveGeometry);
+      out.set(i, row);
+    }
+    return out;
+  };
+  for (size_t i = 0; i < s.faceLoops.size(); ++i) {
+    const auto &loop = s.faceLoops[i];
+    auto row = emscripten::val::object(), topologyOnly = emscripten::val::array();
+    row.set("diagnosticsCaptured", loop.diagnosticsCaptured);
+    row.set("wireOrientation", static_cast<int>(loop.nativeWire.Orientation()));
+    row.set("complete", loop.complete);
+    row.set("faceAwareExplorer", loop.faceAwareExplorer);
+    row.set("direct", exportUses(loop.directDiagnostics));
+    row.set("visited", exportUses(loop.visitedDiagnostics));
+    for (size_t j = 0; j < loop.topologyOnlyUses.size(); ++j) {
+      auto use = emscripten::val::object();
+      use.set("nativeItemId", loop.topologyOnlyUses[j].first);
+      use.set("orientation", loop.topologyOnlyUses[j].second);
+      topologyOnly.set(j, use);
+    }
+    row.set("topologyOnlyVisited", topologyOnly);
+    loops.set(i, row);
+  }
+  v.set("faceLoops", loops);
   return v;
 }
 inline bool CompleteSourceBoundCoverage(const Evidence &e) {

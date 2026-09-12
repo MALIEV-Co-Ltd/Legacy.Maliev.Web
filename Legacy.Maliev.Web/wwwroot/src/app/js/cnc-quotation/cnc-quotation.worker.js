@@ -13,6 +13,8 @@ importScripts(
     '/src/app/js/cnc-quotation/cnc-native-topology.worker.js' + query,
     '/src/app/js/cnc-quotation/cnc-topology.worker.js' + query,
     '/src/app/js/cnc-quotation/cnc-native-regions.js' + query,
+    '/src/app/js/cnc-quotation/cnc-native-thread-evidence.js' + query,
+    '/src/app/js/cnc-quotation/cnc-feature-recognition-thread.js' + query,
     '/src/app/js/cnc-quotation/cnc-feature-recognition-prismatic.js' + query,
     '/src/app/js/cnc-quotation/cnc-native-dispatch.js' + query,
     '/src/app/js/cnc-quotation/cnc-feature-graph.worker.js' + query,

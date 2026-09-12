@@ -235,6 +235,12 @@ inline PointJet CurveJet(const CurveBound &curve, Interval range) {
   return curve.is2d ? result : PlacedJet(result, curve.location);
 }
 inline PointJet SurfaceJet(const SurfaceBound &surface, Jet u, Jet v) {
+  GeomAdaptor_Surface revolutionAdaptor(surface.surface);
+  if (revolutionAdaptor.GetType() == GeomAbs_SurfaceOfRevolution) {
+    MalievCircularRevolution::CircleRevolution r;
+    if (!MalievCircularRevolution::Read(revolutionAdaptor,r)) throw Standard_Failure("unsupported revolution jet basis");
+    return PlacedJet(MalievCircularRevolution::Image(r,Cosine(u),Sine(u),Cosine(v),Sine(v)),surface.location);
+  }
   PointJet result;
   if (surface.spline) {
     if (u.value.lo < surface.u.first || u.value.hi > surface.u.last ||

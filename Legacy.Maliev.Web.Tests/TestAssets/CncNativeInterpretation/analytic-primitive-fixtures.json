@@ -1,0 +1,115 @@
+{
+  "schema": "PublicNativeAnalyticRoleFixtures.v1",
+  "generator": "generate-analytic-primitive-fixtures.cpp",
+  "generatorSha256": "ebea3bec7872deebb7a3f431584bbd4a2dd13038561af5858f55aaf6c510c595",
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "construction": "Independent analytic primitives and booleans; BRepCheck and positive volume before 17-digit export. Prior revolved compatibility assets remain unchanged.",
+  "placement": {
+    "axis": [
+      1,
+      2,
+      3
+    ],
+    "angleRadians": 0.713,
+    "translationMm": [
+      17,
+      -23,
+      41
+    ]
+  },
+  "reversal": "Reversed primitive support axis with cone endpoint radii swapped, preserving physical geometry but reversing native parameterization.",
+  "sources": [
+    {
+      "file": "analytic-primitive-countersink-placed.step",
+      "sha256": "dc55b4280b0f9b2778165c6b6983701237f3be69e259d16d5650ffc24b6213e8",
+      "bytes": 16575
+    },
+    {
+      "file": "analytic-primitive-countersink-reversed.step",
+      "sha256": "828dc9e73a32156cc969f0de83dabc0a3f57a75a421e77f51fbfc02880e0e54c",
+      "bytes": 16612
+    },
+    {
+      "file": "analytic-primitive-countersink.step",
+      "sha256": "8bcf2825e02d068ed70a745b01579612a87c084a1beb6b353ad5aab4a1f4d7aa",
+      "bytes": 16554
+    },
+    {
+      "file": "analytic-primitive-drill-point-placed.step",
+      "sha256": "3d46e74dbbf124c71207fac2d7531ed2700cf675c9ae7dd1ceb537d8f84f57f1",
+      "bytes": 15036
+    },
+    {
+      "file": "analytic-primitive-drill-point-reversed.step",
+      "sha256": "f53d5cfa4737d4458892cc7977354d8be8c0bbe4074305648fe1874cf4a9474b",
+      "bytes": 15155
+    },
+    {
+      "file": "analytic-primitive-drill-point.step",
+      "sha256": "0439422d0e4fc9477dc92636a1f5eb2580c0c3730a6cc2758503bb614d25f097",
+      "bytes": 15112
+    },
+    {
+      "file": "analytic-primitive-open-bore-placed.step",
+      "sha256": "393f70efcb3770662799baed3eeee2039a0d6bf19cb6ecd28074a7aec1bc008f",
+      "bytes": 31856
+    },
+    {
+      "file": "analytic-primitive-open-bore-reversed.step",
+      "sha256": "a6dac0f40b6500e746f4d2ab5aad99c0f41a378e67a8c38490c54accf42a60d9",
+      "bytes": 33893
+    },
+    {
+      "file": "analytic-primitive-open-bore.step",
+      "sha256": "18299761197109770c30b329a219feeca36057deb54e871769bf334cfd030832",
+      "bytes": 32008
+    },
+    {
+      "file": "analytic-primitive-outside-chamfer-placed.step",
+      "sha256": "b0e2bec6b1a3e9e7c483737a5b5c4a42ada712291e4db00b7c90e18ea91c23a6",
+      "bytes": 11376
+    },
+    {
+      "file": "analytic-primitive-outside-chamfer-reversed.step",
+      "sha256": "88f8ce83ac50ec8672ccdb01823c588d841701e7147e9088ef5d659949836efe",
+      "bytes": 11464
+    },
+    {
+      "file": "analytic-primitive-outside-chamfer.step",
+      "sha256": "a67fb9554c764a7f2aa109c180b85577ce30ddbc4ad58a4f3831e2d54a508ca8",
+      "bytes": 11458
+    },
+    {
+      "file": "analytic-primitive-rotational-groove-placed.step",
+      "sha256": "81a321d4db25d51531293502fe72e2efec63db6d39c735cccca0e4e0c97b9c26",
+      "bytes": 14952
+    },
+    {
+      "file": "analytic-primitive-rotational-groove-reversed.step",
+      "sha256": "e1f4bd6dfb2a4dbfecc679122c521b8f39013dae7dbf16c87aed0c8bb808199c",
+      "bytes": 14965
+    },
+    {
+      "file": "analytic-primitive-rotational-groove.step",
+      "sha256": "b4a2d02ccb9b5b5cc5ec1ad15c5a1d0a6fbdcc69af17c79b2627490a572376f0",
+      "bytes": 14930
+    },
+    {
+      "file": "analytic-primitive-tapered-through-placed.step",
+      "sha256": "e9e8eb7e0deeccd5a8fd5aab8ad4aee59d2c688da90d01918cf4ad8eb25e870c",
+      "bytes": 13110
+    },
+    {
+      "file": "analytic-primitive-tapered-through-reversed.step",
+      "sha256": "74fd02654f7e69b795ff6ed4a244f6efa70f8d85d2cf01d7c01fa5f60d7899f9",
+      "bytes": 13142
+    },
+    {
+      "file": "analytic-primitive-tapered-through.step",
+      "sha256": "2fcfe54d0a33325deb987818bad15fe82f918435c5cc4f64311a6ee35c3c87ea",
+      "bytes": 13093
+    }
+  ]
+}

@@ -121,6 +121,11 @@ inline val SurfaceBasis(const Handle(Geom_Surface)& native) {
     case GeomAbs_Cone: { auto p=s.Cone(); o.set("type",std::string("cone")); Frame(o,p.Position()); o.set("referenceRadius",p.RefRadius()); o.set("semiAngleRadians",p.SemiAngle()); break; }
     case GeomAbs_Sphere: { auto p=s.Sphere(); o.set("type",std::string("sphere")); Frame(o,p.Position()); o.set("radius",p.Radius()); break; }
     case GeomAbs_Torus: { auto p=s.Torus(); o.set("type",std::string("torus")); Frame(o,p.Position()); o.set("majorRadius",p.MajorRadius()); o.set("minorRadius",p.MinorRadius()); break; }
+    case GeomAbs_SurfaceOfRevolution: {
+        MalievCircularRevolution::CircleRevolution r;
+        if(!MalievCircularRevolution::Read(s,r)) return Unavailable("unsupported_native_revolution_basis");
+        RevolutionRecord(o,r); break;
+    }
     case GeomAbs_BezierSurface: {
         auto p=s.Bezier(); o.set("type",std::string("bezier")); SurfacePoles(o,p);
         o.set("uPeriodic",false); o.set("vPeriodic",false); break;
