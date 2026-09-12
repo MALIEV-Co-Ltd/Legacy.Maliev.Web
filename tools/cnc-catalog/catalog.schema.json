@@ -1,0 +1,579 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MALIEV local manufacturer tool catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "checkedOn",
+    "units",
+    "purpose",
+    "sources",
+    "tools",
+    "requestedCoverage",
+    "quotingAssemblyAssumptions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "maliev.cnc-tool-catalog.v1"
+    },
+    "checkedOn": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "units": {
+      "const": "millimeter"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "publisher",
+          "sourceUrl",
+          "checkedOn",
+          "status",
+          "notes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "publisher": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceUrl": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "checkedOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "status": {
+            "enum": [
+              "checked_primary_source",
+              "unavailable"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "family",
+          "variant",
+          "manufacturer",
+          "series",
+          "orderCode",
+          "recordStatus",
+          "geometry",
+          "thread",
+          "flutes",
+          "toolMaterial",
+          "surfaceTreatment",
+          "sourceEvidence",
+          "machiningAuthorized",
+          "notes",
+          "threadUsage"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "family": {
+            "enum": [
+              "face_mill",
+              "flat_end_mill",
+              "ball_end_mill",
+              "spot_drill",
+              "hss_drill",
+              "engraving_v_bit",
+              "metric_tap",
+              "imperial_tap",
+              "thread_mill"
+            ]
+          },
+          "variant": {
+            "type": "string",
+            "minLength": 1
+          },
+          "manufacturer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "orderCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "recordStatus": {
+            "enum": [
+              "source_verified",
+              "requested_unverified"
+            ]
+          },
+          "geometry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "diameterMm",
+              "fluteLengthMm",
+              "overallLengthMm",
+              "shankDiameterMm",
+              "underNeckLengthMm",
+              "neckDiameterMm",
+              "ballRadiusMm",
+              "includedAngleDegrees",
+              "pointLengthMm",
+              "pointDiameterMm",
+              "maxAxialDepthMm",
+              "maxCuttingDiameterMm",
+              "connectionBoreDiameterMm",
+              "functionalLengthMm",
+              "threadLengthMm",
+              "minimumDrillHoleDiameterMm",
+              "maximumThreadDepthMm"
+            ],
+            "properties": {
+              "diameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "fluteLengthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "overallLengthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "shankDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "underNeckLengthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "neckDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "ballRadiusMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "includedAngleDegrees": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "pointLengthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "pointDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "maxAxialDepthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "maxCuttingDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "connectionBoreDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "functionalLengthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "threadLengthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "minimumDrillHoleDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "maximumThreadDepthMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              }
+            }
+          },
+          "thread": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "designation",
+              "standard",
+              "nominalDiameterMm",
+              "pitchMm",
+              "threadsPerInch"
+            ],
+            "properties": {
+              "designation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "standard": {
+                "enum": [
+                  "ISO_metric",
+                  "UNC",
+                  "UNF"
+                ]
+              },
+              "nominalDiameterMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "pitchMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "threadsPerInch": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              }
+            }
+          },
+          "flutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "toolMaterial": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "surfaceTreatment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "sourceEvidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sourceId",
+                "locator",
+                "fields"
+              ],
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "locator": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true,
+                  "minItems": 1
+                }
+              }
+            }
+          },
+          "machiningAuthorized": {
+            "const": false
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "threadUsage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "internal",
+              "external",
+              "multiplePitches",
+              "minimumPitchMm",
+              "maximumPitchMm"
+            ],
+            "properties": {
+              "internal": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "external": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "multiplePitches": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "minimumPitchMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "maximumPitchMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "requestedCoverage": {
+      "type": "array",
+      "minItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "family",
+          "variant",
+          "requestedDiametersMm",
+          "verifiedToolIds",
+          "status",
+          "gaps"
+        ],
+        "properties": {
+          "family": {
+            "enum": [
+              "face_mill",
+              "flat_end_mill",
+              "ball_end_mill",
+              "spot_drill",
+              "hss_drill",
+              "engraving_v_bit",
+              "metric_tap",
+              "imperial_tap",
+              "thread_mill"
+            ]
+          },
+          "variant": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requestedDiametersMm": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "uniqueItems": true
+          },
+          "verifiedToolIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "status": {
+            "enum": [
+              "partial",
+              "sampled",
+              "catalogued"
+            ]
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "quotingAssemblyAssumptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "appliesToToolIds",
+          "status",
+          "holderDiameterMm",
+          "holderEngagementMm",
+          "projectionPolicy",
+          "origin",
+          "machiningAuthorized"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "appliesToToolIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "status": {
+            "const": "unverified_quoting_assumption"
+          },
+          "holderDiameterMm": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "holderEngagementMm": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "projectionPolicy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "origin": {
+            "type": "string",
+            "minLength": 1
+          },
+          "machiningAuthorized": {
+            "const": false
+          }
+        }
+      }
+    }
+  }
+}
