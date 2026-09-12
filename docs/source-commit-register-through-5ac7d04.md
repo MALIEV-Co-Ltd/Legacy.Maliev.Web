@@ -1,6 +1,6 @@
 # Source commit migration register
 
-Published source main: `60c341c3993354f4423b812611e20d74692d9d09`.
+Published source main: `8f2b647421acae53a0a04f927747652a97bd8714`.
 Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
 
 Every entry is classified against the final source checkpoint. Related commits
@@ -330,3 +330,4 @@ the runtime, verification, adaptation, and exclusion classifications.
 - [x] `7e4d22850fb33ee24cd9b6e72a0e386f55f02b4b` — Measure generic extrema optimizer separately from curve preparation — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `aade6be7c7a8b82d100c30e8a6f5c10a09ab6711` — Fix native edge membership across reversed occurrence contexts — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `60c341c3993354f4423b812611e20d74692d9d09` — Run quotation browser tests against the current application build — adapted to the .NET 10 browser host in issue #226; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `8f2b647421acae53a0a04f927747652a97bd8714` — Keep quotation page available during country lookup failures — adapted to typed-client and dual-renderer boundaries in issue #233; see [evidence](quotation-country-resilience-migration.md).
