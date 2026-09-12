@@ -9,7 +9,12 @@ importScripts(
     '/src/app/js/cnc-quotation/cnc-material-catalog.js' + query,
     '/src/app/js/cnc-quotation/cnc-tool-library.js' + query,
     '/src/app/js/cnc-quotation/cnc-spatial-field.worker.js' + query,
+    '/src/app/js/cnc-quotation/cnc-cad-document.js' + query,
+    '/src/app/js/cnc-quotation/cnc-native-topology.worker.js' + query,
     '/src/app/js/cnc-quotation/cnc-topology.worker.js' + query,
+    '/src/app/js/cnc-quotation/cnc-native-regions.js' + query,
+    '/src/app/js/cnc-quotation/cnc-feature-recognition-prismatic.js' + query,
+    '/src/app/js/cnc-quotation/cnc-native-dispatch.js' + query,
     '/src/app/js/cnc-quotation/cnc-feature-graph.worker.js' + query,
     '/src/app/js/cnc-quotation/cnc-process-compiler.js' + query,
     '/src/app/js/cnc-quotation/cnc-reach.js' + query,
@@ -27,7 +32,13 @@ var PLANNER_VERSION = 'cnc-feature-planner-v3';
 var MAX_CACHE_ENTRIES = 96;
 var planCache = new Map();
 var quoteCache = new Map();
-var counters = { planValidations: 0, quotes: 0 };
+var nativeGeometryCache = new Map();
+// Full native CAD is much larger than a material plan. This is a serialized-content
+// budget, not a JavaScript heap ceiling. Eviction never requires another CAD import.
+var MAX_NATIVE_CACHE_ENTRIES = 4;
+var MAX_NATIVE_CACHE_BYTES = 64 * 1024 * 1024;
+var nativeGeometryCacheBytes = 0;
+var counters = { planValidations: 0, quotes: 0, nativeGeometryValidations: 0 };
 
 function hasText(value) { return typeof value === 'string' && value.trim().length > 0; }
 function codedError(code) { var error = new Error(code); error.code = code; return error; }
@@ -39,8 +50,41 @@ function unresolvedEntries(graph) {
     return graph && Array.isArray(graph.unresolved) ? graph.unresolved : [];
 }
 function unresolvedIdentity(entry) {
-    return JSON.stringify([entry && hasText(entry.featureId) ? entry.featureId : null,
+    var featureId = entry && hasText(entry.featureId) ? entry.featureId : null;
+    var scope = entry && hasText(entry.scope) ? entry.scope : featureId ? 'feature' : 'document';
+    var stage = entry && hasText(entry.stage) ? entry.stage
+        : scope === 'feature' ? 'recognition' : 'topology';
+    return JSON.stringify([scope, stage,
+        featureId,
         entry && entry.reason, entry && entry.required !== false]);
+}
+function cacheNativeGeometry(key, evidence, bytes) {
+    function evict() {
+        var oldest = nativeGeometryCache.keys().next().value;
+        nativeGeometryCacheBytes -= nativeGeometryCache.get(oldest).bytes;
+        nativeGeometryCache.delete(oldest);
+    }
+    while (nativeGeometryCache.size && nativeGeometryCacheBytes > MAX_NATIVE_CACHE_BYTES) { evict(); }
+    if (bytes > MAX_NATIVE_CACHE_BYTES) { return; }
+    if (nativeGeometryCache.has(key)) { return; }
+    while (nativeGeometryCache.size && (nativeGeometryCache.size >= MAX_NATIVE_CACHE_ENTRIES
+        || nativeGeometryCacheBytes + bytes > MAX_NATIVE_CACHE_BYTES)) { evict(); }
+    nativeGeometryCache.set(key, { evidence: evidence, bytes: bytes });
+    nativeGeometryCacheBytes += bytes;
+}
+
+function normalizedIssue(issue, fallbackStage) {
+    if (hasText(issue)) {
+        return { scope: 'document', stage: fallbackStage || 'planning', reason: issue, required: true };
+    }
+    issue = issue || {};
+    var featureId = hasText(issue.featureId) ? issue.featureId : null;
+    var result = { scope: hasText(issue.scope) ? issue.scope : featureId ? 'feature' : 'document',
+        stage: hasText(issue.stage) ? issue.stage : fallbackStage || 'planning',
+        reason: hasText(issue.reason) ? issue.reason : 'cnc_plan_review_required',
+        required: issue.required !== false };
+    if (featureId) { result.featureId = featureId; }
+    return result;
 }
 
 function assertInheritedRecognitionReasons(featureGraph, operationGraph) {
@@ -91,14 +135,20 @@ function assertInheritedRecognitionReasons(featureGraph, operationGraph) {
     return true;
 }
 
-function reviewEnvelope(reasons, analysisRevision) {
-    var unique = [];
+function reviewEnvelope(reasons, analysisRevision, fallbackStage) {
+    var unique = [], issues = [], identities = Object.create(null);
     (Array.isArray(reasons) ? reasons : [reasons]).forEach(function (reason) {
-        if (hasText(reason) && unique.indexOf(reason) === -1) { unique.push(reason); }
+        var issue = normalizedIssue(reason, fallbackStage);
+        var identity = unresolvedIdentity(issue);
+        if (!identities[identity]) { identities[identity] = true; issues.push(issue); }
+        if (hasText(issue.reason) && unique.indexOf(issue.reason) === -1) { unique.push(issue.reason); }
     });
-    if (!unique.length) { unique.push('cnc_plan_review_required'); }
-    return { status: 'review_required', analysisRevision: hasText(analysisRevision)
-        ? analysisRevision : null, reviewReasons: unique, quote: null };
+    if (!unique.length) {
+        issues.push(normalizedIssue('cnc_plan_review_required', fallbackStage));
+        unique.push('cnc_plan_review_required');
+    }
+    return { status: 'review_required', planStatus: 'review_required', pricingStatus: 'blocked', analysisRevision: hasText(analysisRevision)
+        ? analysisRevision : null, reviewReasons: unique, reviewIssues: issues, quote: null };
 }
 function materialCode(request) { return request.selectedMaterial || request.alloy || request.material; }
 function planKey(request, geometryRevision, quotedStock) {
@@ -218,8 +268,41 @@ async function estimate(request, emitProgress) {
             return reviewEnvelope(['revision_mismatch'], analysisRevision);
         }
         emitProgress('feature_graph');
+        var nativeRequest = request.nativeSourceAssociation || geometry.nativeFeatureDiagnostics || self.CncNativeDispatch.isNative(topology);
         var featureGraph = request.featureGraph || geometry.manufacturingFeatureGraph
-            || self.CncFeatureGraph.build(topology, request.featureRecognition || {});
+            || (nativeRequest ? null : self.CncFeatureGraph.build(topology, request.featureRecognition || {}));
+        if (nativeRequest) {
+            if (!request.nativeSourceAssociation) { return reviewEnvelope(['native_source_association_required'], analysisRevision); }
+            var canonicalNative = function (value) { return JSON.stringify(self.CncPlanContracts.canonicalize(value)); };
+            if (geometry.cadTopology && canonicalNative(geometry.cadTopology) !== canonicalNative(topology)
+                || geometry.manufacturingFeatureGraph && canonicalNative(geometry.manufacturingFeatureGraph) !== canonicalNative(featureGraph)) {
+                return reviewEnvelope(['native_payload_alias_mismatch'], analysisRevision);
+            }
+            // Rehash all incoming content even on a hit: retaining revision strings
+            // cannot smuggle a changed face, ownership record, or source envelope.
+            var nativeContent = await self.CncNativeDispatch.contentIdentity({ topology: topology, diagnostic: geometry.nativeFeatureDiagnostics,
+                graph: featureGraph, association: request.nativeSourceAssociation });
+            var cachedNative = nativeGeometryCache.get(nativeContent.hash);
+            var nativeGeometry = cachedNative && cachedNative.evidence;
+            if (!nativeGeometry) {
+                nativeGeometry = await self.CncNativeDispatch.validateTransport(topology, geometry.nativeFeatureDiagnostics,
+                    featureGraph, request.nativeSourceAssociation);
+                counters.nativeGeometryValidations++;
+                cacheNativeGeometry(nativeContent.hash, nativeGeometry, nativeContent.bytes);
+            }
+            topology = nativeGeometry.topology;
+            featureGraph = nativeGeometry.graph;
+            // The next compiler receives real owners and inherited required reasons.
+            // This bridge cannot certify stock, setup, tool access or target occupancy.
+            var nativeOperations = self.CncProcessCompiler.compile(featureGraph, { toolLibraryVersion: self.CncToolLibrary.version });
+            self.CncPlanContracts.validateOperationGraph(nativeOperations, featureGraph);
+            assertInheritedRecognitionReasons(featureGraph, nativeOperations);
+            var nativeReview = reviewEnvelope(featureGraph.unresolved, analysisRevision, 'recognition');
+            nativeReview.featureGraph = featureGraph;
+            nativeReview.operationGraph = nativeOperations;
+            nativeReview.geometryRevision = expectedRevision;
+            return nativeReview;
+        }
         if (!featureGraph || featureGraph.topologyRevision !== expectedRevision) {
             return reviewEnvelope(['revision_mismatch'], analysisRevision);
         }

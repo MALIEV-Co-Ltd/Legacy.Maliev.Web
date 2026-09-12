@@ -1,5 +1,6 @@
 #pragma once
 #include "kernel-repair.hpp"
+#include "kernel-rotational-band.hpp"
 // Native OCCT topology only. Included after kernel-face.hpp's scalar helpers.
 #include <BRep_Tool.hxx>
 #include <BRepTools.hxx>
@@ -184,13 +185,14 @@ struct ExportContext {
         o.set("status",std::string(valid?"complete":"partial")); complete=complete&&valid;
         return i;
     }
-    void WriteTrims(const TopoDS_Face& original,val& output) {
+    void WriteTrims(const TopoDS_Face& original,val& output,bool millimeters=false) {
         sourceFaces.push_back(original); sourceFaceRecords.push_back(output);
         val trims=val::object(),wires=val::array(); output.set("trims",trims);
         trims.set("status",std::string("partial")); trims.set("wires",wires);
         trims.set("parameterSpace",std::string("native-surface-uv"));
         trims.set("orientationConvention",std::string("face-forward; reversed-coedge-traverses-last-to-first"));
         val adjacency=val::object(); adjacency.set("status",std::string("pending")); output.set("adjacency",adjacency); faceRecords.push_back(adjacency);
+        std::vector<RotationalBand::Wire> bandWires;
         try {
             TopoDS_Face face=TopoDS::Face(original.Oriented(TopAbs_FORWARD));
             TopLoc_Location location; auto native=BRep_Tool::Surface(face,location);
@@ -208,6 +210,9 @@ struct ExportContext {
                 w.set("role",std::string(outer.IsNull()?"unknown":(wire.IsSame(outer)?"outer":"inner")));
                 w.set("orientation",static_cast<int>(wire.Orientation())); w.set("closed",wire.Closed());
                 w.set("complete",false);
+                RotationalBand::Wire bandWire;
+                bandWire.id=wireId;
+                bandWire.outer=!outer.IsNull()&&wire.IsSame(outer);
                 std::vector<TopoDS_Edge> children;
                 for(TopoDS_Iterator child(wire);child.More();child.Next()) {
                     if(child.Value().ShapeType()==TopAbs_EDGE) children.push_back(TopoDS::Edge(child.Value()));
@@ -237,6 +242,19 @@ struct ExportContext {
                     const bool oriented=edgeUse.Orientation()==TopAbs_FORWARD||edgeUse.Orientation()==TopAbs_REVERSED;
                     const bool useComplete=oriented&&Exact(pcurve)&&std::isfinite(first)&&std::isfinite(last)&&!startId.empty()&&!endId.empty()&&edgeRecords[index-1]["status"].as<std::string>()=="complete";
                     use.set("status",std::string(useComplete?"complete":"partial")); wireComplete=wireComplete&&useComplete;
+                    RotationalBand::Use bandUse;
+                    bandUse.edge=edgeUse;
+                    bandUse.id=useId;
+                    bandUse.edgeId=prefix+"/edge-"+std::to_string(index);
+                    bandUse.wireId=wireId;
+                    bandUse.startId=startId;
+                    bandUse.endId=endId;
+                    bandUse.curve=nativeCurve;
+                    bandUse.first=first;
+                    bandUse.last=last;
+                    bandUse.complete=useComplete;
+                    bandUse.seam=BRep_Tool::IsClosed(edgeUse,face);
+                    bandWire.uses.push_back(bandUse);
                     if (MalievRepair::EvidenceStore().active) {
                         MalievRepair::EmittedUse emitted;
                         emitted.face = original; emitted.wire = wire; emitted.edge = edgeUse;
@@ -257,11 +275,21 @@ struct ExportContext {
                 w.set("complete",wireComplete);
                 if(!wireComplete) w.set("reason",std::string("incomplete_traversal_connectivity_or_curve"));
                 faceComplete=faceComplete&&wireComplete;
+                bandWire.complete=wireComplete;
+                bandWires.push_back(bandWire);
             }
             faceComplete=faceComplete&&wireIndex>0;
             trims.set("status",std::string(faceComplete?"complete":"partial")); complete=complete&&faceComplete;
+            output.set("nativeRotationalBand",RotationalBand::Export(
+                RotationalBand::Evaluate(original,bandWires,faceComplete,millimeters),
+                output["bodyId"].as<std::string>(),faceId));
         } catch(const Standard_Failure&) {
             trims.set("reason",std::string("kernel_trim_export_failed")); complete=false;
+            RotationalBand::Result failed;
+            failed.reason="incomplete_native_traversal";
+            failed.wires=bandWires;
+            output.set("nativeRotationalBand",RotationalBand::Export(failed,
+                output["bodyId"].as<std::string>(),output["faceId"].as<std::string>()));
         }
     }
     void Finish(val& mesh) {

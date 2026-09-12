@@ -1,0 +1,4 @@
+# Hash-pinned immutable artifacts must preserve exact bytes on every checkout.
+occt-import-js.js -text
+occt-import-js.wasm -text
+manifest.js -text

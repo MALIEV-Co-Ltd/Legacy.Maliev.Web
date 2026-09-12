@@ -40,6 +40,7 @@ inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIn
     output.set("faceId", bodyId + "/face-" + std::to_string(faceIndex));
     const std::string faceId=bodyId+"/face-"+std::to_string(faceIndex);
     output.set("nativeRegionMeasures",RegionMeasures::Export(RegionMeasures::Unavailable("native_face_unavailable"),bodyId,faceId));
+    output.set("nativeRotationalBand",RotationalBand::Export(RotationalBand::Result(),bodyId,faceId));
     output.set("trims", Unavailable("ordered_wires_and_pcurves_not_exported"));
     output.set("adjacency", Unavailable("source_edge_ownership_not_exported"));
     const OcctFace* occtFace = dynamic_cast<const OcctFace*>(&source);
@@ -156,6 +157,6 @@ inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIn
         output.set("support", Unavailable("kernel_surface_export_failed"));
         output.set("bounds", Unavailable("kernel_surface_export_failed"));
     }
-    context.WriteTrims(occtFace->KernelFace(), output);
+    context.WriteTrims(occtFace->KernelFace(), output,millimeters);
 }
 }

@@ -346,12 +346,22 @@
     }
     function validationMeshPayload(mesh) { return mesh && { contract: mesh.contract, source: mesh.source,
         resolutionMm: mesh.resolutionMm, deflectionMm: mesh.deflectionMm,
-        bodyAssociations: mesh.bodyAssociations, vertices: mesh.vertices, triangles: mesh.triangles }; }
+            bodyAssociations: mesh.bodyAssociations, vertices: mesh.vertices, triangles: mesh.triangles,
+            nativeImportRevision: mesh.nativeImportRevision }; }
     async function validationMeshHash(mesh) { return root.CncPlanContracts.hash(validationMeshPayload(mesh)); }
     function revisionPayload(topology) { return { contract: topology.contract, sourceKind: topology.sourceKind, automaticPlanningEligible: topology.automaticPlanningEligible, unresolvedReasons: topology.unresolvedReasons, bodies: topology.bodies, faces: topology.faces.map(function (face) { return { id: face.id, bodyId: face.bodyId, surface: face.surface, loops: face.loops, orientation: face.orientation, adjacentFaceIds: face.adjacentFaceIds }; }), edges: topology.edges, validationMeshHash: topology.validationMeshHash }; }
-    async function revisionHash(topology) { return root.CncPlanContracts.hash(revisionPayload(topology)); }
-    async function build(input) {
+    async function revisionHash(topology) { var payload = revisionPayload(topology); if (topology.cadDocument) { payload.cadDocument = root.CncCadDocument.projectDocument(topology.cadDocument); } return root.CncPlanContracts.hash(payload); }
+    async function build(input, nativeInterpretationExpectation) {
         input = input || {};
+        if (Object.prototype.hasOwnProperty.call(input, 'nativeImport') || input.requireNative === true
+            || (Array.isArray(input.meshes) && input.meshes.some(function (mesh) { return mesh && (mesh.kernelTopology || mesh.kernelBody); }))) {
+            var nativeResult = await root.CncNativeTopology.build(input.nativeImport, nativeInterpretationExpectation);
+            if (!input.nativeImport && /^(mesh|stl|obj|gltf|glb)$/.test(String(input.sourceFormat || '').toLowerCase())) {
+                nativeResult.sourceKind = 'mesh'; nativeResult.unresolvedReasons.push('mesh_source');
+                nativeResult.revision = await revisionHash(nativeResult);
+            }
+            return nativeResult;
+        }
         var format = String(input.sourceFormat || '').toLowerCase(), sourceKind = /^(step|stp|iges|igs)$/.test(format) ? 'brep' : 'mesh', meshes = Array.isArray(input.meshes) ? input.meshes : [],
             validationMeshes = Array.isArray(input.validationMeshes) ? input.validationMeshes : [], result = null, reasons = [];
         if (sourceKind === 'mesh') { reasons.push('mesh_source'); }

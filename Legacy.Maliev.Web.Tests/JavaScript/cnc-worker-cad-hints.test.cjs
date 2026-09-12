@@ -28,9 +28,21 @@ function runtime() {
     // The OCCT boundary is deliberately fixed; this suite tests metadata transfer,
     // not CAD tessellation. Real THREE decoding/bridges and STEP hint parser run.
     c.occtimportjs = async () => ({
-        ReadStepFile: (bytes, parameters) => { importParameters.push(parameters); return { success: true, meshes: [mesh(), { ...mesh(), brep_faces: [{ first: 0, last: 0 }, { first: 1, last: 1 }] }] }; },
-        ReadIgesFile: (bytes, parameters) => { importParameters.push(parameters); return { success: true, meshes: [mesh()] }; }
+        ReadStepFile: (bytes, parameters) => { importParameters.push(parameters); return { success: true, kernelProvenance: {}, meshes: [mesh(), { ...mesh(), brep_faces: [{ first: 0, last: 0 }, { first: 1, last: 1 }] }] }; },
+        ReadIgesFile: (bytes, parameters) => { importParameters.push(parameters); return { success: true, kernelProvenance: {}, meshes: [mesh()] }; }
     });
+    // Exercise the worker bridge with an explicitly injected native runtime; loader integrity
+    // and real native export are covered by cnc-native-topology.test.cjs.
+    c.defaultOcctFactory = c.occtimportjs;
+    c.CncNativeInterpretation = { assess: () => ({ validContract: true, interpretationAccepted: false }) }; // Metadata-only mock, never native authority.
+    c.EnsureCncOcct = async () => ({ api: await c.occtimportjs(), manifestUrl: c.CNC_OCCT_PATH + 'manifest.js', manifestSha256: c.CNC_MANIFEST_SHA256, identity: {
+        jsSha256: 'a'.repeat(64), wasmSha256: 'b'.repeat(64), exporterSchema: 'MalievKernelDocument.v1'
+    } });
+    c.CncNativeTopology = { diagnosticSourceVerified: async () => false, build: async nativeImport => ({
+        contract: 'CncCadTopology.v1', sourceKind: 'brep', automaticPlanningEligible: false,
+        unresolvedReasons: ['native_provenance_missing'], faces: [], bodies: [], edges: [],
+        revision: '0'.repeat(64), cadDocument: { contract: 'CadDocument.v2', nativeImport }
+    }) };
     c.AnalyzeCncGeometry = (triangles, modelInfo, options) => {
         analyzed.push({ triangles: Array.from(triangles), modelInfo, options });
         return { boundaryChecked: true };
@@ -49,30 +61,28 @@ function job(options = {}) {
 }
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
 
-test('immediate and deferred CNC imports explicitly request manufacturing summary diagnostics', async () => {
-    for (const deferCncAnalysis of [false, true]) {
-        const f = runtime();
-        const result = await f.dispatch(job({ deferCncAnalysis }));
-        assert.equal(result.success, true);
-        if (deferCncAnalysis) {
-            assert.equal(f.analyzed.length, 0);
-            const analyzed = await f.dispatch({ action: 'analyze', meshes: structuredClone(result.analysisMeshes), analysisProfile: 'cnc' });
-            assert.equal(analyzed.success, true);
-        }
-        assert.deepEqual(f.analyzed.map(call => plain(call.options || {})), [{ mode: 'manufacturing_summary' }]);
-    }
+test('CNC import requests the stock-preserving summary without legacy tool diagnostics', async () => {
+    const f = runtime();
+    const result = await f.dispatch(job());
+    assert.equal(result.success, true);
+    assert.deepEqual(f.analyzed.map(call => plain(call.options || {})), [{ mode: 'manufacturing_summary' }]);
+    const graph = result.cncGeometry.manufacturingFeatureGraph;
+    assert.equal(graph.recognitionReadiness.status, 'unavailable');
+    assert.equal(graph.recognitionReadiness.sourceVerified, false);
+    assert.equal(graph.automaticPlanningEligible, false);
+    assert.ok(graph.unresolved.some(issue => issue.reason === 'native_provenance_missing' && issue.required));
 });
 
-test('STEP and STP validation tessellation use absolute millimeter deflection without changing display tessellation', async () => {
-    for (const extension of ['step', 'stp']) {
+test('STEP validation tessellation uses an absolute millimeter deflection', async () => {
+    for (const extension of ['step', 'stp', 'iges', 'igs']) {
         const f = runtime();
         const result = await f.dispatch(job({ extension }));
         assert.equal(result.success, true);
-        assert.equal(f.importParameters.length, 2);
-        assert.deepEqual(plain(f.importParameters[1]), {
-            linearUnit: 'millimeter', linearDeflectionType: 'absolute_value', linearDeflection: 0.1
+        assert.equal(f.importParameters.length, 1);
+        assert.deepEqual(plain(f.importParameters[0]), {
+            linearUnit: 'millimeter', linearDeflectionType: 'absolute_value', linearDeflection: 0.1,
+            repairErrorBudgetMm: 0.01, repairAssessmentTimeLimitMs: 60000, repairDiagnostics: false
         });
-        assert.equal(f.importParameters[0], null);
     }
 });
 
@@ -102,33 +112,33 @@ test('CNC imports carry the parent cache version and load geometry before ball c
     assert.ok(imported.indexOf(topology) < imported.indexOf(ball));
 });
 
-test('immediate CNC analysis receives STEP hints and globally offset exact CAD face ranges', async () => {
+test('immediate CNC analysis retains display ranges without STEP hint scoring', async () => {
     const f = runtime();
     const result = await f.dispatch(job());
     assert.equal(result.success, true);
     assert.equal(f.analyzed.length, 1);
     const info = f.analyzed[0].modelInfo;
-    assert.equal(info.analyticSurfaces?.length, 1);
-    assert.equal(info.analyticSurfaces[0].radiusMm, 2);
+    assert.equal(info.analyticSurfaces?.length, 0);
+    assert.equal(result.cncGeometry.cadTopology.cadDocument.nativeImport.meshes.length, 2);
     assert.deepEqual(plain(info.cadFaceRanges), [{ first: 0, last: 1 }, { first: 2, last: 2 }, { first: 3, last: 3 }]);
     assert.equal(result.modelInfo.analyticSurfaces, undefined, 'large candidate arrays stay off the UI result');
     assert.ok(result.meshes.every(mesh => mesh.analyticSurfaces === undefined));
 });
 
-test('deferred CNC snapshot round-trip preserves one hint array and each mesh face range', async () => {
+test('deferred CNC snapshot round-trip preserves one native envelope and each display range', async () => {
     const f = runtime();
     const preview = await f.dispatch(job({ deferCncAnalysis: true }));
     assert.equal(preview.success, true);
     assert.equal(f.analyzed.length, 0);
-    assert.equal(preview.analysisMeshes.filter(mesh => Array.isArray(mesh.analyticSurfaces)).length, 1);
-    assert.equal(preview.analysisMeshes.filter(mesh => Array.isArray(mesh.canonicalValidationMeshes)).length, 1,
+    assert.equal(preview.analysisMeshes.filter(mesh => Array.isArray(mesh.analyticSurfaces)).length, 0);
+    assert.equal(preview.analysisMeshes.filter(mesh => mesh.nativeImport).length, 1,
         'the fixed validation tessellation must cross the deferred worker boundary exactly once');
     assert.deepEqual(plain(preview.analysisMeshes[1].cadFaceRanges), [{ first: 0, last: 0 }, { first: 1, last: 1 }]);
     const snapshot = structuredClone(preview.analysisMeshes);
     const result = await f.dispatch({ action: 'analyze', meshes: snapshot, analysisProfile: 'cnc' });
     assert.equal(result.success, true);
-    assert.equal(f.analyzed[0].modelInfo.analyticSurfaces[0].radiusMm, 2);
-    assert.equal(f.analyzed[0].modelInfo.validationMeshes.length, 2,
+    assert.equal(f.analyzed[0].modelInfo.analyticSurfaces.length, 0);
+    assert.equal(result.cncGeometry.cadTopology.cadDocument.nativeImport.meshes.length, 2,
         'deferred analysis must receive the fixed validation tessellation, not reuse display triangles');
     assert.deepEqual(plain(f.analyzed[0].modelInfo.cadFaceRanges), [{ first: 0, last: 1 }, { first: 2, last: 2 }, { first: 3, last: 3 }]);
     assert.equal(f.analyzed[0].triangles.length, 36);
@@ -142,7 +152,7 @@ test('deferred IGES snapshot preserves B-Rep source identity without STEP hints'
     assert.equal(result.success, true);
     assert.equal(result.cncGeometry.cadTopology.sourceKind, 'brep');
     assert.equal(result.cncGeometry.cadTopology.automaticPlanningEligible, false);
-    assert.deepEqual(Array.from(result.cncGeometry.cadTopology.unresolvedReasons), ['iges_semantic_face_support_unavailable']);
+    assert.ok(result.cncGeometry.cadTopology.unresolvedReasons.includes('native_provenance_missing'));
 });
 
 test('additive STEP and CNC IGES do not parse or forward STEP analytic hints', async () => {
@@ -173,7 +183,7 @@ test('invalid or out-of-mesh CAD ranges cannot cross into the next mesh', async 
     assert.deepEqual(plain(f.analyzed[0].modelInfo.cadFaceRanges), [{ first: 2, last: 2 }, { first: 3, last: 3 }]);
 });
 
-test('deferred world transforms preserve triangle provenance without transforming local STEP hints', async () => {
+test('deferred display transforms never transform the native document coordinates', async () => {
     const f = runtime();
     const object = await f.c.RunParseJob(job());
     object.children[1].position.x = 10;
@@ -181,9 +191,8 @@ test('deferred world transforms preserve triangle provenance without transformin
     const rebuilt = f.c.BuildObject3DFromMeshBuffers(structuredClone(buffers));
     await f.c.AnalyzeCncObject(rebuilt, {});
     assert.equal(f.analyzed[0].triangles[18], 9);
-    assert.equal(f.analyzed[0].modelInfo.analyticSurfaces?.length, 1);
-    assert.equal(f.analyzed[0].modelInfo.analyticSurfaces[0].centerMm.x, 0,
-        'local hints remain candidates; unsupported instance transforms are not guessed');
+    assert.equal(f.analyzed[0].modelInfo.analyticSurfaces?.length, 0);
+    assert.equal(rebuilt.userData.nativeImport.meshes[1].attributes.position.array[0], -1);
     assert.deepEqual(plain(f.analyzed[0].modelInfo.cadFaceRanges), [{ first: 0, last: 1 }, { first: 2, last: 2 }, { first: 3, last: 3 }]);
 });
 

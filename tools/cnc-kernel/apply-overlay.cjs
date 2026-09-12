@@ -49,5 +49,6 @@ fs.copyFileSync(path.join(__dirname, 'kernel-face.hpp'), path.join(source, 'occt
 fs.copyFileSync(path.join(__dirname, 'kernel-trims.hpp'), path.join(source, 'occt-import-js/src/kernel-trims.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-body.hpp'), path.join(source, 'occt-import-js/src/kernel-body.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-region-measures.hpp'), path.join(source, 'occt-import-js/src/kernel-region-measures.hpp'));
+fs.copyFileSync(path.join(__dirname, 'kernel-rotational-band.hpp'), path.join(source, 'occt-import-js/src/kernel-rotational-band.hpp'));
 child.execFileSync(process.execPath, [path.join(__dirname, 'apply-document-overlay.cjs'), source], { stdio: 'inherit' });
 child.execFileSync(process.execPath, [path.join(__dirname, 'apply-repair-overlay.cjs'), source], { stdio: 'inherit' });

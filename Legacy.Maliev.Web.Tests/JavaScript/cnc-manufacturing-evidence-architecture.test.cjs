@@ -43,7 +43,8 @@ test('model worker builds validation occupancy from a fixed tessellation indepen
     const modelWorker = fs.readFileSync(path.resolve(moduleRoot, '../model-viewer/model-viewer.worker.js'), 'utf8');
     const topology = source('cnc-topology.worker');
     assert.match(modelWorker, /canonicalValidationMeshes/);
-    assert.match(modelWorker, /linearDeflection:\s*0\.1/);
+    assert.match(modelWorker, /CncCadDocument\.importParameters/);
+    assert.match(source('cnc-cad-document'), /linearDeflection:\s*0\.1/);
     assert.match(topology, /occt_brep_validation_tessellation_v1/);
 });
 

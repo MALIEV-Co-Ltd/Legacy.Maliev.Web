@@ -2683,6 +2683,10 @@
         // finishes parsing can cancel its worker job instead of leaving the job running (and
         // the worker occupied) until its own timeout.
         var parseHandles = {};
+        // Source lifetime is independent of material/requirement analysisRevision.
+        // Only the currently owned ParseFile success callback may capture a binding.
+        var cncSourceParses = new WeakMap();
+        var nextCncSourceGeneration = 0;
         var partProcessingQueue = [];
         var activePartProcessing = {};
         var maxConcurrentPartProcessing = 4;
@@ -2789,6 +2793,9 @@
             item.cncPlan = null;
             item.cncQuoteError = null;
             item.cncReviewReasons = [];
+            item.cncReviewIssues = [];
+            item.cncPlanStatus = 'processing';
+            item.cncPricingStatus = 'processing';
             item.cncDecisionPriceSnapshot = null;
             item.subtotalThb = null;
             ['unit-cost', 'total-cost', 'unit-time', 'total-time'].forEach(function (field) {
@@ -2836,6 +2843,9 @@
             if (!item || !message || message.analysisRevision !== item.analysisRevision) { return false; }
             var estimate = message.estimate || message;
             if (!estimate || estimate.analysisRevision !== item.analysisRevision) { return false; }
+            item.cncPlanStatus = estimate.planStatus || (estimate.status === 'finalized' ? 'ready' : 'review_required');
+            item.cncPricingStatus = estimate.pricingStatus || (estimate.status === 'finalized' ? 'finalized' : 'blocked');
+            item.cncReviewIssues = Array.isArray(estimate.reviewIssues) ? estimate.reviewIssues.slice() : [];
             if (estimate.status === 'finalized' && estimate.validatedPlan && estimate.quote) {
                 var validatedPlan = estimate.validatedPlan;
                 var quote = estimate.quote;
@@ -4592,6 +4602,34 @@
             return ['step', 'stp', 'iges', 'igs'].indexOf(FileType(fileName)) !== -1;
         }
 
+        function BeginCncSourceParse(item) {
+            var state = { generation: 'cnc-source-' + (++nextCncSourceGeneration), file: item.file,
+                delivered: false, association: null };
+            cncSourceParses.set(item, state);
+            return state;
+        }
+
+        function OwnsCncSourceParse(id, item, state) {
+            return !!item && utils.GetItem(id) === item && item.file === state.file && cncSourceParses.get(item) === state;
+        }
+
+        function CaptureCncNativeAssociation(item, state, geometry) {
+            var association = geometry && geometry.nativeSourceAssociation;
+            if (!association || association.contract !== 'NativeSourceAssociation.v1') { return; }
+            var captured = JSON.parse(JSON.stringify(association));
+            captured.sourceGeneration = state.generation;
+            function freeze(value) {
+                if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
+                return value;
+            }
+            state.association = freeze(captured);
+        }
+
+        function CncNativeAssociationForItem(item) {
+            var state = item && cncSourceParses.get(item);
+            return state && state.delivered && OwnsCncSourceParse(item.id, item, state) ? state.association : null;
+        }
+
         function AddModel(files) {
             for (var i = 0; i < files.length; i++) {
                 var file = files[i];
@@ -4635,10 +4673,11 @@
                         RenderCurrentCncQuotation();
                     }
 
+                    var sourceParse = BeginCncSourceParse(cncItem);
                     var parseOptions = {
                         analysisProfile: 'cnc',
                         onPreviewReady: function (modelInfo, object3D) {
-                            if (!utils.GetItem(id)) { return Promise.resolve(); }
+                            if (!OwnsCncSourceParse(id, cncItem, sourceParse) || sourceParse.delivered) { return Promise.resolve(); }
                             utils.SetItemPreview(id, object3D, modelInfo);
                             // Completion order is not customer intent. Only claim the shared
                             // canvas when no part has been selected yet, or refresh this part if
@@ -4656,7 +4695,7 @@
                             return new Promise(function (resolve) {
                                 requestAnimationFrame(function () {
                                     setTimeout(function () {
-                                        if (utils.GetItem(id)) { UpdateSnapshot(id, object3D, modelInfo); }
+                                        if (OwnsCncSourceParse(id, cncItem, sourceParse)) { UpdateSnapshot(id, object3D, modelInfo); }
                                         resolve();
                                     }, 0);
                                 });
@@ -4664,7 +4703,10 @@
                         }
                     };
                     EnqueuePartProcessing(id, function () {
+                    if (!OwnsCncSourceParse(id, cncItem, sourceParse)) { return; }
                     parseHandles[id] = viewer.ParseFile(uploadedFile, function (modelInfo, object3D, error, cncGeometry) {
+                        if (!OwnsCncSourceParse(id, cncItem, sourceParse) || sourceParse.delivered) { return; }
+                        sourceParse.delivered = true;
                         delete parseHandles[id];
                         if (!modelInfo) {
                             var readFailure = error || iqErrorText.unreadableModel;
@@ -4687,6 +4729,7 @@
                             alert(readFailure);
                             return;
                         }
+                        CaptureCncNativeAssociation(cncItem, sourceParse, cncGeometry);
                         { modelInfo.cncGeometry = cncGeometry || null; }
                         { utils.SetItemPricingPending(id, true); }
                         utils.SetItemParsed(id, object3D, modelInfo);
@@ -4696,7 +4739,7 @@
                         // item with the completed analysis, then dispatch stock/setup/pricing to
                         // their separate worker without revisiting or stealing the active part.
                         setTimeout(function () {
-                            if (!utils.GetItem(id)) { utils.DecreasePendingTask(); return; }
+                            if (!OwnsCncSourceParse(id, cncItem, sourceParse)) { utils.DecreasePendingTask(); return; }
                             var currentActiveId = utils.GetActiveId();
                             var remainsActive = currentActiveId === id;
                             if (currentActiveId === null || currentActiveId === undefined || remainsActive) {
@@ -4787,13 +4830,14 @@
         // Build profiles are discrete, so the selected option can be saved and repriced
         // immediately without the quantity field's typing debounce.
         function UpdateSnapshot(id, backgroundObject, backgroundModelInfo) {
+            var thumbnailAttempt = utils.BeginItemThumbnail(id);
             var mirror = document.getElementById('item-snapshot-' + id);
-            if (!mirror) { utils.SetItemThumbnailComplete(id, false); return; }
+            if (!mirror) { utils.SetItemThumbnailComplete(id, false, thumbnailAttempt); return; }
             var data = backgroundObject
                 ? viewer.SnapshotObject(backgroundObject, backgroundModelInfo)
                 : viewer.Snapshot();
             mirror.src = data ? data : '/src/images/3d-canvas-placeholder.svg';
-            utils.SetItemThumbnailComplete(id, !!data);
+            utils.SetItemThumbnailComplete(id, !!data, thumbnailAttempt);
         }
 
         function SyncCncDrawingControls(item) {
@@ -4938,6 +4982,7 @@
         }
 
         function UploadFile(id, file) {
+            var uploadAttempt = utils.BeginItemUpload(id);
             var progressBar = $('#upload-progress-item-' + id + ' .bar');
             var progressWrap = document.getElementById('upload-progress-item-' + id);
             var uploadPathElement = document.getElementById('item-upload-path-' + id);
@@ -4973,6 +5018,7 @@
                     return myXhr;
                 },
                 success: function (data) {
+                    if (!utils.IsItemStageAttemptCurrent(uploadAttempt)) { return; }
                     if (data.success == true && uploadPathElement && data.receipt) {
                         uploadPathElement.value = data.path;
                         {
@@ -4980,7 +5026,7 @@
                             if (item) { item.cncModelUploadReceipt = data.receipt || ''; }
                             SetCncSubmissionHidden(id, 'CncModelUploadReceipt', data.receipt || '');
                         }
-                        utils.SetItemUploadComplete(id, true);
+                        utils.SetItemUploadComplete(id, true, uploadAttempt);
                         SyncCncSubmissionSafety();
                         PushInstantQuoteEvent('file_upload_complete', {
                             file_count: 1,
@@ -4993,16 +5039,16 @@
                             file_type: FileType(file && file.name)
                         });
                         if (isLocalPreview) {
-                            utils.SetItemUploadComplete(id, true);
+                            utils.SetItemUploadComplete(id, true, uploadAttempt);
                             AllowLocalPreviewAfterUploadFailure();
                         } else {
                             alert(data && data.message ? data.message : iqErrorText.uploadFailed);
-                            utils.SetItemUploadComplete(id, false);
-                            utils.BlockSubmission();
+                            utils.SetItemUploadComplete(id, false, uploadAttempt);
                         }
                     }
                 },
                 error: function (xhr) {
+                    if (!utils.IsItemStageAttemptCurrent(uploadAttempt)) { return; }
                     if (xhr && xhr.status === 429 && retryCount < maximumAdmissionRetries) {
                         retryCount += 1;
                         retryScheduled = true;
@@ -5019,21 +5065,19 @@
                         file_type: FileType(file && file.name)
                     });
                     if (xhr && xhr.status === 429) {
-                        utils.SetItemUploadComplete(id, false);
-                        utils.BlockSubmission();
+                        utils.SetItemUploadComplete(id, false, uploadAttempt);
                         if (!isLocalPreview) {
                             alert(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : iqErrorText.uploadFailed);
                         }
                         return;
                     }
                     if (isLocalPreview) {
-                        utils.SetItemUploadComplete(id, true);
+                        utils.SetItemUploadComplete(id, true, uploadAttempt);
                         AllowLocalPreviewAfterUploadFailure();
                         return;
                     }
-                    utils.SetItemUploadComplete(id, false);
+                    utils.SetItemUploadComplete(id, false, uploadAttempt);
                     alert(xhr && xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : iqErrorText.uploadFailed + ' (network error)');
-                    utils.BlockSubmission();
                 },
                 complete: function () {
                     if (retryScheduled) { return; }
@@ -5204,6 +5248,7 @@
                     cadTopology: geometry.cadTopology || null,
                     geometryRevision: geometry.geometryRevision || (geometry.cadTopology && geometry.cadTopology.revision) || null,
                     manufacturingFeatureGraph: geometry.manufacturingFeatureGraph || null,
+                    nativeFeatureDiagnostics: geometry.nativeFeatureDiagnostics || null,
                     manufacturingValidationEvidence: geometry.manufacturingValidationEvidence || geometry.manufacturing || null,
                     bodyCount: Number.isSafeInteger(geometry.bodyCount) && geometry.bodyCount > 0
                         ? geometry.bodyCount
@@ -5605,6 +5650,7 @@
                 geometryRevision: geometry.geometryRevision,
                 topology: geometry.cadTopology,
                 featureGraph: geometry.manufacturingFeatureGraph,
+                nativeSourceAssociation: CncNativeAssociationForItem(item),
                 manufacturing: geometry.manufacturingValidationEvidence,
                 requirements: requirements,
                 certificateRequired: certificateRequired,
@@ -6635,6 +6681,7 @@
 
         function RemoveOrderItem(id) {
             var removedItem = utils.GetItem(id);
+            if (removedItem) { cncSourceParses.delete(removedItem); }
             var removedFileName = removedItem && removedItem.file ? removedItem.file.name : '';
             delete estimateRequestTokens[id];
             delete materialPriceRequestTokens[id];
