@@ -7,7 +7,11 @@ public class TestingWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string? contentRoot;
 
-    public TestingWebApplicationFactory(string? contentRoot = null)
+    public TestingWebApplicationFactory()
+    {
+    }
+
+    internal TestingWebApplicationFactory(string contentRoot)
     {
         this.contentRoot = contentRoot;
     }
