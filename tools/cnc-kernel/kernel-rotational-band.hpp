@@ -1,8 +1,10 @@
 #pragma once
 #include "kernel-native-interpretation-checks.hpp"
+#include "kernel-circular-revolution.hpp"
 #include <BRepAdaptor_Surface.hxx>
 #include <BRep_Tool.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
+#include <Geom2d_BSplineCurve.hxx>
 #include <TopExp.hxx>
 #include <algorithm>
 #include <cmath>
@@ -53,6 +55,8 @@ struct Result {
   std::string reason = "not_evaluated", support = "unsupported",
               helical = "unknown", radialPolarity = "unknown";
   int orientation = 0;
+  double phase = 0;
+  int profileSense = 1;
   gp_Ax3 frame;
   double radius = 0, minor = 0, angle = 0, u0 = 0, u1 = 0, v0 = 0, v1 = 0,
          radialMin = 0, radialMax = 0, axialMin = 0, axialMax = 0;
@@ -65,6 +69,46 @@ inline double Coord(const gp_Pnt2d &p, int axis) {
 }
 inline bool Junction(const gp_Pnt2d &a, const gp_Pnt2d &b) {
   return Same(a.X(), b.X()) && Same(a.Y(), b.Y());
+}
+// Prove a whole single-span affine parameterization from original coefficients.
+// Endpoint arithmetic retains the existing numerical band policy, not an
+// outward enclosure. Source PC, parameter range and traversal remain unchanged.
+inline const char *AffineEndpoints(const Use &use, Segment &segment) {
+  if (use.curve.IsNull()) return "unsupported_pcurve_type";
+  if (!std::isfinite(use.first) || !std::isfinite(use.last) || use.first >= use.last)
+    return "nonfinite_range";
+  Geom2dAdaptor_Curve curve(use.curve, use.first, use.last);
+  if (curve.GetType() == GeomAbs_Line) {
+    auto line=curve.Line(); auto direction=line.Direction();
+    if (direction.X()!=0 && direction.Y()!=0) return "oblique_or_helical_boundary";
+    segment.constantAxis=direction.X()==0?0:1;
+    auto point=[&](double t) { return gp_Pnt2d(line.Location().X()+t*direction.X(),line.Location().Y()+t*direction.Y()); };
+    segment.start=point(use.first); segment.end=point(use.last);
+    return nullptr;
+  }
+  if (curve.GetType()!=GeomAbs_BSplineCurve) return "unsupported_pcurve_type";
+  auto spline=curve.BSpline();
+  if (spline->Degree()!=1 || spline->IsPeriodic() || spline->NbPoles()!=2 || spline->NbKnots()!=2
+      || spline->Multiplicity(1)!=2 || spline->Multiplicity(2)!=2)
+    return "unsupported_pcurve_type";
+  const double k0=spline->Knot(1),k1=spline->Knot(2),width=k1-k0;
+  const double w0=spline->Weight(1),w1=spline->Weight(2);
+  if (!std::isfinite(w0) || !std::isfinite(w1) || w0<=0 || w0!=w1)
+    return "unsupported_pcurve_type";
+  if (!std::isfinite(k0) || !std::isfinite(k1) || !std::isfinite(width) || width<=0
+      || use.first<k0 || use.last>k1) return "nonfinite_range";
+  const auto a=spline->Pole(1),b=spline->Pole(2);
+  if (!std::isfinite(a.X()) || !std::isfinite(a.Y()) || !std::isfinite(b.X()) || !std::isfinite(b.Y()))
+    return "nonfinite_range";
+  const double dx=b.X()-a.X(),dy=b.Y()-a.Y();
+  if (!std::isfinite(dx) || !std::isfinite(dy) || !std::isfinite(dx/width) || !std::isfinite(dy/width))
+    return "nonfinite_range";
+  if (dx!=0 && dy!=0) return "oblique_or_helical_boundary";
+  if (dx==0 && dy==0) return "parameter_boundary_ambiguous";
+  segment.constantAxis=dx==0?0:1;
+  auto point=[&](double t) { const double fraction=(t-k0)/width; return gp_Pnt2d(a.X()+fraction*dx,a.Y()+fraction*dy); };
+  segment.start=point(use.first); segment.end=point(use.last);
+  return nullptr;
 }
 inline Result Evaluate(const TopoDS_Face &original,
                        const std::vector<Wire> &wires, bool complete,
@@ -96,6 +140,14 @@ inline Result Evaluate(const TopoDS_Face &original,
       r.frame = surface.Torus().Position();
       r.radius = surface.Torus().MajorRadius();
       r.minor = surface.Torus().MinorRadius();
+    } else if (surface.GetType() == GeomAbs_SurfaceOfRevolution) {
+      MalievCircularRevolution::CircleRevolution circle;
+      MalievCircularRevolution::ProfileMap map;
+      if (!MalievCircularRevolution::Read(surface,circle)) return fail("unsupported_support");
+      r.support = "circular_revolution";
+      if (!MalievCircularRevolution::Meridian(circle,map))
+        return fail("unsupported_revolution_profile");
+      r.frame=map.frame; r.radius=map.radius; r.minor=map.minor; r.phase=map.phase; r.profileSense=map.sense;
     } else
       return fail("unsupported_support");
     TopLoc_Location placement;
@@ -153,29 +205,15 @@ inline Result Evaluate(const TopoDS_Face &original,
       if (!std::isfinite(use.first) || !std::isfinite(use.last) ||
           use.first >= use.last)
         return fail("nonfinite_range");
-      if (use.curve.IsNull())
-        return fail("unsupported_pcurve_type");
-      Geom2dAdaptor_Curve curve(use.curve, use.first, use.last);
-      if (curve.GetType() != GeomAbs_Line)
-        return fail("unsupported_pcurve_type");
-      auto line = curve.Line();
-      auto direction = line.Direction();
-      if (direction.X() != 0 && direction.Y() != 0) {
-        r.helical = "oblique-or-helical";
-        return fail("oblique_or_helical_boundary");
+      Segment segment;
+      segment.use = use;
+      if (const char *reason=AffineEndpoints(use,segment)) {
+        if (std::string(reason)=="oblique_or_helical_boundary") r.helical="oblique-or-helical";
+        return fail(reason);
       }
       if (!BRep_Tool::SameParameter(use.edge) ||
           !BRep_Tool::SameRange(use.edge))
         return fail("native_check_failed");
-      Segment segment;
-      segment.use = use;
-      segment.constantAxis = direction.X() == 0 ? 0 : 1;
-      auto point = [&](double t) {
-        return gp_Pnt2d(line.Location().X() + t * direction.X(),
-                        line.Location().Y() + t * direction.Y());
-      };
-      segment.start = point(use.first);
-      segment.end = point(use.last);
       if (use.edge.Orientation() == TopAbs_REVERSED)
         std::swap(segment.start, segment.end);
       else if (use.edge.Orientation() != TopAbs_FORWARD)
@@ -303,7 +341,7 @@ inline Result Evaluate(const TopoDS_Face &original,
         if (segment.use.seam)
           return fail("seam_pair_incomplete");
     }
-    if (r.support == "torus" &&
+    if ((r.support == "torus" || r.support == "circular_revolution") &&
         (r.minor <= 0 || r.radius <= r.minor ||
          r.v1 - r.v0 >= period - Guard(r.v1 - r.v0, period)))
       return fail("unsupported_torus_profile");
@@ -323,12 +361,13 @@ inline Result Evaluate(const TopoDS_Face &original,
       r.axialMax = r.v1 * std::cos(r.angle);
     }
     double normalMin = 1, normalMax = 1;
-    if (r.support == "torus") {
-      std::vector<double> points = {r.v0, r.v1};
+    if (r.support == "torus" || r.support == "circular_revolution") {
+      const double first=std::min(r.phase+r.profileSense*r.v0,r.phase+r.profileSense*r.v1),last=std::max(r.phase+r.profileSense*r.v0,r.phase+r.profileSense*r.v1);
+      std::vector<double> points = {first,last};
       const double halfPi = period / 4;
       if (std::abs(r.v0) > 1e12 || std::abs(r.v1) > 1e12)
         return fail("parameter_boundary_ambiguous");
-      for (double k = std::ceil(r.v0 / halfPi); k * halfPi < r.v1; ++k)
+      for (double k = std::ceil(first / halfPi); k * halfPi < last; ++k)
         points.push_back(k * halfPi);
       r.radialMin = r.axialMin = std::numeric_limits<double>::infinity();
       r.radialMax = r.axialMax = -r.radialMin;
@@ -341,8 +380,8 @@ inline Result Evaluate(const TopoDS_Face &original,
         r.radialMax = std::max(r.radialMax, radial);
         r.axialMin = std::min(r.axialMin, axial);
         r.axialMax = std::max(r.axialMax, axial);
-        normalMin = std::min(normalMin, c);
-        normalMax = std::max(normalMax, c);
+        normalMin = std::min(normalMin, r.profileSense*c);
+        normalMax = std::max(normalMax, r.profileSense*c);
       }
     }
     if (original.Orientation() == TopAbs_REVERSED) {
@@ -452,9 +491,13 @@ inline emscripten::val Export(const Result &r, const std::string &body,
   val parameters = val::object();
   parameters.set("referenceRadius", r.radius);
   parameters.set("minorRadius",
-                 r.support == "torus" ? val(r.minor) : val::null());
+                 (r.support == "torus" || r.support == "circular_revolution") ? val(r.minor) : val::null());
   parameters.set("semiAngleRadians",
                  r.support == "cone" ? val(r.angle) : val::null());
+  if (r.support == "circular_revolution") {
+    val map=val::object(); map.set("method",std::string("meridional-circle-native-v-phase-sense-v1"));
+    map.set("phaseRadians",r.phase); map.set("vSense",r.profileSense); parameters.set("profileMap",map);
+  }
   o.set("parameters", parameters);
   val coverage = val::object();
   coverage.set("kind", std::string(r.full ? "complete-revolution" : "partial"));
@@ -539,7 +582,7 @@ inline emscripten::val Export(const Result &r, const std::string &body,
   val polarity = val::object();
   polarity.set("radial", r.radialPolarity);
   polarity.set("profileOrientationSign",
-               r.orientation == TopAbs_REVERSED ? -1 : 1);
+               (r.orientation == TopAbs_REVERSED ? -1 : 1)*r.profileSense);
   o.set("polarity", polarity);
   return o;
 }

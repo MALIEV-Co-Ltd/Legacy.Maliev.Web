@@ -1,0 +1,115 @@
+{
+  "schema": "PublicNativeAnalyticRoleFixtures.v1",
+  "generator": "generate-analytic-role-fixtures.cpp",
+  "generatorSha256": "dd75813d78b767a8d334dbb20ec355d90a9d943ece46d9bd9a6e8d9ba1450321",
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "construction": "Independent finite revolved profiles and nested line/arc channel; positive volume and BRepCheck validated before 17-digit STEP export.",
+  "placement": {
+    "axis": [
+      1,
+      2,
+      3
+    ],
+    "angleRadians": 0.713,
+    "translationMm": [
+      17,
+      -23,
+      41
+    ]
+  },
+  "reversal": "Opposite underlying edge/curve parameterization with reversed topological traversal preserving physical geometry.",
+  "sources": [
+    {
+      "file": "analytic-closed-channel-placed.step",
+      "sha256": "eb95b29c2952eae1147d273708435904f7eac69a7ca8a17d73c2e2956bf26fdd",
+      "bytes": 62751
+    },
+    {
+      "file": "analytic-closed-channel-reversed.step",
+      "sha256": "5d5af06cd04d9913d08f2faa6421abba0da5c65a2b6ad37ac6ca21e4b3b78cf1",
+      "bytes": 70162
+    },
+    {
+      "file": "analytic-closed-channel.step",
+      "sha256": "19909d7838479600834d7609e83053cf14a76cb8579acfae2a4c07f0f8390e1f",
+      "bytes": 62655
+    },
+    {
+      "file": "analytic-countersink-placed.step",
+      "sha256": "e1c64550176b9d19b2513be42be12b49bb2c8701bec0636a288a315b5baaf969",
+      "bytes": 16586
+    },
+    {
+      "file": "analytic-countersink-reversed.step",
+      "sha256": "56cde4735772d75c5789da4ea14bf861eec9a4151b6340fcf9fdf4c9464da2a6",
+      "bytes": 16548
+    },
+    {
+      "file": "analytic-countersink.step",
+      "sha256": "d0a129814eb0215a84aeba26933b55955a5d68dfc2f58543f4dc371928744471",
+      "bytes": 16557
+    },
+    {
+      "file": "analytic-drill-point-placed.step",
+      "sha256": "1394d29d6d375161d00daf7314d1e48cbb9ad09bdb8544c4c39434580018201c",
+      "bytes": 15049
+    },
+    {
+      "file": "analytic-drill-point-reversed.step",
+      "sha256": "e05a8e2610f25bae287625bab25ec1cc1d86a7bf81230c8258836cb127fcad91",
+      "bytes": 15015
+    },
+    {
+      "file": "analytic-drill-point.step",
+      "sha256": "10b7ecce4e899c819dd87a36f9e394d638f0cb014bdb141078491c3d971db48a",
+      "bytes": 15021
+    },
+    {
+      "file": "analytic-outside-chamfer-placed.step",
+      "sha256": "312b103ba4c0128200aee815b042e1738c329e05829ef42a4019114560656ac8",
+      "bytes": 11379
+    },
+    {
+      "file": "analytic-outside-chamfer-reversed.step",
+      "sha256": "58db58c77ebb0431693c115c3327900ce6c94d93723efd7129eda3a210b606e0",
+      "bytes": 11351
+    },
+    {
+      "file": "analytic-outside-chamfer.step",
+      "sha256": "99c806cc9bce9f99fc874f20d5eea75a82d941bebac2146426043779230abe9f",
+      "bytes": 11361
+    },
+    {
+      "file": "analytic-rotational-groove-placed.step",
+      "sha256": "9a709978ffa69a2d50a62dd3c7d74f6734ff0c6075db6528bd3125d5ff3adf78",
+      "bytes": 15196
+    },
+    {
+      "file": "analytic-rotational-groove-reversed.step",
+      "sha256": "d6383d3c59f34894e67ef9858a2301f8e94acb8d6a12813f1242e469b471779a",
+      "bytes": 15187
+    },
+    {
+      "file": "analytic-rotational-groove.step",
+      "sha256": "7dfcfe691784af8648e845405c110e4dd4306b6700cdcfa92aa74d6057dbb1ff",
+      "bytes": 15167
+    },
+    {
+      "file": "analytic-tapered-through-placed.step",
+      "sha256": "8491859fc54aef67b09ba35199293f8b816b5479e736ee0c457bebc55aafff3c",
+      "bytes": 13111
+    },
+    {
+      "file": "analytic-tapered-through-reversed.step",
+      "sha256": "4c6382d62232776750bcb50737363d56fcd835e5c6c7d5cb25e2e0c05c5e9efa",
+      "bytes": 13091
+    },
+    {
+      "file": "analytic-tapered-through.step",
+      "sha256": "c634f3af96759e48acfcb7bb4bdf889abeb595bd9a8671221029417eff156820",
+      "bytes": 13089
+    }
+  ]
+}

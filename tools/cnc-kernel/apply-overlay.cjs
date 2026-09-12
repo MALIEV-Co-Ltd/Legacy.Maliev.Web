@@ -46,6 +46,7 @@ change('js-interface.cpp', [
     resultObj.set ("root", rootNodeObj);`]
 ]);
 fs.copyFileSync(path.join(__dirname, 'kernel-face.hpp'), path.join(source, 'occt-import-js/src/kernel-face.hpp'));
+fs.copyFileSync(path.join(__dirname, 'kernel-circular-revolution.hpp'), path.join(source, 'occt-import-js/src/kernel-circular-revolution.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-trims.hpp'), path.join(source, 'occt-import-js/src/kernel-trims.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-body.hpp'), path.join(source, 'occt-import-js/src/kernel-body.hpp'));
 fs.copyFileSync(path.join(__dirname, 'kernel-region-measures.hpp'), path.join(source, 'occt-import-js/src/kernel-region-measures.hpp'));

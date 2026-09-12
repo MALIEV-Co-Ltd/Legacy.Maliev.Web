@@ -1,8 +1,8 @@
 (function (root) {
     'use strict';
     // One pin for the verified CAD loader and the transported-evidence receiver.
-    var runtimePin = Object.freeze({ path: '/lib/occt-cnc/0f4759e678ea-191da5c8b62d/',
-        manifestSha256: 'f5ee4f75401ce4086e3e8ffb0048f94e3010ac508dc6ae2709f89b4439de8683' });
+    var runtimePin = Object.freeze({ path: '/lib/occt-cnc/0f4759e678ea-9b23eb595cd0/',
+        manifestSha256: '886d5ea75acc092de6aa7be9e1dc294a445c6da9bf95d99ea9f518534951db6f' });
     var pinnedIdentity;
     function freeze(value) { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; }
     function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -49,6 +49,9 @@
                 reason: feature.kind === 'unresolved' ? feature.reason : feature.kind === 'datum'
                     ? 'native_machining_role_unverified' : 'native_tool_access_unverified' };
         });
+        features.forEach(function (feature) { (feature.recognitionIssues || []).forEach(function (reason) {
+            unresolved.push({ scope: 'feature', stage: 'recognition', featureId: feature.id, required: true, reason: reason });
+        }); });
         var documentReasons = Array.from(new Set((topology && topology.unresolvedReasons || []).filter(function (r) {
             return r !== 'native_trim_consumer_unsupported';
         }).concat(diagnostic.structuralIssues.map(function (r) { return r.reason; }))));
@@ -56,7 +59,8 @@
         var graph = { contract: 'ManufacturingFeatureGraph.v1', topologyRevision: topology.revision,
             automaticPlanningEligible: false, diagnosticOnly: true, nativeDiagnosticRevision: diagnostic.revision,
             provenance: diagnostic.provenance, recognitionReadiness: { contract: 'NativeRecognitionReadiness.v1',
-                status: !projection.sourceVerified || diagnostic.structuralIssues.length ? 'unavailable' : diagnostic.unresolved.length ? 'incomplete' : 'ready',
+                status: !projection.sourceVerified || diagnostic.structuralIssues.length ? 'unavailable'
+                    : diagnostic.unresolved.length || features.some(function (f) { return (f.recognitionIssues || []).length; }) ? 'incomplete' : 'ready',
                 sourceVerified: projection.sourceVerified, policy: clone(interpretation && interpretation.policy || null),
                 structuralIssues: diagnostic.structuralIssues },
             features: features, faceOwners: faceOwners, machinableFaceIds: projection.regions.map(function (r) { return r.faceId; }), unresolved: unresolved };

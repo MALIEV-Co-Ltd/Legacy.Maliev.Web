@@ -6,6 +6,14 @@ struct CylindricalTrigPolynomial {
   UniPolynomial sine, cosine;
   double remainder = 0;
 };
+inline bool CylindricalCompositionClass(const CurveBound &curve,
+                                        const CurveBound &pcurve,
+                                        const SurfaceBound &surface) {
+  return curve.isSpline && CompositionSourceDegree(curve.spline.degree) &&
+         pcurve.isSpline && pcurve.spline.degree == 1 &&
+         !surface.surface.IsNull() &&
+         GeomAdaptor_Surface(surface.surface).GetType() == GeomAbs_Cylinder;
+}
 inline CylindricalTrigPolynomial
 BoundAffineTrigPolynomial(const UniPolynomial &angle,
                           const CompositionWork &work) {
@@ -70,11 +78,9 @@ BoundCylindricalComposition(const CurveBound &curve, const CurveBound &pcurve,
       throw Standard_Failure("invalid cylindrical policy or domain");
     limit = std::min(limit, 32768);
     depthLimit = std::min(depthLimit, 32);
-    if (!curve.isSpline || curve.spline.degree != 3 || !pcurve.isSpline ||
-        pcurve.spline.degree != 1 || surface.surface.IsNull() ||
-        GeomAdaptor_Surface(surface.surface).GetType() != GeomAbs_Cylinder)
+    if (!CylindricalCompositionClass(curve, pcurve, surface))
       throw Standard_Failure(
-          "cylindrical composition requires cubic 3d and linear spline pcurve");
+          "cylindrical composition requires degree1..18 3d and linear spline pcurve");
     for (const auto *spline : {&curve.spline, &pcurve.spline})
       for (const auto &pole : spline->poles) {
         work.Check();

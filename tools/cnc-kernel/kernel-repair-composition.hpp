@@ -2,10 +2,15 @@
 #include "kernel-repair-domains.hpp"
 
 namespace MalievRepair {
-// Common-variable, nonrational cubic/bicubic composition. Never truncate a
-// polynomial: cubic U and V in a bicubic support require all degree18 terms.
+// Common-variable nonrational composition, retaining every coefficient through
+// degree18. Cubic U and V on bicubic support already require that capacity;
+// affine PCs with degree11/14 source edges fit without truncation or fitting.
 using UniPolynomial = std::vector<Interval>;
 using PolynomialPoint = std::array<UniPolynomial, 3>;
+constexpr int CompositionDegreeCapacity = 18;
+inline bool CompositionSourceDegree(int degree) {
+  return degree >= 1 && degree <= CompositionDegreeCapacity;
+}
 struct CompositionWork {
   std::function<bool()> continues;
   void Check() const {
@@ -27,7 +32,8 @@ inline UniPolynomial PolynomialProduct(const UniPolynomial &a,
                                        const UniPolynomial &b,
                                        const CompositionWork &work) {
   work.Check();
-  if (a.size() + b.size() > 20)
+  if (a.empty() || b.empty() ||
+      a.size() + b.size() > CompositionDegreeCapacity + 2)
     throw Standard_Failure("composition degree exceeds18");
   UniPolynomial result(a.size() + b.size() - 1);
   for (size_t i = 0; i < a.size(); ++i)
@@ -39,6 +45,21 @@ inline UniPolynomial PolynomialDeBoorScalar(const Spline &axis, int span,
                                             const UniPolynomial &parameter,
                                             std::vector<UniPolynomial> controls,
                                             const CompositionWork &work) {
+  // Validate the actual composition before coefficient algebra. V controls
+  // can already contain the U polynomial, so include their existing degree.
+  if (!CompositionSourceDegree(axis.degree) || parameter.empty() ||
+      parameter.size() > CompositionDegreeCapacity + 1 ||
+      controls.size() != static_cast<size_t>(axis.degree + 1))
+    throw Standard_Failure("invalid composition operands");
+  size_t controlDegree = 0;
+  for (const auto &control : controls) {
+    if (control.empty() || control.size() > CompositionDegreeCapacity + 1)
+      throw Standard_Failure("invalid composition control degree");
+    controlDegree = std::max(controlDegree, control.size() - 1);
+  }
+  if (axis.degree * (parameter.size() - 1) + controlDegree >
+      CompositionDegreeCapacity)
+    throw Standard_Failure("composition degree exceeds18");
   for (int level = 1; level <= axis.degree; ++level)
     for (int index = axis.degree; index >= level; --index) {
       work.Check();
@@ -169,11 +190,15 @@ BoundPolynomialComposition(const CurveBound &curve, const CurveBound &pcurve,
         !pcurve.c2.IsNull() &&
         Geom2dAdaptor_Curve(pcurve.c2).GetType() == GeomAbs_Line;
     if (!curve.isSpline || (!pcurve.isSpline && !affinePC) || !surface.spline ||
-        curve.spline.degree != 3 ||
-        (pcurve.isSpline && pcurve.spline.degree != 3) ||
+        !CompositionSourceDegree(curve.spline.degree) ||
+        (pcurve.isSpline && pcurve.spline.degree != 1 && pcurve.spline.degree != 3) ||
         surface.u.degree != 3 || surface.v.degree != 3)
-      throw Standard_Failure("composition requires cubic 3d, cubic or line "
-                             "pcurve, bicubic surface");
+      throw Standard_Failure("composition requires degree1..18 3d, affine or "
+                             "cubic pcurve, bicubic surface");
+    const int pcDegree = affinePC ? 1 : pcurve.spline.degree;
+    if ((surface.u.degree + surface.v.degree) * pcDegree >
+        CompositionDegreeCapacity)
+      throw Standard_Failure("composition degree exceeds18");
     const auto nativeSurface = GeomAdaptor_Surface(surface.surface).BSpline();
     if (nativeSurface->IsUPeriodic() || nativeSurface->IsVPeriodic())
       throw Standard_Failure("periodic composition unsupported");

@@ -55,9 +55,7 @@ BoundRepairMetric(const RepresentedCurveBound &curve,
       "," + std::to_string(surface.spline ? surface.v.degree : 0);
   ++dispatch.classes[className];
   const bool cylinderClass =
-      curve.isSpline && curve.spline.degree == 3 && pcurve.isSpline &&
-      pcurve.spline.degree == 1 && !surface.spline &&
-      GeomAdaptor_Surface(surface.surface).GetType() == GeomAbs_Cylinder;
+      CylindricalCompositionClass(curve, pcurve, surface);
   const bool rationalClass =
       surface.spline && surface.u.degree == 5 && surface.v.degree == 2 &&
       pcurve.isSpline && pcurve.spline.degree == 3 &&

@@ -13,7 +13,10 @@
 #include <Geom_ConicalSurface.hxx>
 #include <Geom_CylindricalSurface.hxx>
 #include <Geom_ToroidalSurface.hxx>
+#include <Geom_SurfaceOfRevolution.hxx>
+#include <Geom_Circle.hxx>
 #include <iostream>
+#include <iomanip>
 #include <stdexcept>
 using namespace MalievKernel;
 namespace RB = MalievKernel::RotationalBand;
@@ -146,6 +149,31 @@ int main() {
               "split elementary rectangle");
       }
     auto c = run(face(cone, 0, 2 * pi, 1, 3));
+    Handle(Geom_Surface) revolution=new Geom_SurfaceOfRevolution(new Geom_Circle(gp_Ax2(gp_Pnt(12,0,5),gp_Dir(0,1,0),gp_Dir(0,0,-1)),3),gp_Ax1(gp_Pnt(),gp_Dir(0,0,1)));
+    // Preserve this separate native constructor diagnostic: canonical full-U
+    // control below is not evidence that this shifted seam was certified.
+    auto shiftedFull=face(revolution,.2,.2+2*pi,.3,2.7);auto shiftedDiagnostic=run(shiftedFull);
+    BRepCheck_Analyzer shiftedAnalyzer(shiftedFull,Standard_True,Standard_False);
+    std::cout<<std::setprecision(17)<<"SHIFTED_FULL_DIAGNOSTIC valid="<<shiftedAnalyzer.IsValid()<<" available="<<shiftedDiagnostic.available<<" reason="<<shiftedDiagnostic.reason<<'\n';
+    std::vector<RB::Segment> shiftedSeams;
+    for(const auto&side:shiftedDiagnostic.sides)if(side.constantAxis==0)for(const auto&s:side.segments){
+      shiftedSeams.push_back(s);std::cout<<"SHIFTED_USE edge="<<s.use.edgeId<<" orientation="<<s.use.edge.Orientation()<<" seam="<<s.use.seam<<" range="<<s.use.first<<','<<s.use.last<<" uv="<<s.start.X()<<','<<s.start.Y()<<" -> "<<s.end.X()<<','<<s.end.Y()<<'\n';
+    }
+    if(shiftedSeams.size()==2)std::cout<<"SHIFTED_PAIR sameEdge="<<shiftedSeams[0].use.edge.IsSame(shiftedSeams[1].use.edge)<<" sameCurveHandle="<<(shiftedSeams[0].use.curve==shiftedSeams[1].use.curve)<<'\n';
+    check(shiftedAnalyzer.IsValid()&&!shiftedDiagnostic.available&&shiftedDiagnostic.reason=="seam_pair_incomplete","valid finite shifted face does not invent a closed periodic seam");
+    check(shiftedSeams.size()==2&&!shiftedSeams[0].use.edge.IsSame(shiftedSeams[1].use.edge)&&!shiftedSeams[0].use.seam&&!shiftedSeams[1].use.seam,"coincident boundaries remain distinct native edges");
+    for(bool complete:{false,true}) {
+      auto f=face(revolution,complete?0:.2,complete?2*pi:1.7,.3,2.7);
+      auto band=run(f);
+      if(!band.available)std::cerr<<"revolution complete="<<complete<<" reason="<<band.reason<<'\n';
+      check(band.available&&band.full==complete&&band.support=="circular_revolution","circular revolution finite partial/full actual band");
+      check(band.profileSense==-1,"native reversal of meridian parameter retained");
+      near(band.phase,-pi/2,"native phase retained"); near(band.radialMin,9,"interior radial critical minimum mapped");
+      near(band.axialMin,-3*std::cos(.3),"native V endpoint axial minimum"); near(band.axialMax,-3*std::cos(2.7),"native V endpoint axial maximum");
+      auto reversed=run(TopoDS::Face(f.Reversed()));check(reversed.available&&reversed.orientation!=band.orientation&&reversed.profileSense==band.profileSense,"face reversal does not rewrite parameter sense");
+      gp_Trsf t;t.SetRotation(gp_Ax1(gp_Pnt(),gp_Dir(1,2,3)),.713);t.SetTranslationPart(gp_Vec(17,-23,41));
+      auto placed=run(TopoDS::Face(f.Moved(TopLoc_Location(t))));check(placed.available,"proper placed revolution band");near(placed.radialMin,band.radialMin,"placement invariant profile radius");
+    }
     check(c.available, "cone two rings");
     near(c.axialMin, std::cos(.4), "cone slant parameter axial regression");
     near(c.radialMax, 5 + 3 * std::sin(.4), "cone endpoint radius");

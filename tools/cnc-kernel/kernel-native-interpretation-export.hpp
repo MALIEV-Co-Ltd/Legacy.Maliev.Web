@@ -670,6 +670,41 @@ inline void ExportNativeInterpretationUnchecked(InterpretationValue &provenance,
                         cycle.beforeNormalized != loop.nativeWire.Orientation());
           value.set("composedCoedgeCyclePreserved",
                     cycle.composedCyclePreserved);
+          auto sourceCycle = V::object(), declaredUses = V::array();
+          sourceCycle.set("method", cycle.sourceProof.reason);
+          sourceCycle.set("complete", cycle.sourceProof.complete);
+          sourceCycle.set("sourceDeclarationAttempted", source.declarationAttempted);
+          sourceCycle.set("sourceDeclarationComplete", source.declarationComplete);
+          sourceCycle.set("semantics", std::string("source-oriented-topology-only-separate-final-native-and-metric-obligations-required"));
+          for (size_t occurrence = 0; occurrence < source.declaredCoedges.size(); ++occurrence) {
+            const auto &declared = source.declaredCoedges[occurrence];
+            auto row = V::object();
+            row.set("occurrenceIndex", occurrence);
+            row.set("sourceOrientedEdgeEntityNumber", declared.orientedEntity);
+            row.set("sourceEdgeEntityNumber", declared.edgeEntity);
+            row.set("sourceStartVertexEntityNumber", declared.startEntity);
+            row.set("sourceEndVertexEntityNumber", declared.endEntity);
+            row.set("sourceOrientation", declared.forward);
+            row.set("sourceEdgeSameSense", declared.edgeSameSense);
+            row.set("nativeSourceEdgeItem", declared.nativeEdgeItem);
+            row.set("nativeSourceStartVertexItem", declared.nativeStartItem);
+            row.set("nativeSourceEndVertexItem", declared.nativeEndItem);
+            declaredUses.set(occurrence, row);
+          }
+          sourceCycle.set("declaredOccurrences", declaredUses);
+          value.set("sourceCycleProof", sourceCycle);
+          if (e.diagnostics) {
+            auto predicates = V::object();
+            predicates.set("supportedContext", cycle.supportedContext);
+            predicates.set("preAddOrientationMatches", cycle.preAddOrientationMatches);
+            predicates.set("beforeOccurrenceUnique", cycle.beforeOccurrenceUnique);
+            predicates.set("beforeOrientationMatches", cycle.beforeOrientationMatches);
+            predicates.set("beforeComplete", cycle.beforeCompleteDiagnostic);
+            predicates.set("finalComplete", cycle.finalCompleteDiagnostic);
+            predicates.set("finalAssociationsComplete", cycle.finalAssociationsDiagnostic);
+            predicates.set("sameCycle", cycle.sameCycleDiagnostic);
+            value.set("cycleDiagnostics", predicates);
+          }
           require(cycle.Positive(),
                   "source-bound-composed-orientation-changed");
           std::set<std::string> wireIds;

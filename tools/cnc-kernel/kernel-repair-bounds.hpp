@@ -2,6 +2,7 @@
 // Outward-rounded de Boor envelopes over native coefficients. No samples,
 // tessellation, Segment, numerical extrema or native tolerance enlargement.
 #include <Standard_Failure.hxx>
+#include "kernel-circular-revolution.hpp"
 #include <TopLoc_Location.hxx>
 #include <string>
 #include <vector>
@@ -137,9 +138,10 @@ struct SurfaceBound {
         if(s.IsNull())throw Standard_Failure("missing surface");GeomAdaptor_Surface a(s);
         if(a.GetType()==GeomAbs_BSplineSurface){auto b=a.BSpline();spline=true;u.degree=b->UDegree();v.degree=b->VDegree();u.knots=SurfaceKnots(b,true);v.knots=SurfaceKnots(b,false);b->Bounds(u.first,u.last,v.first,v.last);nu=static_cast<int>(u.knots.size())-u.degree-1;nv=static_cast<int>(v.knots.size())-v.degree-1;
             for(int i=0;i<nu;++i){std::vector<HPoint>row;for(int j=0;j<nv;++j){const int x=i%b->NbUPoles()+1,y=j%b->NbVPoles()+1;auto p=b->Pole(x,y);row.push_back(Weighted(p.X(),p.Y(),p.Z(),b->Weight(x,y)));}poles.push_back(row);}}
-        else if(a.GetType()>GeomAbs_Torus)throw Standard_Failure("unsupported exact surface envelope");
+        else if(a.GetType()>GeomAbs_Torus){MalievCircularRevolution::CircleRevolution r;if(!MalievCircularRevolution::Read(a,r))throw Standard_Failure("unsupported exact surface envelope");}
     }
     Box Bounds(Interval U,Interval V)const{
+        if(!std::isfinite(U.lo)||!std::isfinite(U.hi)||U.lo>U.hi||!std::isfinite(V.lo)||!std::isfinite(V.hi)||V.lo>V.hi)throw Standard_Failure("nonfinite or reversed surface domain");
         Box result=EmptyBox();
         if(spline){
             if(U.lo<u.first||U.hi>u.last||V.lo<v.first||V.hi>v.last)throw Standard_Failure("UV interval outside native surface basis");
@@ -150,6 +152,7 @@ struct SurfaceBound {
                     auto p=DeBoor(row,j,{vl,vh});p[3]={std::max(p[3].lo,minWeight),std::min(p[3].hi,maxWeight)};Union(result,Cartesian(p));used=true;}}
             if(!used)throw Standard_Failure("uncovered native surface interval");
         }else{GeomAdaptor_Surface a(surface);gp_Ax3 axes;Interval x,y,z;
+            if(a.GetType()==GeomAbs_SurfaceOfRevolution){MalievCircularRevolution::CircleRevolution r;if(!MalievCircularRevolution::Read(a,r))throw Standard_Failure("unsupported revolution basis");return Placed(MalievCircularRevolution::Image(r,Trig(U,true),Trig(U,false),Trig(V,true),Trig(V,false)),location);}
             switch(a.GetType()){
                 case GeomAbs_Plane:{auto p=a.Plane();axes=p.Position();x=U;y=V;z=Interval(0);break;}
                 case GeomAbs_Cylinder:{auto p=a.Cylinder();axes=p.Position();x=Interval(p.Radius())*Trig(U,true);y=Interval(p.Radius())*Trig(U,false);z=V;break;}

@@ -35,6 +35,9 @@
 #include <TopoDS_Wire.hxx>
 #include <TransferBRep.hxx>
 #include <Transfer_TransientProcess.hxx>
+#include <StepShape_EdgeLoop.hxx>
+#include <StepShape_EdgeCurve.hxx>
+#include <StepShape_OrientedEdge.hxx>
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
@@ -51,11 +54,23 @@ struct Pcurve {
   Handle(Geom2d_Curve) curve;
   TopoDS_Edge nativeEdge;
 };
+// Optional audit snapshots only; never consulted by an acceptance predicate.
+struct LoopUseDiagnostic {
+  int item = -1, orientation = -1, startVertex = -1, endVertex = -1;
+  bool pcurveAvailable = false, finiteRange = false, stored = false, seam = false;
+  double first = 0, last = 0;
+  std::string pcurveType, pcurveGeometry;
+};
 struct FaceLoop {
   TopoDS_Wire nativeWire;
   std::vector<std::pair<int, int>> uses;
   std::vector<TopoDS_Edge> edges;
+  std::vector<std::pair<int, int>> directUses;
+  std::vector<std::pair<int, int>> directVertices;
   bool complete = true;
+  bool diagnosticsCaptured = false, faceAwareExplorer = false;
+  std::vector<LoopUseDiagnostic> directDiagnostics, visitedDiagnostics;
+  std::vector<std::pair<int, int>> topologyOnlyUses;
 };
 struct State {
   std::string geometry, placement, membership, pcurves;
@@ -206,6 +221,11 @@ struct Periodic {
   bool domainsCaptured = false, attempted = false;
   MalievNativeWarning::EmissionToken emission = 0;
 };
+struct DeclaredCoedge {
+  int orientedEntity = 0, edgeEntity = 0, startEntity = 0, endEntity = 0;
+  bool forward = false, edgeSameSense = false;
+  int nativeEdgeItem = -1, nativeStartItem = -1, nativeEndItem = -1;
+};
 struct SourceBound {
   int faceEntity = 0, boundEntity = 0, loopEntity = 0;
   int insertionParentOrientation = -1;
@@ -213,6 +233,8 @@ struct SourceBound {
        effectiveFaceSense = false;
   std::string loopKind;
   TopoDS_Shape face, wire;
+  bool declarationAttempted = false, declarationComplete = false;
+  std::vector<DeclaredCoedge> declaredCoedges;
 };
 struct EmittedFace {
   TopoDS_Face face;
@@ -406,6 +428,26 @@ inline void IntersectionOperation(const TopoDS_Shape &wire, int status,
   o.emission = MalievNativeWarning::Tag(&message, "intersection", e.operations.size());
   e.operations.push_back(o);
 }
+inline LoopUseDiagnostic CaptureLoopUseDiagnostic(
+    const Boundary &b, const TopoDS_Edge &edge, const TopoDS_Face &face, bool post) {
+  LoopUseDiagnostic value;
+  value.item = Identity(b, edge, post);
+  value.orientation = static_cast<int>(edge.Orientation());
+  const auto start = TopExp::FirstVertex(edge, true), end = TopExp::LastVertex(edge, true);
+  if (!start.IsNull()) value.startVertex = Identity(b, start, post);
+  if (!end.IsNull()) value.endVertex = Identity(b, end, post);
+  Standard_Boolean stored = false;
+  const auto curve = BRep_Tool::CurveOnSurface(edge, face, value.first, value.last, &stored);
+  value.pcurveAvailable = !curve.IsNull();
+  value.stored = stored;
+  value.finiteRange = std::isfinite(value.first) && std::isfinite(value.last) && value.first < value.last;
+  value.seam = BRep_Tool::IsClosed(edge, face);
+  if (!curve.IsNull()) {
+    value.pcurveType = curve->DynamicType()->Name();
+    value.pcurveGeometry = Geometry(curve);
+  }
+  return value;
+}
 inline State Capture(const Boundary &b, const TopoDS_Shape &s, bool post) {
   ++EvidenceStore().audit.captureCalls;
   ++EvidenceStore().audit.counters[post ? "capturePost" : "captureSource"];
@@ -476,12 +518,25 @@ inline State Capture(const Boundary &b, const TopoDS_Shape &s, bool post) {
         for (TopoDS_Iterator edge(wire.Value()); edge.More(); edge.Next()) {
           const auto occurrence = TopoDS::Edge(edge.Value());
           direct.push_back(occurrence);
+          loop.directUses.emplace_back(Identity(b, occurrence, post), static_cast<int>(occurrence.Orientation()));
+          const auto directStart = TopExp::FirstVertex(occurrence, true), directEnd = TopExp::LastVertex(occurrence, true);
+          loop.directVertices.emplace_back(directStart.IsNull() ? -1 : Identity(b, directStart, post),
+                                           directEnd.IsNull() ? -1 : Identity(b, directEnd, post));
           double first, last;
           hasUv = hasUv && !BRep_Tool::CurveOnSurface(occurrence, forwardFace,
                                                       first, last)
                                 .IsNull();
         }
         std::vector<bool> visited(direct.size(), false);
+        if (EvidenceStore().diagnostics) {
+          loop.diagnosticsCaptured = true;
+          loop.faceAwareExplorer = hasUv;
+          for (const auto &occurrence : direct)
+            loop.directDiagnostics.push_back(CaptureLoopUseDiagnostic(b, occurrence, forwardFace, post));
+          for (BRepTools_WireExplorer audit(loop.nativeWire); audit.More(); audit.Next())
+            loop.topologyOnlyUses.emplace_back(Identity(b, audit.Current(), post),
+                                               static_cast<int>(audit.Current().Orientation()));
+        }
         BRepTools_WireExplorer edge;
         if (hasUv)
           edge.Init(TopoDS::Wire(wire.Value()), forwardFace);
@@ -506,6 +561,8 @@ inline State Capture(const Boundary &b, const TopoDS_Shape &s, bool post) {
               Identity(b, edge.Current(), post),
               static_cast<int>(edge.Current().Orientation()));
           loop.edges.push_back(edge.Current());
+          if (EvidenceStore().diagnostics)
+            loop.visitedDiagnostics.push_back(CaptureLoopUseDiagnostic(b, edge.Current(), forwardFace, post));
         }
         loop.complete = loop.complete && loop.uses.size() == direct.size() &&
                         !loop.edges.empty();
@@ -542,6 +599,50 @@ inline State Capture(const Boundary &b, const TopoDS_Shape &s, bool post) {
   v.pcurves = p.str();
   return v;
 }
+inline void CaptureSourceDeclarations(const Boundary &boundary,
+                                      const Handle(Transfer_TransientProcess) &tp) {
+  for (auto &source : EvidenceStore().sourceBounds) {
+    if (source.declarationAttempted || source.loopKind != "StepShape_EdgeLoop" ||
+        Identity(boundary, source.face, false) < 0) continue;
+    source.declarationAttempted = true;
+    try {
+      if (tp.IsNull() || tp->Model().IsNull() || source.loopEntity <= 0 ||
+          source.loopEntity > tp->Model()->NbEntities()) continue;
+      const auto loop = Handle(StepShape_EdgeLoop)::DownCast(tp->Model()->Value(source.loopEntity));
+      if (loop.IsNull() || loop->NbEdgeList() == 0) continue;
+      bool complete = true;
+      for (int i = 1; i <= loop->NbEdgeList(); ++i) {
+        DeclaredCoedge use;
+        const auto oriented = loop->EdgeListValue(i);
+        if (oriented.IsNull()) { complete = false; break; }
+        // Nested ORIENTED_EDGE is not silently flattened: its composed declaration needs a separate proof.
+        const auto edge = Handle(StepShape_EdgeCurve)::DownCast(oriented->EdgeElement());
+        if (edge.IsNull() || edge->EdgeStart().IsNull() || edge->EdgeEnd().IsNull()) { complete = false; break; }
+        use.orientedEntity = tp->Model()->Number(oriented);
+        use.edgeEntity = tp->Model()->Number(edge);
+        use.startEntity = tp->Model()->Number(edge->EdgeStart());
+        use.endEntity = tp->Model()->Number(edge->EdgeEnd());
+        use.forward = oriented->Orientation();
+        use.edgeSameSense = edge->SameSense();
+        const auto nativeEdge = TransferBRep::ShapeResult(tp, edge);
+        const auto nativeStart = TransferBRep::ShapeResult(tp, edge->EdgeStart());
+        const auto nativeEnd = TransferBRep::ShapeResult(tp, edge->EdgeEnd());
+        if (nativeEdge.IsNull() || nativeEdge.ShapeType() != TopAbs_EDGE ||
+            nativeStart.IsNull() || nativeStart.ShapeType() != TopAbs_VERTEX ||
+            nativeEnd.IsNull() || nativeEnd.ShapeType() != TopAbs_VERTEX ||
+            use.orientedEntity <= 0 || use.edgeEntity <= 0 || use.startEntity <= 0 || use.endEntity <= 0) {
+          complete = false; break;
+        }
+        use.nativeEdgeItem = Identity(boundary, nativeEdge, false);
+        use.nativeStartItem = Identity(boundary, nativeStart, false);
+        use.nativeEndItem = Identity(boundary, nativeEnd, false);
+        if (use.nativeEdgeItem < 0 || use.nativeStartItem < 0 || use.nativeEndItem < 0) complete = false;
+        source.declaredCoedges.push_back(use);
+      }
+      source.declarationComplete = complete && source.declaredCoedges.size() == static_cast<size_t>(loop->NbEdgeList());
+    } catch (const Standard_Failure &) { source.declarationComplete = false; }
+  }
+}
 inline void Begin(const TopoDS_Shape &shape,
                   const Handle(Transfer_TransientProcess) & tp,
                   const Handle(Standard_Transient) & source) {
@@ -575,6 +676,7 @@ inline void Begin(const TopoDS_Shape &shape,
   for (auto &item : b.items)
     item.before = Capture(b, item.original, false);
   }
+  CaptureSourceDeclarations(b, tp);
   AllocateSourceObligations(b);
   e.audit.Checkpoint("begin-end", e.deadline, e.current);
 }
@@ -632,6 +734,94 @@ inline bool SameCycle(const std::vector<std::pair<int, int>> &a,
       return true;
   }
   return false;
+}
+struct SourceCycleProof {
+  bool complete = false, declared = false;
+  std::vector<std::pair<int, int>> uses;
+  std::string reason = "source-declaration-unavailable";
+};
+inline SourceCycleProof CertifySourceCycle(const Boundary &boundary, const Item &face,
+                                         const FaceLoop &loop, const SourceBound &source) {
+  SourceCycleProof proof;
+  if (!source.declarationAttempted) {
+    // Preserve the existing complete native route (e.g. non-STEP native tests).
+    proof.complete = loop.complete;
+    proof.uses = loop.uses;
+    proof.reason = proof.complete ? "complete-native-source-traversal" : "source-declaration-unavailable";
+    return proof;
+  }
+  proof.declared = true;
+  if (!source.declarationComplete || source.loopKind != "StepShape_EdgeLoop" ||
+      source.faceEntity <= 0 || source.boundEntity <= 0 || source.loopEntity <= 0 ||
+      source.face.IsNull() || source.wire.IsNull() ||
+      !source.face.IsSame(face.original) || !source.wire.IsSame(loop.nativeWire) ||
+      face.before.orientation != (source.sourceFaceSense ? TopAbs_FORWARD : TopAbs_REVERSED)) return proof;
+  const auto parent = static_cast<TopAbs_Orientation>(source.insertionParentOrientation);
+  const auto preAdd = source.boundSense == source.effectiveFaceSense ? TopAbs_FORWARD : TopAbs_REVERSED;
+  if ((parent != TopAbs_FORWARD && parent != TopAbs_REVERSED) || source.wire.Orientation() != preAdd) return proof;
+  const auto normalized = TopAbs::Compose(parent, preAdd);
+  if (loop.nativeWire.Orientation() != normalized || source.declaredCoedges.empty() ||
+      source.declaredCoedges.size() != loop.directUses.size() ||
+      loop.directVertices.size() != loop.directUses.size()) return proof;
+  auto uniqueBinding = [&](int nativeId, int entity, TopAbs_ShapeEnum kind) {
+    if (nativeId < 0 || static_cast<size_t>(nativeId) >= boundary.items.size() || entity <= 0 ||
+        boundary.items[nativeId].original.ShapeType() != kind) return false;
+    int count = 0;
+    for (const auto &item : boundary.items)
+      for (const int candidate : item.entities)
+        if (candidate == entity) {
+          if (&item != &boundary.items[nativeId]) return false;
+          ++count;
+        }
+    return count == 1;
+  };
+  std::vector<bool> consumed(loop.directUses.size(), false);
+  std::vector<std::pair<int, int>> vertices;
+  std::vector<int> occurrences;
+  for (size_t index = 0; index < source.declaredCoedges.size(); ++index) {
+    const auto &use = source.declaredCoedges[normalized == TopAbs_REVERSED
+        ? source.declaredCoedges.size() - 1 - index : index];
+    if (use.orientedEntity <= 0 || std::find(occurrences.begin(), occurrences.end(), use.orientedEntity) != occurrences.end() ||
+        !uniqueBinding(use.nativeEdgeItem, use.edgeEntity, TopAbs_EDGE) ||
+        !uniqueBinding(use.nativeStartItem, use.startEntity, TopAbs_VERTEX) ||
+        !uniqueBinding(use.nativeEndItem, use.endEntity, TopAbs_VERTEX)) return proof;
+    occurrences.push_back(use.orientedEntity);
+    const int orientation = static_cast<int>(TopAbs::Compose(normalized,
+        use.forward == use.edgeSameSense ? TopAbs_FORWARD : TopAbs_REVERSED));
+    const std::pair<int, int> expected(use.nativeEdgeItem, orientation);
+    int start = use.forward ? use.nativeStartItem : use.nativeEndItem;
+    int end = use.forward ? use.nativeEndItem : use.nativeStartItem;
+    if (normalized == TopAbs_REVERSED) std::swap(start, end);
+    int matched = -1;
+    for (size_t j = 0; j < loop.directUses.size(); ++j)
+      if (!consumed[j] && loop.directUses[j] == expected) {
+        if (matched >= 0 || loop.directVertices[j] != std::make_pair(start, end)) return proof;
+        matched = static_cast<int>(j);
+      }
+    if (matched < 0) return proof;
+    consumed[matched] = true;
+    proof.uses.push_back(expected); vertices.emplace_back(start, end);
+  }
+  for (size_t i = 0; i < vertices.size(); ++i)
+    if (vertices[i].second != vertices[(i + 1) % vertices.size()].first) return proof;
+  // A complete face-aware source walk is corroborating order evidence, never replaced when it disagrees.
+  if (loop.complete && !SameCycle(loop.uses, proof.uses)) return proof;
+  proof.complete = true;
+  proof.reason = "certified-step-oriented-edge-loop";
+  return proof;
+}
+inline SourceCycleProof SourceCycleForLoop(const Boundary &boundary, const Item &face, const FaceLoop &loop) {
+  const SourceBound *found = nullptr;
+  for (const auto &source : EvidenceStore().sourceBounds)
+    if (!source.face.IsNull() && !source.wire.IsNull() && source.face.IsSame(face.original) && source.wire.IsSame(loop.nativeWire)) {
+      if (found) return SourceCycleProof();
+      found = &source;
+    }
+  if (found) return CertifySourceCycle(boundary, face, loop, *found);
+  SourceCycleProof proof;
+  proof.complete = loop.complete; proof.uses = loop.uses;
+  proof.reason = proof.complete ? "complete-native-source-traversal" : "source-declaration-unavailable";
+  return proof;
 }
 inline bool ConnectorProofValid(const Boundary &boundary,
                                  const ConnectorProof &proof, double budget,
@@ -769,6 +959,10 @@ struct SourceBoundCycleCheck {
   bool beforeOccurrenceUnique = false;
   bool beforeOrientationMatches = false;
   bool composedCyclePreserved = false;
+  SourceCycleProof sourceProof;
+  // Export-only decomposition of the existing conjunction, not a new policy.
+  bool beforeCompleteDiagnostic = false, finalCompleteDiagnostic = false,
+       finalAssociationsDiagnostic = false, sameCycleDiagnostic = false;
   TopAbs_Orientation expectedPreAdd = TopAbs_EXTERNAL;
   TopAbs_Orientation expectedNormalized = TopAbs_EXTERNAL;
   TopAbs_Orientation beforeNormalized = TopAbs_EXTERNAL;
@@ -778,6 +972,32 @@ struct SourceBoundCycleCheck {
            composedCyclePreserved;
   }
 };
+inline bool SourceFaceCyclesPreserved(const Boundary &boundary, const Item &face, double budget) {
+  if (face.before.orientation != face.after.orientation || face.before.faceLoops.size() != face.after.faceLoops.size()) return false;
+  std::vector<bool> matched(face.after.faceLoops.size(), false);
+  for (const auto &before : face.before.faceLoops) {
+    const auto source = SourceCycleForLoop(boundary, face, before);
+    if (!source.complete) return false;
+    int match = -1;
+    for (size_t i = 0; i < face.after.faceLoops.size(); ++i) if (!matched[i]) {
+      const auto &loop = face.after.faceLoops[i];
+      std::vector<std::pair<int, int>> uses;
+      bool covered = loop.complete;
+      for (size_t j = 0; j < loop.uses.size(); ++j) {
+        if (loop.uses[j].first >= 0) uses.push_back(loop.uses[j]);
+        else covered = covered && loop.uses[j].first == -1 &&
+            ConnectorForLoopUse(boundary, face, loop, j, budget, false);
+      }
+      if (covered && SameCycle(source.uses, uses)) {
+        if (match >= 0) return false;
+        match = static_cast<int>(i);
+      }
+    }
+    if (match < 0) return false;
+    matched[match] = true;
+  }
+  return true;
+}
 inline SourceBoundCycleCheck
 CheckSourceBoundCycle(const Boundary &boundary, const Item &face,
                       const Item &wire, const SourceBound &source,
@@ -811,6 +1031,7 @@ CheckSourceBoundCycle(const Boundary &boundary, const Item &face,
       result.beforeNormalized = beforeLoop.nativeWire.Orientation();
       beforeUses = beforeLoop.uses;
       beforeComplete = beforeLoop.complete;
+      result.sourceProof = CertifySourceCycle(boundary, face, beforeLoop, source);
     }
   result.beforeOccurrenceUnique = beforeMatches == 1;
   result.beforeOrientationMatches = result.beforeOccurrenceUnique &&
@@ -831,8 +1052,14 @@ CheckSourceBoundCycle(const Boundary &boundary, const Item &face,
     finalSourceUses.emplace_back(use.first, use.second);
   }
   result.composedCyclePreserved =
-      finalLoop.complete && beforeComplete && finalAssociationsComplete &&
-      result.beforeOccurrenceUnique && SameCycle(beforeUses, finalSourceUses);
+      finalLoop.complete && result.sourceProof.complete && finalAssociationsComplete &&
+      result.beforeOccurrenceUnique && SameCycle(result.sourceProof.uses, finalSourceUses);
+  if (EvidenceStore().diagnostics) {
+    result.beforeCompleteDiagnostic = beforeComplete;
+    result.finalCompleteDiagnostic = finalLoop.complete;
+    result.finalAssociationsDiagnostic = finalAssociationsComplete;
+    result.sameCycleDiagnostic = SameCycle(beforeUses, finalSourceUses);
+  }
   return result;
 }
 // Exact clamped-boundary restriction. Positive rational weights make the
@@ -1576,39 +1803,7 @@ inline void End(const TopoDS_Shape &result,
     MalievNativeAudit::Scope cycleScope(e.audit, "source-cycle-matching");
     for (const auto &item : b.items) {
       if (item.original.ShapeType() == TopAbs_FACE) {
-        bool complete =
-            item.before.orientation == item.after.orientation &&
-            item.before.faceLoops.size() == item.after.faceLoops.size();
-        std::vector<bool> matched(item.after.faceLoops.size(), false);
-        for (const auto &before : item.before.faceLoops) {
-          int match = -1;
-          bool ambiguous = false;
-          complete = complete && before.complete;
-          for (size_t i = 0; i < item.after.faceLoops.size(); ++i)
-            if (!matched[i]) {
-              const auto &loop = item.after.faceLoops[i];
-              std::vector<std::pair<int, int>> uses;
-              bool covered = loop.complete;
-              for (size_t j = 0; j < loop.uses.size(); ++j) {
-                if (loop.uses[j].first >= 0)
-                  uses.push_back(loop.uses[j]);
-                else {
-                  covered = covered && loop.uses[j].first == -1 &&
-                      ConnectorForLoopUse(b, item, loop, j, e.budget, false);
-                }
-              }
-              if (covered && SameCycle(before.uses, uses)) {
-                if (match >= 0)
-                  ambiguous = true;
-                match = static_cast<int>(i);
-              }
-            }
-          if (match < 0 || ambiguous)
-            complete = false;
-          else
-            matched[match] = true;
-        }
-        if (!complete)
+        if (!SourceFaceCyclesPreserved(b, item, e.budget))
           ++b.changedMembership;
         continue;
       }
