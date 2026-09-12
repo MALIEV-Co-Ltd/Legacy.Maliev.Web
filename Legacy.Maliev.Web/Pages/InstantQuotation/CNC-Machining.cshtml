@@ -1608,8 +1608,8 @@
         };
 
         // This must run before model-viewer.js, which constructs the worker while loading.
-        window.malievModelWorkerUrl = '/src/app/js/model-viewer/model-viewer.worker.js';
-        window.malievCncQuotationWorkerUrl = '/src/app/js/cnc-quotation/cnc-quotation.worker.js';
+        window.malievModelWorkerUrl = '@Html.Raw(Legacy.Maliev.Web.Middleware.WebContentSecurityPolicy.ModelWorkerUrl)';
+        window.malievCncQuotationWorkerUrl = '@Html.Raw(Legacy.Maliev.Web.Middleware.WebContentSecurityPolicy.CncQuotationWorkerUrl)';
     </script>
     <partial name="_ThreeJsJavascriptsPartial" />
 
