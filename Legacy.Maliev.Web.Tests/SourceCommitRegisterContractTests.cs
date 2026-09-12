@@ -4,8 +4,8 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed partial class SourceCommitRegisterContractTests
 {
-    private const string SourceCheckpoint = "5ac7d045c51194edd9e64d8564f1b726b001be34";
-    private const int ExpectedCommitCount = 286;
+    private const string SourceCheckpoint = "cbbe1c3a482d0825cecb732bb1044c88bb20358c";
+    private const int ExpectedCommitCount = 289;
 
     [Fact]
     public void Register_ClassifiesEverySourceCommitWithEvidence()
@@ -33,6 +33,11 @@ public sealed partial class SourceCommitRegisterContractTests
             Assert.Contains("[evidence](", entry.Value, StringComparison.Ordinal));
         Assert.Contains(entries.Cast<Match>(), entry =>
             entry.Groups[1].Value.Equals(SourceCheckpoint, StringComparison.Ordinal));
+        Assert.Contains(entries.Cast<Match>(), entry =>
+            entry.Groups[1].Value.Equals("bf079667bba7d9bc01a9688b1f7f5a5be5748a92", StringComparison.Ordinal));
+        Assert.Contains("`bf079667bba7d9bc01a9688b1f7f5a5be5748a92`", register, StringComparison.Ordinal);
+        Assert.Contains("`691d87c56c979613c4cd12b43a0d5e2e40994beb`", register, StringComparison.Ordinal);
+        Assert.Contains("`6438973a98a3a76f724df70f4b5c8b44541c9e3b`", register, StringComparison.Ordinal);
         Assert.True(File.Exists(reconciliationPath));
     }
 

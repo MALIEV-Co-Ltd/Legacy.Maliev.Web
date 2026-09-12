@@ -1,6 +1,6 @@
 # Source commit migration register
 
-Published source main: `5ac7d045c51194edd9e64d8564f1b726b001be34`.
+Published source main: `cbbe1c3a482d0825cecb732bb1044c88bb20358c`.
 Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
 
 Every entry is classified against the final source checkpoint. Related commits
@@ -294,3 +294,6 @@ the runtime, verification, adaptation, and exclusion classifications.
 - [x] `b1dc51ef5241ceb40a3c8a4e5c3f3a823d16b07e` — Merge deterministic CNC instant quotation planner — reconciled final behavior; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `03dc9a1271c16e6535934445e9dd6e3f30e8fffe` — Isolate generated XML documentation from source — reconciled final behavior; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `5ac7d045c51194edd9e64d8564f1b726b001be34` — Make native logging application-local — reconciled final behavior; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `ad2774760862371b4ea442d02669ad9ecd4913f5` — docs(cnc): plan evidence-backed manufacturing quotation recovery — source-only recovery plan classified as non-runtime; issue #221 ports the two subsequent runtime outcomes without copying source deployment instructions; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` — Add source-backed local CNC cutting tool catalog — migrated as a standalone non-authorizing review asset in target commit `691d87c56c979613c4cd12b43a0d5e2e40994beb`; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `cbbe1c3a482d0825cecb732bb1044c88bb20358c` — Avoid legacy tool diagnostics during CNC quotation imports — migrated with explicit manufacturing-summary-only suppression and absolute-millimeter STEP validation tessellation in target commit `6438973a98a3a76f724df70f4b5c8b44541c9e3b`; see [evidence](cnc-source-commit-reconciliation.md).
