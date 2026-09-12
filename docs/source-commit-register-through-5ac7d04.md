@@ -1,6 +1,6 @@
 # Source commit migration register
 
-Published source main: `8f2b647421acae53a0a04f927747652a97bd8714`.
+Published source main: `69ac210f1aeb11d35435688b198601042d502404`.
 Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
 
 Every entry is classified against the final source checkpoint. Related commits
@@ -331,3 +331,4 @@ the runtime, verification, adaptation, and exclusion classifications.
 - [x] `aade6be7c7a8b82d100c30e8a6f5c10a09ab6711` — Fix native edge membership across reversed occurrence contexts — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `60c341c3993354f4423b812611e20d74692d9d09` — Run quotation browser tests against the current application build — adapted to the .NET 10 browser host in issue #226; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `8f2b647421acae53a0a04f927747652a97bd8714` — Keep quotation page available during country lookup failures — adapted to typed-client and dual-renderer boundaries in issue #233; see [evidence](quotation-country-resilience-migration.md).
+- [x] `69ac210f1aeb11d35435688b198601042d502404` — Fix strength profile 3D print estimates — migrated with physical slicer-profile estimation in issue #232; see [evidence](strength-profile-pricing-migration.md).

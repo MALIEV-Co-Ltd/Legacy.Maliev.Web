@@ -120,6 +120,62 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Fact]
+    public void FrameChassisPetCfStrength_ReconcilesWithSlicerReference()
+    {
+        var geometry = new GeometryInput
+        {
+            HeightMm = 38.390871196985245,
+            VolumeMm3 = 178530.49236773944,
+            FootprintMm2 = 233.9974365234375 * 232,
+            AreaProfileMm2 =
+            [
+                0, 17551.773853, 19161.533876, 19893.822115, 20085.778751, 19941.613221, 14806.574583, 12565.364414,
+                8349.357194, 7342.723312, 6714.898193, 6121.038095, 5853.299626, 5667.736698, 5470.362105, 5346.442721,
+                8177.103367, 8182.737152, 8225.400400, 5305.205763, 5198.868845, 5107.260981, 5027.985902, 5006.892132,
+                2185.768256, 2272.230631, 2499.843106, 2665.878269, 2747.719832, 2774.832177, 2883.709203, 3086.103266,
+                3084.004320, 2981.333435, 2800.463697, 2665.516360, 2742.246847, 2680.047373, 2544.904734, 2290.015480,
+                1455.776635, 1442.380794, 1394.979348, 1317.197140, 1236.013520, 1140.381429, 1065.494998, 1017.513384,
+                960.493879, 911.042259, 1109.770278, 1088.376991, 1036.540973, 952.270903, 823.271786, 534.129093,
+                441.103249, 373.456519, 294.685835, 198.663806, 134.615571, 109.082193, 70.909672, 0,
+            ],
+            PerimeterProfileMm =
+            [
+                0, 1453.388769, 1506.781285, 1520.694922, 1549.603687, 1495.859757, 2011.403550, 2124.879975,
+                2554.136848, 2400.164067, 2366.200644, 2095.272690, 2026.316035, 2019.251419, 1990.770790, 1890.048131,
+                2323.416328, 2311.558553, 2315.133501, 1543.569742, 1530.910654, 1524.895103, 1521.545266, 1469.791693,
+                953.618330, 1007.250804, 1087.284211, 1089.610808, 1077.762689, 1093.973148, 1077.454678, 1089.797184,
+                1047.442610, 1000.533859, 898.553149, 824.798378, 790.077661, 770.406236, 741.194782, 679.884298,
+                495.652331, 480.870610, 459.977118, 426.562018, 406.683837, 385.030470, 371.588030, 355.872612,
+                333.446057, 300.878989, 303.153078, 264.298328, 250.396026, 239.756814, 223.511253, 168.121898,
+                146.865616, 133.318407, 118.461265, 96.191378, 64.484509, 59.627171, 53.243145, 0,
+            ],
+        };
+
+        var quote = PricingEngine.QuoteItem(
+            geometry,
+            PricingCatalog.ResolveMaterial("PET-CF")!,
+            1,
+            BuildPreference.Strength);
+
+        Assert.InRange(quote.PrintTimeMinutesPerUnit, 420, 460);
+        Assert.InRange(quote.MaterialPerUnit, 195, 230);
+        Assert.InRange(quote.UnitPrice, 6_000, 6_600);
+    }
+
+    [Fact]
+    public void QualityProfile_ReportsItsLongerPhysicalPrintTime()
+    {
+        var material = PricingCatalog.ResolveMaterial("PLA")!;
+        var geometry = Geometry(500, 200);
+
+        var standard = PricingEngine.QuoteItem(geometry, material, 1, BuildPreference.Standard);
+        var quality = PricingEngine.QuoteItem(geometry, material, 1, BuildPreference.Quality);
+
+        Assert.True(quality.PrintTimeMinutesPerUnit > standard.PrintTimeMinutesPerUnit);
+        Assert.True(quality.UnitPrice > standard.UnitPrice);
+    }
+
+    [Fact]
     public void ItemQuote_RoundsCustomerUnitPriceBeforeCalculatingSubtotal()
     {
         var quote = PricingEngine.QuoteItem(
