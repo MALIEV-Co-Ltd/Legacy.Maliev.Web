@@ -1,6 +1,6 @@
 # Source commit migration register
 
-Published source main: `bbba5046b41c0b1c7fed949d29b093b555b94b9b`.
+Published source main: `fe3d824d52b2ce3f06f98211cd48349979a71527`.
 Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
 
 Every entry is classified against the final source checkpoint. Related commits
@@ -314,3 +314,8 @@ the runtime, verification, adaptation, and exclusion classifications.
 - [x] `1e6c2538d5b6b5696e8bd446d6adf10a647fed6f` — Preserve verified native CAD imports through progressive browser analysis — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `8de3ba6fde52de18e54aa180793e985708882b67` — Recognize verified native CAD regions with complete face ownership — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `bbba5046b41c0b1c7fed949d29b093b555b94b9b` — Preserve native feature ownership across quotation dispatch — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `6a6485f84d458ee89ddcb1738780ea3448117dc3` — Bound high-degree native edge residuals — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `0e7c4898e59596ef41ab27760437bb9e107eea5e` — Recognize source-backed threaded regions across native imports — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `878bb8a42fe8d2fb7d6e18a0b1033fdd3619c169` — Preserve STEP declared edge cycles through periodic repair — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `939184a5604a012fb65666bc4afce48a1a98cb0a` — Bound circular revolution surfaces without changing native parameterization — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `fe3d824d52b2ce3f06f98211cd48349979a71527` — Recognize native affine spline boundaries without changing parameterization — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).

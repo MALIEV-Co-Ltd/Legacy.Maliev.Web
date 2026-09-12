@@ -1,8 +1,8 @@
 # CNC source commit reconciliation
 
-Authoritative source checkpoint: `bbba5046b41c0b1c7fed949d29b093b555b94b9b`.
+Authoritative source checkpoint: `fe3d824d52b2ce3f06f98211cd48349979a71527`.
 
-Legacy verification checkpoint: `0bf051c1a59f3800dcc00a932898822388c68e04`.
+Legacy implementation checkpoint: `80f4a71442ac13d93f70dba33c6a572d69621fd8`.
 
 This document closes the commit-by-commit register from source baseline
 `4486f0e964e508e5eb7b43a59eeaec46cc052c67` through the authoritative source
@@ -127,3 +127,34 @@ browser-module assertions, 516 passing CNC-engine assertions with six explicit
 private-fixture skips, two current-build Chromium acceptance tests, deterministic
 asset generation, source-blob contracts, Release build, affected .NET tests,
 formatting, package audit, and secret scanning.
+
+## Issue #224 evidence extension
+
+The five-commit native recognition series is migrated in source order through
+`fe3d824d52b2ce3f06f98211cd48349979a71527`. Target commit
+`80f4a71442ac13d93f70dba33c6a572d69621fd8` carries the final state of all 90
+source paths: kernel bounds and repair proofs, thread and periodic-edge
+recognition, exact revolution and affine-pcurve handling, public generated
+fixtures, and the content-addressed OCCT browser runtime with its licenses.
+
+The production JavaScript, kernel sources, generated STEP/JSON fixtures, and
+runtime JS/WASM are source-exact. Three JavaScript test helpers change only the
+repository-root segment from `Maliev.Web` to `Legacy.Maliev.Web`; every test
+assertion remains intact. The LGPL `LICENSE.md` content is line-ending-normalized
+by the Legacy repository-wide text policy; executable/runtime bytes and their
+manifest hashes are unchanged.
+
+Thread admission remains fail closed unless the source edge, finite domain,
+continuation, pitch, lead, handedness, and occurrence transforms agree.
+Periodic repair requires the STEP-declared oriented coedge cycle. Revolution
+and affine-spline recognition preserve native parameterization and reject
+unsupported, incomplete, rational-speed, oblique, or unbounded evidence.
+
+Validation on the coherent pinned OCCT overlay passed 198 transformed-thread
+residual checks, 102 source-declared-cycle checks, 6,013 circular-revolution
+checks, 128 rotational-band checks, and 225 affine-pcurve checks. The complete
+browser-module suite passed 137 assertions; the expanded CNC suite passed 537
+with nine explicit private-fixture or platform skips and zero failures; and the
+Release .NET suite passed 2,011 tests after a zero-warning, zero-error build.
+Formatting, the frozen parity manifest, generated-asset diff, package audit,
+and secret scan also passed.
