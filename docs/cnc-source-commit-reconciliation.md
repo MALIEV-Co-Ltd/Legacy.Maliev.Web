@@ -1,6 +1,6 @@
 # CNC source commit reconciliation
 
-Authoritative source checkpoint: `5ac7d045c51194edd9e64d8564f1b726b001be34`.
+Authoritative source checkpoint: `cbbe1c3a482d0825cecb732bb1044c88bb20358c`.
 
 Legacy verification checkpoint: `4ebcea553aa753d81667a47e3c036004bb0c2e57`.
 
@@ -58,3 +58,37 @@ PostgreSQL, or deployment boundaries were copied verbatim.
 
 The authoritative per-commit disposition is
 [`source-commit-register-through-5ac7d04.md`](source-commit-register-through-5ac7d04.md).
+
+## Issue #221 evidence extension
+
+The source was inspected by committed Git object only. The planning-only parent
+`ad2774760862371b4ea442d02669ad9ecd4913f5` is recorded in the commit register
+as non-runtime evidence: its source deployment directions are intentionally not
+portable to Legacy Web.
+
+| Source commit | Classification | Complete Legacy target lineage |
+| --- | --- | --- |
+| `ad2774760862371b4ea442d02669ad9ecd4913f5` | Non-runtime plan | None |
+| `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` | Migrated | `5068239880271e1a17c1d2707cf728c019d4adc2`; `691d87c56c979613c4cd12b43a0d5e2e40994beb` |
+| `cbbe1c3a482d0825cecb732bb1044c88bb20358c` | Migrated | `6438973a98a3a76f724df70f4b5c8b44541c9e3b` |
+
+- `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` maps first to implementation
+  commit `5068239880271e1a17c1d2707cf728c019d4adc2`, then to the Legacy
+  README-path correction commit `691d87c56c979613c4cd12b43a0d5e2e40994beb`.
+  The six catalog assets are kept outside runtime delivery, preserve all
+  provenance/dimension/coverage checks, and retain every
+  `machiningAuthorized: false` guard.
+- `cbbe1c3a482d0825cecb732bb1044c88bb20358c` maps to Legacy target commit
+  `6438973a98a3a76f724df70f4b5c8b44541c9e3b`. The two source worker blobs are
+  exact matches; only `manufacturing_summary` omits legacy diagnostics, while
+  normal callers retain them. The source STEP/STP validation import requests
+  absolute millimeter tessellation and display tessellation remains unchanged.
+
+Issue #221 evidence is validated by the source-history register contract,
+`scripts/verify-complete-source-history-parity.ps1 -ManifestOnly`, the catalog
+validator and regression suite, focused summary/import contracts, Release build,
+`dotnet format --verify-no-changes`, package vulnerability audits, and staged
+gitleaks. The source-history script deliberately remains frozen at the prior
+complete cross-repository boundary; this register closes only the explicitly
+scoped three-commit CNC extension and does not claim classification of the
+unrelated intervening source history.

@@ -14,7 +14,7 @@ public sealed class CncPlannerSourceBlobParityTests
             ["cnc-feature-graph.worker.js"] = "123fb2855ec8dc5bd97f01292230cac55035e89d",
             ["cnc-fixture-catalog.js"] = "ca23ebaa6fdf5dec2d074d8b735450ff303adc6a",
             ["cnc-fixture-clearance.js"] = "fb052e4b6ec10064ef85f185dbb4eef73e6d2d3f",
-            ["cnc-geometry.worker.js"] = "e8a5393e33efab878d7b596100d2df379f11f8bb",
+            ["cnc-geometry.worker.js"] = "ca9deee9192a094253e2c3a539bbdbbcff6bc3b7",
             ["cnc-machine-capability.js"] = "ce2a6cc50078faba282cda566c518e17ace49088",
             ["cnc-manufacturing-evidence.worker.js"] = "3cad1aa4acfb3e7c053ae89cf936e28a8c2e3fff",
             ["cnc-material-catalog.js"] = "e74461e1aa4fbbcb1697fc6e8bf5e6d91ed0e9dc",

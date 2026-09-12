@@ -177,7 +177,7 @@ async function AnalyzeCncObject(object3D, modelInfo) {
         bodyCount: modelInfo.bodyCount,
         sourceFormat: analysisInfo.sourceFormat
     });
-    var geometry = AnalyzeCncGeometry(ExtractTriangles(object3D), analysisInfo);
+    var geometry = AnalyzeCncGeometry(ExtractTriangles(object3D), analysisInfo, { mode: 'manufacturing_summary' });
     geometry.cadTopology = topology;
     geometry.geometryRevision = topology.revision;
     geometry.manufacturingFeatureGraph = self.CncFeatureGraph.build(topology, {
@@ -695,7 +695,7 @@ function RunParseJob(data) {
             group.userData.occtMeshes = result.meshes;
             group.userData.sourceFormat = extension;
             if (data.analysisProfile === 'cnc' && (extension === 'stp' || extension === 'step')) {
-                var validationResult = occt.ReadStepFile(bytes, { linearDeflection: 0.1 });
+                var validationResult = occt.ReadStepFile(bytes, { linearUnit: 'millimeter', linearDeflectionType: 'absolute_value', linearDeflection: 0.1 });
                 if (!validationResult || !validationResult.success) {
                     throw new Error('Unable to build canonical CNC validation tessellation.');
                 }
