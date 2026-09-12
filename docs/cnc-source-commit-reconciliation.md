@@ -183,3 +183,21 @@ generated-asset diff, NuGet and npm vulnerability audits, committed-history
 secret scanning, and `git diff --check` also passed. The directory secret scan's
 only two findings were vendored Playwright JavaScript beneath ignored test
 `bin/` output; neither file is tracked or included in the branch.
+
+## Issue #226 evidence extension
+
+Source commit `60c341c3993354f4423b812611e20d74692d9d09` is adapted to the
+.NET 10 Blazor quotation host in target commit
+`727dd4061d46311023ab4e75381d0aac3f479a7b`. The shared browser fixture now
+selects the application content root from the compiled test source's workspace
+and refuses to initialize unless both rendered worker URLs contain the MVID of
+the currently referenced Web assembly. Missing or stale identities fail before
+Playwright can run, so quotation browser tests cannot silently exercise an old
+application output. A separate byte comparison proves the owned Kestrel host
+serves the worker from that same workspace.
+
+The adaptation preserves the source contract while using the existing Legacy
+`WebApplicationFactory<Program>` and Blazor/Razor host instead of recreating the
+.NET 8 fixture. Focused identity and native-browser validation passed five tests
+after a zero-warning, zero-error Release build. No application runtime behavior,
+deployment configuration, database, or production environment is changed.
