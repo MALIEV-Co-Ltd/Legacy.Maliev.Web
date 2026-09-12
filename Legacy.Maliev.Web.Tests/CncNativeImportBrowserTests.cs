@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Playwright;
 
@@ -208,7 +209,7 @@ public sealed class CncNativeImportBrowserTests(CncNativeBrowserFixture fixture)
 
 public sealed class CncNativeBrowserFixture : IAsyncLifetime
 {
-    private TestingWebApplicationFactory? factory;
+    private WebApplicationFactory<Program>? factory;
     private HttpClient? hostClient;
     private IPlaywright? playwright;
 
@@ -222,7 +223,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
     {
         int port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
-        factory = new TestingWebApplicationFactory();
+        factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
         hostClient = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -232,6 +233,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
         CncQuotationUrl = new Uri(origin, "/instantquotation/cnc-machining?culture=en").ToString();
         using HttpResponseMessage readiness = await hostClient.GetAsync(CncQuotationUrl);
         Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        BrowserHostIdentityVerifier.EnsureCurrentBuild(await readiness.Content.ReadAsStringAsync());
 
         playwright = await Playwright.CreateAsync();
         Browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
