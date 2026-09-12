@@ -46,7 +46,7 @@ jobs:
         shell: pwsh
         run: ./scripts/verify-complete-source-history-parity.ps1 -ManifestOnly
       - name: Build browser acceptance host
-        run: dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
       - name: Install pinned Chromium browser
         shell: pwsh
         run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
