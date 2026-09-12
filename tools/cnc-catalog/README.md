@@ -60,7 +60,7 @@ until the applicable order-code configuration has been verified.
 
 ```powershell
 node tools/cnc-catalog/validate.cjs
-node --test Maliev.Web.Tests/JavaScript/cnc-local-catalog.test.cjs
+node --test Legacy.Maliev.Web.Tests/JavaScript/cnc-local-catalog.test.cjs
 ```
 
 The dependency-free validator executes the exact JSON Schema keyword subset
@@ -94,11 +94,11 @@ No customer CAD or private source material was added.
 
 ## Executed checks
 
-Initial `node --test Maliev.Web.Tests/JavaScript/cnc-local-catalog.test.cjs`
+Initial `node --test Legacy.Maliev.Web.Tests/JavaScript/cnc-local-catalog.test.cjs`
 failed as expected because catalog.json did not exist. After implementation:
 
 - `node --check tools/cnc-catalog/validate.cjs`: passed.
-- `node --check Maliev.Web.Tests/JavaScript/cnc-local-catalog.test.cjs`: passed.
+- `node --check Legacy.Maliev.Web.Tests/JavaScript/cnc-local-catalog.test.cjs`: passed.
 - `node tools/cnc-catalog/validate.cjs`: 83 records / 14 sources passed.
 - Catalog regression suite: 16 tests passed, zero failed or skipped.
 
