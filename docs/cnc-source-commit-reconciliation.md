@@ -2,7 +2,7 @@
 
 Authoritative source checkpoint: `bbba5046b41c0b1c7fed949d29b093b555b94b9b`.
 
-Legacy verification checkpoint: `4ebcea553aa753d81667a47e3c036004bb0c2e57`.
+Legacy verification checkpoint: `0bf051c1a59f3800dcc00a932898822388c68e04`.
 
 This document closes the commit-by-commit register from source baseline
 `4486f0e964e508e5eb7b43a59eeaec46cc052c67` through the authoritative source
@@ -104,9 +104,16 @@ The native-CAD series preserves exact source assets for the OCCT browser runtime
 native document and topology adapters, bounded repair kernel, native region
 interpretation, warning lineage, semantic ownership, and dispatch contracts.
 Repository-root references in source JavaScript tests are the only textual test
-adaptation; their assertions remain unchanged. The source Playwright fixture is
-not copied because Legacy Web validates browser modules through its existing
-current-build browser lane rather than the source ASP.NET Core 8 staging host.
+adaptation; their assertions remain unchanged. The source Playwright acceptance
+contract is adapted to a .NET 10 Kestrel `WebApplicationFactory` host. It loads
+the current generated assets in pinned Chromium, executes the actual native
+worker and WASM pair under the application CSP, and submits a STEP fixture
+through the rendered file input to prove preview-before-analysis ordering.
+
+The finishing-colour renderer owns its current Three.js module through the
+route-scoped `MalievFinishingThree` namespace. The CNC workspace independently
+retains the source-compatible Three.js runtime required by its classic controls;
+the shared vendor bundle cannot overwrite that page-owned global.
 
 The retry commit's CNC upload, thumbnail, pricing-failure ownership, stale-attempt,
 and watchdog changes are ported to the Legacy CNC page and shared model-viewer
@@ -115,7 +122,8 @@ runtime. Additive upload/retry behavior remains owned by the .NET 10
 implementation is not reintroduced. The migrated watchdog regression contains all
 25 assertions and passes against the Legacy path adaptation.
 
-Validation covers exact source blobs before repository-path adaptation, 96 focused
-passing JavaScript assertions with six explicit reviewed-fixture skips, the full
-browser/CNC suite, deterministic asset generation, source-blob contracts, Release
-build, affected .NET tests, formatting, package audit, and secret scanning.
+Validation covers exact source blobs before repository-path adaptation, 137
+browser-module assertions, 516 passing CNC-engine assertions with six explicit
+private-fixture skips, two current-build Chromium acceptance tests, deterministic
+asset generation, source-blob contracts, Release build, affected .NET tests,
+formatting, package audit, and secret scanning.
