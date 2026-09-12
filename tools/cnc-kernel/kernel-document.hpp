@@ -1,5 +1,6 @@
 #pragma once
 #include "importer-xcaf.hpp"
+#include "kernel-repair.hpp"
 #include <TDF_Tool.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <algorithm>
@@ -91,6 +92,9 @@ class DocumentCoverage {
         }
     }
 public:
+    bool MeasuresMillimeterOutput() const {
+        return units&&audit.available&&(audit.format!="step"||!audit.declaredLengthUnits.empty());
+    }
     DocumentCoverage(Importer* importer,const ImportParams& params) {
         document.set("schema",std::string("MalievKernelDocument.v1"));
         document.set("scope",std::string("source-transfer-and-xcaf-single-solid-coverage"));
@@ -105,7 +109,7 @@ public:
         if(!units) Reason("output_not_millimeter");
         audit=xcaf->KernelAudit();
         if(!audit.available) Reason("source_transfer_audit_unavailable");
-        else if(!audit.supported) Reason(audit.format=="iges"?"iges_source_entity_coverage_unverified":"step_source_representation_not_supported");
+        else if(!audit.structurallySupported) Reason(audit.format=="iges"?"iges_source_entity_coverage_unverified":"step_source_representation_not_supported");
         if(audit.missingRoots) Reason("source_transfer_roots_missing");
         if(audit.failures) Reason("source_transfer_failures");
         if(audit.warnings) Reason("source_transfer_warnings");
@@ -126,6 +130,12 @@ public:
     void Associate(const Mesh& mesh,val& output,ExportContext& context) {
         ++emittedBodies; emittedFaces+=context.sourceFaces.size();
         const auto source=dynamic_cast<const KernelMeshSource*>(&mesh);
+        if (MalievRepair::EvidenceStore().active && source && output.hasOwnProperty("kernelBody")) {
+            MalievRepair::EmittedBody body;
+            body.shape = source->KernelShape(); body.id = context.prefix;
+            body.nativeEvidenceJson = val::global("JSON").call<std::string>("stringify", output["kernelBody"]);
+            MalievRepair::EvidenceStore().emittedBodies.push_back(body);
+        }
         val candidates=val::array(); std::vector<size_t> bodyMatches;
         if(source) for(size_t i=0;i<occurrences.size();++i) {
             auto& o=occurrences[i];
@@ -153,6 +163,16 @@ public:
             if(matches.size()==1) instance.set("occurrenceId",occurrences[matches[0].first].id);
             else ++unmappedFaces;
             context.sourceFaceRecords[f].set("assemblyInstance",instance);
+            if (MalievRepair::EvidenceStore().active) {
+                MalievRepair::EmittedFace emitted;
+                emitted.face = context.sourceFaces[f]; emitted.bodyId = context.prefix;
+                emitted.faceId = context.sourceFaceRecords[f]["faceId"].as<std::string>();
+                emitted.uniqueSource = matches.size() == 1;
+                if (emitted.uniqueSource) emitted.sourceOccurrenceId = faceCandidates[0].as<std::string>();
+                emitted.trimsComplete = context.sourceFaceRecords[f]["trims"]["status"].as<std::string>() == "complete";
+                emitted.adjacencyComplete = context.sourceFaceRecords[f]["adjacency"]["status"].as<std::string>() == "complete";
+                MalievRepair::EvidenceStore().emittedFaces.push_back(emitted);
+            }
         }
     }
     void Finish(val& provenance) {
@@ -185,6 +205,8 @@ public:
         for(size_t i=0;i<audit.diagnostics.size();++i) {
             const auto& native=audit.diagnostics[i]; val diagnostic=val::object();
             diagnostic.set("entityNumber",native.entityNumber); diagnostic.set("severity",native.severity);
+            diagnostic.set("diagnosticOccurrenceId",std::string("native-diagnostic-")+std::to_string(i));
+            diagnostic.set("nativeDeliveryId",native.nativeDelivery>=0?val(std::string("native-delivery-")+std::to_string(native.nativeDelivery)):val::null());
             diagnostic.set("sourceEntityLabel",native.sourceLabel);
             diagnostic.set("message",native.message); diagnostic.set("originalMessage",native.originalMessage);
             diagnostic.set("category",std::string("unclassified-native-transfer")); diagnostics.set(i,diagnostic);
@@ -195,13 +217,24 @@ public:
         for(size_t i=0;i<audit.unsupportedEntities.size();++i) unsupported.set(i,audit.unsupportedEntities[i]);
         for(size_t i=0;i<audit.missingRootEntities.size();++i) missing.set(i,audit.missingRootEntities[i]);
         transfer.set("unsupportedEntityNumbers",unsupported); transfer.set("missingRootEntityNumbers",missing);
-        transfer.set("supportedSingleSolidSource",audit.supported); document.set("sourceTransfer",transfer);
+        transfer.set("supportedSingleSolidSource",audit.supported);
+        transfer.set("structurallySupportedSingleSolidSource",audit.structurallySupported);
+        document.set("sourceTransfer",transfer);
         document.set("freeRootCount",rootCount); document.set("occurrenceCount",occurrences.size()); document.set("leafOccurrenceCount",leafCount);
         document.set("sourceFaceCount",sourceFaces); document.set("emittedFaceCount",emittedFaces); document.set("emittedBodyCount",emittedBodies);
         document.set("enumerationStatus",std::string(enumerated?"complete":"unavailable_or_partial"));
         document.set("faceCoverageStatus",std::string(faceCoverage&&sourceFaces==emittedFaces?"complete":"incomplete"));
         val why=val::array(); for(size_t i=0;i<reasons.size();++i) why.set(i,reasons[i]); document.set("reasons",why);
         const bool complete=reasons.empty()&&units&&audit.supported&&bodyCoverage&&faceCoverage;
+        // Coverage and repair acceptability are independent facts. Preserve the
+        // conservative legacy boolean while exposing warning-independent coverage.
+        val coverage=val::object(),coverageReasons=val::array(); int coverageReasonCount=0;
+        for(const auto& reason:reasons) if(reason!="source_transfer_warnings") coverageReasons.set(coverageReasonCount++,reason);
+        const bool sourceComplete=coverageReasonCount==0&&units&&audit.structurallySupported&&bodyCoverage&&faceCoverage;
+        coverage.set("schema",std::string("MalievKernelSourceCoverage.v1"));
+        coverage.set("status",std::string(sourceComplete?"complete_supported_single_solid":"review_required"));
+        coverage.set("complete",sourceComplete);coverage.set("reasons",coverageReasons);
+        coverage.set("repairAssessmentIsSeparate",true);provenance.set("sourceCoverage",coverage);
         document.set("status",std::string(complete?"complete_supported_single_solid":"review_required"));
         provenance.set("completeCadDocument",complete); provenance.set("documentCoverage",document);
     }

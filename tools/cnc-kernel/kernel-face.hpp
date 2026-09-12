@@ -13,6 +13,7 @@
 #include <TopExp_Explorer.hxx>
 #include <Poly_Triangulation.hxx>
 #include <emscripten/val.h>
+#include "kernel-region-measures.hpp"
 
 namespace MalievKernel {
 using emscripten::val;
@@ -33,10 +34,12 @@ inline val Unavailable(const char* reason) {
 }
 #include "kernel-trims.hpp"
 namespace MalievKernel {
-inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIndex, ExportContext& context) {
+inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIndex, ExportContext& context, bool millimeters=false) {
     const std::string bodyId = "body-" + std::to_string(bodyIndex);
     output.set("bodyId", bodyId);
     output.set("faceId", bodyId + "/face-" + std::to_string(faceIndex));
+    const std::string faceId=bodyId+"/face-"+std::to_string(faceIndex);
+    output.set("nativeRegionMeasures",RegionMeasures::Export(RegionMeasures::Unavailable("native_face_unavailable"),bodyId,faceId));
     output.set("trims", Unavailable("ordered_wires_and_pcurves_not_exported"));
     output.set("adjacency", Unavailable("source_edge_ownership_not_exported"));
     const OcctFace* occtFace = dynamic_cast<const OcctFace*>(&source);
@@ -46,6 +49,7 @@ inline void WriteFace(const Face& source, val& output, int bodyIndex, int faceIn
     }
     try {
     const TopoDS_Face& face = occtFace->KernelFace();
+    output.set("nativeRegionMeasures",RegionMeasures::Export(RegionMeasures::Area(face,millimeters),bodyId,faceId));
     output.set("orientation", static_cast<int>(face.Orientation()));
     output.set("orientationStatus", std::string(
         face.Orientation() == TopAbs_FORWARD || face.Orientation() == TopAbs_REVERSED

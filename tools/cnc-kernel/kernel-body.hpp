@@ -5,13 +5,15 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS_Shell.hxx>
 #include <Precision.hxx>
+#include "kernel-region-measures.hpp"
 namespace MalievKernel {
 // Native mesh occurrence evidence, not an assembly definition or cavity proof.
-inline void WriteBody(const Mesh& mesh,val& output,ExportContext& context) {
+inline void WriteBody(const Mesh& mesh,val& output,ExportContext& context,bool millimeters=false) {
     val body=val::object(),shells=val::array(); output.set("kernelBody",body);
     body.set("schema",std::string("MalievKernelBody.v1")); body.set("bodyId",context.prefix);
     body.set("membershipStatus",std::string("unavailable")); body.set("shells",shells);
     body.set("boundedSolidEvidence",false); body.set("cavityValidation",std::string("unavailable"));
+    body.set("nativeRegionMeasures",RegionMeasures::Export(RegionMeasures::Unavailable("supported_solid_unavailable"),context.prefix));
     const KernelMeshSource* source=dynamic_cast<const KernelMeshSource*>(&mesh);
     if(!source) { body.set("reason",std::string("native_mesh_source_unavailable")); return; }
     try {
@@ -68,6 +70,7 @@ inline void WriteBody(const Mesh& mesh,val& output,ExportContext& context) {
         }
         membership=membership&&!context.sourceFaces.empty()&&(standalone||!nativeShells.empty());
         body.set("membershipStatus",std::string(membership?"complete":"partial"));
+        if(solid) body.set("nativeRegionMeasures",RegionMeasures::Export(RegionMeasures::Volume(shape,millimeters,membership),context.prefix));
         // A standalone-face group's source compound contains excluded objects;
         // never run a validity claim for that enclosing compound on its behalf.
         if(standalone||(!solid&&!shell)) return;
@@ -85,6 +88,7 @@ inline void WriteBody(const Mesh& mesh,val& output,ExportContext& context) {
             body.set("boundedSolidEvidence",valid&&membership&&shellChecks&&nativeShells.size()==1&&state==TopAbs_OUT);
         }
     } catch(const Standard_Failure&) {
+        body.set("nativeRegionMeasures",RegionMeasures::Export(RegionMeasures::Unavailable("kernel_body_export_failed"),context.prefix));
         body.set("membershipStatus",std::string("partial"));
         body.set("boundedSolidEvidence",false); body.set("reason",std::string("kernel_body_export_failed"));
     }

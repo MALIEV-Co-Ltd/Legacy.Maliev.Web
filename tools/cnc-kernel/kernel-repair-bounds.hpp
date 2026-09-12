@@ -5,6 +5,7 @@
 #include <TopLoc_Location.hxx>
 #include <string>
 #include <vector>
+#include <functional>
 #include <cmath>
 #include <GeomAdaptor_Curve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
@@ -65,7 +66,9 @@ inline Interval Trig(Interval t,bool cosine){
     Interval term=cosine?Interval(1):t,sum=term;
     const auto square=t*t;
     for(int k=1;k<24;++k){const int a=cosine?2*k-1:2*k;term=term*(Interval(0)-square)/Interval(a*(a+1));sum=sum+term;}
-    Interval remainder(1);for(int k=1;k<=48;++k)remainder=remainder*Interval(4)/Interval(k);
+    // Fixed outward arithmetic, independent of parameter, native geometry and
+    // sine/cosine branch. The importer does not vary the floating rounding mode.
+    static const Interval remainder=[](){Interval value(1);for(int k=1;k<=48;++k)value=value*Interval(4)/Interval(k);return value;}();
     return {std::max(-1.0,Down(sum.lo-remainder.hi)),std::min(1.0,Up(sum.hi+remainder.hi))};
 }
 inline Box FrameBox(const gp_Pnt&o,const gp_Dir&x,const gp_Dir&y,const gp_Dir&z,Interval a,Interval b,Interval c){Box v;for(int i=0;i<3;++i)v[i]=Interval(o.Coord(i+1))+Interval(x.Coord(i+1))*a+Interval(y.Coord(i+1))*b+Interval(z.Coord(i+1))*c;return v;}
@@ -187,8 +190,11 @@ inline double RationalPolynomialDifference(const Polynomial&a,const Polynomial&b
     Interval sum;for(int c=0;c<3;++c){Interval bound;for(const auto&coefficient:residual)bound=bound+Interval(std::max(std::abs(coefficient[c].lo),std::abs(coefficient[c].hi)));sum=sum+bound*bound;}
     return (Interval(Up(std::sqrt(sum.hi)))/(Interval(minA)*Interval(minB))).hi;
 }
-inline Residual BoundSurfaceDifference(const Handle(Geom_Surface)&before,const Handle(Geom_Surface)&after,double budget){
+inline Residual BoundSurfaceDifference(const Handle(Geom_Surface)&before,const Handle(Geom_Surface)&after,double budget,
+    const std::function<bool()>& continues = {}, int intervalLimit = 1024){
     Residual result;try{
+        if(continues && !continues())throw Standard_Failure("assessment-monotonic-time-limit");
+        if(intervalLimit<=0)throw Standard_Failure("periodic comparison interval limit");
         if(!std::isfinite(budget)||budget<=0)throw Standard_Failure("invalid surface comparison budget");
         SurfaceBound a(before,TopLoc_Location()),b(after,TopLoc_Location());if(!a.spline||!b.spline)throw Standard_Failure("periodic comparison requires native spline bases");
         if(a.u.first!=b.u.first||a.u.last!=b.u.last||a.v.first!=b.v.first||a.v.last!=b.v.last)throw Standard_Failure("periodic parameter correspondence differs");
@@ -197,7 +203,10 @@ inline Residual BoundSurfaceDifference(const Handle(Geom_Surface)&before,const H
         std::sort(u.begin(),u.end());u.erase(std::unique(u.begin(),u.end()),u.end());std::sort(v.begin(),v.end());v.erase(std::unique(v.begin(),v.end()),v.end());
         double minA=1e300,minB=1e300;for(const auto&r:a.poles)for(const auto&p:r)minA=std::min(minA,p[3].lo);for(const auto&r:b.poles)for(const auto&p:r)minB=std::min(minB,p[3].lo);
         if(u.size()*v.size()>1024)throw Standard_Failure("periodic polynomial resource limit");
-        for(size_t i=1;i<u.size();++i)for(size_t j=1;j<v.size();++j){++result.intervals;const double upper=RationalPolynomialDifference(SurfacePolynomial(a,u[i-1],u[i],v[j-1],v[j]),SurfacePolynomial(b,u[i-1],u[i],v[j-1],v[j]),minA,minB);if(!std::isfinite(upper))throw Standard_Failure("nonfinite periodic bound");result.upper=std::max(result.upper,upper);}
+        for(size_t i=1;i<u.size();++i)for(size_t j=1;j<v.size();++j){
+            if(continues && !continues())throw Standard_Failure("assessment-monotonic-time-limit");
+            if(result.intervals>=std::min(intervalLimit,1024))throw Standard_Failure("periodic comparison interval limit");
+            ++result.intervals;const double upper=RationalPolynomialDifference(SurfacePolynomial(a,u[i-1],u[i],v[j-1],v[j]),SurfacePolynomial(b,u[i-1],u[i],v[j-1],v[j]),minA,minB);if(!std::isfinite(upper))throw Standard_Failure("nonfinite periodic bound");result.upper=std::max(result.upper,upper);}
         result.status=result.upper<=budget?"bounded-within-budget":"unresolved-upper-bound-exceeds-budget";
     }catch(const Standard_Failure&e){result.reason=e.GetMessageString()?e.GetMessageString():"surface comparison unavailable";}
     return result;

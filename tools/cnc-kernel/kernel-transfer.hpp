@@ -1,4 +1,5 @@
 #pragma once
+#include "kernel-native-warning-lineage.hpp"
 // Conservative source-format audit, before XCAF/mesh omissions can hide roots.
 #include <XSControl_Reader.hxx>
 #include <XSControl_WorkSession.hxx>
@@ -25,12 +26,13 @@
 
 struct KernelTransferDiagnostic {
     int entityNumber=0;
+    int nativeDelivery=-1;
     std::string severity,message,originalMessage,sourceLabel;
     KernelTransferDiagnostic(int number,const char* level,const char* finalText,const char* originalText,const std::string& label)
         : entityNumber(number),severity(level),message(finalText?finalText:""),originalMessage(originalText?originalText:""),sourceLabel(label) {}
 };
 struct KernelTransferAudit {
-    bool available=false, supported=false;
+    bool available=false, supported=false, structurallySupported=false;
     int roots=0, missingRoots=0, failures=0, warnings=0, entities=0;
     int sourceFaces=0, missingFaces=0;
     std::vector<std::string> declaredLengthUnits;
@@ -67,8 +69,10 @@ inline KernelTransferAudit AuditKernelTransfer(XSControl_Reader& reader, bool st
         }
         for(int i=1;i<=check->NbFails();++i)
             audit.diagnostics.push_back(KernelTransferDiagnostic(number,"failure",check->CFail(i,Standard_True),check->CFail(i,Standard_False),label));
-        for(int i=1;i<=check->NbWarnings();++i)
+        for(int i=1;i<=check->NbWarnings();++i) {
             audit.diagnostics.push_back(KernelTransferDiagnostic(number,"warning",check->CWarning(i,Standard_True),check->CWarning(i,Standard_False),label));
+            audit.diagnostics.back().nativeDelivery = MalievNativeWarning::FindDelivery(check, check->Warning(i,Standard_True), number, model);
+        }
     }
     // IGES root transfer evidence is retained, but its entity ownership audit
     // needs format-specific certification (blanked/dependent entities, groups).
@@ -110,8 +114,9 @@ inline KernelTransferAudit AuditKernelTransfer(XSControl_Reader& reader, bool st
             unsupported=true;
         if(unsupported) audit.unsupportedEntities.push_back(i);
     }
-    audit.supported=audit.roots==1&&audit.missingRoots==0&&audit.failures==0&&audit.warnings==0
+    audit.structurallySupported=audit.roots==1&&audit.missingRoots==0&&audit.failures==0
         &&audit.unsupportedEntities.empty()&&solidItems==1&&audit.sourceFaces>0&&audit.missingFaces==0
         &&!audit.declaredLengthUnits.empty();
+    audit.supported=audit.structurallySupported&&audit.warnings==0;
     return audit;
 }

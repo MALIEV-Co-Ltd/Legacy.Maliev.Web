@@ -72,15 +72,15 @@ BoundRepairMetric(const RepresentedCurveBound &curve,
        GeomAdaptor_Curve(curve.c3).GetType() == GeomAbs_Ellipse);
   const bool highAxisModel =
       pcurve.isSpline && pcurve.spline.degree == 3 &&
-      (highAxisAnalyticSource || (curve.isSpline && curve.spline.degree == 3));
+      (highAxisAnalyticSource || curve.isSpline);
   const bool highAxisExact =
       curve.isSpline &&
       (curve.spline.degree == 6 || curve.spline.degree == 8) &&
       !pcurve.isSpline &&
       Geom2dAdaptor_Curve(pcurve.c2).GetType() == GeomAbs_Line;
   const bool highAxisClass =
-      surface.spline && surface.u.degree == 2 &&
-      (surface.v.degree == 6 || surface.v.degree == 8) &&
+      HighAxisDegreeCapacity(surface, highAxisModel, highAxisExact,
+                             highAxisAnalyticSource ? 3 : curve.spline.degree) &&
       !GeomAdaptor_Surface(surface.surface).BSpline()->IsUPeriodic() &&
       !GeomAdaptor_Surface(surface.surface).BSpline()->IsVPeriodic() &&
       (highAxisModel || highAxisExact);

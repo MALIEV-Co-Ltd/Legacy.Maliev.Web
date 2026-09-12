@@ -22,7 +22,8 @@ change('js-interface.cpp', [
   ['#include "kernel-body.hpp"', '#include "kernel-body.hpp"\n#include "kernel-document.hpp"'],
   ['HierarchyWriter (emscripten::val& meshesArr) :', 'HierarchyWriter (emscripten::val& meshesArr, MalievKernel::DocumentCoverage& document) :\n        mDocument(document),'],
   ['    emscripten::val& mMeshesArr;', '    MalievKernel::DocumentCoverage& mDocument;\n    emscripten::val& mMeshesArr;'],
-  ['            MalievKernel::WriteBody(mesh, meshObj, kernelContext);', '            MalievKernel::WriteBody(mesh, meshObj, kernelContext);\n            mDocument.Associate(mesh, meshObj, kernelContext);'],
+  ['                MalievKernel::WriteFace(face, brepFaceObj, mMeshCount, brepFaceCount, kernelContext);', '                MalievKernel::WriteFace(face, brepFaceObj, mMeshCount, brepFaceCount, kernelContext, mDocument.MeasuresMillimeterOutput());'],
+  ['            MalievKernel::WriteBody(mesh, meshObj, kernelContext);', '            MalievKernel::WriteBody(mesh, meshObj, kernelContext, mDocument.MeasuresMillimeterOutput());\n            mDocument.Associate(mesh, meshObj, kernelContext);'],
   ['    HierarchyWriter hierarchyWriter (meshesArr);', '    MalievKernel::DocumentCoverage documentCoverage(importer.get(), params);\n    HierarchyWriter hierarchyWriter (meshesArr, documentCoverage);'],
   ['    resultObj.set("kernelProvenance", provenance);', '    documentCoverage.Finish(provenance);\n    resultObj.set("kernelProvenance", provenance);']
 ]);

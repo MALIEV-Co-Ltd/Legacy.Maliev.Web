@@ -1,6 +1,21 @@
 #pragma once
 #include "kernel-repair-rational-composition.hpp"
 namespace MalievRepair {
+inline bool HighAxisDegreeCapacity(const SurfaceBound &surface, bool modelClass,
+                                   bool exactClass, int sourceDegree) {
+  // V >= 6 is a dispatch preference: preserve the existing lower-degree
+  // routes, not a mathematical restriction. The admitted source classes stay
+  // retained-tail analytic models or exact spline polynomials with cubic PC,
+  // and exact degree-6/8 splines with native line PC.
+  if ((!modelClass && !exactClass) || !surface.spline ||
+      surface.u.degree != 2 || surface.v.degree < 6)
+    return false;
+  const int liftedDegree = surface.u.degree * (modelClass ? 3 : 1) +
+                           surface.v.degree;
+  // RationalSurfacePiece allows degree 21; RationalProduct allows degree 24.
+  return sourceDegree >= 1 && liftedDegree <= 21 &&
+         liftedDegree + sourceDegree <= 24;
+}
 inline RationalSourceModel HighAxisSourcePiece(const CurveBound &curve,
                                                double first, double last,
                                                const UniPolynomial &parameter,
@@ -70,11 +85,10 @@ inline Residual BoundHighAxisRationalComposition(
         curve.isSpline &&
         (curve.spline.degree == 6 || curve.spline.degree == 8) && affinePC;
     const bool modelClass =
-        (analyticSource || (curve.isSpline && curve.spline.degree == 3)) &&
+        (analyticSource || curve.isSpline) &&
         pcurve.isSpline && pcurve.spline.degree == 3;
-    if ((!exactClass && !modelClass) || !surface.spline ||
-        surface.u.degree != 2 ||
-        (surface.v.degree != 6 && surface.v.degree != 8))
+    if (!HighAxisDegreeCapacity(surface, modelClass, exactClass,
+                                analyticSource ? 3 : curve.spline.degree))
       throw Standard_Failure("unsupported high-axis native class");
     const auto native = GeomAdaptor_Surface(surface.surface).BSpline();
     if (native->IsUPeriodic() || native->IsVPeriodic())

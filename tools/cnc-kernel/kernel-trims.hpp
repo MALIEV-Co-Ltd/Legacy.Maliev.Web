@@ -1,4 +1,5 @@
 #pragma once
+#include "kernel-repair.hpp"
 // Native OCCT topology only. Included after kernel-face.hpp's scalar helpers.
 #include <BRep_Tool.hxx>
 #include <BRepTools.hxx>
@@ -236,6 +237,14 @@ struct ExportContext {
                     const bool oriented=edgeUse.Orientation()==TopAbs_FORWARD||edgeUse.Orientation()==TopAbs_REVERSED;
                     const bool useComplete=oriented&&Exact(pcurve)&&std::isfinite(first)&&std::isfinite(last)&&!startId.empty()&&!endId.empty()&&edgeRecords[index-1]["status"].as<std::string>()=="complete";
                     use.set("status",std::string(useComplete?"complete":"partial")); wireComplete=wireComplete&&useComplete;
+                    if (MalievRepair::EvidenceStore().active) {
+                        MalievRepair::EmittedUse emitted;
+                        emitted.face = original; emitted.wire = wire; emitted.edge = edgeUse;
+                        emitted.faceId = faceId; emitted.wireId = wireId; emitted.coedgeId = useId;
+                        emitted.edgeId = prefix+"/edge-"+std::to_string(index);
+                        emitted.startVertexId = startId; emitted.endVertexId = endId; emitted.complete = useComplete;
+                        MalievRepair::EvidenceStore().emittedUses.push_back(emitted);
+                    }
                     val ownership=val::object(); ownership.set("faceId",faceId); ownership.set("wireId",wireId); ownership.set("coedgeId",useId);
                     ownership.set("seam",BRep_Tool::IsClosed(edgeUse,face));
                     ownership.set("orientation",static_cast<int>(edgeUse.Orientation()));
