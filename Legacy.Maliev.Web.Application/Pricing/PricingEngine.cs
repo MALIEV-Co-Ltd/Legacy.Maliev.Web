@@ -30,10 +30,11 @@ public static class PricingEngine
                 resinMilliliters,
                 material,
                 partsPerPlate) * PricingCatalog.ComplexityFactor;
+            complexityAdjustedCost *= PricingCatalog.BuildPreferenceFactor(buildPreference);
         }
         else
         {
-            var estimate = PrintTimeCalculator.EstimateFdm(geometry, material);
+            var estimate = PrintTimeCalculator.EstimateFdm(geometry, material, buildPreference);
             printTime = estimate.PrintMinutes;
             materialPerUnit = estimate.MaterialGrams;
             weightGrams = estimate.MaterialGrams;
@@ -43,8 +44,6 @@ public static class PricingEngine
                 estimate.SupportGrams,
                 material) * PricingCatalog.ComplexityFactor;
         }
-
-        complexityAdjustedCost *= PricingCatalog.BuildPreferenceFactor(buildPreference);
 
         var setupLabor = PricingCatalog.SetupHours(material.Process) * PricingCatalog.LaborRatePerHour;
         var failureRate = PricingCatalog.FailureReserveRate(material.Process);

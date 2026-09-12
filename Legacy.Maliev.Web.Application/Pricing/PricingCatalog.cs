@@ -9,6 +9,12 @@ public static class PricingCatalog
     public const double FdmLineWidthMm = 0.42;
     public const int FdmWallCount = 3;
     public const double FdmInfillDensity = 0.15;
+    public const double FdmQualityLayerHeightMm = 0.12;
+    public const double FdmQualityWallSpeedMmPerSec = 40.0;
+    public const int FdmStrengthWallCount = 6;
+    public const double FdmStrengthInfillDensity = 0.25;
+    public const double FdmStrengthTopBottomShellMm = 2.0;
+    public const double FdmStrengthWallSpeedMmPerSec = 70.0;
     public const double QualityBuildFactor = 1.35;
     public const double StrengthBuildFactor = 1.20;
     public const double FdmWallSpeedMmPerSec = 50.0;
