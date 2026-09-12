@@ -4,3 +4,8 @@ generate-region-fixtures.cpp -text
 generate-thread-fixtures.cpp -text
 generate-analytic-role-fixtures.cpp -text
 generate-analytic-primitive-fixtures.cpp -text
+generate-analytic-compound-fixtures.cpp -text
+generate-finite-curved-fixtures.cpp -text
+generate-stock-validation-fixtures.cpp -text
+generate-native-common-route-fixtures.cpp -text
+generate-native-through-bore-negative-fixtures.cpp -text

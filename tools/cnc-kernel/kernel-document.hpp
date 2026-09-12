@@ -1,6 +1,7 @@
 #pragma once
 #include "importer-xcaf.hpp"
 #include "kernel-repair.hpp"
+#include "kernel-stock-frames.hpp"
 #include <TDF_Tool.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <algorithm>
@@ -174,6 +175,7 @@ public:
                 MalievRepair::EvidenceStore().emittedFaces.push_back(emitted);
             }
         }
+        output.set("nativeStockFrames",StockFrames::Export(context,MeasuresMillimeterOutput()));
     }
     void Finish(val& provenance) {
         bool faceCoverage=enumerated&&unmappedFaces==0; int sourceFaces=0;

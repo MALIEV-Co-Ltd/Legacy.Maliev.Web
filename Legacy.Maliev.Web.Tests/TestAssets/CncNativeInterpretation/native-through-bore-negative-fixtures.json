@@ -1,0 +1,29 @@
+{
+  "schema": "PublicNativeThroughBoreNegativeFixtures.v1",
+  "generator": "generate-native-through-bore-negative-fixtures.cpp",
+  "generatorSha256": "69f82595085d6eb20b4ddeb370ebd7c62a49e1e50f6286fd7105a5bf7760ea34",
+  "stage": "/tmp/native-through-bore-negative-generator-NbZNoY",
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "sources": [
+    {
+      "file": "native-through-bore-negative-two-bores.step",
+      "family": "two-bores",
+      "variant": "normal",
+      "sha256": "fff8a155053803fb6f72b1488cf623d6c618fedb33c8edb3e7b0666b9c6bebf3",
+      "bytes": 32315,
+      "elapsedMs": 777,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nnative-through-bore-negative-two-bores native-valid=true target=30x20x12 two-disjoint-bores-radius=3 centers-x=11,23"
+    },
+    {
+      "file": "native-through-bore-negative-two-bores-placed.step",
+      "family": "two-bores",
+      "variant": "placed",
+      "sha256": "dfd626390ae43caefa0381e31a7c3f1a5de843ba3a643863c34cc34f3ad6351f",
+      "bytes": 32390,
+      "elapsedMs": 742,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nnative-through-bore-negative-two-bores-placed native-valid=true target=30x20x12 two-disjoint-bores-radius=3 centers-x=11,23"
+    }
+  ]
+}

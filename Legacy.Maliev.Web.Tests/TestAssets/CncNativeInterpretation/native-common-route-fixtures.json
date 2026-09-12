@@ -1,0 +1,56 @@
+{
+  "schema": "PublicNativeCommonRouteFixtures.v1",
+  "generator": "generate-native-common-route-fixtures.cpp",
+  "generatorSha256": "d06bd42d7ddabc43785e439148b17d9aae06ef276a989ea0f11a72642c77133b",
+  "stage": "/tmp/native-common-route-generator-nXPYSC",
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "sources": [
+    {
+      "file": "native-common-route-cuboid.step",
+      "family": "cuboid",
+      "variant": "normal",
+      "sha256": "ccfecb9547688cbe9cd0153641eb8b75a65a14bc77de59f0480a719010ec5108",
+      "bytes": 21895,
+      "elapsedMs": 716,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nnative-common-route-cuboid native-valid=true target=30x20x12 cavity-radius=0"
+    },
+    {
+      "file": "native-common-route-cuboid-placed.step",
+      "family": "cuboid",
+      "variant": "placed",
+      "sha256": "eecd8afd287d1e837debd42177fde7021a1ecaa1ca42068e0ab17fa78b3b923d",
+      "bytes": 21955,
+      "elapsedMs": 757,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nnative-common-route-cuboid-placed native-valid=true target=30x20x12 cavity-radius=0"
+    },
+    {
+      "file": "native-common-route-cuboid-reversed.step",
+      "family": "cuboid",
+      "variant": "reversed",
+      "sha256": "41f817dced5303ff3db8631e448158e2ca34a14cfdd4f473799fd0cb28eb31f5",
+      "bytes": 21929,
+      "elapsedMs": 739,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nnative-common-route-cuboid-reversed native-valid=true target=30x20x12 cavity-radius=0"
+    },
+    {
+      "file": "native-common-route-cavity.step",
+      "family": "cavity",
+      "variant": "normal",
+      "sha256": "271a5b84f5df17651be1ce9ddbecdad4f77e4e19ef88b59d3cf4c91b93283178",
+      "bytes": 27105,
+      "elapsedMs": 740,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nnative-common-route-cavity native-valid=true target=30x20x12 cavity-radius=3"
+    },
+    {
+      "file": "native-common-route-cavity-placed.step",
+      "family": "cavity",
+      "variant": "placed",
+      "sha256": "27dd394468426c141ebb0acaf2c7ebd658ab75c85a00530f6b8de4c33d76a4a1",
+      "bytes": 27175,
+      "elapsedMs": 735,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nnative-common-route-cavity-placed native-valid=true target=30x20x12 cavity-radius=3"
+    }
+  ]
+}

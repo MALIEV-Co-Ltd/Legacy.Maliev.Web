@@ -1,0 +1,164 @@
+{
+  "schema": "PublicNativeAnalyticCompoundFixtures.v1",
+  "generator": "generate-analytic-compound-fixtures.cpp",
+  "generatorSha256": "fff38a837fce40696b53fc40eeeb97cafd9fd3f6d5e2d706b627815012a1f0c4",
+  "generatorDependencies": [
+    {
+      "file": "generate-thread-fixtures.cpp",
+      "sha256": "25980783122324142b21740f8748030cb5561b591c64d6ed687eacb552cfdbb3",
+      "use": "Explicit bounded source recipe reuse; no runtime include or dependency."
+    }
+  ],
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "construction": "Independent single-solid compounds; BRepCheck, one shell/solid and positive finite volume before 17-digit STEP export.",
+  "placement": {
+    "axis": [
+      1,
+      2,
+      3
+    ],
+    "angleRadians": 0.713,
+    "translationMm": [
+      17,
+      -23,
+      41
+    ]
+  },
+  "reversal": "Thread: reversed cylinder axis, affine pcurve poles/traversal and ruled U rows. Primitives: reversed support axis, swapped cone endpoint radii. Physical geometry, outward material orientation and thread handedness preserved.",
+  "intent": {
+    "thread-small-bore": {
+      "thread": {
+        "minorDiameterMm": 12.741,
+        "majorDiameterMm": 13.884,
+        "pitchMm": 1,
+        "leadMm": 1,
+        "startCount": 1,
+        "handedness": "right",
+        "depthMm": 4
+      },
+      "bore": {
+        "diameterMm": 0.8,
+        "depthMm": 4,
+        "axisOffsetMm": 3
+      }
+    },
+    "groove-bead": {
+      "groove": {
+        "majorRadiusMm": 12,
+        "minorRadiusMm": 3,
+        "axialIntervalMm": [
+          2,
+          8
+        ],
+        "radialIntervalMm": [
+          9,
+          12
+        ]
+      },
+      "bead": {
+        "majorRadiusMm": 12,
+        "minorRadiusMm": 2,
+        "axialIntervalMm": [
+          10,
+          14
+        ],
+        "radialIntervalMm": [
+          12,
+          14
+        ]
+      },
+      "bridgeIntervalMm": [
+        8,
+        10
+      ]
+    },
+    "opposed-bores": {
+      "diameterMm": 6,
+      "upperCylinderIntervalMm": [
+        4,
+        10
+      ],
+      "coneIntervalMm": [
+        2,
+        4
+      ],
+      "lowerCylinderIntervalMm": [
+        0,
+        1
+      ],
+      "materialWebIntervalMm": [
+        1,
+        2
+      ],
+      "physicalBoreCount": 2,
+      "coneQuantityContribution": 0
+    }
+  },
+  "sources": [
+    {
+      "file": "analytic-compound-thread-small-bore.step",
+      "family": "thread-small-bore",
+      "variant": "normal",
+      "sha256": "1933e05ed41f66ba565bb4ed1f3bf04b4a5f69ef72dc744531c1c6ba7fcd3ce6",
+      "bytes": 1168557
+    },
+    {
+      "file": "analytic-compound-thread-small-bore-placed.step",
+      "family": "thread-small-bore",
+      "variant": "placed",
+      "sha256": "7f01d5ffd822720e4d6f884049785e173ddf5ce6b472fccc0f10b2d206cbe60d",
+      "bytes": 1167764
+    },
+    {
+      "file": "analytic-compound-thread-small-bore-reversed.step",
+      "family": "thread-small-bore",
+      "variant": "reversed",
+      "sha256": "30bd4a6363435b125681e26d7d43b7f15e7a124e4bda4f97a9e7a6823bbbc863",
+      "bytes": 1165657
+    },
+    {
+      "file": "analytic-compound-groove-bead.step",
+      "family": "groove-bead",
+      "variant": "normal",
+      "sha256": "3ea9291cef4912ced4dfc9a2e9b9ecb62f63354fa40246e121f6caab0085b4b2",
+      "bytes": 25611
+    },
+    {
+      "file": "analytic-compound-groove-bead-placed.step",
+      "family": "groove-bead",
+      "variant": "placed",
+      "sha256": "4ccdc9cf758b975142dad3c49a4ed7e1eeaed1ef04ced1e006a5d29db60e0bcc",
+      "bytes": 25648
+    },
+    {
+      "file": "analytic-compound-groove-bead-reversed.step",
+      "family": "groove-bead",
+      "variant": "reversed",
+      "sha256": "acc6d31c1fec0c544659a702369b424785a17ae8c109eea77af41d49bacaf2b3",
+      "bytes": 25671
+    },
+    {
+      "file": "analytic-compound-opposed-bores.step",
+      "family": "opposed-bores",
+      "variant": "normal",
+      "sha256": "a73b7eaa8a7dcdd0d9a8a714209ae65dc5b852c5b4dce845f250a8ed6370ca10",
+      "bytes": 20746
+    },
+    {
+      "file": "analytic-compound-opposed-bores-placed.step",
+      "family": "opposed-bores",
+      "variant": "placed",
+      "sha256": "31a511e14f24e8cf663f9b322f0dcc2f7a03a7972713044d385ce26516baec8c",
+      "bytes": 20679
+    },
+    {
+      "file": "analytic-compound-opposed-bores-reversed.step",
+      "family": "opposed-bores",
+      "variant": "reversed",
+      "sha256": "b952317daae84dab02dcb7d2e51c469079391e9887a01a9492165e6b97c98134",
+      "bytes": 20804
+    }
+  ]
+}

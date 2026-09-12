@@ -1,0 +1,83 @@
+{
+  "schema": "PublicStockValidationFixtures.v1",
+  "generator": "generate-stock-validation-fixtures.cpp",
+  "generatorSha256": "f7385dee100dbd60d05cea22cb2ac4b7ea4923c5218f066a73849487a8ef3391",
+  "stage": "/tmp/stock-validation-generator-tBVIET",
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "sources": [
+    {
+      "file": "stock-validation-box.step",
+      "family": "box",
+      "variant": "normal",
+      "sha256": "e19190afc73a08ab61e9f91fdceca27fadde7ae101cd43f05356db1a17768371",
+      "bytes": 21895,
+      "elapsedMs": 682,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nstock-validation-box native-valid=true"
+    },
+    {
+      "file": "stock-validation-box-placed.step",
+      "family": "box",
+      "variant": "placed",
+      "sha256": "25b0fbb9cf4c54c2919b79ff9988fd70f85abc288057eed6174b80fcd3cb620c",
+      "bytes": 21958,
+      "elapsedMs": 699,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nstock-validation-box-placed native-valid=true"
+    },
+    {
+      "file": "stock-validation-box-reversed.step",
+      "family": "box",
+      "variant": "reversed",
+      "sha256": "b0908166e503fff5f2585b2af4d76a5c08512f5e03215388a408f8151e4e928a",
+      "bytes": 21929,
+      "elapsedMs": 799,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nstock-validation-box-reversed native-valid=true"
+    },
+    {
+      "file": "stock-validation-cylinder.step",
+      "family": "cylinder",
+      "variant": "normal",
+      "sha256": "69106fa168a231f907c8f806e8cd5594df987c6b9dacd9210e730d78eac06462",
+      "bytes": 7852,
+      "elapsedMs": 718,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nstock-validation-cylinder native-valid=true"
+    },
+    {
+      "file": "stock-validation-cylinder-placed.step",
+      "family": "cylinder",
+      "variant": "placed",
+      "sha256": "60ef7e9b6be143f9c88168ee7a8b3ce4a4f30de0a2d8232d3f69bd72ee16bd18",
+      "bytes": 7866,
+      "elapsedMs": 673,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nstock-validation-cylinder-placed native-valid=true"
+    },
+    {
+      "file": "stock-validation-cylinder-reversed.step",
+      "family": "cylinder",
+      "variant": "reversed",
+      "sha256": "e8f6af037a5b59ef0017cbb48fad72433fec17d1bfbdbf03707a8fd3336558e6",
+      "bytes": 7860,
+      "elapsedMs": 681,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nstock-validation-cylinder-reversed native-valid=true"
+    },
+    {
+      "file": "stock-validation-coincident-instances.step",
+      "family": "coincident-instances",
+      "variant": "normal",
+      "sha256": "1cc62e1417c56a46f9b800bc66960aec89f63fcd252c27ea7326f08fadfcee34",
+      "bytes": 45739,
+      "elapsedMs": 691,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nstock-validation-coincident-instances native-valid=true"
+    },
+    {
+      "file": "stock-validation-coincident-instances-placed.step",
+      "family": "coincident-instances",
+      "variant": "placed",
+      "sha256": "3a0c5c0189b9762ed6f1769690ae98ba3038fba04bbe6a801bcaa16aa7aa0248",
+      "bytes": 45868,
+      "elapsedMs": 807,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nstock-validation-coincident-instances-placed native-valid=true"
+    }
+  ]
+}

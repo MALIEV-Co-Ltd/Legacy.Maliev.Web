@@ -1,0 +1,241 @@
+{
+  "schema": "FiniteNativeCurvedFixtures.v1",
+  "generators": [
+    {
+      "file": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "sha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "FiniteCurvedPatch/thread/generate-finite-curved-fixtures.cpp",
+      "sha256": "2bfdb5f107fcb378c5f0d9f7ca7c285ed466a5bdeb6cf191d4f9717071b61f41"
+    },
+    {
+      "file": "FiniteCurvedPatch/singular/generate-finite-curved-fixtures.cpp",
+      "sha256": "a23f67ead2e1ab20688830a6f2259cab102c631b9c28a06a30e6475edd77ff9b"
+    },
+    {
+      "file": "generate-finite-curved-fixtures.cpp",
+      "sha256": "03f13c21b1960fb8e024dd634111a77d8638e1e7a54440b62b85d52745acfb2c"
+    }
+  ],
+  "sources": [
+    {
+      "file": "finite-curved-sphere-outward.step",
+      "family": "sphere-outward",
+      "variant": "normal",
+      "sha256": "74945e672ed8745091da834c36b8f4e8fc16e47fcd341a58cf70976ce84bbfae",
+      "bytes": 16768,
+      "elapsedMs": 754,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-sphere-outward valid=true volume=0.917854",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-sphere-outward-placed.step",
+      "family": "sphere-outward",
+      "variant": "placed",
+      "sha256": "67875b27686d7b9ee027335e88eba4a060931b3ba869d5eb9fd4dc2be83c4c27",
+      "bytes": 16794,
+      "elapsedMs": 858,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-sphere-outward-placed valid=true volume=0.917854",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-sphere-outward-reversed.step",
+      "family": "sphere-outward",
+      "variant": "reversed",
+      "sha256": "d8a884c83706097fdfa4411edfaed1ef688de39b234fe8477067e45ae3a0198c",
+      "bytes": 17759,
+      "elapsedMs": 754,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-sphere-outward-reversed valid=true volume=0.917854",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-sphere-inward.step",
+      "family": "sphere-inward",
+      "variant": "normal",
+      "sha256": "9b5335ebbde7bb7ad1fb3540fc74ffc92eae271d29ee5db77bbbfdb285c30381",
+      "bytes": 31123,
+      "elapsedMs": 804,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-sphere-inward valid=true volume=26.0821",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-sphere-inward-placed.step",
+      "family": "sphere-inward",
+      "variant": "placed",
+      "sha256": "0a1c0af46f42a8b3dcc09395d51670fa577986f2a5577dbdfd009b607db8b60e",
+      "bytes": 31201,
+      "elapsedMs": 815,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-sphere-inward-placed valid=true volume=26.0821",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-sphere-inward-reversed.step",
+      "family": "sphere-inward",
+      "variant": "reversed",
+      "sha256": "cf948dcdbae2aaadef9c72a0f9ac013d7d3c543b7c03e3036ccb6234bfbcbe35",
+      "bytes": 32114,
+      "elapsedMs": 758,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-sphere-inward-reversed valid=true volume=26.0821",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-rational-roof.step",
+      "family": "rational-roof",
+      "variant": "normal",
+      "sha256": "24f7f79786d70d47b952c7a3e59add960be0f3da8d3bb579317aa00dbea30bd9",
+      "bytes": 28173,
+      "elapsedMs": 762,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nfinite-curved-rational-roof valid=true volume=8.85815",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-rational-roof-placed.step",
+      "family": "rational-roof",
+      "variant": "placed",
+      "sha256": "74365120c2ea59f435e47abc18e5bee5b6d42d83e928172f2fd886d1f830ee0a",
+      "bytes": 27464,
+      "elapsedMs": 801,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nfinite-curved-rational-roof-placed valid=true volume=8.85815",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-rational-roof-reversed.step",
+      "family": "rational-roof",
+      "variant": "reversed",
+      "sha256": "97f37d3d71495d3e6eaa26429439dc4317996cf34160775786fd8d7f046a715b",
+      "bytes": 27782,
+      "elapsedMs": 773,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nfinite-curved-rational-roof-reversed valid=true volume=8.85815",
+      "generator": "FiniteCurvedPatch/initial/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "ff356da3b30efd7d2689b1ab21938eeabdf1598230cc31a961ac0805e0a63852"
+    },
+    {
+      "file": "finite-curved-singular-roof.step",
+      "family": "singular-roof",
+      "variant": "normal",
+      "sha256": "20f03d21e250bb481acd82b0f77fea5990d90e2eec509f237df5e70e91ad5a96",
+      "bytes": 22404,
+      "elapsedMs": 764,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nfinite-curved-singular-roof valid=true volume=4.41965",
+      "generator": "FiniteCurvedPatch/singular/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "a23f67ead2e1ab20688830a6f2259cab102c631b9c28a06a30e6475edd77ff9b"
+    },
+    {
+      "file": "finite-curved-singular-roof-placed.step",
+      "family": "singular-roof",
+      "variant": "placed",
+      "sha256": "ff4202ba2049e387cce301033a0b05838b6587aa5042f4d471131a8f13f37a55",
+      "bytes": 21882,
+      "elapsedMs": 730,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nfinite-curved-singular-roof-placed valid=true volume=4.41965",
+      "generator": "FiniteCurvedPatch/singular/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "a23f67ead2e1ab20688830a6f2259cab102c631b9c28a06a30e6475edd77ff9b"
+    },
+    {
+      "file": "finite-curved-singular-roof-reversed.step",
+      "family": "singular-roof",
+      "variant": "reversed",
+      "sha256": "7ceb3209cdfa2edfd068fd9f74d8c611e2b2df055960ec82ae9952c82576730c",
+      "bytes": 22107,
+      "elapsedMs": 738,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 2                      ******\nfinite-curved-singular-roof-reversed valid=true volume=4.41747",
+      "generator": "FiniteCurvedPatch/singular/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "a23f67ead2e1ab20688830a6f2259cab102c631b9c28a06a30e6475edd77ff9b"
+    },
+    {
+      "file": "finite-curved-thread-quarter-sphere.step",
+      "family": "thread-quarter-sphere",
+      "variant": "normal",
+      "sha256": "effd15f00aa2dc4c42b1fe6ff9ac330b6d7bc2e63281efd5d16ac8b252afcfeb",
+      "bytes": 1182298,
+      "inputSource": "analytic-compound-thread-small-bore.step",
+      "inputSha256": "e346e9503b8c9715f2a031089101acfe32ba4f9b1b881cd9510e98f50b223594",
+      "elapsedMs": 2484,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-thread-quarter-sphere valid=true volume=550.998",
+      "generator": "generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "03f13c21b1960fb8e024dd634111a77d8638e1e7a54440b62b85d52745acfb2c"
+    },
+    {
+      "file": "finite-curved-thread-quarter-sphere-placed.step",
+      "family": "thread-quarter-sphere",
+      "variant": "placed",
+      "sha256": "7d5a3c6400e62b695f8c3d969bf8fe94547bf4ed73c50be1e7fc525e87c998a0",
+      "bytes": 1181172,
+      "inputSource": "analytic-compound-thread-small-bore.step",
+      "inputSha256": "e346e9503b8c9715f2a031089101acfe32ba4f9b1b881cd9510e98f50b223594",
+      "elapsedMs": 2405,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-thread-quarter-sphere-placed valid=true volume=550.998",
+      "generator": "generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "03f13c21b1960fb8e024dd634111a77d8638e1e7a54440b62b85d52745acfb2c"
+    },
+    {
+      "file": "finite-curved-thread-quarter-sphere-reversed.step",
+      "family": "thread-quarter-sphere",
+      "variant": "reversed",
+      "sha256": "5f2fb50f7768090b0a663a8afeae14d0905673387442587a2776e95c4503362d",
+      "bytes": 1182049,
+      "inputSource": "analytic-compound-thread-small-bore-reversed.step",
+      "inputSha256": "46431a8aaca5f5bf65495795a7fe3d82cca8687370303ea66af18f2783d23113",
+      "elapsedMs": 2437,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-thread-quarter-sphere-reversed valid=true volume=550.998",
+      "generator": "generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "03f13c21b1960fb8e024dd634111a77d8638e1e7a54440b62b85d52745acfb2c"
+    }
+  ],
+  "unavailableSources": [
+    {
+      "file": "finite-curved-thread-small-sphere.step",
+      "family": "thread-small-sphere",
+      "variant": "normal",
+      "sha256": "78d0bfd36f30ae6cdb8e9d5a45da6b72f13e374d79797baf99178cd203896352",
+      "bytes": 1184911,
+      "inputSource": "analytic-compound-thread-small-bore.step",
+      "inputSha256": "e346e9503b8c9715f2a031089101acfe32ba4f9b1b881cd9510e98f50b223594",
+      "elapsedMs": 1998,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-thread-small-sphere valid=true volume=551.017",
+      "generator": "FiniteCurvedPatch/thread/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "2bfdb5f107fcb378c5f0d9f7ca7c285ed466a5bdeb6cf191d4f9717071b61f41",
+      "capability": "periodic-spline-pcurve-metric-unavailable;two-wire-symbolic-domain-unsupported",
+      "sourceValidity": "valid-native-solid"
+    },
+    {
+      "file": "finite-curved-thread-small-sphere-placed.step",
+      "family": "thread-small-sphere",
+      "variant": "placed",
+      "sha256": "86720709c324b30816b8ece7ebae7dd995c17763168865dab732349b10fc7651",
+      "bytes": 1184124,
+      "inputSource": "analytic-compound-thread-small-bore.step",
+      "inputSha256": "e346e9503b8c9715f2a031089101acfe32ba4f9b1b881cd9510e98f50b223594",
+      "elapsedMs": 1971,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-thread-small-sphere-placed valid=true volume=551.017",
+      "generator": "FiniteCurvedPatch/thread/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "2bfdb5f107fcb378c5f0d9f7ca7c285ed466a5bdeb6cf191d4f9717071b61f41",
+      "capability": "periodic-spline-pcurve-metric-unavailable;two-wire-symbolic-domain-unsupported",
+      "sourceValidity": "valid-native-solid"
+    },
+    {
+      "file": "finite-curved-thread-small-sphere-reversed.step",
+      "family": "thread-small-sphere",
+      "variant": "reversed",
+      "sha256": "e92889b82ac391acbc43ef7a8783c45c8371ba025dba3bb9e509bde8fd34f788",
+      "bytes": 1182741,
+      "inputSource": "analytic-compound-thread-small-bore-reversed.step",
+      "inputSha256": "46431a8aaca5f5bf65495795a7fe3d82cca8687370303ea66af18f2783d23113",
+      "elapsedMs": 1882,
+      "output": "*******************************************************************\n******        Statistics on Transfer (Write)                 ******\n\n*******************************************************************\n******        Transfer Mode = 0  I.E.  As Is       ******\n******        Transferring Shape, ShapeType = 0                      ******\nfinite-curved-thread-small-sphere-reversed valid=true volume=551.017",
+      "generator": "FiniteCurvedPatch/thread/generate-finite-curved-fixtures.cpp",
+      "generatorSha256": "2bfdb5f107fcb378c5f0d9f7ca7c285ed466a5bdeb6cf191d4f9717071b61f41",
+      "capability": "periodic-spline-pcurve-metric-unavailable;two-wire-symbolic-domain-unsupported",
+      "sourceValidity": "valid-native-solid"
+    }
+  ]
+}

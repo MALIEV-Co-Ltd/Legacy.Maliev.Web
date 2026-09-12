@@ -168,6 +168,174 @@ invoke it from `apply-overlay.cjs`. After copying updated headers to the retaine
 container, touch all consuming translation units before the incremental build
 because `docker cp` may preserve older mtimes. Keep old objects/containers.
 
+## Opt-in numerical target sessions
+
+`ReadStepFileWithTarget(bytes, params)` uses the existing STEP load/transfer once
+and adds `nativeTargetSession` to its ordinary result. Existing import APIs do
+not retain a session. Admission requires normalized millimetres, complete native
+source-interpretation prerequisites, exactly one valid solid with one checked
+shell, complete oriented source-face allocation, and nonrejected infinite-point
+OUT. It does not assert the application's private interpretation approval.
+Open/multiple/nested-shell/unaccepted sources remain unavailable without repair.
+
+The retained values own the original solid, location/orientation, source faces
+and IDs, a complete finite-face boundary container, classifier, distance helper,
+and exact imported bytes. No pointer address is serialized. The registry admits
+at most four live sessions and 64 MiB aggregate source snapshots, rejecting a
+new session at capacity. These are not native-heap or WASM-memory bounds. IDs
+increase within one module lifetime; future callers must also bind a worker
+incarnation because another module can repeat the string.
+
+Bind once using `BindNativeTargetSource(sessionId, bytes, binding)`, where binding
+has contract `NativeTargetSourceBinding.v1`, nonempty `sourceGeneration`,
+`nativeImportRevision`, `topologyRevision`, and a lowercase 64-hex
+`sourceBytesHash`. Native code compares actual bytes, not a claimed digest.
+`byteEqualityVerified:true` and
+`bindingAuthority:'caller-labels-bound-to-exact-imported-bytes'` mean exactly
+that: these immutable labels are caller correlations, not native SHA validation.
+Identical rebinding is idempotent; different bytes/labels reject.
+
+`QueryNativeTargetBatch(request)` accepts this ordered, synchronous contract:
+
+```js
+{
+  contract: 'NativeTargetQueryBatch.v1', sessionId, binding,
+  batchId: 'batch-1', policyVersion: 'native-target-numerical-v1',
+  mode: 'membership-and-distance', // or membership / boundary-distance
+  coordinateSpace: 'import-world-mm',
+  points: [{ pointId: 'p0', point: [1, 2, 3] }]
+}
+```
+
+The complete batch (1–256 finite points, unique IDs) is copied/validated before
+native evaluation. Bad identity, labels, mode, coordinate space, extra inventory
+fields or nonfinite values reject without evaluating a prefix. Results echo
+every point/ID in order and the producer-owned body/all-face inventory. Per-point
+components have available/unavailable/not-requested status; failed components
+never become zero distance or empty material. Interrupted suffixes remain
+explicit unavailable slots. Batch status is complete/partial/unavailable, with
+elapsed time and evaluated count as diagnostics, not completion guarantees.
+
+Membership uses the loaded `BRepClass3d_SolidClassifier`. Rejected, uncompleted or
+unexpected states are UNKNOWN. Finite OUT additionally requires a unique actual
+source-face witness: public nonrejected OUT with a null face can hide an internal
+uncompleted state and stays unavailable. IN/ON are numerical observations, not
+proof of all hidden subqueries; ON is not relabeled empty. Infinite-point
+admission uses its separate pinned control-flow predicate. No enclosure-based
+OUT shortcut is implemented.
+
+Distance uses `BRepExtrema_DistShapeShape` from a transient point vertex to a
+compound of **all original finite faces**, never to the solid interior or an
+unrestricted support. It requires successful completion, solutions and finite
+nonnegative value without an inner-solid solution. Nearest face/edge/vertex IDs
+are joined to retained source identities; missing/ambiguous optional support
+metadata is explicit. Classification tolerance and distance deflection both use
+pinned `Precision::Confusion()` and are separate from maximum source topology
+tolerance. Results have `formalIntervalCertificate:false`,
+`certifiedDistanceErrorBoundMm:null`, `applicationInterpretationApproved:false`
+and `machiningAuthorized:false`. No error interval or quotation admission is
+implied. Synchronous native calls have no fictitious cancellation/deadline
+guarantee; future worker termination/async brokerage is outside this producer.
+
+`ReleaseNativeTarget(sessionId)` releases owning resources; repeated or unknown
+IDs return `released:false`. Failed/provisional imports cannot leak a live slot.
+Release does not promise that WASM linear-memory high-water allocation shrinks.
+
+Build with the existing isolated `build.ps1` workflow above; do not publish a
+candidate or change pins implicitly. Native test staging must contain the two
+new headers, `test-target-query-native.cpp`, and hash-bound public
+`native-common-route-cuboid.step`. The harness verifies staged headers against
+the actual compiled source and links the existing OCCT/importer object response
+files without a second js-interface binding object:
+
+```text
+node tools/cnc-kernel/test-target-query-overlay.cjs
+sh tools/cnc-kernel/test-target-query-native.sh STAGED_NATIVE_TEST_SOURCE_DIR ISOLATED_RESULT_DIR
+node tools/cnc-kernel/test-target-query.cjs CANDIDATE_JS PUBLIC_FIXTURE_ROOT
+```
+
+The API test optionally saves write-once raw receipts beneath
+`CNC_TARGET_QUERY_RECEIPT_DIR`. It compares all deterministic old output fields;
+only measured phase/counter/mark/dispatch timings, the timing-ranked top-20
+`audit.slowMetrics`, and the existing increasing native invocation nonce are
+excluded. Each raw timing-ranked row is checked against its own complete native
+semantic/residual ledger, which remains in exact equality. These test exclusions
+never rewrite producer outputs or source/session labels.
+
+## Opt-in native target-query profiling (diagnostic only)
+
+The default overlay and runtime expose no profiling API. For a separately
+identified local composed source/build, apply the default overlays first, then:
+
+```text
+node tools/cnc-kernel/test-target-query-profile-overlay.cjs PRISTINE_COMPOSED_ROOT
+node tools/cnc-kernel/apply-target-query-profile-overlay.cjs ISOLATED_COMPOSED_ROOT
+cmake --build ISOLATED_BUILD --parallel 2
+node tools/cnc-kernel/test-target-query-profile.cjs BASELINE_JS PROFILE_JS SOURCE_PATH BATCH_MANIFEST RESULT_DIRECTORY
+```
+
+The opt-in overlay checks both pinned upstream revisions, all ten exact source
+hashes and every replacement anchor before writing. It copies the same bounded
+header beside the importer and BRepClass3d sources; IntCurvesFace includes that
+exact BRepClass3d copy, as does the guarded 3D generic specialization. The selector header/source add box rejection, edge
+preparation, ExtCC construction, existing-result and vertex phases. Box rejection
+still tests the original infinite line; ExtCC still uses the original finite
+adaptor/BRep domains. Return values, ordered parameters and parallel validity
+flags are not changed. Curve-type ExtCC buckets are separate from surface-type
+projection/intersector buckets.
+
+Rebuild the changed OCCT caller objects, importer binding object and every
+transitive selector-header consumer, retaining and hash-verifying the other
+objects. Do not assume old partial CMake dependency records cover reused
+objects: enumerate source includes, verify consumers with compiler dependency
+output and explicitly rebuild that set using the recorded compiler flags before
+the normal CMake link. Do not reuse a
+build whose absolute CMake paths, source closure or compiler flags differ. Do not
+publish these diagnostic artifacts or overwrite a production pin.
+
+`QueryNativeTargetBatchProfile(ordinaryRequest, diagnosticRequestHash)` calls the
+unchanged strict ordinary query under an active synchronous batch context.
+`ReadLastNativeTargetQueryProfile()` returns the last bounded sidecar. The hash is
+only a caller label: the harness computes SHA-256 independently and checks exact
+source/session/batch/mode/point-count correlation. Invalid/truncated labels,
+counter overflow or nesting overflow make attribution unavailable, not geometry.
+Ordinary output fields and OUT-witness requirements remain unchanged.
+
+Counters use fixed arrays, a 32-frame stack and `steady_clock`, with no clock or
+allocation in inactive scopes. Sidecars contain no per-point/per-face records.
+Phase inclusive times overlap; sum exclusive descendants plus batch self, never
+sum inclusive phases as total. Support buckets are an overlapping breakdown,
+not additional exclusive work. After adding selector children, line-tree self
+time is residual traversal/control/instrumentation cost, not a measurement of
+pure UBTree traversal. Five additional 3D generic ExtCC phases separate each
+original adaptor length, remaining preparation (prepare exclusive), interval
+finder calls and whole generic solve. Generic solve exclusive is residual
+loop/result/status work, not preparation. Two fixed support groups attribute
+lengths by actual curve rank/type; generic callers need not be selector edges.
+No calculation is cached or accelerated here.
+This instrumentation assumes the existing
+single-threaded synchronous WASM execution and does not claim multithread safety.
+
+Compile `test-target-query-profile.cpp` twice: once with `PROFILE_HELPER_TU` and
+the BRepClass3d header include path, once with `PROFILE_NATIVE` and the importer
+include path plus the actual build's `includes_CXX.rsp`. Link both objects with
+the existing native object response closure, excluding exactly the js-interface
+object as in `test-target-query-native.sh`. The test covers disabled/reset/nested
+contexts, unwind and overflow behavior, and actual linked OCCT/importer sharing.
+It also solves a finite 3D Bezier/line case with active and inactive hooks and
+an equivalent 2D case with no 3D counters. The shared Extrema_GenExtCC.gxx hooks
+are guarded by a marker defined/undefined only around the 3D Extrema_ECC_0.cxx
+include. Rebuild both 3D and 2D specializations plus every profile-header
+consumer; verify the unchanged 2D source/object and ordinary solve results.
+
+The replay manifest binds source bytes, both JS/WASM hashes, ordered batches and
+each points-array SHA-256. Maximum 16 batches per source, 256 points per batch,
+and 32 KiB per sidecar. Baseline and profile each import the source once; raw
+ordinary results and sidecars are written to a new result directory. Complete
+ordinary query comparison excludes only `elapsedMs`; existing import comparison
+uses the explicitly enumerated timing/invocation exclusions above. A profile is
+neither a numerical error certificate nor source, machining or quote authority.
+
 ## License
 
 occt-import-js declares LGPL-2.1 in its package metadata; this extension follows
