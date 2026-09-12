@@ -158,3 +158,28 @@ with nine explicit private-fixture or platform skips and zero failures; and the
 Release .NET suite passed 2,011 tests after a zero-warning, zero-error build.
 Formatting, the frozen parity manifest, generated-asset diff, package audit,
 and secret scan also passed.
+
+## Issue #225 evidence extension
+
+The ten-commit fixture, stock-frame, retained-target, and profiling series is
+migrated in source order through `aade6be7c7a8b82d100c30e8a6f5c10a09ab6711`.
+Implementation commit `f4786976e576d527556f339709cc482f5088a234`
+contains all 84 final source paths with identical Git blob IDs. This preserves
+independent generator lineage, topology-bound triangulation correspondence,
+bounded target sessions and queries, diagnostic-only profiling, and reversed
+occurrence edge membership without granting machining authority.
+
+Focused coherent native validation passed 1,448 stock/triangulation checks,
+30 reversed-context membership checks, and 163 retained-target query checks.
+The retained-target JavaScript harness passed 65 semantic and lifetime checks.
+The overlay wiring, target-query, and hash-bound profiling overlay guards passed;
+an independently linked profiled OCCT closure then passed 109 counter,
+cross-translation-unit, selector, 3D-extrema, and unchanged-2D checks with zero
+failures. The complete browser-module suite passed 137 assertions; the expanded
+CNC suite passed 537 with nine explicit private-fixture or platform skips and
+zero failures; and the Release .NET suite passed 2,011 tests after a
+zero-warning, zero-error build. Formatting, the frozen parity manifest,
+generated-asset diff, NuGet and npm vulnerability audits, committed-history
+secret scanning, and `git diff --check` also passed. The directory secret scan's
+only two findings were vendored Playwright JavaScript beneath ignored test
+`bin/` output; neither file is tracked or included in the branch.

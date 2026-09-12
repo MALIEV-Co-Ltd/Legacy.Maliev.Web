@@ -6,11 +6,11 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed partial class SourceCommitRegisterContractTests
 {
-    private const string SourceCheckpoint = "fe3d824d52b2ce3f06f98211cd48349979a71527";
-    private const int ExpectedCommitCount = 311;
+    private const string SourceCheckpoint = "aade6be7c7a8b82d100c30e8a6f5c10a09ab6711";
+    private const int ExpectedCommitCount = 321;
     private const int FrozenHistoryCommitCount = 286;
     private const string FrozenHistorySha256 = "ebf9de7d1dbde6b281edd2cf836872c92763afde3073c26515efe3b7e89e3fc8";
-    private const string RegisterHistorySha256 = "345585763ed975ee429a46626e3de62ad641f2c84dedb9aeb23e4a72c76d65cf";
+    private const string RegisterHistorySha256 = "d99b49e8b930a866b71100329b18bc11b5106048d31aed16f94e80af865b8dae";
 
     [Fact]
     public void Register_ClassifiesEverySourceCommitWithEvidence()
@@ -39,9 +39,9 @@ public sealed partial class SourceCommitRegisterContractTests
         Assert.Equal(RegisterHistorySha256, ComputeSequenceSha256(commits));
         Assert.Equal(
             [
-                "878bb8a42fe8d2fb7d6e18a0b1033fdd3619c169",
-                "939184a5604a012fb65666bc4afce48a1a98cb0a",
-                "fe3d824d52b2ce3f06f98211cd48349979a71527"
+                "378e5ff7b7a2192749e2f715107aee20395be599",
+                "7e4d22850fb33ee24cd9b6e72a0e386f55f02b4b",
+                "aade6be7c7a8b82d100c30e8a6f5c10a09ab6711"
             ],
             commits[^3..]);
         Assert.DoesNotContain("- [ ]", register, StringComparison.Ordinal);
@@ -57,6 +57,7 @@ public sealed partial class SourceCommitRegisterContractTests
         Assert.Contains("`da8dbfa41a0f5b444ee0375ebe0b646b11b63039`", register, StringComparison.Ordinal);
         Assert.Contains("`bbba5046b41c0b1c7fed949d29b093b555b94b9b`", register, StringComparison.Ordinal);
         Assert.Contains("`fe3d824d52b2ce3f06f98211cd48349979a71527`", register, StringComparison.Ordinal);
+        Assert.Contains("`aade6be7c7a8b82d100c30e8a6f5c10a09ab6711`", register, StringComparison.Ordinal);
         Assert.Contains(
             "| `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` | Migrated | `5068239880271e1a17c1d2707cf728c019d4adc2`; `691d87c56c979613c4cd12b43a0d5e2e40994beb` |",
             reconciliation,

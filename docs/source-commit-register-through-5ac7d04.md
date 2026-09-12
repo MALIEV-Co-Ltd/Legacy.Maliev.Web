@@ -1,6 +1,6 @@
 # Source commit migration register
 
-Published source main: `fe3d824d52b2ce3f06f98211cd48349979a71527`.
+Published source main: `aade6be7c7a8b82d100c30e8a6f5c10a09ab6711`.
 Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
 
 Every entry is classified against the final source checkpoint. Related commits
@@ -319,3 +319,13 @@ the runtime, verification, adaptation, and exclusion classifications.
 - [x] `878bb8a42fe8d2fb7d6e18a0b1033fdd3619c169` — Preserve STEP declared edge cycles through periodic repair — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `939184a5604a012fb65666bc4afce48a1a98cb0a` — Bound circular revolution surfaces without changing native parameterization — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `fe3d824d52b2ce3f06f98211cd48349979a71527` — Recognize native affine spline boundaries without changing parameterization — migrated in issue #224; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `559fe9232e20fc4e70d80d54ec7b8a7649009b94` — Preserve independent native CAD regression sources and generation lineage — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `9310702b448c82b377a63e2ce4d05cf9ded9a702` — Export native stock frames and topology-bound triangulation correspondence — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `a9b1886b44731ce0cbfef2135878edbe7b9e9cc2` — Avoid repeated generic stock-frame bounds optimization — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `022eae45a63e2f4804a588ad3d6aac86d4bed098` — Add native cuboid and through-cavity fixtures — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `82f0c98ead18db8ae6ed8a88095aa3714fed091a` — Retain two-bore ownership regression fixtures — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `26cb8db22845b50dce4613d62d5cadb58ce82829` — Retain native CAD targets for bounded numerical queries — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `3aabef45a119aa7647f4abddc6460a7e14dbf638` — Add bounded native query profiling with classification equivalence tests — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `378e5ff7b7a2192749e2f715107aee20395be599` — Isolate native selector extrema cost without changing query results — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `7e4d22850fb33ee24cd9b6e72a0e386f55f02b4b` — Measure generic extrema optimizer separately from curve preparation — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `aade6be7c7a8b82d100c30e8a6f5c10a09ab6711` — Fix native edge membership across reversed occurrence contexts — migrated in issue #225; see [evidence](cnc-source-commit-reconciliation.md).
