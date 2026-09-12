@@ -1,6 +1,6 @@
 # Source commit migration register
 
-Published source main: `cbbe1c3a482d0825cecb732bb1044c88bb20358c`.
+Published source main: `bbba5046b41c0b1c7fed949d29b093b555b94b9b`.
 Baseline: `4486f0e964e508e5eb7b43a59eeaec46cc052c67`.
 
 Every entry is classified against the final source checkpoint. Related commits
@@ -297,3 +297,20 @@ the runtime, verification, adaptation, and exclusion classifications.
 - [x] `ad2774760862371b4ea442d02669ad9ecd4913f5` — docs(cnc): plan evidence-backed manufacturing quotation recovery — source-only recovery plan classified as non-runtime; issue #221 ports the two subsequent runtime outcomes without copying source deployment instructions; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` — Add source-backed local CNC cutting tool catalog — migrated as a standalone non-authorizing review asset in implementation target commit `5068239880271e1a17c1d2707cf728c019d4adc2`, followed by documentation-path adaptation `691d87c56c979613c4cd12b43a0d5e2e40994beb`; see [evidence](cnc-source-commit-reconciliation.md).
 - [x] `cbbe1c3a482d0825cecb732bb1044c88bb20358c` — Avoid legacy tool diagnostics during CNC quotation imports — migrated with explicit manufacturing-summary-only suppression and absolute-millimeter STEP validation tessellation in target commit `6438973a98a3a76f724df70f4b5c8b44541c9e3b`; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `a20a65116b7d99c773cc84c7eeab418af85ea956` — Export native CAD face identity and source document coverage — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `f9ba54de0c49788a1d76d627d723fbb66cf4e0fa` — Add bounded native curve and surface verification helpers — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `7c08303528610246d856804a7919bed3c5fdbd06` — Bound shared-parameter repair residuals with one work budget — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `4b6cf309e8e9ea4c219e9b43616339195cd22d9a` — Preserve native line parameters in repair comparisons — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `ae07be9dfbfa98bb80932707252897678cdfb994` — Bound cylindrical and rational CAD residuals with shared work limits — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `4f6dc90cac6c95b63d834a81cc00a7994893e5cd` — Complete bounded comparisons for high-degree CAD boundaries — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `6222e5e287ca19546be1a0c3fc1f243c3fcdadd2` — Preserve native warning provenance without requiring a source model — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `da8dbfa41a0f5b444ee0375ebe0b646b11b63039` — Keep queued quotation work recoverable across stage retries — migrated in issue #223 with the Legacy additive workflow retained as its .NET 10 implementation; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `5feed65c1c84ec180829ec132dc9771ff8127c84` — Preserve bounded native CAD interpretation evidence and failure states — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `a298dd54ecd739aed81fd2a331a203ac7250a1cc` — Complete bounded CAD connector interpretation without timeout fallback — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `35cfff14ecba58ceb3d6128731dab1228b9ed9b9` — Measure native CAD regions with bounded volume refinement — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `209bfc62ff128566a3e73f0a3cce4ce8ef43979b` — Bound clamped CAD connectors and degree-aware spline repairs — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `a2f3e817d9061e943955f3e371c58f41a176c664` — Export native rotational regions with complete trim coverage — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `5baabe3cdc9342dea51bf5a09175c7a78b5436cd` — Validate native CNC interpretation and stable semantic identity — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `1e6c2538d5b6b5696e8bd446d6adf10a647fed6f` — Preserve verified native CAD imports through progressive browser analysis — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `8de3ba6fde52de18e54aa180793e985708882b67` — Recognize verified native CAD regions with complete face ownership — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).
+- [x] `bbba5046b41c0b1c7fed949d29b093b555b94b9b` — Preserve native feature ownership across quotation dispatch — migrated in issue #222; see [evidence](cnc-source-commit-reconciliation.md).

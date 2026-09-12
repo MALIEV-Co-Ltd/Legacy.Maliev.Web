@@ -65,7 +65,7 @@
     }
 
     function create(options) {
-        const THREE = global.THREE;
+        const THREE = global.MalievFinishingThree;
         const stage = options?.stage;
         const canvas = options?.canvas;
 

@@ -45,6 +45,11 @@ jobs:
       - name: Verify frozen source-parity manifest
         shell: pwsh
         run: ./scripts/verify-complete-source-history-parity.ps1 -ManifestOnly
+      - name: Build browser acceptance host
+        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Install pinned Chromium browser
+        shell: pwsh
+        run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@6017816fa67f369d785ed30794f002cfd6299af7
         with:

@@ -35,7 +35,9 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
         Assert.Contains("finish-color-matcher-core.js", entry, StringComparison.Ordinal);
         Assert.Contains("finish-color-matcher-preview.js", entry, StringComparison.Ordinal);
         Assert.Contains("finish-color-matcher.js", entry, StringComparison.Ordinal);
-        Assert.Contains("window.THREE = THREE", vendor, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.THREE", vendor, StringComparison.Ordinal);
+        Assert.Contains("window.MalievFinishingThree = THREE", entry, StringComparison.Ordinal);
+        Assert.Contains("global.MalievFinishingThree", preview, StringComparison.Ordinal);
         Assert.Contains("window.MalievHlcColourAtlas", atlas, StringComparison.Ordinal);
         Assert.Contains("\"version\":\"2.03\"", atlas, StringComparison.Ordinal);
         Assert.Contains("\"publisher\":\"freieFarbe e.V.\"", atlas, StringComparison.Ordinal);

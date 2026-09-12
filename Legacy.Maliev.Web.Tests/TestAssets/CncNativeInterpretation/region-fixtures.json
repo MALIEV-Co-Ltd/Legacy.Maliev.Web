@@ -1,0 +1,67 @@
+{
+  "schema": "PublicNativeRegionFixtures.v1",
+  "generator": "generate-region-fixtures.cpp",
+  "generatorSha256": "f290a411fc36a343af9be14818cf031096549ccdd8a5abf9229372ecd6d2c91c",
+  "occtCommit": "d2abb6d844231cb8f29be6894440874a4700e4a5",
+  "importerCommit": "c2148e54b456b571238d35cac037d304053d64b2",
+  "jsSha256": "0f4759e678eafaf72a85e6a46ba3cf7cd324a88f7882d64d8dffdbaed25f2f90",
+  "wasmSha256": "191da5c8b62d845a8585ff7d952222b823e744933d5e95fd9bd6a62a6fb866d5",
+  "imageId": "sha256:19980e5a716cbd39870b40561f58ae3804d9a17b27c482374553bfb78cf106cf",
+  "sources": [
+    {
+      "file": "ring.step",
+      "sha256": "663eebc4fb387b92a2b0c62b218b3e26543f94de9392b7842e734db76313c109",
+      "bytes": 13067
+    },
+    {
+      "file": "ring-flipped-axis.step",
+      "sha256": "cfcf6b65bbc89f798f2364280ed5afc9a2a7d63ae1bca574d892eb31d26bcd08",
+      "bytes": 14963
+    },
+    {
+      "file": "ring-default-precision.step",
+      "sha256": "475cddaf8c62ee98ab419049ba04056a033183e66dc6b5ab3e1880bff21211bf",
+      "bytes": 9349
+    },
+    {
+      "file": "ring-split-edges.step",
+      "sha256": "a560930dd2fc95d32abfa13db164f6f13d0a26374c61b8c2cda5b3bca580125e",
+      "bytes": 22449
+    },
+    {
+      "file": "ring-transformed.step",
+      "sha256": "9e645ca5c6db736876ded5802b0ed67ff08c6dac60c01de8c530d4c6646b8b1a",
+      "bytes": 13085
+    },
+    {
+      "file": "ellipse-prism.step",
+      "sha256": "3c6d05cd4f2f690e398f5fa8dae34b3cd6b209ed0dc0ba26f88a13a5eecaa997",
+      "bytes": 8167
+    },
+    {
+      "file": "ellipse-cap.step",
+      "sha256": "3f2da359bc0751c126bf1368e2ca4852bfadda9744fd79a895682639259828f3",
+      "bytes": 10555
+    },
+    {
+      "file": "disk-cylinder.step",
+      "sha256": "462f23e3acbcd979141404e53a4dacb5fbf9f7f42b3ca6e57da97005a1d0b12f",
+      "bytes": 7855
+    },
+    {
+      "file": "partial-cylinder.step",
+      "sha256": "d002a66b8dd3cd02c64a2b4cb311684a42470606fffdfb6f1da5e0c3c5ea4ac9",
+      "bytes": 17413
+    },
+    {
+      "file": "opposite-blind.step",
+      "sha256": "7d85e306bacc7d87c1fa64ac14674abd317186882ea4473939d5a4bbcd7d4834",
+      "bytes": 19125
+    },
+    {
+      "file": "stepped-bore.step",
+      "sha256": "ef87ba72c49415e6f37d3fe283c6520fed84c7e043ef65c5137550d1ee95fe31",
+      "bytes": 18704
+    }
+  ]
+}

@@ -233,6 +233,20 @@
                 faceOwners[faceId] = feature.id;
             });
         });
+        values(graph.unresolved).forEach(function (item) {
+            if (!isPlainObject(item) || !hasText(item.reason)) {
+                throw contractError('broken_feature_reference', 'Feature graph issues must contain a reason.');
+            }
+            var scope = hasText(item.scope) ? item.scope : hasText(item.featureId) ? 'feature' : 'document';
+            var stage = hasText(item.stage) ? item.stage : scope === 'document' ? 'topology' : 'recognition';
+            if ((scope !== 'document' && scope !== 'feature')
+                || (scope === 'document' && stage !== 'topology' && stage !== 'recognition')
+                || (scope === 'feature' && stage !== 'recognition')
+                || scope === 'document' && hasText(item.featureId)
+                || scope === 'feature' && (!hasText(item.featureId) || !featureIds[item.featureId])) {
+                throw contractError('broken_feature_reference', 'Feature graph issue has an invalid scope, stage, or feature reference.');
+            }
+        });
         features.forEach(function (feature) {
             values(feature.secondaryFeatureIds).forEach(function (featureId) {
                 if (!hasText(featureId) || !featureIds[featureId]) {
@@ -537,10 +551,20 @@
             }
             var feature = hasText(item.featureId) ? featuresById[item.featureId] : null;
             var inherited = featureGraphUnresolved.some(function (source) {
-                return isPlainObject(source) && source.featureId === item.featureId
-                    && source.reason === item.reason && source.required === item.required;
+                return isPlainObject(source)
+                    && (hasText(source.featureId) ? source.featureId : null)
+                        === (hasText(item.featureId) ? item.featureId : null)
+                    && source.reason === item.reason && source.required === item.required
+                    && (!hasText(item.scope) || !hasText(source.scope) || source.scope === item.scope)
+                    && (!hasText(item.stage) || !hasText(source.stage) || source.stage === item.stage);
             });
             if (inherited) { return; }
+            var scope = hasText(item.scope) ? item.scope : hasText(item.featureId) ? 'feature' : 'document';
+            var stage = hasText(item.stage) ? item.stage : 'compiler';
+            if (scope !== 'feature' || stage !== 'compiler') {
+                throw contractError('broken_feature_reference',
+                    'Operation issue has an invalid scope or compiler stage.');
+            }
             if (!feature) {
                 throw contractError('broken_feature_reference',
                     'Operation unresolved reason references a missing feature.');
@@ -895,6 +919,7 @@
 
     function topologyEvidence(topology) {
         var evidence = JSON.parse(JSON.stringify(topology));
+        if (evidence.cadDocument && evidence.cadDocument.nativeImport) { evidence.cadDocument = root.CncCadDocument.projectDocument(topology.cadDocument); }
         values(evidence.faces).forEach(function (face) { delete face.analysisSamples; delete face.triangleRange; });
         delete evidence.validationMesh;
         return canonicalize(evidence);

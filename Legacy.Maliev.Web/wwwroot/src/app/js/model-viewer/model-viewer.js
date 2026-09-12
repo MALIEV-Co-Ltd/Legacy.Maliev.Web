@@ -466,6 +466,25 @@ function CreateModelWorkerManager(maxConcurrency) {
         if (data.jobId !== slot.activeJobId) {
             return; // stale response from a since-respawned worker; ignore
         }
+        if (data.success && data.stage === 'native-preview') {
+            var entry = pending.get(data.jobId);
+            if (!entry || !entry.onPreview || entry.previewReceived) {
+                RespawnWorker(slot);
+                Settle(data.jobId, { success: false, error: 'Invalid native CNC preview continuation.' });
+                return;
+            }
+            entry.previewReceived = true;
+            Promise.resolve().then(function () { return entry.onPreview(data); }).then(function () {
+                if (slot.activeJobId === data.jobId && pending.get(data.jobId) === entry) {
+                    slot.worker.postMessage({ action: 'continue-native-analysis', jobId: data.jobId });
+                }
+            }).catch(function (error) {
+                if (slot.activeJobId !== data.jobId || pending.get(data.jobId) !== entry) { return; }
+                RespawnWorker(slot);
+                Settle(data.jobId, { success: false, error: (error && error.message) || 'Unable to prepare native CNC preview.' });
+            });
+            return;
+        }
         slot.activeJobId = null;
         Settle(data.jobId, data);
         DispatchNext();
@@ -490,7 +509,7 @@ function CreateModelWorkerManager(maxConcurrency) {
         // ArrayBuffer/typed-array buffers) to move into the worker without copying. Returns
         // { jobId, promise } -- the caller keeps jobId to Cancel(...) this job later (e.g. if the
         // user removes the part before it finishes); the promise resolves/rejects as usual.
-        Submit: function (message, transfer) {
+        Submit: function (message, transfer, onPreview) {
             var jobId = 'job-' + (nextJobId++);
             message.jobId = jobId;
             var promise = new Promise(function (resolve, reject) {
@@ -498,7 +517,7 @@ function CreateModelWorkerManager(maxConcurrency) {
                     reject(new Error('Unable to load 3D file processing support. Please reload the page.'));
                     return;
                 }
-                pending.set(jobId, { resolve: resolve, reject: reject, timeoutHandle: null });
+                pending.set(jobId, { resolve: resolve, reject: reject, timeoutHandle: null, onPreview: onPreview, previewReceived: false });
                 queue.push({ message: message, transfer: transfer });
                 DispatchNext();
             });
@@ -1114,6 +1133,7 @@ function ModelViewer(canvasElement) {
         var analysisProfile = options.analysisProfile === 'cnc' ? 'cnc' : 'additive';
         var extension = GetFileExtension(file.name);
         var cancelled = false;
+        var terminal = false;
         var activeJob = null;
         var handle = {
             cancel: function () {
@@ -1125,7 +1145,7 @@ function ModelViewer(canvasElement) {
         };
 
         var prepareObject = function (object3D, modelInfo, includeCadEdges) {
-            if (cancelled) { return; }
+            if (cancelled || terminal) { return; }
             modelInfo = modelInfo || {};
             modelInfo.sourceFormat = extension;
             modelInfo.isCadSource = extension === 'step' || extension === 'stp'
@@ -1146,13 +1166,14 @@ function ModelViewer(canvasElement) {
         };
 
         var handleObject = function (object3D, modelInfo, cncGeometry) {
-            if (cancelled) { return; }
+            if (cancelled || terminal) { return; }
             modelInfo = prepareObject(object3D, modelInfo, true);
+            terminal = true;
             onReady(modelInfo, object3D, null, cncGeometry);
         };
 
         var publishPreview = function (object3D, modelInfo) {
-            if (cancelled || typeof options.onPreviewReady !== 'function') { return Promise.resolve(); }
+            if (cancelled || terminal || typeof options.onPreviewReady !== 'function') { return Promise.resolve(); }
             // The progressive preview is the first visible CAD frame. Prepare its feature
             // edges before publishing it so customers never see a temporary edge-less solid
             // while the slower accessibility analysis is still running.
@@ -1160,6 +1181,7 @@ function ModelViewer(canvasElement) {
             try {
                 return Promise.resolve(options.onPreviewReady(modelInfo, object3D));
             } catch (error) {
+                if (analysisProfile === 'cnc' && /^(step|stp|iges|igs)$/.test(extension)) { throw error; }
                 if (window.console && typeof window.console.error === 'function') {
                     window.console.error('Unable to publish the progressive model preview.', error);
                 }
@@ -1168,7 +1190,8 @@ function ModelViewer(canvasElement) {
         };
 
         var onError = function (message) {
-            if (cancelled) { return; }
+            if (cancelled || terminal) { return; }
+            terminal = true;
             onReady(null, null, message || 'Unable to read this model file.');
         };
 
@@ -1194,7 +1217,7 @@ function ModelViewer(canvasElement) {
         };
 
         var SubmitAnalysisRequest = function (object3D, request) {
-            if (cancelled) { return; }
+            if (cancelled || terminal) { return; }
             var submitted = ModelAnalysisWorkerManager.Submit({ action: 'analyze', meshes: request.meshes, analysisProfile: analysisProfile }, request.transfer);
             activeJob = { manager: ModelAnalysisWorkerManager, jobId: submitted.jobId };
             submitted.promise.then(function (result) {
@@ -1203,7 +1226,7 @@ function ModelViewer(canvasElement) {
         };
 
         var SubmitObjectForAnalysis = function (object3D) {
-            if (cancelled) { return; }
+            if (cancelled || terminal) { return; }
             if (!object3D) {
                 onError('Unable to read this 3D file.');
                 return;
@@ -1255,15 +1278,32 @@ function ModelViewer(canvasElement) {
         ReadArrayBuffer(file, function (buffer) {
             if (cancelled) { return; }
             var progressiveCncPreview = analysisProfile === 'cnc' && typeof options.onPreviewReady === 'function';
+            var nativeProgressive = progressiveCncPreview && /^(step|stp|iges|igs)$/.test(extension);
+            var nativePreviewObject = null;
             var submitted = ModelParseWorkerManager.Submit({
                 action: 'parse',
                 extension: extension,
                 buffer: buffer,
                 analysisProfile: analysisProfile,
-                deferCncAnalysis: progressiveCncPreview
-            }, [buffer]);
+                deferCncAnalysis: progressiveCncPreview,
+                retainNativeAnalysis: nativeProgressive
+            }, [buffer], nativeProgressive ? function (preview) {
+                return new Promise(function (resolve) { setTimeout(resolve, 0); }).then(function () {
+                    if (cancelled || terminal) { throw new Error('Native CNC preview is no longer active.'); }
+                    return BuildGroupFromMeshBuffersAsync(preview.meshes);
+                }).then(function (object3D) {
+                    if (cancelled || terminal) { throw new Error('Native CNC preview is no longer active.'); }
+                    nativePreviewObject = object3D;
+                    return publishPreview(object3D, preview.modelInfo);
+                });
+            } : null);
             activeJob = { manager: ModelParseWorkerManager, jobId: submitted.jobId };
             submitted.promise.then(function (result) {
+                if (nativeProgressive) {
+                    if (!nativePreviewObject) { throw new Error('Native CNC preview is missing.'); }
+                    handleObject(nativePreviewObject, result.modelInfo, result.cncGeometry);
+                    return;
+                }
                 // The worker has finished the heavy parse/analysis off-thread.
                 // BuildGroupFromMeshBuffers constructs a THREE.BufferGeometry per
                 // mesh and is O(N) in triangle count -- for a multi-million-triangle
@@ -3458,12 +3498,114 @@ function ModelViewerUtils(culture, currency, viewer) {
 
     var unfinishedTasks = 0;
     var hasError = false;
+    var explicitSubmissionError = false;
     var submitAllow = document.getElementById('submit-gate');
 
     var items = {}; // id -> { file, object3D, modelInfo, material, color, quantity }
     var activeId = null;
     var materialSearch = '';
     var self = this;
+    var itemAttemptSequence = 0;
+    var STAGE_WATCHDOG_TIMEOUT_MS = 120000;
+
+    function RecomputeHasError() {
+        hasError = explicitSubmissionError
+            || Object.keys(items).some(function (itemId) { return !!items[itemId].errorMessage; });
+    }
+
+    function SetDisplayedItemError(item, kind, owner, message) {
+        item.errorMessage = message;
+        item.displayedErrorOwner = message ? { kind: kind, owner: owner } : null;
+    }
+
+    function RestoreRecoverableItemError(item) {
+        var ownedOwner = Object.keys(item.ownedFailures || {})[0];
+        if (ownedOwner) {
+            SetDisplayedItemError(item, 'owned', ownedOwner, item.ownedFailures[ownedOwner].message);
+            return;
+        }
+        var watchdogStage = Object.keys(item.watchdogErrors || {})[0];
+        SetDisplayedItemError(item, watchdogStage ? 'watchdog' : null, watchdogStage,
+            watchdogStage
+                ? (culture === 'th' ? 'ไฟล์นี้ใช้เวลานานผิดปกติ กรุณาลบแล้วลองใหม่' : 'This file is taking too long. Remove it and try again.')
+                : null);
+    }
+
+    function ClearStageWatchdog(item, stage) {
+        var watchdog = item && item.stageWatchdogs && item.stageWatchdogs[stage];
+        if (!watchdog) { return; }
+        if (watchdog.timer) { window.clearTimeout(watchdog.timer); }
+        delete item.stageWatchdogs[stage];
+    }
+
+    function ClearAllStageWatchdogs(item) {
+        if (!item || !item.stageWatchdogs) { return; }
+        Object.keys(item.stageWatchdogs).forEach(function (stage) { ClearStageWatchdog(item, stage); });
+    }
+
+    function ClearMatchingWatchdogError(item, stage) {
+        if (!item || !item.watchdogErrors || !item.watchdogErrors[stage]) { return; }
+        var displayedWatchdogError = item.displayedErrorOwner
+            && item.displayedErrorOwner.kind === 'watchdog'
+            && item.displayedErrorOwner.owner === stage;
+        delete item.watchdogErrors[stage];
+        var remainingStage = Object.keys(item.watchdogErrors)[0];
+        item.watchdogError = remainingStage ? item.watchdogErrors[remainingStage] : null;
+        if (displayedWatchdogError) { RestoreRecoverableItemError(item); }
+        RecomputeHasError();
+    }
+
+    function BeginStageWatchdog(id, stage) {
+        var item = items[id];
+        if (!item || (stage !== 'upload' && stage !== 'thumbnail')) { return; }
+        if (item.errorMessage && Object.keys(item.watchdogErrors || {}).length === 0) { return; }
+        ClearStageWatchdog(item, stage);
+        ClearMatchingWatchdogError(item, stage);
+        var stageAttempt = (item.stageAttempts[stage] || 0) + 1;
+        item.stageAttempts[stage] = stageAttempt;
+        var itemAttempt = item.processingAttemptId;
+        var attemptHandle = Object.freeze({ itemId: String(id), stage: stage,
+            itemAttempt: itemAttempt, stageAttempt: stageAttempt });
+        var watchdog = { attempt: stageAttempt, timer: null };
+        item.stageWatchdogs[stage] = watchdog;
+        item.stageOwners[stage] = attemptHandle;
+        watchdog.timer = window.setTimeout(function () {
+            var current = items[id];
+            var currentWatchdog = current && current.stageWatchdogs && current.stageWatchdogs[stage];
+            if (current !== item || current.processingAttemptId !== itemAttempt
+                || !currentWatchdog || currentWatchdog.attempt !== stageAttempt) { return; }
+            delete current.stageWatchdogs[stage];
+            current.watchdogError = { stage: stage, itemAttempt: itemAttempt, stageAttempt: stageAttempt };
+            current.watchdogErrors[stage] = current.watchdogError;
+            if (!current.errorMessage || (current.displayedErrorOwner && current.displayedErrorOwner.kind === 'watchdog')) {
+                SetDisplayedItemError(current, 'watchdog', stage, culture === 'th'
+                    ? 'ไฟล์นี้ใช้เวลานานผิดปกติ กรุณาลบแล้วลองใหม่'
+                    : 'This file is taking too long. Remove it and try again.');
+            }
+            hasError = true;
+            UpdateThumbnailState(id);
+            CheckReadyState();
+        }, STAGE_WATCHDOG_TIMEOUT_MS);
+        UpdateThumbnailState(id);
+        return attemptHandle;
+    }
+
+    function IsStageAttemptCurrent(item, stage, attemptHandle) {
+        var owner = item && item.stageOwners && item.stageOwners[stage];
+        return !!owner && !!attemptHandle && owner.itemId === attemptHandle.itemId
+            && owner.stage === attemptHandle.stage && owner.itemAttempt === attemptHandle.itemAttempt
+            && owner.stageAttempt === attemptHandle.stageAttempt;
+    }
+
+    function SettleStageWatchdog(item, stage, attemptHandle) {
+        var owner = item && item.stageOwners && item.stageOwners[stage];
+        if (owner && !IsStageAttemptCurrent(item, stage, attemptHandle)) { return false; }
+        if (!owner && attemptHandle) { return false; }
+        ClearStageWatchdog(item, stage);
+        ClearMatchingWatchdogError(item, stage);
+        if (item && item.stageOwners) { delete item.stageOwners[stage]; }
+        return true;
+    }
 
     function IsActiveMultiBody() {
         return !!(activeId && items[activeId] && items[activeId].modelInfo && items[activeId].modelInfo.bodyCount > 1);
@@ -3486,6 +3628,7 @@ function ModelViewerUtils(culture, currency, viewer) {
     this.GetAllItemIds = function () { return Object.keys(items); };
 
     this.RegisterItem = function (id, file) {
+        ClearAllStageWatchdogs(items[id]);
         items[id] = {
             file: file,
             object3D: null,
@@ -3510,8 +3653,17 @@ function ModelViewerUtils(culture, currency, viewer) {
                 planning: 'pending',
                 pricing: 'pending'
             },
-            errorMessage: null
+            errorMessage: null,
+            processingAttemptId: ++itemAttemptSequence,
+            stageAttempts: {},
+            stageWatchdogs: {},
+            stageOwners: {},
+            watchdogErrors: {},
+            ownedFailures: {},
+            watchdogError: null,
+            displayedErrorOwner: null
         };
+        RecomputeHasError();
         CreateThumbnailNode(id, file);
         CreateSummaryNode(id, file);
     };
@@ -3535,22 +3687,26 @@ function ModelViewerUtils(culture, currency, viewer) {
         UpdateThumbnailDimensions(id, modelInfo);
     };
 
-    this.SetItemUploadComplete = function (id, succeeded) {
+    this.SetItemUploadComplete = function (id, succeeded, attemptHandle) {
         if (!items[id]) { return; }
+        if (!SettleStageWatchdog(items[id], 'upload', attemptHandle)) { return false; }
         items[id].uploadComplete = true;
         if (!succeeded) {
             this.SetItemFailed(id, culture === 'th' ? 'อัปโหลดไฟล์ไม่สำเร็จ' : 'Upload failed');
-            return;
+            return true;
         }
         UpdateThumbnailState(id);
+        return true;
     };
 
-    this.SetItemThumbnailComplete = function (id, available) {
+    this.SetItemThumbnailComplete = function (id, available, attemptHandle) {
         if (!items[id]) { return; }
+        if (!SettleStageWatchdog(items[id], 'thumbnail', attemptHandle)) { return false; }
         items[id].thumbnailComplete = true;
         items[id].thumbnailAvailable = available === true;
         this.SetItemProcessingStage(id, 'thumbnail', available === true ? 'ready' : 'failed');
         UpdateThumbnailState(id);
+        return true;
     };
 
     this.SetItemProcessingStage = function (id, stage, status) {
@@ -3561,6 +3717,41 @@ function ModelViewerUtils(culture, currency, viewer) {
         UpdateThumbnailState(id);
     };
 
+    this.BeginItemUpload = function (id) { return BeginStageWatchdog(id, 'upload'); };
+    this.BeginItemThumbnail = function (id) { return BeginStageWatchdog(id, 'thumbnail'); };
+    this.IsItemStageAttemptCurrent = function (attemptHandle) {
+        if (!attemptHandle) { return false; }
+        return IsStageAttemptCurrent(items[attemptHandle.itemId], attemptHandle.stage, attemptHandle);
+    };
+
+    this.SetItemOwnedFailure = function (id, owner, attempt, message) {
+        var item = items[id];
+        if (!item || !owner) { return false; }
+        var failure = { owner: owner, attempt: attempt, message: message || errorText };
+        item.ownedFailures[owner] = failure;
+        if (!item.errorMessage || (item.displayedErrorOwner
+            && item.displayedErrorOwner.kind === 'owned' && item.displayedErrorOwner.owner === owner)) {
+            SetDisplayedItemError(item, 'owned', owner, failure.message);
+        }
+        RecomputeHasError();
+        UpdateThumbnailState(id);
+        CheckReadyState();
+        return true;
+    };
+
+    this.ClearItemOwnedFailure = function (id, owner) {
+        var item = items[id];
+        var failure = item && item.ownedFailures && item.ownedFailures[owner];
+        if (!failure) { return false; }
+        delete item.ownedFailures[owner];
+        if (item.displayedErrorOwner && item.displayedErrorOwner.kind === 'owned'
+            && item.displayedErrorOwner.owner === owner) { RestoreRecoverableItemError(item); }
+        RecomputeHasError();
+        UpdateThumbnailState(id);
+        CheckReadyState();
+        return true;
+    };
+
     this.SetItemPricingPending = function (id, pending) {
         if (!items[id]) { return; }
         items[id].pricingPending = pending === true;
@@ -3569,7 +3760,13 @@ function ModelViewerUtils(culture, currency, viewer) {
 
     this.SetItemFailed = function (id, message) {
         if (!items[id]) { return; }
-        items[id].errorMessage = message || (culture === 'th' ? 'ไม่สามารถประมวลผลไฟล์ได้' : 'File processing failed');
+        ClearAllStageWatchdogs(items[id]);
+        items[id].stageOwners = {};
+        items[id].watchdogErrors = {};
+        items[id].ownedFailures = {};
+        items[id].watchdogError = null;
+        SetDisplayedItemError(items[id], 'terminal', null,
+            message || (culture === 'th' ? 'ไม่สามารถประมวลผลไฟล์ได้' : 'File processing failed'));
         hasError = true;
         UpdateThumbnailState(id);
         CheckReadyState();
@@ -3985,12 +4182,13 @@ function ModelViewerUtils(culture, currency, viewer) {
 
     this.RemoveItem = function (id) {
         var item = items[id];
+        ClearAllStageWatchdogs(item);
         if (item && item.object3D) {
             if (viewer && activeId === id) { viewer.ShowObject(null, null); }
             viewer.DisposeObject(item.object3D);
         }
         delete items[id];
-        hasError = Object.keys(items).some(function (itemId) { return !!items[itemId].errorMessage; });
+        RecomputeHasError();
 
         var thumb = document.getElementById('thumb-' + id);
         if (thumb) { thumb.remove(); }
@@ -4088,33 +4286,6 @@ function ModelViewerUtils(culture, currency, viewer) {
         UpdateThumbnailQuote(id);
     }
 
-    // A part whose upload or parse never resolves used to spin "Processing…" forever,
-    // with the submit button stuck on a reasonless "Please wait". Give the wait an end.
-    var STALL_TIMEOUT_MS = 120000;
-
-    function ClearStallTimer(item) {
-        if (item && item.stallTimer) {
-            window.clearTimeout(item.stallTimer);
-            item.stallTimer = null;
-        }
-    }
-
-    function ArmStallTimer(id, item) {
-        if (item.stallTimer) { return; }
-        item.stallTimer = window.setTimeout(function () {
-            var current = items[id];
-            if (!current) { return; }
-            current.stallTimer = null;
-            if (current.errorMessage) { return; }
-            if (current.parseComplete && current.uploadComplete && current.thumbnailComplete) { return; }
-            current.errorMessage = culture === 'th'
-                ? 'ไฟล์นี้ใช้เวลานานผิดปกติ กรุณาลบแล้วลองใหม่'
-                : 'This file is taking too long. Remove it and try again.';
-            UpdateThumbnailState(id);
-            CheckReadyState();
-        }, STALL_TIMEOUT_MS);
-    }
-
     function UpdateThumbnailState(id) {
         var item = items[id];
         var node = document.getElementById('thumb-' + id);
@@ -4125,7 +4296,6 @@ function ModelViewerUtils(culture, currency, viewer) {
         node.classList.toggle('is-error', !!item.errorMessage);
         node.classList.toggle('has-thumbnail', item.thumbnailAvailable === true);
         if (item.errorMessage) {
-            ClearStallTimer(item);
             node.classList.remove('is-processing');
             node.setAttribute('aria-busy', 'false');
             status.hidden = false;
@@ -4139,7 +4309,6 @@ function ModelViewerUtils(culture, currency, viewer) {
         node.classList.toggle('is-processing', !ready);
         node.setAttribute('aria-busy', ready ? 'false' : 'true');
         if (!ready) {
-            ArmStallTimer(id, item);
             status.hidden = false;
             var stage = stages.geometry === 'queued' ? 'queued'
                 : (stages.geometry !== 'ready' ? 'geometry'
@@ -4159,8 +4328,6 @@ function ModelViewerUtils(culture, currency, viewer) {
             statusText.textContent = labels[stage];
             return;
         }
-
-        ClearStallTimer(item);
 
         if (!item.thumbnailAvailable) {
             node.classList.add('has-preview-warning');
@@ -4321,8 +4488,8 @@ function ModelViewerUtils(culture, currency, viewer) {
     this.AllowLocalPreviewAfterUploadFailure = function () {
         CheckReadyState();
     };
-    this.BlockSubmission = function () { hasError = true; CheckReadyState(); };
-    this.ClearError = function () { hasError = false; CheckReadyState(); };
+    this.BlockSubmission = function () { explicitSubmissionError = true; RecomputeHasError(); CheckReadyState(); };
+    this.ClearError = function () { explicitSubmissionError = false; RecomputeHasError(); CheckReadyState(); };
     this.HasError = function () { return hasError; };
     this.ThrowError = function () {
         // Localized copy is published by the page; the literal is the last-resort fallback.

@@ -1,8 +1,8 @@
 namespace Legacy.Maliev.Web.Middleware;
 
-public sealed class WebContentSecurityPolicyMiddleware(RequestDelegate next)
+public static class WebContentSecurityPolicy
 {
-    private const string Policy =
+    public const string DocumentPolicy =
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.googletagmanager.com https://*.googletagmanager.com https://tagmanager.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://static.line-scdn.net; " +
         "style-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com; " +
@@ -16,16 +16,42 @@ public sealed class WebContentSecurityPolicyMiddleware(RequestDelegate next)
         "form-action 'self'; " +
         "base-uri 'self'";
 
+    public static readonly string ModelWorkerPolicy = DocumentPolicy.Replace(
+        "'wasm-unsafe-eval'",
+        "'unsafe-eval' 'wasm-unsafe-eval'",
+        StringComparison.Ordinal);
+
+    public static readonly string AssetVersion =
+        typeof(WebContentSecurityPolicy).Assembly.ManifestModule.ModuleVersionId.ToString("N")[..16];
+
+    public static string ModelWorkerUrl =>
+        "/src/app/js/model-viewer/model-viewer.worker.js?v=" + AssetVersion;
+
+    public static string CncQuotationWorkerUrl =>
+        "/src/app/js/cnc-quotation/cnc-quotation.worker.js?v=" + AssetVersion;
+}
+
+public sealed class WebContentSecurityPolicyMiddleware(RequestDelegate next)
+{
+    private const string ModelWorkerPath = "/src/app/js/model-viewer/model-viewer.worker.js";
+
     public Task InvokeAsync(HttpContext context)
     {
+        bool isModelWorker = context.Request.Path.Equals(
+            ModelWorkerPath,
+            StringComparison.OrdinalIgnoreCase);
+        string policy = isModelWorker
+            ? WebContentSecurityPolicy.ModelWorkerPolicy
+            : WebContentSecurityPolicy.DocumentPolicy;
+
         context.Response.OnStarting(
             static state =>
             {
-                var response = (HttpResponse)state;
-                response.Headers.ContentSecurityPolicy = Policy;
+                var (response, responsePolicy) = ((HttpResponse Response, string Policy))state;
+                response.Headers.ContentSecurityPolicy = responsePolicy;
                 return Task.CompletedTask;
             },
-            context.Response);
+            (context.Response, policy));
         return next(context);
     }
 }

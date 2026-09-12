@@ -9,27 +9,32 @@ public sealed class CncPlannerSourceBlobParityTests
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["cnc-ball-rest.worker.js"] = "720a628c2c3c855fb762feb9736697c05c421028",
+            ["cnc-cad-document.js"] = "b428da7aa4d8cdd6e10ff0124b5c2dda4894b11b",
             ["cnc-cad-surfaces.worker.js"] = "f78d7dee0f3ac17f630b4c542c33ef834e230f1f",
             ["cnc-engine.js"] = "85240c0936ffed296b8a8efdb4e34fe3907fcd5e",
-            ["cnc-feature-graph.worker.js"] = "123fb2855ec8dc5bd97f01292230cac55035e89d",
+            ["cnc-feature-graph.worker.js"] = "e56916e5be437420b236ef53533ecff52a7fb349",
+            ["cnc-feature-recognition-prismatic.js"] = "030a3d98c00214c5c9e7e5b10b8e5a4564ecbf4f",
             ["cnc-fixture-catalog.js"] = "ca23ebaa6fdf5dec2d074d8b735450ff303adc6a",
             ["cnc-fixture-clearance.js"] = "fb052e4b6ec10064ef85f185dbb4eef73e6d2d3f",
             ["cnc-geometry.worker.js"] = "ca9deee9192a094253e2c3a539bbdbbcff6bc3b7",
             ["cnc-machine-capability.js"] = "ce2a6cc50078faba282cda566c518e17ace49088",
             ["cnc-manufacturing-evidence.worker.js"] = "3cad1aa4acfb3e7c053ae89cf936e28a8c2e3fff",
             ["cnc-material-catalog.js"] = "e74461e1aa4fbbcb1697fc6e8bf5e6d91ed0e9dc",
-            ["cnc-plan-contracts.js"] = "1447d80983db5cb52c008bae00047268d8a1b7c7",
+            ["cnc-native-dispatch.js"] = "3ebe535e96e589944686ece8c74b9172741f4fbb",
+            ["cnc-native-regions.js"] = "c245b6e4a182e5706b8f368d7744ecd2e8f9c054",
+            ["cnc-native-topology.worker.js"] = "f3f7000d8dbf1d372662b56896a1550a19fc6c98",
+            ["cnc-plan-contracts.js"] = "3c92b72025e16a4ba577a87723664f7466c76c3e",
             ["cnc-planning.js"] = "07216dea763e9b32da1bf4df38cd30c23bc34d49",
             ["cnc-plan-validator.worker.js"] = "d417c4f36bc3e26f8d7cbbb373756d0045fccfb3",
             ["cnc-process-compiler.js"] = "012ba9f08df9a632834058961fd6e50516dedeb3",
             ["cnc-quotation-config.js"] = "857b7e459cd79eec1c0375bc2f5f367a333fadb2",
-            ["cnc-quotation.worker.js"] = "e28eb03838920deae4abc45be99c7b56725dc59b",
+            ["cnc-quotation.worker.js"] = "09dfe9671ea7e51ac2a2248bca46c6dcbdc0c36a",
             ["cnc-reach.js"] = "dfc69078387eef8c4fe4b48e372c9cc125dc1c36",
             ["cnc-setup-planner.js"] = "a04b4716626678edd1bf731b606ed7e5f2260bf3",
             ["cnc-spatial-field.worker.js"] = "55ff815130e80e44e99ae622f07a062a8acd480f",
             ["cnc-stock.js"] = "2799f4fff0e1288cc4bfcfa4dd9f929231345c0a",
             ["cnc-tool-library.js"] = "241e6cbe050b8bfc520298169f8e583e9c177142",
-            ["cnc-topology.worker.js"] = "373d56c28a8cdffb068b003c0fcc7aac26ac06ec"
+            ["cnc-topology.worker.js"] = "fbba684374c681aa845e523ab641abbc0cfd8707"
         };
 
     [Fact]

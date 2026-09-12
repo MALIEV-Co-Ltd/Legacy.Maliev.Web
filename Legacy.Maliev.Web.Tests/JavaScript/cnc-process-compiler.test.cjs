@@ -235,11 +235,11 @@ test('compiler validates the feature contract and fails closed on unresolved gra
     assert.throws(() => c.CncProcessCompiler.compile({ contract: 'bad' }, {}),
         error => error && error.code === 'revision_mismatch');
     const graph = c.CncProcessCompiler.compile(featureGraph([], [
-        { featureId: 'feature-x', reason: 'unclassified_brep_face', required: true }
+        { scope: 'document', stage: 'topology', reason: 'unclassified_brep_face', required: true }
     ]), {});
     assert.deepEqual(Array.from(graph.operations), []);
     assert.deepEqual(Array.from(graph.unresolved, item => ({ ...item })), [
-        { featureId: 'feature-x', reason: 'unclassified_brep_face', required: true }
+        { featureId: null, reason: 'unclassified_brep_face', required: true }
     ]);
 });
 

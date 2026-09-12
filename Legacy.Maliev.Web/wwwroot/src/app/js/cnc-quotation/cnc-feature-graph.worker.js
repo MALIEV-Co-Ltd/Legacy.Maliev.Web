@@ -625,6 +625,10 @@
 
     function build(topology, options) {
         topology = topology || {};
+        if (topology.nativeInterpretation || topology.cadDocument && (topology.cadDocument.contract === 'CadDocument.v2' || topology.cadDocument.nativeImport)
+            || topology.validationMesh && topology.validationMesh.source === 'occt_native_same_import_v1') {
+            throw new Error('native_recognition_requires_local_dispatch');
+        }
         if (topology.contract !== 'CncCadTopology.v1' || !text(topology.revision)) {
             throw new Error('revision_mismatch: CncFeatureGraph requires CncCadTopology.v1.');
         }

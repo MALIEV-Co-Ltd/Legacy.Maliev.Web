@@ -24,7 +24,12 @@ function ImportCncGeometryModule() {
     importScripts('/src/app/js/cnc-quotation/cnc-spatial-field.worker.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-geometry.worker.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-cad-surfaces.worker.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-cad-document.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-native-topology.worker.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-topology.worker.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-native-regions.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-feature-recognition-prismatic.js' + query);
+    importScripts('/src/app/js/cnc-quotation/cnc-native-dispatch.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-feature-graph.worker.js' + query);
     importScripts('/src/app/js/cnc-quotation/cnc-ball-rest.worker.js' + query);
 }
@@ -37,6 +42,51 @@ ImportCncGeometryModule();
 // ---------------------------------------------------------------------------
 
 var occtPromise = null;
+var defaultOcctFactory = null;
+var cncOcctPromise = null;
+var CNC_OCCT_PATH = self.CncNativeDispatch.runtimePin.path;
+var CNC_MANIFEST_SHA256 = self.CncNativeDispatch.runtimePin.manifestSha256;
+// Only locally parsed objects can carry this authority; transported mesh JSON cannot.
+var cncSourceExpectations = new WeakMap();
+var retainedCncJob = null;
+
+async function NativeBytesHash(bytes) {
+    var digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+function EnsureCncOcct() {
+    if (cncOcctPromise) { return cncOcctPromise; }
+    cncOcctPromise = (async function () {
+        var manifestResponse = await fetch(CNC_OCCT_PATH + 'manifest.js');
+        if (!manifestResponse.ok) { throw new Error('Unable to load native CNC manifest.'); }
+        var manifestBytes = await manifestResponse.arrayBuffer();
+        if (await NativeBytesHash(manifestBytes) !== CNC_MANIFEST_SHA256) { throw new Error('Native CNC manifest integrity mismatch.'); }
+        var manifestText = new TextDecoder().decode(manifestBytes);
+        var prefix = 'self.CncNativeBuild = Object.freeze(', suffix = ');\n';
+        if (!manifestText.startsWith(prefix) || !manifestText.endsWith(suffix)) { throw new Error('Invalid native CNC manifest.'); }
+        var identity = JSON.parse(manifestText.slice(prefix.length, -suffix.length));
+        function freeze(value) { Object.keys(value).forEach(function (key) { if (value[key] && typeof value[key] === 'object') { freeze(value[key]); } }); return Object.freeze(value); }
+        freeze(identity);
+        var artifacts = await Promise.all(['occt-import-js.js', 'occt-import-js.wasm'].map(async function (name) {
+            var response = await fetch(CNC_OCCT_PATH + name);
+            if (!response.ok) { throw new Error('Unable to load native CNC runtime.'); }
+            return response.arrayBuffer();
+        }));
+        for (var i = 0; i < artifacts.length; i++) {
+            var hash = await NativeBytesHash(artifacts[i]);
+            if (hash !== (i === 0 ? identity.jsSha256 : identity.wasmSha256)
+                || artifacts[i].byteLength !== (i === 0 ? identity.jsBytes : identity.wasmBytes)) { throw new Error('Native CNC runtime integrity mismatch.'); }
+        }
+        // This content-addressed directory is immutable. Static same-origin loading respects CSP;
+        // WASM comes from the verified bytes, never the other loader's mutable global factory.
+        importScripts(CNC_OCCT_PATH + 'occt-import-js.js');
+        var factory = occtimportjs;
+        return { api: await factory({ wasmBinary: artifacts[1], locateFile: function (name) { return CNC_OCCT_PATH + name; } }), identity: identity,
+            manifestUrl: CNC_OCCT_PATH + 'manifest.js', manifestSha256: CNC_MANIFEST_SHA256 };
+    }()).catch(function (error) { cncOcctPromise = null; throw error; });
+    return cncOcctPromise;
+}
 
 function EnsureOcct() {
     if (occtPromise) {
@@ -45,10 +95,11 @@ function EnsureOcct() {
 
     occtPromise = new Promise(function (resolve, reject) {
         try {
-            if (typeof occtimportjs === 'undefined') {
+            if (!defaultOcctFactory) {
                 importScripts('/lib/occt/occt-import-js.js');
+                defaultOcctFactory = occtimportjs;
             }
-            occtimportjs({ locateFile: function (name) { return '/lib/occt/' + name; } }).then(resolve).catch(reject);
+            defaultOcctFactory({ locateFile: function (name) { return '/lib/occt/' + name; } }).then(resolve).catch(reject);
         } catch (e) {
             reject(new Error('Unable to load STEP/IGES support.'));
         }
@@ -170,19 +221,28 @@ async function AnalyzeCncObject(object3D, modelInfo) {
         sourceFormat: object3D.userData.sourceFormat || 'mesh'
     });
     var topology = await self.CncTopology.build({
+        requireNative: true,
+        nativeImport: object3D.userData.nativeImport,
         meshes: analysisInfo.occtMeshes,
         validationMeshes: analysisInfo.validationMeshes,
         validationDeflectionMm: analysisInfo.validationDeflectionMm,
         analyticSurfaces: analysisInfo.analyticSurfaces,
         bodyCount: modelInfo.bodyCount,
         sourceFormat: analysisInfo.sourceFormat
-    });
+    }, cncSourceExpectations.get(object3D));
     var geometry = AnalyzeCncGeometry(ExtractTriangles(object3D), analysisInfo, { mode: 'manufacturing_summary' });
     geometry.cadTopology = topology;
     geometry.geometryRevision = topology.revision;
-    geometry.manufacturingFeatureGraph = self.CncFeatureGraph.build(topology, {
-        modelScaleMm: Math.max.apply(Math, valuesOrEmpty(geometry.orientedSizeMm))
-    });
+    if (self.CncNativeDispatch.isNative(topology)) {
+        var nativeResult = await self.CncNativeDispatch.buildLocal(topology);
+        geometry.nativeFeatureDiagnostics = nativeResult.diagnostic;
+        geometry.manufacturingFeatureGraph = nativeResult.graph;
+        geometry.nativeSourceAssociation = self.CncNativeDispatch.association(topology, nativeResult, cncSourceExpectations.get(object3D));
+    } else {
+        geometry.manufacturingFeatureGraph = self.CncFeatureGraph.build(topology, {
+            modelScaleMm: Math.max.apply(Math, valuesOrEmpty(geometry.orientedSizeMm))
+        });
+    }
     AssertManufacturingFeatureGraph(geometry.manufacturingFeatureGraph);
     return geometry;
 }
@@ -534,7 +594,7 @@ function AnalyzePreviewObject(object3D) {
 
 // Walks a decoded object3D and returns each mesh's own local-space position/index typed
 // arrays, ready to transfer back to the main thread for display.
-function ExtractMeshBuffers(object3D) {
+function ExtractMeshBuffers(object3D, preserveSource) {
     var meshes = [];
     object3D.traverse(function (child) {
         if (!child.isMesh || !child.geometry || !child.geometry.attributes || !child.geometry.attributes.position) {
@@ -544,9 +604,9 @@ function ExtractMeshBuffers(object3D) {
         var normal = child.geometry.attributes.normal ? child.geometry.attributes.normal.array : null;
         var index = child.geometry.index ? child.geometry.index.array : null;
         meshes.push({
-            position: position instanceof Float32Array ? position : new Float32Array(position),
-            normal: normal ? (normal instanceof Float32Array ? normal : new Float32Array(normal)) : null,
-            index: index ? (index instanceof Uint32Array ? index : new Uint32Array(index)) : null,
+            position: !preserveSource && position instanceof Float32Array ? position : new Float32Array(position),
+            normal: normal ? (!preserveSource && normal instanceof Float32Array ? normal : new Float32Array(normal)) : null,
+            index: index ? (!preserveSource && index instanceof Uint32Array ? index : new Uint32Array(index)) : null,
             cadFaceRanges: Array.isArray(child.geometry.userData.cadFaceRanges)
                 ? child.geometry.userData.cadFaceRanges.map(function (face) {
                     return { first: face.first, last: face.last };
@@ -607,6 +667,7 @@ function ExtractAnalysisMeshBuffers(object3D) {
         meshes[0].validationDeflectionMm = Number(object3D.userData.validationDeflectionMm);
     }
     if (meshes.length > 0) { meshes[0].sourceFormat = object3D.userData.sourceFormat || 'mesh'; }
+    if (meshes.length > 0 && object3D.userData.nativeImport) { meshes[0].nativeImport = object3D.userData.nativeImport; }
     return meshes;
 }
 
@@ -622,6 +683,7 @@ function BuildObject3DFromMeshBuffers(meshes) {
     if (meshes.length > 0) {
         group.userData.occtMeshes = meshes;
         group.userData.sourceFormat = meshes[0].sourceFormat || 'mesh';
+        group.userData.nativeImport = meshes[0].nativeImport;
         group.userData.canonicalValidationMeshes = Array.isArray(meshes[0].canonicalValidationMeshes)
             ? meshes[0].canonicalValidationMeshes : [];
         group.userData.validationDeflectionMm = Number(meshes[0].validationDeflectionMm);
@@ -683,6 +745,28 @@ function RunParseJob(data) {
         return Promise.resolve(new THREE.OBJLoader().parse(text));
     }
     if (extension === 'stp' || extension === 'step' || extension === 'igs' || extension === 'iges') {
+        if (data.analysisProfile === 'cnc') {
+            return EnsureCncOcct().then(async function (runtime) {
+                var bytes = new Uint8Array(data.buffer).slice();
+                var sourceBytesHash = await NativeBytesHash(bytes);
+                var result = (extension === 'igs' || extension === 'iges')
+                    ? runtime.api.ReadIgesFile(bytes, self.CncCadDocument.importParameters)
+                    : runtime.api.ReadStepFile(bytes, self.CncCadDocument.importParameters);
+                if (!result || !result.success) { throw new Error('Unable to import native CNC document.'); }
+                var group = OcctResultToGroup(result);
+                group.userData.sourceFormat = extension;
+                group.userData.nativeImport = await self.CncCadDocument.create(bytes, extension, runtime.identity, result);
+                if (group.userData.nativeImport.sourceBytesHash !== sourceBytesHash) { throw new Error('Native CNC source integrity mismatch.'); }
+                if (runtime.manifestSha256 !== CNC_MANIFEST_SHA256 || runtime.manifestUrl !== CNC_OCCT_PATH + 'manifest.js') { throw new Error('Native CNC loader identity mismatch.'); }
+                var expectation = Object.freeze({ sourceBytesHash: sourceBytesHash, sourceAttachmentVerified: true,
+                    buildIdentity: runtime.identity, manifestUrl: runtime.manifestUrl, manifestSha256: runtime.manifestSha256,
+                    errorBudgetMm: 0.01, assessmentTimeLimitMs: 60000 });
+                var interpretation = self.CncNativeInterpretation.assess(group.userData.nativeImport, expectation);
+                if (!interpretation.validContract) { throw new Error('Native CNC import integrity: ' + interpretation.reasons.join(', ')); }
+                cncSourceExpectations.set(group, expectation);
+                return group;
+            });
+        }
         return EnsureOcct().then(function (occt) {
             var bytes = new Uint8Array(data.buffer);
             var result = (extension === 'igs' || extension === 'iges')
@@ -694,15 +778,6 @@ function RunParseJob(data) {
             var group = OcctResultToGroup(result);
             group.userData.occtMeshes = result.meshes;
             group.userData.sourceFormat = extension;
-            if (data.analysisProfile === 'cnc' && (extension === 'stp' || extension === 'step')) {
-                var validationResult = occt.ReadStepFile(bytes, { linearUnit: 'millimeter', linearDeflectionType: 'absolute_value', linearDeflection: 0.1 });
-                if (!validationResult || !validationResult.success) {
-                    throw new Error('Unable to build canonical CNC validation tessellation.');
-                }
-                group.userData.canonicalValidationMeshes = validationResult.meshes;
-                group.userData.validationDeflectionMm = 0.1;
-                group.userData.analyticSurfaces = CncCadSurfaces.parseStep(new TextDecoder().decode(bytes));
-            }
             return group;
         });
     }
@@ -817,30 +892,42 @@ self.onmessage = function (event) {
     var jobId = data.jobId;
 
     function fail(error) {
+        if (retainedCncJob && retainedCncJob.jobId === jobId) { retainedCncJob = null; }
         self.postMessage({ jobId: jobId, success: false, error: (error && error.message) || 'Unable to read this model file.' });
     }
 
     try {
         if (data.action === 'parse') {
+            if (retainedCncJob) { throw new Error('Native CNC analysis is awaiting continuation.'); }
             RunParseJob(data).then(function (object3D) {
                 var progressiveCncPreview = event.data.analysisProfile === 'cnc'
                     && event.data.deferCncAnalysis === true;
+                var retainNative = progressiveCncPreview && data.retainNativeAnalysis === true
+                    && /^(step|stp|iges|igs)$/.test(String(data.extension).toLowerCase());
                 // Core measurements are cheap enough to finish in the decode worker and
                 // must accompany the first visible CAD frame. Only CNC accessibility and
                 // setup evidence are deferred to the independent analysis worker.
                 var modelInfo = AnalyzeObject(object3D);
-                var meshes = ExtractMeshBuffers(object3D);
+                var meshes = ExtractMeshBuffers(object3D, retainNative);
                 if (event.data.analysisProfile === 'cnc' && event.data.deferCncAnalysis !== true) {
                     AnalyzeCncObject(object3D, modelInfo).then(function (cncGeometry) {
                         self.postMessage({ jobId: jobId, success: true, meshes: meshes, modelInfo: modelInfo, cncGeometry: cncGeometry }, TransferablesFor(meshes));
                     }).catch(fail);
                 } else {
-                    var analysisMeshes = progressiveCncPreview ? ExtractAnalysisMeshBuffers(object3D) : null;
+                    var analysisMeshes = progressiveCncPreview && !retainNative ? ExtractAnalysisMeshBuffers(object3D) : null;
+                    if (retainNative) { retainedCncJob = { jobId: jobId, object3D: object3D, modelInfo: modelInfo }; }
                     var transfer = TransferablesFor(meshes);
                     if (analysisMeshes) { transfer = transfer.concat(TransferablesFor(analysisMeshes)); }
                     self.postMessage({ jobId: jobId, success: true, meshes: meshes, analysisMeshes: analysisMeshes,
-                        modelInfo: modelInfo, cncGeometry: null }, transfer);
+                        modelInfo: modelInfo, cncGeometry: null, stage: retainNative ? 'native-preview' : null }, transfer);
                 }
+            }).catch(fail);
+        } else if (data.action === 'continue-native-analysis') {
+            if (!retainedCncJob || retainedCncJob.jobId !== jobId) { throw new Error('Native CNC source context is missing or expired.'); }
+            var retained = retainedCncJob;
+            retainedCncJob = null;
+            AnalyzeCncObject(retained.object3D, retained.modelInfo).then(function (cncGeometry) {
+                self.postMessage({ jobId: jobId, success: true, meshes: null, modelInfo: retained.modelInfo, cncGeometry: cncGeometry });
             }).catch(fail);
         } else if (data.action === 'analyze') {
             var object3D = BuildObject3DFromMeshBuffers(data.meshes);

@@ -8,6 +8,11 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(root, 'wwwroot', 'dist');
 const assets = path.join(root, 'assets');
 
+async function normalizeGeneratedWhitespace(file) {
+  const source = await readFile(file, 'utf8');
+  await writeFile(file, source.replace(/[\t ]+$/gm, '').replace(/^ +\t/gm, '\t'));
+}
+
 // The source CNC worker uses the classic-script Three.js API, independently of
 // the current module-based additive viewer. Keep its runtime pinned to source.
 const cncVendor = path.join(root, 'wwwroot', 'src', 'vendor', 'three');
@@ -96,6 +101,9 @@ await build({
   platform: 'browser',
 });
 
+await Promise.all(Object.keys(routeScripts).map(name =>
+  normalizeGeneratedWhitespace(path.join(dist, `${name}.js`))));
+
 const instantQuotationViewer = path.join(dist, 'instant-quotation-viewer.mjs');
 const instantQuotationWorkflow = path.join(dist, 'instant-quotation-workflow.mjs');
 
@@ -108,10 +116,7 @@ await build({
   plugins: [threeMfLoaderPatchPlugin],
 });
 
-const viewerSource = await readFile(instantQuotationViewer, 'utf8');
-await writeFile(
-  instantQuotationViewer,
-  viewerSource.replace(/[\t ]+$/gm, '').replace(/^ +\t/gm, '\t'));
+await normalizeGeneratedWhitespace(instantQuotationViewer);
 
 await build({
   ...common,

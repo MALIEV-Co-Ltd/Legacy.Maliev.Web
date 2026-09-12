@@ -34,6 +34,12 @@ public sealed partial class CncInstantQuotationPageTests : IClassFixture<Testing
         Assert.Contains("/instantquotation/cnc-machining?Handler=SubmitRequest", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("/dist/cnc-quotation.min.js", source, StringComparison.Ordinal);
         Assert.Contains("new Worker(window.malievCncQuotationWorkerUrl", source, StringComparison.Ordinal);
+        Assert.Matches(
+            "window\\.malievModelWorkerUrl = '/src/app/js/model-viewer/model-viewer\\.worker\\.js\\?v=[0-9a-f]{16}';",
+            source);
+        Assert.Matches(
+            "window\\.malievCncQuotationWorkerUrl = '/src/app/js/cnc-quotation/cnc-quotation\\.worker\\.js\\?v=[0-9a-f]{16}';",
+            source);
         Assert.DoesNotContain("ServiceAuthentication__ClientSecret", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Authorization: Bearer", source, StringComparison.OrdinalIgnoreCase);
 
@@ -58,6 +64,13 @@ public sealed partial class CncInstantQuotationPageTests : IClassFixture<Testing
         Assert.Contains("/cnc-quotation/cnc-material-catalog.js", page, StringComparison.Ordinal);
         Assert.Contains("/cnc-quotation/cnc-setup-planner.js", page, StringComparison.Ordinal);
         Assert.Contains("/cnc-quotation/cnc-engine.js", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("$.ajax", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("$(", page, StringComparison.Ordinal);
+        Assert.Contains("new XMLHttpRequest()", page, StringComparison.Ordinal);
+
+        string vendorEntry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "vendor-entry.js"));
+        Assert.DoesNotContain("window.THREE", vendorEntry, StringComparison.Ordinal);
+        Assert.DoesNotContain("from 'three'", vendorEntry, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -81,6 +94,46 @@ public sealed partial class CncInstantQuotationPageTests : IClassFixture<Testing
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotEmpty(content);
+    }
+
+    [Fact]
+    public async Task ModelWorker_ResponseReceivesItsIsolatedEvalPolicy()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+
+        using var documentResponse = await client.GetAsync("/instantquotation/cnc-machining?culture=en");
+        using var workerResponse = await client.GetAsync("/src/app/js/model-viewer/model-viewer.worker.js?v=test");
+        using var otherScriptResponse = await client.GetAsync("/src/app/js/model-viewer/model-viewer.js?v=test");
+
+        string documentPolicy = Assert.Single(documentResponse.Headers.GetValues("Content-Security-Policy"));
+        string workerPolicy = Assert.Single(workerResponse.Headers.GetValues("Content-Security-Policy"));
+        string otherScriptPolicy = Assert.Single(otherScriptResponse.Headers.GetValues("Content-Security-Policy"));
+
+        Assert.DoesNotContain(" 'unsafe-eval'", documentPolicy, StringComparison.Ordinal);
+        Assert.Contains(" 'unsafe-eval' 'wasm-unsafe-eval'", workerPolicy, StringComparison.Ordinal);
+        Assert.DoesNotContain(" 'unsafe-eval'", otherScriptPolicy, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ModelWorker_PropagatesItsBuildQueryToNativeCadImports()
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+
+        using var response = await client.GetAsync("/src/app/js/model-viewer/model-viewer.worker.js?v=test");
+        string source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("typeof self.location.search === 'string'", source, StringComparison.Ordinal);
+        Assert.Contains("cnc-native-dispatch.js' + query", source, StringComparison.Ordinal);
+        Assert.Contains("cnc-native-topology.worker.js' + query", source, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

@@ -1,0 +1,3 @@
+# Native fixture and generator hashes bind exact bytes, including STEP whitespace.
+*.step -text
+generate-region-fixtures.cpp -text
