@@ -66,10 +66,18 @@ The source was inspected by committed Git object only. The planning-only parent
 as non-runtime evidence: its source deployment directions are intentionally not
 portable to Legacy Web.
 
-- `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` maps to Legacy target commit
-  `691d87c56c979613c4cd12b43a0d5e2e40994beb`. The six catalog assets are kept
-  outside runtime delivery, preserve all provenance/dimension/coverage checks,
-  and retain every `machiningAuthorized: false` guard.
+| Source commit | Classification | Complete Legacy target lineage |
+| --- | --- | --- |
+| `ad2774760862371b4ea442d02669ad9ecd4913f5` | Non-runtime plan | None |
+| `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` | Migrated | `5068239880271e1a17c1d2707cf728c019d4adc2`; `691d87c56c979613c4cd12b43a0d5e2e40994beb` |
+| `cbbe1c3a482d0825cecb732bb1044c88bb20358c` | Migrated | `6438973a98a3a76f724df70f4b5c8b44541c9e3b` |
+
+- `bf079667bba7d9bc01a9688b1f7f5a5be5748a92` maps first to implementation
+  commit `5068239880271e1a17c1d2707cf728c019d4adc2`, then to the Legacy
+  README-path correction commit `691d87c56c979613c4cd12b43a0d5e2e40994beb`.
+  The six catalog assets are kept outside runtime delivery, preserve all
+  provenance/dimension/coverage checks, and retain every
+  `machiningAuthorized: false` guard.
 - `cbbe1c3a482d0825cecb732bb1044c88bb20358c` maps to Legacy target commit
   `6438973a98a3a76f724df70f4b5c8b44541c9e3b`. The two source worker blobs are
   exact matches; only `manufacturing_summary` omits legacy diagnostics, while
