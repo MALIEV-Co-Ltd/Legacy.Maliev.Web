@@ -64,6 +64,13 @@ public sealed partial class CncInstantQuotationPageTests : IClassFixture<Testing
         Assert.Contains("/cnc-quotation/cnc-material-catalog.js", page, StringComparison.Ordinal);
         Assert.Contains("/cnc-quotation/cnc-setup-planner.js", page, StringComparison.Ordinal);
         Assert.Contains("/cnc-quotation/cnc-engine.js", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("$.ajax", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("$(", page, StringComparison.Ordinal);
+        Assert.Contains("new XMLHttpRequest()", page, StringComparison.Ordinal);
+
+        string vendorEntry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "vendor-entry.js"));
+        Assert.DoesNotContain("window.THREE", vendorEntry, StringComparison.Ordinal);
+        Assert.DoesNotContain("from 'three'", vendorEntry, StringComparison.Ordinal);
     }
 
     [Theory]

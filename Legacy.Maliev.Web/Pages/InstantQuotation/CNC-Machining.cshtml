@@ -4906,15 +4906,16 @@
             utils.IncreasePendingTask();
 
             var formData = new FormData();
-            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            var requestVerificationToken = document.querySelector('input[name="__RequestVerificationToken"]');
+            formData.append('__RequestVerificationToken', requestVerificationToken ? requestVerificationToken.value : '');
             formData.append('file', file);
 
             formData.append('itemId', id);
             formData.append('uploadRole', 'drawing');
             { formData.append('quotationFormToken', quotationFormToken); }
-            $.ajax({
+            SendCncUploadRequest({
                 url: cncDrawingUploadFileUrl,
-                data: formData, type: "POST", async: true, cache: false, processData: false, contentType: false,
+                data: formData,
                 success: function (data) {
                     var current = utils.GetItem(id);
                     if (data.success === true && data.receipt && current && current.cncDrawing && current.cncDrawing.fileName === file.name) {
@@ -4981,9 +4982,39 @@
             return true;
         }
 
+        function SendCncUploadRequest(options) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', options.url, true);
+            if (typeof options.progress === 'function' && xhr.upload) {
+                xhr.upload.addEventListener('progress', options.progress, false);
+            }
+            function responseBody() {
+                if (!xhr.responseText) { return null; }
+                try { return JSON.parse(xhr.responseText); }
+                catch (_) { return null; }
+            }
+            function errorResponse(data) {
+                return {
+                    status: xhr.status,
+                    responseJSON: data,
+                    getResponseHeader: function (name) { return xhr.getResponseHeader(name); }
+                };
+            }
+            function complete(success) {
+                var data = responseBody();
+                if (success) { options.success(data || {}); }
+                else { options.error(errorResponse(data)); }
+                options.complete();
+            }
+            xhr.addEventListener('load', function () { complete(xhr.status >= 200 && xhr.status < 300); });
+            xhr.addEventListener('error', function () { complete(false); });
+            xhr.addEventListener('abort', function () { complete(false); });
+            xhr.send(options.data);
+        }
+
         function UploadFile(id, file) {
             var uploadAttempt = utils.BeginItemUpload(id);
-            var progressBar = $('#upload-progress-item-' + id + ' .bar');
+            var progressBar = document.querySelector('#upload-progress-item-' + id + ' .bar');
             var progressWrap = document.getElementById('upload-progress-item-' + id);
             var uploadPathElement = document.getElementById('item-upload-path-' + id);
             PushInstantQuoteEvent('file_upload_start', {
@@ -4991,7 +5022,8 @@
                 file_type: FileType(file && file.name)
             });
             var formData = new FormData();
-            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            var requestVerificationToken = document.querySelector('input[name="__RequestVerificationToken"]');
+            formData.append('__RequestVerificationToken', requestVerificationToken ? requestVerificationToken.value : '');
             formData.append('file', file);
 
             formData.append('itemId', id);
@@ -5002,20 +5034,14 @@
             return new Promise(function (resolve) {
                 function sendUploadAttempt() {
                     var retryScheduled = false;
-                    $.ajax({
+                    SendCncUploadRequest({
                 url: cncModelUploadFileUrl,
-                data: formData, type: "POST", async: true, cache: false, processData: false, contentType: false,
-                xhr: function () {
-                    var myXhr = $.ajaxSettings.xhr();
-                    if (myXhr.upload) {
-                        myXhr.upload.addEventListener('progress', function (event) {
-                            if (event.lengthComputable) {
-                                if (progressWrap) { progressWrap.style.visibility = 'visible'; }
-                                progressBar.css('width', ((event.loaded * 100) / event.total) + '%');
-                            }
-                        }, false);
+                data: formData,
+                progress: function (event) {
+                    if (event.lengthComputable) {
+                        if (progressWrap) { progressWrap.style.visibility = 'visible'; }
+                        if (progressBar) { progressBar.style.width = ((event.loaded * 100) / event.total) + '%'; }
                     }
-                    return myXhr;
                 },
                 success: function (data) {
                     if (!utils.IsItemStageAttemptCurrent(uploadAttempt)) { return; }
