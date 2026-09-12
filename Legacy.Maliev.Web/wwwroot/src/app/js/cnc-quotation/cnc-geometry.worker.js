@@ -2835,7 +2835,11 @@ function CncGeneralBallEvidence(records, clusters, field, axes, verifier, balls,
     return result;
 }
 
-function AnalyzeCncGeometry(triangles, modelInfo) {
+function AnalyzeCncGeometry(triangles, modelInfo, options) {
+    // The semantic planner needs stock and review facts, not the legacy
+    // per-tool accessibility field. Keep full diagnostics for existing callers;
+    // only an explicit manufacturing summary request omits those passes.
+    var includeAccessibilityDiagnostics = !(options && options.mode === 'manufacturing_summary');
     var sample = CncSampleTriangles(triangles || []);
     var selected = CncChooseAxes(triangles || []);
     var evidence = CncTriangleEvidence(triangles || [], selected.axes);
@@ -2880,13 +2884,15 @@ function AnalyzeCncGeometry(triangles, modelInfo) {
         && maxDimension / minimumDimension >= CNC_THIN_PLATE_RULES.bowingRiskSpanToThicknessRatio;
     var deepFeatureRisk = minimumDimension > 0 && maxDimension / minimumDimension > 4 && nonPlanarRatio > 0.08;
     var orientationCandidates = CncDirectionCandidates(selected.axes, evidence, surfaceAnalysis, rotationalEvidence);
-    var accessibilityField = self.CncSpatialField
+    var accessibilityField = includeAccessibilityDiagnostics && self.CncSpatialField
         ? self.CncSpatialField.build(triangles || [], { axes: selected.axes }, {
             geometryToleranceMm: 0.5,
             minimumCutterDiameterMm: CNC_MINIMUM_MILLING_TOOL_RADIUS_MM * 2
         })
         : null;
-    CncAssignFieldSamplesToClusters(accessibilityField, surfaceClusters, surfaceAnalysis.records);
+    if (accessibilityField) {
+        CncAssignFieldSamplesToClusters(accessibilityField, surfaceClusters, surfaceAnalysis.records);
+    }
     if (accessibilityField && self.CncToolLibrary) {
         accessibilityField._refineToolContact = CncFlatToolContactVerifier(surfaceAnalysis.records, surfaceClusters);
         self.CncSpatialField.classifyToolAccess(accessibilityField, self.CncToolLibrary.analysisProfiles());
@@ -2969,7 +2975,7 @@ function AnalyzeCncGeometry(triangles, modelInfo) {
         orientedSizeMm: { x: dimensions[0], y: dimensions[1], z: dimensions[2] },
         principalAxes: selected.axes,
         orientationEvidence: selected.evidence,
-        accessibilityField: self.CncSpatialField
+        accessibilityField: accessibilityField && self.CncSpatialField
             ? self.CncSpatialField.serialize(accessibilityField)
             : null,
         orientationCandidates: orientationCandidates,

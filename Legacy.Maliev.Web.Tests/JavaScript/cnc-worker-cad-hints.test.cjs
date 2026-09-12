@@ -12,7 +12,7 @@ const source = `ISO-10303-21;HEADER;ENDSEC;DATA;
 #5=GLOBAL_UNIT_ASSIGNED_CONTEXT((#4));ENDSEC;END-ISO-10303-21;`;
 
 function runtime() {
-    const imported = [], analyzed = [];
+    const imported = [], analyzed = [], importParameters = [];
     const c = vm.createContext({ console, TextDecoder, TextEncoder, crypto: webcrypto });
     c.self = c;
     c.location = { search: '?v=cad-boundary-version' };
@@ -28,15 +28,15 @@ function runtime() {
     // The OCCT boundary is deliberately fixed; this suite tests metadata transfer,
     // not CAD tessellation. Real THREE decoding/bridges and STEP hint parser run.
     c.occtimportjs = async () => ({
-        ReadStepFile: () => ({ success: true, meshes: [mesh(), { ...mesh(), brep_faces: [{ first: 0, last: 0 }, { first: 1, last: 1 }] }] }),
-        ReadIgesFile: () => ({ success: true, meshes: [mesh()] })
+        ReadStepFile: (bytes, parameters) => { importParameters.push(parameters); return { success: true, meshes: [mesh(), { ...mesh(), brep_faces: [{ first: 0, last: 0 }, { first: 1, last: 1 }] }] }; },
+        ReadIgesFile: (bytes, parameters) => { importParameters.push(parameters); return { success: true, meshes: [mesh()] }; }
     });
-    c.AnalyzeCncGeometry = (triangles, modelInfo) => {
-        analyzed.push({ triangles: Array.from(triangles), modelInfo });
+    c.AnalyzeCncGeometry = (triangles, modelInfo, options) => {
+        analyzed.push({ triangles: Array.from(triangles), modelInfo, options });
         return { boundaryChecked: true };
     };
     return {
-        c, imported, analyzed,
+        c, imported, analyzed, importParameters,
         dispatch: data => new Promise(resolve => {
             c.postMessage = message => resolve(message);
             c.onmessage({ data: { jobId: 1, ...data } });
@@ -48,6 +48,33 @@ function job(options = {}) {
         analysisProfile: 'cnc', ...options };
 }
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
+
+test('immediate and deferred CNC imports explicitly request manufacturing summary diagnostics', async () => {
+    for (const deferCncAnalysis of [false, true]) {
+        const f = runtime();
+        const result = await f.dispatch(job({ deferCncAnalysis }));
+        assert.equal(result.success, true);
+        if (deferCncAnalysis) {
+            assert.equal(f.analyzed.length, 0);
+            const analyzed = await f.dispatch({ action: 'analyze', meshes: structuredClone(result.analysisMeshes), analysisProfile: 'cnc' });
+            assert.equal(analyzed.success, true);
+        }
+        assert.deepEqual(f.analyzed.map(call => plain(call.options || {})), [{ mode: 'manufacturing_summary' }]);
+    }
+});
+
+test('STEP and STP validation tessellation use absolute millimeter deflection without changing display tessellation', async () => {
+    for (const extension of ['step', 'stp']) {
+        const f = runtime();
+        const result = await f.dispatch(job({ extension }));
+        assert.equal(result.success, true);
+        assert.equal(f.importParameters.length, 2);
+        assert.deepEqual(plain(f.importParameters[1]), {
+            linearUnit: 'millimeter', linearDeflectionType: 'absolute_value', linearDeflection: 0.1
+        });
+        assert.equal(f.importParameters[0], null);
+    }
+});
 
 for (const [evidence, highlightedCount] of [[[], 0], [[0], 9], [undefined, 9], [null, 9]]) {
     test('worker overlay distinguishes missing visibility from ' + JSON.stringify(evidence), () => {
