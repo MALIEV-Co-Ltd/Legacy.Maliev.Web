@@ -124,8 +124,8 @@ public sealed class QuotationPageTests
         var analyticsEvent = analyticsDocument.RootElement;
         Assert.Equal("maliev_lead_submitted", analyticsEvent.GetProperty("event").GetString());
         Assert.Equal("manual_quote", analyticsEvent.GetProperty("lead_type").GetString());
-        Assert.Equal("custom_manufacturing", analyticsEvent.GetProperty("service").GetString());
-        Assert.Equal("quotation-713", analyticsEvent.GetProperty("transaction_id").GetString());
+        Assert.Equal("cnc_machining", analyticsEvent.GetProperty("service").GetString());
+        Assert.Equal("request-713", analyticsEvent.GetProperty("transaction_id").GetString());
         Assert.Equal("persisted", analyticsEvent.GetProperty("lead_status").GetString());
         Assert.True(analyticsEvent.GetProperty("has_files").GetBoolean());
         Assert.False(analyticsEvent.TryGetProperty("file_upload_completed", out _));
@@ -223,7 +223,14 @@ public sealed class QuotationPageTests
         {
             CallCount++;
             IdempotencyKey = idempotencyKey;
-            return Task.FromResult(result ?? new QuotationRequestResult(null, true, true));
+            var value = result ?? new QuotationRequestResult(null, true, true);
+            return Task.FromResult(value.ReferenceNumber is int id
+                ? value with
+                {
+                    TransactionId = value.TransactionId ?? $"request-{id}",
+                    JourneyId = value.JourneyId ?? submission.JourneyId,
+                }
+                : value);
         }
     }
 

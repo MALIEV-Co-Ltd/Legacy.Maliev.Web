@@ -143,7 +143,7 @@ internal sealed class InstantQuotationSubmissionService(
 
         if (checkpoint?.Status == InstantQuotationSubmissionCheckpointStatus.Completed)
         {
-            return Completed(checkpoint.RequestReference);
+            return Completed(checkpoint.RequestReference, checkpoint.TransactionId, checkpoint.JourneyId);
         }
 
         if (checkpoint is null)
@@ -195,7 +195,8 @@ internal sealed class InstantQuotationSubmissionService(
             customer.Country.Trim(),
             TrimToNull(customer.CompanyName),
             TrimToNull(customer.TaxIdentification),
-            BuildMessage(session, quote, customer.Description));
+            BuildMessage(session, quote, customer.Description),
+            JourneyId: CreateJourneyId(session.SubmissionId));
 
         QuotationRequestResult quotationResult;
         try
@@ -233,11 +234,20 @@ internal sealed class InstantQuotationSubmissionService(
             return (null, Rejected(InstantQuotationProblemCategory.Unexpected));
         }
 
+        if (!IsValidRequestTransactionId(quotationResult.TransactionId, quotationResult.ReferenceNumber.Value)
+            || quotationResult.JourneyId is not Guid journeyId
+            || journeyId != submission.JourneyId)
+        {
+            return (null, Rejected(InstantQuotationProblemCategory.Unexpected));
+        }
+
         var checkpoint = new InstantQuotationSubmissionCheckpoint(
             session.SubmissionId,
             quotationResult.ReferenceNumber.Value,
             InstantQuotationSubmissionCheckpointStatus.Persisted,
-            snapshotDigest);
+            snapshotDigest,
+            TransactionId: quotationResult.TransactionId,
+            JourneyId: quotationResult.JourneyId);
         bool stored;
         try
         {
@@ -272,7 +282,7 @@ internal sealed class InstantQuotationSubmissionService(
         if (checkpoint.Status >= InstantQuotationSubmissionCheckpointStatus.FilesLinked)
         {
             return fulfillmentClient is null
-                ? Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected)
+                ? Partial(checkpoint, InstantQuotationProblemCategory.Unexpected)
                 : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
                     session,
                     quote,
@@ -290,21 +300,21 @@ internal sealed class InstantQuotationSubmissionService(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
         catch (TimeoutException)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
 
         if (!fencedRead.LeaseValid || fencedRead.Checkpoint != checkpoint)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+            return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
         }
 
         if (!await RenewLeaseAsync(submissionLease, cancellationToken))
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+            return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
         }
 
         var expectedOperationId = CreateFinalizationOperationId(session.SubmissionId);
@@ -321,37 +331,37 @@ internal sealed class InstantQuotationSubmissionService(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
         catch (TimeoutException)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
         catch (HttpRequestException)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
 
         if (finalization.ServiceStatus != InstantQuotationServiceStatus.Available)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
 
         if (finalization.AuthorizationStatus != InstantQuotationAuthorizationStatus.Authorized)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Authorization);
+            return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
         }
 
         if (!string.Equals(finalization.OperationId, expectedOperationId, StringComparison.Ordinal))
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected);
+            return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
         }
 
         if (finalization.Status != InstantQuotationOperationStatus.Succeeded
             || finalization.ProblemCategory != InstantQuotationProblemCategory.None)
         {
             return Partial(
-                checkpoint.RequestReference,
+                checkpoint,
                 finalization.ProblemCategory == InstantQuotationProblemCategory.None
                     ? InstantQuotationProblemCategory.Unexpected
                     : finalization.ProblemCategory);
@@ -364,7 +374,7 @@ internal sealed class InstantQuotationSubmissionService(
                 || fileId == Guid.Empty
                 || !expectedFiles.TryAdd(fileId, part))
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
             }
         }
 
@@ -376,14 +386,14 @@ internal sealed class InstantQuotationSubmissionService(
                 expectedFiles[file.FileId].Geometry.Sha256,
                 StringComparison.Ordinal)))
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Unexpected);
+            return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
         }
 
         foreach (var file in finalization.Files.OrderBy(file => file.FileId))
         {
             if (!await RenewLeaseAsync(submissionLease, cancellationToken))
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
             }
 
             InstantQuotationRequestFileLinkResult link;
@@ -400,28 +410,28 @@ internal sealed class InstantQuotationSubmissionService(
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             }
             catch (Exception exception) when (exception is TimeoutException or HttpRequestException)
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             }
 
             if (link.ServiceStatus != InstantQuotationServiceStatus.Available)
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             }
 
             if (link.AuthorizationStatus != InstantQuotationAuthorizationStatus.Authorized)
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Authorization);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
             }
 
             if (link.Status != InstantQuotationOperationStatus.Succeeded
                 || link.ProblemCategory != InstantQuotationProblemCategory.None)
             {
                 return Partial(
-                    checkpoint.RequestReference,
+                    checkpoint,
                     link.ProblemCategory == InstantQuotationProblemCategory.None
                         ? InstantQuotationProblemCategory.Unexpected
                         : link.ProblemCategory);
@@ -437,7 +447,7 @@ internal sealed class InstantQuotationSubmissionService(
             };
             if (!await RenewLeaseAsync(submissionLease, cancellationToken))
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
             }
 
             bool filesLinkedStored;
@@ -450,11 +460,11 @@ internal sealed class InstantQuotationSubmissionService(
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             }
             catch (TimeoutException)
             {
-                return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             }
 
             return filesLinkedStored
@@ -466,7 +476,7 @@ internal sealed class InstantQuotationSubmissionService(
                     submissionLease,
                     filesLinkedCheckpoint,
                     cancellationToken)
-                : Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+                : Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
         }
 
         var completedCheckpoint = checkpoint with
@@ -475,7 +485,7 @@ internal sealed class InstantQuotationSubmissionService(
         };
         if (!await RenewLeaseAsync(submissionLease, cancellationToken))
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+            return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
         }
 
         bool stored;
@@ -488,16 +498,16 @@ internal sealed class InstantQuotationSubmissionService(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
         catch (TimeoutException)
         {
-            return Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable);
+            return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
         }
 
         return stored
-            ? Completed(checkpoint.RequestReference)
-            : Partial(checkpoint.RequestReference, InstantQuotationProblemCategory.Conflict);
+            ? Completed(checkpoint.RequestReference, checkpoint.TransactionId, checkpoint.JourneyId)
+            : Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
     }
 
     private static string BuildMessage(
@@ -825,14 +835,23 @@ internal sealed class InstantQuotationSubmissionService(
     private static bool ExceedsLength(string? value, int maximumLength) =>
         value?.Length > maximumLength;
 
+    private static Guid CreateJourneyId(string submissionId)
+    {
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"instant-quotation-journey:{submissionId.ToLowerInvariant()}"));
+        return new Guid(digest.AsSpan(0, 16));
+    }
+
+    private static bool IsValidRequestTransactionId(string? transactionId, int requestId) =>
+        string.Equals(transactionId, $"request-{requestId}", StringComparison.Ordinal);
+
     private static InstantQuotationSubmissionResult Rejected(InstantQuotationProblemCategory problem) =>
         new(InstantQuotationSubmissionOutcome.Rejected, null, problem);
 
     private static InstantQuotationSubmissionResult Partial(
-        int requestReference,
+        InstantQuotationSubmissionCheckpoint checkpoint,
         InstantQuotationProblemCategory problem) =>
-        new(InstantQuotationSubmissionOutcome.Partial, requestReference, problem);
+        new(InstantQuotationSubmissionOutcome.Partial, checkpoint.RequestReference, problem, checkpoint.TransactionId, checkpoint.JourneyId);
 
-    private static InstantQuotationSubmissionResult Completed(int requestReference) =>
-        new(InstantQuotationSubmissionOutcome.Completed, requestReference, InstantQuotationProblemCategory.None);
+    private static InstantQuotationSubmissionResult Completed(int requestReference, string? transactionId = null, Guid? journeyId = null) =>
+        new(InstantQuotationSubmissionOutcome.Completed, requestReference, InstantQuotationProblemCategory.None, transactionId, journeyId);
 }

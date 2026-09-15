@@ -19,7 +19,7 @@ public sealed class CncSubmissionPersistenceCoordinatorTests
         var profiles = new CapturingProfileClient();
         var events = new List<string>();
         var coordinator = new CncSubmissionPersistenceCoordinator(
-            new FixedRequestClient(new(CncRequestOutcome.Created, 42)),
+            new FixedRequestClient(new(CncRequestOutcome.Created, 42, "request-42")),
             profiles,
             new LinkedFileClient(events),
             new CncNotificationCoordinator(new SuccessfulSignedLinkClient(events), new SuccessfulNotificationClient(events)));
@@ -82,7 +82,7 @@ public sealed class CncSubmissionPersistenceCoordinatorTests
             [new CncUploadReceiptState("form", "session", "item", "model", "receipt", DateTimeOffset.MaxValue)]),
             TimeProvider.System);
         var coordinator = new CncSubmissionPersistenceCoordinator(
-            new FixedRequestClient(new(CncRequestOutcome.Created, 42)),
+            new FixedRequestClient(new(CncRequestOutcome.Created, 42, "request-42")),
             new UnexpectedProfileClient(),
             new UnexpectedFileClient(),
             new CncNotificationCoordinator(new UnexpectedSignedLinkClient(), new UnexpectedNotificationClient()));
@@ -107,7 +107,7 @@ public sealed class CncSubmissionPersistenceCoordinatorTests
             TimeProvider.System);
         var events = new List<string>();
         var coordinator = new CncSubmissionPersistenceCoordinator(
-            new FixedRequestClient(new(CncRequestOutcome.Created, 42)),
+            new FixedRequestClient(new(CncRequestOutcome.Created, 42, "request-42")),
             new UnexpectedProfileClient(),
             new LinkedFileClient(events),
             new CncNotificationCoordinator(new SuccessfulSignedLinkClient(events), new SuccessfulNotificationClient(events)));

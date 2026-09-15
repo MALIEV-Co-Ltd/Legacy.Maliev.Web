@@ -12,7 +12,10 @@ public enum CncRequestOutcome
 }
 
 /// <summary>The durable request identity is available only after a verified create response.</summary>
-public sealed record CncRequestResult(CncRequestOutcome Outcome, int? RequestId = null);
+public sealed record CncRequestResult(
+    CncRequestOutcome Outcome,
+    int? RequestId = null,
+    string? TransactionId = null);
 
 /// <summary>Creates CNC engineering-review requests without replaying ambiguous writes.</summary>
 public interface ICncRequestClient

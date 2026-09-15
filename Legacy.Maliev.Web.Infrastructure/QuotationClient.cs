@@ -54,7 +54,8 @@ internal sealed class QuotationClient(
                         submission.TaxIdentification,
                         submission.Message,
                         submission.InternalComment,
-                        false),
+                        false,
+                        submission.JourneyId),
                     options: ExactLegacyJson)
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -104,7 +105,7 @@ internal sealed class QuotationClient(
                 return new QuotationRequestResult(null, true, true);
             }
 
-            return new QuotationRequestResult(created!.Id, true, true);
+            return new QuotationRequestResult(created!.Id, true, true, created.TransactionId, created.JourneyId);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -121,6 +122,7 @@ internal sealed class QuotationClient(
     private static bool IsValid(CreatedResource? created, QuotationRequestSubmission submission) =>
         created is not null
         && created.Id > 0
+        && IsValidTransactionId(created.TransactionId, created.Id)
         && string.Equals(created.FirstName, submission.FirstName, StringComparison.Ordinal)
         && string.Equals(created.LastName, submission.LastName, StringComparison.Ordinal)
         && string.Equals(created.Email, submission.Email, StringComparison.Ordinal)
@@ -131,7 +133,11 @@ internal sealed class QuotationClient(
         && string.Equals(created.Message, submission.Message, StringComparison.Ordinal)
         && string.Equals(created.InternalComment, submission.InternalComment, StringComparison.Ordinal)
         && !created.Done
-        && created.CreatedDate != default;
+        && created.CreatedDate != default
+        && (!submission.JourneyId.HasValue || created.JourneyId == submission.JourneyId);
+
+    private static bool IsValidTransactionId(string? transactionId, int requestId) =>
+        string.Equals(transactionId, $"request-{requestId}", StringComparison.Ordinal);
 
     private sealed record QuotationRequestPayload(
         string FirstName,
@@ -143,7 +149,8 @@ internal sealed class QuotationClient(
         string? TaxIdentification,
         string Message,
         string? InternalComment,
-        bool Done);
+        bool Done,
+        Guid? JourneyId = null);
 
     private sealed record CreatedResource(
         [property: JsonPropertyName("Id")] int Id,
@@ -159,5 +166,6 @@ internal sealed class QuotationClient(
         [property: JsonPropertyName("CreatedDate")] DateTimeOffset CreatedDate,
         [property: JsonPropertyName("InternalComment")] string? InternalComment = null,
         [property: JsonPropertyName("ModifiedDate")] DateTimeOffset? ModifiedDate = null,
-        [property: JsonPropertyName("JourneyId")] Guid? JourneyId = null);
+        [property: JsonPropertyName("JourneyId")] Guid? JourneyId = null,
+        [property: JsonPropertyName("TransactionId")] string? TransactionId = null);
 }

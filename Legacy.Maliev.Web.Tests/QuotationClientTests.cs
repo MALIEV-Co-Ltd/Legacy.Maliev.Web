@@ -32,10 +32,10 @@ public sealed class QuotationClientTests
                     "Done",
                     "Email",
                     "FirstName",
-                    "LastName",
-                    "Message",
-                    "TaxIdentification",
-                    "TelephoneNumber"
+                "LastName",
+                "Message",
+                "TaxIdentification",
+                "TelephoneNumber"
                 ],
                 properties.Keys.Order(StringComparer.Ordinal));
             Assert.Equal("Mali", properties["FirstName"].GetString());
@@ -49,7 +49,7 @@ public sealed class QuotationClientTests
             Assert.False(properties["Done"].GetBoolean());
             var responseBody =
                 """
-                {"Id":417,"FirstName":"Mali","LastName":"Ev","Email":"mali@example.com","TelephoneNumber":"020000000","Country":"Thailand","CompanyName":"MALIEV","TaxIdentification":"0100000000000","Message":"Need CNC parts","Done":false,"CreatedDate":"2026-07-19T08:00:00Z"}
+                {"Id":417,"FirstName":"Mali","LastName":"Ev","Email":"mali@example.com","TelephoneNumber":"020000000","Country":"Thailand","CompanyName":"MALIEV","TaxIdentification":"0100000000000","Message":"Need CNC parts","Done":false,"CreatedDate":"2026-07-19T08:00:00Z","TransactionId":"request-417"}
                 """;
             if (includesJourney) responseBody = responseBody.Replace("\"Id\":417", "\"JourneyId\":null,\"Id\":417", StringComparison.Ordinal);
             var response = JsonResponse(responseBody,
@@ -70,6 +70,7 @@ public sealed class QuotationClientTests
         Assert.Equal(417, result.ReferenceNumber);
         Assert.True(result.ServiceAvailable);
         Assert.True(result.Authorized);
+        Assert.Equal("request-417", result.TransactionId);
         var request = Assert.Single(handler.Requests);
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal("/quotationrequests/", request.RequestUri?.AbsolutePath);

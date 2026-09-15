@@ -258,7 +258,8 @@ public sealed class Index(
                 NormalizeOptional(Company),
                 NormalizeOptional(TaxNumber),
                 Message.Trim(),
-                finderAttribution?.ToMetadataJson()),
+                finderAttribution?.ToMetadataJson(),
+                SubmissionId),
             $"legacy-web-quotation-{SubmissionId:N}",
             cancellationToken);
         if (result.ReferenceNumber is not int referenceNumber)
@@ -285,13 +286,34 @@ public sealed class Index(
             SubmissionId,
             uploads,
             cancellationToken);
-        if (!LeadAnalyticsEventQueue.TryQueueManualQuotation(
-                TempData,
-                referenceNumber,
-                QuotationPrefill.NormalizeServiceContext(ServiceContext),
-                uploads.Length > 0,
-                uploads.Length > 0 && fileResult.Completed,
-                out var analyticsFailure))
+        bool analyticsQueued = false;
+        Exception? analyticsFailure = null;
+        if (result.TransactionId is { Length: > 0 }
+            && result.JourneyId is Guid journeyId)
+        {
+            analyticsQueued = finderAttribution is null
+                ? LeadAnalyticsEventQueue.TryQueueManualQuotation(
+                    TempData,
+                    result.TransactionId,
+                    uploads.Length > 0,
+                    ServiceContext,
+                    journeyId.ToString(),
+                    out analyticsFailure)
+                : LeadAnalyticsEventQueue.TryQueueManualQuotationWithFinder(
+                    TempData,
+                    result.TransactionId,
+                    uploads.Length > 0,
+                    ServiceContext,
+                    journeyId.ToString(),
+                    finderAttribution,
+                    out analyticsFailure);
+        }
+        else
+        {
+            analyticsFailure = new InvalidOperationException("Quotation service did not return its API-owned transaction and journey identifiers.");
+        }
+
+        if (!analyticsQueued)
         {
             logger.LogWarning(
                 analyticsFailure,

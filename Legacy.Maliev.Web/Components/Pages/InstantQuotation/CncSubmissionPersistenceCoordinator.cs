@@ -12,7 +12,8 @@ internal enum CncSubmissionPersistenceOutcome
 
 internal sealed record CncSubmissionPersistenceResult(
     CncSubmissionPersistenceOutcome Outcome,
-    int? RequestId = null);
+    int? RequestId = null,
+    string? TransactionId = null);
 
 /// <summary>Coordinates the non-replayable persistence steps after CNC admission and receipt claiming.</summary>
 internal sealed class CncSubmissionPersistenceCoordinator(
@@ -41,12 +42,12 @@ internal sealed class CncSubmissionPersistenceCoordinator(
         lease.TryMarkPersistenceStarted();
         if (created.Outcome != CncRequestOutcome.Created || created.RequestId is not > 0)
         {
-            return new(CncSubmissionPersistenceOutcome.Unconfirmed, created.RequestId);
+            return new(CncSubmissionPersistenceOutcome.Unconfirmed, created.RequestId, created.TransactionId);
         }
 
         if (submission.OrderItems is not { Count: > 0 })
         {
-            return new(CncSubmissionPersistenceOutcome.Partial, created.RequestId);
+            return new(CncSubmissionPersistenceOutcome.Partial, created.RequestId, created.TransactionId);
         }
 
         int requestId = created.RequestId.Value;
@@ -71,7 +72,7 @@ internal sealed class CncSubmissionPersistenceCoordinator(
                 cancellationToken);
             if (model.Outcome != CncFileFinalizationOutcome.Linked || string.IsNullOrWhiteSpace(model.DestinationObjectName))
             {
-                return new(CncSubmissionPersistenceOutcome.Partial, requestId);
+                return new(CncSubmissionPersistenceOutcome.Partial, requestId, created.TransactionId);
             }
 
             string? drawingObjectName = null;
@@ -86,7 +87,7 @@ internal sealed class CncSubmissionPersistenceCoordinator(
                     cancellationToken);
                 if (drawing.Outcome != CncFileFinalizationOutcome.Linked || string.IsNullOrWhiteSpace(drawing.DestinationObjectName))
                 {
-                    return new(CncSubmissionPersistenceOutcome.Partial, requestId);
+                    return new(CncSubmissionPersistenceOutcome.Partial, requestId, created.TransactionId);
                 }
 
                 drawingObjectName = drawing.DestinationObjectName;
@@ -105,6 +106,7 @@ internal sealed class CncSubmissionPersistenceCoordinator(
             !partial && delivery.Complete
                 ? CncSubmissionPersistenceOutcome.Completed
                 : CncSubmissionPersistenceOutcome.Partial,
-            requestId);
+            requestId,
+            created.TransactionId);
     }
 }

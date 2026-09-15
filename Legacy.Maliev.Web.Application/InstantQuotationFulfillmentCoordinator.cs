@@ -314,7 +314,9 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
             ? new InstantQuotationSubmissionResult(
                 InstantQuotationSubmissionOutcome.Completed,
                 checkpoint.RequestReference,
-                InstantQuotationProblemCategory.None)
+                InstantQuotationProblemCategory.None,
+                checkpoint.TransactionId,
+                checkpoint.JourneyId)
             : Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
     }
 
@@ -425,5 +427,7 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
         InstantQuotationProblemCategory category) => new(
             InstantQuotationSubmissionOutcome.Partial,
             checkpoint.RequestReference,
-            category);
+            category,
+            checkpoint.TransactionId,
+            checkpoint.JourneyId);
 }

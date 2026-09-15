@@ -28,10 +28,10 @@ public sealed class CncRequestClientTests
             Assert.Equal("customer@example.test", root.GetProperty("Email").GetString());
             Assert.False(root.TryGetProperty("journeyId", out _));
             Assert.False(root.TryGetProperty("OrderId", out _));
-            return Reply(201, $"{{\"Id\":42,\"JourneyId\":\"{Journey}\",\"Done\":null}}");
+            return Reply(201, $"{{\"Id\":42,\"JourneyId\":\"{Journey}\",\"TransactionId\":\"request-42\",\"Done\":null}}");
         });
         var result = await new CncRequestClient(new Factory(handler), new Tokens(), TimeProvider.System).CreateAsync(Submission, default);
-        Assert.Equal(new CncRequestResult(CncRequestOutcome.Created, 42), result);
+        Assert.Equal(new CncRequestResult(CncRequestOutcome.Created, 42, "request-42"), result);
         Assert.Equal(1, handler.Count);
     }
 
@@ -72,10 +72,10 @@ public sealed class CncRequestClientTests
     [Fact]
     public async Task Create_AcceptsOmittedNullDoneAndSourceSizeReviewRecord()
     {
-        var body = JsonSerializer.Serialize(new { Id = 42, JourneyId = Journey, Message = new string('<', 262144) });
+        var body = JsonSerializer.Serialize(new { Id = 42, JourneyId = Journey, TransactionId = "request-42", Message = new string('<', 262144) });
         var handler = new Handler(_ => Task.FromResult(Reply(201, body)));
         var result = await new CncRequestClient(new Factory(handler), new Tokens(), TimeProvider.System).CreateAsync(Submission, default);
-        Assert.Equal(new CncRequestResult(CncRequestOutcome.Created, 42), result);
+        Assert.Equal(new CncRequestResult(CncRequestOutcome.Created, 42, "request-42"), result);
     }
 
     [Fact]

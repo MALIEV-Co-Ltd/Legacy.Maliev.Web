@@ -14,7 +14,7 @@ public sealed class LeadAnalyticsEventQueueParityTests
 
         Assert.True(LeadAnalyticsEventQueue.TryQueueInstantQuotation(
             tempData,
-            44,
+            "request-44",
             hasFiles: true,
             "11111111-2222-3333-4444-555555555555",
             out var failure));
@@ -29,7 +29,7 @@ public sealed class LeadAnalyticsEventQueueParityTests
         Assert.Equal("maliev_lead_submitted", root.GetProperty("event").GetString());
         Assert.Equal("instant_3d_quote", root.GetProperty("lead_type").GetString());
         Assert.Equal("3d_printing", root.GetProperty("service").GetString());
-        Assert.Equal("quotation-44", root.GetProperty("transaction_id").GetString());
+        Assert.Equal("request-44", root.GetProperty("transaction_id").GetString());
         Assert.Equal("persisted", root.GetProperty("lead_status").GetString());
         Assert.True(root.GetProperty("has_files").GetBoolean());
         Assert.Equal("11111111-2222-3333-4444-555555555555", root.GetProperty("journey_id").GetString());
@@ -42,7 +42,7 @@ public sealed class LeadAnalyticsEventQueueParityTests
 
         Assert.False(LeadAnalyticsEventQueue.TryQueueInstantQuotation(
             tempData,
-            44,
+            "request-44",
             hasFiles: true,
             "not-a-guid",
             out var failure));
@@ -54,7 +54,7 @@ public sealed class LeadAnalyticsEventQueueParityTests
     [Theory]
     [InlineData("3D-Printing", "3d_printing")]
     [InlineData("3d-scanning", "3d_scanning")]
-    [InlineData("CNC-Machining", "custom_manufacturing")]
+    [InlineData("CNC-Machining", "cnc_machining")]
     public void ManualQuotation_NormalizesTheSourceRouteAndPreservesTheJourney(
         string requestedItem,
         string expectedService)
@@ -63,7 +63,7 @@ public sealed class LeadAnalyticsEventQueueParityTests
 
         Assert.True(LeadAnalyticsEventQueue.TryQueueManualQuotation(
             tempData,
-            45,
+            "request-45",
             hasFiles: false,
             requestedItem: requestedItem,
             journeyId: "11111111-2222-3333-4444-555555555555",
@@ -73,7 +73,57 @@ public sealed class LeadAnalyticsEventQueueParityTests
 
         Assert.Equal("manual_quote", payload!.LeadType);
         Assert.Equal(expectedService, payload.Service);
+        Assert.Equal("request-45", payload.TransactionId);
         Assert.Equal("11111111-2222-3333-4444-555555555555", payload.JourneyId);
+    }
+
+    [Fact]
+    public void InstantCncQuotation_UsesDedicatedLeadAndApiTransaction()
+    {
+        var tempData = CreateTempData();
+
+        Assert.True(LeadAnalyticsEventQueue.TryQueueInstantCncQuotation(
+            tempData,
+            "request-47",
+            hasFiles: true,
+            "11111111-2222-3333-4444-555555555555",
+            out var failure));
+        Assert.Null(failure);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(tempData, out var payload));
+        Assert.Equal("instant_cnc_quote", payload!.LeadType);
+        Assert.Equal("cnc_machining", payload.Service);
+        Assert.Equal("request-47", payload.TransactionId);
+    }
+
+    [Fact]
+    public void ManualQuotationWithFinder_PreservesValidatedAttribution()
+    {
+        Assert.True(ServiceFinderAttribution.TryCreate(
+            "files-3d",
+            "service-3d",
+            "material-plastic",
+            "quantity-1-10",
+            "use-prototype",
+            "printing",
+            "printing",
+            "performance-strength",
+            "environment-indoor",
+            out var attribution));
+        var tempData = CreateTempData();
+
+        Assert.True(LeadAnalyticsEventQueue.TryQueueManualQuotationWithFinder(
+            tempData,
+            "request-48",
+            hasFiles: false,
+            requestedItem: "3d-printing",
+            journeyId: "11111111-2222-3333-4444-555555555555",
+            attribution!,
+            out var failure));
+        Assert.Null(failure);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(tempData, out var payload));
+        Assert.Equal("request-48", payload!.TransactionId);
+        Assert.Equal("service-3d", payload.Intent);
+        Assert.Equal("printing", payload.FinderPath);
     }
 
     private static TempDataDictionary CreateTempData() =>

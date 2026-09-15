@@ -371,7 +371,9 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(new(
             outcome,
             720,
-            InstantQuotationProblemCategory.DependencyUnavailable));
+            InstantQuotationProblemCategory.DependencyUnavailable,
+            "request-720",
+            Guid.Parse("11111111-2222-3333-4444-555555555555")));
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
@@ -639,7 +641,9 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     private static InstantQuotationSubmissionResult Completed(int reference) => new(
         InstantQuotationSubmissionOutcome.Completed,
         reference,
-        InstantQuotationProblemCategory.None);
+        InstantQuotationProblemCategory.None,
+        $"request-{reference}",
+        Guid.Parse("11111111-2222-3333-4444-555555555555"));
 
     private static void AssertSafeCompletedTempData(IReadOnlyDictionary<string, object> values, int reference)
     {
@@ -660,12 +664,12 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         using var document = JsonDocument.Parse(serialized);
         var root = document.RootElement;
         Assert.Equal(
-            ["event", "has_files", "lead_status", "lead_type", "service", "transaction_id"],
+            ["event", "has_files", "journey_id", "lead_status", "lead_type", "service", "transaction_id"],
             root.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
         Assert.Equal("maliev_lead_submitted", root.GetProperty("event").GetString());
-        Assert.Equal("manual_quote", root.GetProperty("lead_type").GetString());
+        Assert.Equal("instant_3d_quote", root.GetProperty("lead_type").GetString());
         Assert.Equal("3d_printing", root.GetProperty("service").GetString());
-        Assert.Equal($"quotation-{reference}", root.GetProperty("transaction_id").GetString());
+        Assert.Equal($"request-{reference}", root.GetProperty("transaction_id").GetString());
         Assert.Equal("persisted", root.GetProperty("lead_status").GetString());
         Assert.True(root.GetProperty("has_files").GetBoolean());
         Assert.False(root.TryGetProperty("file_upload_completed", out _));

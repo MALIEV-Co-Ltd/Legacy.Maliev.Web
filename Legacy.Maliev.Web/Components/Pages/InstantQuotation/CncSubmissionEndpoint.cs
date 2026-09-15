@@ -157,7 +157,7 @@ internal sealed class CncSubmissionEndpoint(
         catch (Exception exception)
         {
             logger.LogError("CNC submission outcome became unconfirmed. ExceptionType={ExceptionType}", exception.GetType().Name);
-            return Terminal(context, null, true, "We could not confirm whether your request was received. Do not submit it again; please contact info@maliev.com so we can check it safely.", journeyId);
+            return Terminal(context, null, null, true, "We could not confirm whether your request was received. Do not submit it again; please contact info@maliev.com so we can check it safely.", journeyId);
         }
 
         if (result.Outcome == CncSubmissionPersistenceOutcome.Retry)
@@ -171,20 +171,20 @@ internal sealed class CncSubmissionEndpoint(
                 ? "Thank you. Your CNC preliminary estimate and files were received for engineering review. We will send the binding quotation after review."
                 : $"Request #{result.RequestId} was received, but a downstream step failed. Do not submit it again; please contact info@maliev.com with this reference."
             : "We could not confirm whether your request was received. Do not submit it again; please contact info@maliev.com so we can check it safely.";
-        return Terminal(context, result.RequestId, !complete, notification, journeyId);
+        return Terminal(context, result.RequestId, result.TransactionId, !complete, notification, journeyId);
     }
 
-    private IResult Terminal(HttpContext context, int? requestId, bool failed, string notification, Guid journeyId)
+    private IResult Terminal(HttpContext context, int? requestId, string? transactionId, bool failed, string notification, Guid journeyId)
     {
         ITempDataDictionary tempData = tempDataFactory.GetTempData(context);
         tempData["Notification"] = notification;
         tempData["SubmissionFailed"] = failed;
-        if (requestId is > 0)
+        if (requestId is > 0 && !string.IsNullOrWhiteSpace(transactionId))
         {
             tempData["SubmittedRequestId"] = requestId.Value;
-            _ = LeadAnalyticsEventQueue.TryQueueInstantQuotation(
+            _ = LeadAnalyticsEventQueue.TryQueueInstantCncQuotation(
                 tempData,
-                requestId.Value,
+                transactionId,
                 hasFiles: true,
                 journeyId.ToString(),
                 out _);
