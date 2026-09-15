@@ -156,7 +156,7 @@ const routeStyles = {
 await build({
   ...common,
   entryPoints: routeStyles,
-  external: ['/src/images/*', '/lib/ibm-plex/*'],
+  external: ['/src/images/*', '/lib/ibm-plex/*', '/lib/outfit/*'],
   outdir: dist,
 });
 
