@@ -64,7 +64,7 @@ public sealed class ArchitectureTests
                 .Attribute("Version")?.Value)
             .ToArray();
 
-        Assert.All(versions, version => Assert.Equal("10.9.0", version));
+        Assert.All(versions, version => Assert.Equal("10.10.0", version));
         Assert.Single(versions.Distinct(StringComparer.Ordinal));
     }
 

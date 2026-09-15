@@ -66,7 +66,7 @@ function runtime(process = 'cnc') {
         terminate() { this.terminated = true; }
     }
     const context = vm.createContext({ console, document, Intl, Number, Object, Array, Math,
-        Worker: FakeWorker, alert() {} });
+        Worker: FakeWorker, alert() {}, ToTwoDecimalPoint(value) { return Number(value).toFixed(2); } });
     context.window = context;
     context.innerWidth = 1280;
     context.addEventListener = () => {};
@@ -103,6 +103,20 @@ test('queued geometry beyond the presentation deadline stays queued without an e
     expireAll();
     assert.equal(item.errorMessage, null);
     assert.equal(item.processingStages.geometry, 'queued');
+});
+
+test('completed additive parse clears CNC-only processing stages', () => {
+    const { utils, register } = runtime('printing');
+    const item = register('1');
+
+    assert.equal(item.processingStages.stock, 'ready');
+    assert.equal(item.processingStages.planning, 'ready');
+    assert.equal(item.processingStages.pricing, 'ready');
+
+    utils.SetItemParsed('1', {}, { size: { x: 10, y: 10, z: 10 } });
+
+    assert.equal(item.processingStages.geometry, 'ready');
+    assert.equal(item.processingStages.analysis, 'ready');
 });
 
 test('long sequential stages do not share a whole-item wall clock', () => {
