@@ -20,6 +20,23 @@ public enum BuildPreference
     Strength,
 }
 
+/// <summary>Whether shipping has a deterministic price for the selected destination.</summary>
+public enum ShippingPricingState
+{
+    DomesticPriced,
+    ToBeQuoted,
+}
+
+/// <summary>Destination-aware shipping result used by the quotation boundary.</summary>
+public sealed class ShippingQuote
+{
+    public required string DestinationCountryCode { get; init; }
+
+    public ShippingPricingState State { get; init; }
+
+    public decimal AmountThb { get; init; }
+}
+
 public sealed class MaterialInfo
 {
     public required string Key { get; init; }
@@ -57,6 +74,12 @@ public sealed class GeometryInput
     public IReadOnlyList<double> AreaProfileMm2 { get; init; } = [];
 
     public IReadOnlyList<double> PerimeterProfileMm { get; init; } = [];
+
+    /// <summary>
+    /// Cross-sectional area without support from the preceding layer. An absent profile uses
+    /// the conservative legacy area-growth fallback; an explicit zero means fully supported.
+    /// </summary>
+    public IReadOnlyList<double> UnsupportedAreaProfileMm2 { get; init; } = [];
 
     public double FootprintMm2 { get; init; }
 }

@@ -29,13 +29,15 @@ public static class InstantQuotationCompatibilityEndpoint
                 query["areaProfile"],
                 query["perimeterProfile"],
                 query["currency"],
-                ParseInt32(query["quantity"]))
+                ParseInt32(query["quantity"]),
+                query["unsupportedAreaProfile"])
             : InstantQuotationCalculator.GetOrderTotal(
                 query["processes"],
                 query["subtotals"],
                 ParseDouble(query["totalWeightGrams"]),
                 ParseDouble(query["totalBoundingCm3"]),
-                query["currency"]);
+                query["currency"],
+                query["destinationCountry"]);
 
         return context.Response.WriteAsJsonAsync(payload, context.RequestAborted);
     }

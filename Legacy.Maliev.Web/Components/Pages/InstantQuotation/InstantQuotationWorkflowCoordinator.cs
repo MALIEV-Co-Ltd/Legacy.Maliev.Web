@@ -899,6 +899,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             geometry.TopologyChecked,
             geometry.NonWatertight,
             geometry.NonManifold,
-            geometry.MinThicknessMm);
+            geometry.MinThicknessMm,
+            geometry.UnsupportedAreaProfileMm2);
     }
 }

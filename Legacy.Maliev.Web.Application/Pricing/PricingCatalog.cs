@@ -4,6 +4,8 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingCatalog
 {
+    public const string AdditivePricingPolicyVersion = "additive-2026-09-14.v1";
+
     public const double FdmLayerHeightMm = 0.2;
     public const double ResinLayerHeightMm = 0.05;
     public const double FdmLineWidthMm = 0.42;
@@ -18,6 +20,7 @@ public static class PricingCatalog
     public const double QualityBuildFactor = 1.35;
     public const double StrengthBuildFactor = 1.20;
     public const double FdmWallSpeedMmPerSec = 50.0;
+    public const double RushSurcharge = 0.0;
     public const double FdmSupportDensity = 0.15;
     public const double FdmSupportReachFactor = 0.5;
     public const double FdmSupportRemovalSecondsPerGram = 8.0;
@@ -42,6 +45,40 @@ public static class PricingCatalog
     public const double PaymentFeeRate = 0.03;
     public const double VatRate = 0.07;
     public const double TechnicalFilamentMinimumPrice = 500.0;
+
+    private static readonly FdmBuildProfile QualityFdmBuildProfile = new(
+        BuildPreference.Quality,
+        FdmQualityLayerHeightMm,
+        FdmWallCount,
+        FdmInfillDensity,
+        0.60,
+        0.60,
+        FdmQualityWallSpeedMmPerSec);
+
+    private static readonly FdmBuildProfile StandardFdmBuildProfile = new(
+        BuildPreference.Standard,
+        FdmLayerHeightMm,
+        FdmWallCount,
+        FdmInfillDensity,
+        1.00,
+        0.60,
+        FdmWallSpeedMmPerSec);
+
+    private static readonly FdmBuildProfile StrengthFdmBuildProfile = new(
+        BuildPreference.Strength,
+        FdmLayerHeightMm,
+        FdmStrengthWallCount,
+        FdmStrengthInfillDensity,
+        FdmStrengthTopBottomShellMm,
+        FdmStrengthTopBottomShellMm,
+        FdmStrengthWallSpeedMmPerSec);
+
+    public static FdmBuildProfile ResolveFdmBuildProfile(BuildPreference preference) => preference switch
+    {
+        BuildPreference.Quality => QualityFdmBuildProfile,
+        BuildPreference.Strength => StrengthFdmBuildProfile,
+        _ => StandardFdmBuildProfile,
+    };
 
     public static readonly IReadOnlyList<DiscountTier> DiscountTiers = new FrozenList<DiscountTier>(
     [
@@ -83,6 +120,8 @@ public static class PricingCatalog
     public static double SetupHours(PrintProcess process) => process == PrintProcess.Resin ? 0.35 : 0.25;
 
     public static double FailureReserveRate(PrintProcess process) => process == PrintProcess.Resin ? 0.15 : 0.10;
+
+    public static double PackagingCost(PrintProcess process) => process == PrintProcess.Resin ? 30.0 : 20.0;
 
     public static double MinimumOrderPrice(PrintProcess process) => process == PrintProcess.Resin ? 500.0 : 300.0;
 

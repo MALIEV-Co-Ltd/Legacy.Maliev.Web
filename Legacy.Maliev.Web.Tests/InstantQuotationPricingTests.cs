@@ -23,16 +23,21 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Fact]
-    public void ResinDirectCost_SharesPlateTimeButNotPerPartCosts()
+    public void ResinDirectCost_PricesActualOccupiedPlateCount()
     {
         var material = PricingCatalog.ResolveMaterial("M68")!;
-        var single = PricingEngine.ResinDirectCost(765, 40, material, 1);
-        var nested = PricingEngine.ResinDirectCost(765, 40, material, 10);
+        var onePart = PricingEngine.ResinDirectCost(765, 40, material, 1, 10);
+        var fullPlate = PricingEngine.ResinDirectCost(765, 40, material, 10, 10);
+        var partialSecondPlate = PricingEngine.ResinDirectCost(765, 40, material, 11, 10);
         var sharedTimeCost = (765 * (PricingCatalog.MachineHourly(PrintProcess.Resin) / 60.0))
             + (765 * PricingCatalog.OverheadPerMinute(PrintProcess.Resin));
+        var perPartCost = (40 * material.CostPerUnit)
+            + (PricingCatalog.ResinPostProcessingHours * PricingCatalog.LaborRatePerHour)
+            + PricingCatalog.ResinConsumablesPerPart;
 
-        Assert.Equal(single - (0.9 * sharedTimeCost), nested, 2);
-        Assert.True(nested < single);
+        Assert.Equal(perPartCost + sharedTimeCost, onePart, 2);
+        Assert.Equal(perPartCost + (sharedTimeCost / 10), fullPlate, 2);
+        Assert.Equal(perPartCost + ((sharedTimeCost * 2) / 11), partialSecondPlate, 2);
     }
 
     [Theory]
@@ -117,6 +122,56 @@ public sealed class InstantQuotationPricingTests
 
         Assert.True(elongatedEstimate.PrintMinutes > compactEstimate.PrintMinutes * 1.5);
         Assert.True(growingEstimate.SupportGrams > 0);
+    }
+
+    [Fact]
+    public void FdmUnsupportedAreaProfile_OverridesAreaGrowthFallback()
+    {
+        var pla = PricingCatalog.ResolveMaterial("PLA")!;
+        var vertical = new GeometryInput
+        {
+            HeightMm = 20,
+            VolumeMm3 = 4_000,
+            FootprintMm2 = 200,
+            AreaProfileMm2 = Enumerable.Repeat(200.0, 20).ToArray(),
+            PerimeterProfileMm = Enumerable.Repeat(60.0, 20).ToArray(),
+            UnsupportedAreaProfileMm2 = new double[20],
+        };
+        var shifted = new GeometryInput
+        {
+            HeightMm = vertical.HeightMm,
+            VolumeMm3 = vertical.VolumeMm3,
+            FootprintMm2 = vertical.FootprintMm2,
+            AreaProfileMm2 = vertical.AreaProfileMm2,
+            PerimeterProfileMm = vertical.PerimeterProfileMm,
+            UnsupportedAreaProfileMm2 = Enumerable.Repeat(50.0, 20).ToArray(),
+        };
+
+        var verticalEstimate = PrintTimeCalculator.EstimateFdm(vertical, pla);
+        var shiftedEstimate = PrintTimeCalculator.EstimateFdm(shifted, pla);
+
+        Assert.Equal(0, verticalEstimate.SupportGrams, 6);
+        Assert.True(shiftedEstimate.SupportGrams > 0);
+        Assert.True(shiftedEstimate.PrintMinutes > verticalEstimate.PrintMinutes);
+        Assert.True(shiftedEstimate.MaterialGrams > verticalEstimate.MaterialGrams);
+    }
+
+    [Theory]
+    [InlineData("Thailand", ShippingPricingState.DomesticPriced, "TH", 100)]
+    [InlineData("TH", ShippingPricingState.DomesticPriced, "TH", 100)]
+    [InlineData("THA", ShippingPricingState.DomesticPriced, "TH", 100)]
+    [InlineData("Japan", ShippingPricingState.ToBeQuoted, "JAPAN", 0)]
+    public void ShippingQuote_UsesDomesticRateOnlyForThailand(
+        string destination,
+        ShippingPricingState state,
+        string code,
+        decimal amount)
+    {
+        var quote = ShippingCalculator.Quote(destination, 100, 500);
+
+        Assert.Equal(state, quote.State);
+        Assert.Equal(code, quote.DestinationCountryCode);
+        Assert.Equal(amount, quote.AmountThb);
     }
 
     [Fact]

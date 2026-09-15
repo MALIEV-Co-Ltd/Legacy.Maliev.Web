@@ -229,6 +229,38 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Fact]
+    public void Quote_InternationalDestinationFailsClosedToShippingToBeQuoted()
+    {
+        var service = new InstantQuotationPricingService();
+        var result = service.Quote(
+            State(Part("PLA", "White", 1)),
+            "Japan");
+
+        Assert.Equal(ShippingPricingState.ToBeQuoted, result.ShippingState);
+        Assert.Equal("JAPAN", result.DestinationCountryCode);
+        Assert.Equal(0, result.ShippingCost, 2);
+        Assert.Equal(result.Printing * 1.07, result.FinalOrderPrice, 2);
+    }
+
+    [Fact]
+    public void GeometryClaim_PreservesValidatedUnsupportedAreaProfile()
+    {
+        var unsupported = Enumerable.Repeat(12.5, 64).ToArray();
+        var claim = Claim() with { UnsupportedAreaProfileMm2 = unsupported };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "operation",
+            new InstantQuotationUploadReference("opaque"),
+            claim.Sha256);
+
+        var geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim);
+
+        Assert.NotNull(geometry);
+        Assert.Equal(unsupported, geometry!.UnsupportedAreaProfileMm2);
+        unsupported[0] = 99;
+        Assert.Equal(12.5, geometry.UnsupportedAreaProfileMm2[0]);
+    }
+
+    [Fact]
     public void Quote_MixedFdmAndResinOrderUsesResinMinimumFloorRule()
     {
         var result = PricingService.Quote(State(

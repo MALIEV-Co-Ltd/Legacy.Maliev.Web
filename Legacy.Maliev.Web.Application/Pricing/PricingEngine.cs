@@ -15,7 +15,7 @@ public static class PricingEngine
         double printTime;
         double materialPerUnit;
         double weightGrams;
-        double complexityAdjustedCost;
+        Func<int, double> complexityAdjustedCostAtQuantity;
 
         if (material.Process == PrintProcess.Resin)
         {
@@ -24,13 +24,13 @@ public static class PricingEngine
                 * (1 + PricingCatalog.ResinSupportAllowance);
             materialPerUnit = resinMilliliters;
             weightGrams = resinMilliliters * ShippingCalculator.ResinDensityGramsPerMl;
-            var partsPerPlate = PricingCatalog.EstimatePartsPerPlate(geometry.FootprintMm2);
-            complexityAdjustedCost = ResinDirectCost(
+            var capacityPerPlate = PricingCatalog.EstimatePartsPerPlate(geometry.FootprintMm2);
+            complexityAdjustedCostAtQuantity = pricedQuantity => ResinDirectCost(
                 printTime,
                 resinMilliliters,
                 material,
-                partsPerPlate) * PricingCatalog.ComplexityFactor;
-            complexityAdjustedCost *= PricingCatalog.BuildPreferenceFactor(buildPreference);
+                pricedQuantity,
+                capacityPerPlate) * PricingCatalog.ComplexityFactor;
         }
         else
         {
@@ -38,11 +38,12 @@ public static class PricingEngine
             printTime = estimate.PrintMinutes;
             materialPerUnit = estimate.MaterialGrams;
             weightGrams = estimate.MaterialGrams;
-            complexityAdjustedCost = FdmDirectCost(
+            var fdmCost = FdmDirectCost(
                 printTime,
                 estimate.MaterialGrams,
                 estimate.SupportGrams,
                 material) * PricingCatalog.ComplexityFactor;
+            complexityAdjustedCostAtQuantity = _ => fdmCost;
         }
 
         var setupLabor = PricingCatalog.SetupHours(material.Process) * PricingCatalog.LaborRatePerHour;
@@ -54,7 +55,7 @@ public static class PricingEngine
             MinQuantity = tier.MinQuantity,
             UnitPrice = ApplyTechnicalFilamentMinimumUnitPrice(
                 RoundUnitPrice(AllInUnitPrice(
-                    complexityAdjustedCost,
+                    complexityAdjustedCostAtQuantity(tier.MinQuantity),
                     setupLabor,
                     failureRate,
                     paymentGrossUp,
@@ -65,6 +66,7 @@ public static class PricingEngine
             Active = tier.MinQuantity == activeTier.MinQuantity,
         }).ToArray();
 
+        var complexityAdjustedCost = complexityAdjustedCostAtQuantity(normalizedQuantity);
         var unroundedUnitPrice = AllInUnitPrice(
             complexityAdjustedCost,
             setupLabor,
@@ -162,12 +164,24 @@ public static class PricingEngine
         MaterialInfo material,
         int partsPerPlate)
     {
-        var nestedParts = Math.Max(1, partsPerPlate);
+        return ResinDirectCost(printTimeMinutes, resinMilliliters, material, 1, partsPerPlate);
+    }
+
+    internal static double ResinDirectCost(
+        double printTimeMinutes,
+        double resinMilliliters,
+        MaterialInfo material,
+        int quantity,
+        int capacityPerPlate)
+    {
+        var normalizedQuantity = Math.Max(1, quantity);
+        var nestedParts = Math.Max(1, capacityPerPlate);
+        var occupiedPlates = (int)Math.Ceiling(normalizedQuantity / (double)nestedParts);
         var machineHourly = PricingCatalog.MachineHourly(PrintProcess.Resin);
         var overheadPerMinute = PricingCatalog.OverheadPerMinute(PrintProcess.Resin);
         var resinCost = resinMilliliters * material.CostPerUnit;
-        var machineCost = (printTimeMinutes * (machineHourly / 60.0)) / nestedParts;
-        var overheadCost = (printTimeMinutes * overheadPerMinute) / nestedParts;
+        var machineCost = (printTimeMinutes * (machineHourly / 60.0) * occupiedPlates) / normalizedQuantity;
+        var overheadCost = (printTimeMinutes * overheadPerMinute * occupiedPlates) / normalizedQuantity;
         var postProcessing = PricingCatalog.ResinPostProcessingHours * PricingCatalog.LaborRatePerHour;
         return resinCost + machineCost + overheadCost + postProcessing + PricingCatalog.ResinConsumablesPerPart;
     }

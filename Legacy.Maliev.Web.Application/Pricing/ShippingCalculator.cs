@@ -46,4 +46,28 @@ public static class ShippingCalculator
         var customerPrice = Math.Ceiling(((carrierRate * CarrierMarkup) + PackagingMaterialThb) / 10.0) * 10.0;
         return Math.Max(MinimumShippingThb, customerPrice);
     }
+
+    /// <summary>Quotes shipping only when the destination is within Thailand.</summary>
+    public static ShippingQuote Quote(string? destinationCountry, double actualGrams, double boundingCm3)
+    {
+        var normalized = destinationCountry?.Trim();
+        var isThailand = string.IsNullOrWhiteSpace(normalized)
+            || string.Equals(normalized, "Thailand", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "TH", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "THA", StringComparison.OrdinalIgnoreCase);
+
+        return isThailand
+            ? new ShippingQuote
+            {
+                DestinationCountryCode = "TH",
+                State = ShippingPricingState.DomesticPriced,
+                AmountThb = Convert.ToDecimal(CustomerShippingThb(actualGrams, boundingCm3)),
+            }
+            : new ShippingQuote
+            {
+                DestinationCountryCode = normalized!.ToUpperInvariant(),
+                State = ShippingPricingState.ToBeQuoted,
+                AmountThb = 0m,
+            };
+    }
 }
