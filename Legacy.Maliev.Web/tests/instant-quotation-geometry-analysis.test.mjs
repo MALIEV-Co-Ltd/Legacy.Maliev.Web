@@ -39,6 +39,7 @@ test('analyzes indexed triangles in world space with the production geometry con
   assert.equal(result.facetCount, 4);
   assert.equal(result.areaProfileMm2.length, 64);
   assert.equal(result.perimeterProfileMm.length, 64);
+  assert.equal(result.unsupportedAreaProfileMm2.length, 64);
   assert.ok(result.minThicknessMm > 0);
   assert.equal(result.nonWatertight, false);
   assert.equal(result.nonManifold, false);
@@ -85,6 +86,7 @@ test('uses the half-bounding-box fallback only for an impossible non-watertight 
   assert.equal(result.volumeMethod, 'half-bounding-box-fallback');
   assert.equal(result.areaProfileMm2, null);
   assert.equal(result.perimeterProfileMm, null);
+  assert.equal(result.unsupportedAreaProfileMm2, null);
   assert.ok(Math.abs(result.minThicknessMm - baseline.minThicknessMm) < 1e-12);
 });
 
@@ -180,6 +182,7 @@ test('returns the exact zero geometry shape for an object without triangles', ()
     surfaceAreaMm2: 0,
     areaProfileMm2: null,
     perimeterProfileMm: null,
+    unsupportedAreaProfileMm2: null,
     facetCount: 0,
     bodyCount: 0,
     topologyChecked: false,

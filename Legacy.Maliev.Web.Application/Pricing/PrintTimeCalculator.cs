@@ -5,31 +5,26 @@ public static class PrintTimeCalculator
     public static FdmEstimate EstimateFdm(
         GeometryInput? geometry,
         MaterialInfo? material,
-        BuildPreference buildPreference = BuildPreference.Standard)
+        BuildPreference buildPreference = BuildPreference.Standard) =>
+        EstimateFdm(geometry, material, PricingCatalog.ResolveFdmBuildProfile(buildPreference));
+
+    public static FdmEstimate EstimateFdm(
+        GeometryInput? geometry,
+        MaterialInfo? material,
+        FdmBuildProfile? profile)
     {
-        if (geometry is null || material is null || geometry.HeightMm <= 0)
+        if (geometry is null || material is null || profile is null || geometry.HeightMm <= 0)
         {
             return new FdmEstimate();
         }
 
         var height = geometry.HeightMm;
-        var layerHeight = buildPreference == BuildPreference.Quality
-            ? PricingCatalog.FdmQualityLayerHeightMm
-            : PricingCatalog.FdmLayerHeightMm;
+        var layerHeight = profile.LayerHeightMm;
         var layers = Math.Max(1, (int)Math.Ceiling(height / layerHeight));
         var lineWidth = PricingCatalog.FdmLineWidthMm;
-        var walls = buildPreference == BuildPreference.Strength
-            ? PricingCatalog.FdmStrengthWallCount
-            : PricingCatalog.FdmWallCount;
-        var infillDensity = buildPreference == BuildPreference.Strength
-            ? PricingCatalog.FdmStrengthInfillDensity
-            : PricingCatalog.FdmInfillDensity;
-        var wallSpeed = buildPreference switch
-        {
-            BuildPreference.Quality => PricingCatalog.FdmQualityWallSpeedMmPerSec,
-            BuildPreference.Strength => PricingCatalog.FdmStrengthWallSpeedMmPerSec,
-            _ => PricingCatalog.FdmWallSpeedMmPerSec,
-        };
+        var walls = profile.WallCount;
+        var infillDensity = profile.InfillDensity;
+        var wallSpeed = profile.WallSpeedMmPerSecond;
         var infillFlow = PricingCatalog.FdmFlowRateMm3PerSecond(material.FlowClass);
         var minLayer = material.MinLayerSeconds;
         var density = material.DensityGramsPerCm3;
@@ -38,7 +33,7 @@ public static class PrintTimeCalculator
         double totalSeconds = 0;
         double depositedMm3 = 0;
         double supportMm3 = 0;
-        double previousArea = -1;
+        var previousArea = -1d;
         var layerAreas = new double[layers];
         var layerPerimeters = new double[layers];
 
@@ -47,32 +42,29 @@ public static class PrintTimeCalculator
             var fraction = (layer + 0.5) / layers;
             layerAreas[layer] = InterpolateProfile(geometry.AreaProfileMm2, fraction, uniformArea);
             var fallbackPerimeter = 4.0 * Math.Sqrt(Math.Max(0, layerAreas[layer]));
-            layerPerimeters[layer] = InterpolateProfile(geometry.PerimeterProfileMm, fraction, fallbackPerimeter);
+            layerPerimeters[layer] = InterpolateProfile(
+                geometry.PerimeterProfileMm,
+                fraction,
+                fallbackPerimeter);
         }
 
-        var strengthShellLayers = buildPreference == BuildPreference.Strength
-            ? Math.Max(1, (int)Math.Ceiling(PricingCatalog.FdmStrengthTopBottomShellMm / layerHeight))
-            : 0;
+        var topSkinLayers = Math.Max(1, (int)Math.Ceiling(profile.TopSkinThicknessMm / layerHeight));
+        var bottomSkinLayers = Math.Max(1, (int)Math.Ceiling(profile.BottomSkinThicknessMm / layerHeight));
+        var hasUnsupportedAreaProfile = geometry.UnsupportedAreaProfileMm2.Count > 0;
 
         for (var layer = 0; layer < layers; layer++)
         {
             var fraction = (layer + 0.5) / layers;
             var area = layerAreas[layer];
             var perimeter = layerPerimeters[layer];
-
             var wallCrossArea = Math.Min(area, perimeter * walls * lineWidth);
             var wallPathLength = wallCrossArea / lineWidth;
             var interiorArea = Math.Max(0, area - wallCrossArea);
-            double solidSkinArea = 0;
-            if (strengthShellLayers > 0)
-            {
-                var lowerArea = layer >= strengthShellLayers ? layerAreas[layer - strengthShellLayers] : 0;
-                var upperArea = layer + strengthShellLayers < layers ? layerAreas[layer + strengthShellLayers] : 0;
-                var bottomSkinArea = Math.Max(0, area - lowerArea);
-                var topSkinArea = Math.Max(0, area - upperArea);
-                solidSkinArea = Math.Min(interiorArea, bottomSkinArea + topSkinArea);
-            }
-
+            var lowerArea = layer >= bottomSkinLayers ? layerAreas[layer - bottomSkinLayers] : 0;
+            var upperArea = layer + topSkinLayers < layers ? layerAreas[layer + topSkinLayers] : 0;
+            var bottomSkinArea = Math.Max(0, area - lowerArea);
+            var topSkinArea = Math.Max(0, area - upperArea);
+            var solidSkinArea = Math.Min(interiorArea, bottomSkinArea + topSkinArea);
             var sparseInfillArea = Math.Max(0, interiorArea - solidSkinArea);
             var wallDeposit = wallCrossArea * layerHeight;
             var infillDeposit = (solidSkinArea + (sparseInfillArea * infillDensity)) * layerHeight;
@@ -84,9 +76,11 @@ public static class PrintTimeCalculator
 
             if (previousArea >= 0)
             {
-                var growth = Math.Max(0, area - previousArea);
+                var unsupportedArea = hasUnsupportedAreaProfile
+                    ? InterpolateProfile(geometry.UnsupportedAreaProfileMm2, fraction, 0)
+                    : Math.Max(0, area - previousArea);
                 var heightFromBase = fraction * height;
-                supportMm3 += growth
+                supportMm3 += unsupportedArea
                     * heightFromBase
                     * PricingCatalog.FdmSupportReachFactor
                     * PricingCatalog.FdmSupportDensity;
@@ -120,7 +114,10 @@ public static class PrintTimeCalculator
         return (layers * PricingCatalog.ResinPerLayerSeconds) / 60.0;
     }
 
-    private static double InterpolateProfile(IReadOnlyList<double> profile, double fraction, double fallback)
+    private static double InterpolateProfile(
+        IReadOnlyList<double> profile,
+        double fraction,
+        double fallback)
     {
         if (profile.Count == 0)
         {

@@ -8,6 +8,8 @@ export const geometryAnalysisLimits = Object.freeze({
 });
 
 const thicknessEdgeTrimFraction = 0.05;
+const supportOccupancyGridSize = 24;
+const supportOccupancyMaxTriangles = 120000;
 
 /**
  * Reproduces the legacy production mesh analysis over upload-derived geometry.
@@ -74,6 +76,15 @@ export function analyzeUploadDerivedGeometry(object3D) {
   const dimensionZmm = maxZ - minZ;
   const diagonal = Math.hypot(dimensionXmm, dimensionYmm, dimensionZmm);
   let profiles = computeAreaProfiles(triangles, minZ, maxZ, profileSamples);
+  let unsupportedAreaProfileMm2 = computeUnsupportedAreaProfile(
+    triangles,
+    minX,
+    maxX,
+    minY,
+    maxY,
+    minZ,
+    maxZ,
+    profileSamples);
   const quality = analyzeMeshQuality(triangles, diagonal);
   const minThicknessMm = minimumThickness(
     profiles,
@@ -90,6 +101,7 @@ export function analyzeUploadDerivedGeometry(object3D) {
       && (volumeMm3 <= 0 || volumeMm3 > boundingBoxVolume * 1.02)) {
     volumeMm3 = boundingBoxVolume * 0.5;
     profiles = null;
+    unsupportedAreaProfileMm2 = null;
     volumeMethod = 'half-bounding-box-fallback';
   }
 
@@ -107,6 +119,7 @@ export function analyzeUploadDerivedGeometry(object3D) {
     surfaceAreaMm2,
     areaProfileMm2: profiles?.area ?? null,
     perimeterProfileMm: profiles?.perimeter ?? null,
+    unsupportedAreaProfileMm2,
     facetCount,
     bodyCount: quality.bodyCount,
     topologyChecked: quality.checked,
@@ -213,6 +226,101 @@ function trianglePlaneSegment(ax, ay, az, bx, by, bz, cx, cy, cz, level) {
   addPlaneEdgeCrossing(points, bx, by, bz, cx, cy, cz, level);
   addPlaneEdgeCrossing(points, cx, cy, cz, ax, ay, az, level);
   return points.length < 4 ? null : points.slice(0, 4);
+}
+
+// Computes an advisory unsupported XY area profile from overlap with the preceding sampled
+// layer. The fixed grid and triangle cap keep the calculation bounded for upload batches.
+function computeUnsupportedAreaProfile(triangles, minX, maxX, minY, maxY, minZ, maxZ, samples) {
+  const height = maxZ - minZ;
+  const width = maxX - minX;
+  const depth = maxY - minY;
+  const triangleCount = triangles.length / 9;
+  if (height <= 0 || width <= 0 || depth <= 0 || triangleCount === 0
+      || triangleCount > supportOccupancyMaxTriangles) {
+    return null;
+  }
+
+  const segmentsBySlice = Array.from({ length: samples }, () => []);
+  for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+    const offset = triangle * 9;
+    const ax = triangles[offset];
+    const ay = triangles[offset + 1];
+    const az = triangles[offset + 2];
+    const bx = triangles[offset + 3];
+    const by = triangles[offset + 4];
+    const bz = triangles[offset + 5];
+    const cx = triangles[offset + 6];
+    const cy = triangles[offset + 7];
+    const cz = triangles[offset + 8];
+    const triangleMin = Math.min(az, bz, cz);
+    const triangleMax = Math.max(az, bz, cz);
+    if (triangleMax <= triangleMin) continue;
+
+    const first = Math.max(0, Math.ceil(((triangleMin - minZ) / height) * (samples - 1)));
+    const last = Math.min(samples - 1, Math.floor(((triangleMax - minZ) / height) * (samples - 1)));
+    for (let sample = first; sample <= last; sample += 1) {
+      const level = minZ + (sample / (samples - 1)) * height;
+      const segment = trianglePlaneSegment(ax, ay, az, bx, by, bz, cx, cy, cz, level);
+      if (segment) segmentsBySlice[sample].push(segment);
+    }
+  }
+
+  const grid = supportOccupancyGridSize;
+  const cellWidth = width / grid;
+  const cellDepth = depth / grid;
+  const cellArea = cellWidth * cellDepth;
+  const layerStep = height / Math.max(1, samples - 1);
+  const toleranceCells = Math.floor(layerStep / Math.max(cellWidth, cellDepth));
+  const unsupported = new Array(samples).fill(0);
+  let previous = null;
+
+  const occupiedAt = (segments, pointX, pointY) => {
+    let inside = false;
+    for (const edge of segments) {
+      const y0 = edge[1];
+      const y1 = edge[3];
+      if ((y0 > pointY) !== (y1 > pointY)) {
+        const crossingX = edge[0] + ((pointY - y0) * (edge[2] - edge[0]) / (y1 - y0));
+        if (pointX < crossingX) inside = !inside;
+      }
+    }
+    return inside;
+  };
+
+  const supportedByPrevious = (mask, x, y) => {
+    if (!mask) return true;
+    for (let offsetY = -toleranceCells; offsetY <= toleranceCells; offsetY += 1) {
+      for (let offsetX = -toleranceCells; offsetX <= toleranceCells; offsetX += 1) {
+        const sourceX = x + offsetX;
+        const sourceY = y + offsetY;
+        if (sourceX >= 0 && sourceX < grid && sourceY >= 0 && sourceY < grid
+            && mask[(sourceY * grid) + sourceX]) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  for (let slice = 0; slice < samples; slice += 1) {
+    const current = new Uint8Array(grid * grid);
+    let unsupportedCells = 0;
+    for (let gridY = 0; gridY < grid; gridY += 1) {
+      for (let gridX = 0; gridX < grid; gridX += 1) {
+        const pointX = minX + ((gridX + 0.5) * cellWidth);
+        const pointY = minY + ((gridY + 0.5) * cellDepth);
+        const index = (gridY * grid) + gridX;
+        if (occupiedAt(segmentsBySlice[slice], pointX, pointY)) {
+          current[index] = 1;
+          if (slice > 0 && !supportedByPrevious(previous, gridX, gridY)) unsupportedCells += 1;
+        }
+      }
+    }
+    unsupported[slice] = unsupportedCells * cellArea;
+    previous = current;
+  }
+
+  return unsupported;
 }
 
 function addPlaneEdgeCrossing(points, x0, y0, z0, x1, y1, z1, level) {
@@ -343,6 +451,7 @@ function emptyAnalysis() {
     surfaceAreaMm2: 0,
     areaProfileMm2: null,
     perimeterProfileMm: null,
+    unsupportedAreaProfileMm2: null,
     facetCount: 0,
     bodyCount: 0,
     topologyChecked: false,

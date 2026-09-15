@@ -161,7 +161,8 @@ public sealed class ThreeDimensionalPrinting : PageModel
         string? areaProfile,
         string? perimeterProfile,
         string? currency,
-        int quantity) => new(InstantQuotationCalculator.GetEstimate(
+        int quantity,
+        string? unsupportedAreaProfile = null) => new(InstantQuotationCalculator.GetEstimate(
             material,
             dimensionZ,
             volume,
@@ -169,19 +170,22 @@ public sealed class ThreeDimensionalPrinting : PageModel
             areaProfile,
             perimeterProfile,
             currency,
-            quantity));
+            quantity,
+            unsupportedAreaProfile));
 
     public JsonResult OnGetGetOrderTotal(
         string? processes,
         string? subtotals,
         double totalWeightGrams,
         double totalBoundingCm3,
-        string? currency) => new(InstantQuotationCalculator.GetOrderTotal(
+        string? currency,
+        string? destinationCountry = null) => new(InstantQuotationCalculator.GetOrderTotal(
             processes,
             subtotals,
             totalWeightGrams,
             totalBoundingCm3,
-            currency));
+            currency,
+            destinationCountry));
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {

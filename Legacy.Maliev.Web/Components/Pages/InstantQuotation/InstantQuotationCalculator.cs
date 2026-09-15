@@ -25,7 +25,8 @@ public static class InstantQuotationCalculator
         string? areaProfile,
         string? perimeterProfile,
         string? currency,
-        int quantity)
+        int quantity,
+        string? unsupportedAreaProfile = null)
     {
         var materialInfo = PricingCatalog.ResolveMaterial(material);
         if (materialInfo is null)
@@ -44,6 +45,7 @@ public static class InstantQuotationCalculator
             FootprintMm2 = AbsoluteFinite(footprint),
             AreaProfileMm2 = ParseProfile(areaProfile),
             PerimeterProfileMm = ParseProfile(perimeterProfile),
+            UnsupportedAreaProfileMm2 = ParseProfile(unsupportedAreaProfile),
         };
         var quote = PricingEngine.QuoteItem(geometry, materialInfo, quantity);
 
@@ -76,7 +78,8 @@ public static class InstantQuotationCalculator
         string? subtotals,
         double totalWeightGrams,
         double totalBoundingCm3,
-        string? currency)
+        string? currency,
+        string? destinationCountry = null)
     {
         var processList = SplitValues(processes);
         var subtotalList = SplitValues(subtotals);
@@ -97,10 +100,11 @@ public static class InstantQuotationCalculator
             }
         }
 
-        var shipping = ShippingCalculator.CustomerShippingThb(
+        var shippingQuote = ShippingCalculator.Quote(
+            destinationCountry,
             AbsoluteFinite(totalWeightGrams),
             AbsoluteFinite(totalBoundingCm3));
-        var order = PricingEngine.QuoteOrder(lines, shipping);
+        var order = PricingEngine.QuoteOrder(lines, Convert.ToDouble(shippingQuote.AmountThb));
         return new
         {
             success = true,
@@ -109,6 +113,8 @@ public static class InstantQuotationCalculator
             minimumOrderPrice = Math.Round(order.MinimumOrderPrice, 2),
             minimumOrderSurcharge = Math.Round(order.MinimumOrderSurcharge, 2),
             shipping = Math.Round(order.ShippingCost, 2),
+            shippingState = shippingQuote.State.ToString(),
+            destinationCountryCode = shippingQuote.DestinationCountryCode,
             vat = Math.Round(order.Vat, 2),
             finalOrderPrice = Math.Round(order.FinalOrderPrice, 2),
             currency = NormalizeCurrency(currency),

@@ -9,16 +9,26 @@ public interface IInstantQuotationPricingService
 
 public sealed class InstantQuotationPricingService : IInstantQuotationPricingService
 {
-    public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state)
+    public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state) => Quote(state, null);
+
+    public InstantQuotationOrderQuote Quote(
+        InstantQuotationOrderState state,
+        string? destinationCountry)
     {
         ArgumentNullException.ThrowIfNull(state);
 
         var partQuotes = (state.Parts ?? throw new ArgumentException("Parts are required.", nameof(state)))
             .Select(QuotePart)
             .ToArray();
-        var shipping = partQuotes.Length == 0
-            ? 0
-            : ShippingCalculator.CustomerShippingThb(
+        var shippingQuote = partQuotes.Length == 0
+            ? new ShippingQuote
+            {
+                DestinationCountryCode = "TH",
+                State = ShippingPricingState.DomesticPriced,
+                AmountThb = 0,
+            }
+            : ShippingCalculator.Quote(
+                destinationCountry,
                 partQuotes.Sum(part => part.WeightGramsPerUnit * part.Quantity),
                 partQuotes.Sum(part => part.BoundingCm3PerUnit * part.Quantity));
         var order = PricingEngine.QuoteOrder(
@@ -27,7 +37,7 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
                 Process = part.Process,
                 Subtotal = part.Subtotal,
             }),
-            shipping);
+            Convert.ToDouble(shippingQuote.AmountThb));
         var totalPrintMinutes = partQuotes.Sum(part => part.PrintTimeMinutesPerUnit * part.Quantity);
         var minimumLeadTimeDays = Math.Max(1, (int)Math.Ceiling(totalPrintMinutes / 1_440));
 
@@ -42,7 +52,9 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             order.Vat,
             order.FinalOrderPrice,
             minimumLeadTimeDays,
-            minimumLeadTimeDays + 2);
+            minimumLeadTimeDays + 2,
+            shippingQuote.State,
+            shippingQuote.DestinationCountryCode);
     }
 
     private static InstantQuotationPartQuote QuotePart(InstantQuotationPart part)
@@ -77,12 +89,16 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             FootprintMm2 = geometry.FootprintMm2,
             AreaProfileMm2 = geometry.AreaProfileMm2,
             PerimeterProfileMm = geometry.PerimeterProfileMm,
+            UnsupportedAreaProfileMm2 = geometry.UnsupportedAreaProfileMm2,
         };
+        var buildPreference = material.Process == PrintProcess.Resin
+            ? BuildPreference.Standard
+            : configuration.BuildPreference;
         var item = PricingEngine.QuoteItem(
             geometryInput,
             material,
             configuration.Quantity,
-            configuration.BuildPreference);
+            buildPreference);
         var materialPrices = PricingCatalog.Materials.Values
             .Select(candidate => new InstantQuotationMaterialPrice(
                 candidate.Key,
@@ -90,7 +106,7 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
                     geometryInput,
                     candidate,
                     configuration.Quantity,
-                    configuration.BuildPreference).UnitPrice))
+                    candidate.Process == PrintProcess.Resin ? BuildPreference.Standard : buildPreference).UnitPrice))
             .ToArray();
 
         return new InstantQuotationPartQuote(
@@ -109,7 +125,7 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             item.TechnicalFilamentMinimumPrice,
             item.TechnicalFilamentMinimumAdjustment,
             item.Tiers,
-            configuration.BuildPreference,
+            buildPreference,
             materialPrices);
     }
 }

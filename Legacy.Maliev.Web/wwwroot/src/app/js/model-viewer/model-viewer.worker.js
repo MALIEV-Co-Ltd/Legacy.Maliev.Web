@@ -173,6 +173,8 @@ function OcctResultToGroup(result) {
 
 var AREA_PROFILE_SAMPLES = 64;
 var THICKNESS_EDGE_TRIM_FRACTION = 0.05;
+var SUPPORT_OCCUPANCY_GRID_SIZE = 24;
+var SUPPORT_OCCUPANCY_MAX_TRIANGLES = 120000;
 var MIN_REASONABLE_DIMENSION_MM = 3;
 var MAX_BUILD_DIMENSION_MM = 350;
 
@@ -346,6 +348,92 @@ function ComputeAreaProfile(tris, minZ, maxZ, samples) {
     return { area: area, perimeter: perimeter };
 }
 
+// Computes unsupported XY area from overlap between adjacent sampled layers. The fixed
+// grid and triangle cap keep this advisory evidence bounded for multi-file batches.
+function ComputeUnsupportedAreaProfile(tris, minX, maxX, minY, maxY, minZ, maxZ, samples) {
+    var height = maxZ - minZ;
+    var width = maxX - minX;
+    var depth = maxY - minY;
+    var triangleCount = tris.length / 9;
+    if (height <= 0 || width <= 0 || depth <= 0 || triangleCount === 0
+        || triangleCount > SUPPORT_OCCUPANCY_MAX_TRIANGLES) {
+        return null;
+    }
+
+    var segmentsBySlice = Array.from({ length: samples }, function () { return []; });
+    for (var t = 0; t < triangleCount; t++) {
+        var o = t * 9;
+        var ax = tris[o], ay = tris[o + 1], az = tris[o + 2];
+        var bx = tris[o + 3], by = tris[o + 4], bz = tris[o + 5];
+        var cx = tris[o + 6], cy = tris[o + 7], cz = tris[o + 8];
+        var triMin = Math.min(az, bz, cz);
+        var triMax = Math.max(az, bz, cz);
+        if (triMax <= triMin) { continue; }
+        var first = Math.max(0, Math.ceil(((triMin - minZ) / height) * (samples - 1)));
+        var last = Math.min(samples - 1, Math.floor(((triMax - minZ) / height) * (samples - 1)));
+        for (var s = first; s <= last; s++) {
+            var z = minZ + (s / (samples - 1)) * height;
+            var segment = TrianglePlaneSegment(ax, ay, az, bx, by, bz, cx, cy, cz, z);
+            if (segment) { segmentsBySlice[s].push(segment); }
+        }
+    }
+
+    var grid = SUPPORT_OCCUPANCY_GRID_SIZE;
+    var cellWidth = width / grid;
+    var cellDepth = depth / grid;
+    var cellArea = cellWidth * cellDepth;
+    var layerStep = height / Math.max(1, samples - 1);
+    var toleranceCells = Math.floor(layerStep / Math.max(cellWidth, cellDepth));
+    var unsupported = new Array(samples).fill(0);
+    var previous = null;
+
+    function occupiedAt(segments, px, py) {
+        var inside = false;
+        for (var i = 0; i < segments.length; i++) {
+            var edge = segments[i];
+            var y0 = edge[1], y1 = edge[3];
+            if ((y0 > py) !== (y1 > py)) {
+                var crossingX = edge[0] + ((py - y0) * (edge[2] - edge[0]) / (y1 - y0));
+                if (px < crossingX) { inside = !inside; }
+            }
+        }
+        return inside;
+    }
+
+    function supportedByPrevious(mask, x, y) {
+        if (!mask) { return true; }
+        for (var oy = -toleranceCells; oy <= toleranceCells; oy++) {
+            for (var ox = -toleranceCells; ox <= toleranceCells; ox++) {
+                var sx = x + ox, sy = y + oy;
+                if (sx >= 0 && sx < grid && sy >= 0 && sy < grid && mask[(sy * grid) + sx]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    for (var slice = 0; slice < samples; slice++) {
+        var current = new Uint8Array(grid * grid);
+        var unsupportedCells = 0;
+        for (var gy = 0; gy < grid; gy++) {
+            for (var gx = 0; gx < grid; gx++) {
+                var px = minX + ((gx + 0.5) * cellWidth);
+                var py = minY + ((gy + 0.5) * cellDepth);
+                var index = (gy * grid) + gx;
+                if (occupiedAt(segmentsBySlice[slice], px, py)) {
+                    current[index] = 1;
+                    if (slice > 0 && !supportedByPrevious(previous, gx, gy)) { unsupportedCells++; }
+                }
+            }
+        }
+        unsupported[slice] = unsupportedCells * cellArea;
+        previous = current;
+    }
+
+    return unsupported;
+}
+
 // The first and last horizontal slices intersect the mesh's caps. On sloped or rounded
 // caps their cross-sectional area collapses towards zero, which is cap geometry rather
 // than a printable wall measurement. Ignore a narrow boundary band while retaining every
@@ -480,7 +568,7 @@ function AnalyzeMeshQuality(tris, diag) {
     return { nonWatertight: nonWatertight, nonManifold: nonManifold, bodyCount: roots.size, checked: true };
 }
 
-function AnalyzeObject(object3D) {
+function AnalyzeObject(object3D, includeUnsupportedAreaProfile) {
     var tris = ExtractTriangles(object3D);
     var facets = tris.length / 9;
     var minX = Infinity, minY = Infinity, minZ = Infinity;
@@ -513,7 +601,7 @@ function AnalyzeObject(object3D) {
     if (!isFinite(minX)) {
         return {
             min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 }, volume: 0, facets: 0,
-            areaProfile: null, perimeterProfile: null, surfaceAreaMm2: 0, minThicknessMm: 0,
+            areaProfile: null, perimeterProfile: null, unsupportedAreaProfile: null, surfaceAreaMm2: 0, minThicknessMm: 0,
             nonWatertight: false, nonManifold: false, bodyCount: 0, oddlySmall: false, oddlyLarge: false
         };
     }
@@ -522,6 +610,8 @@ function AnalyzeObject(object3D) {
     var diagonal = Math.sqrt(dx * dx + dy * dy + dz * dz);
     var samples = facets > 250000 ? 24 : AREA_PROFILE_SAMPLES;
     var profile = ComputeAreaProfile(tris, minZ, maxZ, samples);
+    var unsupportedAreaProfile = includeUnsupportedAreaProfile ? ComputeUnsupportedAreaProfile(
+        tris, minX, maxX, minY, maxY, minZ, maxZ, samples) : null;
     var quality = AnalyzeMeshQuality(tris, diagonal);
 
     // Approximate local wall thickness as 2*area/perimeter (exact for a uniform annulus)
@@ -539,6 +629,7 @@ function AnalyzeObject(object3D) {
         facets: facets,
         areaProfile: profile ? profile.area : null,
         perimeterProfile: profile ? profile.perimeter : null,
+        unsupportedAreaProfile: unsupportedAreaProfile,
         surfaceAreaMm2: surfaceArea,
         minThicknessMm: minThickness,
         nonWatertight: quality.nonWatertight,
@@ -909,7 +1000,7 @@ self.onmessage = function (event) {
                 // Core measurements are cheap enough to finish in the decode worker and
                 // must accompany the first visible CAD frame. Only CNC accessibility and
                 // setup evidence are deferred to the independent analysis worker.
-                var modelInfo = AnalyzeObject(object3D);
+        var modelInfo = AnalyzeObject(object3D, event.data.analysisProfile !== 'cnc');
                 var meshes = ExtractMeshBuffers(object3D, retainNative);
                 if (event.data.analysisProfile === 'cnc' && event.data.deferCncAnalysis !== true) {
                     AnalyzeCncObject(object3D, modelInfo).then(function (cncGeometry) {
@@ -933,7 +1024,7 @@ self.onmessage = function (event) {
             }).catch(fail);
         } else if (data.action === 'analyze') {
             var object3D = BuildObject3DFromMeshBuffers(data.meshes);
-            var modelInfo = AnalyzeObject(object3D);
+            var modelInfo = AnalyzeObject(object3D, event.data.analysisProfile !== 'cnc');
             if (event.data.analysisProfile === 'cnc') {
                 AnalyzeCncObject(object3D, modelInfo).then(function (cncGeometry) {
                     self.postMessage({ jobId: jobId, success: true, meshes: null, modelInfo: modelInfo, cncGeometry: cncGeometry });

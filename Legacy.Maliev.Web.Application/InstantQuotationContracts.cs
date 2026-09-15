@@ -10,7 +10,8 @@ public sealed record InstantQuotationGeometry(
     IReadOnlyList<double> PerimeterProfileMm,
     int FacetCount,
     int BodyCount,
-    bool IsManifold);
+    bool IsManifold,
+    IReadOnlyList<double>? UnsupportedAreaProfileMm2 = null);
 
 public sealed record InstantQuotationGeometryClaim(
     int Version,
@@ -27,7 +28,8 @@ public sealed record InstantQuotationGeometryClaim(
     bool TopologyChecked,
     bool NonWatertight,
     bool NonManifold,
-    double MinThicknessMm)
+    double MinThicknessMm,
+    IReadOnlyList<double>? UnsupportedAreaProfileMm2 = null)
 {
     public bool IsValid()
     {
@@ -45,6 +47,11 @@ public sealed record InstantQuotationGeometryClaim(
                 && PerimeterProfileMm.All(value => double.IsFinite(value) && value >= 0)
                 && AreaProfileMm2.Any(value => value > 0)
                 && PerimeterProfileMm.Any(value => value > 0);
+        var unsupportedProfileValid = UnsupportedAreaProfileMm2 is null
+            || (AreaProfileMm2 is { Count: > 0 }
+                && PerimeterProfileMm is { Count: > 0 }
+                && UnsupportedAreaProfileMm2.Count == expectedProfileCount
+                && UnsupportedAreaProfileMm2.All(value => double.IsFinite(value) && value >= 0));
         var topologyValid = FacetCount <= 200_000
             ? TopologyChecked
             : !TopologyChecked && BodyCount == 1 && !NonWatertight && !NonManifold;
@@ -59,6 +66,7 @@ public sealed record InstantQuotationGeometryClaim(
             && VolumeMm3 <= boundingVolume * 1.02
             && IsFinitePositive(SurfaceAreaMm2)
             && profilesValid
+            && unsupportedProfileValid
             && FacetCount > 0
             && BodyCount > 0
             && BodyCount <= FacetCount
@@ -71,6 +79,9 @@ public sealed record InstantQuotationGeometryClaim(
     {
         AreaProfileMm2 = AreaProfileMm2 is null ? null : new ImmutableValueList<double>(AreaProfileMm2),
         PerimeterProfileMm = PerimeterProfileMm is null ? null : new ImmutableValueList<double>(PerimeterProfileMm),
+        UnsupportedAreaProfileMm2 = UnsupportedAreaProfileMm2 is null
+            ? null
+            : new ImmutableValueList<double>(UnsupportedAreaProfileMm2),
     };
 
     private static bool IsFinitePositive(double value) => double.IsFinite(value) && value > 0;
@@ -89,7 +100,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
         IReadOnlyList<double> perimeterProfileMm,
         int facetCount,
         int bodyCount,
-        bool isManifold)
+        bool isManifold,
+        IReadOnlyList<double>? unsupportedAreaProfileMm2 = null)
         : this(
             0,
             string.Empty,
@@ -105,7 +117,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
             true,
             !isManifold,
             !isManifold,
-            0)
+            0,
+            unsupportedAreaProfileMm2)
     {
     }
 
@@ -124,7 +137,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
         bool topologyChecked,
         bool nonWatertight,
         bool nonManifold,
-        double minThicknessMm)
+        double minThicknessMm,
+        IReadOnlyList<double>? unsupportedAreaProfileMm2)
     {
         ClaimVersion = claimVersion;
         Sha256 = sha256;
@@ -137,6 +151,7 @@ public sealed class AuthoritativeInstantQuotationGeometry
         FootprintMm2 = dimensionXmm * dimensionYmm;
         AreaProfileMm2 = new ImmutableValueList<double>(areaProfileMm2);
         PerimeterProfileMm = new ImmutableValueList<double>(perimeterProfileMm);
+        UnsupportedAreaProfileMm2 = new ImmutableValueList<double>(unsupportedAreaProfileMm2 ?? []);
         FacetCount = facetCount;
         BodyCount = bodyCount;
         TopologyChecked = topologyChecked;
@@ -166,6 +181,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
     public IReadOnlyList<double> AreaProfileMm2 { get; }
 
     public IReadOnlyList<double> PerimeterProfileMm { get; }
+
+    public IReadOnlyList<double> UnsupportedAreaProfileMm2 { get; }
 
     public int FacetCount { get; }
 
@@ -213,7 +230,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
             claim.TopologyChecked,
             claim.NonWatertight,
             claim.NonManifold,
-            claim.MinThicknessMm);
+            claim.MinThicknessMm,
+            claim.UnsupportedAreaProfileMm2);
     }
 
     internal static AuthoritativeInstantQuotationGeometry RestoreFromProtectedSession(
@@ -224,7 +242,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
         IReadOnlyList<double> perimeterProfileMm,
         int facetCount,
         int bodyCount,
-        bool isManifold) => new(
+        bool isManifold,
+        IReadOnlyList<double>? unsupportedAreaProfileMm2 = null) => new(
             heightMm,
             volumeMm3,
             footprintMm2,
@@ -232,7 +251,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
             perimeterProfileMm,
             facetCount,
             bodyCount,
-            isManifold);
+            isManifold,
+            unsupportedAreaProfileMm2);
 
     internal static AuthoritativeInstantQuotationGeometry RestoreFromProtectedSession(
         int claimVersion,
@@ -249,7 +269,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
         bool topologyChecked,
         bool nonWatertight,
         bool nonManifold,
-        double minThicknessMm) => new(
+        double minThicknessMm,
+        IReadOnlyList<double>? unsupportedAreaProfileMm2 = null) => new(
             claimVersion,
             sha256,
             dimensionXmm,
@@ -264,7 +285,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
             topologyChecked,
             nonWatertight,
             nonManifold,
-            minThicknessMm);
+            minThicknessMm,
+            unsupportedAreaProfileMm2);
 }
 
 public sealed record InstantQuotationPartConfiguration(
@@ -314,7 +336,9 @@ public sealed record InstantQuotationOrderQuote(
     double Vat,
     double FinalOrderPrice,
     int LeadTimeMinimumDays,
-    int LeadTimeMaximumDays);
+    int LeadTimeMaximumDays,
+    ShippingPricingState ShippingState = ShippingPricingState.DomesticPriced,
+    string DestinationCountryCode = "TH");
 
 public sealed record InstantQuotationOrderState(IReadOnlyList<InstantQuotationPart> Parts);
 
