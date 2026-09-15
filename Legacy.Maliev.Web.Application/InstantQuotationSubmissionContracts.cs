@@ -51,7 +51,9 @@ public sealed record InstantQuotationSubmissionCheckpoint(
     bool IdentityCreated = false,
     IReadOnlyList<int>? OrderIds = null,
     string? WelcomeConfirmationToken = null,
-    bool CompensationRequired = false);
+    bool CompensationRequired = false,
+    string? TransactionId = null,
+    Guid? JourneyId = null);
 
 public sealed record InstantQuotationSubmissionCheckpointRead(
     bool LeaseValid,
@@ -90,7 +92,9 @@ public enum InstantQuotationSubmissionOutcome
 public sealed record InstantQuotationSubmissionResult(
     InstantQuotationSubmissionOutcome Outcome,
     int? RequestReference,
-    InstantQuotationProblemCategory ProblemCategory);
+    InstantQuotationProblemCategory ProblemCategory,
+    string? TransactionId = null,
+    Guid? JourneyId = null);
 
 public interface IInstantQuotationSubmissionService
 {

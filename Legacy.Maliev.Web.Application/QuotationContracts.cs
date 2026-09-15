@@ -9,12 +9,15 @@ public sealed record QuotationRequestSubmission(
     string? CompanyName,
     string? TaxIdentification,
     string Message,
-    string? InternalComment = null);
+    string? InternalComment = null,
+    Guid? JourneyId = null);
 
 public sealed record QuotationRequestResult(
     int? ReferenceNumber,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized,
+    string? TransactionId = null,
+    Guid? JourneyId = null);
 
 public sealed record QuotationUpload(
     string FileName,

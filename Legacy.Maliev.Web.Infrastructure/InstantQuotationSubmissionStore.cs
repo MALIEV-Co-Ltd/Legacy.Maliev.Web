@@ -193,7 +193,9 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                 checkpoint.IdentityCreated,
                 checkpoint.OrderIds,
                 checkpoint.WelcomeConfirmationToken,
-                checkpoint.CompensationRequired);
+                checkpoint.CompensationRequired,
+                checkpoint.TransactionId,
+                checkpoint.JourneyId);
             var payload = JsonSerializer.SerializeToUtf8Bytes(persisted);
             var protectedPayload = protector.Protect(payload);
             try
@@ -237,6 +239,7 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             && checkpoint.Version == CurrentVersion
             && string.Equals(checkpoint.SubmissionId, submissionId, StringComparison.Ordinal)
             && checkpoint.RequestReference > 0
+            && (checkpoint.TransactionId is null || IsValidTransactionId(checkpoint.TransactionId, checkpoint.RequestReference))
             && Enum.IsDefined(checkpoint.Status)
             && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest)
             && IsValidStageData(checkpoint.Status, checkpoint.FinalizedFiles, checkpoint.CustomerId, checkpoint.IdentityCreated, checkpoint.OrderIds, checkpoint.WelcomeConfirmationToken);
@@ -244,6 +247,7 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
         private bool IsValid(InstantQuotationSubmissionCheckpoint checkpoint) =>
             string.Equals(checkpoint.SubmissionId, submissionId, StringComparison.Ordinal)
             && checkpoint.RequestReference > 0
+            && (checkpoint.TransactionId is null || IsValidTransactionId(checkpoint.TransactionId, checkpoint.RequestReference))
             && Enum.IsDefined(checkpoint.Status)
             && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest)
             && IsValidStageData(checkpoint.Status, checkpoint.FinalizedFiles, checkpoint.CustomerId, checkpoint.IdentityCreated, checkpoint.OrderIds, checkpoint.WelcomeConfirmationToken);
@@ -316,7 +320,12 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             persisted.IdentityCreated,
             persisted.OrderIds,
             persisted.WelcomeConfirmationToken,
-            persisted.CompensationRequired);
+            persisted.CompensationRequired,
+            persisted.TransactionId,
+            persisted.JourneyId);
+
+        private static bool IsValidTransactionId(string transactionId, int requestReference) =>
+            string.Equals(transactionId, $"request-{requestReference}", StringComparison.Ordinal);
     }
 
     private sealed record PersistedCheckpoint(
@@ -332,7 +341,9 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
         bool IdentityCreated,
         IReadOnlyList<int>? OrderIds,
         string? WelcomeConfirmationToken,
-        bool CompensationRequired = false);
+        bool CompensationRequired = false,
+        string? TransactionId = null,
+        Guid? JourneyId = null);
 }
 
 internal sealed record InstantQuotationSubmissionAtomicRead(

@@ -95,7 +95,7 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         var leadEvent = new LeadAnalyticsEvent(
             "instant_3d_quote",
             "3d_printing",
-            "quotation-714",
+            "request-714",
             hasFiles: true,
             intent: null,
             finderPath: null,
@@ -113,7 +113,7 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.Contains("\"event\":\"generate_lead\"", model.QueuedEventScript, StringComparison.Ordinal);
         Assert.Contains("\"lead_type\":\"instant_3d_quote\"", model.QueuedEventScript, StringComparison.Ordinal);
         Assert.Contains("\"service\":\"3d_printing\"", model.QueuedEventScript, StringComparison.Ordinal);
-        Assert.Contains("\"transaction_id\":\"quotation-714\"", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.Contains("\"transaction_id\":\"request-714\"", model.QueuedEventScript, StringComparison.Ordinal);
         Assert.Equal(2, Regex.Matches(model.QueuedEventScript, "11111111-2222-3333-4444-555555555555").Count);
         Assert.DoesNotContain("file_upload_completed", model.QueuedEventScript, StringComparison.Ordinal);
         Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
@@ -147,7 +147,7 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         var leadEvent = new LeadAnalyticsEvent(
             "instant_3d_quote",
             "3d_printing",
-            "quotation-724",
+            "request-724",
             hasFiles: true,
             intent: null,
             finderPath: null,

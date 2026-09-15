@@ -27,14 +27,30 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// <returns><see langword="true" /> when the event was queued.</returns>
         internal static bool TryQueueContactMessage(ITempDataDictionary tempData, int messageId, out Exception? failure)
         {
-            return TryQueue(tempData, "contact", "general_contact", "message", messageId, false, null, null, out failure);
+            try
+            {
+                return TryQueue(
+                    tempData,
+                    "contact",
+                    "general_contact",
+                    CreateTransactionId("message", messageId),
+                    false,
+                    null,
+                    null,
+                    out failure);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+                return false;
+            }
         }
 
         /// <summary>
         /// Attempts to queue a persisted manual quotation event without allowing analytics failures to escape.
         /// </summary>
         /// <param name="tempData">The request TempData dictionary.</param>
-        /// <param name="requestId">The persisted quotation-request identifier.</param>
+        /// <param name="transactionId">The API-issued quotation-request transaction identifier.</param>
         /// <param name="service">The controlled MALIEV service context.</param>
         /// <param name="hasFiles">Whether the submitted request included files.</param>
         /// <param name="fileUploadCompleted">Whether every submitted file was stored and linked.</param>
@@ -42,35 +58,7 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// <returns><see langword="true" /> when the event was queued.</returns>
         internal static bool TryQueueManualQuotation(
             ITempDataDictionary tempData,
-            int requestId,
-            string service,
-            bool hasFiles,
-            bool fileUploadCompleted,
-            out Exception? failure)
-        {
-            return TryQueue(
-                tempData,
-                "manual_quote",
-                NormalizeLegacyManualQuotationService(service),
-                "quotation",
-                requestId,
-                hasFiles,
-                null,
-                null,
-                out failure);
-        }
-
-        private static string NormalizeLegacyManualQuotationService(string service) => service switch
-        {
-            "3d_printing" => "3d_printing",
-            "3d_scanning" => "3d_scanning",
-            _ => "custom_manufacturing",
-        };
-
-        /// <summary>Queues a manual quotation using the source route and persisted journey contract.</summary>
-        internal static bool TryQueueManualQuotation(
-            ITempDataDictionary tempData,
-            int requestId,
+            string transactionId,
             bool hasFiles,
             string requestedItem,
             string journeyId,
@@ -82,14 +70,58 @@ namespace Legacy.Maliev.Web.Pages.Shared
                 return false;
             }
 
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
             return TryQueue(
                 tempData,
                 "manual_quote",
                 ResolveManualQuotationService(requestedItem),
-                "quotation",
-                requestId,
+                transactionId,
                 hasFiles,
                 null,
+                journeyId,
+                out failure);
+        }
+
+        /// <summary>Attempts to queue a manual quotation with validated service-finder attribution.</summary>
+        internal static bool TryQueueManualQuotationWithFinder(
+            ITempDataDictionary tempData,
+            string transactionId,
+            bool hasFiles,
+            string requestedItem,
+            string journeyId,
+            ServiceFinderAttribution attribution,
+            out Exception? failure)
+        {
+            if (attribution is null)
+            {
+                failure = new ArgumentNullException(nameof(attribution));
+                return false;
+            }
+
+            if (!Guid.TryParse(journeyId, out _))
+            {
+                failure = new ArgumentException("The manual-quotation journey identifier must be a GUID.", nameof(journeyId));
+                return false;
+            }
+
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
+            return TryQueue(
+                tempData,
+                "manual_quote",
+                ResolveManualQuotationService(requestedItem),
+                transactionId,
+                hasFiles,
+                attribution,
                 journeyId,
                 out failure);
         }
@@ -97,15 +129,16 @@ namespace Legacy.Maliev.Web.Pages.Shared
         private static string ResolveManualQuotationService(string requestedItem) =>
             requestedItem?.Trim().ToLowerInvariant() switch
             {
-                "3d-printing" => "3d_printing",
-                "3d-scanning" => "3d_scanning",
+                "3d-printing" or "3d_printing" => "3d_printing",
+                "3d-scanning" or "3d_scanning" => "3d_scanning",
+                "cnc-machining" or "cnc_machining" => "cnc_machining",
                 _ => "custom_manufacturing",
             };
 
         /// <summary>Attempts to queue the source-compatible instant quotation conversion contract.</summary>
         internal static bool TryQueueInstantQuotation(
             ITempDataDictionary tempData,
-            int requestId,
+            string transactionId,
             bool hasFiles,
             string journeyId,
             out Exception? failure)
@@ -116,12 +149,48 @@ namespace Legacy.Maliev.Web.Pages.Shared
                 return false;
             }
 
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
             return TryQueue(
                 tempData,
                 "instant_3d_quote",
                 "3d_printing",
-                "quotation",
-                requestId,
+                transactionId,
+                hasFiles,
+                null,
+                journeyId,
+                out failure);
+        }
+
+        /// <summary>Queues the persisted instant CNC lead with its API-owned request transaction.</summary>
+        internal static bool TryQueueInstantCncQuotation(
+            ITempDataDictionary tempData,
+            string transactionId,
+            bool hasFiles,
+            string journeyId,
+            out Exception? failure)
+        {
+            if (!Guid.TryParse(journeyId, out _))
+            {
+                failure = new ArgumentException("The instant-quotation journey identifier must be a GUID.", nameof(journeyId));
+                return false;
+            }
+
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
+            return TryQueue(
+                tempData,
+                "instant_cnc_quote",
+                "cnc_machining",
+                transactionId,
                 hasFiles,
                 null,
                 journeyId,
@@ -177,10 +246,9 @@ namespace Legacy.Maliev.Web.Pages.Shared
             ITempDataDictionary tempData,
             string leadType,
             string service,
-            string transactionPrefix,
-            int persistedId,
+            string transactionId,
             bool hasFiles,
-            string? intent,
+            ServiceFinderAttribution? attribution,
             string? journeyId,
             out Exception? failure)
         {
@@ -191,10 +259,10 @@ namespace Legacy.Maliev.Web.Pages.Shared
                     new LeadAnalyticsEvent(
                         leadType,
                         service,
-                        CreateTransactionId(transactionPrefix, persistedId),
+                        transactionId,
                         hasFiles,
-                        intent,
-                        null,
+                        attribution?.Intent,
+                        attribution?.FinderPathValue,
                         journeyId));
                 failure = null;
                 return true;
@@ -204,6 +272,15 @@ namespace Legacy.Maliev.Web.Pages.Shared
                 failure = ex;
                 return false;
             }
+        }
+
+        private static bool IsValidRequestTransactionId(string? transactionId)
+        {
+            const string Prefix = "request-";
+            return transactionId is not null
+                && transactionId.StartsWith(Prefix, StringComparison.Ordinal)
+                && int.TryParse(transactionId.AsSpan(Prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var requestId)
+                && requestId > 0;
         }
 
         private static string CreateTransactionId(string prefix, int persistedId)
@@ -336,17 +413,23 @@ namespace Legacy.Maliev.Web.Pages.Shared
                     && string.Equals(this.Service, "general_contact", StringComparison.Ordinal)
                     && HasPositiveId(this.TransactionId, "message"))
                 || (string.Equals(this.LeadType, "manual_quote", StringComparison.Ordinal)
-                    && IsQuotationService(this.Service)
-                    && HasPositiveId(this.TransactionId, "quotation"))
+                    && IsAllowedManualQuotationService(this.Service)
+                    && HasPositiveId(this.TransactionId, "request")
+                    && ServiceFinderAttribution.IsAllowedLeadValues(this.Intent, this.FinderPath))
                 || (string.Equals(this.LeadType, "instant_3d_quote", StringComparison.Ordinal)
                     && string.Equals(this.Service, "3d_printing", StringComparison.Ordinal)
-                    && HasPositiveId(this.TransactionId, "quotation")
+                    && HasPositiveId(this.TransactionId, "request")
+                    && (this.JourneyId is null || Guid.TryParse(this.JourneyId, out _)))
+                || (string.Equals(this.LeadType, "instant_cnc_quote", StringComparison.Ordinal)
+                    && string.Equals(this.Service, "cnc_machining", StringComparison.Ordinal)
+                    && HasPositiveId(this.TransactionId, "request")
                     && (this.JourneyId is null || Guid.TryParse(this.JourneyId, out _)));
         }
 
-        private static bool IsQuotationService(string service) =>
+        private static bool IsAllowedManualQuotationService(string service) =>
             service is "3d_printing"
                 or "3d_scanning"
+                or "cnc_machining"
                 or "custom_manufacturing";
 
         private static bool HasPositiveId(string transactionId, string prefix)

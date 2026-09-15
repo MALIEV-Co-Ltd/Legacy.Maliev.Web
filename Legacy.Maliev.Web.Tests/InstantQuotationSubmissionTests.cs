@@ -859,7 +859,14 @@ public sealed class InstantQuotationSubmissionTests
                 await BeforeReturnAsync();
             }
 
-            return result(submission);
+            var value = result(submission);
+            return value.ReferenceNumber is int id
+                ? value with
+                {
+                    TransactionId = value.TransactionId ?? $"request-{id}",
+                    JourneyId = value.JourneyId ?? submission.JourneyId,
+                }
+                : value;
         }
     }
 

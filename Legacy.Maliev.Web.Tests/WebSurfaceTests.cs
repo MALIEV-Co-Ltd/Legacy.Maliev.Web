@@ -2141,7 +2141,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
         Assert.Equal("maliev_lead_submitted", english.RootElement.GetProperty("event").GetString());
         Assert.Equal("manual_quote", english.RootElement.GetProperty("lead_type").GetString());
-        Assert.Equal("custom_manufacturing", english.RootElement.GetProperty("service").GetString());
+        Assert.Equal("cnc_machining", english.RootElement.GetProperty("service").GetString());
         Assert.Equal("persisted", english.RootElement.GetProperty("lead_status").GetString());
     }
 
@@ -3657,7 +3657,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             CancellationToken cancellationToken)
         {
             LastSubmission = submission;
-            return Task.FromResult(new QuotationRequestResult(1, true, true));
+            return Task.FromResult(new QuotationRequestResult(1, true, true, "request-1", submission.JourneyId));
         }
     }
 

@@ -65,9 +65,11 @@ public sealed class CncRequestClient(IHttpClientFactory clients, IServiceAccessT
             var value = json.RootElement;
             if (!value.TryGetProperty("Id", out var id) || !id.TryGetInt32(out var number) || number <= 0
                 || !value.TryGetProperty("JourneyId", out var journey) || !journey.TryGetGuid(out var guid) || guid != submission.JourneyId
+                || !value.TryGetProperty("TransactionId", out var transaction)
+                || !string.Equals(transaction.GetString(), $"request-{number}", StringComparison.Ordinal)
                 || (value.TryGetProperty("Done", out var done) && done.ValueKind != JsonValueKind.Null))
                 return new(CncRequestOutcome.Unknown);
-            return new(CncRequestOutcome.Created, number);
+            return new(CncRequestOutcome.Created, number, $"request-{number}");
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException
             or JsonException or InvalidOperationException or IOException or ExecutionRejectedException)
