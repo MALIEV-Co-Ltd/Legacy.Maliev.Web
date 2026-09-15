@@ -93,6 +93,15 @@ public sealed class InstantQuotationWorkflowInteropTests
     }
 
     [Fact]
+    public void Review_thumbnails_are_rendered_from_the_requested_part_not_the_active_canvas()
+    {
+        var interop = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "instant-quotation", "workflow-interop.mjs");
+
+        Assert.Contains("viewer.snapshot?.(image.dataset.partId)", interop, StringComparison.Ordinal);
+        Assert.DoesNotContain("viewer.snapshot?.()", interop, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Workflow_cleanup_is_independent_and_expected_javascript_failures_are_suppressed()
     {
         var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");

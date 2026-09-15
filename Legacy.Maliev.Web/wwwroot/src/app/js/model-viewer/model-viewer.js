@@ -3649,9 +3649,11 @@ function ModelViewerUtils(culture, currency, viewer) {
                 geometry: 'pending',
                 thumbnail: 'pending',
                 analysis: 'pending',
-                stock: 'pending',
-                planning: 'pending',
-                pricing: 'pending'
+                stock: isCncQuotation ? 'pending' : 'ready',
+                planning: isCncQuotation ? 'pending' : 'ready',
+                // Additive pricing has its own request-token/is-pricing lifecycle. These
+                // detailed worker stages belong to the CNC planner only.
+                pricing: isCncQuotation ? 'pending' : 'ready'
             },
             errorMessage: null,
             processingAttemptId: ++itemAttemptSequence,
@@ -3673,6 +3675,10 @@ function ModelViewerUtils(culture, currency, viewer) {
         items[id].object3D = object3D;
         items[id].modelInfo = modelInfo;
         items[id].parseComplete = true;
+        // Additive models publish their first usable object only when parsing completes.
+        // CNC can publish an earlier preview through SetItemPreview, but both routes have
+        // finished loading geometry by the time SetItemParsed is called.
+        this.SetItemProcessingStage(id, 'geometry', 'ready');
         this.SetItemProcessingStage(id, 'analysis', 'ready');
         UpdateThumbnailDimensions(id, modelInfo);
         UpdateThumbnailState(id);
@@ -4608,4 +4614,3 @@ function BuildDfmAlerts(info, culture, process) {
     }
     return alerts;
 }
-
