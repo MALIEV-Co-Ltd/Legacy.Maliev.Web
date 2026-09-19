@@ -31,6 +31,13 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("Your files stay confidential. We sign an NDA on request.", source, StringComparison.Ordinal);
         Assert.Contains("Read our NDA", source, StringComparison.Ordinal);
         Assert.Contains("Talk to an engineer", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"printing-quote-guide\"", source, StringComparison.Ordinal);
+        Assert.Contains("Accepted 3D printing files", source, StringComparison.Ordinal);
+        Assert.Contains("STEP / STP", source, StringComparison.Ordinal);
+        Assert.Contains("CATPart (CATIA)", source, StringComparison.Ordinal);
+        Assert.Contains("Compare CNC machining", source, StringComparison.Ordinal);
+        Assert.Contains("Need scanning or reverse engineering?", source, StringComparison.Ordinal);
+        Assert.Contains("ไฟล์เมชอาจต้องซ่อม", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
         Assert.Contains("class=\"service-page-toc\"", source, StringComparison.Ordinal);
         Assert.Equal(6, ServiceCardMediaRegex().Matches(source).Count);
         Assert.Equal(7, FaqDetailsRegex().Matches(source).Count);
@@ -71,6 +78,9 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("data-material-empty", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("data-material-details-url", component, StringComparison.Ordinal);
         Assert.Contains("material_detail_viewed", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing", component, StringComparison.Ordinal);
+        Assert.Contains("IPT (Inventor)", component, StringComparison.Ordinal);
+        Assert.Contains("PAR (Solid Edge)", component, StringComparison.Ordinal);
 
         foreach (var relativePath in new[]
         {

@@ -24,6 +24,16 @@
         <article><i class="fas fa-calculator" aria-hidden="true"></i><div><h2>@T("Price factors", "ปัจจัยราคา")</h2><p>@T("Geometry, material, size, support, orientation, finish, and quantity.", "รูปทรง วัสดุ ขนาด ซัพพอร์ต ทิศทาง ผิว และจำนวน")</p></div></article>
     </div></section>
 
+    <section id="printing-quote-guide" class="service-section service-section-soft" aria-labelledby="printing-quote-guide-title"><div class="service-container">
+        <header class="service-heading center"><p class="service-eyebrow">@T("Quote-ready file guide", "แนวทางเตรียมไฟล์ขอราคา")</p><h2 id="printing-quote-guide-title">@T("Send the right 3D file and project details", "ส่งไฟล์ 3D และข้อมูลโปรเจ็คให้พร้อมประเมิน")</h2><p>@T("These formats are accepted starting points. A supported extension does not guarantee an instant price: units, geometry integrity, process fit, and the intended use still need to be checked.", "รายการนี้เป็นรูปแบบไฟล์ที่รับเป็นจุดเริ่มต้น นามสกุลที่รองรับไม่ได้แปลว่าจะได้ราคาทันที ต้องตรวจหน่วย ความสมบูรณ์ของรูปทรง ความเหมาะสมของกระบวนการ และการใช้งานจริงก่อน")</p></header>
+        <div class="service-card-grid">
+            <article class="service-card"><i class="fas fa-file-alt" aria-hidden="true"></i><h3>@T("Accepted 3D printing files", "ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing")</h3><div class="service-copy"><ul><li>STL</li><li>OBJ</li><li>STEP / STP</li><li>IGES / IGS</li><li>IPT (Inventor)</li><li>CATPart (CATIA)</li><li>SLDPRT (SolidWorks)</li><li>PRT (NX)</li><li>X_T / X_B (Parasolid)</li><li>3DM (Rhino)</li><li>SKP (SketchUp)</li><li>PAR (Solid Edge)</li></ul></div></article>
+            <article class="service-card"><i class="fas fa-clipboard-list" aria-hidden="true"></i><h3>@T("What to include with the file", "ข้อมูลที่ควรส่งพร้อมไฟล์")</h3><div class="service-copy"><ul><li>@T("Units, scale, quantity, and the required date.", "หน่วย สเกล จำนวน และวันที่ต้องการใช้ชิ้นงาน")</li><li>@T("Preferred process or material, if known.", "กระบวนการหรือวัสดุที่ต้องการ หากทราบแล้ว")</li><li>@T("Critical dimensions, fits, load, heat, chemicals, or finish.", "ขนาดสำคัญ ฟิต แรง ความร้อน สารเคมี หรือผิวงาน")</li><li>@T("Photos or a drawing when the model needs context.", "รูปถ่ายหรือแบบงานเมื่อโมเดลต้องมีข้อมูลประกอบ")</li></ul></div></article>
+            <article class="service-card"><i class="fas fa-route" aria-hidden="true"></i><h3>@T("Choose the right manufacturing path", "เลือกกระบวนการให้ตรงกับชิ้นงาน")</h3><p>@T("FDM or resin suits many prototypes and low-volume parts. MJF, SLS, SLM, and DMLS require engineering review. If the part needs tighter tolerances or a machined metal surface, compare the CNC route; if the process is still unclear, start with a custom manufacturing review.", "FDM หรือเรซิ่นเหมาะกับต้นแบบและงานจำนวนน้อยหลายประเภท ส่วน MJF, SLS, SLM และ DMLS ต้องให้วิศวกรประเมิน หากต้องการค่าคลาดเคลื่อนแคบหรือผิวโลหะจากการกัด ให้ดูงาน CNC และหากยังไม่แน่ใจให้เริ่มจากบริการรับผลิตชิ้นงานตามแบบ")</p><p><a href="/Services/CNC-Machining">@T("Compare CNC machining", "เปรียบเทียบงาน CNC")</a> · <a href="/Services/3D-Scanning">@T("Need scanning or reverse engineering?", "ต้องการสแกน 3D หรือ Reverse Engineering?")</a> · <a href="/Services/Custom-Manufacturing">@T("Start a custom manufacturing review", "เริ่มประเมินงานผลิตตามแบบ")</a></p></article>
+        </div>
+        <div class="service-note">@T("Mesh files may need repair, conversion, or an engineering review before the process and price can be confirmed. Do not assume a closed solid, scale, wall thickness, or assembly fit from the file extension alone.", "ไฟล์เมชอาจต้องซ่อม แปลงไฟล์ หรือให้วิศวกรตรวจสอบก่อนยืนยันกระบวนการและราคา อย่าสมมติว่าไฟล์ปิดสนิท สเกล ความหนาผนัง หรือการประกอบถูกต้องจากนามสกุลไฟล์เพียงอย่างเดียว")</div>
+    </div></section>
+
     <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
         <strong>@T("On this page", "ในหน้านี้")</strong>
         <a href="#printing-processes">@T("Process", "กระบวนการ")</a>
@@ -31,6 +41,7 @@
         <a href="#printing-workflow">@T("Workflow", "ขั้นตอน")</a>
         <a href="#printing-related">@T("Related processes", "กระบวนการที่เกี่ยวข้อง")</a>
         <a href="#printing-materials">@T("Materials", "วัสดุ")</a>
+        <a href="#printing-quote-guide">@T("Quote-ready files", "ไฟล์พร้อมขอราคา")</a>
         <a href="#printing-file-guide">@T("File preparation", "เตรียมไฟล์")</a>
         <a href="#printing-guides">@T("Guides", "คู่มือ")</a>
         <a href="#printing-faq">@T("FAQ", "คำถามที่พบบ่อย")</a>
