@@ -6,8 +6,8 @@
     bool isThai = System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th";
     Func<string, string, string> T = (en, th) => isThai ? th : en;
     ViewData["Title"] = T("Reverse Engineering Thailand | 3D Scanning to Editable CAD | MALIEV", "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่");
-    ViewData["Description"] = T("Reverse engineering services in Thailand from 3D scan to editable CAD, with in-house and onsite scanning, deviation analysis, and defined deliverable files.", "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน");
-    ViewData["Keywords"] = T("3D scanning service Thailand, onsite 3D scanning, reverse engineering Thailand, deviation analysis, 3D scan price", "รับสแกน 3D, สแกน 3D ราคา, สแกน 3D นอกสถานที่, Reverse Engineering, Deviation Analysis");
+    ViewData["Description"] = T("Reverse engineering services in Thailand from 3D scan to editable CAD, with in-house and onsite scanning, deviation analysis, and defined deliverable files.", "MALIEV รับสแกน 3D ราคาและขอบเขตชัดเจน ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน");
+    ViewData["Keywords"] = T("3D scanning service Thailand, onsite 3D scanning, reverse engineering Thailand, deviation analysis, 3D scan price", "รับสแกน 3D, รับสแกน 3D ราคา, รับสแกน 3D นอกสถานที่, สแกน 3D ราคา, Reverse Engineering, Deviation Analysis");
     var faqJson = ThreeDimensionalScanningPage.CreateFaqJson();
 }
 
