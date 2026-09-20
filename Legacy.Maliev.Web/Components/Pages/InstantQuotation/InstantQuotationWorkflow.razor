@@ -223,7 +223,7 @@
                                    checked="@(part.Configuration.BuildPreference is BuildPreference.Quality)"
                                    @onchange="() => ChangeBuildPreferenceAsync(part.PartId, BuildPreference.Quality)" />
                             <strong>@Localizer["Quality"]</strong>
-                            <span>@Localizer["0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill"]</span>
+                            <span>@Localizer["Finer detail and a smoother appearance · takes longer and costs more"]</span>
                         </label>
                         <label>
                             <input type="radio"
@@ -232,7 +232,7 @@
                                    checked="@(part.Configuration.BuildPreference is BuildPreference.Standard)"
                                    @onchange="() => ChangeBuildPreferenceAsync(part.PartId, BuildPreference.Standard)" />
                             <strong>@Localizer["Standard"]</strong>
-                            <span>@Localizer["0.20 mm layers, 3 walls, 15% sparse infill"]</span>
+                            <span>@Localizer["Balanced finish, durability, lead time, and price for everyday use"]</span>
                         </label>
                         <label>
                             <input type="radio"
@@ -241,7 +241,7 @@
                                    checked="@(part.Configuration.BuildPreference is BuildPreference.Strength)"
                                    @onchange="() => ChangeBuildPreferenceAsync(part.PartId, BuildPreference.Strength)" />
                             <strong>@Localizer["Strength"]</strong>
-                            <span>@Localizer["6 walls, 2 mm top and bottom shells, denser sparse infill"]</span>
+                            <span>@Localizer["Greater structural strength · material and load direction still require engineering review"]</span>
                         </label>
                     </fieldset>
                 </fieldset>
@@ -321,9 +321,9 @@
                 }
                 else if (OrderQuote is not null)
                 {
-                    <p data-price-confidence class="instant-quote__price-confidence instant-quote__price-confidence--firm" role="status">
-                        <span aria-hidden="true">✓</span>
-                        @Localizer["Firm price — calculated from measured volume."]
+                    <p data-price-confidence class="instant-quote__price-confidence instant-quote__price-confidence--review" role="status">
+                        <span aria-hidden="true">!</span>
+                        @Localizer["Preliminary price — model volume was measured; manufacturing suitability is confirmed by our engineer."]
                     </p>
                 }
 

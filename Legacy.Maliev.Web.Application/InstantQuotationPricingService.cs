@@ -38,8 +38,11 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
                 Subtotal = part.Subtotal,
             }),
             Convert.ToDouble(shippingQuote.AmountThb));
-        var totalPrintMinutes = partQuotes.Sum(part => part.PrintTimeMinutesPerUnit * part.Quantity);
-        var minimumLeadTimeDays = Math.Max(1, (int)Math.Ceiling(totalPrintMinutes / 1_440));
+        var leadTime = AdditiveLeadTimeCalculator.Calculate(partQuotes.Select(part => new AdditiveLeadTimeLine
+        {
+            MinutesPerUnit = Convert.ToDecimal(part.PrintTimeMinutesPerUnit),
+            Quantity = part.Quantity,
+        }));
 
         return new InstantQuotationOrderQuote(
             partQuotes,
@@ -51,8 +54,8 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             order.PriceBeforeVat,
             order.Vat,
             order.FinalOrderPrice,
-            minimumLeadTimeDays,
-            minimumLeadTimeDays + 2,
+            leadTime.MinimumDays,
+            leadTime.MaximumDays,
             shippingQuote.State,
             shippingQuote.DestinationCountryCode);
     }
@@ -91,6 +94,13 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             PerimeterProfileMm = geometry.PerimeterProfileMm,
             UnsupportedAreaProfileMm2 = geometry.UnsupportedAreaProfileMm2,
         };
+        var validation = AdditiveGeometryValidator.Validate(geometryInput, configuration.Quantity);
+        if (!validation.IsValid)
+        {
+            throw new ArgumentException(
+                $"The submitted geometry is not eligible for pricing: {string.Join(',', validation.ReasonCodes)}.",
+                nameof(part.Geometry));
+        }
         var buildPreference = material.Process == PrintProcess.Resin
             ? BuildPreference.Standard
             : configuration.BuildPreference;

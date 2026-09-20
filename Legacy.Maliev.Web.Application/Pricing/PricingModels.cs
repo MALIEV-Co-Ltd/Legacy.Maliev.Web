@@ -97,6 +97,8 @@ public sealed class ItemQuote
 {
     public PrintProcess Process { get; init; }
 
+    public double DirectCostPerUnit { get; init; }
+
     public double PrintTimeMinutesPerUnit { get; init; }
 
     public double MaterialPerUnit { get; init; }

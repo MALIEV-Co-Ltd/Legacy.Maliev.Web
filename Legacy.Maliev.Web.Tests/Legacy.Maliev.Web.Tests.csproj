@@ -20,5 +20,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Legacy.Maliev.Web\Legacy.Maliev.Web.csproj" />
     <ProjectReference Include="..\Legacy.Maliev.Web.Application\Legacy.Maliev.Web.Application.csproj" />
+    <ProjectReference Include="..\tools\additive-benchmark\Maliev.AdditiveBenchmark.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="TestAssets\AdditiveBenchmark\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

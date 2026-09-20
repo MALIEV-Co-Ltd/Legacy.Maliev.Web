@@ -4,7 +4,7 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingCatalog
 {
-    public const string AdditivePricingPolicyVersion = "additive-2026-09-14.v1";
+    public const string AdditivePricingPolicyVersion = "additive-2026-09-19.v2";
 
     public const double FdmLayerHeightMm = 0.2;
     public const double ResinLayerHeightMm = 0.05;
@@ -19,12 +19,14 @@ public static class PricingCatalog
     public const double FdmStrengthWallSpeedMmPerSec = 70.0;
     public const double QualityBuildFactor = 1.35;
     public const double StrengthBuildFactor = 1.20;
-    public const double FdmWallSpeedMmPerSec = 50.0;
+    public const double FdmWallSpeedMmPerSec = 179.0;
     public const double RushSurcharge = 0.0;
     public const double FdmSupportDensity = 0.15;
     public const double FdmSupportReachFactor = 0.5;
     public const double FdmSupportRemovalSecondsPerGram = 8.0;
-    public const double ResinPerLayerSeconds = 2.5;
+    public const double ResinPerLayerSeconds = 13.5;
+    public const int ResinBottomLayerCount = 6;
+    public const double ResinBottomLayerExtraSeconds = 30.2;
     public const double FdmMachineHourly = 17.0;
     public const double ResinMachineHourly = 29.0;
     public const double MonthlyFixedCost = 311_097.0;
@@ -51,17 +53,17 @@ public static class PricingCatalog
         FdmQualityLayerHeightMm,
         FdmWallCount,
         FdmInfillDensity,
-        0.60,
-        0.60,
-        FdmQualityWallSpeedMmPerSec);
+        0.48,
+        0.48,
+        38.0);
 
     private static readonly FdmBuildProfile StandardFdmBuildProfile = new(
         BuildPreference.Standard,
         FdmLayerHeightMm,
         FdmWallCount,
         FdmInfillDensity,
-        1.00,
-        0.60,
+        0.40,
+        0.40,
         FdmWallSpeedMmPerSec);
 
     private static readonly FdmBuildProfile StrengthFdmBuildProfile = new(

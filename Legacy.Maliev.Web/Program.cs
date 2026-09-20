@@ -1,6 +1,7 @@
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Middleware;
@@ -382,6 +383,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddSingleton<AdditiveQuoteTicketService>();
 builder.Services.AddScoped<IInstantQuotationAnalyticsSink, JsInstantQuotationAnalyticsSink>();
 builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAnalyticsTracker>();
 builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
