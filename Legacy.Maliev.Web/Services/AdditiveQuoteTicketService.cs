@@ -4,6 +4,7 @@
 
 namespace Legacy.Maliev.Web.Application.Pricing
 {
+    using Legacy.Maliev.Web.Application;
     using Microsoft.AspNetCore.DataProtection;
     using System;
     using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
     using System.Text.Json;
 
     /// <summary>Protects and validates short-lived server-authoritative additive quote payloads.</summary>
-    public sealed class AdditiveQuoteTicketService
+    public sealed class AdditiveQuoteTicketService : IInstantQuotationQuoteTicketService
     {
         /// <summary>Current line-ticket schema version.</summary>
         public const string LineSchemaVersion = "additive-line-quote.v2";
@@ -47,6 +48,154 @@ namespace Legacy.Maliev.Web.Application.Pricing
             this.lineProtector = provider.CreateProtector("Maliev.Web.AdditiveLineQuote.v2");
             this.orderProtector = provider.CreateProtector("Maliev.Web.AdditiveOrderQuote.v2");
             this.uploadProtector = provider.CreateProtector("Maliev.Web.AdditiveUploadReceipt.v1");
+        }
+
+        /// <inheritdoc />
+        public InstantQuotationQuoteAuthorization Issue(
+            InstantQuotationSessionState session,
+            InstantQuotationOrderQuote quote,
+            DateTimeOffset now)
+        {
+            ArgumentNullException.ThrowIfNull(session);
+            ArgumentNullException.ThrowIfNull(quote);
+            if (session.Parts.Count == 0 || session.Parts.Count != quote.Parts.Count)
+            {
+                throw new ArgumentException("The authoritative quotation does not match the protected session.", nameof(quote));
+            }
+
+            var expiresAt = now.Add(TicketLifetime);
+            var lineTickets = session.Parts.Select((part, index) =>
+            {
+                InstantQuotationPartQuote line = quote.Parts[index];
+                if (part.PartId != line.PartId)
+                {
+                    throw new ArgumentException("The authoritative quotation line order is inconsistent.", nameof(quote));
+                }
+
+                return this.ProtectLine(new AdditiveLineQuotePayload
+                {
+                    SchemaVersion = LineSchemaVersion,
+                    PolicyVersion = PricingCatalog.AdditivePricingPolicyVersion,
+                    SessionId = session.SessionId,
+                    FileName = part.DisplayFileName,
+                    UploadId = part.UploadReference.Value,
+                    StoragePath = NormalizePath(part.UploadReference.Value),
+                    ContentSha256 = part.Geometry.Sha256,
+                    AnalysisRevision = part.Geometry.ClaimVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ProfileVersion = PricingCatalog.AdditivePricingPolicyVersion,
+                    Confidence = "provisional",
+                    ReviewState = "engineer_review_required",
+                    GeometryDigest = CreateGeometryDigest(part.Geometry),
+                    MaterialKey = line.MaterialKey,
+                    BuildPreference = line.BuildPreference,
+                    Process = line.Process,
+                    Quantity = line.Quantity,
+                    DirectCostPerUnitThb = Convert.ToDecimal(line.DirectCostPerUnit),
+                    UnitPriceThb = Convert.ToDecimal(line.UnitPrice),
+                    SubtotalThb = Convert.ToDecimal(line.Subtotal),
+                    WeightGrams = Convert.ToDecimal(line.WeightGramsPerUnit * line.Quantity),
+                    BoundingCm3 = Convert.ToDecimal(line.BoundingCm3PerUnit * line.Quantity),
+                    PrintTimeMinutes = Convert.ToDecimal(line.PrintTimeMinutesPerUnit),
+                    MaterialPerUnit = Convert.ToDecimal(line.MaterialPerUnit),
+                    EffectiveCurrency = "THB",
+                    ExchangeRate = 1m,
+                    IssuedAtUtc = now,
+                    ExpiresAtUtc = expiresAt,
+                });
+            }).ToArray();
+            var allocations = quote.AllocatedLineTotals?.Select(Convert.ToDecimal).ToList()
+                ?? throw new ArgumentException("The authoritative quotation requires deterministic line allocations.", nameof(quote));
+            var orderTicket = this.ProtectOrder(new AdditiveOrderQuotePayload
+            {
+                SchemaVersion = OrderSchemaVersion,
+                PolicyVersion = PricingCatalog.AdditivePricingPolicyVersion,
+                SessionId = session.SessionId,
+                LineTicketDigests = lineTickets.Select(DigestTicket).ToList(),
+                AllocatedLineTotalsThb = allocations,
+                ItemsSubtotalThb = Convert.ToDecimal(quote.ItemsSubtotal),
+                PrintingThb = Convert.ToDecimal(quote.Printing),
+                MinimumOrderPriceThb = Convert.ToDecimal(quote.MinimumOrderPrice),
+                MinimumOrderSurchargeThb = Convert.ToDecimal(quote.MinimumOrderSurcharge),
+                SetupThb = Convert.ToDecimal(quote.Setup),
+                ReserveThb = Convert.ToDecimal(quote.Reserve),
+                PackagingThb = Convert.ToDecimal(quote.Packaging),
+                PaymentFeeThb = Convert.ToDecimal(quote.PaymentFee),
+                RoundingAdjustmentThb = Convert.ToDecimal(quote.RoundingAdjustment),
+                ShippingThb = Convert.ToDecimal(quote.ShippingCost),
+                VatThb = Convert.ToDecimal(quote.Vat),
+                FinalOrderPriceThb = Convert.ToDecimal(quote.FinalOrderPrice),
+                LeadTimeMinimumDays = quote.LeadTimeMinimumDays,
+                LeadTimeMaximumDays = quote.LeadTimeMaximumDays,
+                EffectiveCurrency = "THB",
+                ExchangeRate = 1m,
+                DestinationCountryCode = quote.DestinationCountryCode,
+                ShippingState = quote.ShippingState.ToString(),
+                IssuedAtUtc = now,
+                ExpiresAtUtc = expiresAt,
+            });
+            return new InstantQuotationQuoteAuthorization(lineTickets, orderTicket);
+        }
+
+        /// <inheritdoc />
+        public bool Validate(
+            InstantQuotationSessionState session,
+            InstantQuotationOrderQuote quote,
+            InstantQuotationQuoteAuthorization authorization,
+            DateTimeOffset now)
+        {
+            try
+            {
+                ArgumentNullException.ThrowIfNull(session);
+                ArgumentNullException.ThrowIfNull(quote);
+                ArgumentNullException.ThrowIfNull(authorization);
+                if (authorization.LineTickets.Count != session.Parts.Count
+                    || authorization.LineTickets.Count != quote.Parts.Count)
+                {
+                    return false;
+                }
+
+                var order = this.UnprotectOrder(authorization.OrderTicket, now);
+                if (!string.Equals(order.SessionId, session.SessionId, StringComparison.Ordinal)
+                    || !this.MatchesLineTickets(order, authorization.LineTickets)
+                    || order.FinalOrderPriceThb != Convert.ToDecimal(quote.FinalOrderPrice)
+                    || order.ItemsSubtotalThb != Convert.ToDecimal(quote.ItemsSubtotal)
+                    || order.ShippingThb != Convert.ToDecimal(quote.ShippingCost)
+                    || order.LeadTimeMinimumDays != quote.LeadTimeMinimumDays
+                    || order.LeadTimeMaximumDays != quote.LeadTimeMaximumDays)
+                {
+                    return false;
+                }
+
+                for (var index = 0; index < authorization.LineTickets.Count; index++)
+                {
+                    AdditiveLineQuotePayload payload = this.UnprotectLine(authorization.LineTickets[index], now);
+                    InstantQuotationPart part = session.Parts[index];
+                    InstantQuotationPartQuote line = quote.Parts[index];
+                    if (part.PartId != line.PartId
+                        || !this.MatchesLineIdentity(
+                            payload,
+                            session.SessionId,
+                            part.DisplayFileName,
+                            line.MaterialKey,
+                            line.BuildPreference,
+                            line.Quantity,
+                            part.UploadReference.Value)
+                        || !string.Equals(payload.ContentSha256, part.Geometry.Sha256, StringComparison.Ordinal)
+                        || !string.Equals(payload.GeometryDigest, CreateGeometryDigest(part.Geometry), StringComparison.Ordinal)
+                        || payload.DirectCostPerUnitThb != Convert.ToDecimal(line.DirectCostPerUnit)
+                        || payload.UnitPriceThb != Convert.ToDecimal(line.UnitPrice)
+                        || payload.SubtotalThb != Convert.ToDecimal(line.Subtotal))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception exception) when (exception is AdditiveQuoteTicketException or ArgumentException or InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         /// <summary>Protects a server-computed upload receipt.</summary>
@@ -284,6 +433,15 @@ namespace Legacy.Maliev.Web.Application.Pricing
             }
 
             return true;
+        }
+
+        private static string NormalizePath(string value) => value.Replace('\\', '/').Trim('/');
+
+        private static string CreateGeometryDigest(AuthoritativeInstantQuotationGeometry geometry)
+        {
+            string canonical = FormattableString.Invariant(
+                $"{geometry.Sha256}|{geometry.DimensionXmm:R}|{geometry.DimensionYmm:R}|{geometry.DimensionZmm:R}|{geometry.VolumeMm3:R}|{geometry.SurfaceAreaMm2:R}|{geometry.FacetCount}|{geometry.BodyCount}|{geometry.MinThicknessMm:R}");
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
         }
 
         private T Unprotect<T>(IDataProtector protector, string ticket)

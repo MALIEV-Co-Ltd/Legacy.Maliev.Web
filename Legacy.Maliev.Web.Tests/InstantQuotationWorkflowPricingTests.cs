@@ -196,7 +196,7 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Fact]
-    public void Quote_MixedFdmAndResinPartsUsesDerivedShippingVatWithoutOrderLevelRounding()
+    public void Quote_MixedFdmAndResinPartsUsesAuditableOrderCostSequence()
     {
         var state = State(
             Part("PLA", "White", 9),
@@ -207,25 +207,18 @@ public sealed class InstantQuotationWorkflowPricingTests
         var expectedShipping = ShippingCalculator.CustomerShippingThb(
             expectedLines.Sum(line => line.Quote.WeightGramsPerUnit * line.Part.Configuration.Quantity),
             expectedLines.Sum(line => line.Quote.BoundingCm3PerUnit * line.Part.Configuration.Quantity));
-        var expectedOrder = PricingEngine.QuoteOrder(
-            expectedLines.Select(line => new OrderLine
-            {
-                Process = line.Quote.Process,
-                Subtotal = line.Quote.Subtotal,
-            }),
-            expectedShipping);
+        var expectedOrder = ExpectedOrder(expectedLines, expectedShipping, deliveryIncludesPackaging: true);
 
         Assert.Equal(2, result.Parts.Count);
         Assert.Equal(PrintProcess.Fdm, result.Parts[0].Process);
         Assert.Equal(PrintProcess.Resin, result.Parts[1].Process);
-        Assert.Equal(expectedOrder.ItemsSubtotal, result.ItemsSubtotal, 2);
-        Assert.Equal(expectedOrder.Printing, result.Printing, 2);
+        Assert.Equal(Convert.ToDouble(expectedOrder.UnroundedBaseThb), result.ItemsSubtotal, 2);
+        Assert.Equal(Convert.ToDouble(expectedOrder.BaseOrderThb), result.Printing, 2);
         Assert.Equal(expectedShipping, result.ShippingCost, 2);
-        Assert.Equal(expectedOrder.PriceBeforeVat, result.PriceBeforeVat, 2);
-        Assert.Equal(expectedOrder.PriceBeforeVat * 0.07, result.Vat, 2);
-        Assert.Equal(expectedOrder.FinalOrderPrice, result.FinalOrderPrice, 2);
-        Assert.Equal(expectedOrder.MinimumOrderPrice, result.MinimumOrderPrice, 2);
-        Assert.Equal(expectedOrder.MinimumOrderSurcharge, result.MinimumOrderSurcharge, 2);
+        Assert.Equal(Convert.ToDouble(expectedOrder.PriceBeforeVatThb), result.PriceBeforeVat, 2);
+        Assert.Equal(Convert.ToDouble(expectedOrder.VatThb), result.Vat, 2);
+        Assert.Equal(Convert.ToDouble(expectedOrder.TotalThb), result.FinalOrderPrice, 2);
+        Assert.Equal(result.FinalOrderPrice, result.AllocatedLineTotals!.Sum(), 2);
     }
 
     [Fact]
@@ -239,7 +232,9 @@ public sealed class InstantQuotationWorkflowPricingTests
         Assert.Equal(ShippingPricingState.ToBeQuoted, result.ShippingState);
         Assert.Equal("JAPAN", result.DestinationCountryCode);
         Assert.Equal(0, result.ShippingCost, 2);
-        Assert.Equal(result.Printing * 1.07, result.FinalOrderPrice, 2);
+        Assert.Equal(0, result.FinalOrderPrice % 5, 2);
+        Assert.Equal(result.FinalOrderPrice, result.AllocatedLineTotals!.Sum(), 2);
+        Assert.True(result.Packaging > 0);
     }
 
     [Fact]
@@ -396,5 +391,42 @@ public sealed class InstantQuotationWorkflowPricingTests
             PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)!,
             part.Configuration.Quantity);
         return (part, quote);
+    }
+
+    private static AdditiveOrderCostBreakdown ExpectedOrder(
+        IReadOnlyList<(InstantQuotationPart Part, ItemQuote Quote)> lines,
+        double shipping,
+        bool deliveryIncludesPackaging)
+    {
+        var costs = lines.Select(line =>
+        {
+            var tier = PricingCatalog.ResolveTier(line.Part.Configuration.Quantity);
+            var material = PricingCatalog.ResolveMaterial(line.Part.Configuration.MaterialKey)!;
+            return new AdditiveOrderCostLine
+            {
+                LineId = line.Part.PartId.ToString("N"),
+                Quantity = line.Part.Configuration.Quantity,
+                DirectCostPerUnitThb = Convert.ToDecimal(line.Quote.DirectCostPerUnit),
+                ComplexityFactor = 1m,
+                TargetMarginRate = line.Quote.Process == PrintProcess.Resin ? 0.30m : Convert.ToDecimal(tier.TargetMargin),
+                DiscountRate = Convert.ToDecimal(tier.BulkDiscount),
+                ReserveRate = Convert.ToDecimal(PricingCatalog.FailureReserveRate(line.Quote.Process)),
+                MinimumOrderPriceThb = Math.Max(
+                    Convert.ToDecimal(PricingCatalog.MinimumOrderPrice(line.Quote.Process)),
+                    material.RequiresDrying ? Convert.ToDecimal(PricingCatalog.TechnicalFilamentMinimumPrice) : 0m),
+            };
+        }).ToArray();
+        return AdditiveOrderCostCalculator.Calculate(costs, new AdditiveOrderCharges
+        {
+            SetupThb = lines.Max(line => Convert.ToDecimal(
+                PricingCatalog.SetupHours(line.Quote.Process) * PricingCatalog.LaborRatePerHour)),
+            PackagingThb = deliveryIncludesPackaging
+                ? 0m
+                : lines.Max(line => Convert.ToDecimal(PricingCatalog.PackagingCost(line.Quote.Process))),
+            DeliveryThb = Convert.ToDecimal(shipping),
+            RushRate = Convert.ToDecimal(PricingCatalog.RushSurcharge),
+            PaymentFeeRate = Convert.ToDecimal(PricingCatalog.PaymentFeeRate),
+            VatRate = Convert.ToDecimal(PricingCatalog.VatRate),
+        });
     }
 }

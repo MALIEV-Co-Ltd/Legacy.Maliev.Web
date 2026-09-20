@@ -13,9 +13,12 @@ internal sealed class InstantQuotationSubmissionService(
     IInstantQuotationSubmissionStore submissionStore,
     IInstantQuotationUploadClient uploadClient,
     IInstantQuotationRequestFileClient requestFileClient,
-    IInstantQuotationFulfillmentClient? fulfillmentClient = null) : IInstantQuotationSubmissionService
+    IInstantQuotationFulfillmentClient? fulfillmentClient = null,
+    IInstantQuotationQuoteTicketService? quoteTicketService = null,
+    TimeProvider? timeProvider = null) : IInstantQuotationSubmissionService
 {
     private const int SubmissionIdLength = 64;
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
     public async Task<InstantQuotationSubmissionResult> SubmitAsync(
         string sessionId,
@@ -95,6 +98,17 @@ internal sealed class InstantQuotationSubmissionService(
         if (quote.Parts.Count == 0 || quote.Parts.Count != session.Parts.Count)
         {
             return Rejected(InstantQuotationProblemCategory.Validation);
+        }
+
+        if (quoteTicketService is not null
+            && (session.QuoteAuthorization is null
+                || !quoteTicketService.Validate(
+                    session,
+                    quote,
+                    session.QuoteAuthorization,
+                    clock.GetUtcNow())))
+        {
+            return Rejected(InstantQuotationProblemCategory.Conflict);
         }
 
         var snapshotDigest = CreateSnapshotDigest(session, quote, customer);
@@ -523,6 +537,11 @@ internal sealed class InstantQuotationSubmissionService(
             var partQuote = quote.Parts[index];
             message.AppendLine($"{index + 1} - {SingleLine(part.DisplayFileName)}");
             message.AppendLine($"Material: {partQuote.MaterialKey}");
+            message.AppendLine($"Pricing policy: {PricingCatalog.AdditivePricingPolicyVersion}");
+            message.AppendLine($"Analysis revision: {part.Geometry.ClaimVersion.ToString(CultureInfo.InvariantCulture)}");
+            message.AppendLine($"Profile version: {PricingCatalog.AdditivePricingPolicyVersion}");
+            message.AppendLine("Estimate confidence: provisional");
+            message.AppendLine("Review state: engineer_review_required");
             message.AppendLine($"Color: {SingleLine(partQuote.Color)}");
             message.AppendLine($"Build: {BuildPreferenceDescription(partQuote.BuildPreference)}");
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
@@ -537,6 +556,7 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Cost per unit: {partQuote.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB");
             message.AppendLine($"Print time per unit: {partQuote.PrintTimeMinutesPerUnit.ToString("0.##", CultureInfo.InvariantCulture)} minute(s)");
             message.AppendLine($"Total cost: {partQuote.Subtotal.ToString("0.00", CultureInfo.InvariantCulture)} THB");
+            message.AppendLine($"Allocated order total: {partQuote.AllocatedOrderTotal.ToString("0.00", CultureInfo.InvariantCulture)} THB");
             message.AppendLine();
         }
 
@@ -561,6 +581,11 @@ internal sealed class InstantQuotationSubmissionService(
                 $"Minimum order surcharge: {quote.MinimumOrderSurcharge.ToString("0.00", CultureInfo.InvariantCulture)} THB "
                 + $"(minimum order {quote.MinimumOrderPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB)");
         }
+        message.AppendLine($"Setup: {quote.Setup.ToString("0.00", CultureInfo.InvariantCulture)} THB");
+        message.AppendLine($"Reserve: {quote.Reserve.ToString("0.00", CultureInfo.InvariantCulture)} THB");
+        message.AppendLine($"Packaging: {quote.Packaging.ToString("0.00", CultureInfo.InvariantCulture)} THB");
+        message.AppendLine($"Payment fee: {quote.PaymentFee.ToString("0.00", CultureInfo.InvariantCulture)} THB");
+        message.AppendLine($"Rounding adjustment: {quote.RoundingAdjustment.ToString("0.00", CultureInfo.InvariantCulture)} THB");
         message.AppendLine($"Total price: {quote.FinalOrderPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB");
         return message.ToString();
     }

@@ -4,6 +4,7 @@
 
 namespace Legacy.Maliev.Web.Tests
 {
+    using Legacy.Maliev.Web.Application;
     using Legacy.Maliev.Web.Application.Pricing;
     using Microsoft.AspNetCore.DataProtection;
     using System;
@@ -205,6 +206,48 @@ namespace Legacy.Maliev.Web.Tests
             Assert.Throws<AdditiveQuoteTicketException>(() => service.UnprotectOrder(ticket, Now));
         }
 
+        [Fact]
+        public void WorkflowAuthorization_RoundTripBindsSessionUploadSettingsAndMoney()
+        {
+            AdditiveQuoteTicketService service = CreateService();
+            InstantQuotationSessionState session = Session();
+            InstantQuotationOrderQuote quote = new InstantQuotationPricingService().Quote(session.RequestState);
+
+            InstantQuotationQuoteAuthorization authorization = service.Issue(session, quote, Now);
+
+            Assert.Single(authorization.LineTickets);
+            Assert.True(service.Validate(session, quote, authorization, Now.AddMinutes(1)));
+        }
+
+        [Fact]
+        public void WorkflowAuthorization_RejectsChangedSettingsAndTamperedOrderTicket()
+        {
+            AdditiveQuoteTicketService service = CreateService();
+            InstantQuotationSessionState session = Session();
+            InstantQuotationOrderQuote quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            InstantQuotationQuoteAuthorization authorization = service.Issue(session, quote, Now);
+            InstantQuotationPart part = session.Parts[0];
+            InstantQuotationSessionState changed = session with
+            {
+                RequestState = new InstantQuotationOrderState([
+                    part with
+                    {
+                        Configuration = part.Configuration with { Quantity = part.Configuration.Quantity + 1 },
+                    },
+                ]),
+            };
+            InstantQuotationOrderQuote changedQuote = new InstantQuotationPricingService().Quote(changed.RequestState);
+            string tampered = authorization.OrderTicket[..^1]
+                + (authorization.OrderTicket[^1] == 'A' ? 'B' : 'A');
+
+            Assert.False(service.Validate(changed, changedQuote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(
+                session,
+                quote,
+                authorization with { OrderTicket = tampered },
+                Now.AddMinutes(1)));
+        }
+
         private static AdditiveQuoteTicketService CreateService()
         {
             return new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
@@ -242,6 +285,44 @@ namespace Legacy.Maliev.Web.Tests
                 IssuedAtUtc = Now,
                 ExpiresAtUtc = Now.AddMinutes(30),
             };
+        }
+
+        private static InstantQuotationSessionState Session()
+        {
+            var claim = new InstantQuotationGeometryClaim(
+                1,
+                new string('a', 64),
+                20,
+                20,
+                10,
+                2_000,
+                1_200,
+                Enumerable.Repeat(200d, 64).ToArray(),
+                Enumerable.Repeat(80d, 64).ToArray(),
+                1_024,
+                1,
+                true,
+                false,
+                false,
+                0.8);
+            var upload = InstantQuotationUploadResult.Succeeded(
+                "operation",
+                new InstantQuotationUploadReference(Guid.NewGuid().ToString("D")),
+                claim.Sha256);
+            AuthoritativeInstantQuotationGeometry geometry =
+                AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!;
+            var part = new InstantQuotationPart(
+                Guid.NewGuid(),
+                "part.stl",
+                upload.UploadReference!,
+                geometry,
+                new InstantQuotationPartConfiguration("PLA", "Black", 2, BuildPreference.Strength));
+            return new InstantQuotationSessionState(
+                "session-1",
+                new string('b', 64),
+                new InstantQuotationOrderState([part]),
+                Now,
+                Now);
         }
     }
 }

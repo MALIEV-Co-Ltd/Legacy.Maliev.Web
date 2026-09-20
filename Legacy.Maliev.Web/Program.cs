@@ -384,6 +384,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
 builder.Services.AddSingleton<AdditiveQuoteTicketService>();
+builder.Services.AddSingleton<IInstantQuotationQuoteTicketService>(services =>
+    services.GetRequiredService<AdditiveQuoteTicketService>());
 builder.Services.AddScoped<IInstantQuotationAnalyticsSink, JsInstantQuotationAnalyticsSink>();
 builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAnalyticsTracker>();
 builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();

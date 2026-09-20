@@ -210,7 +210,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             uploadClient,
             pricingService,
             ResolveOwnerIdentity(principal),
-            analytics);
+            analytics,
+            Services.GetService<IInstantQuotationQuoteTicketService>());
         try
         {
             var identityAccessor = Services.GetService<IInstantQuotationWorkflowSessionIdentityAccessor>();
