@@ -12,7 +12,7 @@
     "@fontsource/noto-sans-thai": "5.3.0",
     "@fortawesome/fontawesome-free": "7.3.1",
     "bootstrap": "5.3.8",
-    "three": "0.185.1",
+    "three": "0.186.0",
     "three-cnc-compat": "npm:three@0.129.0"
   },
   "devDependencies": {
