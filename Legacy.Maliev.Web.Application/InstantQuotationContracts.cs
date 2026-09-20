@@ -316,6 +316,7 @@ public sealed record InstantQuotationPartQuote(
     double MaterialPerUnit,
     double WeightGramsPerUnit,
     double BoundingCm3PerUnit,
+    double DirectCostPerUnit,
     double UnitPrice,
     double Subtotal,
     bool TechnicalFilamentMinimumApplied,
@@ -323,7 +324,8 @@ public sealed record InstantQuotationPartQuote(
     double TechnicalFilamentMinimumAdjustment,
     IReadOnlyList<BulkTier> Tiers,
     BuildPreference BuildPreference,
-    IReadOnlyList<InstantQuotationMaterialPrice> MaterialPrices);
+    IReadOnlyList<InstantQuotationMaterialPrice> MaterialPrices,
+    double AllocatedOrderTotal = 0);
 
 public sealed record InstantQuotationOrderQuote(
     IReadOnlyList<InstantQuotationPartQuote> Parts,
@@ -338,7 +340,17 @@ public sealed record InstantQuotationOrderQuote(
     int LeadTimeMinimumDays,
     int LeadTimeMaximumDays,
     ShippingPricingState ShippingState = ShippingPricingState.DomesticPriced,
-    string DestinationCountryCode = "TH");
+    string DestinationCountryCode = "TH",
+    double Setup = 0,
+    double Reserve = 0,
+    double Packaging = 0,
+    double PaymentFee = 0,
+    double RoundingAdjustment = 0,
+    IReadOnlyList<double>? AllocatedLineTotals = null);
+
+public sealed record InstantQuotationQuoteAuthorization(
+    IReadOnlyList<string> LineTickets,
+    string OrderTicket);
 
 public sealed record InstantQuotationOrderState(IReadOnlyList<InstantQuotationPart> Parts);
 
@@ -347,9 +359,24 @@ public sealed record InstantQuotationSessionState(
     string SubmissionId,
     InstantQuotationOrderState RequestState,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    InstantQuotationQuoteAuthorization? QuoteAuthorization = null)
 {
     public IReadOnlyList<InstantQuotationPart> Parts => RequestState.Parts;
+}
+
+public interface IInstantQuotationQuoteTicketService
+{
+    InstantQuotationQuoteAuthorization Issue(
+        InstantQuotationSessionState session,
+        InstantQuotationOrderQuote quote,
+        DateTimeOffset now);
+
+    bool Validate(
+        InstantQuotationSessionState session,
+        InstantQuotationOrderQuote quote,
+        InstantQuotationQuoteAuthorization authorization,
+        DateTimeOffset now);
 }
 
 public interface IInstantQuotationSessionStore

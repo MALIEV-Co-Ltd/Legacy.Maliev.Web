@@ -335,6 +335,11 @@ internal sealed class InstantQuotationFulfillmentClient(
         var comment = new StringBuilder();
         comment.AppendLine(CultureInfo.InvariantCulture, $"Instant quotation {submissionId}/{partIndex + 1}");
         comment.AppendLine("Price status: customer estimate only; staff review required before payment.");
+        comment.AppendLine(CultureInfo.InvariantCulture, $"Pricing policy: {PricingCatalog.AdditivePricingPolicyVersion}");
+        comment.AppendLine(CultureInfo.InvariantCulture, $"Analysis revision: {geometry.ClaimVersion}");
+        comment.AppendLine(CultureInfo.InvariantCulture, $"Profile version: {PricingCatalog.AdditivePricingPolicyVersion}");
+        comment.AppendLine("Estimate confidence: provisional");
+        comment.AppendLine("Review state: engineer_review_required");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Material key: {part.Configuration.MaterialKey}");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Build: {BuildPreferenceDescription(part.Configuration.BuildPreference)}");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Color: {part.Configuration.Color}");
@@ -344,6 +349,7 @@ internal sealed class InstantQuotationFulfillmentClient(
         comment.AppendLine(CultureInfo.InvariantCulture, $"Quantity: {part.Configuration.Quantity}");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Submitted unit estimate: {quote.UnitPrice:0.00} THB");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Submitted total estimate: {quote.Subtotal:0.00} THB");
+        comment.AppendLine(CultureInfo.InvariantCulture, $"Allocated order total: {quote.AllocatedOrderTotal:0.00} THB");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Unit print time: {quote.PrintTimeMinutesPerUnit:0.#} minutes");
         comment.AppendLine(CultureInfo.InvariantCulture,
             $"Total print time: {quote.PrintTimeMinutesPerUnit * part.Configuration.Quantity:0.#} minutes");
