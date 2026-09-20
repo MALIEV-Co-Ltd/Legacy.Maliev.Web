@@ -106,6 +106,10 @@ public sealed class ServicesDirectoryFinderContractTests
 
         Assert.Contains("href=\"/services\"", body, StringComparison.Ordinal);
         Assert.Contains("href=\"/Contact\"", body, StringComparison.Ordinal);
+        Assert.Contains("@T(\"3D printing\", \"รับพิมพ์ 3D\")", body, StringComparison.Ordinal);
+        Assert.Contains("@T(\"View 3D printing service\", \"ดูบริการรับพิมพ์ 3D\")", body, StringComparison.Ordinal);
+        Assert.Contains("@T(\"3D scanning\", \"รับสแกน 3D\")", body, StringComparison.Ordinal);
+        Assert.Contains("@T(\"View 3D scanning service\", \"ดูบริการรับสแกน 3D\")", body, StringComparison.Ordinal);
         Assert.DoesNotContain("asp-page", body, StringComparison.Ordinal);
         Assert.DoesNotContain("dataLayer", body, StringComparison.Ordinal);
         Assert.DoesNotContain("malievPushDiagnosticEvent", body, StringComparison.Ordinal);

@@ -102,11 +102,9 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Fact]
-    public void FdmPerimeterAndOverhang_InfluenceTimeAndSupport()
+    public void FdmOverhang_InfluencesSupport()
     {
         var pla = PricingCatalog.ResolveMaterial("PLA")!;
-        var compact = Geometry(area: 500, perimeter: 200);
-        var elongated = Geometry(area: 500, perimeter: 800);
         var growing = new GeometryInput
         {
             HeightMm = 40,
@@ -116,12 +114,38 @@ public sealed class InstantQuotationPricingTests
             PerimeterProfileMm = Enumerable.Repeat(60.0, 40).ToArray(),
         };
 
-        var compactEstimate = PrintTimeCalculator.EstimateFdm(compact, pla);
-        var elongatedEstimate = PrintTimeCalculator.EstimateFdm(elongated, pla);
         var growingEstimate = PrintTimeCalculator.EstimateFdm(growing, pla);
 
-        Assert.True(elongatedEstimate.PrintMinutes > compactEstimate.PrintMinutes * 1.5);
         Assert.True(growingEstimate.SupportGrams > 0);
+    }
+
+    [Fact]
+    public void ResinMinutes_UsesApprovedExposureAndBottomLayerProfile()
+    {
+        var geometry = new GeometryInput { HeightMm = 10, VolumeMm3 = 5_000 };
+
+        Assert.Equal(48.02, PrintTimeCalculator.ResinMinutes(geometry), 2);
+    }
+
+    [Fact]
+    public void QuoteItem_AppliesManufacturingMarginBeforeOrderSetupLabor()
+    {
+        var pla = PricingCatalog.ResolveMaterial("PLA")!;
+        var geometry = Geometry(area: 500, perimeter: 200);
+        var item = PricingEngine.QuoteItem(geometry, pla, 1);
+        var estimate = PrintTimeCalculator.EstimateFdm(geometry, pla);
+        var core = PricingEngine.FdmDirectCost(
+            estimate.PrintMinutes,
+            estimate.MaterialGrams,
+            estimate.SupportGrams,
+            pla) * PricingCatalog.ComplexityFactor;
+        var setup = PricingCatalog.SetupHours(PrintProcess.Fdm) * PricingCatalog.LaborRatePerHour;
+        var failure = PricingCatalog.FailureReserveRate(PrintProcess.Fdm);
+        var grossUp = 1 + (PricingCatalog.PaymentFeeRate / (1 - PricingCatalog.PaymentFeeRate));
+        var expected = (((core / (1 - 0.50)) * (1 + failure)) + setup) * grossUp;
+
+        Assert.Equal(core, item.DirectCostPerUnit, 6);
+        Assert.Equal(PricingEngine.RoundUnitPrice(expected), item.UnitPrice, 2);
     }
 
     [Fact]

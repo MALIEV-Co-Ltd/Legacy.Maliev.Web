@@ -1,0 +1,237 @@
+{
+  "schemaVersion": "1.0",
+  "benchmarkVersion": "2026-09-19.1",
+  "status": "blocked",
+  "coverageRequirements": {
+    "modelCount": 24,
+    "calibrationModelCount": 16,
+    "validationModelCount": 8,
+    "minimumCases": 72,
+    "families": [
+      "thin_lettering",
+      "flat_plates",
+      "hollow_parts",
+      "tall_walls",
+      "curved_surfaces",
+      "dense_parts",
+      "small_details",
+      "support_heavy"
+    ],
+    "preferences": [
+      "quality",
+      "standard",
+      "strength"
+    ]
+  },
+  "evidenceBlockers": [
+    {
+      "blockerId": "consented-model-corpus",
+      "status": "blocked",
+      "missingDataReason": "The two supplied model digests are verified, but repository or restricted-store benchmark consent and twenty-two additional immutable model fixtures have not been supplied."
+    },
+    {
+      "blockerId": "approved-fdm-profile-exports",
+      "status": "blocked",
+      "missingDataReason": "Full profiles can now be resolved from the installed official preset chains and reproduce both supplied slices, but the resolved bundles are not yet operator-approved, versioned in restricted storage, or tied to a production image digest."
+    },
+    {
+      "blockerId": "production-actuals",
+      "status": "blocked",
+      "missingDataReason": "The initial ten measured production jobs per process have not been supplied."
+    },
+    {
+      "blockerId": "resin-inventory-and-profiles",
+      "status": "blocked",
+      "missingDataReason": "Active resin inventory, approved profiles, and operator sign-off are unavailable."
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "body4-pla-standard-q1",
+      "modelId": "body4",
+      "family": "hollow_parts",
+      "split": "calibration",
+      "availability": "blocked",
+      "modelSha256": "6BFA348211321F26EFB5FA1BED9AC68EC3810261F765617DC3E67B45CF8B3569",
+      "sourceUri": "urn:sha256:6BFA348211321F26EFB5FA1BED9AC68EC3810261F765617DC3E67B45CF8B3569",
+      "sourceUnits": "mm",
+      "transform4x4": [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      ],
+      "materialSku": "PLA | Polymaker | 1000g",
+      "machineProfileId": "Bambu Lab X1 Carbon 0.4 nozzle",
+      "processProfileId": "0.20mm Standard @BBL X1C",
+      "filamentProfileId": "PolyTerra PLA @BBL X1C",
+      "profileSha256": "0799329B33562DA119EFFDF60D169A0328F29583B42390F973C4962F95DD0235",
+      "slicerVersion": "02.08.02.61",
+      "supportMode": "disabled",
+      "orientationPolicyVersion": "source-orientation-v1",
+      "preference": "standard",
+      "quantity": 1,
+      "expected": {
+        "modelPrintSeconds": 13282.029296875,
+        "preparationSeconds": 464.85546875,
+        "totalMachineSeconds": 13746.884765625,
+        "modelGrams": 207.38597106933594,
+        "supportGrams": null,
+        "purgeWasteGrams": null,
+        "resinMilliliters": null
+      },
+      "workbookInputs": {
+        "printTimeSeconds": 13740,
+        "materialGrams": 207.39,
+        "priceThb": 3490
+      },
+      "slicerReference": {
+        "modelPrintSeconds": null,
+        "preparationSeconds": null,
+        "totalMachineSeconds": null,
+        "modelGrams": null,
+        "supportGrams": null,
+        "purgeWasteGrams": null,
+        "resinMilliliters": null
+      },
+      "productionActual": {
+        "modelPrintSeconds": null,
+        "preparationSeconds": null,
+        "totalMachineSeconds": null,
+        "modelGrams": null,
+        "supportGrams": null,
+        "purgeWasteGrams": null,
+        "resinMilliliters": null
+      },
+      "provenance": [
+        {
+          "sourceKind": "restricted_source_model_digest",
+          "uri": "urn:sha256:6BFA348211321F26EFB5FA1BED9AC68EC3810261F765617DC3E67B45CF8B3569",
+          "sha256": "6BFA348211321F26EFB5FA1BED9AC68EC3810261F765617DC3E67B45CF8B3569",
+          "observedAtUtc": "2026-09-19T14:18:00Z",
+          "notes": "The restricted Body4 STL was located and hashed; the customer file is not committed and benchmark-use consent is not yet recorded."
+        },
+        {
+          "sourceKind": "slicer_screenshot_and_workbook",
+          "uri": "https://github.com/MALIEV-Co-Ltd/maliev-web/issues/55",
+          "sha256": null,
+          "observedAtUtc": "2026-09-19T00:00:00Z",
+          "notes": "Screenshot and workbook values are retained as inputs only; they are not a complete slicer profile or certified expected result."
+        },
+        {
+          "sourceKind": "observed_unapproved_process_profile",
+          "uri": "urn:sha256:E4D3F211B6EF87E9612C96F3AC2D18413E0610FFF7EEB815A76420344A3B0A19",
+          "sha256": "E4D3F211B6EF87E9612C96F3AC2D18413E0610FFF7EEB815A76420344A3B0A19",
+          "observedAtUtc": "2026-09-19T14:18:00Z",
+          "notes": "Installed Bambu Studio 2.8.2.61 contains the X1C 0.20 mm Standard process file. It is not a flattened export, project 3MF, or operator-approved production profile."
+        },
+        {
+          "sourceKind": "resolved_local_bambu_cli_reference",
+          "uri": "urn:sha256:A550F4D43A238CB70E64FDF97384793587EB1DFE3BDF79E185BC25E109AC42D8",
+          "sha256": "A550F4D43A238CB70E64FDF97384793587EB1DFE3BDF79E185BC25E109AC42D8",
+          "observedAtUtc": "2026-09-19T13:44:00Z",
+          "notes": "Bambu Studio 02.08.02.61 CLI sliced the source-orientation STL with fully resolved X1C Standard, PolyTerra PLA, and High Temp Plate settings. The result reproduces 207.39 g and 3 h 49 m total. Customer CAD and generated G-code remain outside Git."
+        }
+      ],
+      "missingDataReasons": [
+        "Benchmark-use consent and approved restricted-storage URI are not recorded for the located source model.",
+        "The resolved profile bundle needs operator approval, restricted immutable storage, and a production image digest.",
+        "Measured production actuals are unavailable."
+      ]
+    },
+    {
+      "caseId": "280te-asa-quality-q1",
+      "modelId": "280te",
+      "family": "thin_lettering",
+      "split": "validation",
+      "availability": "blocked",
+      "modelSha256": "C02B07FBA97650DC91671C6BEF0E622BE3F07F9F3F04E18FC0475BA9B92007CB",
+      "sourceUri": "urn:sha256:C02B07FBA97650DC91671C6BEF0E622BE3F07F9F3F04E18FC0475BA9B92007CB",
+      "sourceUnits": "mm",
+      "transform4x4": [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      ],
+      "materialSku": "ASA | Polymaker | 1000g",
+      "machineProfileId": "Bambu Lab X1 Carbon 0.4 nozzle",
+      "processProfileId": "0.12mm High Quality @BBL X1C",
+      "filamentProfileId": "PolyLite ASA @BBL X1C",
+      "profileSha256": "A2EE3222942D43E67B6456B48FB2C5F1421448EEC87BDA93FAC866E79BA3CD25",
+      "slicerVersion": "02.08.02.61",
+      "supportMode": "disabled",
+      "orientationPolicyVersion": "source-orientation-v1",
+      "preference": "quality",
+      "quantity": 1,
+      "expected": {
+        "modelPrintSeconds": null,
+        "preparationSeconds": null,
+        "totalMachineSeconds": null,
+        "modelGrams": null,
+        "supportGrams": null,
+        "purgeWasteGrams": null,
+        "resinMilliliters": null
+      },
+      "workbookInputs": {
+        "printTimeSeconds": 3060,
+        "materialGrams": 10,
+        "priceThb": 755
+      },
+      "slicerReference": {
+        "modelPrintSeconds": 2700.96240234375,
+        "preparationSeconds": 580.13330078125,
+        "totalMachineSeconds": 3281.095703125,
+        "modelGrams": 9.78885269165039,
+        "supportGrams": null,
+        "purgeWasteGrams": null,
+        "resinMilliliters": null
+      },
+      "productionActual": {
+        "modelPrintSeconds": null,
+        "preparationSeconds": null,
+        "totalMachineSeconds": null,
+        "modelGrams": null,
+        "supportGrams": null,
+        "purgeWasteGrams": null,
+        "resinMilliliters": null
+      },
+      "provenance": [
+        {
+          "sourceKind": "customer_file_digest_and_slicer_screenshot",
+          "uri": "https://github.com/MALIEV-Co-Ltd/maliev-web/issues/55",
+          "sha256": "C02B07FBA97650DC91671C6BEF0E622BE3F07F9F3F04E18FC0475BA9B92007CB",
+          "observedAtUtc": null,
+          "notes": "The issue records the customer file digest and displayed slicer totals; no customer CAD is committed."
+        },
+        {
+          "sourceKind": "observed_unapproved_process_profile",
+          "uri": "urn:sha256:2DE5E475BDEC6A19B9BFB76EB70F99E2C69E1957AF9E245E6C818F8B9F599EB7",
+          "sha256": "2DE5E475BDEC6A19B9BFB76EB70F99E2C69E1957AF9E245E6C818F8B9F599EB7",
+          "observedAtUtc": "2026-09-19T14:18:00Z",
+          "notes": "Installed Bambu Studio 2.8.2.61 contains the X1C 0.12 mm High Quality process file. It is not a flattened export, project 3MF, or operator-approved production profile."
+        },
+        {
+          "sourceKind": "observed_unapproved_filament_profile",
+          "uri": "urn:sha256:7B2C02C20DE7A72EFA00BC9465430753C449FBA4AA683422FF5D7005B64C9215",
+          "sha256": "7B2C02C20DE7A72EFA00BC9465430753C449FBA4AA683422FF5D7005B64C9215",
+          "observedAtUtc": "2026-09-19T14:18:00Z",
+          "notes": "A local eSUN ASA user profile was found and hashed. No project evidence ties this file to the reference slice, and operator approval is absent."
+        },
+        {
+          "sourceKind": "resolved_local_bambu_cli_reference",
+          "uri": "urn:sha256:142E01AD7C47029A8FE7CEF739CB893687F6DBEF1B9785C40FB2919C3E9EF0AF",
+          "sha256": "142E01AD7C47029A8FE7CEF739CB893687F6DBEF1B9785C40FB2919C3E9EF0AF",
+          "observedAtUtc": "2026-09-19T13:43:00Z",
+          "notes": "Bambu Studio 02.08.02.61 CLI sliced the identity-orientation STL with fully resolved X1C High Quality, PolyLite ASA, and High Temp Plate settings. Current output is 9.79 g and 54 m 41 s total; the earlier screenshot remains separate version-drift evidence at 9.66 g and 51 m 46 s."
+        }
+      ],
+      "missingDataReasons": [
+        "Customer consent for a committed or access-controlled benchmark fixture is not recorded.",
+        "The resolved profile bundle needs operator approval, restricted immutable storage, and a production image digest.",
+        "Measured production actuals are unavailable."
+      ]
+    }
+  ]
+}
+

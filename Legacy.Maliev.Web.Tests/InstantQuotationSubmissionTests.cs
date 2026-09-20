@@ -108,6 +108,36 @@ public sealed class InstantQuotationSubmissionTests
     }
 
     [Fact]
+    public async Task Submit_InvalidProtectedQuoteAuthorization_FailsClosedBeforePersistence()
+    {
+        InstantQuotationSessionState session = Session(Part()) with
+        {
+            QuoteAuthorization = new InstantQuotationQuoteAuthorization(["line"], "order"),
+        };
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true));
+        var persisted = new RecordingSubmissionStore();
+        var service = new InstantQuotationSubmissionService(
+            new RecordingSessionStore(session, Owner),
+            new InstantQuotationPricingService(),
+            quotation,
+            persisted,
+            new RecordingUploadClient(null, SuccessfulFinalization()),
+            SuccessfulRequestFileClient.Instance,
+            quoteTicketService: RejectingQuoteTicketService.Instance);
+
+        InstantQuotationSubmissionResult result = await service.SubmitAsync(
+            SessionId,
+            Owner,
+            Customer(),
+            CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Rejected, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.Conflict, result.ProblemCategory);
+        Assert.Empty(quotation.Calls);
+        Assert.Null(persisted.Checkpoint);
+    }
+
+    [Fact]
     public async Task Submit_RetryAfterPartialFinalization_ReusesPersistedRequestAndDeterministicOperation()
     {
         var quotation = new RecordingQuotationClient(_ =>
@@ -826,6 +856,22 @@ public sealed class InstantQuotationSubmissionTests
 
         public Task<bool> RemoveAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class RejectingQuoteTicketService : IInstantQuotationQuoteTicketService
+    {
+        public static RejectingQuoteTicketService Instance { get; } = new();
+
+        public InstantQuotationQuoteAuthorization Issue(
+            InstantQuotationSessionState session,
+            InstantQuotationOrderQuote quote,
+            DateTimeOffset now) => throw new NotSupportedException();
+
+        public bool Validate(
+            InstantQuotationSessionState session,
+            InstantQuotationOrderQuote quote,
+            InstantQuotationQuoteAuthorization authorization,
+            DateTimeOffset now) => false;
     }
 
     private sealed class RecordingPricingService : IInstantQuotationPricingService

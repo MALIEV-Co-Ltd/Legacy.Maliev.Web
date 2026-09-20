@@ -442,7 +442,7 @@
   <data name="Price and lead-time summary" xml:space="preserve"><value>สรุปราคาและระยะเวลาผลิต</value></data>
   <data name="Step 3 of 3" xml:space="preserve"><value>ขั้นตอนที่ 3 จาก 3</value></data>
   <data name="Order summary" xml:space="preserve"><value>สรุปคำสั่งซื้อ</value></data>
-  <data name="Firm price — calculated from measured volume." xml:space="preserve"><value>ราคายืนยันได้ — คำนวณจากปริมาตรที่วัดได้จริง</value></data>
+  <data name="Preliminary price — model volume was measured; manufacturing suitability is confirmed by our engineer." xml:space="preserve"><value>ราคาประเมินเบื้องต้น — วัดปริมาตรจากโมเดลแล้ว และวิศวกรจะยืนยันความเหมาะสมในการผลิต</value></data>
   <data name="Needs engineer review — the model is not watertight, so this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — โมเดลไม่ปิดสนิท ราคานี้เป็นเพียงการประมาณ</value></data>
   <data name="Needs engineer review — some parts are not watertight, so part of this price is an approximation." xml:space="preserve"><value>ต้องให้วิศวกรตรวจสอบ — ชิ้นงานบางส่วนไม่ปิดสนิท ราคาบางส่วนจึงเป็นการประมาณ</value></data>
   <data name="Minimum order surcharge" xml:space="preserve"><value>ค่าธรรมเนียมยอดสั่งซื้อขั้นต่ำ</value></data>
@@ -452,9 +452,9 @@
   <data name="Quality" xml:space="preserve"><value>เน้นคุณภาพผิว</value></data>
   <data name="Standard" xml:space="preserve"><value>มาตรฐาน</value></data>
   <data name="Strength" xml:space="preserve"><value>เน้นความแข็งแรง</value></data>
-  <data name="0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill" xml:space="preserve"><value>ชั้นพิมพ์ 0.12 มม. ลดความเร็วและความเร่ง ใช้อินฟิลล์แบบ Gyroid</value></data>
-  <data name="0.20 mm layers, 3 walls, 15% sparse infill" xml:space="preserve"><value>ชั้นพิมพ์ 0.20 มม. ผนัง 3 ชั้น อินฟิลล์ 15%</value></data>
-  <data name="6 walls, 2 mm top and bottom shells, denser sparse infill" xml:space="preserve"><value>ผนัง 6 ชั้น ผิวบนและล่างหนา 2 มม. และใช้อินฟิลล์ที่หนาแน่นขึ้น</value></data>
+  <data name="Finer detail and a smoother appearance · takes longer and costs more" xml:space="preserve"><value>เน้นรายละเอียดที่คมชัดและผิวที่เรียบขึ้น · ใช้เวลาผลิตและมีค่าใช้จ่ายมากขึ้น</value></data>
+  <data name="Balanced finish, durability, lead time, and price for everyday use" xml:space="preserve"><value>สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป</value></data>
+  <data name="Greater structural strength · material and load direction still require engineering review" xml:space="preserve"><value>เพิ่มความแข็งแรงของโครงสร้าง · วัสดุและทิศทางรับแรงยังต้องให้วิศวกรตรวจสอบ</value></data>
   <data name="Compare material prices" xml:space="preserve"><value>เปรียบเทียบราคาวัสดุ</value></data>
   <data name="per piece" xml:space="preserve"><value>ต่อชิ้น</value></data>
   <data name="Part {0}" xml:space="preserve"><value>ชิ้นงานที่ {0}</value></data>

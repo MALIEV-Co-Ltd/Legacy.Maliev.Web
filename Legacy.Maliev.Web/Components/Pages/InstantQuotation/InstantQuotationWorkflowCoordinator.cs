@@ -55,6 +55,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly IInstantQuotationSessionStore sessionStore;
     private readonly IInstantQuotationUploadClient uploadClient;
     private readonly IInstantQuotationPricingService pricingService;
+    private readonly IInstantQuotationQuoteTicketService? quoteTicketService;
     private readonly IInstantQuotationAnalyticsTracker analytics;
     private readonly string? ownerIdentity;
     private readonly SemaphoreSlim stateGate = new(1, 1);
@@ -69,13 +70,15 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         IInstantQuotationUploadClient uploadClient,
         IInstantQuotationPricingService pricingService,
         string? ownerIdentity,
-        IInstantQuotationAnalyticsTracker? analytics = null)
+        IInstantQuotationAnalyticsTracker? analytics = null,
+        IInstantQuotationQuoteTicketService? quoteTicketService = null)
     {
         this.sessionStore = sessionStore;
         this.uploadClient = uploadClient;
         this.pricingService = pricingService;
         this.ownerIdentity = ownerIdentity;
         this.analytics = analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance;
+        this.quoteTicketService = quoteTicketService;
     }
 
     public InstantQuotationWorkflowState State { get; private set; } = InstantQuotationWorkflowState.Empty;
@@ -150,6 +153,21 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 cancellationToken);
             if (existing is not null && TryRestore(existing))
             {
+                if (OrderQuote is not null && quoteTicketService is not null)
+                {
+                    var refreshed = session! with { UpdatedAt = DateTimeOffset.UtcNow };
+                    refreshed = refreshed with
+                    {
+                        QuoteAuthorization = quoteTicketService.Issue(refreshed, OrderQuote, refreshed.UpdatedAt),
+                    };
+                    if (!await sessionStore.PutAsync(refreshed, ownerIdentity, cancellationToken))
+                    {
+                        throw new InvalidOperationException("The protected quotation authorization could not be refreshed.");
+                    }
+
+                    session = refreshed;
+                }
+
                 return;
             }
         }
@@ -760,18 +778,27 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
     {
         var state = new InstantQuotationOrderState(CurrentParts());
+        var quote = state.Parts.Count == 0 ? null : pricingService.Quote(state);
         var updated = session! with
         {
             RequestState = state,
             UpdatedAt = DateTimeOffset.UtcNow,
+            QuoteAuthorization = null,
         };
+        if (quote is not null && quoteTicketService is not null)
+        {
+            updated = updated with
+            {
+                QuoteAuthorization = quoteTicketService.Issue(updated, quote, updated.UpdatedAt),
+            };
+        }
         if (!await sessionStore.PutAsync(updated, ownerIdentity, cancellationToken))
         {
             throw new InvalidOperationException("The protected quotation session could not be updated.");
         }
 
         session = updated;
-        OrderQuote = state.Parts.Count == 0 ? null : pricingService.Quote(state);
+        OrderQuote = quote;
         if (OrderQuote is not null)
         {
             authoritativeQuoteRevision++;

@@ -47,6 +47,16 @@ public static class InstantQuotationCalculator
             PerimeterProfileMm = ParseProfile(perimeterProfile),
             UnsupportedAreaProfileMm2 = ParseProfile(unsupportedAreaProfile),
         };
+        var validation = AdditiveGeometryValidator.Validate(geometry, quantity);
+        if (!validation.IsValid)
+        {
+            return new
+            {
+                success = false,
+                code = "geometry_invalid",
+                reasonCodes = validation.ReasonCodes,
+            };
+        }
         var quote = PricingEngine.QuoteItem(geometry, materialInfo, quantity);
 
         return new

@@ -31,30 +31,76 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
                 destinationCountry,
                 partQuotes.Sum(part => part.WeightGramsPerUnit * part.Quantity),
                 partQuotes.Sum(part => part.BoundingCm3PerUnit * part.Quantity));
-        var order = PricingEngine.QuoteOrder(
-            partQuotes.Select(part => new OrderLine
+        var lines = partQuotes.Select(part =>
+        {
+            var tier = PricingCatalog.ResolveTier(part.Quantity);
+            var material = PricingCatalog.ResolveMaterial(part.MaterialKey)!;
+            var materialMinimum = material.RequiresDrying
+                ? Convert.ToDecimal(PricingCatalog.TechnicalFilamentMinimumPrice)
+                : 0m;
+            return new AdditiveOrderCostLine
             {
-                Process = part.Process,
-                Subtotal = part.Subtotal,
-            }),
-            Convert.ToDouble(shippingQuote.AmountThb));
-        var totalPrintMinutes = partQuotes.Sum(part => part.PrintTimeMinutesPerUnit * part.Quantity);
-        var minimumLeadTimeDays = Math.Max(1, (int)Math.Ceiling(totalPrintMinutes / 1_440));
+                LineId = part.PartId.ToString("N"),
+                Quantity = part.Quantity,
+                DirectCostPerUnitThb = Convert.ToDecimal(part.DirectCostPerUnit),
+                ComplexityFactor = 1m,
+                TargetMarginRate = part.Process == PrintProcess.Resin
+                    ? 0.30m
+                    : Convert.ToDecimal(tier.TargetMargin),
+                DiscountRate = Convert.ToDecimal(tier.BulkDiscount),
+                ReserveRate = Convert.ToDecimal(PricingCatalog.FailureReserveRate(part.Process)),
+                MinimumOrderPriceThb = Math.Max(
+                    Convert.ToDecimal(PricingCatalog.MinimumOrderPrice(part.Process)),
+                    materialMinimum),
+            };
+        }).ToArray();
+        var deliveryIncludesPackaging = shippingQuote.State == ShippingPricingState.DomesticPriced;
+        var order = AdditiveOrderCostCalculator.Calculate(lines, new AdditiveOrderCharges
+        {
+            SetupThb = partQuotes.Max(part => Convert.ToDecimal(
+                PricingCatalog.SetupHours(part.Process) * PricingCatalog.LaborRatePerHour)),
+            PackagingThb = deliveryIncludesPackaging
+                ? 0m
+                : partQuotes.Max(part => Convert.ToDecimal(PricingCatalog.PackagingCost(part.Process))),
+            DeliveryThb = shippingQuote.AmountThb,
+            RushRate = Convert.ToDecimal(PricingCatalog.RushSurcharge),
+            PaymentFeeRate = Convert.ToDecimal(PricingCatalog.PaymentFeeRate),
+            VatRate = Convert.ToDecimal(PricingCatalog.VatRate),
+        });
+        var minimumOrderPrice = lines.Max(static line => line.MinimumOrderPriceThb);
+        var allocationsByPart = order.LineAllocations.ToDictionary(
+            static allocation => Guid.ParseExact(allocation.LineId, "N"),
+            static allocation => allocation.TotalThb);
+        var allocatedParts = partQuotes.Select(part => part with
+        {
+            AllocatedOrderTotal = Convert.ToDouble(allocationsByPart[part.PartId]),
+        }).ToArray();
+        var leadTime = AdditiveLeadTimeCalculator.Calculate(partQuotes.Select(part => new AdditiveLeadTimeLine
+        {
+            MinutesPerUnit = Convert.ToDecimal(part.PrintTimeMinutesPerUnit),
+            Quantity = part.Quantity,
+        }));
 
         return new InstantQuotationOrderQuote(
-            partQuotes,
-            order.ItemsSubtotal,
-            order.Printing,
-            order.MinimumOrderPrice,
-            order.MinimumOrderSurcharge,
-            order.ShippingCost,
-            order.PriceBeforeVat,
-            order.Vat,
-            order.FinalOrderPrice,
-            minimumLeadTimeDays,
-            minimumLeadTimeDays + 2,
+            allocatedParts,
+            Convert.ToDouble(order.UnroundedBaseThb),
+            Convert.ToDouble(order.BaseOrderThb),
+            Convert.ToDouble(minimumOrderPrice),
+            Convert.ToDouble(Math.Max(0m, order.BaseOrderThb - order.UnroundedBaseThb)),
+            Convert.ToDouble(order.DeliveryThb),
+            Convert.ToDouble(order.PriceBeforeVatThb),
+            Convert.ToDouble(order.VatThb),
+            Convert.ToDouble(order.TotalThb),
+            leadTime.MinimumDays,
+            leadTime.MaximumDays,
             shippingQuote.State,
-            shippingQuote.DestinationCountryCode);
+            shippingQuote.DestinationCountryCode,
+            Convert.ToDouble(order.SetupThb),
+            Convert.ToDouble(order.ReserveThb),
+            Convert.ToDouble(order.PackagingThb),
+            Convert.ToDouble(order.PaymentFeeThb),
+            Convert.ToDouble(order.RoundingAdjustmentThb),
+            allocatedParts.Select(static part => part.AllocatedOrderTotal).ToArray());
     }
 
     private static InstantQuotationPartQuote QuotePart(InstantQuotationPart part)
@@ -91,6 +137,13 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             PerimeterProfileMm = geometry.PerimeterProfileMm,
             UnsupportedAreaProfileMm2 = geometry.UnsupportedAreaProfileMm2,
         };
+        var validation = AdditiveGeometryValidator.Validate(geometryInput, configuration.Quantity);
+        if (!validation.IsValid)
+        {
+            throw new ArgumentException(
+                $"The submitted geometry is not eligible for pricing: {string.Join(',', validation.ReasonCodes)}.",
+                nameof(part.Geometry));
+        }
         var buildPreference = material.Process == PrintProcess.Resin
             ? BuildPreference.Standard
             : configuration.BuildPreference;
@@ -119,6 +172,7 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             item.MaterialPerUnit,
             item.WeightGramsPerUnit,
             item.BoundingCm3PerUnit,
+            item.DirectCostPerUnit,
             item.UnitPrice,
             item.Subtotal,
             item.TechnicalFilamentMinimumApplied,

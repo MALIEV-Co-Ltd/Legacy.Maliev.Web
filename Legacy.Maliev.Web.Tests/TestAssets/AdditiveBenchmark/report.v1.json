@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "1.0",
+  "manifestSchemaVersion": "1.0",
+  "manifestSha256": "b492f4b663ffa2b17667b74c93d066673db111564704ea17661a6e82ea234d0b",
+  "deterministicResultSha256": "cbb3215069846f2336c18a43e5114415790f0f6839f80f4d14188c4074777623",
+  "status": "blocked",
+  "summary": {
+    "totalCases": 2,
+    "readyCases": 0,
+    "blockedCases": 2,
+    "invalidIssueCount": 0,
+    "blockingIssueCount": 23
+  },
+  "invalidIssues": [],
+  "blockingIssues": [
+    {
+      "code": "coverage.calibration_models",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 1 calibration models; 16 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 0 models in family curved_surfaces; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 0 models in family dense_parts; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 0 models in family flat_plates; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 0 models in family small_details; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 0 models in family support_heavy; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 0 models in family tall_walls; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 1 models in family hollow_parts; 3 required."
+    },
+    {
+      "code": "coverage.family",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 1 models in family thin_lettering; 3 required."
+    },
+    {
+      "code": "coverage.minimum_cases",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 2 benchmark cases; 72 required."
+    },
+    {
+      "code": "coverage.model_count",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 2 distinct models; 24 required."
+    },
+    {
+      "code": "coverage.preference",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "No supplied case covers required preference strength."
+    },
+    {
+      "code": "coverage.validation_models",
+      "path": "$.cases",
+      "caseId": null,
+      "message": "Coverage has 1 validation models; 8 required."
+    },
+    {
+      "code": "case.blocked",
+      "path": "$.cases[0].missingDataReasons",
+      "caseId": "body4-pla-standard-q1",
+      "message": "Benchmark-use consent and approved restricted-storage URI are not recorded for the located source model."
+    },
+    {
+      "code": "case.blocked",
+      "path": "$.cases[0].missingDataReasons",
+      "caseId": "body4-pla-standard-q1",
+      "message": "Measured production actuals are unavailable."
+    },
+    {
+      "code": "case.blocked",
+      "path": "$.cases[0].missingDataReasons",
+      "caseId": "body4-pla-standard-q1",
+      "message": "The resolved profile bundle needs operator approval, restricted immutable storage, and a production image digest."
+    },
+    {
+      "code": "case.blocked",
+      "path": "$.cases[1].missingDataReasons",
+      "caseId": "280te-asa-quality-q1",
+      "message": "Customer consent for a committed or access-controlled benchmark fixture is not recorded."
+    },
+    {
+      "code": "case.blocked",
+      "path": "$.cases[1].missingDataReasons",
+      "caseId": "280te-asa-quality-q1",
+      "message": "Measured production actuals are unavailable."
+    },
+    {
+      "code": "case.blocked",
+      "path": "$.cases[1].missingDataReasons",
+      "caseId": "280te-asa-quality-q1",
+      "message": "The resolved profile bundle needs operator approval, restricted immutable storage, and a production image digest."
+    },
+    {
+      "code": "evidence.blocked",
+      "path": "$.evidenceBlockers[0]",
+      "caseId": null,
+      "message": "consented-model-corpus: The two supplied model digests are verified, but repository or restricted-store benchmark consent and twenty-two additional immutable model fixtures have not been supplied."
+    },
+    {
+      "code": "evidence.blocked",
+      "path": "$.evidenceBlockers[1]",
+      "caseId": null,
+      "message": "approved-fdm-profile-exports: Full profiles can now be resolved from the installed official preset chains and reproduce both supplied slices, but the resolved bundles are not yet operator-approved, versioned in restricted storage, or tied to a production image digest."
+    },
+    {
+      "code": "evidence.blocked",
+      "path": "$.evidenceBlockers[2]",
+      "caseId": null,
+      "message": "production-actuals: The initial ten measured production jobs per process have not been supplied."
+    },
+    {
+      "code": "evidence.blocked",
+      "path": "$.evidenceBlockers[3]",
+      "caseId": null,
+      "message": "resin-inventory-and-profiles: Active resin inventory, approved profiles, and operator sign-off are unavailable."
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "280te-asa-quality-q1",
+      "availability": "blocked",
+      "missingDataReasons": [
+        "Customer consent for a committed or access-controlled benchmark fixture is not recorded.",
+        "Measured production actuals are unavailable.",
+        "The resolved profile bundle needs operator approval, restricted immutable storage, and a production image digest."
+      ]
+    },
+    {
+      "caseId": "body4-pla-standard-q1",
+      "availability": "blocked",
+      "missingDataReasons": [
+        "Benchmark-use consent and approved restricted-storage URI are not recorded for the located source model.",
+        "Measured production actuals are unavailable.",
+        "The resolved profile bundle needs operator approval, restricted immutable storage, and a production image digest."
+      ]
+    }
+  ]
+}
+

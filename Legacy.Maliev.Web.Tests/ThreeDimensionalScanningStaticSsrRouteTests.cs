@@ -130,10 +130,10 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
     [InlineData(
         "th",
         "รับสแกน 3D และ Reverse Engineering | ในสถานที่และนอกสถานที่",
-        "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน",
+        "MALIEV รับสแกน 3D ราคาและขอบเขตชัดเจน ทั้งในสถานที่และนอกสถานที่ พร้อม Reverse Engineering, Deviation Analysis และไฟล์ส่งมอบตามการใช้งาน",
         "รับสแกน 3D, Reverse Engineering และ Deviation Analysis",
         "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ เพื่อแปลงวัตถุจริงเป็นข้อมูลดิจิทัล สร้าง CAD ที่แก้ไขได้ หรือเปรียบเทียบชิ้นงานกับ CAD ต้นแบบ โดยช่วยกำหนดผลส่งมอบก่อนเริ่มงาน",
-        "รับสแกน 3D, สแกน 3D ราคา, สแกน 3D นอกสถานที่, Reverse Engineering, Deviation Analysis")]
+        "รับสแกน 3D, รับสแกน 3D ราคา, รับสแกน 3D นอกสถานที่, สแกน 3D ราคา, Reverse Engineering, Deviation Analysis")]
     public async Task Route_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
