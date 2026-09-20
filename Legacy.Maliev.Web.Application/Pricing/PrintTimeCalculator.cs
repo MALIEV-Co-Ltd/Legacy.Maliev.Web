@@ -48,8 +48,12 @@ public static class PrintTimeCalculator
                 fallbackPerimeter);
         }
 
-        var topSkinLayers = Math.Max(1, (int)Math.Ceiling(profile.TopSkinThicknessMm / layerHeight));
-        var bottomSkinLayers = Math.Max(1, (int)Math.Ceiling(profile.BottomSkinThicknessMm / layerHeight));
+        var topSkinLayers = profile.TopSkinThicknessMm <= 0
+            ? 0
+            : Math.Max(1, (int)Math.Ceiling(profile.TopSkinThicknessMm / layerHeight));
+        var bottomSkinLayers = profile.BottomSkinThicknessMm <= 0
+            ? 0
+            : Math.Max(1, (int)Math.Ceiling(profile.BottomSkinThicknessMm / layerHeight));
         var hasUnsupportedAreaProfile = geometry.UnsupportedAreaProfileMm2.Count > 0;
 
         for (var layer = 0; layer < layers; layer++)
@@ -60,10 +64,14 @@ public static class PrintTimeCalculator
             var wallCrossArea = Math.Min(area, perimeter * walls * lineWidth);
             var wallPathLength = wallCrossArea / lineWidth;
             var interiorArea = Math.Max(0, area - wallCrossArea);
-            var lowerArea = layer >= bottomSkinLayers ? layerAreas[layer - bottomSkinLayers] : 0;
-            var upperArea = layer + topSkinLayers < layers ? layerAreas[layer + topSkinLayers] : 0;
-            var bottomSkinArea = Math.Max(0, area - lowerArea);
-            var topSkinArea = Math.Max(0, area - upperArea);
+            var lowerArea = bottomSkinLayers > 0 && layer >= bottomSkinLayers
+                ? layerAreas[layer - bottomSkinLayers]
+                : 0;
+            var upperArea = topSkinLayers > 0 && layer + topSkinLayers < layers
+                ? layerAreas[layer + topSkinLayers]
+                : 0;
+            var bottomSkinArea = bottomSkinLayers > 0 ? Math.Max(0, area - lowerArea) : 0;
+            var topSkinArea = topSkinLayers > 0 ? Math.Max(0, area - upperArea) : 0;
             var solidSkinArea = Math.Min(interiorArea, bottomSkinArea + topSkinArea);
             var sparseInfillArea = Math.Max(0, interiorArea - solidSkinArea);
             var wallDeposit = wallCrossArea * layerHeight;
@@ -111,7 +119,10 @@ public static class PrintTimeCalculator
         }
 
         var layers = Math.Max(1, (int)Math.Ceiling(geometry.HeightMm / PricingCatalog.ResinLayerHeightMm));
-        return (layers * PricingCatalog.ResinPerLayerSeconds) / 60.0;
+        var bottomLayers = Math.Min(layers, PricingCatalog.ResinBottomLayerCount);
+        var seconds = (layers * PricingCatalog.ResinPerLayerSeconds)
+            + (bottomLayers * PricingCatalog.ResinBottomLayerExtraSeconds);
+        return seconds / 60.0;
     }
 
     private static double InterpolateProfile(

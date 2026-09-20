@@ -1,0 +1,390 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maliev.com/schemas/additive-benchmark/manifest.v1.schema.json",
+  "title": "MALIEV additive benchmark manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmarkVersion",
+    "status",
+    "coverageRequirements",
+    "evidenceBlockers",
+    "cases"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "benchmarkVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "blocked"
+      ]
+    },
+    "coverageRequirements": {
+      "$ref": "#/$defs/coverageRequirements"
+    },
+    "evidenceBlockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceBlocker"
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/benchmarkCase"
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "nullableSha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "nullableMetric": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modelPrintSeconds",
+        "preparationSeconds",
+        "totalMachineSeconds",
+        "modelGrams",
+        "supportGrams",
+        "purgeWasteGrams",
+        "resinMilliliters"
+      ],
+      "properties": {
+        "modelPrintSeconds": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "preparationSeconds": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "totalMachineSeconds": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "modelGrams": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "supportGrams": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "purgeWasteGrams": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "resinMilliliters": {
+          "$ref": "#/$defs/nullableMetric"
+        }
+      }
+    },
+    "workbookInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "printTimeSeconds",
+        "materialGrams",
+        "priceThb"
+      ],
+      "properties": {
+        "printTimeSeconds": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "materialGrams": {
+          "$ref": "#/$defs/nullableMetric"
+        },
+        "priceThb": {
+          "$ref": "#/$defs/nullableMetric"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceKind",
+        "uri",
+        "sha256",
+        "observedAtUtc",
+        "notes"
+      ],
+      "properties": {
+        "sourceKind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "observedAtUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "coverageRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modelCount",
+        "calibrationModelCount",
+        "validationModelCount",
+        "minimumCases",
+        "families",
+        "preferences"
+      ],
+      "properties": {
+        "modelCount": {
+          "const": 24
+        },
+        "calibrationModelCount": {
+          "const": 16
+        },
+        "validationModelCount": {
+          "const": 8
+        },
+        "minimumCases": {
+          "const": 72
+        },
+        "families": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "enum": [
+              "thin_lettering",
+              "flat_plates",
+              "hollow_parts",
+              "tall_walls",
+              "curved_surfaces",
+              "dense_parts",
+              "small_details",
+              "support_heavy"
+            ]
+          }
+        },
+        "preferences": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "enum": [
+              "quality",
+              "standard",
+              "strength"
+            ]
+          }
+        }
+      }
+    },
+    "evidenceBlocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blockerId",
+        "status",
+        "missingDataReason"
+      ],
+      "properties": {
+        "blockerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "const": "blocked"
+        },
+        "missingDataReason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "benchmarkCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "modelId",
+        "family",
+        "split",
+        "availability",
+        "modelSha256",
+        "sourceUri",
+        "sourceUnits",
+        "transform4x4",
+        "materialSku",
+        "machineProfileId",
+        "processProfileId",
+        "filamentProfileId",
+        "profileSha256",
+        "slicerVersion",
+        "supportMode",
+        "orientationPolicyVersion",
+        "preference",
+        "quantity",
+        "expected",
+        "workbookInputs",
+        "slicerReference",
+        "productionActual",
+        "provenance",
+        "missingDataReasons"
+      ],
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "enum": [
+            "thin_lettering",
+            "flat_plates",
+            "hollow_parts",
+            "tall_walls",
+            "curved_surfaces",
+            "dense_parts",
+            "small_details",
+            "support_heavy"
+          ]
+        },
+        "split": {
+          "enum": [
+            "calibration",
+            "validation"
+          ]
+        },
+        "availability": {
+          "enum": [
+            "ready",
+            "blocked"
+          ]
+        },
+        "modelSha256": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "sourceUri": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "sourceUnits": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "transform4x4": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "minItems": 16,
+              "maxItems": 16,
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "materialSku": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "machineProfileId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "processProfileId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "filamentProfileId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "profileSha256": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "slicerVersion": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "supportMode": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "orientationPolicyVersion": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "preference": {
+          "enum": [
+            "quality",
+            "standard",
+            "strength"
+          ]
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected": {
+          "$ref": "#/$defs/metrics"
+        },
+        "workbookInputs": {
+          "$ref": "#/$defs/workbookInputs"
+        },
+        "slicerReference": {
+          "$ref": "#/$defs/metrics"
+        },
+        "productionActual": {
+          "$ref": "#/$defs/metrics"
+        },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/provenance"
+          }
+        },
+        "missingDataReasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
+

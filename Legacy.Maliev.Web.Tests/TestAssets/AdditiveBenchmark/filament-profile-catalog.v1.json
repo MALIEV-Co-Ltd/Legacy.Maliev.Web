@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "1.0",
+  "catalogVersion": "2026-09-19.2",
+  "slicer": "Bambu Studio",
+  "slicerVersion": "02.08.02.61",
+  "machineProfileId": "Bambu Lab X1 Carbon 0.4 nozzle",
+  "upstreamCatalogUrl": "https://github.com/bambulab/BambuStudio/blob/master/resources/profiles/BBL.json",
+  "entries": [
+    {
+      "materialKey": "PLA",
+      "preferredVendor": "Polymaker",
+      "profileId": "PolyLite PLA @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "D315501326D599268B4AFB112A75A8ECAAAC4F73E437D5279A58781AC0D30582",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PLA-CF",
+      "preferredVendor": "eSUN_or_Polymaker",
+      "profileId": "X1C eSUN PLA-CF Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "9A70238012258EE72E63D9BEDA8BE48260410B96C140C54DD785F60EDBD2CFEE",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PETG",
+      "preferredVendor": "Polymaker",
+      "profileId": "PolyLite PETG @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "BD8C690628C2EDB18AF6C275F9867A0C756C7724098A26BD5087B773E7A195DE",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PETG-CF",
+      "preferredVendor": "eSUN_or_Polymaker",
+      "profileId": "X1C eSUN PETG-CF Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "7D6BB55E8DD266A87E2CE6E8DDA116F959E7E161519E86A56894C10527B2D18E",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PETG-ESD",
+      "preferredVendor": "Polymaker",
+      "profileId": "Fiberon PETG-ESD @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "ADF365349E5840261F58BE2E48C8A60F3D547D2C27B1629A692CB02BEF75166F",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PET-CF",
+      "preferredVendor": "Polymaker",
+      "profileId": "Fiberon PET-CF @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "624BDBB4431F62FA425243922F3A40D7C72CA9C7CAC51D17A051B543A3971112",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "ABS",
+      "preferredVendor": "Polymaker",
+      "profileId": "PolyLite ABS @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "C899F8FC1C67D4F08D78483C7F2AF3EA22CC9D2D357D57DF3FDB78931734D407",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "ABS-FR",
+      "preferredVendor": "eSUN_or_Polymaker",
+      "profileId": "X1C eSUN ABS-FR Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "83D2F3A3D467822F9A6506142F5227F97F156D5DF40363508D997FC5AC4D1668",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "ASA",
+      "preferredVendor": "Polymaker",
+      "profileId": "PolyLite ASA @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "090D4CE3C15FC0035AEEAD049B0A0B254A55E564E0BF6D40BBEE8BE2E78B4226",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "ASA-CF",
+      "preferredVendor": "eSUN_or_Polymaker",
+      "profileId": "Bambu ASA-CF @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle_fallback",
+      "resolvedSha256": "FE27031567A686BFA295547E3A8E8246449D6DA425564A4DC258F93B800C6151",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+    },
+    {
+      "materialKey": "HIPS",
+      "preferredVendor": "eSUN_or_Polymaker",
+      "profileId": "Generic HIPS @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle_fallback",
+      "resolvedSha256": "34C1AE92E8A265F4F884EB9F71E4F2F5B974D1D0719635B93F38311F4753EC22",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+    },
+    {
+      "materialKey": "PC",
+      "preferredVendor": "eSUN",
+      "profileId": "X1C eSUN PC Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "62B0488C429CF5BDF63B610F7DCDFEE4B15250E7EA8656B97E793142BD72C12A",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PC-FR",
+      "preferredVendor": "eSUN_or_Polymaker",
+      "profileId": "Bambu PC FR @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle_fallback",
+      "resolvedSha256": "C95617CD297C3C4060667C7481481186EA97A51BBBF65D046ED31535154C0088",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+    },
+    {
+      "materialKey": "PC-ESD",
+      "preferredVendor": "eSUN",
+      "profileId": "X1C eSUN PC-ESD Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "EFF7ABB2675A895F54CB6D8C5ABEE8DC5F682716EA3399295022BC2CAB610A6B",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PA6",
+      "preferredVendor": "eSUN",
+      "profileId": "X1C eSUN PA Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "B643FCDED86B00F91F12834F760EAD107320FEB790F8EDBA7DD77BD451CA566D",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PA12",
+      "preferredVendor": "Polymaker",
+      "profileId": "Generic PA",
+      "sourceAuthority": "bambu_official_bundle_fallback",
+      "resolvedSha256": "E54CAB02A5DF677A81D4D3136A737F93C2378B6ACD174BC4C459BEFD035CE7FB",
+      "exactMaterialMatch": false,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+    },
+    {
+      "materialKey": "PA-CF",
+      "preferredVendor": "Polymaker",
+      "profileId": "Fiberon PA6-CF @BBL X1C",
+      "sourceAuthority": "bambu_official_bundle",
+      "resolvedSha256": "CBB72ACC7A23E5D9C14AE807C4B8A2FEABF54451FCBE9E124665AF56998B881B",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "TPU",
+      "preferredVendor": "eSUN",
+      "profileId": "X1C eSUN TPU-95A Filament",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "11BF29312DECDDBA989FE3DBA61B1A277DE6582D2D110D0786AAC68AAB1F14A6",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    },
+    {
+      "materialKey": "PVA",
+      "preferredVendor": "eSUN",
+      "profileId": "eSUN PVA",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "2DDF1EFFBF772BA4F15511D5695606CC82F75AE2A8B19270541815D76FB5E58D",
+      "exactMaterialMatch": true,
+      "operatorApproved": true,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active"]
+    }
+  ]
+}
+

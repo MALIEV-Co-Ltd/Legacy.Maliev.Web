@@ -83,6 +83,7 @@ public static class PricingEngine
         return new ItemQuote
         {
             Process = material.Process,
+            DirectCostPerUnit = complexityAdjustedCost,
             PrintTimeMinutesPerUnit = printTime,
             MaterialPerUnit = materialPerUnit,
             WeightGramsPerUnit = weightGrams,
@@ -194,9 +195,10 @@ public static class PricingEngine
         DiscountTier tier,
         int quantity)
     {
-        var unitCost = complexityAdjustedCost + (setupLabor / Math.Max(1, quantity));
-        var marginBased = (unitCost / (1 - tier.TargetMargin)) * (1 - tier.BulkDiscount);
-        return marginBased * (1 + failureRate) * paymentGrossUp;
+        var marginBased = (complexityAdjustedCost / (1 - tier.TargetMargin)) * (1 - tier.BulkDiscount);
+        var reservedPrice = marginBased * (1 + failureRate);
+        var unitWithSetup = reservedPrice + (setupLabor / Math.Max(1, quantity));
+        return unitWithSetup * paymentGrossUp;
     }
 
     private static double RoundUpToNearest(double value, double step) =>

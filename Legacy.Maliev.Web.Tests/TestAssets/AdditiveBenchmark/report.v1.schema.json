@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maliev.com/schemas/additive-benchmark/report.v1.schema.json",
+  "title": "MALIEV additive benchmark report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "manifestSchemaVersion",
+    "manifestSha256",
+    "deterministicResultSha256",
+    "status",
+    "summary",
+    "invalidIssues",
+    "blockingIssues",
+    "cases"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "manifestSchemaVersion": {
+      "const": "1.0"
+    },
+    "manifestSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "deterministicResultSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "blocked",
+        "invalid"
+      ]
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "invalidIssues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "blockingIssues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/caseResult"
+      }
+    }
+  },
+  "$defs": {
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "totalCases",
+        "readyCases",
+        "blockedCases",
+        "invalidIssueCount",
+        "blockingIssueCount"
+      ],
+      "properties": {
+        "totalCases": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "readyCases": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "blockedCases": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "invalidIssueCount": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "blockingIssueCount": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "path",
+        "caseId",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caseId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "caseResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "availability",
+        "missingDataReasons"
+      ],
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "availability": {
+          "enum": [
+            "ready",
+            "blocked",
+            "invalid"
+          ]
+        },
+        "missingDataReasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
+
