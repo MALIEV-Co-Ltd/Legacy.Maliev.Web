@@ -57,9 +57,13 @@ public sealed class SourceParityThrough4486f0eTests : IClassFixture<TestingWebAp
         Assert.Contains("href=\"/contact/line\"", contact, StringComparison.Ordinal);
         Assert.Contains("We accept customer files throughout Thailand", location, StringComparison.Ordinal);
         Assert.Contains("ship completed parts nationwide by parcel", location, StringComparison.Ordinal);
+        Assert.Contains("Shipping within Thailand starts at THB 100", location, StringComparison.Ordinal);
+        Assert.Contains("Pickup is available at our Pak Kret workshop by appointment", location, StringComparison.Ordinal);
         Assert.Contains("schedule an appointment before visiting", location, StringComparison.Ordinal);
         Assert.Contains("รับไฟล์งานจากลูกค้าทั่วประเทศไทย", location, StringComparison.Ordinal);
         Assert.Contains("จัดส่งชิ้นงานสำเร็จทั่วประเทศทางพัสดุ", location, StringComparison.Ordinal);
+        Assert.Contains("ค่าจัดส่งภายในประเทศไทยเริ่มต้น 100 บาท", location, StringComparison.Ordinal);
+        Assert.Contains("สามารถรับชิ้นงานเองที่โรงงาน MALIEV ปากเกร็ดได้โดยนัดหมายล่วงหน้า", location, StringComparison.Ordinal);
     }
 
     [Fact]
