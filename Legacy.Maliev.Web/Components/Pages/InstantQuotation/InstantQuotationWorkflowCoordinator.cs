@@ -354,7 +354,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new ArgumentException("The selected color is not supported.", nameof(color));
         }
 
-        if (quantity is < 1 or > 1_000)
+        if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
         {
             throw new ArgumentOutOfRangeException(nameof(quantity));
         }

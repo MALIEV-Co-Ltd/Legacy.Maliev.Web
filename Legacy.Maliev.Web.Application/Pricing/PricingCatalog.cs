@@ -47,6 +47,8 @@ public static class PricingCatalog
     public const double PaymentFeeRate = 0.03;
     public const double VatRate = 0.07;
     public const double TechnicalFilamentMinimumPrice = 500.0;
+    /// <summary>Maximum quantity accepted by additive quotation and pricing.</summary>
+    public const int MaximumAdditiveQuantity = 10_000;
 
     private static readonly FdmBuildProfile QualityFdmBuildProfile = new(
         BuildPreference.Quality,
@@ -89,6 +91,10 @@ public static class PricingCatalog
         new(50, 0.10, 0.25),
         new(100, 0.15, 0.20),
     ]);
+
+    /// <summary>Display-only quote samples; these do not add commercial discount breakpoints.</summary>
+    public static readonly IReadOnlyList<int> BulkQuoteQuantities = new FrozenList<int>(
+        [1, 10, 50, 100, 500, 1_000, 5_000, MaximumAdditiveQuantity]);
 
     public static readonly IReadOnlyDictionary<string, MaterialInfo> Materials = BuildMaterials();
 
@@ -138,6 +144,13 @@ public static class PricingCatalog
 
     public static DiscountTier ResolveTier(int quantity) =>
         DiscountTiers.LastOrDefault(tier => quantity >= tier.MinQuantity) ?? DiscountTiers[0];
+
+    /// <summary>Clamps a requested additive quantity to the supported range.</summary>
+    public static int NormalizeAdditiveQuantity(int quantity) => Math.Clamp(quantity, 1, MaximumAdditiveQuantity);
+
+    /// <summary>Returns the greatest displayed bulk sample not exceeding the requested quantity.</summary>
+    public static int ResolveBulkQuoteQuantity(int quantity) =>
+        BulkQuoteQuantities.Last(sample => sample <= NormalizeAdditiveQuantity(quantity));
 
     public static double BuildPreferenceFactor(BuildPreference preference) => preference switch
     {

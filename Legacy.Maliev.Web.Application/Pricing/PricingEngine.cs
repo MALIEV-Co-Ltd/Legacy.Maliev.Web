@@ -11,7 +11,7 @@ public static class PricingEngine
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(material);
 
-        var normalizedQuantity = Math.Max(1, quantity);
+        var normalizedQuantity = PricingCatalog.NormalizeAdditiveQuantity(quantity);
         double printTime;
         double materialPerUnit;
         double weightGrams;
@@ -50,20 +50,21 @@ public static class PricingEngine
         var failureRate = PricingCatalog.FailureReserveRate(material.Process);
         var paymentGrossUp = 1 + (PricingCatalog.PaymentFeeRate / (1 - PricingCatalog.PaymentFeeRate));
         var activeTier = PricingCatalog.ResolveTier(normalizedQuantity);
-        var tiers = PricingCatalog.DiscountTiers.Select(tier => new BulkTier
+        var activeBulkQuantity = PricingCatalog.ResolveBulkQuoteQuantity(normalizedQuantity);
+        var tiers = PricingCatalog.BulkQuoteQuantities.Select(bulkQuantity => new BulkTier
         {
-            MinQuantity = tier.MinQuantity,
+            MinQuantity = bulkQuantity,
             UnitPrice = ApplyTechnicalFilamentMinimumUnitPrice(
                 RoundUnitPrice(AllInUnitPrice(
-                    complexityAdjustedCostAtQuantity(tier.MinQuantity),
+                    complexityAdjustedCostAtQuantity(bulkQuantity),
                     setupLabor,
                     failureRate,
                     paymentGrossUp,
-                    tier,
-                    tier.MinQuantity)),
-                tier.MinQuantity,
+                    PricingCatalog.ResolveTier(bulkQuantity),
+                    bulkQuantity)),
+                bulkQuantity,
                 material),
-            Active = tier.MinQuantity == activeTier.MinQuantity,
+            Active = bulkQuantity == activeBulkQuantity,
         }).ToArray();
 
         var complexityAdjustedCost = complexityAdjustedCostAtQuantity(normalizedQuantity);

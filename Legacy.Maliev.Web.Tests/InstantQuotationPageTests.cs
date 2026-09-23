@@ -27,7 +27,9 @@ public sealed class InstantQuotationPageTests
         Assert.Equal("THB", json.GetProperty("currency").GetString());
         Assert.True(json.GetProperty("unitPrice").GetDouble() > 0);
         Assert.Equal(json.GetProperty("unitPrice").GetDouble(), json.GetProperty("subtotal").GetDouble());
-        Assert.Equal(4, json.GetProperty("tiers").GetArrayLength());
+        Assert.Equal(
+            [1, 10, 50, 100, 500, 1_000, 5_000, 10_000],
+            json.GetProperty("tiers").EnumerateArray().Select(tier => tier.GetProperty("minQuantity").GetInt32()));
     }
 
     [Fact]

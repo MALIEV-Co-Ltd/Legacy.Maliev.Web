@@ -41,7 +41,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
             ValidateProfile(geometry.AreaProfileMm2, "area_profile_invalid", reasons);
             ValidateProfile(geometry.PerimeterProfileMm, "perimeter_profile_invalid", reasons);
             ValidateProfile(geometry.UnsupportedAreaProfileMm2, "unsupported_area_profile_invalid", reasons);
-            if (quantity < 1 || quantity > 1000)
+            if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
             {
                 reasons.Add("quantity_out_of_range");
             }

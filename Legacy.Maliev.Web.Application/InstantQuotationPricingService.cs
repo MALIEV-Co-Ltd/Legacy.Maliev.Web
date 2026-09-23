@@ -107,12 +107,12 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         ArgumentNullException.ThrowIfNull(part.Configuration);
 
         var configuration = part.Configuration;
-        if (configuration.Quantity is < 1 or > 1_000)
+        if (configuration.Quantity < 1 || configuration.Quantity > PricingCatalog.MaximumAdditiveQuantity)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(configuration.Quantity),
                 configuration.Quantity,
-                "Quantity must be between 1 and 1000.");
+                $"Quantity must be between 1 and {PricingCatalog.MaximumAdditiveQuantity}.");
         }
 
         var material = PricingCatalog.ResolveMaterial(configuration.MaterialKey)

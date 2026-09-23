@@ -151,19 +151,22 @@ public sealed class InstantQuotationWorkflowPricingTests
     [InlineData(50, 50)]
     [InlineData(99, 50)]
     [InlineData(100, 100)]
-    [InlineData(1000, 100)]
-    public void Quote_PreservesQuantityRangeAndTierBoundaries(int quantity, int expectedTier)
+    [InlineData(500, 500)]
+    [InlineData(1000, 1000)]
+    [InlineData(5000, 5000)]
+    [InlineData(10000, 10000)]
+    public void Quote_PreservesQuantityRangeAndActiveBulkSample(int quantity, int expectedSample)
     {
         var quote = PricingService.Quote(State(Part("PLA", "Black", quantity)));
 
         Assert.Equal(quantity, quote.Parts.Single().Quantity);
-        Assert.True(quote.Parts.Single().Tiers.Single(tier => tier.MinQuantity == expectedTier).Active);
+        Assert.True(quote.Parts.Single().Tiers.Single(tier => tier.MinQuantity == expectedSample).Active);
         Assert.Equal(0, quote.Parts.Single().UnitPrice % 10, 2);
     }
 
     [Theory]
     [InlineData(0)]
-    [InlineData(1001)]
+    [InlineData(10001)]
     public void Quote_RejectsQuantitiesOutsideCapturedRange(int quantity)
     {
         Assert.Throws<ArgumentOutOfRangeException>(

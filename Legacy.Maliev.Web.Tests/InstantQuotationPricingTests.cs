@@ -269,7 +269,7 @@ public sealed class InstantQuotationPricingTests
             PricingCatalog.ResolveMaterial("PLA")!,
             1);
 
-        Assert.Equal(4, quote.Tiers.Count);
+        Assert.Equal([1, 10, 50, 100, 500, 1_000, 5_000, 10_000], quote.Tiers.Select(tier => tier.MinQuantity));
         Assert.True(quote.Tiers.Single(tier => tier.MinQuantity == 1).Active);
         Assert.Equal(quote.Subtotal, quote.UnitPrice, 2);
         Assert.Equal(0, quote.UnitPrice % 10, 2);
@@ -282,6 +282,7 @@ public sealed class InstantQuotationPricingTests
         Assert.Equal(1, PricingCatalog.ResolveTier(0).MinQuantity);
         Assert.Equal(10, PricingCatalog.ResolveTier(49).MinQuantity);
         Assert.Equal(100, PricingCatalog.ResolveTier(5_000).MinQuantity);
+        Assert.Equal(100, PricingCatalog.ResolveTier(10_000).MinQuantity);
 
         var geometry = new GeometryInput
         {
@@ -294,6 +295,27 @@ public sealed class InstantQuotationPricingTests
         Assert.True(
             PricingEngine.QuoteItem(geometry, material, 100).UnitPrice
             < PricingEngine.QuoteItem(geometry, material, 1).UnitPrice);
+    }
+
+    [Fact]
+    public void ItemQuote_QuantityAboveMaximumUsesTenThousandPiecePriceAndSubtotal()
+    {
+        var geometry = new GeometryInput
+        {
+            HeightMm = 30,
+            VolumeMm3 = 20_000,
+            FootprintMm2 = 400,
+            AreaProfileMm2 = Enumerable.Repeat(20_000.0 / 30, 40).ToArray(),
+        };
+        var material = PricingCatalog.ResolveMaterial("PLA")!;
+
+        var atMaximum = PricingEngine.QuoteItem(geometry, material, 10_000);
+        var aboveMaximum = PricingEngine.QuoteItem(geometry, material, 10_001);
+
+        Assert.Equal(atMaximum.UnitPrice, aboveMaximum.UnitPrice);
+        Assert.Equal(atMaximum.Subtotal, aboveMaximum.Subtotal);
+        Assert.Equal(10_000 * atMaximum.UnitPrice, atMaximum.Subtotal, 2);
+        Assert.True(atMaximum.Tiers.Single(tier => tier.MinQuantity == 10_000).Active);
     }
 
     [Theory]

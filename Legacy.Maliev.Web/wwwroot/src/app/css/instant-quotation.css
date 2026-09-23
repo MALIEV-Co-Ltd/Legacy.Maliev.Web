@@ -845,6 +845,22 @@ body.instant-quotation-shell #main-content {
     text-align: end;
 }
 
+.instant-quote__bulk-pricing {
+    max-height: 11rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.instant-quote__bulk-pricing [aria-current="true"] {
+    border-radius: .35rem;
+    background: rgba(13, 110, 253, .08);
+}
+
+.instant-quote__bulk-pricing:focus-visible {
+    outline: 2px solid #0b63ce;
+    outline-offset: -2px;
+}
+
 .instant-quote__workflow [data-workflow-review-content],
 .instant-quote__workflow [data-workflow-customer-details-content] {
     min-height: 100%;
