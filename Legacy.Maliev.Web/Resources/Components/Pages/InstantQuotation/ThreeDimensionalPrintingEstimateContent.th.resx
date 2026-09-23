@@ -306,6 +306,9 @@
   <data name="Quantity" xml:space="preserve">
     <value>จำนวน</value>
   </data>
+  <data name="Saved" xml:space="preserve">
+    <value>ประหยัด</value>
+  </data>
   <data name="Maximum {0} pieces" xml:space="preserve">
     <value>สูงสุด {0} ชิ้น</value>
   </data>

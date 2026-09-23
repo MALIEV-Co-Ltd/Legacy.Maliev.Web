@@ -234,7 +234,13 @@
                             <option value="@color">@Localizer[color]</option>
                         }
                     </select>
-                    <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
+                    <div class="instant-quote__quantity-heading">
+                        <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
+                        @if (InstantQuotationBulkSavings.Calculate(part, quantityEdits.Contains(part.PartId)) is { } savings)
+                        {
+                            <span data-workflow-bulk-savings>@Localizer["Saved"] @Money(savings)</span>
+                        }
+                    </div>
                     <input id="quantity-@part.PartId"
                            name="quantity"
                            type="number"
@@ -242,6 +248,7 @@
                            max="@PricingCatalog.MaximumAdditiveQuantity"
                            aria-describedby="quantity-hint-@part.PartId"
                            value="@part.Configuration.Quantity"
+                           @oninput="() => OnQuantityInput(part.PartId)"
                            @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
                     <small id="quantity-hint-@part.PartId">@Localizer["Maximum {0} pieces", PricingCatalog.MaximumAdditiveQuantity.ToString("N0")]</small>
                     <fieldset data-workflow-build-preference>
