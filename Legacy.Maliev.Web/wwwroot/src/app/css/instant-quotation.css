@@ -477,6 +477,56 @@ body.instant-quotation-shell #main-content {
     top: 7.5rem;
 }
 
+.instant-quote__workflow > [data-workflow-viewer] > button.instant-quote__thickness-toggle {
+    top: 1rem;
+    right: 1rem;
+    left: auto;
+    width: auto;
+    max-width: min(40%, 9rem);
+    min-height: 2.75rem;
+    padding: .35rem .65rem;
+    font-size: .78rem;
+    line-height: 1.2;
+}
+
+.instant-quote__workflow > [data-workflow-viewer] > button.instant-quote__thickness-toggle.needs-attention {
+    border-color: #b91c1c;
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, .2);
+}
+
+.instant-quote__workflow > [data-workflow-viewer] > .instant-quote__thickness-legend {
+    position: absolute;
+    right: 1rem;
+    bottom: .75rem;
+    left: 1rem;
+    z-index: 2;
+    width: fit-content;
+    max-width: calc(100% - 2rem);
+    height: auto;
+    margin: 0;
+    padding: .5rem .7rem;
+    overflow: visible;
+    clip: auto;
+    border-radius: .4rem;
+    background: rgba(255, 255, 255, .94);
+    color: #172033;
+    font-size: .78rem;
+    line-height: 1.4;
+}
+
+.instant-quote__thickness-legend span:not(.instant-quote__thickness-swatch) {
+    display: block;
+}
+
+.instant-quote__thickness-swatch {
+    display: inline-block;
+    width: .75rem;
+    height: .75rem;
+    margin-right: .35rem;
+    border-radius: .15rem;
+    background: #8c0808;
+}
+
 .instant-quote__workflow .instant-quote__configuration-footer {
     position: sticky;
     bottom: -.75rem;

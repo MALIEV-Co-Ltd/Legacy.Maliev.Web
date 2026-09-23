@@ -612,4 +612,3 @@
             selectAreaQuantiles: selectAreaQuantiles, smoothDisplayField: smoothDisplayField }
     };
 }));
-

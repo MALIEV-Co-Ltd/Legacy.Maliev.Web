@@ -513,4 +513,10 @@
   <data name="Edit" xml:space="preserve"><value>แก้ไข</value></data>
   <data name="Edit {0}" xml:space="preserve"><value>แก้ไข {0}</value></data>
   <data name="Our team will review your files, then send an official quotation with payment instructions." xml:space="preserve"><value>ทีมงานของเราจะตรวจสอบไฟล์ จากนั้นส่งใบเสนอราคาอย่างเป็นทางการพร้อมคำแนะนำการชำระเงิน</value></data>
+  <data name="Wall thickness" xml:space="preserve"><value>ความหนาผนัง</value></data>
+  <data name="Red: walls thinner than {0:N2} mm for {1}" xml:space="preserve"><value>สีแดง: ผนังบางกว่า {0:N2} มม. สำหรับ {1}</value></data>
+  <data name="Thin walls may print with defects" xml:space="preserve"><value>ผนังบางอาจเกิดข้อบกพร่อง</value></data>
+  <data name="Some walls are below {0:N2} mm for {1} and may print with holes, weak walls, or missing details." xml:space="preserve"><value>ผนังบางบางส่วนต่ำกว่า {0:N2} มม. สำหรับ {1} และอาจพิมพ์เป็นรู ผนังไม่แข็งแรง หรือรายละเอียดหายไป</value></data>
+  <data name="Thickness analysis is incomplete" xml:space="preserve"><value>ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ</value></data>
+  <data name="Some regions could not be measured reliably." xml:space="preserve"><value>บางบริเวณไม่สามารถตรวจวัดได้อย่างน่าเชื่อถือ</value></data>
 </root>

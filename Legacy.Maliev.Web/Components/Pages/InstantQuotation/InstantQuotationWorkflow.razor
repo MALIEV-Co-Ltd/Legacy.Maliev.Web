@@ -60,6 +60,23 @@
             <button type="button" @onclick="ResetPreviewAsync">@Localizer["Reset view"]</button>
             <button type="button" @onclick="FitPreviewAsync">@Localizer["Fit to view"]</button>
             <button type="button" @onclick="FullscreenPreviewAsync">@Localizer["Fullscreen"]</button>
+            <button type="button"
+                    class="instant-quote__thickness-toggle @(ThicknessNeedsAttention ? "needs-attention" : null)"
+                    disabled="@(SelectedThickness?.Available != true)"
+                    aria-label="@Localizer["Wall thickness"]"
+                    aria-pressed="@(SelectedThickness?.Visible == true ? "true" : "false")"
+                    @onclick="ToggleWallThicknessAsync">@Localizer["Wall thickness"]</button>
+            @if (SelectedThickness?.Visible == true)
+            {
+                <p class="instant-quote__thickness-legend" role="status">
+                    <span class="instant-quote__thickness-swatch" aria-hidden="true"></span>
+                    @Localizer["Red: walls thinner than {0:N2} mm for {1}", SelectedThickness.LimitMm, SelectedThickness.Process.ToUpperInvariant()]
+                    @if (SelectedThickness.Incomplete)
+                    {
+                        <span>@Localizer["Some regions could not be measured reliably."]</span>
+                    }
+                </p>
+            }
         </section>
     }
 
@@ -126,6 +143,7 @@
                 @foreach (var part in ConfigurationParts)
                 {
                     var geometry = part.Geometry;
+                    thicknessStatuses.TryGetValue(part.PartId, out var thicknessStatus);
                     var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
                     var oddlySmall = maximumDimension is > 0 and < 3;
                     var oddlyLarge = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm)) > 350;
@@ -134,7 +152,9 @@
                         || geometry.NonManifold
                         || geometry.BodyCount > 1
                         || oddlySmall
-                        || oddlyLarge;
+                        || oddlyLarge
+                        || thicknessStatus?.Warning == true
+                        || thicknessStatus?.Incomplete == true;
                     <article data-workflow-dfm-part data-part-id="@part.PartId">
                         <h5>@part.DisplayFileName</h5>
                         <dl>
@@ -147,6 +167,14 @@
                         @if (hasWarning)
                         {
                             <ul data-workflow-dfm-warnings>
+                                @if (thicknessStatus?.Warning == true)
+                                {
+                                    <li data-dfm-code="thin-wall">@Localizer["Thin walls may print with defects"] — @Localizer["Some walls are below {0:N2} mm for {1} and may print with holes, weak walls, or missing details.", thicknessStatus.LimitMm, thicknessStatus.Process.ToUpperInvariant()]</li>
+                                }
+                                @if (thicknessStatus?.Incomplete == true)
+                                {
+                                    <li data-dfm-code="thickness-incomplete">@Localizer["Thickness analysis is incomplete"] — @Localizer["Some regions could not be measured reliably."]</li>
+                                }
                                 @if (!geometry.TopologyChecked)
                                 {
                                     <li data-dfm-code="topology-not-checked">@Localizer["Detailed topology checks were skipped for this large mesh. Engineering review is required."]</li>

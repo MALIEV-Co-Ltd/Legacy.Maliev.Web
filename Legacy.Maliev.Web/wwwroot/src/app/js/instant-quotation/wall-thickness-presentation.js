@@ -76,4 +76,3 @@
         MIN_RELIABLE_COVERAGE: MIN_RELIABLE_COVERAGE
     };
 }));
-
