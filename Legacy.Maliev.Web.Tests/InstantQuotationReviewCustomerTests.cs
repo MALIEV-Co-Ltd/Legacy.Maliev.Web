@@ -125,7 +125,8 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.DoesNotContain("📦", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
         Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationReview.razor"), StringComparison.Ordinal);
         Assert.Contains("instant-quote__flow-step", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
-        Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
+        Assert.Contains("<InstantQuotationCustomerOrderOverview", markup, StringComparison.Ordinal);
+        Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationCustomerOrderOverview.razor"), StringComparison.Ordinal);
         Assert.Contains("PriceNeedsEngineeringReview", code, StringComparison.Ordinal);
         Assert.Contains("AllPartsNeedEngineeringReview", code, StringComparison.Ordinal);
         Assert.Contains("some parts are not watertight", markup, StringComparison.Ordinal);
@@ -165,6 +166,32 @@ public sealed class InstantQuotationReviewCustomerTests
             "InstantQuotationWorkflow.ViewerPartKey(part.PartId)",
             ReadComponent("InstantQuotationReview.razor"),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CustomerStep_UsesAuthoritativePartsAndQuoteBesideUnchangedPostContract()
+    {
+        var workflow = ReadComponent("InstantQuotationWorkflow.razor");
+        var code = ReadComponent("InstantQuotationWorkflow.razor.cs");
+        var overview = ReadComponent("InstantQuotationCustomerOrderOverview.razor");
+        var form = ReadComponent("InstantQuotationCustomerForm.razor");
+        var css = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "instant-quotation.css"));
+
+        Assert.Contains("<InstantQuotationCustomerOrderOverview Parts=\"@Parts\" Quote=\"@OrderQuote\" Materials=\"@Materials\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("VisibleSections.Review || VisibleSections.CustomerDetails", code, StringComparison.Ordinal);
+        Assert.Contains("data-workflow-customer-order", overview, StringComparison.Ordinal);
+        Assert.Contains("data-review-thumbnail", overview, StringComparison.Ordinal);
+        Assert.Contains("InstantQuotationWorkflow.ViewerPartKey(part.PartId)", overview, StringComparison.Ordinal);
+        Assert.Contains("part.Configuration.Quantity", overview, StringComparison.Ordinal);
+        Assert.Contains("quotedPart?.Subtotal", overview, StringComparison.Ordinal);
+        Assert.Contains("Quote?.FinalOrderPrice", overview, StringComparison.Ordinal);
+        Assert.Contains("Quote?.ShippingCost", overview, StringComparison.Ordinal);
+        Assert.Contains("Quote?.Vat", overview, StringComparison.Ordinal);
+        Assert.Contains("name=\"@Model.AntiforgeryFieldName\"", form, StringComparison.Ordinal);
+        Assert.Contains("Our team will review your files", form, StringComparison.Ordinal);
+        Assert.Contains("[data-workflow-state=\"customerdetails\"] > [data-workflow-viewer]", css, StringComparison.Ordinal);
+        Assert.Contains("@media (min-width: 48rem)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (min-width: 62rem)", css, StringComparison.Ordinal);
     }
 
     [Fact]

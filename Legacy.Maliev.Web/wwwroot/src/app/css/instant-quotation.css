@@ -885,6 +885,162 @@ body.instant-quotation-shell #main-content {
     overflow-wrap: anywhere;
 }
 
+/* Step 3 replaces the interactive viewer with an order ledger. The native form
+   remains in the second pane, with the full price breakdown visible beside it. */
+.instant-quote__workflow[data-workflow-state="customerdetails"] > [data-workflow-viewer] {
+    display: none;
+}
+
+.instant-quote__workflow > .instant-quote__customer-order {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #d8dde3;
+    border-radius: .75rem;
+    background: #fff;
+}
+
+.instant-quote__customer-order > header {
+    padding: .85rem 1rem;
+    border-bottom: 1px solid #e7eaee;
+}
+
+.instant-quote__customer-order h2,
+.instant-quote__customer-order h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.instant-quote__customer-order-scroll {
+    min-width: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
+.instant-quote__customer-order table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.instant-quote__customer-order th,
+.instant-quote__customer-order td {
+    padding: .65rem .75rem;
+    border-bottom: 1px solid #e7eaee;
+    text-align: start;
+    vertical-align: middle;
+}
+
+.instant-quote__customer-order th {
+    color: #526070;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.instant-quote__customer-order th:nth-child(2),
+.instant-quote__customer-order td:nth-child(2) {
+    width: 3.25rem;
+    text-align: center;
+}
+
+.instant-quote__customer-order th:last-child,
+.instant-quote__customer-order td:last-child {
+    width: 6.5rem;
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.instant-quote__customer-order-part {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    align-items: center;
+    gap: .65rem;
+}
+
+.instant-quote__customer-order-part img {
+    width: 3.25rem;
+    height: 3.25rem;
+    object-fit: cover;
+    object-position: center;
+    border: 1px solid #e2e8f0;
+    border-radius: .45rem;
+    background: #f8fafc;
+}
+
+.instant-quote__customer-order-identity {
+    min-width: 0;
+}
+
+.instant-quote__customer-order-identity strong,
+.instant-quote__customer-order-identity small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.instant-quote__customer-order-identity small {
+    color: #687583;
+}
+
+.instant-quote__workflow .instant-quote__customer-order > .instant-quote__pricing-summary {
+    flex: 0 0 auto;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #e7eaee;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.instant-quote__customer-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: .65rem;
+    padding: .75rem 0;
+    background: #fff;
+}
+
+.instant-quote__customer-actions p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #526070;
+    font-size: .8rem;
+    line-height: 1.45;
+}
+
+.instant-quote__customer-actions button {
+    margin: 0;
+    width: 100%;
+}
+
+@media (min-width: 48rem) {
+    .instant-quote__customer-order th:nth-child(2),
+    .instant-quote__customer-order td:nth-child(2) {
+        width: 4.5rem;
+    }
+
+    .instant-quote__customer-order th:last-child,
+    .instant-quote__customer-order td:last-child {
+        width: 7.5rem;
+    }
+
+    .instant-quote__customer-actions {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+
+    .instant-quote__customer-actions p {
+        grid-column: auto;
+    }
+
+    .instant-quote__customer-actions button {
+        width: auto;
+    }
+}
+
 @media (min-width: 62rem) {
     body.instant-quotation-shell {
         height: 100dvh;
@@ -931,6 +1087,45 @@ body.instant-quotation-shell #main-content {
         height: 100%;
         overflow: hidden;
         border-radius: 0;
+    }
+
+    .instant-quote__workflow[data-workflow-state="customerdetails"] > .instant-quote__customer-order {
+        grid-column: 1;
+        grid-row: 1 / -1;
+        min-height: 0;
+        margin: .75rem;
+    }
+
+    .instant-quote__workflow[data-workflow-state="customerdetails"] .instant-quote__customer-order-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .instant-quote__workflow[data-workflow-state="customerdetails"] > [data-workflow-customer-details] {
+        overflow: hidden;
+    }
+
+    .instant-quote__workflow[data-workflow-state="customerdetails"] [data-workflow-customer-details-content] {
+        display: flex;
+        min-height: 0;
+        height: 100%;
+        flex-direction: column;
+    }
+
+    .instant-quote__workflow[data-workflow-state="customerdetails"] [data-workflow-customer-details-content] form {
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+    }
+
+    .instant-quote__workflow[data-workflow-state="customerdetails"] .instant-quote__customer-actions {
+        position: sticky;
+        bottom: 0;
+        grid-column: 1 / -1;
+        z-index: 1;
+        border-top: 1px solid #e7eaee;
+        box-shadow: 0 -.3rem .75rem rgba(31, 52, 73, .06);
     }
 
     .instant-quote__workflow [data-workflow-viewer] canvas {
