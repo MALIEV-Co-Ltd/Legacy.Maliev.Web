@@ -320,23 +320,31 @@
             }
 
             <div class="instant-quote__configuration-footer">
-                <dl data-workflow-order-summary data-workflow-order-total aria-live="polite" aria-atomic="true">
-                    <div class="instant-quote__summary-detail"><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
-                    @if (OrderQuote is { MinimumOrderSurcharge: > 0 } orderQuote)
-                    {
-                        <div data-workflow-minimum-order-surcharge>
-                            <dt>@Localizer["Minimum order surcharge"] (@Localizer["minimum"] @Money(orderQuote.MinimumOrderPrice))</dt>
-                            <dd>@Money(orderQuote.MinimumOrderSurcharge)</dd>
+                <details class="instant-quote__summary-dock" data-workflow-summary-dock>
+                    <summary>
+                        <span class="instant-quote__summary-dock-title">@Localizer["Part and price summary"]</span>
+                        <span>@Localizer["Parts"] <strong>@Parts.Count</strong></span>
+                        <strong aria-live="polite" aria-atomic="true">@Money(OrderQuote?.FinalOrderPrice)</strong>
+                        <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
+                    </summary>
+                    <dl data-workflow-order-summary data-workflow-order-total>
+                        <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
+                        @if (OrderQuote is { MinimumOrderSurcharge: > 0 } orderQuote)
+                        {
+                            <div data-workflow-minimum-order-surcharge>
+                                <dt>@Localizer["Minimum order surcharge"] (@Localizer["minimum"] @Money(orderQuote.MinimumOrderPrice))</dt>
+                                <dd>@Money(orderQuote.MinimumOrderSurcharge)</dd>
+                            </div>
+                        }
+                        <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
+                        <div><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
+                        <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
+                        <div data-workflow-lead-time>
+                            <dt>@Localizer["Lead time"]</dt>
+                            <dd>@LeadTime</dd>
                         </div>
-                    }
-                    <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
-                    <div class="instant-quote__summary-detail"><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
-                    <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
-                    <div data-workflow-lead-time>
-                        <dt>@Localizer["Lead time"]</dt>
-                        <dd>@LeadTime</dd>
-                    </div>
-                </dl>
+                    </dl>
+                </details>
 
                 @if (PriceNeedsEngineeringReview)
                 {

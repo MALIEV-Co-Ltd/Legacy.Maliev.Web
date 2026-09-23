@@ -44,7 +44,7 @@ public sealed class InstantQuotationAccessibilityContractTests
         var workflow = ReadComponent("InstantQuotationWorkflow.razor");
 
         Assert.Contains("Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each.", workflow, StringComparison.Ordinal);
-        Assert.Contains("data-workflow-order-total aria-live=\"polite\" aria-atomic=\"true\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("<strong aria-live=\"polite\" aria-atomic=\"true\">@Money(OrderQuote?.FinalOrderPrice)</strong>", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("role=\"status\" aria-live=\"polite\"", workflow, StringComparison.Ordinal);
     }
 

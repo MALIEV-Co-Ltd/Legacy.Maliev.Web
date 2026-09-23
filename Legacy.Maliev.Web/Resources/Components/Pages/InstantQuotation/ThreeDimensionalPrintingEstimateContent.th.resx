@@ -240,6 +240,9 @@
   <data name="Parts" xml:space="preserve">
     <value>ชิ้นงาน</value>
   </data>
+  <data name="Part and price summary" xml:space="preserve">
+    <value>สรุปชิ้นงานและราคา</value>
+  </data>
   <data name="Start here: drop your 3D file" xml:space="preserve">
     <value>เริ่มที่นี่: วางไฟล์ 3D ของคุณ</value>
   </data>
