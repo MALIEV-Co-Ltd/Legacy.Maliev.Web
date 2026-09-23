@@ -748,6 +748,29 @@ body.instant-quotation-shell #main-content {
     position: relative;
 }
 
+.instant-quote__quantity-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .35rem .6rem;
+    min-width: 0;
+}
+
+.instant-quote__quantity-heading label {
+    margin-top: 1rem;
+}
+
+.instant-quote__quantity-heading [data-workflow-bulk-savings] {
+    max-width: 100%;
+    padding: .15rem .4rem;
+    border-radius: 999px;
+    color: #087d55;
+    background: #e6f5ed;
+    font-size: .75rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
 .instant-quote__workflow [data-workflow-part-number] {
     display: inline-flex;
     min-width: 2rem;

@@ -37,6 +37,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private readonly Dictionary<Guid, string> previewKeys = [];
     private readonly Dictionary<Guid, ThicknessStatus> thicknessStatuses = [];
     private readonly Dictionary<Guid, long> thicknessToggleRevisions = [];
+    private readonly QuantityEditState quantityEdits = new();
     private readonly SemaphoreSlim uploadBatchGate = new(1, 1);
     private IInstantQuotationAnalyticsTracker analytics = NoOpInstantQuotationAnalyticsTracker.Instance;
     private bool previewAttached;
@@ -381,6 +382,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 thicknessStatuses.Remove(partId);
                 thicknessToggleRevisions.Remove(partId);
+                quantityEdits.Forget(partId);
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
                 if (selectedPreviewPartId == partId)
                 {
@@ -653,11 +655,17 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         await UpdatePartAppearanceAsync(partId, color);
     }
 
+    private void OnQuantityInput(Guid partId)
+    {
+        quantityEdits.Begin(partId);
+    }
+
     private Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
     {
         var part = Parts.Single(item => item.PartId == partId);
         var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
-        return UpdateConfigurationAsync(part, part.Configuration.MaterialKey, part.Configuration.Color, quantity);
+        return quantityEdits.RepriceAsync(partId,
+            () => UpdateConfigurationAsync(part, part.Configuration.MaterialKey, part.Configuration.Color, quantity));
     }
 
     private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
