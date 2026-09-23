@@ -382,6 +382,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded());
 builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
 builder.Services.AddSingleton<AdditiveQuoteTicketService>();
 builder.Services.AddSingleton<IInstantQuotationQuoteTicketService>(services =>
@@ -528,6 +529,11 @@ if (useBlazorRouteHost)
 app.MapDefaultEndpoints("web");
 app.MapBuildIdentity();
 app.MapLegacySitemap();
+app.MapGet("/instant-quotation/fdm-profiles.v1.json", (FdmRuntimeProfileCatalog profiles, HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Text(profiles.BrowserManifestJson, "application/json; charset=utf-8");
+});
 app.MapMemberCompatibilityEndpoints();
 app.MapPost("/InstantQuotation/CNC-Machining", async (
     HttpContext context,
