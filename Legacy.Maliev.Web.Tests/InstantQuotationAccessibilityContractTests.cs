@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Xml.Linq;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
@@ -45,6 +46,37 @@ public sealed class InstantQuotationAccessibilityContractTests
         Assert.Contains("Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each.", workflow, StringComparison.Ordinal);
         Assert.Contains("data-workflow-order-total aria-live=\"polite\" aria-atomic=\"true\"", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("role=\"status\" aria-live=\"polite\"", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WallThicknessAdvisoryIsLocalizedKeyboardOperableAndDoesNotGateQuotation()
+    {
+        var workflow = ReadComponent("InstantQuotationWorkflow.razor");
+        var code = ReadComponent("InstantQuotationWorkflow.razor.cs");
+        var resource = XDocument.Load(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "InstantQuotation",
+            "ThreeDimensionalPrintingEstimateContent.th.resx"));
+        var keys = resource.Descendants("data")
+            .Select(element => (string?)element.Attribute("name"))
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains("instant-quote__thickness-toggle", workflow, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=", workflow, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(SelectedThickness?.Available != true)\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("data-dfm-code=\"thin-wall\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("data-dfm-code=\"thickness-incomplete\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("ReportThicknessStateAsync", code, StringComparison.Ordinal);
+        Assert.Contains("ToggleWallThicknessAsync", code, StringComparison.Ordinal);
+        Assert.Contains("Wall thickness", keys);
+        Assert.Contains("Thin walls may print with defects", keys);
+        Assert.Contains("Thickness analysis is incomplete", keys);
+        Assert.DoesNotContain("CanEnterReview && !ThicknessNeedsAttention", code, StringComparison.Ordinal);
     }
 
     [Fact]

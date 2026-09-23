@@ -126,6 +126,137 @@ export function addCadPreviewEdges(object) {
   return added;
 }
 
+/** Wall evidence is advisory and never changes the server-owned quotation claim. */
+export function attachWallThicknessEvidence(object, evidence) {
+  if (!object || !evidence) return false;
+  const meshes = [];
+  object.traverse(child => {
+    if (child.isMesh && !child.userData?.wallThicknessPatch
+        && child.geometry?.getAttribute?.('position')) meshes.push(child);
+  });
+  if (meshes.length !== evidence.fields?.length
+      || meshes.some((mesh, index) => evidence.fields[index]?.length
+        !== mesh.geometry.getAttribute('position').count)) return false;
+  const ownedGeometries = new Set();
+  meshes.forEach((mesh, index) => {
+    const field = evidence.fields[index];
+    if (ownedGeometries.has(mesh.geometry)) mesh.geometry = mesh.geometry.clone();
+    ownedGeometries.add(mesh.geometry);
+    if (!fallbackMaterialOwnership.has(mesh)) {
+      const originals = asArray(mesh.material);
+      const replacements = originals.map(material => material.clone());
+      fallbackMaterialOwnership.set(mesh, { originals, replacements });
+      mesh.material = replacements.length === 1 ? replacements[0] : replacements;
+    }
+    mesh.geometry.setAttribute('wallThicknessMm', new THREE.Float32BufferAttribute(field, 1));
+  });
+  object.userData.wallThicknessEvidence = evidence;
+  return true;
+}
+
+export function renderWallThicknessOverlay(object, visible, policy) {
+  if (!object) return false;
+  const enabled = visible === true && Number.isFinite(policy?.thinMm);
+  let measured = false;
+  object.traverse(child => {
+    if (!child.isMesh || child.userData?.wallThicknessPatch || !child.geometry) return;
+    const field = child.geometry.getAttribute?.('wallThicknessMm');
+    if (!field) return;
+    measured = true;
+    for (const material of asArray(child.material)) {
+      if (!material) continue;
+      const state = material.userData.wallThicknessOverlay ?? {
+        compile: material.onBeforeCompile,
+        cacheKey: material.customProgramCacheKey,
+        active: false,
+        shader: null,
+        thinMm: policy.thinMm,
+      };
+      material.userData.wallThicknessOverlay = state;
+      state.thinMm = policy.thinMm;
+      if (enabled && !state.active) {
+        material.onBeforeCompile = function (shader, renderer) {
+          state.compile.call(this, shader, renderer);
+          shader.uniforms.malievThinLimitMm = { value: state.thinMm };
+          shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nattribute float wallThicknessMm;\nvarying float vWallThicknessMm;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWallThicknessMm = wallThicknessMm;');
+          shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', '#include <common>\nvarying float vWallThicknessMm;\nuniform float malievThinLimitMm;')
+            .replace('#include <color_fragment>',
+              '#include <color_fragment>\nfloat thinBlend = vWallThicknessMm >= 0.0 ? 1.0 - smoothstep(max(0.0, malievThinLimitMm - 0.1), malievThinLimitMm, vWallThicknessMm) : 0.0;\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.55, 0.03, 0.03), thinBlend);');
+          state.shader = shader;
+        };
+        material.customProgramCacheKey = function () {
+          return state.cacheKey.call(this) + '|maliev-thin-wall-gradient-v2';
+        };
+        state.active = true;
+        material.needsUpdate = true;
+      } else if (!enabled && state.active) {
+        material.onBeforeCompile = state.compile;
+        material.customProgramCacheKey = state.cacheKey;
+        state.active = false;
+        state.shader = null;
+        material.needsUpdate = true;
+      }
+      if (state.shader) state.shader.uniforms.malievThinLimitMm.value = state.thinMm;
+    }
+  });
+  const evidence = object.userData.wallThicknessEvidence;
+  const patches = evidence?.oppositeSurfacePatches;
+  let patch = object.userData.wallThicknessPatchMesh;
+  if (!enabled || !measured || !patches?.length) {
+    if (patch) patch.visible = false;
+    return enabled && measured;
+  }
+  if (!patch) {
+    patch = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
+      color: 0x8c0808, transparent: true, side: THREE.DoubleSide,
+      depthTest: true, depthWrite: false, polygonOffset: true,
+      polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+    }));
+    patch.userData.wallThicknessPatch = true;
+    patch.renderOrder = 5;
+    patch.material.onBeforeCompile = shader => {
+      shader.uniforms.malievThinLimitMm = { value: patch.userData.thinMm };
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float wallThicknessMm;\nvarying float vWallThicknessMm;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWallThicknessMm = wallThicknessMm;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vWallThicknessMm;\nuniform float malievThinLimitMm;')
+        .replace('#include <color_fragment>',
+          '#include <color_fragment>\nfloat thinBlend = vWallThicknessMm >= 0.0 ? 1.0 - smoothstep(max(0.0, malievThinLimitMm - 0.1), malievThinLimitMm, vWallThicknessMm) : 0.0;\ndiffuseColor.a *= thinBlend;');
+      patch.userData.shader = shader;
+    };
+    patch.material.customProgramCacheKey = () => 'maliev-opposite-thin-gradient-v2';
+    object.userData.wallThicknessPatchMesh = patch;
+    object.add(patch);
+  }
+  if (patch.userData.thinMm !== policy.thinMm) {
+    object.updateWorldMatrix?.(true, true);
+    const positions = [];
+    const readings = [];
+    for (let offset = 0; offset + 12 < patches.length; offset += 13) {
+      if (Math.min(patches[offset + 9], patches[offset + 10], patches[offset + 11]) >= policy.thinMm
+          || patches[offset + 12] < policy.thinMm) continue;
+      for (let corner = 0; corner < 3; corner += 1) {
+        const point = object.worldToLocal(new THREE.Vector3(
+          patches[offset + corner * 3], patches[offset + corner * 3 + 1], patches[offset + corner * 3 + 2]));
+        positions.push(point.x, point.y, point.z);
+        readings.push(patches[offset + 9 + corner]);
+      }
+    }
+    patch.geometry.dispose();
+    patch.geometry = new THREE.BufferGeometry();
+    patch.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    patch.geometry.setAttribute('wallThicknessMm', new THREE.Float32BufferAttribute(readings, 1));
+    patch.userData.thinMm = policy.thinMm;
+  }
+  if (patch.userData.shader) patch.userData.shader.uniforms.malievThinLimitMm.value = policy.thinMm;
+  patch.visible = patch.geometry.getAttribute('position').count > 0;
+  return enabled && measured;
+}
+
 function createCadFaceBoundaryGeometry(geometry) {
   const ranges = geometry?.userData?.cadFaceRanges;
   const position = geometry?.getAttribute?.('position');
@@ -250,7 +381,7 @@ export function createModelViewer({ adapter, eventTarget = null }) {
       : 1;
     const detectedBodyCount = Number(adapter.colorDisconnectedBodies?.(object)) || 0;
     const bodyCount = Math.max(declaredBodyCount, detectedBodyCount);
-    parts.set(id, { object, bodyCount, camera: null });
+    parts.set(id, { object, bodyCount, camera: null, thicknessVisible: false, material: null });
     adapter.hide?.(object);
     if (bodyCount > 1 && detectedBodyCount <= 1) {
       adapter.setBodyColors?.(object, Array.from({ length: bodyCount }, (_, index) => stableBodyColor(index)));
@@ -265,10 +396,12 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     if (activeId !== null) {
       const current = requirePart(activeId);
       current.camera = clone(adapter.getCameraState?.());
+      adapter.setThickness?.(current.object, false, { thinMm: 0.8 });
       adapter.hide?.(current.object);
     }
     activeId = id;
     adapter.show?.(next.object);
+    adapter.setThickness?.(next.object, next.thicknessVisible, next.policy ?? { thinMm: 0.8 });
     if (next.camera) adapter.setCameraState?.(clone(next.camera));
     else adapter.fit?.(next.object);
   }
@@ -294,6 +427,24 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     if (part.bodyCount > 1) return false;
     adapter.setColor?.(part.object, color);
     return true;
+  }
+
+  function setThicknessEvidence(id, evidence) {
+    const part = requirePart(id);
+    if (!adapter.attachThickness?.(part.object, evidence)) return false;
+    adapter.setThickness?.(part.object, activeId === id && part.thicknessVisible,
+      part.policy ?? { thinMm: 0.8 });
+    return true;
+  }
+
+  function setThicknessVisible(visible, policy) {
+    if (activeId === null) return false;
+    const part = requirePart(activeId);
+    const requested = visible === true;
+    part.policy = policy;
+    const applied = adapter.setThickness?.(part.object, requested, policy) ?? false;
+    part.thicknessVisible = requested && applied;
+    return applied;
   }
 
   function reset() {
@@ -363,7 +514,8 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return part;
   }
 
-  return Object.freeze({ addPart, select, remove, setColor, reset, fit, fullscreen, snapshot, handleKey, dispose });
+  return Object.freeze({ addPart, select, remove, setColor, setThicknessEvidence,
+    setThicknessVisible, reset, fit, fullscreen, snapshot, handleKey, dispose });
 }
 
 /** Creates the production Three.js viewer. Call only inside the quotation island. */
@@ -431,6 +583,8 @@ export function createThreeModelViewer(canvas) {
         index += 1;
       });
     },
+    attachThickness: attachWallThicknessEvidence,
+    setThickness: renderWallThicknessOverlay,
     colorDisconnectedBodies,
     disposeControls() { controls.dispose(); },
     disposeRenderer() { renderer.dispose(); },

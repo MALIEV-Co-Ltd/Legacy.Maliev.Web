@@ -1,4 +1,5 @@
 import { analyzeUploadDerivedGeometry } from './geometry-analysis.mjs';
+import { assessThickness, createWallThicknessAnalyzer, policyForMaterial } from './wall-thickness.mjs';
 
 export const supportedPreviewExtensions = Object.freeze([
   'stl', 'obj', '3mf', 'glb', 'gltf', 'stp', 'step', 'igs', 'iges',
@@ -57,6 +58,7 @@ export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter
     analyzeGeometry: analyzeUploadDerivedGeometry,
     createViewer: viewerModule.createThreeModelViewer,
     reportStatus: () => dotNetStatusReporter?.invokeMethodAsync('ReportPreviewUnavailableAsync'),
+    reportThickness: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportThicknessStateAsync', ...args),
   });
 }
 
@@ -65,6 +67,8 @@ export function createWorkflowPreviewInterop({
   analyzeGeometry,
   createViewer,
   reportStatus = () => {},
+  reportThickness = () => {},
+  thicknessAnalyzer = createWallThicknessAnalyzer(),
 }) {
   if (typeof loadModel !== 'function'
       || typeof analyzeGeometry !== 'function'
@@ -130,6 +134,10 @@ export function createWorkflowPreviewInterop({
       released: false,
       quarantined: false,
       attached: false,
+      thicknessEvidence: null,
+      thicknessMaterial: '',
+      thicknessVisible: false,
+      thicknessRevision: 0,
       stallTimer: null,
     };
     previews.set(key, entry);
@@ -157,6 +165,14 @@ export function createWorkflowPreviewInterop({
         return null;
       }
       completePreview(entry, object);
+      Promise.resolve(thicknessAnalyzer.analyze(object, controller.signal)).then(evidence => {
+        if (!isCurrent(entry)) return;
+        entry.thicknessEvidence = evidence;
+        if (entry.attached && evidence) viewer?.setThicknessEvidence?.(entry.partId, evidence);
+        notifyThickness(entry);
+      }).catch(() => {
+        if (isCurrent(entry)) notifyThickness(entry);
+      });
       return entry.geometryClaim;
     }).catch(error => {
       failPreview(entry, error);
@@ -224,14 +240,16 @@ export function createWorkflowPreviewInterop({
     for (const entry of previews.values()) attachAdmittedPreview(entry);
   }
 
-  function admit(key, partId) {
+  function admit(key, partId, material = '') {
     assertActive();
     const entry = requirePreview(key);
     if (entry.released || entry.quarantined || !partId) return false;
     entry.partId = partId;
+    entry.thicknessMaterial = material;
     entry.file = null;
     partKeys.set(partId, key);
     attachAdmittedPreview(entry);
+    notifyThickness(entry);
     return true;
   }
 
@@ -239,6 +257,7 @@ export function createWorkflowPreviewInterop({
     if (!viewer || !entry.object || !entry.partId || entry.released || entry.quarantined || entry.attached) return;
     viewer.addPart(entry.partId, entry.object);
     entry.attached = true;
+    if (entry.thicknessEvidence) viewer.setThicknessEvidence?.(entry.partId, entry.thicknessEvidence);
   }
 
   function quarantine(key) {
@@ -285,7 +304,57 @@ export function createWorkflowPreviewInterop({
     assertActive();
     if (!partKeys.has(partId) || !viewer) return false;
     viewer.select(partId);
+    const entry = previews.get(partKeys.get(partId));
+    if (entry) notifyThickness(entry);
     return true;
+  }
+
+  function notifyThickness(entry) {
+    if (!entry.partId || !isCurrent(entry)) return;
+    const evidence = entry.thicknessEvidence;
+    const policy = policyForMaterial(entry.thicknessMaterial);
+    const assessment = assessThickness(evidence, entry.thicknessMaterial);
+    const available = !!(evidence?.fields?.some(field => field.some(Number.isFinite))
+      && evidence.summary?.state !== 'unavailable');
+    try {
+      Promise.resolve(reportThickness(
+        entry.partId,
+        available,
+        assessment?.hasThinRegion === true,
+        !!evidence && assessment?.reliable === false,
+        policy.process,
+        policy.thinMm,
+        assessment?.reliable && Number.isFinite(evidence?.summary?.minMm)
+          ? evidence.summary.minMm : null,
+        ++entry.thicknessRevision)).catch(() => {});
+    } catch {
+      // Advisory UI reporting must not alter upload or quotation authority.
+    }
+  }
+
+  function setThicknessMaterial(partId, material) {
+    const entry = previews.get(partKeys.get(partId));
+    if (!entry) return false;
+    entry.thicknessMaterial = material;
+    if (entry.thicknessVisible && viewer) {
+      viewer.select(partId);
+      viewer.setThicknessVisible?.(true, policyForMaterial(material));
+    }
+    notifyThickness(entry);
+    return true;
+  }
+
+  function toggleThickness(partId) {
+    const entry = previews.get(partKeys.get(partId));
+    if (!entry?.thicknessEvidence || !viewer) return false;
+    viewer.select(partId);
+    entry.thicknessVisible = !entry.thicknessVisible;
+    if (!viewer.setThicknessVisible?.(
+      entry.thicknessVisible, policyForMaterial(entry.thicknessMaterial))) {
+      entry.thicknessVisible = false;
+    }
+    notifyThickness(entry);
+    return entry.thicknessVisible;
   }
 
   function remove(partId) {
@@ -342,6 +411,7 @@ export function createWorkflowPreviewInterop({
     partKeys.clear();
     viewer?.dispose();
     viewer = null;
+    thicknessAnalyzer.dispose?.();
   }
 
   function assertActive() {
@@ -365,6 +435,8 @@ export function createWorkflowPreviewInterop({
     release,
     retry,
     select,
+    setThicknessMaterial,
+    toggleThickness,
     remove,
     reset,
     fit,

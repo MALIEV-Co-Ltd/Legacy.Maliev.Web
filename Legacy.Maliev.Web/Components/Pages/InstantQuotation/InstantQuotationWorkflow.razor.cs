@@ -35,6 +35,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IJSObjectReference? previewInterop;
     private DotNetObjectReference<InstantQuotationWorkflow>? previewStatusReporter;
     private readonly Dictionary<Guid, string> previewKeys = [];
+    private readonly Dictionary<Guid, ThicknessStatus> thicknessStatuses = [];
+    private readonly Dictionary<Guid, long> thicknessToggleRevisions = [];
     private readonly SemaphoreSlim uploadBatchGate = new(1, 1);
     private IInstantQuotationAnalyticsTracker analytics = NoOpInstantQuotationAnalyticsTracker.Instance;
     private bool previewAttached;
@@ -42,6 +44,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool batchInProgress;
     private Guid? selectedPreviewPartId;
     private PendingWorkflowFocus pendingFocus;
+
+    private ThicknessStatus? SelectedThickness => selectedPreviewPartId is { } id
+        && thicknessStatuses.TryGetValue(id, out var status) ? status : null;
+
+    private bool ThicknessNeedsAttention => thicknessStatuses.Values.Any(
+        status => status.Warning || status.Incomplete);
 
     private InstantQuotationWorkflowState State => initializationFailed
         ? InstantQuotationWorkflowState.Error
@@ -371,6 +379,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             await workflow.RemoveAsync(partId, default);
             if (part is not null && Parts.All(item => item.PartId != partId))
             {
+                thicknessStatuses.Remove(partId);
+                thicknessToggleRevisions.Remove(partId);
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
                 if (selectedPreviewPartId == partId)
                 {
@@ -458,7 +468,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 try
                 {
-                    await previewInterop.InvokeVoidAsync("admit", key, ViewerPartKey(part.PartId));
+                    await previewInterop.InvokeVoidAsync(
+                        "admit", key, ViewerPartKey(part.PartId), part.Configuration.MaterialKey);
                     selectedPreviewPartId ??= part.PartId;
                     await analytics.RecordStageResultAsync(
                         InstantQuotationStage.Thumbnail,
@@ -514,6 +525,79 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task FullscreenPreviewAsync() => InvokePreviewAsync("fullscreen");
 
+    private async Task ToggleWallThicknessAsync()
+    {
+        if (selectedPreviewPartId is not { } id || previewInterop is null
+            || SelectedThickness?.Available != true)
+        {
+            return;
+        }
+
+        var revision = thicknessToggleRevisions.TryGetValue(id, out var previous) ? previous + 1 : 1;
+        thicknessToggleRevisions[id] = revision;
+        try
+        {
+            var visible = await previewInterop.InvokeAsync<bool>("toggleThickness", ViewerPartKey(id));
+            if (thicknessToggleRevisions.TryGetValue(id, out var current) && current == revision)
+            {
+                ApplyThicknessVisibility(id, visible);
+            }
+        }
+        catch (JSException)
+        {
+            if (thicknessToggleRevisions.TryGetValue(id, out var current) && current == revision)
+            {
+                ApplyThicknessVisibility(id, false);
+            }
+        }
+    }
+
+    private void ApplyThicknessVisibility(Guid id, bool visible)
+    {
+        if (Parts.Any(part => part.PartId == id)
+            && thicknessStatuses.TryGetValue(id, out var status))
+        {
+            thicknessStatuses[id] = status with { Visible = visible };
+        }
+    }
+
+    [JSInvokable]
+    public Task ReportThicknessStateAsync(
+        string partId,
+        bool available,
+        bool warning,
+        bool incomplete,
+        string process,
+        double limitMm,
+        double? minMm,
+        long revision)
+    {
+        if (!Guid.TryParseExact(partId, "N", out var id)
+            || Parts.All(part => part.PartId != id))
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() =>
+        {
+            if (!ShouldAcceptThicknessReport(
+                Parts.Any(part => part.PartId == id),
+                thicknessStatuses.TryGetValue(id, out var current) ? current.Revision : null,
+                revision))
+            {
+                return;
+            }
+
+            var visible = thicknessStatuses.TryGetValue(id, out var previous) && previous.Visible;
+            thicknessStatuses[id] = new ThicknessStatus(
+                available, warning, incomplete, process, limitMm, minMm, available && visible, revision);
+            StateHasChanged();
+        });
+    }
+
+    internal static bool ShouldAcceptThicknessReport(bool partExists, long? currentRevision, long revision)
+        => partExists && revision > 0 && (!currentRevision.HasValue || revision > currentRevision.Value);
+
     private async Task InvokePreviewAsync(string identifier, params object?[] arguments)
     {
         if (previewInterop is null)
@@ -553,6 +637,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             ? part.Configuration.Color
             : colors.First();
         await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity);
+        await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), material);
         await UpdatePartAppearanceAsync(partId, color);
     }
 
@@ -792,6 +877,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             : new(false, false);
 
     public readonly record struct VisibleAnalyticsMilestones(bool EstimateShown, bool ReviewReached);
+
+    private sealed record ThicknessStatus(
+        bool Available,
+        bool Warning,
+        bool Incomplete,
+        string Process,
+        double LimitMm,
+        double? MinMm,
+        bool Visible,
+        long Revision);
 
     private enum PendingWorkflowFocus
     {
