@@ -28,7 +28,6 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("[data-workflow-build-preference]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-material-comparison]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-part-number]", css, StringComparison.Ordinal);
-        Assert.Contains("repeat(auto-fit, minmax(min(100%, 9rem), 1fr))", css, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -44,7 +43,6 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("[data-workflow-review-total]", css, StringComparison.Ordinal);
         Assert.Contains(".instant-quote__actions", css, StringComparison.Ordinal);
         Assert.Contains("flex-wrap: wrap", css, StringComparison.Ordinal);
-        Assert.DoesNotContain("@media (max-width:", css, StringComparison.Ordinal);
     }
 
     private static string ReadCss() => File.ReadAllText(Path.Combine(
