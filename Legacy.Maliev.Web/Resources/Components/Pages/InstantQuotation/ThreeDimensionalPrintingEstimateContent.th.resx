@@ -353,6 +353,11 @@
   <data name="Estimate calculated. A formal quotation requires engineering review." xml:space="preserve"><value>คำนวณราคาแล้ว ใบเสนอราคาอย่างเป็นทางการต้องผ่านการตรวจสอบโดยวิศวกร</value></data>
   <data name="The estimate could not be calculated. Continue to the formal quotation form for assistance." xml:space="preserve"><value>ไม่สามารถคำนวณราคาได้ โปรดไปยังแบบฟอร์มขอใบเสนอราคาเพื่อรับความช่วยเหลือ</value></data>
   <data name="minutes" xml:space="preserve"><value>นาที</value></data>
+  <data name="minute" xml:space="preserve"><value>นาที</value></data>
+  <data name="hour" xml:space="preserve"><value>ชม.</value></data>
+  <data name="hours" xml:space="preserve"><value>ชม.</value></data>
+  <data name="day" xml:space="preserve"><value>วัน</value></data>
+  <data name="days" xml:space="preserve"><value>วัน</value></data>
   <data name="{0}–{1} business days" xml:space="preserve"><value>{0}–{1} วันทำการ</value></data>
   <data name="3D preview" xml:space="preserve"><value>ตัวอย่าง 3 มิติ</value></data>
   <data name="3D preview is unavailable. You can continue with your quotation." xml:space="preserve"><value>ไม่สามารถแสดงตัวอย่าง 3 มิติได้ คุณยังสามารถดำเนินการขอใบเสนอราคาต่อได้</value></data>
