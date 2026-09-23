@@ -1448,17 +1448,26 @@ body {
 .privacy-consent {
     position: fixed;
     z-index: 1200;
-    right: auto;
-    bottom: clamp(.75rem, 2vw, 1.5rem);
-    left: 50%;
-    width: min(calc(100% - clamp(1.5rem, 4vw, 3rem)), 68rem);
-    transform: translateX(-50%);
+    inset: 0;
+    width: min(calc(100% - 2rem), 33rem);
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 0;
+    overflow-y: auto;
     color: var(--maliev-ink);
-    border: 1px solid var(--maliev-line);
+    border: 0;
     border-radius: var(--maliev-radius);
-    background: rgba(255, 255, 255, .97);
-    box-shadow: 0 1rem 2.8rem rgba(16, 44, 78, .16);
-    backdrop-filter: blur(.65rem);
+    background: #fff;
+    box-shadow: 0 1.5rem 4rem rgba(7, 24, 45, .28);
+    font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+}
+
+.privacy-consent::backdrop {
+    background: rgba(0, 0, 0, .72);
+}
+
+html.privacy-consent-open {
+    overflow: hidden;
 }
 
 .maliev-nowrap {
@@ -1466,84 +1475,82 @@ body {
 }
 
 .privacy-consent__inner {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: .8rem;
-    padding: .75rem .85rem;
+    gap: 1.2rem;
+    padding: 2rem;
+    text-align: center;
 }
 
 .privacy-consent__icon {
     display: grid;
-    width: 2.4rem;
-    height: 2.4rem;
+    width: 3.5rem;
+    height: 3.5rem;
     place-items: center;
     color: var(--maliev-blue);
     border: 1px solid #cfe0ff;
     border-radius: 50%;
     background: var(--maliev-blue-soft);
-    font-size: 1rem;
+    font-size: 1.35rem;
 }
 
-.privacy-consent__content strong {
-    display: block;
-    margin-bottom: .15rem;
+.privacy-consent__content h2 {
+    margin: 0 0 .75rem;
     color: var(--maliev-navy);
-    font-size: .88rem;
+    font-size: 1.65rem;
     font-weight: 600;
+    line-height: 1.2;
 }
 
 .privacy-consent__content p {
-    margin: 0;
+    margin: 0 0 .75rem;
     color: var(--maliev-muted);
-    font-size: .78rem;
+    font-size: 1rem;
     font-weight: 400;
-    line-height: 1.45;
+    line-height: 1.6;
 }
 
 .privacy-consent__content a {
     color: var(--maliev-blue-dark);
-    font-weight: 400;
+    font-size: .9rem;
+    font-weight: 600;
     text-underline-offset: .18em;
 }
 
 .privacy-consent__actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: .45rem .7rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+    width: 100%;
 }
 
 .privacy-consent__reject {
-    padding: .3rem .15rem;
-    color: var(--maliev-muted);
+    min-height: 3rem;
+    padding: .65rem .8rem;
+    color: var(--maliev-navy);
     border: 0;
     background: transparent;
     font: inherit;
-    font-size: .76rem;
-    font-weight: 400;
-    text-decoration: underline;
-    text-decoration-color: #a9b8cb;
-    text-underline-offset: .18em;
-    white-space: nowrap;
+    font-weight: 600;
     cursor: pointer;
 }
 
 .privacy-consent__reject:hover {
-    color: var(--maliev-ink);
-    text-decoration-color: currentColor;
+    color: var(--maliev-blue-dark);
+    text-decoration: underline;
 }
 
 .privacy-consent__accept {
-    min-height: 2.5rem;
-    padding: .55rem .9rem;
+    min-height: 3rem;
+    padding: .65rem .8rem;
     color: #fff;
     border: 1px solid var(--maliev-blue);
     border-radius: .7rem;
     background: var(--maliev-blue);
+    font: inherit;
     font-weight: 600;
-    white-space: nowrap;
+    cursor: pointer;
 }
 
 .privacy-consent__accept:hover {
@@ -1622,22 +1629,11 @@ body {
 
 @media (max-width: 47.99rem) {
     .privacy-consent__inner {
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: .65rem;
-        padding: .75rem;
-    }
-
-    .privacy-consent__icon {
-        width: 2.4rem;
-        height: 2.4rem;
+        padding: 1.5rem;
     }
 
     .privacy-consent__actions {
-        grid-column: 1 / -1;
-    }
-
-    .privacy-consent__accept {
-        min-width: 8.5rem;
+        grid-template-columns: 1fr;
     }
 
     .maliev-actions {
