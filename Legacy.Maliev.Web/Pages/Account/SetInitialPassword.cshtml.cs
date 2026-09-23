@@ -18,16 +18,16 @@ public sealed class SetInitialPassword(
     IStringLocalizer<SetInitialPasswordContent> localizer,
     ILogger<SetInitialPassword> logger) : PageModel
 {
-    [BindProperty, Required, EmailAddress, StringLength(320)]
+    [BindProperty, Required(ErrorMessage = "Please enter your email address"), EmailAddress(ErrorMessage = "Please enter a valid email address"), StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
-    [BindProperty, Required, StringLength(256, MinimumLength = 32)]
+    [BindProperty, Required(ErrorMessage = "The password setup token is required."), StringLength(256, MinimumLength = 32, ErrorMessage = "The password setup token is invalid.")]
     public string Token { get; set; } = string.Empty;
 
-    [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 8)]
+    [BindProperty, Required(ErrorMessage = "Please enter a new password"), DataType(DataType.Password), StringLength(1024, MinimumLength = 8, ErrorMessage = "The new password must be between 8 and 1024 characters.")]
     public string Password { get; set; } = string.Empty;
 
-    [BindProperty, Required, DataType(DataType.Password), Compare(nameof(Password)), StringLength(1024)]
+    [BindProperty, Required(ErrorMessage = "Please confirm your new password"), DataType(DataType.Password), Compare(nameof(Password), ErrorMessage = "Password confirmation does not match."), StringLength(1024, ErrorMessage = "Password confirmation is too long.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
     [BindProperty]
@@ -46,11 +46,20 @@ public sealed class SetInitialPassword(
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? localizer["The submitted value is invalid."]
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal));
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var result = localizer[key];
+        return !result.ResourceNotFound
+            ? result.Value
+            : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                ? key
+                : localizer["The submitted value is invalid."].Value;
+    }
 
     public IActionResult OnGet(string? email, string? token, string? returnUrl, bool rememberMe = false)
     {
