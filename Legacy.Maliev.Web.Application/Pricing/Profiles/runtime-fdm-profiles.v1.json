@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0",
+  "profileVersion": "bambu-x1c-2026-09-22.4",
+  "machine": {
+    "sourceArtifactSha256": "85CEC6E5A7D99570BE4B8D01A735112C12012FF9BC4CC9F3182286FCF9D18050",
+    "settings": {
+      "machine_id": "Bambu Lab X1 Carbon 0.4 nozzle",
+      "supported_material_ids": "runtime",
+      "excluded_zones": "none",
+      "nozzle_diameter": "0.4",
+      "printable_width": "256",
+      "printable_depth": "256",
+      "printable_height": "250",
+      "maximum_xy_speed": "500",
+      "maximum_z_speed": "20",
+      "printing_acceleration": "20000",
+      "travel_acceleration": "9000",
+      "preparation_sequence_version": "bambu-fdm-machine-common-01.10.02.76",
+      "machine_prepare_compensation_time": "260",
+      "machine_load_filament_time": "29"
+    }
+  },
+  "builds": {
+    "Standard": {
+      "sourceArtifactSha256": "EA6AC1045F3A5379BC77FFDBCC9BA15D4D7DE442D864049D59E95601EAFADD31",
+      "settings": {
+        "nozzle_diameter": "0.4", "layer_height": "0.2", "wall_loops": "2", "sparse_infill_density": "15%", "sparse_infill_pattern": "grid",
+        "outer_wall_line_width": "0.42", "inner_wall_line_width": "0.45", "sparse_infill_line_width": "0.45", "solid_infill_line_width": "0.42",
+        "gap_fill_min_width": "0.2", "gap_fill_max_width": "0.8", "top_shell_layers": "5", "bottom_shell_layers": "3", "bridge_max_span": "25", "bridge_anchor_length": "1.2", "overhang_speed_multiplier": "50%",
+        "support_enabled": "true", "support_mode": "normal", "support_build_plate_only": "false", "support_overhang_angle": "30", "support_top_z_gap": "0.2", "support_bottom_z_gap": "0.2", "support_xy_clearance": "0.35", "support_body_density": "15%", "support_interface_density": "80%", "support_interface_layers": "2", "support_body_line_width": "0.45", "support_interface_line_width": "0.42", "support_expansion": "0",
+        "tree_tip_spacing": "3", "tree_max_branch_angle": "35", "tree_min_radius": "2", "tree_max_radius": "4", "tree_radius_per_tip": "0.2", "tree_wall_count": "2", "tree_hollow_density": "0%",
+        "gap_fill_speed": "250", "inner_wall_speed": "300", "outer_wall_speed": "200", "top_surface_speed": "200", "bottom_surface_speed": "200", "internal_solid_infill_speed": "250", "sparse_infill_speed": "270", "bridge_speed": "50", "support_speed": "150", "support_interface_speed": "80", "first_layer_speed": "50", "travel_speed": "500", "first_layer_speed_multiplier": "50%", "retract_length": "0.8", "retract_speed": "40", "setup_time": "30", "nozzle_heat_time": "60", "bed_heat_time": "90", "tool_change_time": "12", "brim_width": "5"
+      }
+    },
+    "Quality": {
+      "sourceArtifactSha256": "C6E764FE5C4A82B8DF3C207F54D9BB6AB8971A184A07D46DB213BFEB188F2AC5",
+      "settings": {
+        "nozzle_diameter": "0.4", "layer_height": "0.12", "wall_loops": "2", "sparse_infill_density": "15%", "sparse_infill_pattern": "gyroid",
+        "outer_wall_line_width": "0.42", "inner_wall_line_width": "0.45", "sparse_infill_line_width": "0.45", "solid_infill_line_width": "0.42",
+        "gap_fill_min_width": "0.2", "gap_fill_max_width": "0.8", "top_shell_layers": "7", "bottom_shell_layers": "5", "bridge_max_span": "25", "bridge_anchor_length": "1.2", "overhang_speed_multiplier": "50%",
+        "support_enabled": "true", "support_mode": "normal", "support_build_plate_only": "false", "support_overhang_angle": "30", "support_top_z_gap": "0.12", "support_bottom_z_gap": "0.12", "support_xy_clearance": "0.35", "support_body_density": "15%", "support_interface_density": "80%", "support_interface_layers": "2", "support_body_line_width": "0.45", "support_interface_line_width": "0.42", "support_expansion": "0",
+        "tree_tip_spacing": "3", "tree_max_branch_angle": "35", "tree_min_radius": "2", "tree_max_radius": "4", "tree_radius_per_tip": "0.2", "tree_wall_count": "2", "tree_hollow_density": "0%",
+        "gap_fill_speed": "230", "inner_wall_speed": "150", "outer_wall_speed": "60", "top_surface_speed": "150", "bottom_surface_speed": "150", "internal_solid_infill_speed": "180", "sparse_infill_speed": "180", "bridge_speed": "50", "support_speed": "150", "support_interface_speed": "80", "first_layer_speed": "50", "travel_speed": "500", "first_layer_speed_multiplier": "50%", "retract_length": "0.8", "retract_speed": "40", "setup_time": "30", "nozzle_heat_time": "60", "bed_heat_time": "90", "tool_change_time": "12", "brim_width": "5"
+      }
+    },
+    "Strength": {
+      "sourceArtifactSha256": "A5B615E5D705C0083F6115E84CB06AF5102DB0D11753C171B4F43FD8113E3080",
+      "settings": {
+        "nozzle_diameter": "0.4", "layer_height": "0.2", "wall_loops": "6", "sparse_infill_density": "25%", "sparse_infill_pattern": "grid",
+        "outer_wall_line_width": "0.42", "inner_wall_line_width": "0.45", "sparse_infill_line_width": "0.45", "solid_infill_line_width": "0.42",
+        "gap_fill_min_width": "0.2", "gap_fill_max_width": "0.8", "top_shell_layers": "5", "bottom_shell_layers": "3", "bridge_max_span": "25", "bridge_anchor_length": "1.2", "overhang_speed_multiplier": "50%",
+        "support_enabled": "true", "support_mode": "normal", "support_build_plate_only": "false", "support_overhang_angle": "30", "support_top_z_gap": "0.2", "support_bottom_z_gap": "0.2", "support_xy_clearance": "0.35", "support_body_density": "15%", "support_interface_density": "80%", "support_interface_layers": "2", "support_body_line_width": "0.45", "support_interface_line_width": "0.42", "support_expansion": "0",
+        "tree_tip_spacing": "3", "tree_max_branch_angle": "35", "tree_min_radius": "2", "tree_max_radius": "4", "tree_radius_per_tip": "0.2", "tree_wall_count": "2", "tree_hollow_density": "0%",
+        "gap_fill_speed": "250", "inner_wall_speed": "300", "outer_wall_speed": "60", "top_surface_speed": "200", "bottom_surface_speed": "200", "internal_solid_infill_speed": "250", "sparse_infill_speed": "270", "bridge_speed": "50", "support_speed": "150", "support_interface_speed": "80", "first_layer_speed": "50", "travel_speed": "500", "first_layer_speed_multiplier": "50%", "retract_length": "0.8", "retract_speed": "40", "setup_time": "30", "nozzle_heat_time": "60", "bed_heat_time": "90", "tool_change_time": "12", "brim_width": "5"
+      }
+    }
+  },
+  "materials": {
+    "PLA": { "profileId": "PolyLite PLA @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "D315501326D599268B4AFB112A75A8ECAAAC4F73E437D5279A58781AC0D30582", "densityGramsPerCm3": "1.24", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "4", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PLA-CF": { "profileId": "X1C eSUN PLA-CF Filament", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "9A70238012258EE72E63D9BEDA8BE48260410B96C140C54DD785F60EDBD2CFEE", "densityGramsPerCm3": "1.29", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "4", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PETG": { "profileId": "PolyLite PETG @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "BD8C690628C2EDB18AF6C275F9867A0C756C7724098A26BD5087B773E7A195DE", "densityGramsPerCm3": "1.27", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "12", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PETG-CF": { "profileId": "Fiberon PETG-rCF08 @BBL X1", "sourceAuthority": "vendor_official_profile", "sourceArtifactSha256": "6C9D839211617EB9B6FB3CA4143E0EE2E2CE4757404843D820D60D66EAC703F0", "densityGramsPerCm3": "1.30", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "12", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PETG-ESD": { "profileId": "Fiberon PETG-ESD @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "ADF365349E5840261F58BE2E48C8A60F3D547D2C27B1629A692CB02BEF75166F", "densityGramsPerCm3": "1.31", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "2", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PET-CF": { "profileId": "Fiberon PET-CF17 @BBL X1", "sourceAuthority": "vendor_official_profile", "sourceArtifactSha256": "1DA3E7E9F0305B73A8C65E0CA098BB6BF9C592E04B0A140CCFB62F4B47BAF41E", "densityGramsPerCm3": "1.34", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "5", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "ABS": { "profileId": "PolyLite ABS @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "C899F8FC1C67D4F08D78483C7F2AF3EA22CC9D2D357D57DF3FDB78931734D407", "densityGramsPerCm3": "1.04", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "3", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "ABS-FR": { "profileId": "X1C eSUN ABS-FR Filament", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "83D2F3A3D467822F9A6506142F5227F97F156D5DF40363508D997FC5AC4D1668", "densityGramsPerCm3": "1.15", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "3", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "ASA": { "profileId": "PolyLite ASA @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "090D4CE3C15FC0035AEEAD049B0A0B254A55E564E0BF6D40BBEE8BE2E78B4226", "densityGramsPerCm3": "1.07", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "3", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "ASA-CF": { "profileId": "Bambu ASA-CF @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "986374362F162B0C54A5C6B841028D0CA10A454D3D2AB37642DFAFF59D3A4EA2", "densityGramsPerCm3": "1.02", "maximumVolumetricFlowMm3PerSecond": "18", "minimumLayerTimeSeconds": "12", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "HIPS": { "profileId": "eSUN HIPS White @Bambu Lab X1 Carbon 0.4 nozzle", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "A0F19BF4EE3B395302A7AACF19060601DAEB4F0E67E06932A7789D03508F6464", "densityGramsPerCm3": "1.05", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "6", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PC": { "profileId": "X1C eSUN PC Filament", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "62B0488C429CF5BDF63B610F7DCDFEE4B15250E7EA8656B97E793142BD72C12A", "densityGramsPerCm3": "1.20", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "2", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PC-FR": { "profileId": "Bambu PC FR @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "702C81CAB56F241F01B85A37B518970B2D0EB5A493874CE4C4EF3E260629F340", "densityGramsPerCm3": "1.19", "maximumVolumetricFlowMm3PerSecond": "18", "minimumLayerTimeSeconds": "12", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PC-ESD": { "profileId": "X1C eSUN PC-ESD Filament", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "EFF7ABB2675A895F54CB6D8C5ABEE8DC5F682716EA3399295022BC2CAB610A6B", "densityGramsPerCm3": "1.20", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "30", "minimumCoolingSpeedMmPerSecond": "10", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PA6": { "profileId": "X1C eSUN PA Filament", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "B643FCDED86B00F91F12834F760EAD107320FEB790F8EDBA7DD77BD451CA566D", "densityGramsPerCm3": "1.14", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "8", "minimumCoolingSpeedMmPerSecond": "10", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PA12": { "profileId": "PA12 — eSUN ePA12", "sourceAuthority": "manufacturer_spec_conservative", "sourceArtifactSha256": "139D404B9CF0E0C97E43DDD803BD379B0B0F5FD0BAA0D25BC75C1D110A146746", "densityGramsPerCm3": "1.012", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "8", "minimumCoolingSpeedMmPerSecond": "10", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PA-CF": { "profileId": "Fiberon PA6-CF @BBL X1C", "sourceAuthority": "bambu_official_bundle", "sourceArtifactSha256": "CBB72ACC7A23E5D9C14AE807C4B8A2FEABF54451FCBE9E124665AF56998B881B", "densityGramsPerCm3": "1.16", "maximumVolumetricFlowMm3PerSecond": "8", "minimumLayerTimeSeconds": "2", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] },
+    "TPU": { "profileId": "eSUN TPU", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "D4A1B8E69A0AAE8EDFA9CB1E7A314C5A9FB0E2C5BBF6F411FE231BA3068E2AFD", "densityGramsPerCm3": "1.43", "maximumVolumetricFlowMm3PerSecond": "2.5", "minimumLayerTimeSeconds": "8", "minimumCoolingSpeedMmPerSecond": "10", "automaticPricingEligible": true, "reasonCodes": [] },
+    "PVA": { "profileId": "eSUN PVA", "sourceAuthority": "operator_local_custom", "sourceArtifactSha256": "2DDF1EFFBF772BA4F15511D5695606CC82F75AE2A8B19270541815D76FB5E58D", "densityGramsPerCm3": "1.23", "maximumVolumetricFlowMm3PerSecond": "12", "minimumLayerTimeSeconds": "7", "minimumCoolingSpeedMmPerSecond": "20", "automaticPricingEligible": true, "reasonCodes": [] }
+  }
+}
