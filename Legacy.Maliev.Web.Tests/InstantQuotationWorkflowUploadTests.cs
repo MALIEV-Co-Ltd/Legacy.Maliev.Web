@@ -592,6 +592,41 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
+    public async Task RejectedQuantityRepriceKeepsPreviouslyValidBulkSavingsHiddenUntilPersistedRetry()
+    {
+        var persisted = PersistedPart("part.stl", "opaque") with
+        {
+            Configuration = new InstantQuotationPartConfiguration("PLA", "Black", 10),
+        };
+        var store = new RecordingSessionStore
+        {
+            ExistingSession = Session("protected-resume", persisted),
+        };
+        await using var workflow = CreateWorkflow(store: store);
+        await workflow.InitializeAsync("protected-resume", default);
+        var part = Assert.Single(workflow.Parts);
+        var edits = new QuantityEditState();
+        Assert.NotNull(InstantQuotationBulkSavings.Calculate(part, false));
+
+        edits.Begin(part.PartId);
+        store.RejectNextPut = true;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => edits.RepriceAsync(part.PartId,
+            () => workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 10, default)));
+
+        var afterFailure = Assert.Single(workflow.Parts);
+        Assert.Equal(10, afterFailure.Configuration.Quantity);
+        Assert.Equal(10, afterFailure.Quote!.Quantity);
+        Assert.True(edits.IsPending(part.PartId));
+        Assert.Null(InstantQuotationBulkSavings.Calculate(afterFailure, edits.IsPending(part.PartId)));
+
+        await edits.RepriceAsync(part.PartId,
+            () => workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 10, default));
+
+        Assert.False(edits.IsPending(part.PartId));
+        Assert.True(InstantQuotationBulkSavings.Calculate(Assert.Single(workflow.Parts), false) > 0);
+    }
+
+    [Fact]
     public async Task ConfigurationChange_AcceptsTenThousandAndRejectsQuantityAboveMaximum()
     {
         var client = new ControlledUploadClient();
@@ -988,6 +1023,8 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         public string? ExistingOwnerIdentity { get; init; }
 
+        public bool RejectNextPut { get; set; }
+
         public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken)
         {
             CreateCalls++;
@@ -1011,6 +1048,12 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity, CancellationToken cancellationToken)
         {
+            if (RejectNextPut)
+            {
+                RejectNextPut = false;
+                return Task.FromResult(false);
+            }
+
             LastOwnerIdentity = ownerIdentity;
             LastSavedState = session.RequestState;
             createdSession = session;

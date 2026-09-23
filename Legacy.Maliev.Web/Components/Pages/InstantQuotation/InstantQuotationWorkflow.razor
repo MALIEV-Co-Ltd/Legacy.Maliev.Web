@@ -236,7 +236,7 @@
                     </select>
                     <div class="instant-quote__quantity-heading">
                         <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
-                        @if (InstantQuotationBulkSavings.Calculate(part, quantityEdits.Contains(part.PartId)) is { } savings)
+                        @if (InstantQuotationBulkSavings.Calculate(part, quantityEdits.IsPending(part.PartId)) is { } savings)
                         {
                             <span data-workflow-bulk-savings>@Localizer["Saved"] @Money(savings)</span>
                         }
