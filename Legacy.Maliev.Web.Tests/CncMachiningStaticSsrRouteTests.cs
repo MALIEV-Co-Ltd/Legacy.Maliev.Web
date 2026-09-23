@@ -214,10 +214,12 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         Assert.Contains("CNC machining starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
         Assert.Contains("What file formats should I send?", content, StringComparison.Ordinal);
-        Assert.Contains("แนะนำไฟล์ STEP หรือไฟล์ solid CAD พร้อมแบบ PDF", content, StringComparison.Ordinal);
+        Assert.Contains("อัปโหลด STEP/STP (แนะนำ) หรือ IGES/IGS", content, StringComparison.Ordinal);
         Assert.Contains("id=\"cnc-file-guide\"", content, StringComparison.Ordinal);
         Assert.Contains("Accepted CNC 3D files", content, StringComparison.Ordinal);
         Assert.Contains("STEP / STP (Standard)", content, StringComparison.Ordinal);
+        Assert.Contains("Native SLDPRT files are not accepted", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("<li>SLDPRT (SolidWorks)</li>", content, StringComparison.Ordinal);
         Assert.Contains("A PDF or other controlling drawing is still needed", content, StringComparison.Ordinal);
         Assert.Contains("Review all manufacturing paths", content, StringComparison.Ordinal);
         Assert.Contains("Black oxide for steel", pricing, StringComparison.Ordinal);

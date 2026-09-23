@@ -54,6 +54,16 @@ public sealed class CncUploadHandlerTests
         Assert.Equal(1, fixture.Transport.Uploads);
     }
 
+    [Fact]
+    public async Task SolidWorksPart_ExplainsStepExportWithoutSending()
+    {
+        var fixture = new Fixture();
+        var json = await fixture.Execute(fixture.Request("solidworks"));
+        Assert.False(json.GetProperty("success").GetBoolean());
+        Assert.Contains("export SLDPRT as STEP", json.GetProperty("message").GetString(), StringComparison.Ordinal);
+        Assert.Equal(0, fixture.Transport.Uploads);
+    }
+
     [Theory]
     [InlineData(CncUploadTransportOutcome.NotSent, false, false)]
     [InlineData(CncUploadTransportOutcome.Rejected, false, false)]
@@ -216,7 +226,7 @@ public sealed class CncUploadHandlerTests
                 .Protect(failure == "wrongSession" ? Guid.NewGuid().ToString() : Session);
             var data = failure == "signature" ? Encoding.UTF8.GetBytes("not a CAD file")
                 : File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "TestAssets", "Cnc", "box-20x30x40.step"));
-            var file = new FormFile(new MemoryStream(data), 0, data.Length, "file", "original.step")
+            var file = new FormFile(new MemoryStream(data), 0, data.Length, "file", failure == "solidworks" ? "original.sldprt" : "original.step")
             {
                 Headers = new HeaderDictionary(),
                 ContentType = "application/octet-stream",

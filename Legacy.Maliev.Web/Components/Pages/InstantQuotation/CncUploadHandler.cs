@@ -47,7 +47,7 @@ internal sealed class CncUploadHandler(
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!(role == "model" ? extension is ".step" or ".stp" or ".iges" or ".igs" : extension == ".pdf"))
-            return Failure("CNC models must be STEP/STP or IGES/IGS files; technical drawings must be PDF files.");
+            return Failure("CNC models must be STEP/STP or IGES/IGS files. For SolidWorks parts, export SLDPRT as STEP before uploading. Technical drawings must be PDF files.");
         var limit = role == "drawing" ? CncUploadAdmissionPolicy.MaximumDrawingFileSizeBytes : CncUploadAdmissionPolicy.MaximumModelFileSizeBytes;
         if (file.Length > limit || file.Length > int.MaxValue)
             return Failure($"This {role} file exceeds the {limit / (1024 * 1024)} MB CNC upload limit.");

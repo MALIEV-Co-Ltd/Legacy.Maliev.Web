@@ -1995,6 +1995,7 @@
                             <span class="iq-ve-copy">
                                 <span class="iq-ve-title">@Localizer["Drop your CAD file here"]</span>
                                 <span class="iq-ve-sub">@Localizer["or click to browse"] &middot; STEP, STP, IGES, IGS</span>
+                                <span class="iq-ve-limit">@(culture == "th" ? "ใช้ SolidWorks? ส่งออก SLDPRT เป็น STEP ก่อนอัปโหลด" : "Using SolidWorks? Export SLDPRT as STEP before uploading.")</span>
                                 <span class="iq-ve-limit">@(culture == "th" ? $"สูงสุด {maxUploadMb} MB ต่อไฟล์ · เพิ่มได้หลายชิ้น" : $"Up to {maxUploadMb} MB per file · add as many parts as you need")</span>
                             </span>
                         </label>
@@ -4635,8 +4636,8 @@
                 var file = files[i];
                 if (!IsAllowedRouteModelFile(file.name)) {
                     alert('@culture' == 'th'
-                        ? 'งาน CNC รองรับเฉพาะไฟล์ STEP, STP, IGES และ IGS โดยแนะนำ STEP'
-                        : 'CNC models must be STEP, STP, IGES, or IGS files. STEP is preferred.');
+                        ? 'งาน CNC รองรับเฉพาะไฟล์ STEP, STP, IGES และ IGS หากใช้ SolidWorks ให้ส่งออก SLDPRT เป็น STEP ก่อนอัปโหลด'
+                        : 'CNC models must be STEP, STP, IGES, or IGS files. If you use SolidWorks, export SLDPRT as STEP before uploading.');
                     continue;
                 }
                 if (file.size > maxUploadBytes) {
