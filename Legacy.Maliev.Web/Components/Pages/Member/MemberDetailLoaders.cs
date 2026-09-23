@@ -184,8 +184,8 @@ public static class MemberDetailLoaders
             supplement.ReceiptDocument?.AbsoluteUri,
             supplement.BankAccounts.Select(account => new MemberBankAccountDisplayModel(
                 account.Bank,
-                account.Branch ?? "-",
-                account.Swift ?? "-",
+                account.Branch,
+                account.Swift,
                 account.AccountNumber)).ToArray(),
             errors,
             details.OrderItems.Select(item => new MemberQuotationLineDisplayModel(

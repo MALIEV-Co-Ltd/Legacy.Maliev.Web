@@ -132,9 +132,16 @@
                     @foreach (var account in Model.BankAccounts)
                     {
                         <p>
-                            <strong>@account.Bank</strong><br />
-                            @Localizer["Branch"]: @account.Branch<br />
-                            @Localizer["SWIFT"]: @account.Swift<br />
+                            <strong>@Localizer["Maliev Co., Ltd."]</strong><br />
+                            @Localizer[account.Bank]<br />
+                            @if (!string.IsNullOrWhiteSpace(account.Branch))
+                            {
+                                <span>@Localizer["Branch"]: @account.Branch</span><br />
+                            }
+                            @if (!string.IsNullOrWhiteSpace(account.Swift))
+                            {
+                                <span>@Localizer["SWIFT"]: @account.Swift</span><br />
+                            }
                             @Localizer["Account number"]: <strong>@account.AccountNumber</strong>
                         </p>
                     }

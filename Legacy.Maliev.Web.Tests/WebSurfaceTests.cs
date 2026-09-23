@@ -623,8 +623,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files", "Quotation PDF", "Awaiting payment")]
-    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา", "ใบเสนอราคา PDF", "รอการชำระเงิน")]
+    [InlineData("en", "Quotation details", "Open", "Quotation items", "Linked orders", "Quotation files", "Quotation PDF", "Awaiting payment", "Siam Commercial Bank (SCB)", "Maliev Co., Ltd.")]
+    [InlineData("th", "รายละเอียดใบเสนอราคา", "ยังไม่ได้ตอบรับ", "รายการในใบเสนอราคา", "คำสั่งซื้อที่เชื่อมโยง", "ไฟล์ใบเสนอราคา", "ใบเสนอราคา PDF", "รอการชำระเงิน", "ธนาคารไทยพาณิชย์ (SCB)", "บริษัท มาลีฟ จำกัด")]
     public async Task MemberQuotationDetail_RendersLocalizedOwnedStaticSsr(
         string culture,
         string heading,
@@ -633,7 +633,9 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         string ordersHeading,
         string filesHeading,
         string quotationDocumentLabel,
-        string awaitingPaymentLabel)
+        string awaitingPaymentLabel,
+        string bankLabel,
+        string recipientLabel)
     {
         await SignInAsync();
         var quotationClient = Assert.IsType<StubCustomerQuotationClient>(
@@ -662,6 +664,10 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains("INV-81", decodedSource, StringComparison.Ordinal);
         Assert.Contains(awaitingPaymentLabel, decodedSource, StringComparison.Ordinal);
         Assert.Contains("123-4-56789-0", decodedSource, StringComparison.Ordinal);
+        Assert.Contains(bankLabel, decodedSource, StringComparison.Ordinal);
+        Assert.Contains(recipientLabel, decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SWIFT:", decodedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Head office", decodedSource, StringComparison.Ordinal);
         Assert.Contains("THB", decodedSource, StringComparison.Ordinal);
         Assert.Contains("ICT", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"https://storage.test/quotations/drawing.pdf\"", source, StringComparison.Ordinal);
@@ -4379,7 +4385,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
                 new Uri("https://storage.test/documents/invoice.pdf"),
                 new Uri("https://storage.test/documents/receipt.pdf"),
                 [new CustomerDownloadFile("drawing.pdf", new Uri("https://storage.test/quotations/drawing.pdf"), new DateTime(2026, 7, 15, 3, 0, 0, DateTimeKind.Utc))],
-                [new CustomerBankAccountSummary("MALIEV Bank", "Head office", "MALITHBK", "123-4-56789-0")],
+                [new CustomerBankAccountSummary("Siam Commercial Bank (SCB)", null, null, "123-4-56789-0")],
                 []));
     }
 }
