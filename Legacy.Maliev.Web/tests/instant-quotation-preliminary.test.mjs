@@ -59,6 +59,12 @@ function snapshot() {
       lineSubtotal: 'Subtotal',
       technicalFilamentMinimum: 'Technical filament preparation minimum included',
       printTime: 'Estimated print time per part',
+      day: 'day',
+      days: 'days',
+      hour: 'hr',
+      hours: 'hrs',
+      minute: 'min',
+      minutes: 'mins',
       dimensions: 'Dimensions',
       volume: 'Volume',
       surfaceArea: 'Surface area',
@@ -118,6 +124,7 @@ test('preliminary quotation opens a localized A4 review document with safe summa
   assert.match(harness.written, /PrintPreliminaryQuotation/);
   assert.match(harness.written, /DownloadPreliminaryQuotationPdf/);
   assert.match(harness.written, /Estimated print time per part/);
+  assert.match(harness.written, />1 hr</);
   assert.match(harness.written, /Technical filament preparation minimum included/);
   assert.match(harness.written, /300\.00 THB/);
   assert.match(harness.written, /DFM Analysis/);
@@ -130,6 +137,39 @@ test('preliminary quotation opens a localized A4 review document with safe summa
   assert.equal(harness.events.length, 1);
   assert.equal(harness.events[0].event, 'preliminary_quotation_opened');
   assert.equal(harness.events[0].file_count, 1);
+});
+
+test('preliminary quotation formats long and invalid print durations without changing numeric inputs', () => {
+  const harness = loadPreviewHarness();
+  const value = snapshot();
+  const cases = [
+    [1, '1 min'],
+    [60, '1 hr'],
+    [917.4, '15 hrs 17 mins'],
+    [1501, '1 day 1 hr 1 min'],
+    [0, '—'],
+  ];
+
+  for (const [minutes, label] of cases) {
+    value.parts[0].printTimeMinutes = minutes;
+    harness.open(value);
+    assert.ok(harness.written.includes('>' + label + '<'), `Expected duration ${label}`);
+    assert.equal(value.parts[0].printTimeMinutes, minutes);
+  }
+});
+
+test('preliminary quotation uses Thai duration units', () => {
+  const harness = loadPreviewHarness();
+  const value = snapshot();
+  value.locale = 'th';
+  Object.assign(value.text, {
+    day: 'วัน', days: 'วัน', hour: 'ชม.', hours: 'ชม.', minute: 'นาที', minutes: 'นาที',
+  });
+  value.parts[0].printTimeMinutes = 1501;
+
+  harness.open(value);
+
+  assert.match(harness.written, />1 วัน 1 ชม\. 1 นาที</);
 });
 
 test('preliminary quotation omits the technical filament minimum when it is not applied', () => {
