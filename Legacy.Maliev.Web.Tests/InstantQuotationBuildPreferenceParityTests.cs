@@ -49,7 +49,10 @@ public sealed class InstantQuotationBuildPreferenceParityTests
         Assert.Contains("data-workflow-material-comparison", workflow, StringComparison.Ordinal);
         Assert.Contains("data-workflow-part-number", workflow, StringComparison.Ordinal);
         Assert.Contains("ChangeBuildPreferenceAsync", workflow, StringComparison.Ordinal);
-        Assert.Contains("Build preference", review, StringComparison.Ordinal);
+        Assert.Contains("@Localizer[\"Preference\"]", review, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"quality\">@Localizer[\"Quality\"]</option>", review, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"standard\">@Localizer[\"Standard\"]</option>", review, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"strength\">@Localizer[\"Strength\"]</option>", review, StringComparison.Ordinal);
         Assert.Contains("data-workflow-part-number", review, StringComparison.Ordinal);
     }
 

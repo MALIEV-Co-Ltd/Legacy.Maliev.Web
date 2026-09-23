@@ -12,8 +12,9 @@
             type="button"
             disabled="@(!CanBuildPreliminaryQuotation)"
             aria-disabled="@(!CanBuildPreliminaryQuotation).ToString().ToLowerInvariant()"
+            aria-label="@Localizer["Print preliminary quotation"]"
             @onclick="OpenPreliminaryQuotationAsync">
-        @Localizer["Print preliminary quotation"]
+        PDF
     </button>
     <p class="instant-quote__sr-only" role="note">@Localizer["Temporary browser-side quotation preview for review only. The final quotation is issued after engineering review."]</p>
 </section>

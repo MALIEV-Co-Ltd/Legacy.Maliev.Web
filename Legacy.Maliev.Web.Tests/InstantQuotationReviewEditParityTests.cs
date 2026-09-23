@@ -29,6 +29,66 @@ public sealed class InstantQuotationReviewEditParityTests
     }
 
     [Fact]
+    public async Task Review_ExposesLabeledPerPartSettingsWithoutLosingTheEditEscape()
+    {
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var html = await RenderReviewAsync([Part(id, "part.stl")], id);
+
+        Assert.Contains($"id=\"review-material-{id}\"", html, StringComparison.Ordinal);
+        Assert.Contains($"id=\"review-preference-{id}\"", html, StringComparison.Ordinal);
+        Assert.Contains($"id=\"review-color-{id}\"", html, StringComparison.Ordinal);
+        Assert.Contains($"id=\"review-quantity-{id}\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-review-edit-part", html, StringComparison.Ordinal);
+        Assert.Contains("data-workflow-review-total", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Review_CollapsesMeasurementsButAnnouncesEachPartsDfmVerdict()
+    {
+        var clearId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var warningId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var html = await RenderReviewAsync(
+            [Part(clearId, "clear.stl"), Part(warningId, "warning.stl", isManifold: false)],
+            clearId);
+
+        Assert.Equal(2, Count(html, "data-review-part-details"));
+        Assert.Contains("data-review-dfm-status=\"clear\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-review-dfm-status=\"warning\"", html, StringComparison.Ordinal);
+        Assert.Contains("Non-watertight mesh", html, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Manufacturing warning: Non-watertight mesh", html, StringComparison.Ordinal);
+        Assert.Contains("No automatic DFM warnings were found", html, StringComparison.Ordinal);
+        Assert.Contains("<summary", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Review_KeepsAsyncWallThicknessWarningOnItsPart()
+    {
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var html = await RenderReviewAsync(
+            [Part(id, "thin.stl")], id,
+            _ => ["Thin walls may print with defects"]);
+
+        Assert.Contains("data-review-dfm-status=\"warning\"", html, StringComparison.Ordinal);
+        Assert.Contains("Thin walls may print with defects", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Review_PlacesPreliminaryDocumentBesideForwardActionAfterTheTotal()
+    {
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var html = await RenderReviewAsync([Part(id, "part.stl")], id);
+        var total = html.IndexOf("data-workflow-review-total", StringComparison.Ordinal);
+        var actions = html.IndexOf("data-review-forward-actions", StringComparison.Ordinal);
+        var document = html.IndexOf("id=\"preliminary-quotation-button\"", StringComparison.Ordinal);
+        var continueAction = html.IndexOf("data-review-continue", StringComparison.Ordinal);
+
+        Assert.True(total >= 0 && actions > total && document > actions && continueAction > document);
+        Assert.Contains("data-review-back", html, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Print preliminary quotation\"", html, StringComparison.Ordinal);
+        Assert.Matches(@">\s*PDF\s*</button>", html);
+    }
+
+    [Fact]
     public void Workflow_ReviewSelectionAndEditNavigationKeepTheRequestedPartActive()
     {
         var markup = ReadComponent("InstantQuotationWorkflow.razor");
@@ -80,7 +140,8 @@ public sealed class InstantQuotationReviewEditParityTests
 
     private static async Task<string> RenderReviewAsync(
         IReadOnlyList<InstantQuotationWorkflowPartViewModel> parts,
-        Guid selectedPartId)
+        Guid selectedPartId,
+        Func<Guid, IReadOnlyList<string>>? thicknessWarnings = null)
     {
         using var services = new ServiceCollection()
             .AddLogging()
@@ -102,13 +163,14 @@ public sealed class InstantQuotationReviewEditParityTests
             {
                 ["Parts"] = parts,
                 ["SelectedPartId"] = selectedPartId,
+                ["ThicknessWarnings"] = thicknessWarnings ?? ((Guid _) => Array.Empty<string>()),
             });
             var output = await renderer.RenderComponentAsync<InstantQuotationReview>(parameters);
             return output.ToHtmlString();
         });
     }
 
-    private static InstantQuotationWorkflowPartViewModel Part(Guid id, string fileName) => new(
+    private static InstantQuotationWorkflowPartViewModel Part(Guid id, string fileName, bool isManifold = true) => new(
         id,
         Guid.NewGuid(),
         fileName,
@@ -120,7 +182,7 @@ public sealed class InstantQuotationReviewEditParityTests
             [10],
             12,
             1,
-            true),
+            isManifold),
         new InstantQuotationPartConfiguration("PLA", "Black", 1),
         null);
 

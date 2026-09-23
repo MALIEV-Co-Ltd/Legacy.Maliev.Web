@@ -5,6 +5,7 @@
 <section data-workflow-review-content aria-labelledby="instant-quote-review-heading">
     <header class="instant-quote__panel-header">
         <h3 id="instant-quote-review-heading">@Localizer["Review order items"]</h3>
+        <button type="button" data-review-back @onclick="OnBack">@Localizer["Back"]</button>
     </header>
     <span class="instant-quote__flow-step">@Localizer["Step 2 of 3"]</span>
     <p class="instant-quote__panel-intro">@Localizer["Review each item, the complete price, and estimated lead time before entering your contact details."]</p>
@@ -14,6 +15,7 @@
         {
             var quote = Quote?.Parts.SingleOrDefault(item => item.PartId == part.PartId);
             var partNumber = PartNumber(part.PartId);
+            var warnings = ReviewWarnings(part);
             <article data-workflow-review-part data-review-part-id="@part.PartId" data-selected="@IsSelected(part.PartId).ToString().ToLowerInvariant()" aria-labelledby="instant-quote-review-part-@part.PartId">
                 <button type="button"
                         class="instant-quote__review-thumbnail-button"
@@ -33,11 +35,44 @@
                     <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
                     <small>@Measurement(part.Geometry.DimensionXmm) × @Measurement(part.Geometry.DimensionYmm) × @Measurement(part.Geometry.DimensionZmm) mm</small>
                 </div>
-                <dl>
-                    <div><dt>@Localizer["Material"]</dt><dd>@Localizer[MaterialName(part.Configuration.MaterialKey)]</dd></div>
-                    <div><dt>@Localizer["Color"]</dt><dd>@Localizer[part.Configuration.Color]</dd></div>
-                    <div><dt>@Localizer["Build preference"]</dt><dd>@BuildPreferenceLabel(part.Configuration.BuildPreference)</dd></div>
-                    <div><dt>@Localizer["Quantity"]</dt><dd>@part.Configuration.Quantity</dd></div>
+                <div class="instant-quote__review-fields">
+                    <div>
+                        <label for="review-material-@part.PartId">@Localizer["Material"]</label>
+                        <select id="review-material-@part.PartId" value="@part.Configuration.MaterialKey"
+                                @onchange="args => OnMaterialChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.MaterialKey))">
+                            @foreach (var material in Materials)
+                            {
+                                <option value="@material.Key">@Localizer[material.DisplayName]</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="review-preference-@part.PartId">@Localizer["Preference"]</label>
+                        <select id="review-preference-@part.PartId" value="@part.Configuration.BuildPreference.ToString().ToLowerInvariant()"
+                                @onchange="args => OnBuildPreferenceChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.BuildPreference.ToString()))">
+                            <option value="quality">@Localizer["Quality"]</option>
+                            <option value="standard">@Localizer["Standard"]</option>
+                            <option value="strength">@Localizer["Strength"]</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="review-color-@part.PartId">@Localizer["Color"]</label>
+                        <select id="review-color-@part.PartId" value="@part.Configuration.Color"
+                                @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))">
+                            @foreach (var color in ColorsForMaterial(part.Configuration.MaterialKey))
+                            {
+                                <option value="@color">@Localizer[color]</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="review-quantity-@part.PartId">@Localizer["Quantity"]</label>
+                        <input id="review-quantity-@part.PartId" type="number" min="1" max="@PricingCatalog.MaximumAdditiveQuantity" step="1"
+                               value="@part.Configuration.Quantity"
+                               @onchange="args => OnQuantityChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)))" />
+                    </div>
+                </div>
+                <dl class="instant-quote__review-prices">
                     <div><dt>@Localizer["Unit price"]</dt><dd>@Money(quote?.UnitPrice)</dd></div>
                     <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(quote?.Subtotal)</dd></div>
                     @if (quote is { TechnicalFilamentMinimumApplied: true })
@@ -48,6 +83,36 @@
                         </div>
                     }
                 </dl>
+                <details class="instant-quote__review-details" data-review-part-details>
+                    <summary>
+                        <span>@Localizer["Part details"]</span>
+                        <span class="instant-quote__review-verdict @(warnings.Count > 0 ? "instant-quote__review-verdict--warning" : "instant-quote__review-verdict--clear")"
+                              data-review-dfm-status="@(warnings.Count > 0 ? "warning" : "clear")"
+                              role="img"
+                              aria-label="@(warnings.Count > 0 ? Localizer["Manufacturing warning"].Value + ": " + string.Join(" · ", warnings) : Localizer["No automatic DFM warnings were found. Engineering review is still required."].Value)">
+                            <span aria-hidden="true">@(warnings.Count > 0 ? "!" : "✓")</span>
+                        </span>
+                    </summary>
+                    <dl class="instant-quote__review-measurements">
+                        <div><dt>@Localizer["Dimensions"]</dt><dd>@Measurement(part.Geometry.DimensionXmm) × @Measurement(part.Geometry.DimensionYmm) × @Measurement(part.Geometry.DimensionZmm) mm</dd></div>
+                        <div><dt>@Localizer["Volume"]</dt><dd>@Measurement(part.Geometry.VolumeMm3 / 1_000) cm³</dd></div>
+                        <div><dt>@Localizer["Surface area"]</dt><dd>@Measurement(part.Geometry.SurfaceAreaMm2 / 100) cm²</dd></div>
+                        <div><dt>@Localizer["Min. thickness"]</dt><dd>@Measurement(part.Geometry.MinThicknessMm) mm</dd></div>
+                    </dl>
+                    @if (warnings.Count > 0)
+                    {
+                        <ul data-review-dfm-warnings>
+                            @foreach (var warning in warnings)
+                            {
+                                <li>@warning</li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p>@Localizer["No automatic DFM warnings were found. Engineering review is still required."]</p>
+                    }
+                </details>
                 <button type="button"
                         class="instant-quote__review-edit"
                         data-review-edit-part
@@ -79,10 +144,9 @@
     </section>
 
     <p role="note">@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
-    <InstantQuotationPreliminaryQuotation Parts="@Parts" Quote="@Quote" Materials="@Materials" />
-    <div class="instant-quote__actions" role="group" aria-label="@Localizer["Quotation steps"]">
-        <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
-        <button type="button" @onclick="OnContinue">@Localizer["Customer details"]</button>
+    <div class="instant-quote__review-forward-actions" data-review-forward-actions role="group" aria-label="@Localizer["Quotation steps"]">
+        <InstantQuotationPreliminaryQuotation Parts="@Parts" Quote="@Quote" Materials="@Materials" />
+        <button type="button" data-review-continue @onclick="OnContinue">@Localizer["Customer details"]</button>
     </div>
 </section>
 
@@ -106,6 +170,24 @@
     public EventCallback<Guid> OnEditPart { get; set; }
 
     [Parameter]
+    public Func<string, IReadOnlyList<string>> ColorsForMaterial { get; set; } = static _ => [];
+
+    [Parameter]
+    public Func<Guid, IReadOnlyList<string>> ThicknessWarnings { get; set; } = static _ => [];
+
+    [Parameter]
+    public EventCallback<(Guid PartId, string Value)> OnMaterialChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<(Guid PartId, string Value)> OnColorChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<(Guid PartId, string Value)> OnQuantityChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<(Guid PartId, string Value)> OnBuildPreferenceChanged { get; set; }
+
+    [Parameter]
     public EventCallback OnBack { get; set; }
 
     [Parameter]
@@ -115,15 +197,45 @@
 
     private static string Measurement(double amount) => amount.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
 
-    private string MaterialName(string key) => Materials
-        .SingleOrDefault(item => string.Equals(item.Key, key, StringComparison.Ordinal))?.DisplayName ?? key;
-
-    private string BuildPreferenceLabel(BuildPreference preference) => preference switch
+    private IReadOnlyList<string> ReviewWarnings(InstantQuotationWorkflowPartViewModel part)
     {
-        BuildPreference.Quality => Localizer["Quality"],
-        BuildPreference.Strength => Localizer["Strength"],
-        _ => Localizer["Standard"],
-    };
+        var geometry = part.Geometry;
+        var warnings = new List<string>();
+        if (!geometry.TopologyChecked)
+        {
+            warnings.Add(Localizer["Detailed topology checks were skipped for this large mesh. Engineering review is required."]);
+        }
+
+        if (geometry.NonWatertight)
+        {
+            warnings.Add(Localizer["Non-watertight mesh"]);
+        }
+
+        if (geometry.NonManifold)
+        {
+            warnings.Add(Localizer["Non-manifold edges"]);
+        }
+
+        if (geometry.BodyCount > 1)
+        {
+            warnings.Add(Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount]);
+        }
+
+        var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
+        if (maximumDimension is > 0 and < 3)
+        {
+            warnings.Add(Localizer["A dimension is below 3 mm."]);
+        }
+
+        if (maximumDimension > 350)
+        {
+            warnings.Add(Localizer["A dimension exceeds 350 mm."]);
+        }
+
+        warnings.AddRange(ThicknessWarnings(part.PartId));
+
+        return warnings;
+    }
 
     private bool IsSelected(Guid partId) => SelectedPartId == partId;
 
