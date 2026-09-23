@@ -117,8 +117,8 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Accept cookies" xml:space="preserve">
-    <value>ยอมรับคุกกี้</value>
+  <data name="Accept optional cookies" xml:space="preserve">
+    <value>ยอมรับคุกกี้ที่ไม่จำเป็น</value>
   </data>
   <data name="Reject optional cookies" xml:space="preserve">
     <value>ปฏิเสธคุกกี้ที่ไม่จำเป็น</value>
@@ -132,7 +132,7 @@
   <data name="Learn more about our privacy policy" xml:space="preserve">
     <value>เรียนรู้เพิ่มเติมเกี่ยวกับนโยบายความเป็นส่วนตัวของเรา</value>
   </data>
-  <data name="This website uses cookies to ensure you get the best experience on our website." xml:space="preserve">
-    <value>เว็บไซต์นี้ใช้คุกกี้เพื่อให้แน่ใจว่าคุณได้รับประสบการณ์ที่ดีที่สุดบนเว็บไซต์ของเรา</value>
+  <data name="Essential cookies keep this site working. With your permission, we also use optional cookies for analytics and advertising. You can continue with either choice." xml:space="preserve">
+    <value>คุกกี้ที่จำเป็นช่วยให้เว็บไซต์ทำงานได้ หากคุณอนุญาต เราจะใช้คุกกี้ที่ไม่จำเป็นสำหรับการวิเคราะห์และโฆษณาด้วย คุณสามารถใช้งานเว็บไซต์ต่อได้ไม่ว่าจะเลือกแบบใด</value>
   </data>
 </root>
