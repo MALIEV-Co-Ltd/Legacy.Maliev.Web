@@ -49,6 +49,9 @@ public sealed class PublicCookieConsentMigrationTests : IClassFixture<TestingWeb
         Assert.Contains("ad_personalization: state", component, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.setConsent(state)", component, StringComparison.Ordinal);
         Assert.Contains("maliev_tracking_consent=denied", component, StringComparison.Ordinal);
+        Assert.Contains("cookieConsent.showModal()", component, StringComparison.Ordinal);
+        Assert.Contains("cookieConsent.close()", component, StringComparison.Ordinal);
+        Assert.Contains("event.preventDefault()", component, StringComparison.Ordinal);
         Assert.DoesNotContain("HttpContext", component, StringComparison.Ordinal);
         Assert.DoesNotContain("@rendermode", component, StringComparison.Ordinal);
 
@@ -64,14 +67,15 @@ public sealed class PublicCookieConsentMigrationTests : IClassFixture<TestingWeb
     }
 
     [Theory]
-    [InlineData("en", "Your privacy choices", "Reject optional cookies", "Accept cookies", "Learn more about our privacy policy")]
-    [InlineData("th", "ตัวเลือกความเป็นส่วนตัวของคุณ", "ปฏิเสธคุกกี้ที่ไม่จำเป็น", "ยอมรับคุกกี้", "เรียนรู้เพิ่มเติมเกี่ยวกับนโยบายความเป็นส่วนตัวของเรา")]
+    [InlineData("en", "Your privacy choices", "Reject optional cookies", "Accept optional cookies", "Learn more about our privacy policy", "Essential cookies keep this site working.")]
+    [InlineData("th", "ตัวเลือกความเป็นส่วนตัวของคุณ", "ปฏิเสธคุกกี้ที่ไม่จำเป็น", "ยอมรับคุกกี้ที่ไม่จำเป็น", "เรียนรู้เพิ่มเติมเกี่ยวกับนโยบายความเป็นส่วนตัวของเรา", "คุกกี้ที่จำเป็นช่วยให้เว็บไซต์ทำงานได้")]
     public async Task CookieConsent_RendersLocalizedAccessibleConsentModeBridge(
         string culture,
         string heading,
         string rejectLabel,
         string acceptLabel,
-        string privacyLabel)
+        string privacyLabel,
+        string description)
     {
         using var client = CreateClient();
         using var response = await client.GetAsync($"/legal?culture={culture}");
@@ -79,16 +83,20 @@ public sealed class PublicCookieConsentMigrationTests : IClassFixture<TestingWeb
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);
-        Assert.Contains("role=\"region\"", source, StringComparison.Ordinal);
+        Assert.Contains("<dialog id=\"cookieConsent\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("role=\"region\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"privacy-consent-title\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"privacy-consent-description\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains($">{rejectLabel}<", source, StringComparison.Ordinal);
         Assert.Contains($">{acceptLabel}<", source, StringComparison.Ordinal);
         Assert.Contains($">{privacyLabel}<", source, StringComparison.Ordinal);
+        Assert.Contains(description, source, StringComparison.Ordinal);
         Assert.Contains("href=\"/legal/privacypolicy\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-cookie-string=\"", source, StringComparison.Ordinal);
         Assert.Contains("window.gtag('consent', 'update'", source, StringComparison.Ordinal);
         Assert.Contains("window.malievAnalytics.setConsent(state)", source, StringComparison.Ordinal);
+        Assert.Contains("cookieConsent.showModal()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 

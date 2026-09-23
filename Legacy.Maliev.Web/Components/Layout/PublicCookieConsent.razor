@@ -2,24 +2,24 @@
 
 @if (Model.ShowBanner)
 {
-    <aside id="cookieConsent" class="privacy-consent" role="region" aria-labelledby="privacy-consent-title" aria-describedby="privacy-consent-description" data-migration-component="public-cookie-consent" data-migration-renderer="blazor-static-ssr">
+    <dialog id="cookieConsent" class="privacy-consent" aria-labelledby="privacy-consent-title" aria-describedby="privacy-consent-description" data-migration-component="public-cookie-consent" data-migration-renderer="blazor-static-ssr">
         <div class="privacy-consent__inner">
             <div class="privacy-consent__icon" aria-hidden="true">
                 <i class="fas fa-shield-alt"></i>
             </div>
             <div class="privacy-consent__content">
-                <strong id="privacy-consent-title">@Localizer["Your privacy choices"]</strong>
+                <h2 id="privacy-consent-title">@Localizer["Your privacy choices"]</h2>
                 <p id="privacy-consent-description">
-                    @Localizer["This website uses cookies to ensure you get the best experience on our website."]
-                    <a href="/legal/privacypolicy">@Localizer["Learn more about our privacy policy"]</a>
+                    @Localizer["Essential cookies keep this site working. With your permission, we also use optional cookies for analytics and advertising. You can continue with either choice."]
                 </p>
+                <a href="/legal/privacypolicy">@Localizer["Learn more about our privacy policy"]</a>
             </div>
             <div class="privacy-consent__actions" role="group" aria-label="@Localizer["Cookie choices"]">
                 <button type="button" class="privacy-consent__reject" data-consent-action="reject">@Localizer["Reject optional cookies"]</button>
-                <button type="button" class="accept-policy privacy-consent__accept" data-consent-action="accept" data-cookie-string="@Model.ConsentCookie">@Localizer["Accept cookies"]</button>
+                <button type="button" class="accept-policy privacy-consent__accept" data-consent-action="accept" data-cookie-string="@Model.ConsentCookie">@Localizer["Accept optional cookies"]</button>
             </div>
         </div>
-    </aside>
+    </dialog>
     <script>
         (function () {
             var cookieConsent = document.querySelector('#cookieConsent');
@@ -27,6 +27,18 @@
             var rejectButton = cookieConsent && cookieConsent.querySelector('[data-consent-action="reject"]');
             if (!cookieConsent || !button || !rejectButton) {
                 return;
+            }
+
+            cookieConsent.addEventListener('cancel', function (event) {
+                event.preventDefault();
+            });
+            cookieConsent.showModal();
+            document.documentElement.classList.add('privacy-consent-open');
+
+            function dismissConsent() {
+                cookieConsent.close();
+                cookieConsent.remove();
+                document.documentElement.classList.remove('privacy-consent-open');
             }
 
             function updateGoogleConsent(state) {
@@ -53,13 +65,13 @@
                 if (typeof window.malievLoadGoogleTagManager === 'function') {
                     window.malievLoadGoogleTagManager();
                 }
-                cookieConsent.remove();
+                dismissConsent();
             }, false);
 
             rejectButton.addEventListener('click', function () {
                 document.cookie = 'maliev_tracking_consent=denied; Path=/; Max-Age=31536000; SameSite=Lax; Secure';
                 updateGoogleConsent('denied');
-                cookieConsent.remove();
+                dismissConsent();
             }, false);
         })();
     </script>
