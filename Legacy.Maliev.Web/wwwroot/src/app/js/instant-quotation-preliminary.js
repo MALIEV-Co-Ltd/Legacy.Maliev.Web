@@ -25,6 +25,30 @@
         return number(snapshot, value);
     }
 
+    function printDuration(snapshot, value) {
+        var input = Number(value);
+        if (!Number.isFinite(input) || input <= 0) {
+            return '—';
+        }
+
+        var minutes = Math.max(1, Math.round(input));
+        var days = Math.floor(minutes / 1440);
+        var hours = Math.floor((minutes % 1440) / 60);
+        var remainder = minutes % 60;
+        var parts = [];
+        if (days > 0) {
+            parts.push(days + ' ' + text(snapshot, days === 1 ? 'day' : 'days'));
+        }
+        if (hours > 0) {
+            parts.push(hours + ' ' + text(snapshot, hours === 1 ? 'hour' : 'hours'));
+        }
+        if (remainder > 0 || parts.length === 0) {
+            parts.push(remainder + ' ' + text(snapshot, remainder === 1 ? 'minute' : 'minutes'));
+        }
+
+        return parts.join(' ');
+    }
+
     function money(snapshot, value) {
         return number(snapshot, value) + ' ' + escapeHtml(snapshot.currency || 'THB');
     }
@@ -179,7 +203,7 @@
                 + (part.technicalFilamentMinimumApplied
                     ? detail(text(snapshot, 'technicalFilamentMinimum'), '+' + money(snapshot, part.technicalFilamentMinimumAdjustment), 'iq-preliminary-quotation-money')
                     : '')
-                + detail(text(snapshot, 'printTime'), measurement(snapshot, part.printTimeMinutes) + ' min')
+                + detail(text(snapshot, 'printTime'), printDuration(snapshot, part.printTimeMinutes))
                 + '</dl></div>'
                 + '<div class="iq-preliminary-quotation-measurements">'
                 + detail(text(snapshot, 'dimensions'), measurement(snapshot, part.dimensionXmm) + ' × ' + measurement(snapshot, part.dimensionYmm) + ' × ' + measurement(snapshot, part.dimensionZmm) + ' mm')

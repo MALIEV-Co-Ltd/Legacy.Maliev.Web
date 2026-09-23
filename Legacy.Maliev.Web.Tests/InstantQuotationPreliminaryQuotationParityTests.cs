@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Xunit;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -72,6 +73,25 @@ public sealed class InstantQuotationPreliminaryQuotationParityTests
         Assert.DoesNotContain("<InstantQuotationPreliminaryQuotation", estimate, StringComparison.Ordinal);
         Assert.True(review[(reviewStart)..].Contains("Quote=\"@Quote\"", StringComparison.Ordinal));
         Assert.DoesNotContain("preliminary-quotation-button", estimate, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PreliminaryQuotation_DurationLabelsCrossTheBlazorJavaScriptLocaleBoundary()
+    {
+        var root = FindRepositoryRoot();
+        var component = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationPreliminaryQuotation.razor"));
+        var script = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "instant-quotation-preliminary.js"));
+        var resources = XDocument.Load(Path.Combine(root, "Legacy.Maliev.Web", "Resources", "Components", "Pages", "InstantQuotation", "ThreeDimensionalPrintingEstimateContent.th.resx"));
+
+        foreach (var key in new[] { "day", "days", "hour", "hours", "minute", "minutes" })
+        {
+            Assert.Contains($"[\"{key}\"] = Localizer[\"{key}\"].Value", component, StringComparison.Ordinal);
+            Assert.Contains($"'{key}'", script, StringComparison.Ordinal);
+            Assert.Contains(resources.Root!.Elements("data"), value => (string?)value.Attribute("name") == key);
+        }
+
+        Assert.Contains("printDuration(snapshot, part.printTimeMinutes)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("measurement(snapshot, part.printTimeMinutes) + ' min'", script, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
