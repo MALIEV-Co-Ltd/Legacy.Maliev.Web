@@ -16,8 +16,8 @@ public sealed partial class ScanningPresentationContractTests : IClassFixture<Te
     }
 
     [Theory]
-    [InlineData("en", "What do the outputs of 3D scanning look like?", "Scan", "Before your scan", "Show us the part")]
-    [InlineData("th", "ผลลัพธ์จากการสแกน 3D มีหน้าตาอย่างไร?", "สแกน", "เตรียมตัวก่อนสแกน", "ส่งรูปชิ้นงานให้เราดู")]
+    [InlineData("en", "What do the outputs of 3D scanning look like?", "Scan mesh", "Before your scan", "Show us the part")]
+    [InlineData("th", "ผลลัพธ์จากการสแกน 3D มีหน้าตาอย่างไร?", "เมชสแกน", "เตรียมตัวก่อนสแกน", "ส่งรูปชิ้นงานให้เราดู")]
     public async Task ScanningRoute_RendersAccessibleComparisonAndThreePreparationNotes(
         string culture,
         string comparisonHeading,
