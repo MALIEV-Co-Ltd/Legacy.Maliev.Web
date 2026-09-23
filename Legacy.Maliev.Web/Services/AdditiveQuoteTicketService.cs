@@ -63,6 +63,14 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 throw new ArgumentException("The authoritative quotation does not match the protected session.", nameof(quote));
             }
 
+            if (quote.Parts.Any(part => part.Quantity < 1
+                || Convert.ToDecimal(part.Subtotal) != Convert.ToDecimal(part.UnitPrice) * part.Quantity)
+                || Convert.ToDecimal(quote.ItemsSubtotal)
+                != quote.Parts.Sum(part => Convert.ToDecimal(part.Subtotal)))
+            {
+                throw new ArgumentException("The order subtotal must equal the protected rounded line subtotals.", nameof(quote));
+            }
+
             var expiresAt = now.Add(TicketLifetime);
             var lineTickets = session.Parts.Select((part, index) =>
             {
