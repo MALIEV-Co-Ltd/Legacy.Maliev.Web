@@ -1,3 +1,4 @@
+using System.Globalization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 
@@ -43,6 +44,12 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Contains("Material: ABS", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Build: Strength (6 walls, 2 mm shells, denser infill)", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Quantity: 2 piece(s)", call.Submission.Message, StringComparison.Ordinal);
+        var quotedLine = new InstantQuotationPricingService()
+            .Quote(Session(PartWithDfm(quantity: 2)).RequestState).Parts.Single();
+        Assert.NotEqual(quotedLine.Subtotal, quotedLine.AllocatedOrderTotal);
+        Assert.Contains($"Cost per unit: {quotedLine.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains($"Total cost: {quotedLine.Subtotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains($"Allocated order total: {quotedLine.AllocatedOrderTotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains(
             "Geometry warning: Non-watertight mesh; Non-manifold edges; Multi-body mesh (2 bodies)",
             call.Submission.Message,

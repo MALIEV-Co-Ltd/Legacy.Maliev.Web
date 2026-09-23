@@ -31,49 +31,26 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
                 destinationCountry,
                 partQuotes.Sum(part => part.WeightGramsPerUnit * part.Quantity),
                 partQuotes.Sum(part => part.BoundingCm3PerUnit * part.Quantity));
-        var lines = partQuotes.Select(part =>
+        // The rounded customer-facing line price is already the commercial price.
+        // Rebuilding it from direct physical cost would change the price between the
+        // material card, protected line ticket, order summary, and submission.
+        var lineSubtotals = partQuotes.Select(part => Convert.ToDecimal(part.Subtotal)).ToArray();
+        var commercialSubtotal = lineSubtotals.Sum();
+        var minimumOrderPrice = partQuotes.Max(part =>
+            Convert.ToDecimal(PricingCatalog.MinimumOrderPrice(part.Process)));
+        var printing = Math.Max(commercialSubtotal, minimumOrderPrice);
+        var minimumOrderSurcharge = printing - commercialSubtotal;
+        var shipping = shippingQuote.AmountThb;
+        var priceBeforeVat = printing + shipping;
+        var vat = decimal.Round(
+            priceBeforeVat * Convert.ToDecimal(PricingCatalog.VatRate),
+            2,
+            MidpointRounding.AwayFromZero);
+        var finalOrderPrice = priceBeforeVat + vat;
+        var allocations = AllocateOrderTotal(lineSubtotals, finalOrderPrice);
+        var allocatedParts = partQuotes.Select((part, index) => part with
         {
-            var tier = PricingCatalog.ResolveTier(part.Quantity);
-            var material = PricingCatalog.ResolveMaterial(part.MaterialKey)!;
-            var materialMinimum = material.RequiresDrying
-                ? Convert.ToDecimal(PricingCatalog.TechnicalFilamentMinimumPrice)
-                : 0m;
-            return new AdditiveOrderCostLine
-            {
-                LineId = part.PartId.ToString("N"),
-                Quantity = part.Quantity,
-                DirectCostPerUnitThb = Convert.ToDecimal(part.DirectCostPerUnit),
-                ComplexityFactor = 1m,
-                TargetMarginRate = part.Process == PrintProcess.Resin
-                    ? 0.30m
-                    : Convert.ToDecimal(tier.TargetMargin),
-                DiscountRate = Convert.ToDecimal(tier.BulkDiscount),
-                ReserveRate = Convert.ToDecimal(PricingCatalog.FailureReserveRate(part.Process)),
-                MinimumOrderPriceThb = Math.Max(
-                    Convert.ToDecimal(PricingCatalog.MinimumOrderPrice(part.Process)),
-                    materialMinimum),
-            };
-        }).ToArray();
-        var deliveryIncludesPackaging = shippingQuote.State == ShippingPricingState.DomesticPriced;
-        var order = AdditiveOrderCostCalculator.Calculate(lines, new AdditiveOrderCharges
-        {
-            SetupThb = partQuotes.Max(part => Convert.ToDecimal(
-                PricingCatalog.SetupHours(part.Process) * PricingCatalog.LaborRatePerHour)),
-            PackagingThb = deliveryIncludesPackaging
-                ? 0m
-                : partQuotes.Max(part => Convert.ToDecimal(PricingCatalog.PackagingCost(part.Process))),
-            DeliveryThb = shippingQuote.AmountThb,
-            RushRate = Convert.ToDecimal(PricingCatalog.RushSurcharge),
-            PaymentFeeRate = Convert.ToDecimal(PricingCatalog.PaymentFeeRate),
-            VatRate = Convert.ToDecimal(PricingCatalog.VatRate),
-        });
-        var minimumOrderPrice = lines.Max(static line => line.MinimumOrderPriceThb);
-        var allocationsByPart = order.LineAllocations.ToDictionary(
-            static allocation => Guid.ParseExact(allocation.LineId, "N"),
-            static allocation => allocation.TotalThb);
-        var allocatedParts = partQuotes.Select(part => part with
-        {
-            AllocatedOrderTotal = Convert.ToDouble(allocationsByPart[part.PartId]),
+            AllocatedOrderTotal = Convert.ToDouble(allocations[index]),
         }).ToArray();
         var leadTime = AdditiveLeadTimeCalculator.Calculate(partQuotes.Select(part => new AdditiveLeadTimeLine
         {
@@ -83,24 +60,44 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
 
         return new InstantQuotationOrderQuote(
             allocatedParts,
-            Convert.ToDouble(order.UnroundedBaseThb),
-            Convert.ToDouble(order.BaseOrderThb),
+            Convert.ToDouble(commercialSubtotal),
+            Convert.ToDouble(printing),
             Convert.ToDouble(minimumOrderPrice),
-            Convert.ToDouble(Math.Max(0m, order.BaseOrderThb - order.UnroundedBaseThb)),
-            Convert.ToDouble(order.DeliveryThb),
-            Convert.ToDouble(order.PriceBeforeVatThb),
-            Convert.ToDouble(order.VatThb),
-            Convert.ToDouble(order.TotalThb),
+            Convert.ToDouble(minimumOrderSurcharge),
+            Convert.ToDouble(shipping),
+            Convert.ToDouble(priceBeforeVat),
+            Convert.ToDouble(vat),
+            Convert.ToDouble(finalOrderPrice),
             leadTime.MinimumDays,
             leadTime.MaximumDays,
             shippingQuote.State,
             shippingQuote.DestinationCountryCode,
-            Convert.ToDouble(order.SetupThb),
-            Convert.ToDouble(order.ReserveThb),
-            Convert.ToDouble(order.PackagingThb),
-            Convert.ToDouble(order.PaymentFeeThb),
-            Convert.ToDouble(order.RoundingAdjustmentThb),
-            allocatedParts.Select(static part => part.AllocatedOrderTotal).ToArray());
+            AllocatedLineTotals: allocations.Select(Convert.ToDouble).ToArray());
+    }
+
+    private static decimal[] AllocateOrderTotal(IReadOnlyList<decimal> lineSubtotals, decimal finalOrderPrice)
+    {
+        var subtotal = lineSubtotals.Sum();
+        var candidates = lineSubtotals.Select((lineSubtotal, index) =>
+        {
+            var share = subtotal == 0m ? 1m / lineSubtotals.Count : lineSubtotal / subtotal;
+            var raw = finalOrderPrice * share;
+            var floor = decimal.Floor(raw * 100m) / 100m;
+            return new { Index = index, Floor = floor, Fraction = raw - floor };
+        }).ToArray();
+        var remainingSatang = decimal.ToInt32(decimal.Round(
+            (finalOrderPrice - candidates.Sum(candidate => candidate.Floor)) * 100m,
+            0));
+        var increments = candidates
+            .OrderByDescending(candidate => candidate.Fraction)
+            .ThenBy(candidate => candidate.Index)
+            .Take(remainingSatang)
+            .Select(candidate => candidate.Index)
+            .ToHashSet();
+
+        return candidates
+            .Select(candidate => candidate.Floor + (increments.Contains(candidate.Index) ? 0.01m : 0m))
+            .ToArray();
     }
 
     private static InstantQuotationPartQuote QuotePart(InstantQuotationPart part)

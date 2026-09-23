@@ -220,6 +220,33 @@ namespace Legacy.Maliev.Web.Tests
         }
 
         [Fact]
+        public void WorkflowAuthorization_RejectsOrderSubtotalDifferentFromRoundedLinePrices()
+        {
+            AdditiveQuoteTicketService service = CreateService();
+            InstantQuotationSessionState session = Session();
+            InstantQuotationOrderQuote quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            InstantQuotationOrderQuote inconsistent = quote with { ItemsSubtotal = quote.ItemsSubtotal + 10 };
+
+            Assert.Throws<ArgumentException>(() => service.Issue(session, inconsistent, Now));
+        }
+
+        [Fact]
+        public void WorkflowAuthorization_RejectsLineSubtotalDifferentFromRoundedUnitPriceTimesQuantity()
+        {
+            AdditiveQuoteTicketService service = CreateService();
+            InstantQuotationSessionState session = Session();
+            InstantQuotationOrderQuote quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            InstantQuotationPartQuote line = Assert.Single(quote.Parts);
+            InstantQuotationOrderQuote inconsistent = quote with
+            {
+                Parts = [line with { Subtotal = line.Subtotal + 10 }],
+                ItemsSubtotal = quote.ItemsSubtotal + 10,
+            };
+
+            Assert.Throws<ArgumentException>(() => service.Issue(session, inconsistent, Now));
+        }
+
+        [Fact]
         public void WorkflowAuthorization_RejectsChangedSettingsAndTamperedOrderTicket()
         {
             AdditiveQuoteTicketService service = CreateService();
