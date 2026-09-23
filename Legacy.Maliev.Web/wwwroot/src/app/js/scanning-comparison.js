@@ -13,7 +13,7 @@
             position = Math.max(0, Math.min(100, Math.round(value)));
             comparison.style.setProperty('--comparison-position', position + '%');
             handle.setAttribute('aria-valuenow', String(position));
-            handle.setAttribute('aria-valuetext', position + '% ' + comparison.dataset.scanLabel + ', ' + (100 - position) + '% ' + comparison.dataset.cadLabel);
+            handle.setAttribute('aria-valuetext', position + '% ' + comparison.dataset.leftLabel + ', ' + (100 - position) + '% ' + comparison.dataset.rightLabel);
         }
 
         function endDrag() {

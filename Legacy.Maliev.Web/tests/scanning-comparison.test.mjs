@@ -37,21 +37,21 @@ class Element {
     }
 }
 
-const createFixture = async () => {
+const createFixture = async (proof = 'cad') => {
     const stage = new Element();
     const handle = new Element();
     const handleVisual = new Element();
     handle.querySelector = selector => selector === 'span' ? handleVisual : null;
     const controls = new Element();
-    const buttons = ['compare', 'scan', 'cad', 'side'].map(mode => {
+    const buttons = (proof === 'color' ? ['compare', 'raw', 'color', 'side'] : ['compare', 'scan', 'cad', 'side']).map(mode => {
         const button = new Element();
         button.dataset.comparisonMode = mode;
         return button;
     });
     const comparison = new Element();
     comparison.dataset.mode = 'side';
-    comparison.dataset.scanLabel = 'Scan';
-    comparison.dataset.cadLabel = 'CAD';
+    comparison.dataset.leftLabel = proof === 'color' ? 'Raw scan' : 'Scan';
+    comparison.dataset.rightLabel = proof === 'color' ? 'Color scan' : 'CAD';
     comparison.querySelector = selector => ({
         '[data-comparison-stage]': stage,
         '[data-comparison-handle]': handle,
@@ -103,4 +103,12 @@ test('primary pointer dragging moves the divider only in compare mode and keeps 
     stage.dispatch('pointerdown', { pointerId: 8, isPrimary: true, button: 0, clientX: 120, target: stage });
     assert.equal(comparison.dataset.mode, 'cad');
     assert.equal(handle.getAttribute('aria-valuenow'), '75');
+});
+
+test('color comparison initializes independent accessible labels and modes', async () => {
+    const { comparison, handle, buttons } = await createFixture('color');
+    assert.equal(handle.getAttribute('aria-valuetext'), '50% Raw scan, 50% Color scan');
+    buttons.find(button => button.dataset.comparisonMode === 'color').dispatch('click');
+    assert.equal(comparison.dataset.mode, 'color');
+    assert.equal(handle.hidden, true);
 });
