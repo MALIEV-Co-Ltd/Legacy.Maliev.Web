@@ -62,6 +62,6 @@ public sealed record MemberInvoiceDisplayModel(
 
 public sealed record MemberBankAccountDisplayModel(
     string Bank,
-    string Branch,
-    string Swift,
+    string? Branch,
+    string? Swift,
     string AccountNumber);

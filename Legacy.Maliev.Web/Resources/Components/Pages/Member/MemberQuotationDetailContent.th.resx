@@ -80,6 +80,8 @@
   <data name="Payment date" xml:space="preserve"><value>วันที่ชำระเงิน</value></data>
   <data name="Outstanding" xml:space="preserve"><value>ยอดค้างชำระ</value></data>
   <data name="Bank transfer" xml:space="preserve"><value>โอนเงินผ่านธนาคาร</value></data>
+  <data name="Maliev Co., Ltd." xml:space="preserve"><value>บริษัท มาลีฟ จำกัด</value></data>
+  <data name="Siam Commercial Bank (SCB)" xml:space="preserve"><value>ธนาคารไทยพาณิชย์ (SCB)</value></data>
   <data name="Branch" xml:space="preserve"><value>สาขา</value></data>
   <data name="SWIFT" xml:space="preserve"><value>SWIFT</value></data>
   <data name="Account number" xml:space="preserve"><value>เลขที่บัญชี</value></data>

@@ -72,7 +72,7 @@ public sealed class CustomerMemberDetailClientTests
                 """),
             ("accounting", "invoices/81/files") => Json("""[{"id":1,"bucket":"invoices","objectName":"81.pdf","createdDate":"2026-07-15T00:00:00Z"}]"""),
             ("accounting", "receipts/91/files") => Json("""[{"id":2,"bucket":"receipts","objectName":"91.pdf","createdDate":"2026-07-16T00:00:00Z"}]"""),
-            ("accounting", "payments/accounts") => Json("""[{"id":1,"bank":"Example Bank","accountNumber":"1234","swift":"EXTHBK","branch":"Bangkok"}]"""),
+            ("accounting", "payments/accounts") => Json("""[{"id":1,"bank":"Siam Commercial Bank (SCB)","accountNumber":"1234","swift":null,"branch":null}]"""),
             ("files", var value) when value.Contains("bucket=quotations", StringComparison.Ordinal) => Json("\"https://storage.test/quote.pdf\""),
             ("files", var value) when value.Contains("bucket=invoices", StringComparison.Ordinal) => Json("\"https://storage.test/invoice.pdf\""),
             ("files", var value) when value.Contains("bucket=receipts", StringComparison.Ordinal) => Json("\"https://storage.test/receipt.pdf\""),
@@ -97,7 +97,11 @@ public sealed class CustomerMemberDetailClientTests
         Assert.Equal("https://storage.test/quote.pdf", result.QuotationDocument?.AbsoluteUri);
         Assert.Equal("https://storage.test/invoice.pdf", result.InvoiceDocument?.AbsoluteUri);
         Assert.Equal("https://storage.test/receipt.pdf", result.ReceiptDocument?.AbsoluteUri);
-        Assert.Equal("1234", Assert.Single(result.BankAccounts).AccountNumber);
+        var bankAccount = Assert.Single(result.BankAccounts);
+        Assert.Equal("1234", bankAccount.AccountNumber);
+        Assert.Equal("Siam Commercial Bank (SCB)", bankAccount.Bank);
+        Assert.Null(bankAccount.Branch);
+        Assert.Null(bankAccount.Swift);
         Assert.Empty(result.Warnings);
     }
 
