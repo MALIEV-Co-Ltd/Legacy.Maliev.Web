@@ -701,6 +701,67 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task SelectReviewPartAsync(Guid partId) => SelectPreviewAsync(partId);
 
+    private IReadOnlyList<string> GetReviewThicknessWarnings(Guid partId)
+    {
+        if (!thicknessStatuses.TryGetValue(partId, out var status))
+        {
+            return [];
+        }
+
+        var warnings = new List<string>();
+        if (status.Warning)
+        {
+            warnings.Add(Localizer["Thin walls may print with defects"] + " — "
+                + Localizer["Some walls are below {0:N2} mm for {1} and may print with holes, weak walls, or missing details.",
+                    status.LimitMm, status.Process.ToUpperInvariant()]);
+        }
+
+        if (status.Incomplete)
+        {
+            warnings.Add(Localizer["Thickness analysis is incomplete"] + " — "
+                + Localizer["Some regions could not be measured reliably."]);
+        }
+
+        return warnings;
+    }
+
+    private async Task ChangeReviewMaterialAsync((Guid PartId, string Value) change)
+    {
+        await ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
+        workflow?.EnterReview();
+    }
+
+    private async Task ChangeReviewColorAsync((Guid PartId, string Value) change)
+    {
+        await ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
+        workflow?.EnterReview();
+    }
+
+    private async Task ChangeReviewQuantityAsync((Guid PartId, string Value) change)
+    {
+        if (!int.TryParse(change.Value, out var quantity)
+            || quantity < 1
+            || quantity > PricingCatalog.MaximumAdditiveQuantity)
+        {
+            return;
+        }
+
+        await ChangeQuantityAsync(change.PartId, new ChangeEventArgs { Value = quantity });
+        workflow?.EnterReview();
+    }
+
+    private async Task ChangeReviewBuildPreferenceAsync((Guid PartId, string Value) change)
+    {
+        if (!Enum.TryParse<BuildPreference>(change.Value, true, out var preference)
+            || !Enum.IsDefined(preference))
+        {
+            return;
+        }
+
+        await ChangeBuildPreferenceAsync(change.PartId, preference);
+        workflow?.EnterReview();
+    }
+
     private async Task EditReviewPartAsync(Guid partId)
     {
         await SelectPreviewAsync(partId);

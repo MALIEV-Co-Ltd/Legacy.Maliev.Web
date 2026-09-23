@@ -383,9 +383,15 @@
             <InstantQuotationReview Parts="@Parts"
                                     Quote="@OrderQuote"
                                     Materials="@Materials"
+                                    ColorsForMaterial="GetColors"
+                                    ThicknessWarnings="GetReviewThicknessWarnings"
                                     SelectedPartId="@selectedPreviewPartId"
                                     OnSelectPart="SelectReviewPartAsync"
                                     OnEditPart="EditReviewPartAsync"
+                                    OnMaterialChanged="ChangeReviewMaterialAsync"
+                                    OnColorChanged="ChangeReviewColorAsync"
+                                    OnQuantityChanged="ChangeReviewQuantityAsync"
+                                    OnBuildPreferenceChanged="ChangeReviewBuildPreferenceAsync"
                                     OnBack="ReturnToConfiguration"
                                     OnContinue="EnterCustomerDetails" />
         </div>

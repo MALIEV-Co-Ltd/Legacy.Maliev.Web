@@ -881,6 +881,15 @@ body.instant-quotation-shell #main-content {
     margin: 0;
 }
 
+.instant-quote__workflow [data-workflow-review-content] {
+    container-type: inline-size;
+}
+
+.instant-quote__workflow [data-review-back] {
+    min-width: 44px;
+    min-height: 44px;
+}
+
 .instant-quote__flow-step {
     display: inline-flex;
     padding: .25rem .5rem;
@@ -939,6 +948,115 @@ body.instant-quotation-shell #main-content {
 
 .instant-quote__review-identity small {
     color: #687583;
+}
+
+.instant-quote__workflow .instant-quote__review-fields {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .65rem;
+    min-width: 0;
+}
+
+.instant-quote__review-fields > div {
+    min-width: 0;
+}
+
+.instant-quote__review-fields label {
+    display: block;
+    margin-bottom: .2rem;
+    color: #687583;
+    font-size: .72rem;
+    white-space: nowrap;
+}
+
+.instant-quote__review-fields select,
+.instant-quote__review-fields input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: .4rem .55rem;
+    border: 1px solid #b8c4d2;
+    border-radius: .4rem;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+}
+
+.instant-quote__review-fields :is(select, input):focus-visible,
+.instant-quote__review-details summary:focus-visible,
+.instant-quote__workflow [data-review-back]:focus-visible,
+.instant-quote__workflow [data-review-continue]:focus-visible,
+.instant-quote__preliminary-quotation button:focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 2px;
+}
+
+@container (min-width: 43rem) {
+    .instant-quote__workflow .instant-quote__review-fields {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.instant-quote__review-details {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin: .2rem -.7rem -.7rem;
+    border-top: 1px solid #e7eaee;
+}
+
+.instant-quote__review-details summary {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 44px;
+    padding: .4rem .7rem;
+    color: #435466;
+    cursor: pointer;
+}
+
+.instant-quote__review-verdict {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-left: auto;
+    border-radius: 50%;
+    font-size: .76rem;
+    font-weight: 600;
+}
+
+.instant-quote__review-verdict--clear { color: #087d55; }
+.instant-quote__review-verdict--warning { color: #a85d00; }
+
+.instant-quote__review-details > :not(summary) {
+    margin: .4rem .7rem .7rem;
+}
+
+.instant-quote__workflow [data-workflow-review-part] dl.instant-quote__review-prices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.instant-quote__review-forward-actions {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: stretch;
+    gap: .5rem;
+    margin-top: .65rem;
+}
+
+.instant-quote__review-forward-actions .instant-quote__preliminary-quotation {
+    margin: 0;
+}
+
+.instant-quote__review-forward-actions button {
+    min-height: 44px;
+}
+
+.instant-quote__review-forward-actions [data-review-continue] {
+    width: 100%;
 }
 
 .instant-quote__preliminary-quotation {

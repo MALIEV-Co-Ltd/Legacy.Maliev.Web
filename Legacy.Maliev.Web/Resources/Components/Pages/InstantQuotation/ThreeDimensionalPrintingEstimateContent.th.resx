@@ -463,6 +463,8 @@
   <data name="Technical filament preparation minimum included" xml:space="preserve"><value>รวมค่าขั้นต่ำสำหรับการเตรียมเส้นพลาสติกทางเทคนิค</value></data>
   <data name="minimum" xml:space="preserve"><value>ขั้นต่ำ</value></data>
   <data name="Build preference" xml:space="preserve"><value>รูปแบบการพิมพ์</value></data>
+  <data name="Preference" xml:space="preserve"><value>รูปแบบ</value></data>
+  <data name="Manufacturing warning" xml:space="preserve"><value>ข้อควรระวังด้านการผลิต</value></data>
   <data name="Quality" xml:space="preserve"><value>เน้นคุณภาพผิว</value></data>
   <data name="Standard" xml:space="preserve"><value>มาตรฐาน</value></data>
   <data name="Strength" xml:space="preserve"><value>เน้นความแข็งแรง</value></data>

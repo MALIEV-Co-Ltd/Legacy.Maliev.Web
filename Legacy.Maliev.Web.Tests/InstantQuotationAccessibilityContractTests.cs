@@ -88,8 +88,8 @@ public sealed class InstantQuotationAccessibilityContractTests
 
         Assert.Contains("<option value=\"@material.Key\">@Localizer[material.DisplayName]</option>", workflow, StringComparison.Ordinal);
         Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", workflow, StringComparison.Ordinal);
-        Assert.Contains("@Localizer[MaterialName(part.Configuration.MaterialKey)]", review, StringComparison.Ordinal);
-        Assert.Contains("@Localizer[part.Configuration.Color]", review, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"@material.Key\">@Localizer[material.DisplayName]</option>", review, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", review, StringComparison.Ordinal);
         Assert.Contains("value=\"@country.Name\"", customer, StringComparison.Ordinal);
         Assert.Contains("@country.DisplayName", customer, StringComparison.Ordinal);
     }
