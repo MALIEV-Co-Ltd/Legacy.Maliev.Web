@@ -592,6 +592,27 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
+    public async Task ConfigurationChange_AcceptsTenThousandAndRejectsQuantityAboveMaximum()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("part.stl", "opaque", Geometry());
+        await uploading;
+        var part = Assert.Single(workflow.Parts);
+
+        await workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 10_000, default);
+
+        Assert.Equal(10_000, Assert.Single(workflow.Parts).Configuration.Quantity);
+        Assert.Equal(10_000, Assert.Single(workflow.OrderQuote!.Parts).Quantity);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 10_001, default));
+        Assert.Equal(10_000, Assert.Single(workflow.Parts).Configuration.Quantity);
+    }
+
+    [Fact]
     public async Task BuildPreferenceChange_PersistsOnlySelectedPartAndRecomputesAuthoritativeQuote()
     {
         var client = new ControlledUploadClient();

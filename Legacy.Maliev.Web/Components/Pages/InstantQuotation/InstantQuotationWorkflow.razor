@@ -239,9 +239,11 @@
                            name="quantity"
                            type="number"
                            min="1"
-                           max="1000"
+                           max="@PricingCatalog.MaximumAdditiveQuantity"
+                           aria-describedby="quantity-hint-@part.PartId"
                            value="@part.Configuration.Quantity"
                            @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
+                    <small id="quantity-hint-@part.PartId">@Localizer["Maximum {0} pieces", PricingCatalog.MaximumAdditiveQuantity.ToString("N0")]</small>
                     <fieldset data-workflow-build-preference>
                         <legend>@Localizer["Build preference"]</legend>
                         <label>
@@ -308,13 +310,15 @@
                     }
                     @if (part.Quote is not null)
                     {
-                        @foreach (var tier in part.Quote.Tiers)
-                        {
-                            <div data-workflow-price-tier>
-                                <dt>@Localizer["Quantity"] @tier.MinQuantity</dt>
-                                <dd>@Money(tier.UnitPrice)</dd>
-                            </div>
-                        }
+                        <div class="instant-quote__bulk-pricing" data-workflow-bulk-pricing tabindex="0" role="region" aria-label="@Localizer["Bulk pricing table"]">
+                            @foreach (var tier in part.Quote.Tiers)
+                            {
+                                <div data-workflow-price-tier aria-current="@(tier.Active ? "true" : null)">
+                                    <dt>@Localizer["Quantity"] @tier.MinQuantity.ToString("N0")</dt>
+                                    <dd>@Money(tier.UnitPrice)</dd>
+                                </div>
+                            }
+                        </div>
                     }
                 </dl>
             }

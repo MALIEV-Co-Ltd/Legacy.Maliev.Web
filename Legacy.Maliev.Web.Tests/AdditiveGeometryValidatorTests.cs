@@ -21,6 +21,15 @@ namespace Legacy.Maliev.Web.Tests
             Assert.Empty(result.ReasonCodes);
         }
 
+        [Fact]
+        public void Validate_AcceptsTenThousandPieces()
+        {
+            AdditiveGeometryValidationResult result = AdditiveGeometryValidator.Validate(CreateValidGeometry(), 10_000);
+
+            Assert.True(result.IsValid);
+            Assert.DoesNotContain("quantity_out_of_range", result.ReasonCodes);
+        }
+
         [Theory]
         [InlineData(0, 1000, 100, "height_invalid")]
         [InlineData(100, 0, 100, "volume_invalid")]
@@ -57,7 +66,7 @@ namespace Legacy.Maliev.Web.Tests
                 UnsupportedAreaProfileMm2 = new[] { 0d, 1d },
             };
 
-            AdditiveGeometryValidationResult result = AdditiveGeometryValidator.Validate(geometry, 1001);
+            AdditiveGeometryValidationResult result = AdditiveGeometryValidator.Validate(geometry, 10_001);
 
             Assert.Contains("area_profile_invalid", result.ReasonCodes);
             Assert.Contains("quantity_out_of_range", result.ReasonCodes);
