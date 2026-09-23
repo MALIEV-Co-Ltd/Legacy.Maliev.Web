@@ -6,23 +6,6 @@
     </header>
     <span class="instant-quote__flow-step">@Localizer["Step 3 of 3"]</span>
     <p>@Localizer["Required fields are marked with an asterisk."]</p>
-    <section class="instant-quote__pricing-summary" aria-labelledby="instant-quote-customer-summary-heading">
-        <h4 id="instant-quote-customer-summary-heading">@Localizer["Order summary"]</h4>
-        <dl>
-            <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
-            @if (Quote is { MinimumOrderSurcharge: > 0 } orderQuote)
-            {
-                <div data-workflow-minimum-order-surcharge>
-                    <dt>@Localizer["Minimum order surcharge"] (@Localizer["minimum"] @Money(orderQuote.MinimumOrderPrice))</dt>
-                    <dd>@Money(orderQuote.MinimumOrderSurcharge)</dd>
-                </div>
-            }
-            <div><dt>@Localizer["Shipping"]</dt><dd>@Money(Quote?.ShippingCost)</dd></div>
-            <div><dt>@Localizer["VAT"]</dt><dd>@Money(Quote?.Vat)</dd></div>
-            <div><dt>@Localizer["Total"]</dt><dd>@Money(Quote?.FinalOrderPrice)</dd></div>
-            <div><dt>@Localizer["Lead time"]</dt><dd>@LeadTime</dd></div>
-        </dl>
-    </section>
     @if (Model.InvalidFields.Count > 0)
     {
         <div class="instant-quote__validation-summary" role="alert" tabindex="-1" autofocus>
@@ -141,7 +124,8 @@
             @FieldError("Description")
         </div>
 
-        <div class="instant-quote__actions" role="group" aria-label="@Localizer["Quotation steps"]">
+        <div class="instant-quote__actions instant-quote__customer-actions" role="group" aria-label="@Localizer["Quotation steps"]">
+            <p role="note">@Localizer["Our team will review your files, then send an official quotation with payment instructions."]</p>
             @if (Model.InvalidFields.Count > 0)
             {
                 <a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a>
@@ -166,12 +150,6 @@
     public EventCallback OnBack { get; set; }
 
     private bool HasError(string field) => Model.InvalidFields.Contains(field, StringComparer.Ordinal);
-
-    private string LeadTime => Quote is null
-        ? "—"
-        : Localizer["{0}–{1} business days", Quote.LeadTimeMinimumDays, Quote.LeadTimeMaximumDays];
-
-    private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
 
     private string AriaInvalid(string field) => HasError(field) ? "true" : "false";
 

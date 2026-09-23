@@ -353,6 +353,7 @@
 
     @if (VisibleSections.CustomerDetails)
     {
+        <InstantQuotationCustomerOrderOverview Parts="@Parts" Quote="@OrderQuote" Materials="@Materials" />
         <div data-workflow-customer-details
              @ref="customerDetailsSection"
              tabindex="-1"

@@ -512,4 +512,5 @@
   <data name="Shipping country" xml:space="preserve"><value>ประเทศปลายทาง</value></data>
   <data name="Edit" xml:space="preserve"><value>แก้ไข</value></data>
   <data name="Edit {0}" xml:space="preserve"><value>แก้ไข {0}</value></data>
+  <data name="Our team will review your files, then send an official quotation with payment instructions." xml:space="preserve"><value>ทีมงานของเราจะตรวจสอบไฟล์ จากนั้นส่งใบเสนอราคาอย่างเป็นทางการพร้อมคำแนะนำการชำระเงิน</value></data>
 </root>
