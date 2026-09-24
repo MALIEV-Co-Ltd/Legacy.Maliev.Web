@@ -144,7 +144,7 @@ public sealed class InstantQuotationUploadClientTests
         var methods = transport.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
             .ToDictionary(method => method.Name, StringComparer.Ordinal);
         Assert.Equal(
-            ["CreateSessionAsync", "FinalizeAsync", "RemoveAsync", "UploadAsync"],
+            ["CreateSessionAsync", "FinalizeAsync", "ReadCleanForAnalysisAsync", "RemoveAsync", "UploadAsync"],
             methods.Keys.Order(StringComparer.Ordinal));
         Assert.Equal(
             ["cancellationToken"],
@@ -158,6 +158,9 @@ public sealed class InstantQuotationUploadClientTests
         Assert.Equal(
             ["capability", "quotationRequestId", "fileIds", "operationId", "cancellationToken"],
             methods["FinalizeAsync"].GetParameters().Select(parameter => parameter.Name));
+        Assert.Equal(
+            ["capability", "file", "cancellationToken"],
+            methods["ReadCleanForAnalysisAsync"].GetParameters().Select(parameter => parameter.Name));
         Assert.Equal(typeof(int), methods["FinalizeAsync"].GetParameters()[1].ParameterType);
 
         var services = new ServiceCollection();
