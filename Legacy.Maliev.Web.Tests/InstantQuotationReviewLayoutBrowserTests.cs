@@ -6,6 +6,7 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFixture fixture)
 {
     [Theory]
+    [InlineData(320, 700)]
     [InlineData(390, 844)]
     [InlineData(1522, 949)]
     public async Task ReviewControlsAndForwardActionsRemainReadable(int width, int height)
@@ -53,13 +54,30 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
               return [
                 controls.every(control => control.getBoundingClientRect().width >= 100),
                 Math.abs((pdf.top + pdf.height / 2) - (next.top + next.height / 2)) <= 2,
-                document.documentElement.scrollWidth <= innerWidth + 1
+                document.documentElement.scrollWidth <= innerWidth + 1,
+                next.width <= 240,
+                Math.abs(document.querySelector('[data-review-forward-actions]').getBoundingClientRect().right - next.right) <= 2
               ];
             }
             """);
 
         Assert.True(result[0], "Review controls must not clip their selected values.");
-        Assert.True(result[1], "PDF and Continue must share a row.");
+        if (width >= 390) Assert.True(result[1], "PDF and Continue must share a row when space permits.");
         Assert.True(result[2], "Review must not force horizontal overflow.");
+        Assert.True(result[3], "Continue must remain a compact action, not a full-width strip.");
+        Assert.True(result[4], "The forward action must stay right aligned.");
+
+        if (width == 320)
+        {
+            var longThaiLabelFits = await page.EvaluateAsync<bool>("""
+                () => {
+                  const button = document.querySelector('[data-review-continue]');
+                  button.textContent = 'กรอกข้อมูลสำหรับใบเสนอราคาและดำเนินการต่อ';
+                  return document.documentElement.scrollWidth <= innerWidth + 1
+                    && button.getBoundingClientRect().width <= innerWidth;
+                }
+                """);
+            Assert.True(longThaiLabelFits, "Long Thai action labels must wrap without horizontal overflow.");
+        }
     }
 }
