@@ -1063,8 +1063,9 @@ body.instant-quotation-shell #main-content {
 }
 
 .instant-quote__review-forward-actions {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: stretch;
     gap: .5rem;
     margin-top: .65rem;
@@ -1076,10 +1077,12 @@ body.instant-quotation-shell #main-content {
 
 .instant-quote__review-forward-actions button {
     min-height: 44px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .instant-quote__review-forward-actions [data-review-continue] {
-    width: 100%;
+    width: auto;
 }
 
 .instant-quote__preliminary-quotation {
