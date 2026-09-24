@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -12,6 +13,81 @@ public sealed class InstantQuotationFileServiceTransportTests
 {
     private static readonly Guid SessionId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid FileId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+    [Fact]
+    public async Task ReadCleanForAnalysis_UsesExactCapabilityAndReturnsOnlyDigestMatchedBytes()
+    {
+        var bytes = Encoding.UTF8.GetBytes("solid verified\nendsolid verified\n");
+        var file = CleanFile(bytes);
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal($"/file/v1/instant-quotation/sessions/{SessionId:D}/files/{FileId:D}/content", request.RequestUri?.AbsolutePath);
+            Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-jwt"), request.Headers.Authorization);
+            Assert.Equal("opaque-capability-000000000000000", Assert.Single(request.Headers.GetValues("X-Quote-Session-Token")));
+            Assert.Null(request.Content);
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(bytes),
+            };
+            response.Content.Headers.ContentType = new MediaTypeHeaderValue("model/stl");
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
+            response.Headers.Add("X-Content-Type-Options", "nosniff");
+            return Task.FromResult(response);
+        });
+
+        var result = await Create(handler, "service-jwt")
+            .ReadCleanForAnalysisAsync(Capability(), file, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal(InstantQuotationProblemCategory.None, result.ProblemCategory);
+        Assert.Equal(bytes, result.Content);
+    }
+
+    [Fact]
+    public async Task ReadCleanForAnalysis_FailsClosedWhenBytesDoNotMatchAdmittedDigest()
+    {
+        var admitted = Encoding.UTF8.GetBytes("admitted");
+        var substituted = Encoding.UTF8.GetBytes("altered!");
+        var handler = new RecordingHandler(_ => Task.FromResult(CleanResponse(substituted)));
+
+        var result = await Create(handler, "service-jwt")
+            .ReadCleanForAnalysisAsync(Capability(), CleanFile(admitted), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationOperationStatus.Failed, result.Status);
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Null(result.Content);
+    }
+
+    [Fact]
+    public async Task ReadCleanForAnalysis_RejectsOversizedOrUncleanFileBeforeHttpIo()
+    {
+        var handler = new RecordingHandler(_ => throw new InvalidOperationException("FileService must not be called."));
+        var transport = Create(handler, "service-jwt");
+        var clean = CleanFile([1]);
+
+        var oversized = await transport.ReadCleanForAnalysisAsync(
+            Capability(), clean with { SizeBytes = 32L * 1024 * 1024 + 1 }, CancellationToken.None);
+        var pending = await transport.ReadCleanForAnalysisAsync(
+            Capability(), clean with { Status = "pending" }, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Validation, oversized.ProblemCategory);
+        Assert.Equal(InstantQuotationProblemCategory.Validation, pending.ProblemCategory);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ReadCleanForAnalysis_DoesNotReturnBytesWhenCapabilityIsForbidden()
+    {
+        var handler = new RecordingHandler(_ => Task.FromResult(Problem(HttpStatusCode.Forbidden, "session_forbidden")));
+
+        var result = await Create(handler, "service-jwt")
+            .ReadCleanForAnalysisAsync(Capability(), CleanFile([1]), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationAuthorizationStatus.Denied, result.AuthorizationStatus);
+        Assert.Equal(InstantQuotationProblemCategory.Authorization, result.ProblemCategory);
+        Assert.Null(result.Content);
+    }
 
     [Fact]
     public async Task CreateSession_SendsOnlyServiceJwtAndAcceptsExactCreatedContract()
@@ -773,6 +849,26 @@ public sealed class InstantQuotationFileServiceTransportTests
         $$"""
         {"quotationRequestId":417,"files":[{"fileId":"{{FileId}}","bucket":"private","objectName":"instant-quotation/417/file.stl","fileName":"file.stl","contentType":"model/stl","sizeBytes":123,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"finalized"}]}
         """);
+
+    private static InstantQuotationFileServiceUploadedFile CleanFile(byte[] bytes) => new(
+        FileId,
+        "part.stl",
+        "model/stl",
+        bytes.Length,
+        Convert.ToHexStringLower(SHA256.HashData(bytes)),
+        "clean");
+
+    private static HttpResponseMessage CleanResponse(byte[] bytes)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(bytes),
+        };
+        response.Content.Headers.ContentType = new MediaTypeHeaderValue("model/stl");
+        response.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
+        response.Headers.Add("X-Content-Type-Options", "nosniff");
+        return response;
+    }
 
     private sealed class StubTokenProvider(string? token) : IServiceAccessTokenProvider
     {

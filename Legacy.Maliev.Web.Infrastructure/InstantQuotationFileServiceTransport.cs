@@ -76,11 +76,22 @@ internal sealed record InstantQuotationFileServiceFinalizedFile(
     string Sha256,
     string Status);
 
+internal sealed record InstantQuotationFileServiceCleanReadResult(
+    InstantQuotationServiceStatus ServiceStatus,
+    InstantQuotationAuthorizationStatus AuthorizationStatus,
+    InstantQuotationOperationStatus Status,
+    InstantQuotationProblemCategory ProblemCategory,
+    byte[]? Content,
+    string? InternalProblemCode,
+    InstantQuotationFileServiceRetryDisposition RetryDisposition);
+
 internal sealed class InstantQuotationFileServiceTransport(
     IHttpClientFactory clientFactory,
     IServiceAccessTokenProvider tokenProvider)
 {
     private const long MaximumUploadBytes = 200L * 1024 * 1024;
+    // Physical simulation is intentionally more tightly bounded than file admission.
+    private const long MaximumPhysicalAnalysisBytes = 32L * 1024 * 1024;
     private const int MaximumFilesPerSession = 100;
     private static readonly string[] SupportedExtensions =
         [".stl", ".obj", ".3mf", ".step", ".stp", ".iges", ".igs", ".glb", ".gltf"];
@@ -373,6 +384,93 @@ internal sealed class InstantQuotationFileServiceTransport(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             return FailedFinalization(TransientFailure());
+        }
+    }
+
+    public async Task<InstantQuotationFileServiceCleanReadResult> ReadCleanForAnalysisAsync(
+        InstantQuotationFileCapability capability,
+        InstantQuotationFileServiceUploadedFile file,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(file);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!IsValid(capability)
+            || file.FileId == Guid.Empty
+            || !string.Equals(file.Status, "clean", StringComparison.Ordinal)
+            || file.SizeBytes is <= 0 or > MaximumPhysicalAnalysisBytes
+            || file.Sha256 is not { Length: 64 }
+            || !file.Sha256.All(Uri.IsHexDigit))
+        {
+            return FailedCleanRead(ValidationFailure());
+        }
+
+        var token = await GetTokenAsync(cancellationToken);
+        if (token is null)
+        {
+            return FailedCleanRead(MissingTokenFailure());
+        }
+
+        try
+        {
+            using var request = Authenticated(
+                HttpMethod.Get,
+                $"file/v1/instant-quotation/sessions/{capability.SessionId:D}/files/{file.FileId:D}/content",
+                token);
+            request.Headers.Add("X-Quote-Session-Token", capability.SessionToken);
+            using var response = await SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return FailedCleanRead(await ReadFailureAsync(
+                    response, token, FileServiceOperation.ReadClean, cancellationToken));
+            }
+
+            if (response.StatusCode != HttpStatusCode.OK
+                || response.Content.Headers.ContentLength != file.SizeBytes
+                || !string.Equals(response.Content.Headers.ContentType?.MediaType, file.ContentType, StringComparison.OrdinalIgnoreCase)
+                || response.Headers.CacheControl?.NoStore != true
+                || !response.Headers.TryGetValues("X-Content-Type-Options", out var options)
+                || !options.SequenceEqual(["nosniff"], StringComparer.OrdinalIgnoreCase))
+            {
+                return FailedCleanRead(UnexpectedFailure());
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            using var content = new MemoryStream((int)file.SizeBytes);
+            var buffer = new byte[64 * 1024];
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer, cancellationToken);
+                if (read == 0) break;
+                if (content.Length + read > file.SizeBytes)
+                {
+                    return FailedCleanRead(UnexpectedFailure());
+                }
+
+                hash.AppendData(buffer, 0, read);
+                await content.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            }
+
+            if (content.Length != file.SizeBytes
+                || !string.Equals(Convert.ToHexStringLower(hash.GetHashAndReset()), file.Sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                return FailedCleanRead(UnexpectedFailure());
+            }
+
+            return new(
+                InstantQuotationServiceStatus.Available,
+                InstantQuotationAuthorizationStatus.Authorized,
+                InstantQuotationOperationStatus.Succeeded,
+                InstantQuotationProblemCategory.None,
+                content.ToArray(),
+                null,
+                InstantQuotationFileServiceRetryDisposition.None);
+        }
+        catch (Exception exception) when (IsTransient(exception, cancellationToken))
+        {
+            return FailedCleanRead(TransientFailure());
         }
     }
 
@@ -679,6 +777,9 @@ internal sealed class InstantQuotationFileServiceTransport(
             (FileServiceOperation.Remove, HttpStatusCode.Forbidden, "permission_forbidden" or "session_forbidden") => true,
             (FileServiceOperation.Remove, HttpStatusCode.Conflict, "upload_in_progress") => true,
             (FileServiceOperation.Remove, HttpStatusCode.ServiceUnavailable, "dependency_unavailable" or "outcome_unknown") => true,
+            (FileServiceOperation.ReadClean, HttpStatusCode.Unauthorized, "platform_authentication_required") => true,
+            (FileServiceOperation.ReadClean, HttpStatusCode.Forbidden, "permission_forbidden" or "session_forbidden") => true,
+            (FileServiceOperation.ReadClean, HttpStatusCode.ServiceUnavailable, "dependency_unavailable") => true,
             _ => false,
         };
 
@@ -771,6 +872,15 @@ internal sealed class InstantQuotationFileServiceTransport(
         failure.Code,
         failure.RetryDisposition);
 
+    private static InstantQuotationFileServiceCleanReadResult FailedCleanRead(Failure failure) => new(
+        failure.ServiceStatus,
+        failure.AuthorizationStatus,
+        InstantQuotationOperationStatus.Failed,
+        failure.Category,
+        null,
+        failure.Code,
+        failure.RetryDisposition);
+
     private static Failure ValidationFailure() => new(
         InstantQuotationServiceStatus.Available,
         InstantQuotationAuthorizationStatus.NotEvaluated,
@@ -815,6 +925,7 @@ internal sealed class InstantQuotationFileServiceTransport(
         Upload,
         Finalize,
         Remove,
+        ReadClean,
     }
 
     private sealed record Failure(
