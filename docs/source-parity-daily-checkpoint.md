@@ -227,3 +227,18 @@ explicit manual-CTA marker and bilingual regression assertions that the
 unavailable `/InstantQuotation/CNC-Machining` link is absent. CNC expansion
 remains separate. This classifies only this source commit, not the entire
 source delta since the prior full checkpoint.
+
+## Incremental source commit 63d68317 (2026-09-26)
+
+Source `63d68317f7ae12def6b7caceca9883a7b75475df` (parent
+`915a880f13a9aa6ec7034d13dc986ec46ae11488`) changes the original
+additive-simulation worker, its JavaScript regression, and the original Web
+worker URL cache version. Legacy owner: Web issue #319. The retained Legacy
+additive worker had the same rounded-XY contour collision; its section keys
+now use shared 3D mesh edge/vertex identity. A nearby-closed-solids regression
+fails before the fix and passes afterward; open meshes still fail review.
+The original `SecurityHeaderPolicy` URL pin has no direct Legacy analogue:
+the current Blazor quotation route does not load this worker URL, and no
+production asset points to it. This source commit is classified here without
+claiming that the retained JavaScript worker is the active Legacy pricing path
+or that the wider source delta is complete.
