@@ -199,3 +199,17 @@ client tests: 5 passed; full Web suite: 2,149 passed; test-project formatting
 passed. GitHub issue #313 and Project #2 track the target PR and post-merge
 main SHA. This entry is not a complete checkpoint for every newer source
 commit after `7c416cc8cfd27ef7440e7c046529011630276807`.
+
+## 2026-09-26 incremental 3D-printing route parity
+
+Source commit `eb52167166e12d832ea6c800795a8357d526f759` (parent
+`1e45a63becfc696459fc6527ef4c85980fb059cc`) changes
+`Maliev.Web/Pages/Services/3D-Printing.cshtml`,
+`Maliev.Web/wwwroot/src/app/css/service-pages.css`, related source tests, and a
+source-only plan. It owns the bilingual instant-FDM/resin versus manual
+industrial/metal quotation choice, detailed engineering-review guidance,
+responsive cards, and route-tracking attributes. Legacy owner: Web issue #315.
+The target adapts these to the static-SSR Blazor component and the existing
+`/InstantQuotation/3D-Printing` and `/Quotation?item=3D-Printing` routes while
+preserving its additional accepted CAD formats. This entry classifies only this
+commit; it is not a claim that every later source commit has been reconciled.

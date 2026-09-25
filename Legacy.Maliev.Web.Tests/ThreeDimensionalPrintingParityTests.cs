@@ -36,7 +36,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("STEP / STP", source, StringComparison.Ordinal);
         Assert.Contains("CATPart (CATIA)", source, StringComparison.Ordinal);
         Assert.Contains("Compare CNC machining", source, StringComparison.Ordinal);
-        Assert.Contains("Need scanning or reverse engineering?", source, StringComparison.Ordinal);
+        Assert.Contains("Review scanning and reverse engineering", source, StringComparison.Ordinal);
         Assert.Contains("ไฟล์เมชอาจต้องซ่อม", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
         Assert.Contains("class=\"service-page-toc\"", source, StringComparison.Ordinal);
         Assert.Equal(6, ServiceCardMediaRegex().Matches(source).Count);
@@ -45,6 +45,30 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("Pickup is available at our Pak Kret workshop by appointment", source, StringComparison.Ordinal);
         Assert.Contains("ค่าจัดส่งภายในประเทศไทยเริ่มต้น 100 บาท", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Estimate FDM or resin", "Request engineering review")]
+    [InlineData("th", "ประเมินราคา FDM หรือเรซิ่น", "ขอให้วิศวกรประเมิน")]
+    public async Task ThreeDimensionalPrintingRoute_ShowsDistinctQuotationRoutesAndReviewRequirements(
+        string culture,
+        string instantLabel,
+        string engineeringLabel)
+    {
+        using var client = factory.CreateClient();
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("class=\"printing-route-grid\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-quote-route=\"instant\" data-quote-placement=\"printing_quote_guide\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-quote-route=\"engineering\" data-quote-placement=\"printing_quote_guide\"", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=3D-Printing\"", html, StringComparison.Ordinal);
+        Assert.Contains(instantLabel, html, StringComparison.Ordinal);
+        Assert.Contains(engineeringLabel, html, StringComparison.Ordinal);
+        Assert.Contains("class=\"printing-review-grid\"", html, StringComparison.Ordinal);
+        Assert.Contains("MJF, SLS, SLM", html, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -178,6 +178,22 @@
 .service-card:hover a .fa-arrow-right { transform: translateX(.25rem); }
 .service-card-visual .service-card-media { transition: transform .55s var(--motion-ease, cubic-bezier(.16, 1, .3, 1)); }
 .service-card-visual:has(a):hover .service-card-media { transform: scale(1.045); }
+.printing-route-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+.printing-route-card { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; padding: clamp(1.5rem, 3vw, 2rem); border: 1px solid #bfd2eb; border-radius: var(--service-radius-md); background: #fff; box-shadow: var(--service-shadow-sm); }
+.printing-route-card > div { flex: 1; }
+.printing-route-kicker { color: var(--service-blue-dark); font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.printing-route-card h3 { margin: .55rem 0 .65rem; color: var(--service-ink); font-size: clamp(1.2rem, 2vw, 1.5rem); }
+.printing-route-card p, .printing-route-card li { color: var(--service-muted); line-height: 1.65; }
+.printing-route-card ul { margin: 1rem 0 1.5rem; padding-left: 1.2rem; }
+.printing-route-card .service-button { margin-top: auto; }
+.printing-route-followup { margin: 1.25rem 0; color: var(--service-muted); text-align: center; }
+.printing-file-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.printing-review-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+.printing-review-card { padding: 1.5rem; border: 1px solid var(--service-line); border-radius: var(--service-radius-md); background: #fff; }
+.printing-review-card > i, .printing-review-card > .svg-inline--fa { color: var(--service-blue); font-size: 1.65rem; }
+.printing-review-card h3 { margin: .8rem 0 .65rem; color: var(--service-ink); font-size: 1.08rem; }
+.printing-review-card ul { margin: 0; padding-left: 1.2rem; }
+.printing-review-card li { color: var(--service-muted); line-height: 1.65; }
 .service-image-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
 .service-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(22rem, .9fr); gap: 3.5rem; align-items: center; }
 .service-split.reverse > :first-child { order: 2; }
@@ -415,6 +431,7 @@
     .service-quick article:nth-child(3) { border-left: 0; border-top: 1px solid var(--service-line); }
     .service-quick article:nth-child(4) { border-top: 1px solid var(--service-line); }
     .service-card-grid, .service-material-grid, .service-image-grid, .injection-gallery-grid { grid-template-columns: repeat(2, 1fr); }
+    .printing-review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .service-pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .service-location-section .service-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .service-process { grid-template-columns: repeat(2, 1fr); }
@@ -452,7 +469,7 @@
     .service-button { width: min(100%, 20rem); }
     .service-quick { margin-top: -2rem; }
     .injection-molding-page .service-quick { margin-top: -2rem; }
-    .service-quick-grid, .service-card-grid, .service-material-grid, .service-image-grid, .service-process, .service-split, .service-cta, .injection-gallery-grid, .injection-volume-grid, .scanning-answer-callout, .scanning-deliverable-grid, .scanning-preparation-list > li { grid-template-columns: 1fr; }
+    .service-quick-grid, .service-card-grid, .service-material-grid, .service-image-grid, .service-process, .service-split, .service-cta, .printing-route-grid, .printing-review-grid, .injection-gallery-grid, .injection-volume-grid, .scanning-answer-callout, .scanning-deliverable-grid, .scanning-preparation-list > li { grid-template-columns: 1fr; }
     .scanning-answer-path { justify-content: flex-start; padding-top: 1rem; padding-left: 0; border-top: 1px solid #bdd3ef; border-left: 0; text-align: left; }
     .scanning-deliverable-details { grid-template-columns: 1fr; }
     .scanning-deliverable-details > div + div { margin-top: .9rem; margin-left: 0; padding-top: .9rem; padding-left: 0; border-left: 0; }
