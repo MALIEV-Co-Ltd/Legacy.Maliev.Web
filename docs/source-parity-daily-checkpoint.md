@@ -178,3 +178,24 @@ unit and 92/92 browser tests), formatting and package checks, protected-branch C
 exact source-history verifier against the read-only source repository. No Legacy
 application deployment, traffic change, production database mutation, or cutover was
 performed by this parity checkpoint.
+
+## Incremental source commit fd37fbd (2026-09-26)
+
+Source `fd37fbd03bc767f026a625fd6a91107ada91a96f` (parent
+`eb52167166e12d832ea6c800795a8357d526f759`) changes
+`Maliev.Web/Areas/Member/Pages/Orders/View.cshtml.cs` and adds
+`Maliev.Web.Tests/MemberOrderMissingMaterialTests.cs`. It skips material
+lookup when an owned order has no material ID and skips the dependent group
+lookup when a material cannot be found.
+
+The architecture-equivalent Legacy owner is `Legacy.Maliev.Web`:
+`CustomerMemberDetailClient.GetOrderSupplementAsync` omits the catalog call
+for a null material ID, treats a 404 material as absent, and reads the group
+only from a present material response. `MemberDetailLoaders` renders both
+missing labels as `-` while keeping the owned order visible. Focused tests
+verify both null-ID and 404 paths, no dependent group request, no spurious
+warning, and the display fallback. Release build: 0 warnings/errors; focused
+client tests: 5 passed; full Web suite: 2,149 passed; test-project formatting
+passed. GitHub issue #313 and Project #2 track the target PR and post-merge
+main SHA. This entry is not a complete checkpoint for every newer source
+commit after `7c416cc8cfd27ef7440e7c046529011630276807`.
