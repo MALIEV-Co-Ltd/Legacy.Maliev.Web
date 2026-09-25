@@ -14,6 +14,23 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         this.factory = factory;
     }
 
+    [Theory]
+    [InlineData("en", "Request a CNC engineering quotation")]
+    [InlineData("th", "ขอใบเสนอราคางาน CNC จากวิศวกร")]
+    public async Task DisabledInstantQuotation_OffersOnlyTheManualEngineeringRoute(
+        string culture,
+        string manualLabel)
+    {
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/services/cnc-machining?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-cnc-manual-cta href=\"/Quotation?item=CNC-Machining\"", html, StringComparison.Ordinal);
+        Assert.Contains(manualLabel, html, StringComparison.Ordinal);
+        Assert.DoesNotContain("href=\"/InstantQuotation/CNC-Machining\"", html, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Host_DeclaresTheCncMachiningRouteAndRetainsItsRazorRollbackSource()
     {

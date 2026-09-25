@@ -213,3 +213,17 @@ The target adapts these to the static-SSR Blazor component and the existing
 `/InstantQuotation/3D-Printing` and `/Quotation?item=3D-Printing` routes while
 preserving its additional accepted CAD formats. This entry classifies only this
 commit; it is not a claim that every later source commit has been reconciled.
+
+## Incremental source commit 1e45a63 (2026-09-26)
+
+Source `1e45a63becfc696459fc6527ef4c85980fb059cc` (parent
+`4bde312241c2e063e6768f510b92ee2f60b2b94b`) changes
+`Maliev.Web/Pages/Services/CNC-Machining.cshtml` and
+`Maliev.Web.Tests/CncQuotationRouteSourceTests.cs`. When instant CNC quoting is
+disabled, its primary CTA must route to manual engineering quotation rather
+than advertise the unavailable instant flow. Legacy Web already chose the
+manual `/Quotation?item=CNC-Machining` target; issue #316 adds the source's
+explicit manual-CTA marker and bilingual regression assertions that the
+unavailable `/InstantQuotation/CNC-Machining` link is absent. CNC expansion
+remains separate. This classifies only this source commit, not the entire
+source delta since the prior full checkpoint.
