@@ -2,6 +2,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -55,6 +56,45 @@ public sealed class CustomerMemberDetailClientTests
         Assert.Contains(factory.Requests, request => request.Name == "files"
             && request.Path.Contains("bucket=legacy-orders", StringComparison.Ordinal)
             && request.Path.Contains("objectName=orders%2Fpart.step", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task OrderSupplement_NullMaterialId_SkipsCatalogLookupAndRendersOrder()
+    {
+        var factory = new RecordingClientFactory((_, _) =>
+            throw new InvalidOperationException("An order without optional references must not make a catalog request."));
+        var client = CreateClient(factory);
+        CustomerOrderDetails details = OrderDetailsWithoutMaterial();
+
+        CustomerOrderSupplement supplement = await client.GetOrderSupplementAsync(details, default);
+        MemberOrderDetailDisplayModel display = MemberDetailLoaders.CreateOrderDisplayModel(details, supplement, null, []);
+
+        Assert.Empty(factory.Requests);
+        Assert.Empty(supplement.Warnings);
+        Assert.Equal(details.Order.Id, display.Id);
+        Assert.Equal("-", display.Material);
+        Assert.Equal("-", display.MaterialGroup);
+    }
+
+    [Fact]
+    public async Task OrderSupplement_MaterialNotFound_RendersOrderWithoutGroupLookup()
+    {
+        var factory = new RecordingClientFactory((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var client = CreateClient(factory);
+        CustomerOrderDetails withoutMaterial = OrderDetailsWithoutMaterial();
+        CustomerOrderDetails details = withoutMaterial with
+        {
+            Order = withoutMaterial.Order with { MaterialId = 12 },
+        };
+
+        CustomerOrderSupplement supplement = await client.GetOrderSupplementAsync(details, default);
+        MemberOrderDetailDisplayModel display = MemberDetailLoaders.CreateOrderDisplayModel(details, supplement, null, []);
+
+        Assert.Equal("materials/12", Assert.Single(factory.Requests).Path);
+        Assert.Empty(supplement.Warnings);
+        Assert.Equal(details.Order.Id, display.Id);
+        Assert.Equal("-", display.Material);
+        Assert.Equal("-", display.MaterialGroup);
     }
 
     [Fact]
@@ -145,6 +185,14 @@ public sealed class CustomerMemberDetailClientTests
             new RecordingTokenProvider(),
             NullLogger<CustomerMemberDetailClient>.Instance,
         ]);
+    }
+
+    private static CustomerOrderDetails OrderDetailsWithoutMaterial()
+    {
+        var order = new CustomerOrder(
+            7, 42, "Part", null, 3, 2, 0, 2, 100, 0, 200, 5, null, null, null,
+            true, false, null, DateTime.UnixEpoch, DateTime.UnixEpoch);
+        return new(order, new CustomerOrderProcess(3, 1, "CNC"), [], []);
     }
 
     private static HttpResponseMessage Json(string body) => new(HttpStatusCode.OK)
