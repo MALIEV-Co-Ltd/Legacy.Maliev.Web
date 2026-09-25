@@ -198,7 +198,6 @@
     }
 
     function quantize(value) { return Math.round(value * 1000); }
-    function pointKey(point) { return quantize(point[0]) + ',' + quantize(point[1]); }
     function point3dKey(x, y, z) {
         return quantize(x) + ',' + quantize(y) + ',' + quantize(z);
     }
@@ -239,8 +238,19 @@
 
     function sectionSegments(triangles, triangleOffsets, plane) {
         var unique = new Map();
+        function intersectionKey(firstOffset, secondOffset, planeZ) {
+            var first = point3dKey(triangles[firstOffset], triangles[firstOffset + 1], triangles[firstOffset + 2]);
+            var second = point3dKey(triangles[secondOffset], triangles[secondOffset + 1], triangles[secondOffset + 2]);
+            // A slice through a vertex belongs to that vertex. Other intersections
+            // belong to a shared mesh edge, not a rounded XY coordinate that may
+            // merge distinct nearby closed contours.
+            if (triangles[firstOffset + 2] === planeZ) { return 'v:' + first; }
+            if (triangles[secondOffset + 2] === planeZ) { return 'v:' + second; }
+            return first < second ? 'e:' + first + '|' + second : 'e:' + second + '|' + first;
+        }
         triangleOffsets.forEach(function (triangleOffset) {
             var intersections = [];
+            var keys = [];
             for (var edge = 0; edge < 3; edge += 1) {
                 var firstOffset = triangleOffset + (edge * 3);
                 var secondOffset = triangleOffset + (((edge + 1) % 3) * 3);
@@ -261,10 +271,11 @@
                     triangles[lowerOffset] + ((triangles[upperOffset] - triangles[lowerOffset]) * fraction),
                     triangles[lowerOffset + 1] + ((triangles[upperOffset + 1] - triangles[lowerOffset + 1]) * fraction),
                 ]);
+                keys.push(intersectionKey(lowerOffset, upperOffset, plane));
             }
             if (intersections.length !== 2) { return; }
-            var firstKey = pointKey(intersections[0]);
-            var secondKey = pointKey(intersections[1]);
+            var firstKey = keys[0];
+            var secondKey = keys[1];
             if (firstKey === secondKey) { return; }
             var ordered = firstKey < secondKey
                 ? [firstKey, secondKey, intersections[0], intersections[1]]

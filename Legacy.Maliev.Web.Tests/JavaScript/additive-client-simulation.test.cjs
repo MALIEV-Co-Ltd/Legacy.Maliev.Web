@@ -262,6 +262,22 @@ test('client simulation rejects a globally open mesh even when every sampled sli
     }), /geometry_requires_review/);
 });
 
+test('nearby closed STL contours retain separate shared-edge identities', () => {
+    // The 0.0004 mm gap rounds to one XY point at a slice, but the distinct
+    // source edges must not be fused into an invalid or shared contour.
+    const nearbyBodies = box(0, 0, 0, 1, 1, 1)
+        .concat(box(1.0004, 0, -0.1, 2.0004, 1, 1.1));
+    const simulator = loadWorker();
+    const result = simulator.simulateFdm({
+        meshes: mesh(nearbyBodies),
+        build: build({ support: { ...build().support, enabled: false } }),
+        materialId: 'PLA',
+    });
+
+    assert.equal(result.layerCount, 6);
+    assert.ok(result.totalSeconds > 0);
+});
+
 test('client simulation ignores collapsed seam triangles during manifold validation', () => {
     const simulator = loadWorker();
     const closedWithCollapsedSeam = box(0, 0, 0, 10, 10, 2).concat([
