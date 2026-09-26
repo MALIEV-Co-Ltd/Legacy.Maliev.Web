@@ -43,7 +43,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool previewAttached;
     private bool previewUnavailable;
     private bool batchInProgress;
-    private int activeReprices;
+    private readonly RepricingActivity repricing = new();
     private Guid? selectedPreviewPartId;
     private PendingWorkflowFocus pendingFocus;
 
@@ -64,7 +64,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private bool IsBusy => State is InstantQuotationWorkflowState.Uploading;
 
-    private bool IsRepricing => activeReprices > 0;
+    private bool IsRepricing => repricing.IsActive;
 
     private bool InputDisabled => IsBusy || batchInProgress;
 
@@ -707,19 +707,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         int quantity) => RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
             ?? Task.CompletedTask);
 
-    private async Task RepriceAsync(Func<Task> update)
-    {
-        activeReprices++;
-        try
-        {
-            await InvokeAsync(StateHasChanged);
-            await update();
-        }
-        finally
-        {
-            activeReprices--;
-        }
-    }
+    private Task RepriceAsync(Func<Task> update) =>
+        repricing.RunAsync(update, () => InvokeAsync(StateHasChanged));
 
     private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
         InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
