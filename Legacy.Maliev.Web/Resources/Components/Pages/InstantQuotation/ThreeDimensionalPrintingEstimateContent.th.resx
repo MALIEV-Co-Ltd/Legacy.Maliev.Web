@@ -534,4 +534,8 @@
   <data name="Some walls are below {0:N2} mm for {1} and may print with holes, weak walls, or missing details." xml:space="preserve"><value>ผนังบางบางส่วนต่ำกว่า {0:N2} มม. สำหรับ {1} และอาจพิมพ์เป็นรู ผนังไม่แข็งแรง หรือรายละเอียดหายไป</value></data>
   <data name="Thickness analysis is incomplete" xml:space="preserve"><value>ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ</value></data>
   <data name="Some regions could not be measured reliably." xml:space="preserve"><value>บางบริเวณไม่สามารถตรวจวัดได้อย่างน่าเชื่อถือ</value></data>
+  <data name="Privacy Policy" xml:space="preserve"><value>นโยบายความเป็นส่วนตัว</value></data>
+  <data name="Non-Disclosure Agreement" xml:space="preserve"><value>สัญญาปกปิดความลับ</value></data>
+  <data name="Talk to an engineer" xml:space="preserve"><value>ปรึกษาวิศวกร</value></data>
+  <data name="(opens in a new tab)" xml:space="preserve"><value>(เปิดในแท็บใหม่)</value></data>
 </root>
