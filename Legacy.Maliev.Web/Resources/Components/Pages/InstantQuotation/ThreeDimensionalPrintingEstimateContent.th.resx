@@ -362,6 +362,7 @@
   <data name="Prices are shown in THB and are estimates until engineering review." xml:space="preserve"><value>ราคาแสดงเป็นเงินบาทและเป็นเพียงการประเมินจนกว่าวิศวกรจะตรวจสอบ</value></data>
   <data name="Continue with files and request a formal quotation" xml:space="preserve"><value>แนบไฟล์และขอใบเสนอราคาอย่างเป็นทางการ</value></data>
   <data name="Calculating estimate…" xml:space="preserve"><value>กำลังคำนวณราคา…</value></data>
+  <data name="Updating price and lead time…" xml:space="preserve"><value>กำลังอัปเดตราคาและระยะเวลาผลิต…</value></data>
   <data name="Estimate calculated. A formal quotation requires engineering review." xml:space="preserve"><value>คำนวณราคาแล้ว ใบเสนอราคาอย่างเป็นทางการต้องผ่านการตรวจสอบโดยวิศวกร</value></data>
   <data name="The estimate could not be calculated. Continue to the formal quotation form for assistance." xml:space="preserve"><value>ไม่สามารถคำนวณราคาได้ โปรดไปยังแบบฟอร์มขอใบเสนอราคาเพื่อรับความช่วยเหลือ</value></data>
   <data name="minutes" xml:space="preserve"><value>นาที</value></data>

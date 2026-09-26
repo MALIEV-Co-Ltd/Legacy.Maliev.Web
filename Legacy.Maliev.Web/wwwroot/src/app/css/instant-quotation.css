@@ -578,6 +578,48 @@ body.instant-quotation-shell #main-content {
     font-weight: 600;
 }
 
+.instant-quote__summary-dock-heading,
+.instant-quote__status-heading {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .35rem .75rem;
+}
+
+.instant-quote__pricing-status {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: .4rem;
+    margin: 0 0 0 auto;
+    color: #0b57d0;
+    font-size: .76rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: end;
+    overflow-wrap: anywhere;
+}
+
+.instant-quote__pricing-spinner {
+    width: .75rem;
+    height: .75rem;
+    flex: 0 0 auto;
+    border: 2px solid #0b57d044;
+    border-top-color: #0b57d0;
+    border-radius: 50%;
+    animation: instant-quote-pricing-spin .8s linear infinite;
+}
+
+@keyframes instant-quote-pricing-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .instant-quote__pricing-spinner { animation: none; }
+}
+
 .instant-quote__summary-dock-caret {
     font-size: 1.2rem;
     line-height: 1;
@@ -635,7 +677,7 @@ body.instant-quotation-shell #main-content {
         grid-template-columns: minmax(0, 1fr) auto auto;
     }
 
-    .instant-quote__summary-dock-title {
+    .instant-quote__summary-dock-heading {
         grid-column: 1 / -1;
     }
 
@@ -1149,8 +1191,12 @@ body.instant-quotation-shell #main-content {
 }
 
 .instant-quote__pricing-summary h4 {
-    margin: 0 0 .5rem;
+    margin: 0;
     font-size: .9rem;
+}
+
+.instant-quote__pricing-summary .instant-quote__status-heading {
+    margin-bottom: .5rem;
 }
 
 .instant-quote__workflow .instant-quote__pricing-summary dl {
