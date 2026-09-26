@@ -39,4 +39,18 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.17.10" />
   </ItemGroup>
+  <!-- Keep worker cache URLs tied to their source bytes, even for JavaScript-only builds. -->
+  <Target Name="FingerprintWorkerAssets" BeforeTargets="GetAssemblyAttributes">
+    <ItemGroup>
+      <_WorkerAsset Include="wwwroot/src/app/js/model-viewer/model-viewer.worker.js;wwwroot/src/app/js/additive-quotation/**/*.js;wwwroot/src/app/js/cnc-quotation/**/*.js" />
+    </ItemGroup>
+    <GetFileHash Files="@(_WorkerAsset)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_WorkerAssetHash" />
+    </GetFileHash>
+    <ItemGroup>
+      <AssemblyMetadata Include="WorkerAsset:$([System.String]::Copy('%(_WorkerAssetHash.Identity)').Replace('\', '/'))">
+        <Value>%(_WorkerAssetHash.FileHash)</Value>
+      </AssemblyMetadata>
+    </ItemGroup>
+  </Target>
 </Project>
