@@ -309,10 +309,18 @@ new production requirements.
 | `7aa95d1111528d3d875d8001a43676118974c1d0` | Source-specific physical-simulation report has no separately refreshed Legacy Web counterpart. The target repricing status already uses `min-width: 0` and `overflow-wrap: anywhere`; no obsolete simulation DOM was copied. Long-status browser acceptance for the target remains a separate check. |
 | `20fe822f80cb8f04d671897281a96a9c7dc33510` | Source test-only change opens the collapsed source summary before asserting details. Target `InstantQuotationCompactSummaryBrowserTests` already opens native `<details>` before testing visible totals and controls. Deeper target detail assertions remain a separate test-coverage opportunity. |
 | `b6f9eacea2669c7fcf0f619dc0c96f2f104ca861` | Source test-only selector update for a metrics wrapper. The target uses its own semantic summary dock and does not have that source wrapper; no runtime port applies. |
-| `027e733e8e7a5abebf975598fda86589ca034b32` | A compact, keyboard-focusable native `<details>` summary dock with visible total and separate Review control exists in `InstantQuotationWorkflow.razor` and `InstantQuotationCompactSummaryBrowserTests`. Source-specific warning badge, consultation door, and full expanded-detail behavior have not been declared equivalent by this narrow checkbox slice; keep #276 open for dedicated acceptance. |
+| `027e733e8e7a5abebf975598fda86589ca034b32` | Legacy Web `5a489b5` completes the applicable native summary-dock behavior: the collapsed dock retains its total and Review control, a badge reuses the configuration DFM warning predicate, expanded content includes part geometry/pricing and privacy/NDA links, and a separate localized consultation link opens the existing contact form in a new tab without losing the quote. This maps the source consultation door to the target's existing route rather than copying its channel menu or JS state machine. `InstantQuotationCompactSummaryBrowserTests` verifies keyboard expansion, warning semantics, legal/detail visibility, 44px consultation control, focus, and overflow in Chromium at 320/375/820/1280px across EN/TH. No service contract or CNC behavior changed. |
 
 The checkbox slice passed a Release build with zero warnings/errors, focused
 5/5 real-Chromium source/geometry/keyboard checks, full affected Web suite
 2,172/2,172, deterministic asset build, format, and npm/NuGet vulnerability
 checks. The browser fixture does not constitute an uploaded-part or production
 quotation. No deployment or service write was performed.
+
+The `027e733` summary-dock slice passed a Release build with zero warnings/errors,
+focused real-Chromium checks 8/8, the affected Web suite 2,177/2,177,
+deterministic assets, formatting, npm/NuGet vulnerability audits, and staged
+gitleaks. Browser tests use representative configuration DOM with production
+CSS and source-contract assertions; they do not claim an uploaded-part or
+production quotation. No deployment or service write was performed. Keep #276
+open for the remaining source SHAs and broader acceptance.
