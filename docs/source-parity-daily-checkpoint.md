@@ -242,3 +242,31 @@ the current Blazor quotation route does not load this worker URL, and no
 production asset points to it. This source commit is classified here without
 claiming that the retained JavaScript worker is the active Legacy pricing path
 or that the wider source delta is complete.
+
+## Incremental 3D-printing CTR route and decision parity (2026-09-26)
+
+This bounded Web checkpoint accounts for five committed source changes on
+`R:\maliev-web` `origin/main`. Legacy Web issues [#322](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/issues/322)
+and [#323](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/issues/323) are
+closed by the protected-main merges below. It does not classify unrelated
+newer source commits or authorize deployment, metadata publication, or a
+GTM/Ads change.
+
+| Source SHA | Individual disposition in Legacy Web |
+| --- | --- |
+| `a73acf2e4de9a611c7eda22cf6dbdae333d231cf` | Source implementation plan, not a runtime artifact. Its Web route/measurement slice is tracked by #322 and merged [PR #324](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/pull/324) at `bd1a2b01a09c177b8aca290d26dc5a1ae22b675d`; its Web CTR decision slice is tracked by #323 and merged [PR #325](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/pull/325) at `fd9ae45d94ed28c7288085cb6ce543b5851a26d5`. The plan also names QuotationService #52 and Intranet #177, whose acceptance is outside this Web checkpoint. |
+| `c97ced90bd8913a1686fec16405efd57c62d3176` | Route-choice attributes, consent-safe diagnostic event, and source browser behavior migrated to the Blazor static-SSR page, route-owned JavaScript bundle, and English/Thai browser tests by Web #322 / PR #324 (`bd1a2b01a09c177b8aca290d26dc5a1ae22b675d`). The instant and engineering destinations remain distinct; this event is intent, not a persisted lead. |
+| `31ba7d7c9816330529c8c335939fde5d0fc4a632` | Dated CTR decision artifact migrated under Web #323 / PR #325 (`fd9ae45d94ed28c7288085cb6ce543b5851a26d5`). The canonical owner, verified-fact versus hypothesis boundary, and mature-window/owner-approval gate remain explicit; the proposed snippet is not published. |
+| `de75a0e55240ee78053c8c87eb4a83b67cdd32f2` | The Web browser-test formatting and behavior are represented by Web #322 / PR #324 (`bd1a2b01a09c177b8aca290d26dc5a1ae22b675d`). This source commit also formats an Intranet test; that independent portion is outside this Web checkpoint. |
+| `0665dcd54788c037ee663ff90f32741014f0c81c` | Decision-pack whitespace normalization is represented in the migrated final document under Web #323 / PR #325 (`fd9ae45d94ed28c7288085cb6ce543b5851a26d5`); it has no independent runtime effect. |
+
+Both merge commits are ancestors of current Legacy Web `origin/main`
+`fd9ae45d94ed28c7288085cb6ce543b5851a26d5`. Independent acceptance on
+that main SHA: Release build of `Legacy.Maliev.Web.Tests.csproj` succeeded with
+zero warnings and errors; the focused 3D-printing rendered-route, decision-pack,
+and real headless-Chromium English/Thai tests passed 9/9. They cover ten labeled
+choices at five placements, both destinations, no pre-consent `dataLayer`
+route event, one buffered scalar event per click released on consent despite
+reloading the handler, and no lead event. These checks do not establish
+production deployment, GA4/GTM delivery, persisted quotation, or
+qualified-customer outcomes.
