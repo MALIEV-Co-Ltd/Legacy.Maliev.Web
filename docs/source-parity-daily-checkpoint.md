@@ -271,3 +271,23 @@ route event, one buffered scalar event per click released on consent despite
 reloading the handler, and no lead event. These checks do not establish
 production deployment, GA4/GTM delivery, persisted quotation, or
 qualified-customer outcomes.
+
+## Instant Quotation review actions and calculating status (2026-09-26)
+
+This bounded #276 checkpoint maps two committed `R:\maliev-web` source SHAs to
+the target-native Blazor workflow. It does not reopen the already merged action
+change or claim parity for the other source SHAs in #276.
+
+| Source SHA | Legacy Web disposition |
+| --- | --- |
+| `ce8a2f4037bedf51df1aedde4aef531c2faff3c7` | Already migrated by [PR #312](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/pull/312), merged on protected main at `62cc8a1f26b09942af874205d3df13f819c65b26`. `InstantQuotationReview.razor` preserves PDF-before-Continue order; the compact right-aligned action row in `instant-quotation.css` keeps 44px controls, wraps long labels, and exposes keyboard focus. This checkpoint verifies existing parity without duplicate changes. |
+| `d46b4d6a3fca8148792da1033c77d60d22d7b9d9` | Adapted by Legacy Web commit `e522fa5`: repricing shows a localized heading-adjacent status and reduced-motion-safe spinner while retaining the previous authoritative total; the totals alone carry `aria-busy`. The source's physical-simulation report is not copied because Legacy Web has no corresponding separately refreshed simulation report; its quote refresh supplies price and lead time through the coordinator. Browser geometry evidence uses representative review DOM, not a production-derived quotation. |
+
+This is source-behavior parity, not a source-shape port. No deployment, service
+write, or production quotation was performed. #276 remains open for its other
+source commits and final acceptance. The `e522fa5` slice passed a Release
+build with zero warnings/errors, 18 focused source/browser tests at compact,
+tablet, and desktop widths in light/dark where relevant, and the full Web
+suite (2,167/2,167). The full-suite rerun was needed because an existing
+820px bulk-savings CSS assertion failed once, then passed in isolation and
+again in the complete suite; this remains an intermittent-test watch item.
