@@ -93,44 +93,47 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
     }
 
     [Theory]
-    [InlineData(320, 700)]
-    [InlineData(390, 844)]
-    [InlineData(1522, 949)]
-    public async Task ReviewControlsAndForwardActionsRemainReadable(int width, int height)
+    [InlineData(320, 700, "th", "light")]
+    [InlineData(390, 844, "en", "dark")]
+    [InlineData(820, 900, "th", "dark")]
+    [InlineData(1522, 949, "en", "light")]
+    public async Task ReviewControlsAndForwardActionsRemainReadable(int width, int height, string culture, string colorScheme)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
+            ColorScheme = colorScheme == "dark" ? ColorScheme.Dark : ColorScheme.Light,
+            HasTouch = width <= 390,
         });
         await using var page = await context.NewPageAsync();
         var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
-        await page.GotoAsync(new Uri(new Uri(origin), "/instantquotation/3d-printing?culture=en").ToString());
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
 
         await page.EvaluateAsync("""
-            () => {
+            thai => {
               const workflow = document.querySelector('.instant-quote__workflow');
               workflow.dataset.workflowState = 'review';
               workflow.innerHTML = `<div data-workflow-review><section data-workflow-review-content>
                 <article data-workflow-review-part>
                   <div class="instant-quote__review-identity"><h4>part.stl</h4></div>
                   <div class="instant-quote__review-fields">
-                    <div><label for="material">Material</label><select id="material"><option>Engineering-grade PETG</option></select></div>
-                    <div><label for="preference">Preference</label><select id="preference"><option>Standard</option></select></div>
-                    <div><label for="color">Color</label><select id="color"><option>Black</option></select></div>
-                    <div><label for="quantity">Quantity</label><input id="quantity" type="number" value="10"></div>
+                    <div><label for="material">${thai ? 'วัสดุ' : 'Material'}</label><select id="material"><option>Engineering-grade PETG</option></select></div>
+                    <div><label for="preference">${thai ? 'รูปแบบ' : 'Preference'}</label><select id="preference"><option>Standard</option></select></div>
+                    <div><label for="color">${thai ? 'สี' : 'Color'}</label><select id="color"><option>Black</option></select></div>
+                    <div><label for="quantity">${thai ? 'จำนวน' : 'Quantity'}</label><input id="quantity" type="number" value="10"></div>
                   </div>
                   <dl class="instant-quote__review-prices"><div><dt>Unit price</dt><dd>฿100.00</dd></div><div><dt>Subtotal</dt><dd>฿1,000.00</dd></div></dl>
-                  <details class="instant-quote__review-details"><summary>Part details</summary><p>Engineering review required</p></details>
+                  <details class="instant-quote__review-details"><summary>${thai ? 'รายละเอียดชิ้นงาน' : 'Part details'}<span class="instant-quote__review-verdict instant-quote__review-verdict--warning" role="img" aria-label="${thai ? 'ข้อควรระวังด้านการผลิต' : 'Manufacturing warning'}"><span aria-hidden="true">!</span></span></summary><p>${thai ? 'ต้องให้วิศวกรตรวจสอบ' : 'Engineering review required'}</p></details>
                 </article>
                 <section class="instant-quote__pricing-summary">Total ฿1,000.00</section>
                 <div class="instant-quote__review-forward-actions" data-review-forward-actions>
                   <section class="instant-quote__preliminary-quotation"><button type="button">PDF</button></section>
-                  <button type="button" data-review-continue>Customer details</button>
+                  <button type="button" data-review-continue>${thai ? 'ข้อมูลลูกค้า' : 'Customer details'}</button>
                 </div></section></div>`;
             }
-            """);
+            """, culture == "th");
 
         var result = await page.EvaluateAsync<bool[]>("""
             () => {
@@ -153,6 +156,26 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
         Assert.True(result[2], "Review must not force horizontal overflow.");
         Assert.True(result[3], "Continue must remain a compact action, not a full-width strip.");
         Assert.True(result[4], "The forward action must stay right aligned.");
+
+        var details = page.Locator(".instant-quote__review-details");
+        Assert.False(await details.EvaluateAsync<bool>("element => element.open"));
+        Assert.Equal(culture == "th" ? "ข้อควรระวังด้านการผลิต" : "Manufacturing warning",
+            await page.Locator(".instant-quote__review-verdict").GetAttributeAsync("aria-label"));
+        await details.Locator("summary").FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        Assert.True(await details.EvaluateAsync<bool>("element => element.open"));
+        if (width <= 390)
+        {
+            var bounds = await details.Locator("summary").BoundingBoxAsync();
+            Assert.NotNull(bounds);
+            await page.Touchscreen.TapAsync(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+            Assert.False(await details.EvaluateAsync<bool>("element => element.open"));
+        }
+        await page.Locator("#quantity").FocusAsync();
+        Assert.True(await page.Locator("#quantity").EvaluateAsync<bool>("element => document.activeElement === element"));
+        Assert.True(await page.Locator("[data-review-continue]").EvaluateAsync<bool>("element => element.getBoundingClientRect().height >= 44"));
+        await page.Locator("[data-review-continue]").ClickAsync();
+        Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
 
         if (width == 320)
         {
