@@ -5,6 +5,27 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationReviewCustomerTests
 {
     [Fact]
+    public void RepricingStatus_IsLocalizedAndDoesNotReplacePreviousTotals()
+    {
+        var review = ReadComponent("InstantQuotationReview.razor");
+        var workflow = ReadComponent("InstantQuotationWorkflow.razor");
+        var code = ReadComponent("InstantQuotationWorkflow.razor.cs");
+        var thai = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources", "Components", "Pages",
+            "InstantQuotation", "ThreeDimensionalPrintingEstimateContent.th.resx"));
+
+        Assert.Contains("data-pricing-loading-status role=\"status\"", review, StringComparison.Ordinal);
+        Assert.Contains("data-pricing-loading-status role=\"status\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsRepricing.ToString().ToLowerInvariant()\"", review, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsRepricing.ToString().ToLowerInvariant()\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("@Money(Quote?.FinalOrderPrice)", review, StringComparison.Ordinal);
+        Assert.Contains("@Money(OrderQuote?.FinalOrderPrice)", workflow, StringComparison.Ordinal);
+        Assert.Contains("await update();", code, StringComparison.Ordinal);
+        Assert.Contains("activeReprices--;", code, StringComparison.Ordinal);
+        Assert.Contains("กำลังอัปเดตราคาและระยะเวลาผลิต…", thai, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Review_RendersOnlyAuthoritativePartAndOrderFields()
     {
         var review = ReadComponent("InstantQuotationReview.razor");

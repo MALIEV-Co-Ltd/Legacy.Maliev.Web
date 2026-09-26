@@ -6,6 +6,93 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFixture fixture)
 {
     [Theory]
+    [InlineData(320, 700, "light")]
+    [InlineData(390, 844, "dark")]
+    [InlineData(820, 900, "light")]
+    [InlineData(1280, 800, "dark")]
+    public async Task CalculatingStatusStaysBesideHeadingWithoutClipping(int width, int height, string colorScheme)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            ColorScheme = colorScheme == "dark" ? ColorScheme.Dark : ColorScheme.Light,
+        });
+        await using var page = await context.NewPageAsync();
+        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        await page.GotoAsync(new Uri(new Uri(origin), "/instantquotation/3d-printing?culture=th").ToString());
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+
+        await page.EvaluateAsync("""
+            () => {
+              const workflow = document.querySelector('.instant-quote__workflow');
+              workflow.dataset.workflowState = 'review';
+              workflow.innerHTML = `<div data-workflow-review><section data-workflow-review-content>
+                <section class="instant-quote__pricing-summary">
+                  <div class="instant-quote__status-heading">
+                    <h4>สรุปราคาและระยะเวลาผลิต</h4>
+                    <p class="instant-quote__pricing-status" role="status" data-pricing-loading-status>
+                      <span class="instant-quote__pricing-spinner" aria-hidden="true"></span>
+                      กำลังอัปเดตราคาและระยะเวลาผลิต…</p>
+                  </div>
+                  <dl aria-busy="true"><div><dt>Total</dt><dd>฿1,000.00</dd></div></dl>
+                </section>
+                <div class="instant-quote__review-forward-actions" data-review-forward-actions>
+                  <section class="instant-quote__preliminary-quotation"><button type="button">PDF</button></section>
+                  <button type="button" data-review-continue>กรอกข้อมูลลูกค้า</button>
+                </div></section></div>`;
+            }
+            """);
+
+        var result = await page.EvaluateAsync<bool[]>("""
+            () => {
+              const heading = document.querySelector('.instant-quote__status-heading');
+              const status = heading.querySelector('[data-pricing-loading-status]');
+              const title = heading.querySelector('h4');
+              const bounds = heading.getBoundingClientRect();
+              const label = status.getBoundingClientRect();
+              return [
+                status.getAttribute('role') === 'status',
+                status.querySelector('[aria-hidden="true"]') !== null,
+                title.getBoundingClientRect().width > 0 && label.width > 0,
+                label.left >= bounds.left - 1 && label.right <= bounds.right + 1,
+                document.documentElement.scrollWidth <= innerWidth + 1,
+                [...document.querySelectorAll('[data-review-forward-actions] button')].every(button => button.getBoundingClientRect().height >= 44)
+              ];
+            }
+            """);
+        Assert.All(result, Assert.True);
+        await page.Keyboard.PressAsync("Tab");
+        Assert.True(await page.EvaluateAsync<bool>("document.activeElement !== document.body"));
+
+        var dockFits = await page.EvaluateAsync<bool>("""
+            () => {
+              const workflow = document.querySelector('.instant-quote__workflow');
+              workflow.dataset.workflowState = 'configured';
+              workflow.innerHTML = `<section data-workflow-configuration>
+                <div class="instant-quote__configuration-footer">
+                  <details class="instant-quote__summary-dock"><summary>
+                    <span class="instant-quote__summary-dock-heading">
+                      <span class="instant-quote__summary-dock-title">สรุปชิ้นงานและราคา</span>
+                      <span class="instant-quote__pricing-status" role="status" data-pricing-loading-status>
+                        <span class="instant-quote__pricing-spinner" aria-hidden="true"></span>
+                        กำลังอัปเดตราคาและระยะเวลาผลิต…</span>
+                    </span><span>1 part</span><strong>฿1,000.00</strong><span aria-hidden="true">⌄</span>
+                  </summary><dl aria-busy="true"><div><dt>Total</dt><dd>฿1,000.00</dd></div></dl></details>
+                  <div class="instant-quote__configuration-actions"><button type="button">Review</button></div>
+                </div></section>`;
+              const heading = document.querySelector('.instant-quote__summary-dock-heading');
+              const status = heading.querySelector('[data-pricing-loading-status]').getBoundingClientRect();
+              const bounds = heading.getBoundingClientRect();
+              return status.width > 0 && status.left >= bounds.left - 1
+                && status.right <= bounds.right + 1
+                && document.documentElement.scrollWidth <= innerWidth + 1;
+            }
+            """);
+        Assert.True(dockFits, "Configuration status must remain within the summary dock.");
+    }
+
+    [Theory]
     [InlineData(320, 700)]
     [InlineData(390, 844)]
     [InlineData(1522, 949)]

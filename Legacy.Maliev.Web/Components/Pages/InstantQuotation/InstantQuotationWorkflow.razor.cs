@@ -43,6 +43,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool previewAttached;
     private bool previewUnavailable;
     private bool batchInProgress;
+    private int activeReprices;
     private Guid? selectedPreviewPartId;
     private PendingWorkflowFocus pendingFocus;
 
@@ -62,6 +63,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             : GetVisibleSections(State);
 
     private bool IsBusy => State is InstantQuotationWorkflowState.Uploading;
+
+    private bool IsRepricing => activeReprices > 0;
 
     private bool InputDisabled => IsBusy || batchInProgress;
 
@@ -671,13 +674,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
     {
         var part = Parts.Single(item => item.PartId == partId);
-        return workflow?.UpdateConfigurationAsync(
+        return RepriceAsync(() => workflow?.UpdateConfigurationAsync(
             part.PartId,
             part.Configuration.MaterialKey,
             part.Configuration.Color,
             part.Configuration.Quantity,
             buildPreference,
-            default) ?? Task.CompletedTask;
+            default) ?? Task.CompletedTask);
     }
 
     private int PartNumber(Guid partId)
@@ -701,8 +704,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         InstantQuotationWorkflowPartViewModel part,
         string material,
         string color,
-        int quantity) => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
-            ?? Task.CompletedTask;
+        int quantity) => RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
+            ?? Task.CompletedTask);
+
+    private async Task RepriceAsync(Func<Task> update)
+    {
+        activeReprices++;
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await update();
+        }
+        finally
+        {
+            activeReprices--;
+        }
+    }
 
     private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
         InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);

@@ -123,8 +123,17 @@
     </div>
 
     <section class="instant-quote__pricing-summary" aria-labelledby="instant-quote-review-summary-heading">
-        <h4 id="instant-quote-review-summary-heading">@Localizer["Price and lead-time summary"]</h4>
-        <dl data-workflow-review-total>
+        <div class="instant-quote__status-heading">
+            <h4 id="instant-quote-review-summary-heading">@Localizer["Price and lead-time summary"]</h4>
+            @if (IsRepricing)
+            {
+                <p class="instant-quote__pricing-status" data-pricing-loading-status role="status">
+                    <span class="instant-quote__pricing-spinner" aria-hidden="true"></span>
+                    @Localizer["Updating price and lead time…"]
+                </p>
+            }
+        </div>
+        <dl data-workflow-review-total aria-busy="@IsRepricing.ToString().ToLowerInvariant()">
             <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(Quote?.ItemsSubtotal)</dd></div>
             @if (Quote is { MinimumOrderSurcharge: > 0 } orderQuote)
             {
@@ -156,6 +165,9 @@
 
     [Parameter]
     public InstantQuotationOrderQuote? Quote { get; set; }
+
+    [Parameter]
+    public bool IsRepricing { get; set; }
 
     [Parameter]
     public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; set; } = [];

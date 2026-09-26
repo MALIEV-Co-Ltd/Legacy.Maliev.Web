@@ -333,12 +333,21 @@
             <div class="instant-quote__configuration-footer">
                 <details class="instant-quote__summary-dock" data-workflow-summary-dock>
                     <summary>
-                        <span class="instant-quote__summary-dock-title">@Localizer["Part and price summary"]</span>
+                        <span class="instant-quote__summary-dock-heading">
+                            <span class="instant-quote__summary-dock-title">@Localizer["Part and price summary"]</span>
+                            @if (IsRepricing)
+                            {
+                                <span class="instant-quote__pricing-status" data-pricing-loading-status role="status">
+                                    <span class="instant-quote__pricing-spinner" aria-hidden="true"></span>
+                                    @Localizer["Updating price and lead time…"]
+                                </span>
+                            }
+                        </span>
                         <span>@Localizer["Parts"] <strong>@Parts.Count</strong></span>
                         <strong aria-live="polite" aria-atomic="true">@Money(OrderQuote?.FinalOrderPrice)</strong>
                         <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
                     </summary>
-                    <dl data-workflow-order-summary data-workflow-order-total>
+                    <dl data-workflow-order-summary data-workflow-order-total aria-busy="@IsRepricing.ToString().ToLowerInvariant()">
                         <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
                         @if (OrderQuote is { MinimumOrderSurcharge: > 0 } orderQuote)
                         {
@@ -389,6 +398,7 @@
              aria-labelledby="instant-quote-review-heading">
             <InstantQuotationReview Parts="@Parts"
                                     Quote="@OrderQuote"
+                                    IsRepricing="@IsRepricing"
                                     Materials="@Materials"
                                     ColorsForMaterial="GetColors"
                                     ThicknessWarnings="GetReviewThicknessWarnings"
