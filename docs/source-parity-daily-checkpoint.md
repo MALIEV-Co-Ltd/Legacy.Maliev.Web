@@ -291,3 +291,28 @@ compact, tablet, and desktop widths in light/dark where relevant, and the full
 Web suite (2,169/2,169). An earlier full-suite rerun was needed because an existing
 820px bulk-savings CSS assertion failed once, then passed in isolation and
 again in the complete suite; this remains an intermittent-test watch item.
+
+## #276 remaining-source audit and customer checkbox (2026-09-26)
+
+This checkpoint started from protected Legacy Web main
+`3d95302924ca7f27685d406ec3ec9168a24019b6` and inspected the committed
+source objects listed in #276. The previously reconciled `3f090e9`, `ce8a2f4`,
+and `d46b4d6` lanes remain unchanged. The table classifies each other full
+source SHA without treating source-only tests or absent source-specific DOM as
+new production requirements.
+
+| Source SHA | Disposition at this checkpoint |
+| --- | --- |
+| `03254079a98245509e73a41e143ff75bf536449b` | Target-native review fields, DFM verdict disclosure, and PDF/Continue action row are present in `InstantQuotationReview.razor` and covered by `InstantQuotationReviewLayoutBrowserTests`. This audit did not change them; final uploaded-part review acceptance remains open. |
+| `7f010ba7742e96367bdf5039dd03e994fadcfa1b` | Account email/token messages and Thai translations already exist in the target. Instant Quotation projects server validation to controlled invalid-field names and localized Blazor field guidance rather than exposing source Razor validation text. Exact bilingual submission/error-state acceptance remains open; raw source messages were not copied. |
+| `49294cf81ec1940c433d9092af0b96f050298930` | A real cascade gap was found and fixed by Legacy Web `8ff01cc`: the shared workflow input's 44px minimum height overrode the checkbox's nominal 20px height. The scoped CSS override keeps the native checkmark compact while its associated label remains at least 44px tall. `InstantQuotationCustomerCheckboxBrowserTests` now inserts the fixture inside the actual workflow and verifies EN/TH, 320/375/820/1280px, label click, keyboard Space, and no horizontal overflow. |
+| `7aa95d1111528d3d875d8001a43676118974c1d0` | Source-specific physical-simulation report has no separately refreshed Legacy Web counterpart. The target repricing status already uses `min-width: 0` and `overflow-wrap: anywhere`; no obsolete simulation DOM was copied. Long-status browser acceptance for the target remains a separate check. |
+| `20fe822f80cb8f04d671897281a96a9c7dc33510` | Source test-only change opens the collapsed source summary before asserting details. Target `InstantQuotationCompactSummaryBrowserTests` already opens native `<details>` before testing visible totals and controls. Deeper target detail assertions remain a separate test-coverage opportunity. |
+| `b6f9eacea2669c7fcf0f619dc0c96f2f104ca861` | Source test-only selector update for a metrics wrapper. The target uses its own semantic summary dock and does not have that source wrapper; no runtime port applies. |
+| `027e733e8e7a5abebf975598fda86589ca034b32` | A compact, keyboard-focusable native `<details>` summary dock with visible total and separate Review control exists in `InstantQuotationWorkflow.razor` and `InstantQuotationCompactSummaryBrowserTests`. Source-specific warning badge, consultation door, and full expanded-detail behavior have not been declared equivalent by this narrow checkbox slice; keep #276 open for dedicated acceptance. |
+
+The checkbox slice passed a Release build with zero warnings/errors, focused
+5/5 real-Chromium source/geometry/keyboard checks, full affected Web suite
+2,172/2,172, deterministic asset build, format, and npm/NuGet vulnerability
+checks. The browser fixture does not constitute an uploaded-part or production
+quotation. No deployment or service write was performed.
