@@ -76,7 +76,9 @@ body.instant-quotation-shell #main-content {
 .instant-quote__checkbox-field input[type="checkbox"] {
   width: 1.25rem;
   height: 1.25rem;
+  min-height: 1.25rem;
   margin: 0;
+  padding: 0;
 }
 
 .instant-quote__checkbox-field label {
