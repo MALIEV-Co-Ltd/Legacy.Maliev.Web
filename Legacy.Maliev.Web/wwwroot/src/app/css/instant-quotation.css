@@ -580,6 +580,19 @@ body.instant-quotation-shell #main-content {
     font-weight: 600;
 }
 
+.instant-quote__summary-warning {
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #8a5b00;
+    background: #fff4d6;
+    font-weight: 700;
+}
+
 .instant-quote__summary-dock-heading,
 .instant-quote__status-heading {
     display: flex;
@@ -658,11 +671,34 @@ body.instant-quotation-shell #main-content {
     margin: 0;
     font-variant-numeric: tabular-nums;
     text-align: end;
+    overflow-wrap: anywhere;
+}
+
+.instant-quote__summary-legal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .35rem;
+    padding: .5rem .75rem;
+    border-top: 1px solid #e7eaee;
+    font-size: .78rem;
+}
+
+.instant-quote__summary-dock:not([open]) > .instant-quote__summary-legal {
+    display: none;
+}
+
+.instant-quote__summary-legal a {
+    color: #0b57d0;
+    text-decoration: underline;
 }
 
 .instant-quote__configuration-actions {
+    display: flex;
     grid-column: 2;
     align-self: center;
+    flex-wrap: wrap;
+    gap: .5rem;
 }
 
 .instant-quote__configuration-footer > .instant-quote__price-confidence {
@@ -694,8 +730,30 @@ body.instant-quotation-shell #main-content {
 }
 
 .instant-quote__configuration-actions button {
-    width: 100%;
+    width: auto;
+    flex: 1 1 8rem;
     margin: 0;
+}
+
+.instant-quote__consultation-link {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 44px;
+    flex: 1 1 10rem;
+    align-items: center;
+    justify-content: center;
+    padding: .55rem .85rem;
+    border: 1px solid #0b57d0;
+    border-radius: .5rem;
+    color: #0b57d0;
+    font-weight: 700;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.instant-quote__consultation-link:focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 3px;
 }
 
 .instant-quote__price-confidence {

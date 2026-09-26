@@ -93,6 +93,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool PriceNeedsEngineeringReview => Parts.Any(static part =>
         part.Geometry.NonWatertight || !part.Geometry.TopologyChecked);
 
+    private bool HasConfigurationWarnings => ConfigurationParts.Any(HasManufacturingWarning);
+
+    private bool HasManufacturingWarning(InstantQuotationWorkflowPartViewModel part)
+    {
+        var geometry = part.Geometry;
+        var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
+        return !geometry.TopologyChecked
+            || geometry.NonWatertight
+            || geometry.NonManifold
+            || geometry.BodyCount > 1
+            || maximumDimension is > 0 and < 3
+            || maximumDimension > 350
+            || (thicknessStatuses.TryGetValue(part.PartId, out var thickness)
+                && (thickness.Warning || thickness.Incomplete));
+    }
+
     private bool AllPartsNeedEngineeringReview => Parts.Count > 0 && Parts.All(static part =>
         part.Geometry.NonWatertight || !part.Geometry.TopologyChecked);
 

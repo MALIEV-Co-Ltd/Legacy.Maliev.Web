@@ -147,14 +147,7 @@
                     var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
                     var oddlySmall = maximumDimension is > 0 and < 3;
                     var oddlyLarge = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm)) > 350;
-                    var hasWarning = !geometry.TopologyChecked
-                        || geometry.NonWatertight
-                        || geometry.NonManifold
-                        || geometry.BodyCount > 1
-                        || oddlySmall
-                        || oddlyLarge
-                        || thicknessStatus?.Warning == true
-                        || thicknessStatus?.Incomplete == true;
+                    var hasWarning = HasManufacturingWarning(part);
                     <article data-workflow-dfm-part data-part-id="@part.PartId">
                         <h5>@part.DisplayFileName</h5>
                         <dl>
@@ -334,6 +327,10 @@
                 <details class="instant-quote__summary-dock" data-workflow-summary-dock>
                     <summary>
                         <span class="instant-quote__summary-dock-heading">
+                            @if (HasConfigurationWarnings)
+                            {
+                                <span class="instant-quote__summary-warning" data-summary-warning role="img" aria-label="@Localizer["Manufacturing warning"]"><span aria-hidden="true">!</span></span>
+                            }
                             <span class="instant-quote__summary-dock-title">@Localizer["Part and price summary"]</span>
                             @if (IsRepricing)
                             {
@@ -348,6 +345,14 @@
                         <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
                     </summary>
                     <dl data-workflow-order-summary data-workflow-order-total aria-busy="@IsRepricing.ToString().ToLowerInvariant()">
+                        @foreach (var part in ConfigurationParts)
+                        {
+                            <div data-summary-part-details><dt>@Localizer["Part details"]</dt><dd>@part.DisplayFileName</dd></div>
+                            <div><dt>@Localizer["Dimensions"]</dt><dd>@Measurement(part.Geometry.DimensionXmm) × @Measurement(part.Geometry.DimensionYmm) × @Measurement(part.Geometry.DimensionZmm) mm</dd></div>
+                            <div><dt>@Localizer["Volume"]</dt><dd>@Measurement(part.Geometry.VolumeMm3 / 1_000) cm³</dd></div>
+                            <div><dt>@Localizer["Surface area"]</dt><dd>@Measurement(part.Geometry.SurfaceAreaMm2 / 100) cm²</dd></div>
+                            <div><dt>@Localizer["Min. thickness"]</dt><dd>@Measurement(part.Geometry.MinThicknessMm) mm</dd></div>
+                        }
                         <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(OrderQuote?.ItemsSubtotal)</dd></div>
                         @if (OrderQuote is { MinimumOrderSurcharge: > 0 } orderQuote)
                         {
@@ -364,6 +369,11 @@
                             <dd>@LeadTime</dd>
                         </div>
                     </dl>
+                    <div class="instant-quote__summary-legal" data-summary-legal>
+                        <a href="/legal/privacypolicy">@Localizer["Privacy Policy"]</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="/legal/nondisclosureagreement">@Localizer["Non-Disclosure Agreement"]</a>
+                    </div>
                 </details>
 
                 @if (PriceNeedsEngineeringReview)
@@ -385,6 +395,7 @@
 
                 <div class="instant-quote__configuration-actions">
                     <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
+                    <a class="instant-quote__consultation-link" data-summary-consultation href="/contact#contact-us" target="_blank" rel="noopener noreferrer">@Localizer["Talk to an engineer"]<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a>
                 </div>
             </div>
         </section>
