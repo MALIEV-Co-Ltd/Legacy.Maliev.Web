@@ -227,6 +227,29 @@
         renderFiles();
     }
 
+    function attachQuoteRouteTracking() {
+        document.querySelectorAll("[data-quote-route][data-quote-placement]").forEach(function (link) {
+            if (link.dataset.quoteTrackingAttached === "true") {
+                return;
+            }
+
+            link.dataset.quoteTrackingAttached = "true";
+            link.addEventListener("click", function () {
+                var page = link.closest("[data-quote-service-id][data-quote-locale]");
+                if (!page || typeof window.malievPushDiagnosticEvent !== "function") {
+                    return;
+                }
+
+                window.malievPushDiagnosticEvent("quote_route_selected", {
+                    service_id: page.dataset.quoteServiceId,
+                    route: link.dataset.quoteRoute,
+                    placement: link.dataset.quotePlacement,
+                    locale: page.dataset.quoteLocale
+                });
+            });
+        });
+    }
+
     function initialiseInquiryEnhancements() {
         document.querySelectorAll("select[data-auto-country]").forEach(autoPopulateCountry);
         document.querySelectorAll("form").forEach(function (form) {
@@ -242,6 +265,7 @@
 
     function onReady() {
         initialiseInquiryEnhancements();
+        attachQuoteRouteTracking();
     }
 
     if (document.readyState === "loading") {

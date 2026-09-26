@@ -71,6 +71,26 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("MJF, SLS, SLM", html, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ThreeDimensionalPrintingRoute_LabelsEveryQuoteChoiceForConsentSafeMeasurement(string culture)
+    {
+        using var client = factory.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-printing?culture={culture}"));
+
+        Assert.Contains("data-quote-service-id=\"3d_printing\"", html, StringComparison.Ordinal);
+        Assert.Contains($"data-quote-locale=\"{culture}\"", html, StringComparison.Ordinal);
+        Assert.Equal(10, Regex.Matches(html, "data-quote-route=\\\"(?:instant|engineering)\\\"").Count);
+        foreach (var placement in new[] { "hero", "engineering_review", "part_proof", "printing_quote_guide", "final_cta" })
+        {
+            Assert.Equal(2, Regex.Matches(html, $"data-quote-placement=\\\"{placement}\\\"").Count);
+        }
+
+        var entry = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "assets", "route-service-printing.js"));
+        Assert.Contains("inquiry-pages.js", entry, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ThreeDimensionalPrintingSource_PreservesMaterialComparisonAccessibilityAndAssets()
     {
