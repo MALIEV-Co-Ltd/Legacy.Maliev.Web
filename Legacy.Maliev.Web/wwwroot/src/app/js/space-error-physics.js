@@ -1,7 +1,9 @@
 (function (root, factory) {
     'use strict';
-    if (typeof module === 'object' && module.exports) module.exports = factory();
-    else root.SpaceErrorPhysics = factory();
+    var physics = factory();
+    if (typeof module === 'object' && module.exports) module.exports = physics;
+    // The route bundle wraps CommonJS inputs; the browser interaction still needs this global.
+    root.SpaceErrorPhysics = physics;
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
