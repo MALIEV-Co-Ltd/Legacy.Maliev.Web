@@ -324,3 +324,28 @@ gitleaks. Browser tests use representative configuration DOM with production
 CSS and source-contract assertions; they do not claim an uploaded-part or
 production quotation. No deployment or service write was performed. Keep #276
 open for the remaining source SHAs and broader acceptance.
+
+## #276 additive review acceptance checkpoint (2026-09-27)
+
+Starting from protected main `f117b3a0070bf7a32e8d8c0736b9b0a15c2dc1d7`, the
+committed source objects were rechecked through `4198baa6b0e7903f2b9b6e3d5d68f9d2c2b5b0db`.
+This slice strengthens the target-native review browser fixture for Thai and
+English, light and dark scheme, 320/390/820/1522 px layout, collapsed DFM
+warning access, keyboard disclosure/focus, touch disclosure, and forward-action
+reachability. The fixture uses representative review DOM and production CSS; it
+does not establish uploaded-part or production-data parity.
+
+| Source SHA | Current disposition |
+| --- | --- |
+| `03254079a98245509e73a41e143ff75bf536449b` | Review editing, DFM verdict, and responsive PDF/Continue behavior were adapted by merged PR #306 and #312; this checkpoint adds cross-culture/theme/interaction regression, not a second runtime port. Uploaded-part recalculation remains unproven. |
+| `7f010ba7742e96367bdf5039dd03e994fadcfa1b` | Account and quotation field localization is target-native as described above; bilingual submission/error-state acceptance remains open. |
+| `3f090e9488d91790636558d3ce59c7f046efa1d8` | Compact pricing control reachability was merged by PR #329; completed-pricing fixture is not an uploaded quotation. |
+| `ce8a2f4037bedf51df1aedde4aef531c2faff3c7` | Review quotation actions were merged by PR #312. |
+| `d46b4d6a3fca8148792da1033c77d60d22d7b9d9` | Localized repricing status was merged by PR #330; its geometry fixture is not a production-derived quote. |
+| `49294cf81ec1940c433d9092af0b96f050298930` | Customer checkbox sizing and keyboard/touch regression were merged by PR #331. |
+| `7aa95d1111528d3d875d8001a43676118974c1d0` | Source-specific simulation DOM has no target counterpart; target status containment is present, while long-status and uploaded-quote acceptance remain open. |
+| `20fe822f80cb8f04d671897281a96a9c7dc33510`, `b6f9eacea2669c7fcf0f619dc0c96f2f104ca861` | Source test-selector changes; native dock tests open their own semantic details before asserting content. |
+| `027e733e8e7a5abebf975598fda86589ca034b32`, `663dd8c9c36eece39cd2f641895027ac926e1183` | Compact dock behavior is represented by merged PR #293 and #332; source channel-menu JS is intentionally not copied. |
+| `57654d9ecea01c99b947e48bc759fb9a37dcf388` | Editable review layout is represented by PR #306, and quote-matched bulk savings by merged PR #307; do not infer new discount tiers from the source. |
+| `c88a4e93c28b7306a5f2c353ee2ed1b8677ff7f8` | Human-readable preliminary print durations were merged by PR #289. |
+| `4d9954c086c391698399b9a089f64dd57fbf5a95` | Source merge object combines unrelated consent changes; no separate additive runtime port applies. |
