@@ -121,7 +121,14 @@ internal sealed class InstantQuotationFileServiceUploadClient : IInstantQuotatio
             return InstantQuotationUploadResult.Succeeded(
                 operationId,
                 new InstantQuotationUploadReference(result.File.FileId.ToString("D")),
-                result.File.Sha256);
+                result.File.Sha256,
+                new InstantQuotationPhysicalAnalysisUpload(
+                    result.File.FileId,
+                    result.File.FileName,
+                    result.File.ContentType,
+                    result.File.SizeBytes,
+                    result.File.Sha256,
+                    result.File.Status));
         }
         catch (Exception exception) when (IsNonCancellationFailure(exception, cancellationToken))
         {

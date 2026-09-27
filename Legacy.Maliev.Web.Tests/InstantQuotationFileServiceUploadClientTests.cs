@@ -65,6 +65,16 @@ public sealed class InstantQuotationFileServiceUploadClientTests
 
         Assert.All(results, result => Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status));
         Assert.All(results, result => Assert.Equal(sha256, result.ContentSha256));
+        Assert.All(results, result =>
+        {
+            Assert.NotNull(result.PhysicalAnalysisUpload);
+            Assert.Equal(result.UploadReference!.Value, result.PhysicalAnalysisUpload.FileId.ToString("D"));
+            Assert.Equal("part.stl", result.PhysicalAnalysisUpload.FileName);
+            Assert.Equal("model/stl", result.PhysicalAnalysisUpload.ContentType);
+            Assert.Equal(bytes.Length, result.PhysicalAnalysisUpload.SizeBytes);
+            Assert.Equal(sha256, result.PhysicalAnalysisUpload.Sha256);
+            Assert.Equal("clean", result.PhysicalAnalysisUpload.Status);
+        });
         Assert.All(results, result => Assert.True(Guid.TryParseExact(result.UploadReference?.Value, "D", out _)));
         Assert.Equal(1, createCount);
         Assert.Equal(2, uploadCount);
