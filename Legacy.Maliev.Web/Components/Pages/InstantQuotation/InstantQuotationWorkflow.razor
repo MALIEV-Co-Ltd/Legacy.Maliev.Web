@@ -340,7 +340,10 @@
                                 </span>
                             }
                         </span>
-                        <span>@Localizer["Parts"] <strong>@Parts.Count</strong></span>
+                        <span class="instant-quote__summary-dock-meta">
+                            <span>@Localizer["Parts"] <strong>@Parts.Count</strong></span>
+                            <span data-workflow-lead-time aria-live="polite" aria-atomic="true">@Localizer["Lead time"] <strong>@LeadTime</strong></span>
+                        </span>
                         <strong aria-live="polite" aria-atomic="true">@Money(OrderQuote?.FinalOrderPrice)</strong>
                         <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
                     </summary>
@@ -364,10 +367,6 @@
                         <div><dt>@Localizer["Shipping"]</dt><dd>@Money(OrderQuote?.ShippingCost)</dd></div>
                         <div><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
                         <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
-                        <div data-workflow-lead-time>
-                            <dt>@Localizer["Lead time"]</dt>
-                            <dd>@LeadTime</dd>
-                        </div>
                     </dl>
                     <div class="instant-quote__summary-legal" data-summary-legal>
                         <a href="/legal/privacypolicy">@Localizer["Privacy Policy"]</a>

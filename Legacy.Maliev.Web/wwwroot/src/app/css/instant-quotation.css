@@ -580,6 +580,14 @@ body.instant-quotation-shell #main-content {
     font-weight: 600;
 }
 
+.instant-quote__summary-dock-meta {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    font-size: .82rem;
+    overflow-wrap: anywhere;
+}
+
 .instant-quote__summary-warning {
     display: inline-flex;
     width: 1.5rem;
