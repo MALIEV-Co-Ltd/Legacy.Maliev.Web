@@ -24,6 +24,19 @@
         <article><i class="fas fa-calculator" aria-hidden="true"></i><div><h2>@T("Price factors", "ปัจจัยราคา")</h2><p>@T("Geometry, material, size, support, orientation, finish, and quantity.", "รูปทรง วัสดุ ขนาด ซัพพอร์ต ทิศทาง ผิว และจำนวน")</p></div></article>
     </div></section>
 
+    <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
+        <strong>@T("On this page", "ในหน้านี้")</strong>
+        <a href="#printing-processes">@T("Process", "กระบวนการ")</a>
+        <a href="#printing-tolerances">@T("Tolerances", "ค่าความคลาดเคลื่อน")</a>
+        <a href="#printing-workflow">@T("Workflow", "ขั้นตอน")</a>
+        <a href="#printing-related">@T("Related processes", "กระบวนการที่เกี่ยวข้อง")</a>
+        <a href="#printing-materials">@T("Materials", "วัสดุ")</a>
+        <a href="#printing-quote-guide">@T("Quote-ready files", "ไฟล์พร้อมขอราคา")</a>
+        <a href="#printing-file-guide">@T("File preparation", "เตรียมไฟล์")</a>
+        <a href="#printing-guides">@T("Guides", "คู่มือ")</a>
+        <a href="#printing-faq">@T("FAQ", "คำถามที่พบบ่อย")</a>
+    </nav>
+
     <section id="printing-quote-guide" class="service-section service-section-soft" aria-labelledby="printing-quote-guide-title"><div class="service-container">
         <header class="service-heading center"><p class="service-eyebrow">@T("Quote-ready file guide", "แนวทางเตรียมไฟล์ขอราคา")</p><h2 id="printing-quote-guide-title">@T("Send the right 3D file and project details", "ส่งไฟล์ 3D และข้อมูลโปรเจ็คให้พร้อมประเมิน")</h2><p>@T("These formats are accepted starting points. A supported extension does not guarantee an instant price: units, geometry integrity, process fit, and the intended use still need to be checked.", "รายการนี้เป็นรูปแบบไฟล์ที่รับเป็นจุดเริ่มต้น นามสกุลที่รองรับไม่ได้แปลว่าจะได้ราคาทันที ต้องตรวจหน่วย ความสมบูรณ์ของรูปทรง ความเหมาะสมของกระบวนการ และการใช้งานจริงก่อน")</p></header>
         <div class="printing-route-grid" aria-label="@T("Choose a 3D printing quotation route", "เลือกเส้นทางขอราคางานพิมพ์ 3D")">
@@ -43,19 +56,6 @@
         <p class="printing-route-followup">@T("Not sure which route fits?", "ยังไม่แน่ใจว่าควรเลือกเส้นทางใด?") <a href="/Services/CNC-Machining">@T("Compare CNC machining", "เปรียบเทียบงาน CNC")</a> · <a href="/Services/3D-Scanning">@T("Review scanning and reverse engineering", "ดูบริการสแกน 3D และ Reverse Engineering")</a> · <a href="/Services/Custom-Manufacturing">@T("Start a custom manufacturing review", "เริ่มประเมินงานผลิตตามแบบ")</a></p>
         <div class="service-note">@T("Mesh files may need repair, conversion, or an engineering review before the process and price can be confirmed. Do not assume a closed solid, scale, wall thickness, or assembly fit from the file extension alone.", "ไฟล์เมชอาจต้องซ่อม แปลงไฟล์ หรือให้วิศวกรตรวจสอบก่อนยืนยันกระบวนการและราคา อย่าสมมติว่าไฟล์ปิดสนิท สเกล ความหนาผนัง หรือการประกอบถูกต้องจากนามสกุลไฟล์เพียงอย่างเดียว")</div>
     </div></section>
-
-    <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
-        <strong>@T("On this page", "ในหน้านี้")</strong>
-        <a href="#printing-processes">@T("Process", "กระบวนการ")</a>
-        <a href="#printing-tolerances">@T("Tolerances", "ค่าความคลาดเคลื่อน")</a>
-        <a href="#printing-workflow">@T("Workflow", "ขั้นตอน")</a>
-        <a href="#printing-related">@T("Related processes", "กระบวนการที่เกี่ยวข้อง")</a>
-        <a href="#printing-materials">@T("Materials", "วัสดุ")</a>
-        <a href="#printing-quote-guide">@T("Quote-ready files", "ไฟล์พร้อมขอราคา")</a>
-        <a href="#printing-file-guide">@T("File preparation", "เตรียมไฟล์")</a>
-        <a href="#printing-guides">@T("Guides", "คู่มือ")</a>
-        <a href="#printing-faq">@T("FAQ", "คำถามที่พบบ่อย")</a>
-    </nav>
 
     <section id="printing-processes" class="service-section"><div class="service-container"><header class="service-heading center"><p class="service-eyebrow">@T("Choose the Process", "เลือกกระบวนการ")</p><h2>@T("When should you use FDM or resin printing?", "ควรเลือกพิมพ์ FDM หรือเรซินเมื่อใด?")</h2><p>@T("The best process depends on part purpose, detail, strength, surface finish, size, material behavior, and budget.", "กระบวนการที่เหมาะสมขึ้นกับการใช้งาน รายละเอียด ความแข็งแรง ผิว ขนาด พฤติกรรมวัสดุ และงบประมาณ")</p></header><div class="service-card-grid">
         <figure class="service-card service-card-visual"><img class="service-card-media" src="/src/images/services/printing/printing-fdm-application.webp" srcset="/src/images/services/printing/printing-fdm-application-640.webp 640w, /src/images/services/printing/printing-fdm-application-960.webp 960w, /src/images/services/printing/printing-fdm-application.webp 1536w" sizes="(max-width: 767px) 100vw, 33vw" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("FDM-printed fixture being fitted in a workshop", "ฟิกซ์เจอร์ที่พิมพ์ด้วย FDM กำลังทดสอบประกอบในเวิร์กช็อป")" /><figcaption class="service-card-body"><h3>@T("FDM: functional and larger parts", "FDM: ชิ้นงานใช้งานจริงและขนาดใหญ่")</h3><p>@T("FDM builds thermoplastic parts layer by layer. It is a practical choice for fit checks, brackets, enclosures, jigs, fixtures, ducts, and low-volume functional components.", "FDM สร้างชิ้นงานเทอร์โมพลาสติกทีละชั้น เหมาะกับงานทดสอบประกอบ ขายึด กล่อง จิ๊ก ฟิกซ์เจอร์ ท่อลม และชิ้นงานใช้งานจริงจำนวนน้อย")</p></figcaption></figure>
