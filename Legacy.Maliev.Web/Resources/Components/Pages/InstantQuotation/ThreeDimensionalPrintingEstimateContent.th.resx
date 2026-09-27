@@ -538,4 +538,6 @@
   <data name="Non-Disclosure Agreement" xml:space="preserve"><value>สัญญาปกปิดความลับ</value></data>
   <data name="Talk to an engineer" xml:space="preserve"><value>ปรึกษาวิศวกร</value></data>
   <data name="(opens in a new tab)" xml:space="preserve"><value>(เปิดในแท็บใหม่)</value></data>
+  <data name="Show details" xml:space="preserve"><value>แสดงรายละเอียด</value></data>
+  <data name="Hide details" xml:space="preserve"><value>ซ่อนรายละเอียด</value></data>
 </root>
