@@ -25,6 +25,7 @@
             var cookieConsent = document.querySelector('#cookieConsent');
             var button = cookieConsent && cookieConsent.querySelector('[data-consent-action="accept"]');
             var rejectButton = cookieConsent && cookieConsent.querySelector('[data-consent-action="reject"]');
+            var decisionMade = false;
             if (!cookieConsent || !button || !rejectButton) {
                 return;
             }
@@ -56,6 +57,8 @@
             }
 
             button.addEventListener('click', function () {
+                if (decisionMade) return;
+                decisionMade = true;
                 if (button.dataset.cookieString) {
                     document.cookie = button.dataset.cookieString;
                 }
@@ -69,6 +72,8 @@
             }, false);
 
             rejectButton.addEventListener('click', function () {
+                if (decisionMade) return;
+                decisionMade = true;
                 document.cookie = 'maliev_tracking_consent=denied; Path=/; Max-Age=31536000; SameSite=Lax; Secure';
                 updateGoogleConsent('denied');
                 dismissConsent();
