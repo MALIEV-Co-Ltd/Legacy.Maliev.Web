@@ -6,6 +6,22 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserFixture fixture)
 {
     [Fact]
+    public void LocalizedLeadTimeIsInTheAlwaysVisibleSummaryNotCollapsedDetails()
+    {
+        var project = BrowserHostIdentityVerifier.SourceProjectDirectory();
+        var markup = File.ReadAllText(Path.Combine(project, "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor"));
+        var summaryStart = markup.IndexOf("<details class=\"instant-quote__summary-dock\"", StringComparison.Ordinal);
+        var summaryEnd = markup.IndexOf("</summary>", summaryStart, StringComparison.Ordinal);
+        var detailsEnd = markup.IndexOf("</details>", summaryEnd, StringComparison.Ordinal);
+
+        Assert.True(summaryStart >= 0 && summaryEnd > summaryStart && detailsEnd > summaryEnd);
+        Assert.Contains("data-workflow-lead-time", markup[summaryStart..summaryEnd], StringComparison.Ordinal);
+        Assert.Contains("@Localizer[\"Lead time\"]", markup[summaryStart..summaryEnd], StringComparison.Ordinal);
+        Assert.Contains("@LeadTime", markup[summaryStart..summaryEnd], StringComparison.Ordinal);
+        Assert.DoesNotContain("data-workflow-lead-time", markup[summaryEnd..detailsEnd], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void NativeDockKeepsWarningConsultationAndLegalLinksInTheWorkflow()
     {
         var project = BrowserHostIdentityVerifier.SourceProjectDirectory();
@@ -49,7 +65,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
                     <summary><span class="instant-quote__summary-dock-heading">
                       <span class="instant-quote__summary-warning" data-summary-warning role="img" aria-label="${thai ? 'ข้อควรระวังด้านการผลิต' : 'Manufacturing warning'}"><span aria-hidden="true">!</span></span>
                       <span class="instant-quote__summary-dock-title">${thai ? 'สรุปชิ้นงานและราคา' : 'Part and price summary'}</span>
-                      </span><span>1 part</span><strong>฿12,964.00</strong><span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span></summary>
+                      </span><span class="instant-quote__summary-dock-meta"><span>1 part</span><span data-workflow-lead-time aria-live="polite" aria-atomic="true">${thai ? 'ระยะเวลา' : 'Lead time'} <strong>${thai ? '3–5 วันทำการ' : '3–5 business days'}</strong></span></span><strong>฿12,964.00</strong><span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span></summary>
                     <dl data-workflow-order-summary data-workflow-order-total>
                       <div data-summary-part-details><dt>${thai ? 'รายละเอียดชิ้นงาน' : 'Part details'}</dt><dd>very-long-part-name-for-a-custom-fabrication-project.stl</dd></div>
                       <div><dt>Dimensions</dt><dd>10 × 20 × 30 mm</dd></div>
@@ -82,12 +98,17 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         Assert.False(await page.Locator("[data-summary-legal]").IsVisibleAsync());
         Assert.True(await consultation.IsVisibleAsync());
         Assert.True(await consultation.EvaluateAsync<bool>("element => element.getBoundingClientRect().height >= 44"));
+        var leadTime = page.Locator("[data-workflow-lead-time]");
+        Assert.True(await leadTime.IsVisibleAsync());
+        Assert.Equal(culture == "th" ? "ระยะเวลา 3–5 วันทำการ" : "Lead time 3–5 business days", await leadTime.InnerTextAsync());
+        Assert.True(await leadTime.EvaluateAsync<bool>("element => element.getBoundingClientRect().right <= innerWidth"));
 
         await summary.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         Assert.True(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await page.Locator("[data-summary-part-details]").IsVisibleAsync());
         Assert.True(await page.Locator("[data-summary-legal]").IsVisibleAsync());
+        Assert.True(await leadTime.IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
         Assert.True(await page.Locator(".instant-quote__configuration-actions button").IsVisibleAsync());
         await consultation.FocusAsync();
@@ -121,7 +142,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
                 <div class="instant-quote__configuration-footer">
                   <details class="instant-quote__summary-dock" data-workflow-summary-dock>
                     <summary><span class="instant-quote__summary-dock-title">Part and price summary</span>
-                      <span>2 parts</span><strong>฿12,964.00</strong><span aria-hidden="true">⌄</span></summary>
+                      <span class="instant-quote__summary-dock-meta"><span>2 parts</span><span data-workflow-lead-time>Lead time <strong>3–5 business days</strong></span></span><strong>฿12,964.00</strong><span aria-hidden="true">⌄</span></summary>
                     <dl data-workflow-order-summary><div><dt>Subtotal</dt><dd>฿12,000.00</dd></div>
                       <div><dt>Shipping</dt><dd>฿100.00</dd></div><div><dt>VAT</dt><dd>฿864.00</dd></div>
                       <div><dt>Total</dt><dd>฿12,964.00</dd></div></dl>
@@ -137,6 +158,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         var review = page.Locator(".instant-quote__configuration-actions button");
         Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await summary.IsVisibleAsync());
+        Assert.True(await page.Locator("[data-workflow-lead-time]").IsVisibleAsync());
         Assert.True(await review.IsVisibleAsync());
         Assert.True(await summary.EvaluateAsync<bool>("element => element.getBoundingClientRect().height >= 44"));
         Assert.True(await summary.EvaluateAsync<bool>("element => getComputedStyle(element).display === 'grid'"));
@@ -145,6 +167,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         await summary.ClickAsync();
         Assert.True(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await dock.Locator("[data-workflow-order-summary]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-workflow-lead-time]").IsVisibleAsync());
         Assert.True(await review.IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
     }
