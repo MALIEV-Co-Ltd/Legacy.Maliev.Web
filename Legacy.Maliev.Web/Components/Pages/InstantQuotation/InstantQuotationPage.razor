@@ -112,6 +112,9 @@
         var requestReference = PositiveReference(tempData["InstantQuotationRequestReference"]);
         var problemCategory = ControlledProblemCategory(tempData["InstantQuotationProblemCategory"]?.ToString());
         var invalidFields = ControlledValidationFields(tempData[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]?.ToString());
+        var overlengthBuildingFields = ControlledValidationFields(tempData[ThreeDimensionalPrinting.OverlengthBuildingFieldsTempDataKey]?.ToString())
+            .Where(static field => field is "BillingBuilding" or "ShippingBuilding")
+            .ToArray();
         if (submissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
         {
             requestReference = null;
@@ -143,6 +146,7 @@
             problemCategory)
         {
             InvalidFields = invalidFields,
+            OverlengthBuildingFields = overlengthBuildingFields,
             Mobile = mobile,
             BillingBuilding = billingBuilding,
             BillingStreet1 = billingStreet1,
