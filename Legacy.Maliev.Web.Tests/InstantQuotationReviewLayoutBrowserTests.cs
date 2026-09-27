@@ -22,6 +22,7 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
         await page.GotoAsync(new Uri(new Uri(origin), "/instantquotation/3d-printing?culture=th").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await WaitForInteractiveWorkflowAsync(page);
 
         await page.EvaluateAsync("""
             () => {
@@ -110,6 +111,7 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
         await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await WaitForInteractiveWorkflowAsync(page);
 
         await page.EvaluateAsync("""
             thai => {
@@ -190,4 +192,9 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
             Assert.True(longThaiLabelFits, "Long Thai action labels must wrap without horizontal overflow.");
         }
     }
+
+    // Synthetic layout markup must not race the initial interactive render.
+    private static Task WaitForInteractiveWorkflowAsync(IPage page) =>
+        page.WaitForFunctionAsync(
+            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined");
 }

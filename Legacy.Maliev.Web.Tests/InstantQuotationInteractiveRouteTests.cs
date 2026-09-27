@@ -236,6 +236,17 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     }
 
     [Fact]
+    public async Task InteractiveQuotationBootstrap_IsServedAsJavaScript()
+    {
+        using var response = await client.GetAsync("/_framework/blazor.web.js");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.True(response.StatusCode is HttpStatusCode.OK, $"Expected 200, got {response.StatusCode}: {body[..Math.Min(body.Length, 1000)]}");
+        Assert.Contains("javascript", response.Content.Headers.ContentType?.MediaType, StringComparison.OrdinalIgnoreCase);
+        Assert.False(body.StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task OtherStaticSsrRoute_DoesNotLoadBlazorBootstrap()
     {
         using var response = await client.GetAsync("/legal?culture=en");

@@ -19,6 +19,11 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.WebHost.UseStaticWebAssets();
+}
+
 var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
 var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
 var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
@@ -557,6 +562,7 @@ app.MapPost("/InstantQuotation/CNC-Machining", async (
 }).WithMetadata(new RequireAntiforgeryTokenAttribute(true));
 if (useBlazorRouteHost)
 {
+    app.MapStaticAssets();
     var razorComponents = app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
     razorComponents.Add(endpointBuilder =>
