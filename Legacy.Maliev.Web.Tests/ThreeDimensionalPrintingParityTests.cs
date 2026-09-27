@@ -34,7 +34,8 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("id=\"printing-quote-guide\"", source, StringComparison.Ordinal);
         Assert.Contains("Accepted 3D printing files", source, StringComparison.Ordinal);
         Assert.Contains("STEP / STP", source, StringComparison.Ordinal);
-        Assert.Contains("CATPart (CATIA)", source, StringComparison.Ordinal);
+        Assert.Contains("3MF", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CATPart (CATIA)", source, StringComparison.Ordinal);
         Assert.Contains("Compare CNC machining", source, StringComparison.Ordinal);
         Assert.Contains("Review scanning and reverse engineering", source, StringComparison.Ordinal);
         Assert.Contains("ไฟล์เมชอาจต้องซ่อม", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
@@ -45,6 +46,31 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("Pickup is available at our Pak Kret workshop by appointment", source, StringComparison.Ordinal);
         Assert.Contains("ค่าจัดส่งภายในประเทศไทยเริ่มต้น 100 บาท", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ThreeDimensionalPrintingRoute_AdvertisesOnlySupportedQuotationFileFormats(string culture)
+    {
+        using var client = factory.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-printing?culture={culture}"));
+        var guideStart = html.IndexOf("id=\"printing-quote-guide\"", StringComparison.Ordinal);
+        Assert.True(guideStart >= 0);
+        var cardStart = html.IndexOf("<article class=\"service-card\"", guideStart, StringComparison.Ordinal);
+        Assert.True(cardStart > guideStart);
+        var cardEnd = html.IndexOf("</article>", cardStart, StringComparison.Ordinal);
+        Assert.True(cardEnd > cardStart);
+        var fileCard = html[cardStart..cardEnd];
+
+        foreach (var format in new[] { "STL", "OBJ", "3MF", "GLB", "GLTF", "STEP / STP", "IGES / IGS" })
+        {
+            Assert.Contains($"<li>{format}</li>", fileCard, StringComparison.Ordinal);
+        }
+        foreach (var format in new[] { "IPT (Inventor)", "CATPart (CATIA)", "SLDPRT (SolidWorks)", "PRT (NX)", "X_T / X_B (Parasolid)", "3DM (Rhino)", "SKP (SketchUp)", "PAR (Solid Edge)" })
+        {
+            Assert.DoesNotContain(format, fileCard, StringComparison.Ordinal);
+        }
     }
 
     [Theory]
@@ -126,8 +152,23 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("data-material-details-url", component, StringComparison.Ordinal);
         Assert.Contains("material_detail_viewed", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing", component, StringComparison.Ordinal);
-        Assert.Contains("IPT (Inventor)", component, StringComparison.Ordinal);
-        Assert.Contains("PAR (Solid Edge)", component, StringComparison.Ordinal);
+        var fileCardStart = component.IndexOf("<h3>@T(\"Accepted 3D printing files\"", StringComparison.Ordinal);
+        Assert.True(fileCardStart >= 0);
+        var fileCardEnd = component.IndexOf("</article>", fileCardStart, StringComparison.Ordinal);
+        Assert.True(fileCardEnd > fileCardStart);
+        var fileCard = component[fileCardStart..fileCardEnd];
+        foreach (var supportedFormat in new[] { "STL", "OBJ", "3MF", "GLB", "GLTF", "STEP / STP", "IGES / IGS" })
+        {
+            Assert.Contains($"<li>{supportedFormat}</li>", fileCard, StringComparison.Ordinal);
+        }
+        foreach (var unsupportedFormat in new[] { "IPT (Inventor)", "CATPart (CATIA)", "SLDPRT (SolidWorks)", "PRT (NX)", "X_T / X_B (Parasolid)", "3DM (Rhino)", "SKP (SketchUp)", "PAR (Solid Edge)" })
+        {
+            Assert.DoesNotContain(unsupportedFormat, fileCard, StringComparison.Ordinal);
+        }
+        var uploadWorkflow = File.ReadAllText(Path.Combine(web, "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor"));
+        var modelViewer = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "model-viewer", "model-viewer.js"));
+        Assert.Contains("accept=\".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges", uploadWorkflow, StringComparison.Ordinal);
+        Assert.Contains("var SUPPORTED_EXTENSIONS = ['stl', 'obj', '3mf', 'glb', 'gltf', 'stp', 'step', 'igs', 'iges'];", modelViewer, StringComparison.Ordinal);
 
         foreach (var relativePath in new[]
         {

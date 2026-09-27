@@ -40,6 +40,16 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
     }
 
     [Fact]
+    public async Task ThreeDimensionalScanningRoute_UsesApprovedThaiMeshComparisonHeading()
+    {
+        using var client = factory.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync("/services/3d-scanning?culture=th"));
+
+        Assert.Contains("Mesh กับ CAD ที่สร้างใหม่ต่างกันอย่างไร?", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("เมชสแกนกับ CAD ที่สร้างใหม่ต่างกันอย่างไร?", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ThreeDimensionalScanningSource_ContainsTheResponsivePresentationContractAndAssets()
     {
         var root = FindRepositoryRoot();
