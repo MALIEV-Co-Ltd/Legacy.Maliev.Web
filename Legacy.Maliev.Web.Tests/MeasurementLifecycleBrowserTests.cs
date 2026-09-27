@@ -21,6 +21,8 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
         await using var session = await OpenFreshAsync(width);
 
         Assert.Equal("denied", await ConsentStateAsync(session.Page, "default"));
+        Assert.True(await OptionalStorageDefaultsDeniedAsync(session.Page));
+        Assert.Equal(-1, await GtmEventIndexAsync(session.Page));
         Assert.True(await session.Page.Locator("#cookieConsent").IsVisibleAsync());
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
         Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
@@ -33,6 +35,8 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
     {
         await using var session = await OpenFreshAsync(width, submitPersistedQuotation: true);
         Assert.Equal("denied", await ConsentStateAsync(session.Page, "default"));
+        Assert.True(await OptionalStorageDefaultsDeniedAsync(session.Page));
+        Assert.Equal(-1, await GtmEventIndexAsync(session.Page));
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
         Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
 
@@ -40,6 +44,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
             .EvaluateAsync("button => { button.click(); button.click(); }");
 
         Assert.Equal(1, await CountConsentUpdatesAsync(session.Page, "granted"));
+        Assert.True(await GtmEventIndexAsync(session.Page) > await ConsentDefaultIndexAsync(session.Page));
         Assert.Equal(0, await session.Page.Locator("#cookieConsent").CountAsync());
         Assert.Equal(2, await CountLeadEventsAsync(session.Page));
         var leadEventsJson = await session.Page.EvaluateAsync<string>(
@@ -82,6 +87,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
             .EvaluateAsync("button => { button.click(); button.click(); }");
 
         Assert.Equal(1, await CountConsentUpdatesAsync(session.Page, "denied"));
+        Assert.Equal(-1, await GtmEventIndexAsync(session.Page));
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
         Assert.Contains("maliev_tracking_consent=denied", (await session.Context.CookiesAsync())
             .Select(cookie => $"{cookie.Name}={cookie.Value}"));
@@ -89,6 +95,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
 
         await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.Equal(0, await session.Page.Locator("#cookieConsent").CountAsync());
+        Assert.Equal(-1, await GtmEventIndexAsync(session.Page));
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
         await session.Page.EvaluateAsync(
             "() => window.dataLayer.push({ event: 'service_finder_completed', finder_session_id: crypto.randomUUID() })");
@@ -110,6 +117,17 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
     private static Task<string> ConsentStateAsync(IPage page, string command) => page.EvaluateAsync<string>(
         "command => { const entry = dataLayer.find(item => item[0] === 'consent' && item[1] === command); return entry?.[2]?.analytics_storage ?? ''; }",
         command);
+
+    private static Task<bool> OptionalStorageDefaultsDeniedAsync(IPage page) => page.EvaluateAsync<bool>(
+        "() => { const entry = dataLayer.find(item => item[0] === 'consent' && item[1] === 'default'); "
+        + "return Boolean(entry) && ['ad_storage', 'analytics_storage', 'ad_user_data', 'ad_personalization']"
+        + ".every(key => entry[2][key] === 'denied'); }");
+
+    private static Task<int> ConsentDefaultIndexAsync(IPage page) => page.EvaluateAsync<int>(
+        "() => dataLayer.findIndex(item => item[0] === 'consent' && item[1] === 'default')");
+
+    private static Task<int> GtmEventIndexAsync(IPage page) => page.EvaluateAsync<int>(
+        "() => dataLayer.findIndex(item => item.event === 'gtm.js')");
 
     private static Task<int> CountConsentUpdatesAsync(IPage page, string state) => page.EvaluateAsync<int>(
         "state => dataLayer.filter(item => item[0] === 'consent' && item[1] === 'update' && item[2].analytics_storage === state).length",
