@@ -5,6 +5,26 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class PublishWorkflowPermissionContractTests
 {
     [Fact]
+    public void PublishWorkflow_UsesGatedImmutablePublisherWithoutDirectDeployOrImagePrune()
+    {
+        var root = FindRoot();
+        var source = File.ReadAllText(Path.Combine(root, ".github", "workflows", "publish-image.yml"));
+
+        Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED != 'true'", source, StringComparison.Ordinal);
+        Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED == 'true'", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@6017816fa67f369d785ed30794f002cfd6299af7",
+            source,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("deploy.ps1", source, StringComparison.OrdinalIgnoreCase);
+        Assert.False(
+            Regex.IsMatch(source, @"\bdocker\s+(?:image|system)\s+prune\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant),
+            "The Web publish path must not prune unrelated host images.");
+        Assert.False(File.Exists(Path.Combine(root, "deploy.ps1")));
+        Assert.False(File.Exists(Path.Combine(root, "Legacy.Maliev.Web", "deploy.ps1")));
+    }
+
+    [Fact]
     public void PublishWorkflow_ScopesOidcToPublishJobs()
     {
         var source = File.ReadAllText(Path.Combine(
