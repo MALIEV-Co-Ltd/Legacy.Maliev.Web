@@ -76,6 +76,129 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
     }
 
     [Fact]
+    public async Task NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews()
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
+        });
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        (float Width, float Depth, float Height)[] dimensions =
+        [
+            (12, 18, 7), (19, 13, 11), (24, 23, 8),
+            (15, 31, 13), (34, 17, 10), (21, 27, 19),
+            (39, 25, 14), (18, 41, 20), (43, 16, 27),
+        ];
+        var paths = dimensions.Select((size, index) =>
+            CreateBoxStl(size.Width, size.Depth, size.Height, $"maliev-preview-part-{index + 1:00}")).ToArray();
+        try
+        {
+            Assert.Equal(9, paths.Select(path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))))
+                .Distinct(StringComparer.Ordinal).Count());
+            await page.SetInputFilesAsync("#instant-quote-files", paths);
+            await page.WaitForFunctionAsync(
+                "() => document.querySelectorAll('[data-workflow-part]').length === 9",
+                null,
+                new PageWaitForFunctionOptions { Timeout = 90000 });
+            Assert.Equal(9, upload.VerifiedUploads);
+            var parts = page.Locator("[data-workflow-part]");
+            for (var index = 0; index < 9; index++)
+            {
+                var partId = await parts.Nth(index).GetAttributeAsync("data-part-id");
+                await parts.Nth(index).Locator("button[aria-label^='View']").ClickAsync();
+                await page.WaitForFunctionAsync(
+                    "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                    partId);
+                await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+                await page.WaitForFunctionAsync(
+                    "() => !document.querySelector('[data-pricing-loading-status]')");
+            }
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    """
+                    () => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')
+                    """,
+                    null,
+                    new PageWaitForFunctionOptions { Timeout = 90000 });
+            }
+            catch (TimeoutException error)
+            {
+                var state = await page.EvaluateAsync<string>("""
+                    () => JSON.stringify({
+                        workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                        parts: document.querySelectorAll('[data-workflow-part]').length,
+                        pendingUploads: document.querySelectorAll('[data-workflow-upload-item]').length,
+                        reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
+                        status: document.querySelector('#instant-quote-status')?.textContent,
+                        alert: document.querySelector('[role=alert]')?.textContent
+                    })
+                    """);
+                throw new InvalidOperationException(
+                    $"Nine-part upload did not reach review. State: {state}; verified uploads: {upload.VerifiedUploads}; page errors: {string.Join(" | ", pageErrors)}.",
+                    error);
+            }
+            Assert.Equal(9, upload.VerifiedUploads);
+
+            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+            await page.WaitForFunctionAsync(
+                """
+                () => {
+                    const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
+                    return images.length === 9 && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
+                }
+                """,
+                null,
+                new PageWaitForFunctionOptions { Timeout = 90000 });
+            var reviewNames = await page.Locator("[data-workflow-review-part] h4").AllInnerTextsAsync();
+            Assert.Equal(paths.Select(Path.GetFileName).Order(StringComparer.Ordinal),
+                reviewNames.Order(StringComparer.Ordinal));
+            var reviewPreviews = await page.Locator("[data-workflow-review-part] [data-review-thumbnail]")
+                .EvaluateAllAsync<string[]>("images => images.map(image => image.getAttribute('src'))");
+            Assert.Equal(9, reviewPreviews.Distinct(StringComparer.Ordinal).Count());
+
+            var preliminaryButton = page.Locator("#preliminary-quotation-button");
+            Assert.True(await preliminaryButton.IsEnabledAsync());
+            await using var preview = await page.RunAndWaitForPopupAsync(() => preliminaryButton.ClickAsync());
+            await preview.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            var preliminaryNames = await preview.Locator(".iq-preliminary-quotation-part h2").AllInnerTextsAsync();
+            Assert.Equal(reviewNames, preliminaryNames);
+            var preliminaryPreviews = await preview.Locator(".iq-preliminary-quotation-thumbnail")
+                .EvaluateAllAsync<string[]>("images => images.map(image => image.getAttribute('src'))");
+            Assert.Equal(9, preliminaryPreviews.Length);
+            Assert.All(preliminaryPreviews, source => Assert.StartsWith("data:image/png", source, StringComparison.Ordinal));
+            Assert.Equal(9, preliminaryPreviews.Distinct(StringComparer.Ordinal).Count());
+            Assert.Empty(pageErrors);
+        }
+        finally
+        {
+            foreach (var path in paths) File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview()
     {
         var upload = new HashCheckingUploadClient();
@@ -210,7 +333,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
         }
     }
 
-    private static string CreateBoxStl(float width, float depth, float height)
+    private static string CreateBoxStl(float width, float depth, float height, string fileStem = "maliev-thin-fdm")
     {
         float[][] points =
         [
@@ -223,7 +346,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5],
             [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7],
         ];
-        var path = Path.Combine(Path.GetTempPath(), $"maliev-thin-fdm-{Guid.NewGuid():N}.stl");
+        var path = Path.Combine(Path.GetTempPath(), $"{fileStem}-{Guid.NewGuid():N}.stl");
         using var writer = new BinaryWriter(File.Create(path));
         writer.Write(new byte[80]);
         writer.Write((uint)faces.Length);
