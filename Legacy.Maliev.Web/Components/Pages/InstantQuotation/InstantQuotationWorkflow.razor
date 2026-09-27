@@ -351,7 +351,7 @@
                             <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
                         </span>
                     </summary>
-                    <dl data-workflow-order-summary data-workflow-order-total aria-busy="@IsRepricing.ToString().ToLowerInvariant()">
+                    <dl data-workflow-order-summary data-workflow-order-total aria-busy="@IsRepricing.ToString().ToLowerInvariant()" tabindex="0" aria-label="@Localizer["Part and price summary"]">
                         @foreach (var part in ConfigurationParts)
                         {
                             <div data-summary-part-details><dt>@Localizer["Part details"]</dt><dd>@part.DisplayFileName</dd></div>
