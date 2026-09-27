@@ -74,6 +74,23 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
     }
 
     [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ThreeDimensionalPrintingRoute_PlacesQuoteGuideAfterInPageToc(string culture)
+    {
+        using var client = factory.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-printing?culture={culture}"));
+        var quickFacts = html.IndexOf("<section class=\"service-quick\">", StringComparison.Ordinal);
+        var inPageToc = html.IndexOf("<nav class=\"service-page-toc\" aria-label=", StringComparison.Ordinal);
+        var quoteGuide = html.IndexOf("<section id=\"printing-quote-guide\"", StringComparison.Ordinal);
+
+        Assert.True(quickFacts >= 0);
+        Assert.True(inPageToc > quickFacts);
+        Assert.True(quoteGuide > inPageToc);
+        Assert.Contains("href=\"#printing-quote-guide\"", html[inPageToc..quoteGuide], StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("en", "Estimate FDM or resin", "Request engineering review")]
     [InlineData("th", "ประเมินราคา FDM หรือเรซิ่น", "ขอให้วิศวกรประเมิน")]
     public async Task ThreeDimensionalPrintingRoute_ShowsDistinctQuotationRoutesAndReviewRequirements(
@@ -152,6 +169,10 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("data-material-details-url", component, StringComparison.Ordinal);
         Assert.Contains("material_detail_viewed", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing", component, StringComparison.Ordinal);
+        var quickFacts = component.IndexOf("<section class=\"service-quick\">", StringComparison.Ordinal);
+        var inPageToc = component.IndexOf("<nav class=\"service-page-toc\" aria-label=", StringComparison.Ordinal);
+        var quoteGuide = component.IndexOf("<section id=\"printing-quote-guide\"", StringComparison.Ordinal);
+        Assert.True(quickFacts >= 0 && inPageToc > quickFacts && quoteGuide > inPageToc);
         var fileCardStart = component.IndexOf("<h3>@T(\"Accepted 3D printing files\"", StringComparison.Ordinal);
         Assert.True(fileCardStart >= 0);
         var fileCardEnd = component.IndexOf("</article>", fileCardStart, StringComparison.Ordinal);
