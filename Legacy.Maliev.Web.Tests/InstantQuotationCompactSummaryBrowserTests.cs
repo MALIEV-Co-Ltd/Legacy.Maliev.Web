@@ -32,21 +32,34 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         Assert.Contains("HasConfigurationWarnings", markup + code, StringComparison.Ordinal);
         Assert.Contains("data-summary-part-details", markup, StringComparison.Ordinal);
         Assert.Contains("data-summary-legal", markup, StringComparison.Ordinal);
+        Assert.True(markup.IndexOf("data-summary-legal", StringComparison.Ordinal) >
+            markup.IndexOf("</details>", markup.IndexOf("data-workflow-summary-dock", StringComparison.Ordinal), StringComparison.Ordinal));
+        Assert.Contains("data-summary-show", markup, StringComparison.Ordinal);
+        Assert.Contains("data-summary-hide", markup, StringComparison.Ordinal);
+        var resource = System.Xml.Linq.XDocument.Load(Path.Combine(project, "Resources", "Components", "Pages",
+            "InstantQuotation", "ThreeDimensionalPrintingEstimateContent.th.resx"));
+        var labels = resource.Descendants("data").ToDictionary(
+            element => (string)element.Attribute("name")!,
+            element => (string?)element.Element("value") ?? string.Empty,
+            StringComparer.Ordinal);
+        Assert.Equal("แสดงรายละเอียด", labels["Show details"]);
+        Assert.Equal("ซ่อนรายละเอียด", labels["Hide details"]);
         Assert.Contains("href=\"/legal/privacypolicy\"", markup, StringComparison.Ordinal);
         Assert.Contains("href=\"/legal/nondisclosureagreement\"", markup, StringComparison.Ordinal);
         Assert.Contains("data-summary-consultation href=\"/contact#contact-us\" target=\"_blank\"", markup, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData(320, 700, "en")]
-    [InlineData(375, 667, "th")]
-    [InlineData(820, 800, "en")]
-    [InlineData(1280, 800, "th")]
-    public async Task WarningAndExpandedDetailsRemainReachableBesideIndependentActions(int width, int height, string culture)
+    [InlineData(320, 700, "en", ColorScheme.Light)]
+    [InlineData(375, 667, "th", ColorScheme.Dark)]
+    [InlineData(820, 800, "en", ColorScheme.Dark)]
+    [InlineData(1280, 800, "th", ColorScheme.Light)]
+    public async Task WarningAndExpandedDetailsRemainReachableBesideIndependentActions(int width, int height, string culture, ColorScheme colorScheme)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
+            ColorScheme = colorScheme,
         });
         await using var page = await context.NewPageAsync();
         var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
@@ -56,7 +69,13 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
 
         await page.EvaluateAsync("""
             thai => {
-              const workflow = document.querySelector('.instant-quote__workflow');
+              const host = document.createElement('main');
+              host.id = 'summary-test-host';
+              host.className = 'instant-quote';
+              const workflow = document.createElement('div');
+              workflow.className = 'instant-quote__workflow';
+              host.append(workflow);
+              document.body.append(host);
               workflow.dataset.workflowState = 'configured';
               workflow.innerHTML = `<section data-workflow-configuration>
                 <div style="height:900px">Part configuration</div>
@@ -65,7 +84,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
                     <summary><span class="instant-quote__summary-dock-heading">
                       <span class="instant-quote__summary-warning" data-summary-warning role="img" aria-label="${thai ? 'ข้อควรระวังด้านการผลิต' : 'Manufacturing warning'}"><span aria-hidden="true">!</span></span>
                       <span class="instant-quote__summary-dock-title">${thai ? 'สรุปชิ้นงานและราคา' : 'Part and price summary'}</span>
-                      </span><span class="instant-quote__summary-dock-meta"><span>1 part</span><span data-workflow-lead-time aria-live="polite" aria-atomic="true">${thai ? 'ระยะเวลา' : 'Lead time'} <strong>${thai ? '3–5 วันทำการ' : '3–5 business days'}</strong></span></span><strong>฿12,964.00</strong><span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span></summary>
+                      </span><span class="instant-quote__summary-dock-meta"><span>1 part</span><span data-workflow-lead-time aria-live="polite" aria-atomic="true">${thai ? 'ระยะเวลา' : 'Lead time'} <strong>${thai ? '3–5 วันทำการ' : '3–5 business days'}</strong></span></span><strong>฿12,964.00</strong><span class="instant-quote__summary-dock-disclosure"><span data-summary-show>${thai ? 'แสดงรายละเอียด' : 'Show details'}</span><span data-summary-hide>${thai ? 'ซ่อนรายละเอียด' : 'Hide details'}</span><span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span></span></summary>
                     <dl data-workflow-order-summary data-workflow-order-total>
                       <div data-summary-part-details><dt>${thai ? 'รายละเอียดชิ้นงาน' : 'Part details'}</dt><dd>very-long-part-name-for-a-custom-fabrication-project.stl</dd></div>
                       <div><dt>Dimensions</dt><dd>10 × 20 × 30 mm</dd></div>
@@ -74,12 +93,12 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
                       <div><dt>Min. thickness</dt><dd>1 mm</dd></div>
                       <div><dt>Total</dt><dd>฿12,964.00</dd></div>
                     </dl>
-                    <div class="instant-quote__summary-legal" data-summary-legal>
+                  </details>
+                  <div class="instant-quote__summary-legal" data-summary-legal>
                       <a href="/legal/privacypolicy">${thai ? 'นโยบายความเป็นส่วนตัว' : 'Privacy Policy'}</a>
                       <span aria-hidden="true">·</span>
                       <a href="/legal/nondisclosureagreement">${thai ? 'สัญญาปกปิดความลับ' : 'Non-Disclosure Agreement'}</a>
                     </div>
-                  </details>
                   <div class="instant-quote__configuration-actions">
                     <button type="button">${thai ? 'ตรวจสอบรายการ' : 'Review'}</button>
                     <a class="instant-quote__consultation-link" data-summary-consultation href="/contact#contact-us" target="_blank" rel="noopener noreferrer">${thai ? 'ปรึกษาวิศวกร' : 'Talk to an engineer'}</a>
@@ -91,11 +110,37 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         var dock = page.Locator("[data-workflow-summary-dock]");
         var summary = dock.Locator("summary");
         var consultation = page.Locator("[data-summary-consultation]");
+        if (width == 320)
+        {
+            await page.Locator("#summary-test-host").ScrollIntoViewIfNeededAsync();
+            await page.ScreenshotAsync(new PageScreenshotOptions
+            {
+                Path = Path.Combine(Path.GetTempPath(), "legacy-wall-summary-main-320-collapsed.png"),
+            });
+        }
         Assert.True(await page.Locator("[data-summary-warning]").IsVisibleAsync());
         Assert.Equal(culture == "th" ? "ข้อควรระวังด้านการผลิต" : "Manufacturing warning",
             await page.Locator("[data-summary-warning]").GetAttributeAsync("aria-label"));
         Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
-        Assert.False(await page.Locator("[data-summary-legal]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-summary-legal]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-summary-show]").IsVisibleAsync(),
+            await page.Locator("[data-summary-show]").EvaluateAsync<string>(
+                "element => JSON.stringify({display:getComputedStyle(element).display, html:element.outerHTML, parent:element.parentElement.outerHTML})"));
+        Assert.False(await page.Locator("[data-summary-hide]").IsVisibleAsync());
+        foreach (var link in await page.Locator("[data-summary-legal] a").AllAsync())
+        {
+            await link.ScrollIntoViewIfNeededAsync();
+            Assert.True(await link.EvaluateAsync<bool>(
+                "element => { const rect = element.getBoundingClientRect(); return rect.height >= 44 && rect.left >= -1 && rect.right <= innerWidth + 1; }"));
+        }
+        if (width == 1280)
+        {
+            await page.Locator("#summary-test-host").ScrollIntoViewIfNeededAsync();
+            await page.ScreenshotAsync(new PageScreenshotOptions
+            {
+                Path = Path.Combine(Path.GetTempPath(), "legacy-wall-summary-main-1280-collapsed.png"),
+            });
+        }
         Assert.True(await consultation.IsVisibleAsync());
         Assert.True(await consultation.EvaluateAsync<bool>("element => element.getBoundingClientRect().height >= 44"));
         var leadTime = page.Locator("[data-workflow-lead-time]");
@@ -108,9 +153,24 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         Assert.True(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await page.Locator("[data-summary-part-details]").IsVisibleAsync());
         Assert.True(await page.Locator("[data-summary-legal]").IsVisibleAsync());
+        Assert.False(await page.Locator("[data-summary-show]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-summary-hide]").IsVisibleAsync());
+        if (width is 320 or 1280)
+        {
+            await page.Locator("#summary-test-host").ScrollIntoViewIfNeededAsync();
+            await page.ScreenshotAsync(new PageScreenshotOptions
+            {
+                Path = Path.Combine(Path.GetTempPath(), $"legacy-wall-summary-main-{width}-expanded.png"),
+            });
+        }
         Assert.True(await leadTime.IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
         Assert.True(await page.Locator(".instant-quote__configuration-actions button").IsVisibleAsync());
+        await summary.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
+        Assert.True(await page.Locator("[data-summary-show]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-summary-legal]").IsVisibleAsync());
         await consultation.FocusAsync();
         Assert.True(await consultation.EvaluateAsync<bool>("element => document.activeElement === element"));
         Assert.Equal("_blank", await consultation.GetAttributeAsync("target"));

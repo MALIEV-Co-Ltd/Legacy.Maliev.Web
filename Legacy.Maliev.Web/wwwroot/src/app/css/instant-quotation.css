@@ -643,6 +643,20 @@ body.instant-quotation-shell #main-content {
     .instant-quote__pricing-spinner { animation: none; }
 }
 
+.instant-quote__summary-dock-disclosure {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    white-space: nowrap;
+    font-size: .82rem;
+    font-weight: 650;
+}
+
+.instant-quote__summary-dock:not([open]) [data-summary-hide],
+.instant-quote__summary-dock[open] [data-summary-show] {
+    display: none;
+}
+
 .instant-quote__summary-dock-caret {
     font-size: 1.2rem;
     line-height: 1;
@@ -684,6 +698,7 @@ body.instant-quotation-shell #main-content {
 
 .instant-quote__summary-legal {
     display: flex;
+    grid-column: 1 / -1;
     flex-wrap: wrap;
     justify-content: center;
     gap: .35rem;
@@ -692,11 +707,11 @@ body.instant-quotation-shell #main-content {
     font-size: .78rem;
 }
 
-.instant-quote__summary-dock:not([open]) > .instant-quote__summary-legal {
-    display: none;
-}
-
 .instant-quote__summary-legal a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: .25rem .35rem;
     color: #0b57d0;
     text-decoration: underline;
 }

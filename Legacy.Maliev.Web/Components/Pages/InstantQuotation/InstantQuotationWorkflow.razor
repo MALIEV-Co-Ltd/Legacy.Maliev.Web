@@ -345,7 +345,11 @@
                             <span data-workflow-lead-time aria-live="polite" aria-atomic="true">@Localizer["Lead time"] <strong>@LeadTime</strong></span>
                         </span>
                         <strong aria-live="polite" aria-atomic="true">@Money(OrderQuote?.FinalOrderPrice)</strong>
-                        <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
+                        <span class="instant-quote__summary-dock-disclosure">
+                            <span data-summary-show>@Localizer["Show details"]</span>
+                            <span data-summary-hide>@Localizer["Hide details"]</span>
+                            <span class="instant-quote__summary-dock-caret" aria-hidden="true">⌄</span>
+                        </span>
                     </summary>
                     <dl data-workflow-order-summary data-workflow-order-total aria-busy="@IsRepricing.ToString().ToLowerInvariant()">
                         @foreach (var part in ConfigurationParts)
@@ -368,12 +372,12 @@
                         <div><dt>@Localizer["VAT"]</dt><dd>@Money(OrderQuote?.Vat)</dd></div>
                         <div><dt>@Localizer["Total"]</dt><dd>@Money(OrderQuote?.FinalOrderPrice)</dd></div>
                     </dl>
-                    <div class="instant-quote__summary-legal" data-summary-legal>
-                        <a href="/legal/privacypolicy">@Localizer["Privacy Policy"]</a>
-                        <span aria-hidden="true">·</span>
-                        <a href="/legal/nondisclosureagreement">@Localizer["Non-Disclosure Agreement"]</a>
-                    </div>
                 </details>
+                <div class="instant-quote__summary-legal" data-summary-legal>
+                    <a href="/legal/privacypolicy">@Localizer["Privacy Policy"]</a>
+                    <span aria-hidden="true">·</span>
+                    <a href="/legal/nondisclosureagreement">@Localizer["Non-Disclosure Agreement"]</a>
+                </div>
 
                 @if (PriceNeedsEngineeringReview)
                 {
