@@ -293,6 +293,13 @@
                 }
 
                 <dl data-workflow-part-price data-workflow-part-pricing>
+                    @if (InstantQuotationSelectedPrintTime.IsVisible(part.Quote?.PrintTimeMinutesPerUnit, IsRepricing))
+                    {
+                        <div data-workflow-selected-print-time data-part-id="@part.PartId">
+                            <dt>@Localizer["Estimated print time per part"]</dt>
+                            <dd>@FormatPrintDuration(part.Quote!.PrintTimeMinutesPerUnit)</dd>
+                        </div>
+                    }
                     <div>
                         <dt>@Localizer["Unit price"]</dt>
                         <dd>@Money(part.Quote?.UnitPrice)</dd>

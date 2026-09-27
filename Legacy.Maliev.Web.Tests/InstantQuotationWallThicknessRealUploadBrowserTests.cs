@@ -13,6 +13,69 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
 {
     [Fact]
+    public async Task SelectingUploadedPartsShowsOnlyTheirOwnPrintTime()
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var small = CreateBoxStl(20, 20, 5);
+        var large = CreateBoxStl(100, 100, 30);
+        try
+        {
+            await page.SetInputFilesAsync("#instant-quote-files", [small, large]);
+            var parts = page.Locator("[data-workflow-part]");
+            await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 2");
+            Assert.Equal(2, await parts.CountAsync());
+            var selectedPrintTime = page.Locator("[data-workflow-selected-print-time]");
+
+            var firstId = await parts.Nth(0).GetAttributeAsync("data-part-id");
+            await parts.Nth(0).Locator("button[aria-label^='View']").ClickAsync();
+            await page.WaitForFunctionAsync(
+                "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                firstId);
+            var firstDuration = await selectedPrintTime.Locator("dd").InnerTextAsync();
+
+            var secondId = await parts.Nth(1).GetAttributeAsync("data-part-id");
+            await parts.Nth(1).Locator("button[aria-label^='View']").ClickAsync();
+            await page.WaitForFunctionAsync(
+                "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                secondId);
+            var secondDuration = await selectedPrintTime.Locator("dd").InnerTextAsync();
+
+            Assert.NotEqual(firstDuration, secondDuration);
+            Assert.Equal(1, await selectedPrintTime.CountAsync());
+            Assert.Equal(2, upload.VerifiedUploads);
+            Assert.Empty(pageErrors);
+        }
+        finally
+        {
+            File.Delete(small);
+            File.Delete(large);
+        }
+    }
+
+    [Fact]
     public async Task ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview()
     {
         var upload = new HashCheckingUploadClient();
