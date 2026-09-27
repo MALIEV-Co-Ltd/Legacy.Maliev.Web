@@ -300,7 +300,8 @@ public sealed record InstantQuotationPart(
     string DisplayFileName,
     InstantQuotationUploadReference UploadReference,
     AuthoritativeInstantQuotationGeometry Geometry,
-    InstantQuotationPartConfiguration Configuration);
+    InstantQuotationPartConfiguration Configuration,
+    InstantQuotationPhysicalAnalysisUpload? PhysicalAnalysisUpload = null);
 
 public sealed record InstantQuotationMaterialPrice(
     string MaterialKey,

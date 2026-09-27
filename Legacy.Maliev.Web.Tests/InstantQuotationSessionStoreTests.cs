@@ -70,6 +70,44 @@ public sealed class InstantQuotationSessionStoreTests
     }
 
     [Fact]
+    public async Task CreateGet_PhysicalAnalysisDescriptor_RoundTripsOnlyForOwner()
+    {
+        var fixture = CreateFixture();
+        var fileId = Guid.NewGuid();
+        var part = Part("PLA", Enumerable.Repeat(500.0, 64).ToArray(), Enumerable.Repeat(80.0, 64).ToArray());
+        var descriptor = new InstantQuotationPhysicalAnalysisUpload(
+            fileId, "part.stl", "model/stl", 128, part.Geometry.Sha256, "clean");
+        var state = new InstantQuotationOrderState(
+            [part with { UploadReference = new InstantQuotationUploadReference(fileId.ToString("D")), PhysicalAnalysisUpload = descriptor }]);
+
+        var created = await fixture.Store.CreateAsync("customer-42", state, default);
+        var found = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
+
+        Assert.Equal(descriptor, found!.Parts.Single().PhysicalAnalysisUpload);
+        Assert.Null(await fixture.Store.GetAsync(created.SessionId, "customer-99", default));
+        var raw = await fixture.Cache.GetAsync(DistributedInstantQuotationSessionStore.CacheKeyPrefix + created.SessionId);
+        Assert.NotNull(raw);
+        Assert.DoesNotContain(descriptor.Sha256, Encoding.UTF8.GetString(raw), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetAsync_DescriptorDigestNotBoundToGeometry_RejectsProtectedSession()
+    {
+        var fixture = CreateFixture();
+        var fileId = Guid.NewGuid();
+        var part = Part("PLA", Enumerable.Repeat(500.0, 64).ToArray(), Enumerable.Repeat(80.0, 64).ToArray());
+        var descriptor = new InstantQuotationPhysicalAnalysisUpload(
+            fileId, "part.stl", "model/stl", 128, new string('b', 64), "clean");
+        var state = new InstantQuotationOrderState(
+            [part with { UploadReference = new InstantQuotationUploadReference(fileId.ToString("D")), PhysicalAnalysisUpload = descriptor }]);
+
+        var created = await fixture.Store.CreateAsync("customer-42", state, default);
+
+        Assert.Null(await fixture.Store.GetAsync(created.SessionId, "customer-42", default));
+        Assert.Null(await fixture.Cache.GetAsync(DistributedInstantQuotationSessionStore.CacheKeyPrefix + created.SessionId));
+    }
+
+    [Fact]
     public async Task Operations_OwnerMismatch_RejectWithoutDisclosingOrMutatingSession()
     {
         var fixture = CreateFixture();

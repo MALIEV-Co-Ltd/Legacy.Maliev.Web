@@ -180,11 +180,25 @@ internal sealed class DistributedInstantQuotationSessionStore(
             && !string.IsNullOrWhiteSpace(part.DisplayFileName)
             && !string.IsNullOrWhiteSpace(part.UploadReference)
             && claim?.IsValid() is true
+            && (part.PhysicalAnalysisUpload is null
+                || IsValidPhysicalAnalysisUpload(part.PhysicalAnalysisUpload, part.UploadReference, geometry!.Sha256!))
             && configuration is not null
             && !string.IsNullOrWhiteSpace(configuration.MaterialKey)
             && !string.IsNullOrWhiteSpace(configuration.Color)
             && configuration.Quantity is >= 1 and <= 1_000;
     }
+
+    private static bool IsValidPhysicalAnalysisUpload(
+        InstantQuotationPhysicalAnalysisUpload upload,
+        string uploadReference,
+        string geometrySha256) =>
+        upload.FileId != Guid.Empty
+        && string.Equals(upload.FileId.ToString("D"), uploadReference, StringComparison.Ordinal)
+        && !string.IsNullOrWhiteSpace(upload.FileName)
+        && !string.IsNullOrWhiteSpace(upload.ContentType)
+        && upload.SizeBytes > 0
+        && string.Equals(upload.Sha256, geometrySha256, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(upload.Status, "clean", StringComparison.Ordinal);
 
     private static PersistedSession ToPersisted(
         InstantQuotationSessionState session,
@@ -224,7 +238,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 part.Configuration.MaterialKey,
                 part.Configuration.Color,
                 part.Configuration.Quantity,
-                part.Configuration.BuildPreference.ToString()));
+                part.Configuration.BuildPreference.ToString()),
+            part.PhysicalAnalysisUpload);
     }
 
     private static InstantQuotationSessionState ToSessionState(PersistedSession persisted) => new(
@@ -263,7 +278,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 configuration.MaterialKey!,
                 configuration.Color!,
                 configuration.Quantity,
-                PricingCatalog.ResolveBuildPreference(configuration.BuildPreference)));
+                PricingCatalog.ResolveBuildPreference(configuration.BuildPreference)),
+            persisted.PhysicalAnalysisUpload);
     }
 
     private static InstantQuotationOrderState Snapshot(InstantQuotationOrderState state)
@@ -298,7 +314,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 geometry.NonWatertight,
                 geometry.NonManifold,
                 geometry.MinThicknessMm),
-            part.Configuration with { });
+            part.Configuration with { },
+            part.PhysicalAnalysisUpload is null ? null : part.PhysicalAnalysisUpload with { });
     }
 
     private static bool OwnerMatches(string? actual, string? expected) =>
@@ -324,7 +341,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
         string? DisplayFileName,
         string? UploadReference,
         PersistedGeometry? Geometry,
-        PersistedConfiguration? Configuration);
+        PersistedConfiguration? Configuration,
+        InstantQuotationPhysicalAnalysisUpload? PhysicalAnalysisUpload = null);
 
     private sealed record PersistedGeometry(
         int ClaimVersion,

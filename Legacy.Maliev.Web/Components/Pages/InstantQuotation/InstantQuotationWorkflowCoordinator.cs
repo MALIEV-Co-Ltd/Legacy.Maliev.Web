@@ -661,7 +661,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                         entry.File.FileName,
                         result.UploadReference!,
                         geometry,
-                        new InstantQuotationPartConfiguration("PLA", "Black", 1));
+                        new InstantQuotationPartConfiguration("PLA", "Black", 1),
+                        result.PhysicalAnalysisUpload);
                     entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
                     entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;

@@ -43,6 +43,14 @@ internal enum InstantQuotationUploadRetryDisposition
 
 public sealed record InstantQuotationUploadReference(string Value);
 
+public sealed record InstantQuotationPhysicalAnalysisUpload(
+    Guid FileId,
+    string FileName,
+    string ContentType,
+    long SizeBytes,
+    string Sha256,
+    string Status);
+
 public sealed record InstantQuotationFinalizedFile(
     Guid FileId,
     string Bucket,
@@ -106,7 +114,8 @@ public sealed record InstantQuotationUploadResult
         InstantQuotationProblemCategory problemCategory,
         InstantQuotationUploadReference? uploadReference,
         string? contentSha256,
-        InstantQuotationUploadRetryDisposition retryDisposition)
+        InstantQuotationUploadRetryDisposition retryDisposition,
+        InstantQuotationPhysicalAnalysisUpload? physicalAnalysisUpload = null)
     {
         OperationId = operationId;
         ServiceStatus = serviceStatus;
@@ -116,6 +125,7 @@ public sealed record InstantQuotationUploadResult
         UploadReference = uploadReference;
         ContentSha256 = contentSha256;
         RetryDisposition = retryDisposition;
+        PhysicalAnalysisUpload = physicalAnalysisUpload;
     }
 
     public string OperationId { get; }
@@ -132,12 +142,15 @@ public sealed record InstantQuotationUploadResult
 
     public string? ContentSha256 { get; }
 
+    public InstantQuotationPhysicalAnalysisUpload? PhysicalAnalysisUpload { get; }
+
     internal InstantQuotationUploadRetryDisposition RetryDisposition { get; }
 
     internal static InstantQuotationUploadResult Succeeded(
         string operationId,
         InstantQuotationUploadReference uploadReference,
-        string contentSha256) => new(
+        string contentSha256,
+        InstantQuotationPhysicalAnalysisUpload? physicalAnalysisUpload = null) => new(
             operationId,
             InstantQuotationServiceStatus.Available,
             InstantQuotationAuthorizationStatus.Authorized,
@@ -145,7 +158,8 @@ public sealed record InstantQuotationUploadResult
             InstantQuotationProblemCategory.None,
             uploadReference,
             contentSha256,
-            InstantQuotationUploadRetryDisposition.None);
+            InstantQuotationUploadRetryDisposition.None,
+            physicalAnalysisUpload);
 
     internal static InstantQuotationUploadResult Failed(
         string operationId,
