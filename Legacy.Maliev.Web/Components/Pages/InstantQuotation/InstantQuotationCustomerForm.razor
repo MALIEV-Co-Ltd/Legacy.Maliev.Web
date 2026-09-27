@@ -165,7 +165,9 @@
         builder.OpenElement(0, "span");
         builder.AddAttribute(1, "id", $"{FieldId(field)}-error");
         builder.AddAttribute(2, "class", "instant-quote__field-error");
-        builder.AddContent(3, Localizer["Please correct this field."]);
+        builder.AddContent(3, field == "TaxNumber"
+            ? Localizer["Thai tax ID must contain exactly 13 digits."]
+            : Localizer["Please correct this field."]);
         builder.CloseElement();
     };
 
@@ -181,7 +183,9 @@
         }
 
         builder.AddContent(5, HasError(field)
-            ? Localizer["This field contains address details. Move them to the separate address fields below."]
+            ? Model.OverlengthBuildingFields.Contains(field, StringComparer.Ordinal)
+                ? Localizer["Building or organization name must be 256 characters or fewer."]
+                : Localizer["This field contains address details. Move them to the separate address fields below."]
             : string.Empty);
         builder.CloseElement();
     };

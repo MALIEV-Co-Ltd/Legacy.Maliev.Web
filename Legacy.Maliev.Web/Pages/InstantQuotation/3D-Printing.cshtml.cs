@@ -36,6 +36,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public const string SubmissionStatusRejected = "rejected";
     public const string SubmissionStatusTempDataKey = "InstantQuotationSubmissionStatus";
     public const string ValidationFieldsTempDataKey = "InstantQuotationValidationFields";
+    public const string OverlengthBuildingFieldsTempDataKey = "InstantQuotationOverlengthBuildingFields";
 
     [BindProperty]
     [StringLength(50)]
@@ -200,6 +201,18 @@ public sealed class ThreeDimensionalPrinting : PageModel
                 .Order(StringComparer.Ordinal)
                 .ToArray();
             TempData[ValidationFieldsTempDataKey] = JsonSerializer.Serialize(invalidFields);
+            var overlengthBuildingFields = invalidFields
+                .Where(field => field switch
+                {
+                    nameof(BillingBuilding) => BillingBuilding?.Length > 256,
+                    nameof(ShippingBuilding) => ShippingBuilding?.Length > 256,
+                    _ => false,
+                })
+                .ToArray();
+            if (overlengthBuildingFields.Length > 0)
+            {
+                TempData[OverlengthBuildingFieldsTempDataKey] = JsonSerializer.Serialize(overlengthBuildingFields);
+            }
             StoreRejected(InstantQuotationProblemCategory.Validation);
             return LocalRedirect("/InstantQuotation/3D-Printing");
         }

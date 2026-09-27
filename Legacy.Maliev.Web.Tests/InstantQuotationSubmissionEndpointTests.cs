@@ -480,6 +480,54 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         Assert.Matches("id=\"instant-quote-description\"[^>]*aria-invalid=\"true\"", correctionSource);
     }
 
+    [Theory]
+    [InlineData("en", "Thai tax ID must contain exactly 13 digits.", "Building or organization name must be 256 characters or fewer.")]
+    [InlineData("th", "เลขประจำตัวผู้เสียภาษีไทยต้องมีตัวเลข 13 หลัก", "ชื่ออาคารหรือองค์กรต้องมีความยาวไม่เกิน 256 ตัวอักษร")]
+    public async Task InvalidTaxAndOverlengthBuilding_PostRedirectGetShowsSpecificLocalizedGuidance(
+        string culture, string taxMessage, string buildingMessage)
+    {
+        var service = new RecordingSubmissionService(Completed(724));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+
+        using var response = await client.PostAsync(
+            SubmitRoute,
+            CustomerForm(new()
+            {
+                ["TaxNumber"] = "123",
+                ["BillingBuilding"] = new string('A', 257),
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(service.Calls);
+        var fields = JsonSerializer.Deserialize<string[]>(Assert.IsType<string>(
+            tempData.Values[ThreeDimensionalPrinting.ValidationFieldsTempDataKey]));
+        var reasons = JsonSerializer.Deserialize<string[]>(Assert.IsType<string>(
+            tempData.Values[ThreeDimensionalPrinting.OverlengthBuildingFieldsTempDataKey]));
+        Assert.NotNull(fields);
+        Assert.NotNull(reasons);
+        Assert.Equal(["BillingBuilding", "TaxNumber"], fields);
+        Assert.Equal(["BillingBuilding"], reasons);
+
+        using var feedback = await client.GetAsync($"/InstantQuotation/3D-Printing?culture={culture}");
+        var source = WebUtility.HtmlDecode(await feedback.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, feedback.StatusCode);
+        Assert.Contains(taxMessage, source, StringComparison.Ordinal);
+        Assert.Contains(buildingMessage, source, StringComparison.Ordinal);
+        Assert.Matches(
+            "id=\"instant-quote-billing-building-error\"[^>]*>" + System.Text.RegularExpressions.Regex.Escape(buildingMessage) + "</span>",
+            source);
+        if (culture == "th")
+        {
+            Assert.DoesNotContain("Thai tax ID must contain exactly 13 digits.", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Building or organization name must be 256 characters or fewer.", source, StringComparison.Ordinal);
+        }
+    }
+
     [Fact]
     public async Task MissingProtectedSessionClaim_FailsClosedWithoutCallingTheService()
     {

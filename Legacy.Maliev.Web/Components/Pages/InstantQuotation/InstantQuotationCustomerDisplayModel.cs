@@ -21,6 +21,7 @@ public sealed record InstantQuotationCustomerDisplayModel(
     public const string RejectedStatus = "rejected";
 
     public IReadOnlyList<string> InvalidFields { get; init; } = [];
+    public IReadOnlyList<string> OverlengthBuildingFields { get; init; } = [];
 
     public string Mobile { get; init; } = string.Empty;
     public string BillingBuilding { get; init; } = string.Empty;
