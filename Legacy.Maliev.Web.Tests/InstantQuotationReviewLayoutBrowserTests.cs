@@ -94,6 +94,84 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
     }
 
     [Theory]
+    [InlineData(320, 700, "th", ColorScheme.Light)]
+    [InlineData(390, 844, "en", ColorScheme.Dark)]
+    [InlineData(820, 900, "th", ColorScheme.Dark)]
+    [InlineData(1280, 800, "en", ColorScheme.Light)]
+    public async Task LongAnalysisStatusWrapsInsideReviewAndSummary(int width, int height, string culture, ColorScheme colorScheme)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            ColorScheme = colorScheme,
+        });
+        await using var page = await context.NewPageAsync();
+        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await WaitForInteractiveWorkflowAsync(page);
+
+        // The source simulation report has no native counterpart; the active Blazor
+        // repricing status is the corresponding narrow, announced text surface.
+        await page.EvaluateAsync("""
+            thai => {
+              const host = document.createElement('main');
+              host.id = 'long-status-test-host';
+              host.className = 'instant-quote';
+              document.body.append(host);
+              const message = (thai ? 'กำลังวิเคราะห์ชิ้นงานและอัปเดตราคา' : 'AnalyzingPartAndUpdatingPrice').repeat(14);
+              host.innerHTML = `<div class="instant-quote__workflow" data-workflow-state="review">
+                <section data-workflow-review><section data-workflow-review-content>
+                  <section class="instant-quote__pricing-summary">
+                    <div class="instant-quote__status-heading"><h4>${thai ? 'สรุปราคา' : 'Price summary'}</h4>
+                      <p class="instant-quote__pricing-status" role="status" data-pricing-loading-status>
+                        <span class="instant-quote__pricing-spinner" aria-hidden="true"></span><span>${message}</span></p>
+                    </div><dl><div><dt>Total</dt><dd>฿1,000.00</dd></div></dl>
+                  </section>
+                  <div class="instant-quote__review-forward-actions" data-review-forward-actions>
+                    <button type="button" data-review-continue>${thai ? 'ข้อมูลลูกค้า' : 'Customer details'}</button>
+                  </div>
+                </section></section></div>
+                <div class="instant-quote__workflow" data-workflow-state="configured">
+                  <section data-workflow-configuration><div class="instant-quote__configuration-footer">
+                    <details class="instant-quote__summary-dock" open><summary>
+                      <span class="instant-quote__summary-dock-heading">
+                        <span class="instant-quote__summary-dock-title">${thai ? 'สรุปชิ้นงานและราคา' : 'Part and price summary'}</span>
+                        <span class="instant-quote__pricing-status" role="status" data-pricing-loading-status>
+                          <span class="instant-quote__pricing-spinner" aria-hidden="true"></span><span>${message}</span>
+                        </span></span><strong>฿1,000.00</strong></summary>
+                      <dl><div><dt>Total</dt><dd>฿1,000.00</dd></div></dl>
+                    </details><div class="instant-quote__configuration-actions"><button type="button">Review</button></div>
+                  </div></section></div>`;
+            }
+            """, culture == "th");
+
+        var fits = await page.EvaluateAsync<bool[]>("""
+            () => {
+              const host = document.querySelector('#long-status-test-host');
+              return [...host.querySelectorAll('[data-pricing-loading-status]')].map(status => {
+                const bounds = status.getBoundingClientRect();
+                const parent = status.parentElement.getBoundingClientRect();
+                return status.getAttribute('role') === 'status'
+                  && status.scrollWidth <= status.clientWidth + 1
+                  && bounds.left >= parent.left - 1 && bounds.right <= parent.right + 1
+                  && document.documentElement.scrollWidth <= innerWidth + 1;
+              });
+            }
+            """);
+        Assert.Equal([true, true], fits);
+        if (Environment.GetEnvironmentVariable("MALIEV_WEB_VALIDATION_SCREENSHOTS") == "1" && width is 320 or 1280)
+        {
+            await page.EvaluateAsync("() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+            await page.Locator("#long-status-test-host").ScreenshotAsync(new LocatorScreenshotOptions
+            {
+                Path = Path.Combine(Path.GetTempPath(), $"legacy-web-276-long-status-{culture}-{width}.png"),
+            });
+        }
+    }
+
+    [Theory]
     [InlineData(320, 700, "th", "light")]
     [InlineData(390, 844, "en", "dark")]
     [InlineData(820, 900, "th", "dark")]
