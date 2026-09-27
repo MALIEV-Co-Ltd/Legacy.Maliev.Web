@@ -716,6 +716,31 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         .SingleOrDefault(item => string.Equals(item.Key, materialKey, StringComparison.Ordinal))?.DisplayName
         ?? materialKey;
 
+    private string FormatPrintDuration(double printTimeMinutes)
+    {
+        var minutes = Math.Max(1, (long)Math.Round(printTimeMinutes, MidpointRounding.AwayFromZero));
+        var days = minutes / 1440;
+        var hours = minutes % 1440 / 60;
+        var remainder = minutes % 60;
+        var duration = new List<string>(3);
+        if (days > 0)
+        {
+            duration.Add($"{days:N0} {Localizer[days == 1 ? "day" : "days"]}");
+        }
+
+        if (hours > 0)
+        {
+            duration.Add($"{hours:N0} {Localizer[hours == 1 ? "hour" : "hours"]}");
+        }
+
+        if (remainder > 0 || duration.Count == 0)
+        {
+            duration.Add($"{remainder:N0} {Localizer[remainder == 1 ? "minute" : "minutes"]}");
+        }
+
+        return string.Join(" ", duration);
+    }
+
     private Task UpdateConfigurationAsync(
         InstantQuotationWorkflowPartViewModel part,
         string material,
