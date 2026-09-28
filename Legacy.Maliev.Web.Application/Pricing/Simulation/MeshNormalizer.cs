@@ -17,10 +17,14 @@ using System.Threading;
 public static class MeshNormalizer
 {
     /// <summary>Applies units and component transforms, diagnoses topology, and computes a stable digest.</summary>
+    public static NormalizedMesh Normalize(MeshInput input, GeometryTolerance tolerance) =>
+        Normalize(input, tolerance, CancellationToken.None);
+
+    /// <summary>Applies units and component transforms with cooperative cancellation.</summary>
     public static NormalizedMesh Normalize(
         MeshInput input,
         GeometryTolerance tolerance,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(input);

@@ -15,6 +15,15 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
     private static readonly Guid FileId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
     [Fact]
+    public void MeshNormalizer_PreservesExistingTwoArgumentClrContract()
+    {
+        Assert.NotNull(typeof(MeshNormalizer).GetMethod(nameof(MeshNormalizer.Normalize),
+            [typeof(MeshInput), typeof(GeometryTolerance)]));
+        Assert.NotNull(typeof(MeshNormalizer).GetMethod(nameof(MeshNormalizer.Normalize),
+            [typeof(MeshInput), typeof(GeometryTolerance), typeof(CancellationToken)]));
+    }
+
+    [Fact]
     public async Task CleanAdmittedBox_ProducesUploadBoundMeshForTrustedPhysicalSimulation()
     {
         byte[] bytes = BinaryBox(8);
