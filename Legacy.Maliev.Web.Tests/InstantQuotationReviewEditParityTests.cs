@@ -1,4 +1,6 @@
+using System.Net;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -89,6 +91,27 @@ public sealed class InstantQuotationReviewEditParityTests
     }
 
     [Fact]
+    public async Task Review_KeepsManufacturingUnitPriceSeparateFromAllocatedOrderGross()
+    {
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var part = new InstantQuotationPartQuote(
+            id, "PLA", "Black", 2, PrintProcess.Fdm, 30, 1, 1, 1, 1,
+            120, 240, false, 0, 0, [], BuildPreference.Standard, [],
+            AllocatedOrderTotal: 577.80);
+        var quote = new InstantQuotationOrderQuote(
+            [part], 240, 500, 500, 260, 40, 540, 37.80, 577.80, 1, 3,
+            AllocatedLineTotals: [577.80]);
+
+        var html = await RenderReviewAsync([Part(id, "part.stl")], id, quote: quote);
+        var readableHtml = WebUtility.HtmlDecode(html);
+
+        Assert.Matches(@"<dt>Unit price</dt>\s*<dd>฿120\.00</dd>", readableHtml);
+        Assert.Matches(@"<dt>Subtotal</dt>\s*<dd>฿240\.00</dd>", readableHtml);
+        Assert.Matches(@"<dt>Total</dt>\s*<dd>฿577\.80</dd>", readableHtml);
+        Assert.DoesNotContain("฿288.90", readableHtml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Workflow_ReviewSelectionAndEditNavigationKeepTheRequestedPartActive()
     {
         var markup = ReadComponent("InstantQuotationWorkflow.razor");
@@ -141,7 +164,8 @@ public sealed class InstantQuotationReviewEditParityTests
     private static async Task<string> RenderReviewAsync(
         IReadOnlyList<InstantQuotationWorkflowPartViewModel> parts,
         Guid selectedPartId,
-        Func<Guid, IReadOnlyList<string>>? thicknessWarnings = null)
+        Func<Guid, IReadOnlyList<string>>? thicknessWarnings = null,
+        InstantQuotationOrderQuote? quote = null)
     {
         using var services = new ServiceCollection()
             .AddLogging()
@@ -162,6 +186,7 @@ public sealed class InstantQuotationReviewEditParityTests
             var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
             {
                 ["Parts"] = parts,
+                ["Quote"] = quote,
                 ["SelectedPartId"] = selectedPartId,
                 ["ThicknessWarnings"] = thicknessWarnings ?? ((Guid _) => Array.Empty<string>()),
             });
