@@ -44,7 +44,6 @@ public sealed class InstantQuotationReviewCustomerTests
             "LeadTimeMinimumDays",
             "LeadTimeMaximumDays",
             "data-workflow-review",
-            "Price and lead time are estimates",
         })
         {
             Assert.Contains(value, review, StringComparison.Ordinal);
@@ -52,6 +51,31 @@ public sealed class InstantQuotationReviewCustomerTests
 
         Assert.DoesNotContain("UploadReference", review, StringComparison.Ordinal);
         Assert.DoesNotContain("SessionId", review, StringComparison.Ordinal);
+        Assert.DoesNotContain("Price and lead time are estimates and may change", review, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CustomerSteps_ShowTheSameConciseCommercialTotalsWithoutInternalAllocations()
+    {
+        foreach (var component in new[]
+        {
+            "InstantQuotationWorkflow.razor",
+            "InstantQuotationReview.razor",
+            "InstantQuotationCustomerOrderOverview.razor",
+        })
+        {
+            var markup = ReadComponent(component);
+
+            foreach (var amount in new[] { "ItemsSubtotal", "MinimumOrderSurcharge", "ShippingCost", "Vat", "FinalOrderPrice" })
+            {
+                Assert.Contains(amount, markup, StringComparison.Ordinal);
+            }
+
+            foreach (var internalAllocation in new[] { "SetupThb", "ReserveThb", "PackagingThb", "PaymentFeeThb" })
+            {
+                Assert.DoesNotContain(internalAllocation, markup, StringComparison.Ordinal);
+            }
+        }
     }
 
     [Fact]
@@ -147,9 +171,11 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("instant-quote__flow-step", ReadComponent("InstantQuotationCustomerForm.razor"), StringComparison.Ordinal);
         Assert.Contains("<InstantQuotationCustomerOrderOverview", markup, StringComparison.Ordinal);
         Assert.Contains("instant-quote__pricing-summary", ReadComponent("InstantQuotationCustomerOrderOverview.razor"), StringComparison.Ordinal);
-        Assert.Contains("PriceNeedsEngineeringReview", code, StringComparison.Ordinal);
-        Assert.Contains("AllPartsNeedEngineeringReview", code, StringComparison.Ordinal);
-        Assert.Contains("some parts are not watertight", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("PriceNeedsEngineeringReview", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("AllPartsNeedEngineeringReview", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-price-confidence", markup, StringComparison.Ordinal);
+        Assert.Contains("data-summary-warning", markup, StringComparison.Ordinal);
+        Assert.Contains("Estimated print time per part", markup, StringComparison.Ordinal);
         Assert.Contains("Quote=\"@OrderQuote\"", markup, StringComparison.Ordinal);
         Assert.Contains(".EnterReview();", code, StringComparison.Ordinal);
         Assert.Contains(".EnterCustomerDetails();", code, StringComparison.Ordinal);
