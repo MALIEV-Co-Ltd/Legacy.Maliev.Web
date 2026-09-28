@@ -1021,6 +1021,34 @@ body.instant-quotation-shell #main-content {
     scrollbar-width: thin;
 }
 
+.instant-quote__workflow dl > .instant-quote__bulk-pricing {
+    display: block;
+    padding: 0;
+}
+
+.instant-quote__bulk-pricing [data-workflow-price-tier] {
+    display: flex;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .35rem .5rem;
+    border-bottom: 1px solid #e7eaee;
+}
+
+/* The page itself scrolls below the fixed desktop shell; keep the tier list
+   in that single scroll path instead of trapping touch and keyboard users. */
+@media (max-width: 61.999rem) {
+    .instant-quote__bulk-pricing {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
+
+@media (min-width: 62rem) and (min-height: 62.5rem) {
+    .instant-quote__bulk-pricing {
+        max-height: clamp(11rem, calc(100dvh - 42rem), 24rem);
+    }
+}
+
 .instant-quote__bulk-pricing [aria-current="true"] {
     border-radius: .35rem;
     background: rgba(13, 110, 253, .08);
@@ -1083,12 +1111,13 @@ body.instant-quotation-shell #main-content {
 }
 
 .instant-quote__workflow [data-workflow-review-part] {
+    --instant-quote-review-inset: .7rem;
     display: grid;
     grid-template-columns: 60px minmax(0, 1fr);
     align-items: center;
     gap: .8rem;
     margin: 0;
-    padding: .7rem;
+    padding: var(--instant-quote-review-inset);
     border-radius: .6rem;
     background: #fff;
 }
@@ -1172,7 +1201,7 @@ body.instant-quotation-shell #main-content {
 .instant-quote__review-details {
     grid-column: 1 / -1;
     min-width: 0;
-    margin: .2rem -.7rem -.7rem;
+    margin: .2rem calc(-1 * var(--instant-quote-review-inset)) calc(-1 * var(--instant-quote-review-inset));
     border-top: 1px solid #e7eaee;
 }
 
@@ -1181,7 +1210,7 @@ body.instant-quotation-shell #main-content {
     align-items: center;
     gap: .5rem;
     min-height: 44px;
-    padding: .4rem .7rem;
+    padding: .4rem var(--instant-quote-review-inset);
     color: #435466;
     cursor: pointer;
 }
@@ -1202,7 +1231,13 @@ body.instant-quotation-shell #main-content {
 .instant-quote__review-verdict--warning { color: #a85d00; }
 
 .instant-quote__review-details > :not(summary) {
-    margin: .4rem .7rem .7rem;
+    margin: .4rem var(--instant-quote-review-inset) var(--instant-quote-review-inset);
+}
+
+@media (max-width: 36rem) {
+    .instant-quote__workflow [data-workflow-review-part] {
+        --instant-quote-review-inset: .55rem;
+    }
 }
 
 .instant-quote__workflow [data-workflow-review-part] dl.instant-quote__review-prices {
@@ -1429,6 +1464,7 @@ body.instant-quotation-shell #main-content {
 }
 
 .instant-quote__customer-actions {
+    flex: 0 0 auto;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
@@ -1546,6 +1582,7 @@ body.instant-quotation-shell #main-content {
     }
 
     .instant-quote__workflow[data-workflow-state="customerdetails"] [data-workflow-customer-details-content] form {
+        flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
         scrollbar-gutter: stable;
@@ -1553,9 +1590,6 @@ body.instant-quotation-shell #main-content {
     }
 
     .instant-quote__workflow[data-workflow-state="customerdetails"] .instant-quote__customer-actions {
-        position: sticky;
-        bottom: 0;
-        grid-column: 1 / -1;
         z-index: 1;
         border-top: 1px solid #e7eaee;
         box-shadow: 0 -.3rem .75rem rgba(31, 52, 73, .06);
@@ -1631,10 +1665,6 @@ body.instant-quotation-shell #main-content {
 
     .instant-quote__workflow form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .instant-quote__workflow form > .instant-quote__actions {
-        grid-column: 1 / -1;
     }
 
     .instant-quote__workflow button {
