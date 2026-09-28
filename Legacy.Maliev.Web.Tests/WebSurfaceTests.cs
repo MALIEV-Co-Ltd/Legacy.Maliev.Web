@@ -1998,6 +1998,27 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.DoesNotContain("GTM-5VBH5LK", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/robots.txt")]
+    [InlineData("/Error?code=404")]
+    public async Task HttpResponses_IncludeBaselineBrowserSecurityHeaders(string path)
+    {
+        using var response = await client.GetAsync(path);
+
+        Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
+        Assert.Equal("DENY", Assert.Single(response.Headers.GetValues("X-Frame-Options")));
+        var policy = Assert.Single(response.Headers.GetValues("Content-Security-Policy"));
+        Assert.Contains("default-src 'self'", policy, StringComparison.Ordinal);
+        Assert.Contains("base-uri 'self'", policy, StringComparison.Ordinal);
+        Assert.Contains("object-src 'none'", policy, StringComparison.Ordinal);
+        Assert.Contains("frame-ancestors 'none'", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("paypal", policy, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            path.StartsWith("/Error", StringComparison.Ordinal) ? "no-referrer" : "strict-origin-when-cross-origin",
+            Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+    }
+
     [Fact]
     public async Task HomePage_ContentSecurityPolicyAllowsOnlyRequiredMeasurementHosts()
     {
