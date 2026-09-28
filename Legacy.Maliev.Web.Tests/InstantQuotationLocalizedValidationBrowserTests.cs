@@ -45,6 +45,9 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
         await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        var uploadHelp = await page.Locator("[data-workflow-upload]").InnerTextAsync();
+        Assert.Contains(thai ? "ไฟล์ละ 100 MB" : "100 MB each", uploadHelp, StringComparison.Ordinal);
+        Assert.DoesNotContain(thai ? "ไฟล์ละ 200 MB" : "200 MB each", uploadHelp, StringComparison.Ordinal);
         await page.WaitForFunctionAsync(
             "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined");
 

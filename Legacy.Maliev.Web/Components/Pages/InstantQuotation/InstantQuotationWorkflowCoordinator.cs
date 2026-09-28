@@ -46,7 +46,7 @@ public interface IInstantQuotationWorkflowSessionIdentityAccessor
 
 public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 {
-    public const long MaximumFileSize = 200 * 1024 * 1024;
+    public const long MaximumFileSize = 100 * 1024 * 1024;
 
     private static readonly IReadOnlySet<string> AllowedExtensions = new HashSet<string>(
         [".stl", ".obj", ".3mf", ".glb", ".gltf", ".stp", ".step", ".igs", ".iges"],
