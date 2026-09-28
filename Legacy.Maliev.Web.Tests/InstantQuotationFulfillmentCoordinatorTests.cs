@@ -203,7 +203,7 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         DateTimeOffset.Parse("2026-08-30T00:00:00+07:00"));
 
     private static InstantQuotationOrderQuote Quote(params InstantQuotationPart[] parts) =>
-        new InstantQuotationPricingService().Quote(new InstantQuotationOrderState(parts));
+        SyntheticPhysicalPricingTestData.Quote(new InstantQuotationOrderState(parts));
 
     private static InstantQuotationPart Part(int quantity, string uploadId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee") => new(
         Guid.Parse(uploadId),

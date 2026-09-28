@@ -44,7 +44,7 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Contains("Material: ABS", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Build: Strength (6 walls, 2 mm shells, denser infill)", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains("Quantity: 2 piece(s)", call.Submission.Message, StringComparison.Ordinal);
-        var quotedLine = new InstantQuotationPricingService()
+        var quotedLine = SyntheticPhysicalPricingTestData
             .Quote(Session(PartWithDfm(quantity: 2)).RequestState).Parts.Single();
         Assert.NotEqual(quotedLine.Subtotal, quotedLine.AllocatedOrderTotal);
         Assert.Contains($"Cost per unit: {quotedLine.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
@@ -79,7 +79,9 @@ public sealed class InstantQuotationSubmissionTests
             persisted,
             new RecordingUploadClient(null, SuccessfulFinalization()),
             SuccessfulRequestFileClient.Instance,
-            fulfillment);
+            fulfillment,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
         var result = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
 
@@ -115,6 +117,28 @@ public sealed class InstantQuotationSubmissionTests
     }
 
     [Fact]
+    public async Task Submit_FdmWithoutTicketVerifier_FailsClosedBeforePersistence()
+    {
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true));
+        var persisted = new RecordingSubmissionStore();
+        var service = new InstantQuotationSubmissionService(
+            new RecordingSessionStore(Session(Part()), Owner),
+            new InstantQuotationPricingService(),
+            quotation,
+            persisted,
+            new RecordingUploadClient(null, SuccessfulFinalization()),
+            SuccessfulRequestFileClient.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Rejected, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, result.ProblemCategory);
+        Assert.Empty(quotation.Calls);
+        Assert.Null(persisted.Checkpoint);
+    }
+
+    [Fact]
     public async Task Submit_InvalidProtectedQuoteAuthorization_FailsClosedBeforePersistence()
     {
         InstantQuotationSessionState session = Session(Part()) with
@@ -130,7 +154,8 @@ public sealed class InstantQuotationSubmissionTests
             persisted,
             new RecordingUploadClient(null, SuccessfulFinalization()),
             SuccessfulRequestFileClient.Instance,
-            quoteTicketService: RejectingQuoteTicketService.Instance);
+            quoteTicketService: RejectingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
         InstantQuotationSubmissionResult result = await service.SubmitAsync(
             SessionId,
@@ -470,7 +495,9 @@ public sealed class InstantQuotationSubmissionTests
             quotation,
             persisted,
             upload,
-            SuccessfulRequestFileClient.Instance);
+            SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
         var initial = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
         sessions.CurrentSession = Session(Part(quantity: 3) with
@@ -615,7 +642,9 @@ public sealed class InstantQuotationSubmissionTests
             quotation,
             persisted,
             upload,
-            SuccessfulRequestFileClient.Instance);
+            SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
         var result = await service.SubmitAsync(SessionId, "different-owner", Customer(), CancellationToken.None);
 
@@ -640,7 +669,9 @@ public sealed class InstantQuotationSubmissionTests
             quotation,
             persisted,
             upload,
-            SuccessfulRequestFileClient.Instance);
+            SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
         var result = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
 
@@ -675,7 +706,9 @@ public sealed class InstantQuotationSubmissionTests
             quotation,
             persisted,
             upload,
-            SuccessfulRequestFileClient.Instance);
+            SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
         var first = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
         var retry = await service.SubmitAsync(SessionId, ownerIdentity: null, Customer(), CancellationToken.None);
@@ -750,7 +783,9 @@ public sealed class InstantQuotationSubmissionTests
             persisted,
             upload,
             requestFileClient ?? SuccessfulRequestFileClient.Instance,
-            fulfillmentClient);
+            fulfillmentClient,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
 
     private static InstantQuotationCustomerSubmission Customer(
         string firstName = "Mali",
@@ -782,7 +817,10 @@ public sealed class InstantQuotationSubmissionTests
         SubmissionId,
         new InstantQuotationOrderState(parts),
         DateTimeOffset.Parse("2026-07-19T00:00:00+07:00"),
-        DateTimeOffset.Parse("2026-07-19T00:00:00+07:00"));
+        DateTimeOffset.Parse("2026-07-19T00:00:00+07:00"))
+    {
+        QuoteAuthorization = new InstantQuotationQuoteAuthorization(["synthetic-line"], "synthetic-order"),
+    };
 
     private static InstantQuotationPart Part(int quantity = 1) => new(
         Guid.Parse("11111111-2222-3333-4444-555555555555"),
@@ -879,6 +917,24 @@ public sealed class InstantQuotationSubmissionTests
             InstantQuotationOrderQuote quote,
             InstantQuotationQuoteAuthorization authorization,
             DateTimeOffset now) => false;
+    }
+
+    // Legacy downstream-submission tests isolate persistence and retry behavior from ticket cryptography.
+    // Production uses the protected ticket service; dedicated ticket tests validate that boundary.
+    private sealed class AcceptingQuoteTicketService : IInstantQuotationQuoteTicketService
+    {
+        public static AcceptingQuoteTicketService Instance { get; } = new();
+
+        public InstantQuotationQuoteAuthorization Issue(
+            InstantQuotationSessionState session,
+            InstantQuotationOrderQuote quote,
+            DateTimeOffset now) => throw new NotSupportedException();
+
+        public bool Validate(
+            InstantQuotationSessionState session,
+            InstantQuotationOrderQuote quote,
+            InstantQuotationQuoteAuthorization authorization,
+            DateTimeOffset now) => true;
     }
 
     private sealed class RecordingPricingService : IInstantQuotationPricingService

@@ -388,7 +388,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded());
-builder.Services.AddSingleton<IInstantQuotationPricingService, InstantQuotationPricingService>();
+builder.Services.AddSingleton<InstantQuotationPricingService>();
+builder.Services.AddSingleton<IInstantQuotationPricingService>(services =>
+    services.GetRequiredService<InstantQuotationPricingService>());
 builder.Services.AddSingleton<AdditiveQuoteTicketService>();
 builder.Services.AddSingleton<IInstantQuotationQuoteTicketService>(services =>
     services.GetRequiredService<AdditiveQuoteTicketService>());

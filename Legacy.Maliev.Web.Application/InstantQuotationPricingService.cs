@@ -11,14 +11,30 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
 {
     public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state) => Quote(state, null);
 
+    internal InstantQuotationOrderQuote QuoteWithPhysical(
+        InstantQuotationOrderState state,
+        IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult> physical)
+        => QuoteCore(state, null, physical);
+
+    internal InstantQuotationOrderQuote QuoteWithPhysical(
+        InstantQuotationOrderState state,
+        string? destinationCountry,
+        IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult> physical)
+        => QuoteCore(state, destinationCountry, physical);
+
     public InstantQuotationOrderQuote Quote(
         InstantQuotationOrderState state,
-        string? destinationCountry)
+        string? destinationCountry) => QuoteCore(state, destinationCountry, null);
+
+    private static InstantQuotationOrderQuote QuoteCore(
+        InstantQuotationOrderState state,
+        string? destinationCountry,
+        IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>? physical)
     {
         ArgumentNullException.ThrowIfNull(state);
 
         var partQuotes = (state.Parts ?? throw new ArgumentException("Parts are required.", nameof(state)))
-            .Select(QuotePart)
+            .Select(part => QuotePart(part, physical))
             .ToArray();
         var shippingQuote = partQuotes.Length == 0
             ? new ShippingQuote
@@ -100,7 +116,9 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             .ToArray();
     }
 
-    private static InstantQuotationPartQuote QuotePart(InstantQuotationPart part)
+    private static InstantQuotationPartQuote QuotePart(
+        InstantQuotationPart part,
+        IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>? physical)
     {
         ArgumentNullException.ThrowIfNull(part);
         ArgumentNullException.ThrowIfNull(part.Geometry);
@@ -144,19 +162,31 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         var buildPreference = material.Process == PrintProcess.Resin
             ? BuildPreference.Standard
             : configuration.BuildPreference;
-        var item = PricingEngine.QuoteItem(
-            geometryInput,
-            material,
-            configuration.Quantity,
-            buildPreference);
+        InstantQuotationPhysicalAnalysisReceipt? receipt = null;
+        ItemQuote item;
+        if (material.Process == PrintProcess.Fdm)
+        {
+            if (physical is null
+                || !physical.TryGetValue((part.PartId, material.Key), out var evidence)
+                || !evidence.IsReady
+                || !MatchesEvidence(part, material.Key, buildPreference, evidence))
+            {
+                throw new InvalidOperationException("A current server-verified physical simulation is required for FDM pricing.");
+            }
+
+            item = PricingEngine.QuoteFdmSimulation(
+                evidence.Physical!, material, configuration.Quantity,
+                evidence.BoundingCm3PerUnit);
+            receipt = InstantQuotationPhysicalAnalysisReceipt.Create(
+                evidence.Binding!, configuration.MaterialKey, evidence.Physical!,
+                evidence.BoundingCm3PerUnit);
+        }
+        else
+        {
+            item = PricingEngine.QuoteItem(geometryInput, material, configuration.Quantity, buildPreference);
+        }
         var materialPrices = PricingCatalog.Materials.Values
-            .Select(candidate => new InstantQuotationMaterialPrice(
-                candidate.Key,
-                PricingEngine.QuoteItem(
-                    geometryInput,
-                    candidate,
-                    configuration.Quantity,
-                    candidate.Process == PrintProcess.Resin ? BuildPreference.Standard : buildPreference).UnitPrice))
+            .Select(candidate => MaterialPrice(part, candidate, geometryInput, buildPreference, physical))
             .ToArray();
 
         return new InstantQuotationPartQuote(
@@ -177,6 +207,61 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             item.TechnicalFilamentMinimumAdjustment,
             item.Tiers,
             buildPreference,
-            materialPrices);
+            materialPrices,
+            PhysicalReceipt: receipt);
+    }
+
+    private static InstantQuotationMaterialPrice MaterialPrice(
+        InstantQuotationPart part,
+        MaterialInfo candidate,
+        GeometryInput geometry,
+        BuildPreference buildPreference,
+        IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>? physical)
+    {
+        if (candidate.Process == PrintProcess.Resin)
+        {
+            return new(candidate.Key, PricingEngine.QuoteItem(
+                geometry, candidate, part.Configuration.Quantity, BuildPreference.Standard).UnitPrice);
+        }
+
+        if (physical is null
+            || !physical.TryGetValue((part.PartId, candidate.Key), out var evidence)
+            || !evidence.IsReady
+            || !MatchesEvidence(part, candidate.Key, buildPreference, evidence))
+        {
+            return new(candidate.Key, null);
+        }
+
+        try
+        {
+            var quote = PricingEngine.QuoteFdmSimulation(
+                evidence.Physical!, candidate, part.Configuration.Quantity,
+                evidence.BoundingCm3PerUnit);
+            return new(candidate.Key, quote.UnitPrice,
+                InstantQuotationPhysicalAnalysisReceipt.Create(
+                    evidence.Binding!, part.Configuration.MaterialKey, evidence.Physical!,
+                    evidence.BoundingCm3PerUnit));
+        }
+        catch (ArgumentException)
+        {
+            return new(candidate.Key, null);
+        }
+    }
+
+    private static bool MatchesEvidence(
+        InstantQuotationPart part,
+        string candidateMaterialKey,
+        BuildPreference preference,
+        InstantQuotationBoundPhysicalAnalysisResult evidence)
+    {
+        var binding = evidence.Binding;
+        var upload = part.PhysicalAnalysisUpload;
+        return binding is not null && upload is not null
+            && binding.PartId == part.PartId && binding.FileId == upload.FileId
+            && string.Equals(binding.UploadSha256, upload.Sha256, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(binding.MaterialKey, candidateMaterialKey, StringComparison.Ordinal)
+            && string.Equals(binding.ConfiguredMaterialKey ?? binding.MaterialKey,
+                part.Configuration.MaterialKey, StringComparison.Ordinal)
+            && binding.BuildPreference == preference && binding.Quantity == part.Configuration.Quantity;
     }
 }

@@ -53,6 +53,30 @@ public sealed class InstantQuotationSessionStoreTests
     }
 
     [Fact]
+    public async Task PutAsync_ConcurrentSameRevision_OnlyOneAuthorizationCanWin()
+    {
+        var fixture = CreateFixture();
+        var created = await fixture.Store.CreateAsync("customer-42", State(), default);
+        var first = created with
+        {
+            QuoteAuthorization = new InstantQuotationQuoteAuthorization(["first"], "first-order"),
+        };
+        var second = created with
+        {
+            QuoteAuthorization = new InstantQuotationQuoteAuthorization(["second"], "second-order"),
+        };
+
+        bool[] writes = await Task.WhenAll(
+            fixture.Store.PutAsync(first, "customer-42", default),
+            fixture.Store.PutAsync(second, "customer-42", default));
+
+        Assert.Single(writes, static accepted => accepted);
+        var current = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
+        Assert.NotNull(current?.QuoteAuthorization);
+        Assert.Equal(writes[0] ? "first-order" : "second-order", current.QuoteAuthorization.OrderTicket);
+    }
+
+    [Fact]
     public async Task CreateGet_BuildPreference_PersistsPerPartInProtectedCache()
     {
         var fixture = CreateFixture();
@@ -178,7 +202,7 @@ public sealed class InstantQuotationSessionStoreTests
     }
 
     [Fact]
-    public async Task CreateAsync_SourceCollectionsMutate_PersistedSessionAndPricingRemainUnchanged()
+    public async Task CreateAsync_SourceCollectionsMutate_PersistedSessionRemainsUnchangedAndFdmIsUnpriced()
     {
         var fixture = CreateFixture();
         var areas = Enumerable.Repeat(500.0, 64).ToArray();
@@ -189,14 +213,15 @@ public sealed class InstantQuotationSessionStoreTests
         var sourceParts = new[] { originalPart };
         var created = await fixture.Store.CreateAsync("customer-42", new InstantQuotationOrderState(sourceParts), default);
         var pricing = new InstantQuotationPricingService();
-        var before = pricing.Quote(created.RequestState);
+        Assert.Throws<InvalidOperationException>(() => pricing.Quote(created.RequestState));
 
         areas[0] = -1;
         perimeters[0] = -1;
         sourceParts[0] = Part("PETG", [1], [1]);
 
         var found = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
-        var after = pricing.Quote(found!.RequestState);
+        Assert.NotNull(found);
+        Assert.Throws<InvalidOperationException>(() => pricing.Quote(found.RequestState));
         Assert.NotSame(originalPart.Geometry, created.Parts.Single().Geometry);
         Assert.NotSame(created.Parts.Single().Geometry, found.Parts.Single().Geometry);
         Assert.Equal("PLA", found.Parts.Single().Configuration.MaterialKey);
@@ -207,9 +232,41 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.Equal(2_200, found.Parts.Single().Geometry.SurfaceAreaMm2);
         Assert.Equal(0.8, found.Parts.Single().Geometry.MinThicknessMm);
         Assert.True(found.Parts.Single().Geometry.TopologyChecked);
-        Assert.Equal(before.FinalOrderPrice, after.FinalOrderPrice);
-        Assert.Equal(before.Parts.Single().PrintTimeMinutesPerUnit, after.Parts.Single().PrintTimeMinutesPerUnit);
         Assert.False(found.Parts is IList<InstantQuotationPart>);
+    }
+
+    [Fact]
+    public async Task PutAsync_PersistsOwnerBoundPhysicalReceiptAndTicketsButRejectsStaleRevision()
+    {
+        var fixture = CreateFixture();
+        var fileId = Guid.NewGuid();
+        var original = State().Parts.Single();
+        var part = original with
+        {
+            UploadReference = new InstantQuotationUploadReference(fileId.ToString("D")),
+            PhysicalAnalysisUpload = new InstantQuotationPhysicalAnalysisUpload(
+                fileId, "part.stl", "model/stl", 100, original.Geometry.Sha256, "clean"),
+        };
+        var created = await fixture.Store.CreateAsync("owner-1", new InstantQuotationOrderState([part]), default);
+        var receipt = new InstantQuotationPhysicalAnalysisReceipt(
+            created.SessionId, "owner-1", part.PartId, fileId, part.Geometry.Sha256,
+            "PLA", "PLA", BuildPreference.Standard, 1, "profile-v1", new string('B', 64),
+            "analysis-v1", new string('C', 64), 1000, 100, 3600, 2);
+        var updated = created with
+        {
+            PhysicalReceipts = [receipt],
+            QuoteAuthorization = new InstantQuotationQuoteAuthorization(["line-ticket"], "order-ticket"),
+        };
+
+        Assert.True(await fixture.Store.PutAsync(updated, "owner-1", default));
+        Assert.False(await fixture.Store.PutAsync(updated, "owner-1", default));
+        var restored = await fixture.Store.GetAsync(created.SessionId, "owner-1", default);
+        Assert.NotNull(restored);
+        Assert.Equal("owner-1", restored.OwnerIdentity);
+        Assert.Equal(receipt, Assert.Single(restored.PhysicalReceipts!));
+        Assert.Equal("line-ticket", Assert.Single(restored.QuoteAuthorization!.LineTickets));
+        Assert.Equal("order-ticket", restored.QuoteAuthorization.OrderTicket);
+        Assert.Null(await fixture.Store.GetAsync(created.SessionId, "other-owner", default));
     }
 
     [Fact]

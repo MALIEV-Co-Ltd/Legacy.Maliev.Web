@@ -305,7 +305,8 @@ public sealed record InstantQuotationPart(
 
 public sealed record InstantQuotationMaterialPrice(
     string MaterialKey,
-    double UnitPrice);
+    double? UnitPrice,
+    InstantQuotationPhysicalAnalysisReceipt? PhysicalReceipt = null);
 
 public sealed record InstantQuotationPartQuote(
     Guid PartId,
@@ -326,7 +327,8 @@ public sealed record InstantQuotationPartQuote(
     IReadOnlyList<BulkTier> Tiers,
     BuildPreference BuildPreference,
     IReadOnlyList<InstantQuotationMaterialPrice> MaterialPrices,
-    double AllocatedOrderTotal = 0);
+    double AllocatedOrderTotal = 0,
+    InstantQuotationPhysicalAnalysisReceipt? PhysicalReceipt = null);
 
 public sealed record InstantQuotationOrderQuote(
     IReadOnlyList<InstantQuotationPartQuote> Parts,
@@ -361,7 +363,9 @@ public sealed record InstantQuotationSessionState(
     InstantQuotationOrderState RequestState,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    InstantQuotationQuoteAuthorization? QuoteAuthorization = null)
+    InstantQuotationQuoteAuthorization? QuoteAuthorization = null,
+    string? OwnerIdentity = null,
+    IReadOnlyList<InstantQuotationPhysicalAnalysisReceipt>? PhysicalReceipts = null)
 {
     public IReadOnlyList<InstantQuotationPart> Parts => RequestState.Parts;
 }

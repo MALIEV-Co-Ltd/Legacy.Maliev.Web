@@ -216,12 +216,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var sessionStore = Services.GetService<IInstantQuotationSessionStore>();
         var uploadClient = Services.GetService<IInstantQuotationUploadClient>();
         var pricingService = Services.GetService<IInstantQuotationPricingService>();
+        var authoritativePricingService = Services.GetService<IInstantQuotationAuthoritativePricingService>();
+        var quoteTicketService = Services.GetService<IInstantQuotationQuoteTicketService>();
         if (sessionStore is null && uploadClient is null && pricingService is null)
         {
             return;
         }
 
-        if (sessionStore is null || uploadClient is null || pricingService is null)
+        if (sessionStore is null || uploadClient is null || pricingService is null
+            || authoritativePricingService is null || quoteTicketService is null)
         {
             initializationFailed = true;
             return;
@@ -237,7 +240,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             pricingService,
             ResolveOwnerIdentity(principal),
             analytics,
-            Services.GetService<IInstantQuotationQuoteTicketService>());
+            quoteTicketService,
+            authoritativePricingService);
         try
         {
             var identityAccessor = Services.GetService<IInstantQuotationWorkflowSessionIdentityAccessor>();

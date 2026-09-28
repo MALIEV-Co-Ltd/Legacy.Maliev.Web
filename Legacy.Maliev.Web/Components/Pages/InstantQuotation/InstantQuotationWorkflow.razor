@@ -282,7 +282,7 @@
                     <div data-workflow-physical-analysis data-part-id="@part.PartId">
                         <button type="button"
                                 disabled="@(physicalAnalysisPartId == part.PartId)"
-                                @onclick="() => AnalyzePhysicalAsync(part.PartId)">@Localizer["Check physical build (not a price)"]</button>
+                                @onclick="() => AnalyzePhysicalAsync(part.PartId)">@Localizer["Check physical build details"]</button>
                         @if (physicalAnalysisPartId == part.PartId)
                         {
                             <p role="status">@Localizer["Checking physical build…"]</p>
@@ -292,7 +292,7 @@
                             <p role="status" data-physical-analysis-result="@(physical.IsReady ? "ready" : "unavailable")"
                                data-physical-analysis-failure="@physical.Failure">
                                 @(physical.IsReady
-                                    ? Localizer["Physical build evidence is ready for engineering review. Price is unchanged."]
+                                    ? Localizer["Physical build evidence is ready. Verified analysis is used for the current price."]
                                     : Localizer["Physical build analysis is unavailable. Engineering review is required."])
                             </p>
                         }
@@ -308,7 +308,9 @@
                             {
                                 <li data-workflow-material-price="@materialPrice.MaterialKey">
                                     <span>@Localizer[MaterialDisplayName(materialPrice.MaterialKey)]</span>
-                                    <strong>@Money(materialPrice.UnitPrice) @Localizer["per piece"]</strong>
+                                    <strong>@(materialPrice.UnitPrice is { } availablePrice
+                                        ? $"{Money(availablePrice)} {Localizer["per piece"]}"
+                                        : Localizer["Price unavailable — engineering review required."].Value)</strong>
                                 </li>
                             }
                         </ul>
@@ -316,6 +318,13 @@
                 }
 
                 <dl data-workflow-part-price data-workflow-part-pricing>
+                    @if (part.Quote is null)
+                    {
+                        <div role="status" data-workflow-price-unavailable>
+                            <dt>@Localizer["Price"]</dt>
+                            <dd>@Localizer["Price unavailable — engineering review required."]</dd>
+                        </div>
+                    }
                     @if (InstantQuotationSelectedPrintTime.IsVisible(part.Quote?.PrintTimeMinutesPerUnit, IsRepricing))
                     {
                         <div data-workflow-selected-print-time data-part-id="@part.PartId">

@@ -1,7 +1,62 @@
 namespace Legacy.Maliev.Web.Application.Pricing;
 
+using Legacy.Maliev.Web.Application.Pricing.Simulation;
+
 public static class PricingEngine
 {
+    /// <summary>Applies the existing commercial policy to a server-verified, quantity-bound FDM ledger.</summary>
+    public static ItemQuote QuoteFdmSimulation(
+        SimulationResult physical,
+        MaterialInfo material,
+        int quantity,
+        double boundingCm3PerUnit)
+    {
+        ArgumentNullException.ThrowIfNull(physical);
+        ArgumentNullException.ThrowIfNull(material);
+        if (material.Process != PrintProcess.Fdm
+            || quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity
+            || !double.IsFinite(boundingCm3PerUnit) || boundingCm3PerUnit <= 0
+            || physical.Diagnostics.Count != 0
+            || !double.IsFinite(physical.TotalDepositedMm3) || physical.TotalDepositedMm3 <= 0
+            || !double.IsFinite(physical.Motion.TotalSeconds) || physical.Motion.TotalSeconds <= 0)
+        {
+            throw new ArgumentException("The physical FDM evidence is not eligible for a price.", nameof(physical));
+        }
+
+        double grams = physical.TotalDepositedMm3 * material.DensityGramsPerCm3 / (1_000d * quantity);
+        double supportGrams = physical.SupportDepositedMm3 * material.DensityGramsPerCm3 / (1_000d * quantity);
+        double minutes = physical.Motion.TotalSeconds / (60d * quantity);
+        double directCost = FdmDirectCost(minutes, grams, supportGrams, material) * PricingCatalog.ComplexityFactor;
+        if (!double.IsFinite(directCost) || directCost <= 0)
+        {
+            throw new ArgumentException("The physical FDM cost is not finite and positive.", nameof(physical));
+        }
+
+        var setupLabor = PricingCatalog.SetupHours(PrintProcess.Fdm) * PricingCatalog.LaborRatePerHour;
+        var failureRate = PricingCatalog.FailureReserveRate(PrintProcess.Fdm);
+        var paymentGrossUp = 1 + (PricingCatalog.PaymentFeeRate / (1 - PricingCatalog.PaymentFeeRate));
+        var calculated = RoundUnitPrice(AllInUnitPrice(
+            directCost, setupLabor, failureRate, paymentGrossUp,
+            PricingCatalog.ResolveTier(quantity), quantity));
+        var unitPrice = ApplyTechnicalFilamentMinimumUnitPrice(calculated, quantity, material);
+        return new ItemQuote
+        {
+            Process = PrintProcess.Fdm,
+            DirectCostPerUnit = directCost,
+            PrintTimeMinutesPerUnit = minutes,
+            MaterialPerUnit = grams,
+            WeightGramsPerUnit = grams,
+            BoundingCm3PerUnit = boundingCm3PerUnit,
+            UnitPrice = unitPrice,
+            Subtotal = unitPrice * quantity,
+            TechnicalFilamentMinimumApplied = unitPrice > calculated,
+            TechnicalFilamentMinimumPrice = material.RequiresDrying ? PricingCatalog.TechnicalFilamentMinimumPrice : 0,
+            TechnicalFilamentMinimumAdjustment = (unitPrice - calculated) * quantity,
+            // Other quantities require their own physical simulation; do not fabricate tier prices.
+            Tiers = [new BulkTier { MinQuantity = quantity, UnitPrice = unitPrice, Active = true }],
+        };
+    }
+
     public static ItemQuote QuoteItem(
         GeometryInput geometry,
         MaterialInfo material,

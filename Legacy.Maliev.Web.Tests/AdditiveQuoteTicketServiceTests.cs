@@ -275,6 +275,72 @@ namespace Legacy.Maliev.Web.Tests
                 Now.AddMinutes(1)));
         }
 
+        [Fact]
+        public void FdmTicket_RequiresExactPersistedPhysicalReceiptAndRejectsReplay()
+        {
+            AdditiveQuoteTicketService service = CreateService();
+            InstantQuotationSessionState resinSession = Session();
+            InstantQuotationOrderQuote resinQuote = new InstantQuotationPricingService().Quote(resinSession.RequestState);
+            InstantQuotationPart original = Assert.Single(resinSession.Parts);
+            var fileId = Guid.Parse(original.UploadReference.Value);
+            var receipt = new InstantQuotationPhysicalAnalysisReceipt(
+                resinSession.SessionId, null, original.PartId, fileId, original.Geometry.Sha256,
+                "PLA", "PLA", BuildPreference.Strength, 2, "profile-v1", new string('B', 64),
+                "analysis-v1", new string('C', 64), 1000, 100, 3600,
+                resinQuote.Parts.Single().BoundingCm3PerUnit);
+            var part = original with
+            {
+                Configuration = new InstantQuotationPartConfiguration("PLA", "Black", 2, BuildPreference.Strength),
+                PhysicalAnalysisUpload = new InstantQuotationPhysicalAnalysisUpload(
+                    fileId, "part.stl", "model/stl", 100, original.Geometry.Sha256, "clean"),
+            };
+            var session = resinSession with
+            {
+                RequestState = new InstantQuotationOrderState([part]),
+                PhysicalReceipts = [receipt],
+            };
+            var resinLine = Assert.Single(resinQuote.Parts);
+            var physicalLine = resinLine with
+            {
+                MaterialKey = "PLA",
+                Process = PrintProcess.Fdm,
+                BuildPreference = BuildPreference.Strength,
+                PhysicalReceipt = receipt,
+            };
+            var quote = resinQuote with { Parts = [physicalLine] };
+
+            InstantQuotationQuoteAuthorization authorization = service.Issue(session, quote, Now);
+            Assert.True(service.Validate(session, quote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with
+            {
+                PhysicalReceipts = [receipt with { PhysicalSha256 = new string('D', 64) }],
+            }, quote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with
+            {
+                RequestState = new InstantQuotationOrderState([part with { PartId = Guid.NewGuid() }]),
+            }, quote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with { OwnerIdentity = "another-owner" },
+                quote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with
+            {
+                RequestState = new InstantQuotationOrderState([part with
+                {
+                    Configuration = part.Configuration with { Quantity = 3 },
+                }]),
+            }, quote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with
+            {
+                PhysicalReceipts = [receipt with { ProfileSha256 = new string('E', 64) }],
+            }, quote, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with
+            {
+                RequestState = new InstantQuotationOrderState([part with
+                {
+                    PhysicalAnalysisUpload = part.PhysicalAnalysisUpload! with { FileId = Guid.NewGuid() },
+                }]),
+            }, quote, authorization, Now.AddMinutes(1)));
+        }
+
         private static AdditiveQuoteTicketService CreateService()
         {
             return new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
@@ -287,12 +353,16 @@ namespace Legacy.Maliev.Web.Tests
                 SchemaVersion = AdditiveQuoteTicketService.LineSchemaVersion,
                 PolicyVersion = PricingCatalog.AdditivePricingPolicyVersion,
                 SessionId = "session-1",
+                PartId = Guid.Parse("11111111-1111-1111-1111-111111111111").ToString("D"),
                 FileName = "part.stl",
                 UploadId = "upload-1",
                 StoragePath = "2026-9-14/session-1/upload-1/part.stl",
                 ContentSha256 = new string('A', 64),
                 AnalysisRevision = "analysis-v1",
                 ProfileVersion = "profile-v1",
+                ProfileSha256 = new string('B', 64),
+                PhysicalAnalysisVersion = "physical-v1",
+                PhysicalSha256 = new string('C', 64),
                 Confidence = "provisional",
                 ReviewState = "engineer_review_required",
                 GeometryDigest = "geometry-digest",
@@ -343,7 +413,7 @@ namespace Legacy.Maliev.Web.Tests
                 "part.stl",
                 upload.UploadReference!,
                 geometry,
-                new InstantQuotationPartConfiguration("PLA", "Black", 2, BuildPreference.Strength));
+                new InstantQuotationPartConfiguration("M68", "Gray", 2, BuildPreference.Strength));
             return new InstantQuotationSessionState(
                 "session-1",
                 new string('b', 64),

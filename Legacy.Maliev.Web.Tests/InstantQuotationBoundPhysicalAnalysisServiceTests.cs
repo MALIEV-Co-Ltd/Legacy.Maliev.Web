@@ -33,6 +33,79 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         Assert.Equal(2, fixture.Store.ReadCount);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(10_000)]
+    public async Task CurrentServerPhysicalEvidence_PricesSelectedStlAndBindsReceipt(int quantity)
+    {
+        var fixture = Fixture(quantity);
+        var evidence = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+        var part = Assert.Single(fixture.Store.State.Parts);
+        var quote = new InstantQuotationPricingService().QuoteWithPhysical(
+            fixture.Store.State.RequestState,
+            new Dictionary<(Guid, string), InstantQuotationBoundPhysicalAnalysisResult>
+            {
+                [(part.PartId, "PLA")] = evidence,
+            });
+
+        var line = Assert.Single(quote.Parts);
+        Assert.True(line.UnitPrice > 0);
+        Assert.Equal(line.UnitPrice * quantity, line.Subtotal);
+        Assert.Equal(Digest, line.PhysicalReceipt!.UploadSha256);
+        Assert.Equal(Owner, line.PhysicalReceipt.OwnerIdentity);
+        Assert.Equal(evidence.Physical!.ProfileSha256, line.PhysicalReceipt.ProfileSha256);
+        Assert.Equal(0.512, line.BoundingCm3PerUnit, 3);
+        Assert.Equal(line.BoundingCm3PerUnit, line.PhysicalReceipt.BoundingCm3PerUnit);
+        Assert.Null(line.MaterialPrices.Single(price => price.MaterialKey == "PETG").UnitPrice);
+        Assert.Throws<InvalidOperationException>(() =>
+            new InstantQuotationPricingService().Quote(fixture.Store.State.RequestState));
+    }
+
+    [Fact]
+    public async Task BrowserGeometryClaim_CannotChangePhysicalFdmShippingWeightOrBounding()
+    {
+        var fixture = Fixture();
+        var evidence = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+        var original = Assert.Single(fixture.Store.State.Parts);
+        var browserClaim = new InstantQuotationGeometryClaim(
+            1, Digest, 6, 6, 6, 150, 200,
+            Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+            12, 1, true, false, false, 1);
+        Assert.True(browserClaim.IsValid());
+        var altered = original with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, Digest),
+                browserClaim)!,
+        };
+        var pricing = new InstantQuotationPricingService();
+        var evidenceByMaterial = new Dictionary<(Guid, string), InstantQuotationBoundPhysicalAnalysisResult>
+        {
+            [(original.PartId, "PLA")] = evidence,
+        };
+
+        var actual = pricing.QuoteWithPhysical(new InstantQuotationOrderState([altered]), evidenceByMaterial);
+        var expected = pricing.QuoteWithPhysical(fixture.Store.State.RequestState, evidenceByMaterial);
+
+        Assert.Equal(expected.Parts.Single().BoundingCm3PerUnit, actual.Parts.Single().BoundingCm3PerUnit);
+        Assert.Equal(expected.Parts.Single().WeightGramsPerUnit, actual.Parts.Single().WeightGramsPerUnit);
+        Assert.Equal(expected.FinalOrderPrice, actual.FinalOrderPrice);
+    }
+
+    [Fact]
+    public async Task ReplayedEvidenceForAnotherPart_IsRejectedBeforePricing()
+    {
+        var fixture = Fixture();
+        var evidence = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+        var changed = fixture.Store.State.Parts.Single() with { PartId = Guid.NewGuid() };
+        Assert.Throws<InvalidOperationException>(() => new InstantQuotationPricingService().QuoteWithPhysical(
+            new InstantQuotationOrderState([changed]),
+            new Dictionary<(Guid, string), InstantQuotationBoundPhysicalAnalysisResult>
+            {
+                [(changed.PartId, "PLA")] = evidence,
+            }));
+    }
+
     [Fact]
     public async Task WrongOwnerSessionPartOrUpload_NeverReadsBytes()
     {
@@ -156,7 +229,8 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
             new InstantQuotationPhysicalAnalysisUpload(FileId, "part.stl", "model/stl", Bytes.Length, Digest, "clean"));
         var now = DateTimeOffset.UtcNow;
         var store = new SessionStore(new InstantQuotationSessionState(
-            SessionId, "submission", new InstantQuotationOrderState([part]), now, now));
+            SessionId, "submission", new InstantQuotationOrderState([part]), now, now,
+            OwnerIdentity: Owner));
         var reader = new InputReader();
         var service = new InstantQuotationBoundPhysicalAnalysisService(
             store, new InstantQuotationAdmittedMeshService(reader), FdmRuntimeProfileCatalog.LoadEmbedded());

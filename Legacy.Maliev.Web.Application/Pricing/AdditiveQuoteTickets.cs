@@ -50,6 +50,12 @@ namespace Legacy.Maliev.Web.Application.Pricing
         /// <summary>Gets or sets the owning instant-quotation session id.</summary>
         public string SessionId { get; set; } = string.Empty;
 
+        /// <summary>Gets or sets the owner bound to this quote; null identifies an anonymous session.</summary>
+        public string? OwnerIdentity { get; set; }
+
+        /// <summary>Gets or sets the stable server part identifier.</summary>
+        public string PartId { get; set; } = string.Empty;
+
         /// <summary>Gets or sets the uploaded file name.</summary>
         public string FileName { get; set; } = string.Empty;
 
@@ -67,6 +73,15 @@ namespace Legacy.Maliev.Web.Application.Pricing
 
         /// <summary>Gets or sets the manufacturing profile version used for this estimate.</summary>
         public string ProfileVersion { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the digest of the resolved server manufacturing profile.</summary>
+        public string ProfileSha256 { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the physical analysis algorithm revision.</summary>
+        public string PhysicalAnalysisVersion { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the digest of the immutable server physical ledger.</summary>
+        public string PhysicalSha256 { get; set; } = string.Empty;
 
         /// <summary>Gets or sets estimate confidence: validated, provisional, or unavailable.</summary>
         public string Confidence { get; set; } = string.Empty;
