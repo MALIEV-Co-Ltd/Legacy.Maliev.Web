@@ -401,10 +401,10 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("/member/orders/3d-printing", "en", "Additive Manufacturing", "/Member/Orders/3D-Printing?handler=Submit")]
-    [InlineData("/member/orders/3d-printing", "th", "งานผลิตแบบเพิ่มเนื้อวัสดุ", "/Member/Orders/3D-Printing?handler=Submit")]
-    [InlineData("/member/orders/3d-scanning", "en", "3D Scanning", "/Member/Orders/3D-Scanning?handler=Submit")]
-    [InlineData("/member/orders/cnc-machining", "en", "CNC Manufacturing", "/Member/Orders/CNC-Machining?handler=Submit")]
+    [InlineData("/member/orders/3d-printing", "en", "Additive Manufacturing", "/Member/Orders/3D-Printing?handler=Submit&amp;culture=en")]
+    [InlineData("/member/orders/3d-printing", "th", "งานผลิตแบบเพิ่มเนื้อวัสดุ", "/Member/Orders/3D-Printing?handler=Submit&amp;culture=th")]
+    [InlineData("/member/orders/3d-scanning", "en", "3D Scanning", "/Member/Orders/3D-Scanning?handler=Submit&amp;culture=en")]
+    [InlineData("/member/orders/cnc-machining", "en", "CNC Manufacturing", "/Member/Orders/CNC-Machining?handler=Submit&amp;culture=en")]
     public async Task MemberOrderCreation_RendersAuthenticatedLocalizedStaticSsrForm(
         string route,
         string culture,
