@@ -2060,6 +2060,17 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
+    [InlineData("/instantquotation")]
+    [InlineData("/InstantQuotation?culture=en")]
+    public async Task InstantQuotationLegacyEntry_RedirectsToThreeDimensionalPrinting(string route)
+    {
+        using var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/InstantQuotation/3D-Printing", response.Headers.Location?.OriginalString);
+    }
+
+    [Theory]
     [InlineData("en", "Start by uploading a file", "Instant Pricing", "or click to browse", "No file selected")]
     [InlineData("th", "เริ่มต้นด้วยการส่งไฟล์", "ประเมินราคาพิมพ์ 3D", "หรือคลิกเพื่อเลือกไฟล์", "ยังไม่ได้เลือกไฟล์")]
     public async Task InstantQuotation_RendersLocalizedStaticSsrWorkflowShell(
