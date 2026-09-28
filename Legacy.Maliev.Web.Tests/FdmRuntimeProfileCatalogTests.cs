@@ -1,10 +1,41 @@
 using System.Text.Json.Nodes;
 using Legacy.Maliev.Web.Application.Pricing;
+using Legacy.Maliev.Web.Application.Pricing.Simulation;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class FdmRuntimeProfileCatalogTests
 {
+    [Theory]
+    [InlineData(BuildPreference.Standard, 0.20, 2)]
+    [InlineData(BuildPreference.Quality, 0.12, 2)]
+    [InlineData(BuildPreference.Strength, 0.20, 6)]
+    public void ApprovedBuildResolvesTrustedServerProfile(
+        BuildPreference preference,
+        double expectedLayerHeight,
+        int expectedWalls)
+    {
+        var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+
+        Assert.True(catalog.TryResolveTrustedProfile("PLA", preference, out ResolvedSimulationProfile? profile));
+        Assert.NotNull(profile);
+        Assert.Equal(expectedLayerHeight, profile.LayerHeightMm, 2);
+        Assert.Equal(expectedWalls, profile.WallCount);
+        Assert.Equal("PLA", profile.MaterialId);
+        Assert.Equal(64, profile.ResolvedProfileSha256.Length);
+    }
+
+    [Theory]
+    [InlineData("UNKNOWN")]
+    [InlineData("M68")]
+    public void UnavailableMaterialCannotResolveTrustedServerProfile(string material)
+    {
+        var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+
+        Assert.False(catalog.TryResolveTrustedProfile(material, BuildPreference.Standard, out var profile));
+        Assert.Null(profile);
+    }
+
     [Fact]
     public void EmbeddedManifestCoversExactlyTheFdmCatalogAndApprovedBuilds()
     {

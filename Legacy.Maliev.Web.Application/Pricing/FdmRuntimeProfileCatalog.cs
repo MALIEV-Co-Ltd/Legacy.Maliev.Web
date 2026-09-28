@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Legacy.Maliev.Web.Application.Pricing.Simulation;
 
 namespace Legacy.Maliev.Web.Application.Pricing;
 
@@ -49,6 +50,60 @@ public sealed class FdmRuntimeProfileCatalog
             material.AutomaticPricingEligible,
             ProfileVersion,
             material.ReasonCodes!.OrderBy(static reason => reason, StringComparer.Ordinal).ToArray());
+    }
+
+    /// <summary>Resolves only approved release cells into server-owned physical settings.</summary>
+    public bool TryResolveTrustedProfile(
+        string? materialKey,
+        BuildPreference preference,
+        out ResolvedSimulationProfile? profile)
+    {
+        profile = null;
+        if (!ResolvePolicy(materialKey, preference).AutomaticPricingEligible
+            || materialKey is null
+            || !manifest.Materials!.TryGetValue(materialKey, out var releaseMaterial)
+            || !manifest.Builds!.TryGetValue(preference.ToString(), out var build)
+            || PricingCatalog.ResolveMaterial(materialKey) is not { Process: PrintProcess.Fdm } catalogMaterial)
+        {
+            return false;
+        }
+
+        var machine = new Dictionary<string, string>(manifest.Machine!.Settings!, StringComparer.Ordinal)
+        {
+            ["supported_material_ids"] = materialKey,
+        };
+        var process = new Dictionary<string, string>(build.Settings!, StringComparer.Ordinal);
+        var density = catalogMaterial.DensityGramsPerCm3.ToString(CultureInfo.InvariantCulture);
+        var flow = releaseMaterial.MaximumVolumetricFlowMm3PerSecond!;
+        var filament = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["material_id"] = materialKey,
+            ["filament_density"] = density,
+            ["filament_max_volumetric_speed"] = flow,
+            ["minimum_layer_time"] = releaseMaterial.MinimumLayerTimeSeconds!,
+            ["minimum_cooling_speed"] = releaseMaterial.MinimumCoolingSpeedMmPerSecond!,
+            ["support_material_id"] = "model",
+            ["support_material_density"] = density,
+            ["support_interface_material_id"] = "model",
+            ["support_interface_material_density"] = density,
+            ["support_max_volumetric_speed"] = flow,
+            ["support_interface_max_volumetric_speed"] = flow,
+        };
+
+        try
+        {
+            profile = ResolvedSimulationProfile.Resolve(
+                preference,
+                machine,
+                process,
+                filament,
+                releaseMaterial.SourceArtifactSha256!);
+            return true;
+        }
+        catch (SimulationProfileException)
+        {
+            return false;
+        }
     }
 
     internal static FdmRuntimeProfileCatalog Parse(string json)
