@@ -272,6 +272,18 @@ test('capture listener snapshots each FileList before server interop and rejecte
   assert.deepEqual(interop.beginSelection({ files: [] }), []);
 });
 
+test('oversized selections are skipped before preview loading while smaller files proceed', async () => {
+  const oversized = { ...modelFile('large.stl'), size: 201 * 1024 * 1024 };
+  const accepted = { ...modelFile('small.stl'), size: 10 * 1024 * 1024 };
+  const loaded = [];
+  const { interop } = harness(async file => { loaded.push(file); return disposableObject(); });
+
+  const keys = interop.beginSelection({ files: [oversized, accepted] }, 200 * 1024 * 1024);
+  assert.equal(keys.length, 1);
+  await interop.getGeometryClaim(keys[0]);
+  assert.deepEqual(loaded, [accepted]);
+});
+
 test('admits successful previews and releases failed, removed, cancelled, and stale previews', async () => {
   const objects = [disposableObject(), disposableObject(), disposableObject()];
   const { calls, interop } = harness(async (_file, { signal }) => {

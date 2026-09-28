@@ -109,10 +109,11 @@ export function createWorkflowPreviewInterop({
     inputChangeHandler = null;
   }
 
-  function beginSelection(input) {
+  function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY) {
     assertActive();
     const files = selectionSnapshots.shift() ?? Array.from(input?.files ?? []);
-    return files.map(startPreview);
+    return files.filter(file => !Number.isFinite(maximumFileSize) || file.size <= maximumFileSize)
+      .map(startPreview);
   }
 
   function discardSelection() {
