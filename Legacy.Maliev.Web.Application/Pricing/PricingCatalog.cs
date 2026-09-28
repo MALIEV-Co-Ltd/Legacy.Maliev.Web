@@ -28,6 +28,7 @@ public static class PricingCatalog
     public const int ResinBottomLayerCount = 6;
     public const double ResinBottomLayerExtraSeconds = 30.2;
     public const double FdmMachineHourly = 17.0;
+    public const double FdmHeatedEnclosureEnergyHourly = 5.0;
     public const double ResinMachineHourly = 29.0;
     public const double MonthlyFixedCost = 311_097.0;
     public const double FdmOverheadAllocation = 0.70;
@@ -237,7 +238,8 @@ public static class PricingCatalog
             double costPerGram,
             FdmFlowClass flow,
             double minLayerSeconds,
-            bool requiresDrying = false) => new()
+            bool requiresDrying = false,
+            bool requiresHeatedEnclosure = false) => new()
             {
                 Key = key,
                 DisplayName = name,
@@ -247,6 +249,7 @@ public static class PricingCatalog
                 FlowClass = flow,
                 MinLayerSeconds = minLayerSeconds,
                 RequiresDrying = requiresDrying,
+                RequiresHeatedEnclosure = requiresHeatedEnclosure,
             };
 
         MaterialInfo Resin(string key, string name, double costPerMl) => new()
@@ -265,8 +268,8 @@ public static class PricingCatalog
             Fdm("PETG-CF", "PETG-CF — PETG + Carbon Fiber", 1.29, 1.55, FdmFlowClass.Engineering, 10, requiresDrying: true),
             Fdm("PETG-ESD", "PETG-ESD — Electrostatic Discharge Safe", 1.31, 2.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
             Fdm("PET-CF", "PET-CF — PET + Carbon Fiber", 1.30, 1.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
-            Fdm("ABS", "ABS — Acrylonitrile Butadiene Styrene", 1.04, 0.76, FdmFlowClass.Standard, 5),
-            Fdm("ABS-FR", "ABS-FR — Flame-Retardant ABS", 1.15, 1.60, FdmFlowClass.Standard, 5),
+            Fdm("ABS", "ABS — Acrylonitrile Butadiene Styrene", 1.04, 0.76, FdmFlowClass.Standard, 5, requiresHeatedEnclosure: true),
+            Fdm("ABS-FR", "ABS-FR — Flame-Retardant ABS", 1.15, 1.60, FdmFlowClass.Standard, 5, requiresHeatedEnclosure: true),
             Fdm("ASA", "ASA — Acrylonitrile Styrene Acrylate", 1.07, 0.86, FdmFlowClass.Standard, 5),
             Fdm("ASA-CF", "ASA-CF — ASA + Carbon Fiber", 1.11, 1.834, FdmFlowClass.Engineering, 5),
             Fdm("HIPS", "HIPS — High Impact Polystyrene", 1.04, 0.925, FdmFlowClass.Standard, 6),

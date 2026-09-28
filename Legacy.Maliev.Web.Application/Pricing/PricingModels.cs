@@ -54,6 +54,8 @@ public sealed class MaterialInfo
     public double MinLayerSeconds { get; init; }
 
     public bool RequiresDrying { get; init; }
+
+    public bool RequiresHeatedEnclosure { get; init; }
 }
 
 public sealed class FdmEstimate

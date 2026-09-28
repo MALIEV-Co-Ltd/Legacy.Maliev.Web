@@ -22,6 +22,32 @@ public sealed class InstantQuotationPricingTests
         Assert.Equal(1_715.97, directCost, 2);
     }
 
+    [Theory]
+    [InlineData("ABS")]
+    [InlineData("ABS-FR")]
+    public void FdmDirectCost_HeatedEnclosureMaterialsAddFiveBahtPerPrintingHour(string materialKey)
+    {
+        var pla = PricingCatalog.ResolveMaterial("PLA")!;
+        var enclosed = PricingCatalog.ResolveMaterial(materialKey)!;
+
+        var plaCost = PricingEngine.FdmDirectCost(60, 0, 0, pla);
+        var enclosedCost = PricingEngine.FdmDirectCost(60, 0, 0, enclosed);
+
+        Assert.Equal(5.0, enclosedCost - plaCost, 4);
+    }
+
+    [Fact]
+    public void FdmDirectCost_AsaKeepsStandardMachineEnergyRate()
+    {
+        var pla = PricingCatalog.ResolveMaterial("PLA")!;
+        var asa = PricingCatalog.ResolveMaterial("ASA")!;
+
+        Assert.Equal(
+            PricingEngine.FdmDirectCost(60, 0, 0, pla),
+            PricingEngine.FdmDirectCost(60, 0, 0, asa),
+            4);
+    }
+
     [Fact]
     public void ResinDirectCost_PricesActualOccupiedPlateCount()
     {
