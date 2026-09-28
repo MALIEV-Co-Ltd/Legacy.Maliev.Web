@@ -172,17 +172,29 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
     }
 
     [Theory]
+    [InlineData(320, 700, "en", "light")]
+    [InlineData(320, 700, "en", "dark")]
     [InlineData(320, 700, "th", "light")]
-    [InlineData(390, 844, "en", "dark")]
+    [InlineData(320, 700, "th", "dark")]
+    [InlineData(375, 667, "en", "light")]
+    [InlineData(375, 667, "en", "dark")]
+    [InlineData(375, 667, "th", "light")]
+    [InlineData(375, 667, "th", "dark")]
+    [InlineData(820, 900, "en", "light")]
+    [InlineData(820, 900, "en", "dark")]
+    [InlineData(820, 900, "th", "light")]
     [InlineData(820, 900, "th", "dark")]
-    [InlineData(1522, 949, "en", "light")]
+    [InlineData(1280, 800, "en", "light")]
+    [InlineData(1280, 800, "en", "dark")]
+    [InlineData(1280, 800, "th", "light")]
+    [InlineData(1280, 800, "th", "dark")]
     public async Task ReviewControlsAndForwardActionsRemainReadable(int width, int height, string culture, string colorScheme)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             ColorScheme = colorScheme == "dark" ? ColorScheme.Dark : ColorScheme.Light,
-            HasTouch = width <= 390,
+            HasTouch = width <= 375,
         });
         await using var page = await context.NewPageAsync();
         var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
@@ -232,19 +244,36 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
             """);
 
         Assert.True(result[0], "Review controls must not clip their selected values.");
-        if (width >= 390) Assert.True(result[1], "PDF and Continue must share a row when space permits.");
+        if (width >= 375) Assert.True(result[1], "PDF and Continue must share a row when space permits.");
         Assert.True(result[2], "Review must not force horizontal overflow.");
         Assert.True(result[3], "Continue must remain a compact action, not a full-width strip.");
         Assert.True(result[4], "The forward action must stay right aligned.");
 
         var details = page.Locator(".instant-quote__review-details");
+        var disclosureGeometry = await details.EvaluateAsync<string>("""
+            element => {
+              const card = element.closest('[data-workflow-review-part]').getBoundingClientRect();
+              const disclosure = element.getBoundingClientRect();
+              const toggle = element.querySelector('summary').getBoundingClientRect();
+              const inset = parseFloat(getComputedStyle(element.querySelector('summary')).paddingLeft);
+              return JSON.stringify({ cardLeft: card.left, cardRight: card.right,
+                disclosureLeft: disclosure.left, disclosureRight: disclosure.right,
+                toggleWidth: toggle.width, disclosureWidth: disclosure.width,
+                toggleHeight: toggle.height, inset,
+                fits: Math.abs(disclosure.left - card.left) <= 2
+                && Math.abs(disclosure.right - card.right) <= 2
+                && inset >= 8 && toggle.width >= disclosure.width - 1
+                && toggle.height >= 44 });
+            }
+            """);
+        Assert.True(disclosureGeometry.Contains("\"fits\":true", StringComparison.Ordinal), disclosureGeometry);
         Assert.False(await details.EvaluateAsync<bool>("element => element.open"));
         Assert.Equal(culture == "th" ? "ข้อควรระวังด้านการผลิต" : "Manufacturing warning",
             await page.Locator(".instant-quote__review-verdict").GetAttributeAsync("aria-label"));
         await details.Locator("summary").FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         Assert.True(await details.EvaluateAsync<bool>("element => element.open"));
-        if (width <= 390)
+        if (width <= 375)
         {
             var bounds = await details.Locator("summary").BoundingBoxAsync();
             Assert.NotNull(bounds);
@@ -268,6 +297,14 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
                 }
                 """);
             Assert.True(longThaiLabelFits, "Long Thai action labels must wrap without horizontal overflow.");
+        }
+        if (Environment.GetEnvironmentVariable("MALIEV_WEB_VALIDATION_SCREENSHOTS") == "1"
+            && width is 320 or 1280 && culture == "th" && colorScheme == "light")
+        {
+            await page.ScreenshotAsync(new PageScreenshotOptions
+            {
+                Path = Path.Combine(Path.GetTempPath(), $"legacy-web-276-review-{culture}-{width}.png"),
+            });
         }
     }
 

@@ -124,19 +124,20 @@
             @FieldError("Description")
         </div>
 
-        <div class="instant-quote__actions instant-quote__customer-actions" role="group" aria-label="@Localizer["Quotation steps"]">
-            <p role="note">@Localizer["Our team will review your files, then send an official quotation with payment instructions."]</p>
-            @if (Model.InvalidFields.Count > 0)
-            {
-                <a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a>
-            }
-            else
-            {
-                <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
-            }
-            <button type="submit" data-instant-quote-submit>@Localizer["Submit"]</button>
-        </div>
     </form>
+
+    <div class="instant-quote__actions instant-quote__customer-actions" role="group" aria-label="@Localizer["Quotation steps"]">
+        <p role="note">@Localizer["Our team will review your files, then send an official quotation with payment instructions."]</p>
+        @if (Model.InvalidFields.Count > 0)
+        {
+            <a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a>
+        }
+        else
+        {
+            <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
+        }
+        <button type="submit" form="instant-quotation-form" data-instant-quote-submit>@Localizer["Submit"]</button>
+    </div>
 </section>
 
 @code {
