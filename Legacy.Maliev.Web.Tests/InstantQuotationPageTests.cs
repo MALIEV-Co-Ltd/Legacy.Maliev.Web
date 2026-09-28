@@ -64,6 +64,7 @@ public sealed class InstantQuotationPageTests
         Assert.True(json.GetProperty("success").GetBoolean());
         Assert.Equal(3_000, json.GetProperty("printing").GetDouble(), 2);
         Assert.True(json.GetProperty("shipping").GetDouble() >= 100);
+        Assert.Equal(3_100, json.GetProperty("priceBeforeVat").GetDouble(), 2);
         Assert.True(json.GetProperty("vat").GetDouble() > 0);
         Assert.True(json.GetProperty("finalOrderPrice").GetDouble() > 3_000);
         Assert.Equal("THB", json.GetProperty("currency").GetString());
