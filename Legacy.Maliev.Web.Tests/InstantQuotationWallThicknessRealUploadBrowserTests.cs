@@ -12,6 +12,151 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
 {
+    [Theory]
+    [InlineData(320, "th")]
+    [InlineData(375, "en")]
+    public async Task UploadedPartKeepsCompactQuantityTiersAndReviewActionsReachable(int width, string culture)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = 700 },
+            HasTouch = true,
+            IsMobile = true,
+        });
+        await using var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var path = CreateBoxStl(20, 20, 5);
+        try
+        {
+            await page.SetInputFilesAsync("#instant-quote-files", path);
+            await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
+            var viewerControlsFit = await page.Locator("[data-workflow-viewer] > button:not(.instant-quote__thickness-toggle)")
+                .EvaluateAllAsync<bool>("""
+                    buttons => {
+                      const thickness = document.querySelector('.instant-quote__thickness-toggle').getBoundingClientRect();
+                      return buttons.length === 3 && buttons.every(button => {
+                        const box = button.getBoundingClientRect();
+                        return box.width >= 88 && box.height >= 44 && box.right < thickness.left - 4
+                          && button.scrollWidth <= button.clientWidth + 1
+                          && button.scrollHeight <= button.clientHeight + 1;
+                      });
+                    }
+                    """);
+            Assert.True(viewerControlsFit, "Localized viewer controls must not collapse into vertical text columns.");
+            var tiers = page.Locator("[data-workflow-price-tier]");
+            Assert.True(await tiers.CountAsync() > 1);
+            var tierRegion = page.Locator("[data-workflow-bulk-pricing]");
+            await tierRegion.FocusAsync();
+            Assert.True(await tierRegion.EvaluateAsync<bool>("element => document.activeElement === element"));
+            await tiers.Last.ScrollIntoViewIfNeededAsync();
+            Assert.True(await tiers.Last.EvaluateAsync<bool>(
+                "element => { const r = element.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }"));
+            Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+
+            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            await review.WaitForAsync();
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
+                    null,
+                    new PageWaitForFunctionOptions { Timeout = 10000 });
+            }
+            catch (TimeoutException error)
+            {
+                var state = await page.EvaluateAsync<string>("""
+                    () => JSON.stringify({
+                      workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                      review: document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button')?.outerHTML,
+                      status: document.querySelector('#instant-quote-status')?.textContent,
+                      alert: document.querySelector('[role=alert]')?.textContent,
+                      pricingStatus: document.querySelector('[data-pricing-loading-status]')?.textContent,
+                      parts: document.querySelectorAll('[data-workflow-part]').length,
+                      tiers: document.querySelectorAll('[data-workflow-price-tier]').length
+                    })
+                    """);
+                throw new InvalidOperationException($"Uploaded part did not enable review: {state}", error);
+            }
+            if (culture == "th")
+            {
+                await review.TapAsync();
+            }
+            else
+            {
+                await review.FocusAsync();
+                await page.Keyboard.PressAsync("Enter");
+            }
+            var part = page.Locator("[data-workflow-review-part]");
+            await part.WaitForAsync();
+            Assert.Equal(1, await part.CountAsync());
+            Assert.Contains(Path.GetFileName(path), await part.InnerTextAsync(), StringComparison.Ordinal);
+            var disclosure = part.Locator("[data-review-part-details] > summary");
+            if (culture == "th")
+            {
+                await disclosure.TapAsync();
+            }
+            else
+            {
+                await disclosure.FocusAsync();
+                await page.Keyboard.PressAsync("Enter");
+            }
+            Assert.True(await part.Locator("[data-review-part-details]").EvaluateAsync<bool>("element => element.open"));
+            var continueButton = page.Locator("[data-review-continue]");
+            await continueButton.ScrollIntoViewIfNeededAsync();
+            Assert.True(await continueButton.EvaluateAsync<bool>(
+                "element => { const r = element.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }"));
+            Assert.True(await continueButton.EvaluateAsync<bool>("element => element.getBoundingClientRect().height >= 44"));
+            Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+            Assert.Equal(1, upload.VerifiedUploads);
+            Assert.Empty(pageErrors);
+            var skipLink = page.Locator(".maliev-skip-link").First;
+            await skipLink.FocusAsync();
+            Assert.True(await skipLink.EvaluateAsync<bool>("element => getComputedStyle(element).clipPath !== 'inset(50%)'"));
+            await page.EvaluateAsync("() => { document.body.tabIndex = -1; document.body.focus(); }");
+            Assert.True(await skipLink.EvaluateAsync<bool>("element => getComputedStyle(element).clipPath === 'inset(50%)'"));
+            if (Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR") is { Length: > 0 } evidenceDirectory)
+            {
+                Directory.CreateDirectory(evidenceDirectory);
+                await page.Locator("[data-workflow-viewer]").ScreenshotAsync(new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-viewer-{culture}-{width}.png"),
+                });
+                await page.ScreenshotAsync(new PageScreenshotOptions
+                {
+                    Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-{culture}-{width}.png"),
+                    FullPage = true,
+                });
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public async Task SelectingUploadedPartsShowsOnlyTheirOwnPrintTime()
     {
