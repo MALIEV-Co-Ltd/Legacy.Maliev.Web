@@ -16,7 +16,6 @@ internal sealed class InstantQuotationFileCapabilityStore(
     internal const int CurrentVersion = 1;
     internal const string CacheKeyPrefix = "legacy:web:instant-quotation-file-capability:";
     internal const string ProtectorPurpose = "Legacy.Maliev.Web.InstantQuotationFileCapability.v1";
-    private const long ContractMaxUploadBytes = 209_715_200;
     private const int ContractMaxFilesPerSession = 100;
     private static readonly string[] ContractExtensions =
         [".stl", ".obj", ".3mf", ".step", ".stp", ".iges", ".igs", ".glb", ".gltf"];
@@ -150,7 +149,7 @@ internal sealed class InstantQuotationFileCapabilityStore(
         && capability.SessionToken is { Length: >= 32 and <= 512 }
         && capability.SessionToken.All(IsPrintableAscii)
         && capability.ExpiresAt > now
-        && capability.MaxUploadBytes == ContractMaxUploadBytes
+        && InstantQuotationFileUploadLimits.IsSupportedCapability(capability.MaxUploadBytes)
         && capability.MaxFilesPerSession == ContractMaxFilesPerSession
         && capability.SupportedExtensions is not null
         && capability.SupportedExtensions.SequenceEqual(ContractExtensions, StringComparer.Ordinal);

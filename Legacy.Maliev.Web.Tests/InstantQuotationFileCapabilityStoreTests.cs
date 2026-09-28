@@ -15,12 +15,14 @@ public sealed class InstantQuotationFileCapabilityStoreTests
     private static readonly DateTimeOffset Now = new(2030, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly string[] Extensions = [".stl", ".obj", ".3mf", ".step", ".stp", ".iges", ".igs", ".glb", ".gltf"];
 
-    [Fact]
-    public async Task PutGetRemove_ExactOwnerBinding_ReturnsProtectedCapabilitySnapshot()
+    [Theory]
+    [InlineData(104_857_600)]
+    [InlineData(209_715_200)]
+    public async Task PutGetRemove_ExactOwnerBinding_ReturnsProtectedCapabilitySnapshot(long maxUploadBytes)
     {
         var fixture = CreateFixture();
         var sourceExtensions = Extensions.ToArray();
-        var capability = Capability(sourceExtensions);
+        var capability = Capability(sourceExtensions) with { MaxUploadBytes = maxUploadBytes };
 
         Assert.True(await fixture.Store.PutAsync(WebSessionId, "member-42", capability, default));
         sourceExtensions[0] = ".exe";
@@ -78,7 +80,9 @@ public sealed class InstantQuotationFileCapabilityStoreTests
 
     [Theory]
     [InlineData(0, 100)]
+    [InlineData(104_857_599, 100)]
     [InlineData(209_715_200, 0)]
+    [InlineData(157_286_400, 100)]
     [InlineData(209_715_201, 100)]
     [InlineData(209_715_200, 101)]
     public async Task PutAsync_NonContractLimits_FailsClosedWithoutWriting(long maxUploadBytes, int maxFiles)

@@ -89,7 +89,7 @@ internal sealed class InstantQuotationFileServiceTransport(
     IHttpClientFactory clientFactory,
     IServiceAccessTokenProvider tokenProvider)
 {
-    private const long MaximumUploadBytes = 200L * 1024 * 1024;
+    private const long MaximumUploadBytes = InstantQuotationFileUploadLimits.LegacyBytes;
     // Physical simulation is intentionally more tightly bounded than file admission.
     private const long MaximumPhysicalAnalysisBytes = 32L * 1024 * 1024;
     private const int MaximumFilesPerSession = 100;
@@ -625,7 +625,7 @@ internal sealed class InstantQuotationFileServiceTransport(
         capability.SessionId != Guid.Empty
         && IsValidSecret(capability.SessionToken)
         && capability.ExpiresAt != default
-        && capability.MaxUploadBytes == MaximumUploadBytes
+        && InstantQuotationFileUploadLimits.IsSupportedCapability(capability.MaxUploadBytes)
         && capability.MaxFilesPerSession == MaximumFilesPerSession
         && capability.SupportedExtensions.SequenceEqual(SupportedExtensions, StringComparer.Ordinal);
 
@@ -634,7 +634,7 @@ internal sealed class InstantQuotationFileServiceTransport(
         && response.SessionId != Guid.Empty
         && IsValidSecret(response.SessionToken)
         && response.ExpiresAt != default
-        && response.MaxUploadBytes == MaximumUploadBytes
+        && InstantQuotationFileUploadLimits.IsSupportedCapability(response.MaxUploadBytes)
         && response.MaxFilesPerSession == MaximumFilesPerSession
         && response.SupportedExtensions is not null
         && response.SupportedExtensions.SequenceEqual(SupportedExtensions, StringComparer.Ordinal);
