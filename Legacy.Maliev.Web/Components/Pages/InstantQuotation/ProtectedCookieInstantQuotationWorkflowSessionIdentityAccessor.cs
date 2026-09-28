@@ -121,7 +121,7 @@ public sealed class InstantQuotationSessionIdentityCookie(
     public const string CookieName = "__Host-Maliev.InstantQuotation";
 
     /// <summary>Matches the protected server session's absolute lifetime.</summary>
-    public static readonly TimeSpan Lifetime = TimeSpan.FromHours(24);
+    public static readonly TimeSpan Lifetime = TimeSpan.FromHours(3);
 
     /// <summary>Isolates the identity-cookie data-protection payload.</summary>
     public const string ProtectorPurpose = "Legacy.Maliev.Web.InstantQuotationWorkflowIdentity.v1";

@@ -2,13 +2,16 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using StackExchange.Redis;
 using Testcontainers.Redis;
 
@@ -102,6 +105,43 @@ public sealed class RedisRuntimeIntegrationTests(RedisRuntimeFixture fixture)
         var secondStore = secondFactory.Services.GetRequiredService<IAccountSessionStore>();
 
         Assert.Equal(session, await secondStore.GetAsync(sessionId, default));
+    }
+
+    [Fact]
+    public async Task ProtectedInstantQuotationCookieAndSessionSurviveAcrossInstances()
+    {
+        string protectedCookie;
+        string sessionId;
+        using (var firstFactory = fixture.CreateFactory())
+        {
+            var sessionStore = firstFactory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+            var session = await sessionStore.CreateAsync(null, new InstantQuotationOrderState([]), default);
+            sessionId = session.SessionId;
+            var cookie = new InstantQuotationSessionIdentityCookie(
+                firstFactory.Services.GetRequiredService<IDataProtectionProvider>(),
+                TimeProvider.System,
+                NullLogger<InstantQuotationSessionIdentityCookie>.Instance);
+            var context = new DefaultHttpContext();
+
+            cookie.Write(context, sessionId, session.CreatedAt.Add(InstantQuotationSessionIdentityCookie.Lifetime));
+            protectedCookie = context.Response.Headers.SetCookie.ToString().Split(';')[0];
+        }
+
+        using var secondFactory = fixture.CreateFactory();
+        var secondCookie = new InstantQuotationSessionIdentityCookie(
+            secondFactory.Services.GetRequiredService<IDataProtectionProvider>(),
+            TimeProvider.System,
+            NullLogger<InstantQuotationSessionIdentityCookie>.Instance);
+        var secondContext = new DefaultHttpContext();
+        secondContext.Request.Headers.Cookie = protectedCookie;
+
+        var restoredIdentity = secondCookie.TryRead(secondContext);
+        var restoredSession = await secondFactory.Services
+            .GetRequiredService<IInstantQuotationSessionStore>()
+            .GetAsync(restoredIdentity!, null, default);
+
+        Assert.Equal(sessionId, restoredIdentity);
+        Assert.Equal(sessionId, restoredSession?.SessionId);
     }
 
     [Fact]
