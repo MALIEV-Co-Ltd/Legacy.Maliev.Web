@@ -11,13 +11,22 @@ using System.Linq;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 /// <summary>Normalizes finite mesh input into stable local millimetre coordinates.</summary>
 public static class MeshNormalizer
 {
     /// <summary>Applies units and component transforms, diagnoses topology, and computes a stable digest.</summary>
-    public static NormalizedMesh Normalize(MeshInput input, GeometryTolerance tolerance)
+    public static NormalizedMesh Normalize(MeshInput input, GeometryTolerance tolerance) =>
+        Normalize(input, tolerance, CancellationToken.None);
+
+    /// <summary>Applies units and component transforms with cooperative cancellation.</summary>
+    public static NormalizedMesh Normalize(
+        MeshInput input,
+        GeometryTolerance tolerance,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(input.Triangles);
         ArgumentNullException.ThrowIfNull(tolerance);
@@ -34,33 +43,55 @@ public static class MeshNormalizer
         }
 
         var transformed = new List<MeshTriangle>(input.Triangles.Count);
+        Vector3 minimum = new(float.PositiveInfinity);
+        int index = 0;
         foreach (MeshTriangle triangle in input.Triangles)
         {
+            if ((index++ & 1023) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
             Vector3 a = Transform(triangle.A, input.ComponentTransform, input.UnitsToMillimetres);
             Vector3 b = Transform(triangle.B, input.ComponentTransform, input.UnitsToMillimetres);
             Vector3 c = Transform(triangle.C, input.ComponentTransform, input.UnitsToMillimetres);
             transformed.Add(new MeshTriangle(a, b, c));
+            minimum = Vector3.Min(minimum, Vector3.Min(a, Vector3.Min(b, c)));
         }
 
-        Vector3 minimum = new(
-            transformed.Min(triangle => MathF.Min(triangle.A.X, MathF.Min(triangle.B.X, triangle.C.X))),
-            transformed.Min(triangle => MathF.Min(triangle.A.Y, MathF.Min(triangle.B.Y, triangle.C.Y))),
-            transformed.Min(triangle => MathF.Min(triangle.A.Z, MathF.Min(triangle.B.Z, triangle.C.Z))));
-        var normalized = transformed
-            .Select(triangle => new MeshTriangle(triangle.A - minimum, triangle.B - minimum, triangle.C - minimum))
-            .ToArray();
+        var normalized = new MeshTriangle[transformed.Count];
+        for (int triangleIndex = 0; triangleIndex < transformed.Count; triangleIndex++)
+        {
+            if ((triangleIndex & 1023) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-        var diagnostics = Diagnose(normalized, tolerance.CoordinateMm);
-        return new NormalizedMesh(normalized, ComputeDigest(normalized, tolerance.CoordinateMm), diagnostics);
+            MeshTriangle triangle = transformed[triangleIndex];
+            normalized[triangleIndex] = new MeshTriangle(
+                triangle.A - minimum, triangle.B - minimum, triangle.C - minimum);
+        }
+
+        var diagnostics = Diagnose(normalized, tolerance.CoordinateMm, cancellationToken);
+        return new NormalizedMesh(normalized, ComputeDigest(normalized, tolerance.CoordinateMm, cancellationToken), diagnostics);
     }
 
-    private static IReadOnlyList<string> Diagnose(IReadOnlyList<MeshTriangle> triangles, double coordinateMm)
+    private static IReadOnlyList<string> Diagnose(
+        IReadOnlyList<MeshTriangle> triangles,
+        double coordinateMm,
+        CancellationToken cancellationToken)
     {
         var diagnostics = new SortedSet<string>(StringComparer.Ordinal);
         var edges = new Dictionary<EdgeKey, int>();
         double minimumAreaVector = coordinateMm * coordinateMm;
-        foreach (MeshTriangle triangle in triangles)
+        for (int index = 0; index < triangles.Count; index++)
         {
+            if ((index & 1023) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            MeshTriangle triangle = triangles[index];
             Vector3 areaVector = Vector3.Cross(triangle.B - triangle.A, triangle.C - triangle.A);
             if (areaVector.LengthSquared() <= minimumAreaVector * minimumAreaVector)
             {
@@ -94,10 +125,20 @@ public static class MeshNormalizer
         edges[edge] = edges.GetValueOrDefault(edge) + 1;
     }
 
-    private static string ComputeDigest(IReadOnlyList<MeshTriangle> triangles, double precision)
+    private static string ComputeDigest(
+        IReadOnlyList<MeshTriangle> triangles,
+        double precision,
+        CancellationToken cancellationToken)
     {
-        string[] canonical = triangles.Select(triangle =>
+        var canonical = new string[triangles.Count];
+        for (int index = 0; index < triangles.Count; index++)
         {
+            if ((index & 1023) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            MeshTriangle triangle = triangles[index];
             VertexKey[] vertices =
             [
                 VertexKey.Create(triangle.A, precision),
@@ -105,10 +146,13 @@ public static class MeshNormalizer
                 VertexKey.Create(triangle.C, precision),
             ];
             Array.Sort(vertices);
-            return string.Join(';', vertices.Select(vertex => vertex.ToString()));
-        }).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            canonical[index] = string.Join(';', vertices.Select(vertex => vertex.ToString()));
+        }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        Array.Sort(canonical, StringComparer.Ordinal);
         string body = string.Join('\n', canonical);
+        cancellationToken.ThrowIfCancellationRequested();
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body)));
     }
 

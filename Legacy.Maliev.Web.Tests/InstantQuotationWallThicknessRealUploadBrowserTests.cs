@@ -74,6 +74,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             Assert.True(await tiers.Last.EvaluateAsync<bool>(
                 "element => { const r = element.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }"));
             Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+            var uploadedPartId = Guid.Parse((await page.Locator("[data-workflow-part]")
+                .GetAttributeAsync("data-part-id"))!);
+            await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(uploadedPartId);
 
             await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
@@ -526,8 +529,22 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
     private sealed class HashCheckingUploadClient : IInstantQuotationUploadClient
     {
         private int verifiedUploads;
+        private BrowserUpload? verifiedUpload;
 
         public int VerifiedUploads => Volatile.Read(ref verifiedUploads);
+
+        public async Task AssertAdmittedMeshMatchesBrowserUploadAsync(Guid partId)
+        {
+            BrowserUpload upload = Assert.IsType<BrowserUpload>(verifiedUpload);
+            var reader = new BrowserUploadInputReader(upload, partId);
+            var service = new InstantQuotationAdmittedMeshService(reader);
+            var mesh = await service.ReadAsync(
+                upload.SessionId, upload.OwnerIdentity, partId, upload.FileId, upload.Sha256, default);
+            Assert.True(mesh.IsReady);
+            Assert.Equal(upload.Sha256, mesh.UploadSha256);
+            Assert.Equal(12, mesh.Mesh!.Triangles.Count);
+            Assert.Equal(1, reader.ReadCount);
+        }
 
         public async Task<InstantQuotationUploadResult> UploadAsync(
             string sessionId,
@@ -553,10 +570,13 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
                     InstantQuotationProblemCategory.Validation);
             }
 
+            var fileId = Guid.NewGuid();
+            verifiedUpload = new BrowserUpload(sessionId, ownerIdentity, fileId, fileName,
+                copy.ToArray(), sha256);
             Interlocked.Increment(ref verifiedUploads);
             return InstantQuotationUploadResult.Succeeded(
                 operationId,
-                new InstantQuotationUploadReference(Guid.NewGuid().ToString("D")),
+                new InstantQuotationUploadReference(fileId.ToString("D")),
                 sha256);
         }
 
@@ -574,5 +594,28 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
             string operationId,
             CancellationToken cancellationToken) => Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
+    }
+
+    private sealed record BrowserUpload(
+        string SessionId, string? OwnerIdentity, Guid FileId, string FileName, byte[] Bytes, string Sha256);
+
+    private sealed class BrowserUploadInputReader(BrowserUpload upload, Guid partId)
+        : IInstantQuotationPhysicalAnalysisInputReader
+    {
+        public int ReadCount { get; private set; }
+
+        public Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(
+            string sessionId, string? ownerIdentity, Guid requestedPartId, CancellationToken cancellationToken)
+        {
+            ReadCount++;
+            return Task.FromResult(sessionId == upload.SessionId
+                && ownerIdentity == upload.OwnerIdentity
+                && requestedPartId == partId
+                ? new InstantQuotationPhysicalAnalysisInputResult(
+                    upload.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None,
+                    upload.FileId, upload.FileName, upload.Sha256)
+                : InstantQuotationPhysicalAnalysisInputResult.Unavailable(
+                    InstantQuotationPhysicalAnalysisInputFailure.SessionUnavailable));
+        }
     }
 }
