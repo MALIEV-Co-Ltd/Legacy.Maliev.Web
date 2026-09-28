@@ -9,6 +9,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
     [InlineData(375, 667)]
     [InlineData(820, 800)]
     [InlineData(1280, 800)]
+    [InlineData(1440, 900)]
     public async Task CustomerLedgerAndFormRemainReadableAtRepresentativeWidths(int width, int height)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -20,6 +21,10 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         await page.GotoAsync(new Uri(new Uri(origin), "/instantquotation/3d-printing?culture=en").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+
+        // The synthetic customer step must not be replaced by Blazor's first interactive render.
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined");
 
         await page.EvaluateAsync("""
             () => {
@@ -60,6 +65,16 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 "element => element.scrollHeight > element.clientHeight"));
             Assert.True(await page.Locator(".instant-quote__customer-order-scroll").EvaluateAsync<bool>(
                 "element => element.scrollHeight > element.clientHeight"));
+            var lastPart = page.Locator(".instant-quote__customer-order-scroll tbody tr").Last;
+            await lastPart.ScrollIntoViewIfNeededAsync();
+            Assert.True(await lastPart.EvaluateAsync<bool>("""
+                element => {
+                  const row = element.getBoundingClientRect();
+                  const rail = element.closest('.instant-quote__customer-order-scroll').getBoundingClientRect();
+                  return row.top >= rail.top - 1 && row.bottom <= rail.bottom + 1;
+                }
+                """));
+            Assert.True(await page.Locator(".instant-quote__pricing-summary").IsVisibleAsync());
         }
         else
         {
