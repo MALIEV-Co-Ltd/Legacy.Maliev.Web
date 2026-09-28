@@ -14,9 +14,16 @@ internal enum InstantQuotationPhysicalAnalysisInputFailure
 
 internal sealed record InstantQuotationPhysicalAnalysisInputResult(
     byte[]? Content,
-    InstantQuotationPhysicalAnalysisInputFailure Failure)
+    InstantQuotationPhysicalAnalysisInputFailure Failure,
+    Guid FileId = default,
+    string? FileName = null,
+    string? Sha256 = null)
 {
-    internal bool IsReady => Content is not null && Failure == InstantQuotationPhysicalAnalysisInputFailure.None;
+    internal bool IsReady => Content is not null
+        && Failure == InstantQuotationPhysicalAnalysisInputFailure.None
+        && FileId != Guid.Empty
+        && !string.IsNullOrWhiteSpace(FileName)
+        && !string.IsNullOrWhiteSpace(Sha256);
 
     internal static InstantQuotationPhysicalAnalysisInputResult Unavailable(
         InstantQuotationPhysicalAnalysisInputFailure failure) => new(null, failure);

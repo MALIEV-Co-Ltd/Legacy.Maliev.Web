@@ -76,7 +76,12 @@ internal sealed class InstantQuotationPhysicalAnalysisInputReader(
                 upload.Status);
             var read = await transport.ReadCleanForAnalysisAsync(capability, file, cancellationToken);
             return read.Status == InstantQuotationOperationStatus.Succeeded && read.Content is not null
-                ? new InstantQuotationPhysicalAnalysisInputResult(read.Content, InstantQuotationPhysicalAnalysisInputFailure.None)
+                ? new InstantQuotationPhysicalAnalysisInputResult(
+                    read.Content,
+                    InstantQuotationPhysicalAnalysisInputFailure.None,
+                    upload.FileId,
+                    upload.FileName,
+                    upload.Sha256)
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(
                     InstantQuotationPhysicalAnalysisInputFailure.ContentUnavailable);
         }
