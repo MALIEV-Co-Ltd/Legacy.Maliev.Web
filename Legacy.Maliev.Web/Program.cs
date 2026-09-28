@@ -534,6 +534,8 @@ if (useBlazorRouteHost)
 app.MapDefaultEndpoints("web");
 app.MapBuildIdentity();
 app.MapLegacySitemap();
+app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))
+    .ExcludeFromDescription();
 app.MapGet("/instant-quotation/fdm-profiles.v1.json", (FdmRuntimeProfileCatalog profiles, HttpContext context) =>
 {
     context.Response.Headers.CacheControl = "no-store";
