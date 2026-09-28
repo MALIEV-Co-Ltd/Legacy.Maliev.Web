@@ -2040,6 +2040,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         var connectSourceDirective = policy.Split(';', StringSplitOptions.TrimEntries)
             .Single(static directive => directive.StartsWith("connect-src ", StringComparison.Ordinal));
         Assert.Contains("https://www.googleadservices.com", connectSourceDirective, StringComparison.Ordinal);
+        Assert.Contains("https://ad.doubleclick.net", connectSourceDirective, StringComparison.Ordinal);
         Assert.Contains("https://googleads.g.doubleclick.net", connectSourceDirective, StringComparison.Ordinal);
         Assert.Contains("https://pagead2.googlesyndication.com", connectSourceDirective, StringComparison.Ordinal);
         Assert.Contains("'wasm-unsafe-eval'", policy, StringComparison.Ordinal);
