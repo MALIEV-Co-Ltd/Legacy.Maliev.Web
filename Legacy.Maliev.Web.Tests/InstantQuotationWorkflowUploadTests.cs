@@ -18,7 +18,7 @@ public sealed class InstantQuotationWorkflowUploadTests
             "accept=\".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges,model/stl,application/sla,application/vnd.ms-pki.stl,model/x.stl-binary,model/x.stl-ascii,model/obj,model/3mf,model/gltf-binary,model/gltf+json,model/step,model/iges\"",
             source,
             StringComparison.Ordinal);
-        Assert.Contains("200 * 1024 * 1024", ReadWorkflowSources(), StringComparison.Ordinal);
+        Assert.Contains("100 * 1024 * 1024", ReadWorkflowSources(), StringComparison.Ordinal);
         foreach (var marker in new[]
         {
             "data-workflow-upload",
@@ -415,6 +415,24 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         await workflow.UploadAsync([UploadFile(fileName)], default);
 
+        Assert.Empty(client.UploadOperations);
+        var upload = Assert.Single(workflow.Uploads);
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, upload.Status);
+        Assert.Equal(InstantQuotationProblemCategory.Validation, upload.ProblemCategory);
+    }
+
+    [Fact]
+    public async Task AboveHundredMegabytes_IsRejectedBeforeUploadBoundary()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+
+        await workflow.UploadAsync(
+            [UploadFile("oversized.stl") with { Length = InstantQuotationWorkflowCoordinator.MaximumFileSize + 1 }],
+            default);
+
+        Assert.Equal(100L * 1024 * 1024, InstantQuotationWorkflowCoordinator.MaximumFileSize);
         Assert.Empty(client.UploadOperations);
         var upload = Assert.Single(workflow.Uploads);
         Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, upload.Status);

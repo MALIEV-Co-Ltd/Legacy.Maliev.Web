@@ -65,7 +65,7 @@ public sealed partial class InstantQuotationLocalizationParityTests
             ["Try upload again for {0}"] = "ลองอัปโหลด {0} อีกครั้ง",
             ["View {0}"] = "ดู {0}",
             ["Remove {0}"] = "ลบ {0}",
-            ["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each."] = "ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 200 MB",
+            ["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 100 MB each."] = "ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 100 MB",
             ["Thailand"] = "ประเทศไทย",
             ["Any"] = "สีใดก็ได้",
             ["Black"] = "ดำ",

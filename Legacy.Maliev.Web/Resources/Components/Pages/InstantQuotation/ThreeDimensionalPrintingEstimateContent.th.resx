@@ -410,7 +410,7 @@
   <data name="Try upload again for {0}" xml:space="preserve"><value>ลองอัปโหลด {0} อีกครั้ง</value></data>
   <data name="View {0}" xml:space="preserve"><value>ดู {0}</value></data>
   <data name="Remove {0}" xml:space="preserve"><value>ลบ {0}</value></data>
-  <data name="Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each." xml:space="preserve"><value>ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 200 MB</value></data>
+  <data name="Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 100 MB each." xml:space="preserve"><value>ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 100 MB</value></data>
   <data name="Thailand" xml:space="preserve"><value>ประเทศไทย</value></data>
   <data name="Any" xml:space="preserve"><value>สีใดก็ได้</value></data>
   <data name="Black" xml:space="preserve"><value>ดำ</value></data>
