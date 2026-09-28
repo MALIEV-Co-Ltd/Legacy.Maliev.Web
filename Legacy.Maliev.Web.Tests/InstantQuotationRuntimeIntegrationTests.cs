@@ -1,5 +1,6 @@
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -39,6 +40,13 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
     }
 
     [Fact]
+    public void ProtectedCookieAndDistributedSessionKeepSourceThreeHourLifetime()
+    {
+        Assert.Equal(TimeSpan.FromHours(3), InstantQuotationSessionIdentityCookie.Lifetime);
+        Assert.Equal(TimeSpan.FromHours(3), DistributedInstantQuotationSessionStore.SessionLifetime);
+    }
+
+    [Fact]
     public async Task Route_FirstRequestEstablishesProtectedCookie_AndReloadDoesNotExtendIt()
     {
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -60,7 +68,7 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
         Assert.Contains("path=/", setCookie, StringComparison.OrdinalIgnoreCase);
         var maxAge = Regex.Match(setCookie, "max-age=(?<seconds>[0-9]+)", RegexOptions.IgnoreCase);
         Assert.True(maxAge.Success);
-        Assert.InRange(int.Parse(maxAge.Groups["seconds"].Value), 86_390, 86_400);
+        Assert.InRange(int.Parse(maxAge.Groups["seconds"].Value), 10_790, 10_800);
         Assert.DoesNotContain("domain=", setCookie, StringComparison.OrdinalIgnoreCase);
 
         using var second = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");

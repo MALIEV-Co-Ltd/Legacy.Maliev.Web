@@ -20,7 +20,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
     internal const int CurrentVersion = 1;
     internal const string CacheKeyPrefix = "legacy:web:instant-quotation-session:";
     internal const string ProtectorPurpose = "Legacy.Maliev.Web.InstantQuotationSession.v1";
-    internal static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(24);
+    internal static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(3);
     private readonly IDataProtector protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
     private readonly object localLockRegistrySync = new();
     private readonly Dictionary<string, LocalLockEntry> localLocks = new(StringComparer.Ordinal);
