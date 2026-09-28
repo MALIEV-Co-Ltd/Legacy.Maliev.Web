@@ -386,23 +386,6 @@
                     <a href="/legal/nondisclosureagreement">@Localizer["Non-Disclosure Agreement"]</a>
                 </div>
 
-                @if (PriceNeedsEngineeringReview)
-                {
-                    <p data-price-confidence class="instant-quote__price-confidence instant-quote__price-confidence--review" role="status">
-                        <span aria-hidden="true">!</span>
-                        @(AllPartsNeedEngineeringReview
-                            ? Localizer["Needs engineer review — the model is not watertight, so this price is an approximation."]
-                            : Localizer["Needs engineer review — some parts are not watertight, so part of this price is an approximation."])
-                    </p>
-                }
-                else if (OrderQuote is not null)
-                {
-                    <p data-price-confidence class="instant-quote__price-confidence instant-quote__price-confidence--review" role="status">
-                        <span aria-hidden="true">!</span>
-                        @Localizer["Preliminary price — model volume was measured; manufacturing suitability is confirmed by our engineer."]
-                    </p>
-                }
-
                 <div class="instant-quote__configuration-actions">
                     <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
                     <a class="instant-quote__consultation-link" data-summary-consultation href="/contact#contact-us" target="_blank" rel="noopener noreferrer">@Localizer["Talk to an engineer"]<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a>

@@ -90,9 +90,6 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private InstantQuotationOrderQuote? OrderQuote => workflow?.OrderQuote;
 
-    private bool PriceNeedsEngineeringReview => Parts.Any(static part =>
-        part.Geometry.NonWatertight || !part.Geometry.TopologyChecked);
-
     private bool HasConfigurationWarnings => ConfigurationParts.Any(HasManufacturingWarning);
 
     private bool HasManufacturingWarning(InstantQuotationWorkflowPartViewModel part)
@@ -108,9 +105,6 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             || (thicknessStatuses.TryGetValue(part.PartId, out var thickness)
                 && (thickness.Warning || thickness.Incomplete));
     }
-
-    private bool AllPartsNeedEngineeringReview => Parts.Count > 0 && Parts.All(static part =>
-        part.Geometry.NonWatertight || !part.Geometry.TopologyChecked);
 
     private string LeadTime => OrderQuote is null
         ? "—"
