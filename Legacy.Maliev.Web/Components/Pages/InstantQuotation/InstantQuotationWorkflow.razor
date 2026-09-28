@@ -478,8 +478,15 @@
             }
             else if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
             {
-                <p role="alert">@Localizer["Your request could not be submitted. Please review the form and try again."]</p>
-                <p><a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a></p>
+                @if (CustomerModel.ProblemCategory is "validation")
+                {
+                    <p role="alert">@Localizer["Your request could not be submitted. Please review the form and try again."]</p>
+                    <p><a href="/InstantQuotation/3D-Printing">@Localizer["Return to your quotation"]</a></p>
+                }
+                else
+                {
+                    <p role="alert">@Localizer["We could not confirm whether your request was received. Do not submit it again; contact MALIEV support."]</p>
+                }
             }
             else
             {

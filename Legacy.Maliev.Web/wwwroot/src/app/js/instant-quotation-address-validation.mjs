@@ -39,13 +39,12 @@ export function buildingContainsAddressComponents(building, addressComponents) {
     return false;
 }
 
-export function wireInstantQuotationAddressValidation(form) {
+export function wireInstantQuotationAddressValidation(form, submit = form?.querySelector?.('[data-instant-quote-submit]')) {
     if (!form?.elements) {
         return;
     }
 
     const message = form.dataset?.addressValidationMessage ?? '';
-    const submit = form.querySelector?.('[data-instant-quote-submit]');
     const shipToBilling = form.elements.namedItem('ShipToBillingAddress');
 
     const validateGroup = (group) => {
@@ -101,6 +100,10 @@ export function wireInstantQuotationAddressValidation(form) {
         validateGroup(groups[1]);
         updateSubmit();
     });
+    // The submit button sits outside the form. Recheck all customer fields, not only
+    // address components, so correcting another required field can re-enable it.
+    form.addEventListener?.('input', updateSubmit);
+    form.addEventListener?.('change', updateSubmit);
     form.addEventListener?.('submit', (event) => {
         const valid = groups.every(validateGroup);
         updateSubmit();

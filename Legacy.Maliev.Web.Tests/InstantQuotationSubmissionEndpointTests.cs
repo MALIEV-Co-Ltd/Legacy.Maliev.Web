@@ -480,6 +480,91 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         Assert.Matches("id=\"instant-quote-description\"[^>]*aria-invalid=\"true\"", correctionSource);
     }
 
+    [Fact]
+    public async Task JsonSubmit_InvalidCustomerCanRetryWithoutLosingPageState()
+    {
+        var service = new RecordingSubmissionService(Completed(723));
+        var tempData = new RecordingTempDataProvider();
+        await using var application = CreateFactory(service, tempData);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        tempData.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await client.PostAsync(SubmitRoute, CustomerForm(new()
+        {
+            ["FirstName"] = new string('a', 51),
+            ["__RequestVerificationToken"] = token,
+        }));
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("retry", payload.RootElement.GetProperty("outcome").GetString());
+        Assert.Contains("FirstName", payload.RootElement.GetProperty("invalidFields")
+            .EnumerateArray().Select(field => field.GetString()));
+        Assert.NotEmpty(payload.RootElement.GetProperty("errors").EnumerateArray());
+        Assert.Empty(service.Calls);
+        Assert.Empty(tempData.Values);
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationSubmissionOutcome.Rejected, InstantQuotationProblemCategory.Validation, "retry")]
+    [InlineData(InstantQuotationSubmissionOutcome.Rejected, InstantQuotationProblemCategory.DependencyUnavailable, "terminal")]
+    [InlineData(InstantQuotationSubmissionOutcome.Partial, InstantQuotationProblemCategory.DependencyUnavailable, "terminal")]
+    [InlineData(InstantQuotationSubmissionOutcome.Completed, InstantQuotationProblemCategory.None, "terminal")]
+    public async Task JsonSubmit_OnlyProvenPreCreationValidationIsRetryable(
+        InstantQuotationSubmissionOutcome outcome,
+        InstantQuotationProblemCategory category,
+        string expectedOutcome)
+    {
+        var service = new RecordingSubmissionService(new(
+            outcome,
+            outcome is InstantQuotationSubmissionOutcome.Partial or InstantQuotationSubmissionOutcome.Completed ? 727 : null,
+            category));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await client.PostAsync(SubmitRoute, CustomerForm(new()
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expectedOutcome, payload.RootElement.GetProperty("outcome").GetString());
+        if (expectedOutcome == "terminal")
+        {
+            Assert.Equal("/InstantQuotation/3D-Printing", payload.RootElement.GetProperty("redirectUrl").GetString());
+        }
+        Assert.Single(service.Calls);
+    }
+
+    [Fact]
+    public async Task JsonSubmit_UnconfirmedDownstreamOutcomeNeverInvitesBlindResubmission()
+    {
+        var service = new RecordingSubmissionService(new(
+            InstantQuotationSubmissionOutcome.Rejected,
+            null,
+            InstantQuotationProblemCategory.DependencyUnavailable));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await client.PostAsync(SubmitRoute, CustomerForm(new()
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var nextPage = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+
+        Assert.Equal("terminal", payload.RootElement.GetProperty("outcome").GetString());
+        Assert.Contains("Do not submit it again; contact MALIEV support.", nextPage, StringComparison.Ordinal);
+        Assert.Single(service.Calls);
+    }
+
     [Theory]
     [InlineData("en", "Thai tax ID must contain exactly 13 digits.", "Building or organization name must be 256 characters or fewer.")]
     [InlineData("th", "เลขประจำตัวผู้เสียภาษีไทยต้องมีตัวเลข 13 หลัก", "ชื่ออาคารหรือองค์กรต้องมีความยาวไม่เกิน 256 ตัวอักษร")]
