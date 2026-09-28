@@ -190,11 +190,17 @@ public sealed class ThreeDimensionalPrinting : PageModel
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
+        var wantsJson = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
         NormalizeOptionalCustomerFields();
         ValidateConditionalCustomerFields();
         ValidateBuildingFields();
         if (!ModelState.IsValid)
         {
+            if (wantsJson)
+            {
+                return RetryJson();
+            }
+
             var invalidFields = ModelState
                 .Where(static item => item.Value?.Errors.Count > 0 && ControlledValidationFields.Contains(item.Key))
                 .Select(static item => item.Key)
@@ -221,7 +227,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
         if (!IsValidSessionIdentity(sessionId))
         {
             StoreRejected(InstantQuotationProblemCategory.Authorization);
-            return LocalRedirect("/InstantQuotation/3D-Printing");
+            return TerminalOrRedirect(wantsJson);
         }
 
         var isAuthenticated = User.Identity?.IsAuthenticated is true;
@@ -231,12 +237,12 @@ public sealed class ThreeDimensionalPrinting : PageModel
         if (isAuthenticated && ownerIdentity is null)
         {
             StoreRejected(InstantQuotationProblemCategory.Authorization);
-            return LocalRedirect("/InstantQuotation/3D-Printing");
+            return TerminalOrRedirect(wantsJson);
         }
         if (submissionService is null)
         {
             StoreRejected(InstantQuotationProblemCategory.DependencyUnavailable);
-            return LocalRedirect("/InstantQuotation/3D-Printing");
+            return TerminalOrRedirect(wantsJson);
         }
 
         InstantQuotationSubmissionResult result;
@@ -275,12 +281,37 @@ public sealed class ThreeDimensionalPrinting : PageModel
         {
             logger?.LogError("Instant Quotation submission failed before a controlled result was returned.");
             StoreRejected(InstantQuotationProblemCategory.Unexpected);
-            return LocalRedirect("/InstantQuotation/3D-Printing");
+            return TerminalOrRedirect(wantsJson);
+        }
+
+        // Only validation is known to have failed before a request could be created.
+        // A downstream timeout can hide a persisted request, so it is never a safe retry.
+        if (wantsJson && result.Outcome == InstantQuotationSubmissionOutcome.Rejected
+            && result.ProblemCategory == InstantQuotationProblemCategory.Validation)
+        {
+            return RetryJson();
         }
 
         StoreResult(result);
-        return LocalRedirect("/InstantQuotation/3D-Printing");
+        return TerminalOrRedirect(wantsJson);
     }
+
+    private IActionResult TerminalOrRedirect(bool wantsJson) => wantsJson
+        ? new JsonResult(new { outcome = "terminal", redirectUrl = "/InstantQuotation/3D-Printing" })
+        : LocalRedirect("/InstantQuotation/3D-Printing");
+
+    private JsonResult RetryJson() => new(new
+    {
+        outcome = "retry",
+        errors = ModelState.Values.SelectMany(static state => state.Errors)
+            .Select(static error => error.ErrorMessage)
+            .Where(static message => !string.IsNullOrWhiteSpace(message))
+            .ToArray(),
+        invalidFields = ModelState.Keys
+            .Where(key => ControlledValidationFields.Contains(key) && ModelState[key]?.Errors.Count > 0)
+            .Order(StringComparer.Ordinal)
+            .ToArray(),
+    });
 
     private static bool IsValidSessionIdentity(string? value) =>
         value is { Length: 64 } && value.All(Uri.IsHexDigit);

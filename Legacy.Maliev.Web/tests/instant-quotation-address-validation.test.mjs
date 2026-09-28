@@ -63,6 +63,39 @@ test('live building validation shows the localized field error and disables subm
     assert.equal(submit.disabled, false);
 });
 
+test('validation controls the submit button rendered outside the form', () => {
+    const fields = new Map([
+        ['FirstName', control('')],
+        ['BillingBuilding', control('')],
+        ['BillingStreet1', control('155 ซอย วงศ์สว่าง11')],
+        ['BillingStreet2', control('แขวงวงศ์สว่าง')],
+        ['BillingCity', control('บางซื่อ')],
+        ['BillingProvince', control('กรุงเทพมหานคร')],
+        ['BillingPostalCode', control('10800')],
+        ['ShipToBillingAddress', control('true', true)],
+        ['ShippingBuilding', control('')],
+        ['ShippingStreet1', control('')],
+        ['ShippingStreet2', control('')],
+        ['ShippingCity', control('')],
+        ['ShippingProvince', control('')],
+        ['ShippingPostalCode', control('')],
+    ]);
+    const submit = { disabled: false };
+    const form = fakeForm(fields, { hidden: true }, null);
+    fields.get('FirstName').validationMessage = 'required';
+    wireInstantQuotationAddressValidation(form, submit);
+
+    assert.equal(submit.disabled, true);
+    fields.get('FirstName').validationMessage = '';
+    form.dispatch('input');
+    assert.equal(submit.disabled, false);
+
+    fields.get('BillingBuilding').value = '155 ซอย วงศ์สว่าง11 แขวงวงศ์สว่าง เขตบางซื่อ';
+    fields.get('BillingBuilding').dispatch('input');
+
+    assert.equal(submit.disabled, true);
+});
+
 function control(value, checked = false) {
     const listeners = new Map();
     return {
@@ -92,6 +125,7 @@ function fakeForm(fields, error, submit) {
         },
         elements: { namedItem: (name) => fields.get(name) ?? null },
         addEventListener(type, listener) { listeners.set(type, listener); },
+        dispatch(type) { listeners.get(type)?.({ target: this }); },
         querySelector(selector) {
             if (selector === '[data-address-validation-for="BillingBuilding"]') return error;
             if (selector === '[data-instant-quote-submit]') return submit;

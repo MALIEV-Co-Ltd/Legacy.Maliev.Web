@@ -4,6 +4,7 @@ import {
 } from './instant-quotation-controller.mjs';
 import { wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
 import { wireInstantQuotationAddressValidation } from './instant-quotation-address-validation.mjs';
+import { wireInstantQuotationSubmission } from './instant-quotation-submission.mjs';
 
 const form = document.querySelector('[data-instant-estimate]');
 const status = document.getElementById('estimate-status');
@@ -62,7 +63,15 @@ function wireCustomerForms(root) {
 
         wiredCustomerForms.add(customerForm);
         wireOptionalQuotationFields(customerForm);
-        wireInstantQuotationAddressValidation(customerForm);
+        const customerSubmit = document.querySelector('[data-instant-quote-submit]');
+        wireInstantQuotationAddressValidation(customerForm, customerSubmit);
+        if (customerForm.id === 'instant-quotation-form') {
+            wireInstantQuotationSubmission(
+                customerForm,
+                customerSubmit,
+                window.fetch.bind(window),
+                (url) => { window.location.href = url; });
+        }
     });
 }
 
