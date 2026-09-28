@@ -12,15 +12,15 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Orders;
 
 [Authorize]
-[RequestFormLimits(MultipartBodyLengthLimit = 220_200_960)]
-[RequestSizeLimit(220_200_960)]
+[RequestFormLimits(MultipartBodyLengthLimit = 115_343_360)]
+[RequestSizeLimit(115_343_360)]
 public abstract class MemberOrderCreatePageModel(
     CustomerOrderKind kind,
     IAccountSessionManager sessionManager,
     ICustomerOrderCatalogClient catalogClient,
     ICustomerOrderSubmissionService submissionService) : PageModel
 {
-    private const long MaximumUploadBytes = 200L * 1024 * 1024;
+    private const long MaximumUploadBytes = 100L * 1024 * 1024;
 
     public MemberOrderCreationDisplayModel DisplayModel { get; private set; } = default!;
 
@@ -70,7 +70,7 @@ public abstract class MemberOrderCreatePageModel(
 
         if (Files.Sum(file => file.Length) > MaximumUploadBytes)
         {
-            ModelState.AddModelError(nameof(Files), "The total upload size cannot exceed 200 MB.");
+            ModelState.AddModelError(nameof(Files), "The total upload size cannot exceed 100 MB.");
         }
 
         var catalogResult = await catalogClient.GetAsync(kind, cancellationToken);

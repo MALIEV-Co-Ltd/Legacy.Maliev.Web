@@ -423,6 +423,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains($">{heading}<", decoded, StringComparison.Ordinal);
         Assert.Contains($"action=\"{action}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(culture == "th" ? "ขนาดรวมสูงสุด 100 MB" : "Maximum total upload size: 100 MB", decoded, StringComparison.Ordinal);
+        Assert.DoesNotContain("200 MB", decoded, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"OperationId\"", source, StringComparison.Ordinal);
         Assert.Contains("noindex,follow", source, StringComparison.OrdinalIgnoreCase);

@@ -24,7 +24,7 @@
     <div class="maliev-form-field maliev-form-field--full">
         <label for="member-order-files">@(Model.Kind == CustomerOrderKind.Scanning ? Localizer["Pictures of the object"] : Localizer["Upload files"])</label>
         <input id="member-order-files" type="file" name="Files" accept="@Model.AcceptedExtensions" multiple />
-        <span class="maliev-form-help">@Localizer["Optional. Maximum total upload size: 200 MB."]</span>
+        <span class="maliev-form-help">@Localizer["Optional. Maximum total upload size: 100 MB."]</span>
     </div>
     <div class="maliev-form-grid">
         <div class="maliev-form-field"><label for="member-order-name">@Localizer["Name"]</label><input id="member-order-name" name="Name" value="@Model.Name" maxlength="200" required /></div>

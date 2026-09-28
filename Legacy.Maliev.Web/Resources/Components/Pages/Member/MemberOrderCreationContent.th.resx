@@ -20,7 +20,7 @@
   <data name="Verify that your part conforms to our manufacturing specifications. The quotation is non-binding and can be cancelled before acceptance." xml:space="preserve"><value>โปรดตรวจสอบว่าชิ้นงานเป็นไปตามข้อกำหนดการผลิต ใบเสนอราคายังไม่มีผลผูกพันและยกเลิกได้ก่อนตอบรับ</value></data>
   <data name="Pictures of the object" xml:space="preserve"><value>รูปภาพของวัตถุ</value></data>
   <data name="Upload files" xml:space="preserve"><value>แนบไฟล์</value></data>
-  <data name="Optional. Maximum total upload size: 200 MB." xml:space="preserve"><value>ไม่บังคับ ขนาดรวมสูงสุด 200 MB</value></data>
+  <data name="Optional. Maximum total upload size: 100 MB." xml:space="preserve"><value>ไม่บังคับ ขนาดรวมสูงสุด 100 MB</value></data>
   <data name="Name" xml:space="preserve"><value>ชื่อชิ้นงาน</value></data>
   <data name="Quantity" xml:space="preserve"><value>จำนวน</value></data>
   <data name="Process" xml:space="preserve"><value>กระบวนการผลิต</value></data>
@@ -49,7 +49,7 @@
   <data name="Order options are temporarily unavailable." xml:space="preserve"><value>ตัวเลือกคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
   <data name="The order operation is invalid. Please reload the page and try again." xml:space="preserve"><value>ข้อมูลการส่งคำสั่งซื้อไม่ถูกต้อง โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง</value></data>
   <data name="You must agree to the terms of service." xml:space="preserve"><value>โปรดยอมรับข้อกำหนดการใช้บริการ</value></data>
-  <data name="The total upload size cannot exceed 200 MB." xml:space="preserve"><value>ไฟล์ทั้งหมดต้องมีขนาดรวมไม่เกิน 200 MB</value></data>
+  <data name="The total upload size cannot exceed 100 MB." xml:space="preserve"><value>ไฟล์ทั้งหมดต้องมีขนาดรวมไม่เกิน 100 MB</value></data>
   <data name="Please select a valid process." xml:space="preserve"><value>โปรดเลือกกระบวนการผลิตที่ถูกต้อง</value></data>
   <data name="Please select a valid material." xml:space="preserve"><value>โปรดเลือกวัสดุที่ถูกต้อง</value></data>
   <data name="Please select a valid color." xml:space="preserve"><value>โปรดเลือกสีที่ถูกต้อง</value></data>
