@@ -90,6 +90,27 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.DoesNotContain(descriptor.Sha256, Encoding.UTF8.GetString(raw), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(10_000, true)]
+    [InlineData(10_001, false)]
+    public async Task ProtectedSession_UsesCurrentAdditiveQuantityBoundary(int quantity, bool accepted)
+    {
+        var fixture = CreateFixture();
+        var part = Part("PLA", Enumerable.Repeat(500.0, 64).ToArray(),
+            Enumerable.Repeat(80.0, 64).ToArray());
+        var created = await fixture.Store.CreateAsync("customer-42",
+            new InstantQuotationOrderState(
+                [part with { Configuration = part.Configuration with { Quantity = quantity } }]), default);
+
+        var restored = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
+
+        Assert.Equal(accepted, restored is not null);
+        if (accepted)
+        {
+            Assert.Equal(quantity, restored!.Parts.Single().Configuration.Quantity);
+        }
+    }
+
     [Fact]
     public async Task GetAsync_DescriptorDigestNotBoundToGeometry_RejectsProtectedSession()
     {

@@ -185,7 +185,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
             && configuration is not null
             && !string.IsNullOrWhiteSpace(configuration.MaterialKey)
             && !string.IsNullOrWhiteSpace(configuration.Color)
-            && configuration.Quantity is >= 1 and <= 1_000;
+            && configuration.Quantity is >= 1 and <= PricingCatalog.MaximumAdditiveQuantity;
     }
 
     private static bool IsValidPhysicalAnalysisUpload(

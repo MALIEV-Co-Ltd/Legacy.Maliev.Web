@@ -276,6 +276,29 @@
                     </fieldset>
                 </fieldset>
 
+                @if (workflow?.CurrentPhysicalAnalysisBinding(part.PartId,
+                    Services.GetRequiredService<FdmRuntimeProfileCatalog>().ProfileVersion) is not null)
+                {
+                    <div data-workflow-physical-analysis data-part-id="@part.PartId">
+                        <button type="button"
+                                disabled="@(physicalAnalysisPartId == part.PartId)"
+                                @onclick="() => AnalyzePhysicalAsync(part.PartId)">@Localizer["Check physical build (not a price)"]</button>
+                        @if (physicalAnalysisPartId == part.PartId)
+                        {
+                            <p role="status">@Localizer["Checking physical build…"]</p>
+                        }
+                        else if (physicalAnalyses.TryGetValue(part.PartId, out var physical))
+                        {
+                            <p role="status" data-physical-analysis-result="@(physical.IsReady ? "ready" : "unavailable")"
+                               data-physical-analysis-failure="@physical.Failure">
+                                @(physical.IsReady
+                                    ? Localizer["Physical build evidence is ready for engineering review. Price is unchanged."]
+                                    : Localizer["Physical build analysis is unavailable. Engineering review is required."])
+                            </p>
+                        }
+                    </div>
+                }
+
                 @if (part.Quote is not null)
                 {
                     <details data-workflow-material-comparison>
