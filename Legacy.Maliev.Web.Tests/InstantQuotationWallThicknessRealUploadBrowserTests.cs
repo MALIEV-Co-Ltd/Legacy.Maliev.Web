@@ -52,6 +52,19 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
         {
             await page.SetInputFilesAsync("#instant-quote-files", path);
             await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
+            var viewerControlsFit = await page.Locator("[data-workflow-viewer] > button:not(.instant-quote__thickness-toggle)")
+                .EvaluateAllAsync<bool>("""
+                    buttons => {
+                      const thickness = document.querySelector('.instant-quote__thickness-toggle').getBoundingClientRect();
+                      return buttons.length === 3 && buttons.every(button => {
+                        const box = button.getBoundingClientRect();
+                        return box.width >= 88 && box.height >= 44 && box.right < thickness.left - 4
+                          && button.scrollWidth <= button.clientWidth + 1
+                          && button.scrollHeight <= button.clientHeight + 1;
+                      });
+                    }
+                    """);
+            Assert.True(viewerControlsFit, "Localized viewer controls must not collapse into vertical text columns.");
             var tiers = page.Locator("[data-workflow-price-tier]");
             Assert.True(await tiers.CountAsync() > 1);
             var tierRegion = page.Locator("[data-workflow-bulk-pricing]");
@@ -119,10 +132,18 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
             Assert.Equal(1, upload.VerifiedUploads);
             Assert.Empty(pageErrors);
+            var skipLink = page.Locator(".maliev-skip-link").First;
+            await skipLink.FocusAsync();
+            Assert.True(await skipLink.EvaluateAsync<bool>("element => getComputedStyle(element).clipPath !== 'inset(50%)'"));
+            await page.EvaluateAsync("() => { document.body.tabIndex = -1; document.body.focus(); }");
+            Assert.True(await skipLink.EvaluateAsync<bool>("element => getComputedStyle(element).clipPath === 'inset(50%)'"));
             if (Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR") is { Length: > 0 } evidenceDirectory)
             {
-                await page.EvaluateAsync("() => { document.body.tabIndex = -1; document.body.focus(); }");
                 Directory.CreateDirectory(evidenceDirectory);
+                await page.Locator("[data-workflow-viewer]").ScreenshotAsync(new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-viewer-{culture}-{width}.png"),
+                });
                 await page.ScreenshotAsync(new PageScreenshotOptions
                 {
                     Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-{culture}-{width}.png"),
