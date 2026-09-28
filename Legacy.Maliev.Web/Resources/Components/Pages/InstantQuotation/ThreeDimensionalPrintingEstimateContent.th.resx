@@ -452,6 +452,7 @@
   <data name="Castable Wax Resin" xml:space="preserve"><value>เรซินแวกซ์สำหรับงานหล่อ</value></data>
   <data name="Required fields are marked with an asterisk." xml:space="preserve"><value>ช่องที่จำเป็นมีเครื่องหมายดอกจัน</value></data>
   <data name="There are problems with the customer details." xml:space="preserve"><value>ข้อมูลลูกค้าบางช่องไม่ถูกต้อง</value></data>
+  <data name="We could not confirm whether your request was received. Do not submit it again; contact MALIEV support." xml:space="preserve"><value>เราไม่สามารถยืนยันได้ว่าได้รับคำขอของคุณแล้วหรือไม่ อย่าส่งซ้ำ กรุณาติดต่อฝ่ายช่วยเหลือของ MALIEV</value></data>
   <data name="Please correct {0}." xml:space="preserve"><value>กรุณาแก้ไข{0}</value></data>
   <data name="Please correct this field." xml:space="preserve"><value>กรุณาแก้ไขช่องนี้</value></data>
   <data name="Thai tax ID must contain exactly 13 digits." xml:space="preserve"><value>เลขประจำตัวผู้เสียภาษีไทยต้องมีตัวเลข 13 หลัก</value></data>
