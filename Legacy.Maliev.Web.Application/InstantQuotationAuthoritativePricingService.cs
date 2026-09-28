@@ -140,6 +140,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         string materialKey) =>
         result is { IsReady: true, Binding: { } binding, Physical: { } physical }
         && physical.Diagnostics.Count == 0
+        && double.IsFinite(result.BoundingCm3PerUnit) && result.BoundingCm3PerUnit > 0
         && string.Equals(binding.SessionId, sessionId, StringComparison.Ordinal)
         && string.Equals(binding.OwnerIdentity, ownerIdentity, StringComparison.Ordinal)
         && binding.PartId == part.PartId

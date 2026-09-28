@@ -31,10 +31,12 @@ internal sealed record InstantQuotationPhysicalAnalysisBinding(
 internal sealed record InstantQuotationBoundPhysicalAnalysisResult(
     InstantQuotationPhysicalAnalysisBinding? Binding,
     SimulationResult? Physical,
-    InstantQuotationBoundPhysicalAnalysisFailure Failure)
+    InstantQuotationBoundPhysicalAnalysisFailure Failure,
+    double BoundingCm3PerUnit = 0)
 {
     internal bool IsReady => Binding is not null && Physical is not null
-        && Failure == InstantQuotationBoundPhysicalAnalysisFailure.None;
+        && Failure == InstantQuotationBoundPhysicalAnalysisFailure.None
+        && double.IsFinite(BoundingCm3PerUnit) && BoundingCm3PerUnit > 0;
 
     internal static InstantQuotationBoundPhysicalAnalysisResult Unavailable(
         InstantQuotationBoundPhysicalAnalysisFailure failure) => new(null, null, failure);
@@ -152,7 +154,40 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
                 InstantQuotationBoundPhysicalAnalysisFailure.AnalysisUnavailable);
         }
 
-        return new(binding, physical, InstantQuotationBoundPhysicalAnalysisFailure.None);
+        double boundingCm3 = BoundingCm3(admitted.Mesh!);
+        return double.IsFinite(boundingCm3) && boundingCm3 > 0
+            ? new(binding, physical, InstantQuotationBoundPhysicalAnalysisFailure.None, boundingCm3)
+            : InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
+                InstantQuotationBoundPhysicalAnalysisFailure.AnalysisUnavailable);
+    }
+
+    private static double BoundingCm3(NormalizedMesh mesh)
+    {
+        if (mesh.Triangles.Count == 0)
+        {
+            return 0;
+        }
+
+        double minX = double.PositiveInfinity, minY = double.PositiveInfinity, minZ = double.PositiveInfinity;
+        double maxX = double.NegativeInfinity, maxY = double.NegativeInfinity, maxZ = double.NegativeInfinity;
+        foreach (var triangle in mesh.Triangles)
+        {
+            Include(triangle.A);
+            Include(triangle.B);
+            Include(triangle.C);
+        }
+
+        return (maxX - minX) * (maxY - minY) * (maxZ - minZ) / 1_000d;
+
+        void Include(Vector3 point)
+        {
+            minX = Math.Min(minX, point.X);
+            minY = Math.Min(minY, point.Y);
+            minZ = Math.Min(minZ, point.Z);
+            maxX = Math.Max(maxX, point.X);
+            maxY = Math.Max(maxY, point.Y);
+            maxZ = Math.Max(maxZ, point.Z);
+        }
     }
 
     private static bool MatchesCurrentPart(

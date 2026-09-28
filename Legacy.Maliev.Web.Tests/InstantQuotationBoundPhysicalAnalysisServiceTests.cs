@@ -54,9 +54,42 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         Assert.Equal(Digest, line.PhysicalReceipt!.UploadSha256);
         Assert.Equal(Owner, line.PhysicalReceipt.OwnerIdentity);
         Assert.Equal(evidence.Physical!.ProfileSha256, line.PhysicalReceipt.ProfileSha256);
+        Assert.Equal(0.512, line.BoundingCm3PerUnit, 3);
+        Assert.Equal(line.BoundingCm3PerUnit, line.PhysicalReceipt.BoundingCm3PerUnit);
         Assert.Null(line.MaterialPrices.Single(price => price.MaterialKey == "PETG").UnitPrice);
         Assert.Throws<InvalidOperationException>(() =>
             new InstantQuotationPricingService().Quote(fixture.Store.State.RequestState));
+    }
+
+    [Fact]
+    public async Task BrowserGeometryClaim_CannotChangePhysicalFdmShippingWeightOrBounding()
+    {
+        var fixture = Fixture();
+        var evidence = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+        var original = Assert.Single(fixture.Store.State.Parts);
+        var browserClaim = new InstantQuotationGeometryClaim(
+            1, Digest, 6, 6, 6, 150, 200,
+            Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+            12, 1, true, false, false, 1);
+        Assert.True(browserClaim.IsValid());
+        var altered = original with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, Digest),
+                browserClaim)!,
+        };
+        var pricing = new InstantQuotationPricingService();
+        var evidenceByMaterial = new Dictionary<(Guid, string), InstantQuotationBoundPhysicalAnalysisResult>
+        {
+            [(original.PartId, "PLA")] = evidence,
+        };
+
+        var actual = pricing.QuoteWithPhysical(new InstantQuotationOrderState([altered]), evidenceByMaterial);
+        var expected = pricing.QuoteWithPhysical(fixture.Store.State.RequestState, evidenceByMaterial);
+
+        Assert.Equal(expected.Parts.Single().BoundingCm3PerUnit, actual.Parts.Single().BoundingCm3PerUnit);
+        Assert.Equal(expected.Parts.Single().WeightGramsPerUnit, actual.Parts.Single().WeightGramsPerUnit);
+        Assert.Equal(expected.FinalOrderPrice, actual.FinalOrderPrice);
     }
 
     [Fact]

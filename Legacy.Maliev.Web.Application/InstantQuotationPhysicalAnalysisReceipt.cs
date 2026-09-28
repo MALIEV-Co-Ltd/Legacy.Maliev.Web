@@ -22,12 +22,14 @@ public sealed record InstantQuotationPhysicalAnalysisReceipt(
     string PhysicalSha256,
     double DepositedMm3,
     double SupportMm3,
-    double MotionSeconds)
+    double MotionSeconds,
+    double BoundingCm3PerUnit)
 {
     internal static InstantQuotationPhysicalAnalysisReceipt Create(
         InstantQuotationPhysicalAnalysisBinding binding,
         string configuredMaterialKey,
-        SimulationResult physical)
+        SimulationResult physical,
+        double boundingCm3PerUnit)
     {
         var digest = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('|',
             physical.AnalysisVersion,
@@ -35,11 +37,13 @@ public sealed record InstantQuotationPhysicalAnalysisReceipt(
             physical.TotalDepositedMm3.ToString("R", CultureInfo.InvariantCulture),
             physical.SupportDepositedMm3.ToString("R", CultureInfo.InvariantCulture),
             physical.Motion.TotalSeconds.ToString("R", CultureInfo.InvariantCulture),
+            boundingCm3PerUnit.ToString("R", CultureInfo.InvariantCulture),
             string.Join(',', physical.Diagnostics.Order(StringComparer.Ordinal))))));
         return new(binding.SessionId, binding.OwnerIdentity, binding.PartId, binding.FileId,
             binding.UploadSha256, configuredMaterialKey, binding.MaterialKey, binding.BuildPreference,
             binding.Quantity, binding.ProfileVersion, physical.ProfileSha256, physical.AnalysisVersion,
-            digest, physical.TotalDepositedMm3, physical.SupportDepositedMm3, physical.Motion.TotalSeconds);
+            digest, physical.TotalDepositedMm3, physical.SupportDepositedMm3,
+            physical.Motion.TotalSeconds, boundingCm3PerUnit);
     }
 
     internal bool Matches(InstantQuotationPhysicalAnalysisBinding binding, string configuredMaterialKey) =>

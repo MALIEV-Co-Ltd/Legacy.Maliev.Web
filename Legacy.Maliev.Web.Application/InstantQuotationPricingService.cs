@@ -176,9 +176,10 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
 
             item = PricingEngine.QuoteFdmSimulation(
                 evidence.Physical!, material, configuration.Quantity,
-                Math.Abs(geometry.FootprintMm2 * geometry.HeightMm) / 1_000d);
+                evidence.BoundingCm3PerUnit);
             receipt = InstantQuotationPhysicalAnalysisReceipt.Create(
-                evidence.Binding!, configuration.MaterialKey, evidence.Physical!);
+                evidence.Binding!, configuration.MaterialKey, evidence.Physical!,
+                evidence.BoundingCm3PerUnit);
         }
         else
         {
@@ -235,10 +236,11 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         {
             var quote = PricingEngine.QuoteFdmSimulation(
                 evidence.Physical!, candidate, part.Configuration.Quantity,
-                Math.Abs(part.Geometry.FootprintMm2 * part.Geometry.HeightMm) / 1_000d);
+                evidence.BoundingCm3PerUnit);
             return new(candidate.Key, quote.UnitPrice,
                 InstantQuotationPhysicalAnalysisReceipt.Create(
-                    evidence.Binding!, part.Configuration.MaterialKey, evidence.Physical!));
+                    evidence.Binding!, part.Configuration.MaterialKey, evidence.Physical!,
+                    evidence.BoundingCm3PerUnit));
         }
         catch (ArgumentException)
         {

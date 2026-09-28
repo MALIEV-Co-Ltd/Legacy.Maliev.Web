@@ -325,7 +325,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
             && receipt.BuildPreference == line.BuildPreference
             && receipt.BuildPreference == part.Configuration.BuildPreference
             && receipt.Quantity == line.Quantity
-            && receipt.Quantity == part.Configuration.Quantity;
+            && receipt.Quantity == part.Configuration.Quantity
+            && receipt.BoundingCm3PerUnit == line.BoundingCm3PerUnit;
 
         /// <summary>Protects one canonical order quote.</summary>
         /// <param name="payload">Canonical payload.</param>

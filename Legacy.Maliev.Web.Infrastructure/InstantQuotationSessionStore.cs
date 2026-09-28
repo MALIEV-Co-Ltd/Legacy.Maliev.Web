@@ -274,6 +274,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 && receipt.Quantity is >= 1 and <= PricingCatalog.MaximumAdditiveQuantity
                 && double.IsFinite(receipt.DepositedMm3) && receipt.DepositedMm3 > 0
                 && double.IsFinite(receipt.MotionSeconds) && receipt.MotionSeconds > 0
+                && double.IsFinite(receipt.BoundingCm3PerUnit) && receipt.BoundingCm3PerUnit > 0
                 && session.RequestState.Parts.Count(part => part is not null
                     && part.PartId == receipt.PartId
                     && part.PhysicalAnalysisUpload is { } upload

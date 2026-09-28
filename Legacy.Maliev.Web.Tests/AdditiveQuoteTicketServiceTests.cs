@@ -286,7 +286,8 @@ namespace Legacy.Maliev.Web.Tests
             var receipt = new InstantQuotationPhysicalAnalysisReceipt(
                 resinSession.SessionId, null, original.PartId, fileId, original.Geometry.Sha256,
                 "PLA", "PLA", BuildPreference.Strength, 2, "profile-v1", new string('B', 64),
-                "analysis-v1", new string('C', 64), 1000, 100, 3600);
+                "analysis-v1", new string('C', 64), 1000, 100, 3600,
+                resinQuote.Parts.Single().BoundingCm3PerUnit);
             var part = original with
             {
                 Configuration = new InstantQuotationPartConfiguration("PLA", "Black", 2, BuildPreference.Strength),

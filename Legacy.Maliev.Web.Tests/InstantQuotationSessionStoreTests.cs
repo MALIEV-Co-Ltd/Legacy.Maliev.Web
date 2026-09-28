@@ -251,7 +251,7 @@ public sealed class InstantQuotationSessionStoreTests
         var receipt = new InstantQuotationPhysicalAnalysisReceipt(
             created.SessionId, "owner-1", part.PartId, fileId, part.Geometry.Sha256,
             "PLA", "PLA", BuildPreference.Standard, 1, "profile-v1", new string('B', 64),
-            "analysis-v1", new string('C', 64), 1000, 100, 3600);
+            "analysis-v1", new string('C', 64), 1000, 100, 3600, 2);
         var updated = created with
         {
             PhysicalReceipts = [receipt],

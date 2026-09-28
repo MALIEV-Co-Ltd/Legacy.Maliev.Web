@@ -62,7 +62,8 @@ internal static class SyntheticPhysicalPricingTestData
                     part.Configuration.Quantity, FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion,
                     part.Configuration.MaterialKey);
                 evidence[(part.PartId, material.Key)] = new(
-                    binding, physical, InstantQuotationBoundPhysicalAnalysisFailure.None);
+                    binding, physical, InstantQuotationBoundPhysicalAnalysisFailure.None,
+                    Math.Abs(geometry.FootprintMm2 * geometry.HeightMm) / 1_000d);
             }
         }
 
