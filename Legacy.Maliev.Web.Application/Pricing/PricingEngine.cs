@@ -151,7 +151,8 @@ public static class PricingEngine
         double supportGrams,
         MaterialInfo material)
     {
-        var machineHourly = PricingCatalog.MachineHourly(PrintProcess.Fdm);
+        var machineHourly = PricingCatalog.MachineHourly(PrintProcess.Fdm)
+            + (material.RequiresHeatedEnclosure ? PricingCatalog.FdmHeatedEnclosureEnergyHourly : 0);
         var overheadPerMinute = PricingCatalog.OverheadPerMinute(PrintProcess.Fdm);
         var materialCost = weightGrams * material.CostPerUnit * (1 + PricingCatalog.FdmWasteAllowance);
         var machineOverhead = printTimeMinutes * ((machineHourly / 60.0) + overheadPerMinute);
