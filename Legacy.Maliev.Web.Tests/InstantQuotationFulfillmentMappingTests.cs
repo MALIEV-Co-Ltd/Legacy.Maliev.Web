@@ -51,7 +51,7 @@ public sealed class InstantQuotationFulfillmentMappingTests
             new InstantQuotationUploadReference(Guid.NewGuid().ToString("D")),
             geometry,
             new InstantQuotationPartConfiguration("ABS", "Black", 2, BuildPreference.Strength));
-        var quote = new InstantQuotationPricingService().Quote(new InstantQuotationOrderState([part])).Parts[0];
+        var quote = SyntheticPhysicalPricingTestData.Quote(new InstantQuotationOrderState([part])).Parts[0];
 
         var result = InstantQuotationFulfillmentClient.BuildOrderComment(
             new string('f', 64), 0, part, quote, 7, "Check tapped holes");

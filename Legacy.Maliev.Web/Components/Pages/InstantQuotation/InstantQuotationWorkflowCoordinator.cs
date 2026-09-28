@@ -55,6 +55,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly IInstantQuotationSessionStore sessionStore;
     private readonly IInstantQuotationUploadClient uploadClient;
     private readonly IInstantQuotationPricingService pricingService;
+    private readonly IInstantQuotationAuthoritativePricingService? authoritativePricingService;
     private readonly IInstantQuotationQuoteTicketService? quoteTicketService;
     private readonly IInstantQuotationAnalyticsTracker analytics;
     private readonly string? ownerIdentity;
@@ -71,7 +72,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         IInstantQuotationPricingService pricingService,
         string? ownerIdentity,
         IInstantQuotationAnalyticsTracker? analytics = null,
-        IInstantQuotationQuoteTicketService? quoteTicketService = null)
+        IInstantQuotationQuoteTicketService? quoteTicketService = null,
+        IInstantQuotationAuthoritativePricingService? authoritativePricingService = null)
     {
         this.sessionStore = sessionStore;
         this.uploadClient = uploadClient;
@@ -79,6 +81,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         this.ownerIdentity = ownerIdentity;
         this.analytics = analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance;
         this.quoteTicketService = quoteTicketService;
+        this.authoritativePricingService = authoritativePricingService;
     }
 
     public InstantQuotationWorkflowState State { get; private set; } = InstantQuotationWorkflowState.Empty;
@@ -171,23 +174,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 protectedSessionIdentity,
                 ownerIdentity,
                 cancellationToken);
-            if (existing is not null && TryRestore(existing))
+            if (existing is not null && await TryRestoreAsync(existing, cancellationToken))
             {
-                if (OrderQuote is not null && quoteTicketService is not null)
-                {
-                    var refreshed = session! with { UpdatedAt = DateTimeOffset.UtcNow };
-                    refreshed = refreshed with
-                    {
-                        QuoteAuthorization = quoteTicketService.Issue(refreshed, OrderQuote, refreshed.UpdatedAt),
-                    };
-                    if (!await sessionStore.PutAsync(refreshed, ownerIdentity, cancellationToken))
-                    {
-                        throw new InvalidOperationException("The protected quotation authorization could not be refreshed.");
-                    }
-
-                    session = refreshed;
-                }
-
                 return;
             }
         }
@@ -760,7 +748,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         && result.ProblemCategory is InstantQuotationProblemCategory.None
         && result.UploadReference is not null;
 
-    private bool TryRestore(InstantQuotationSessionState existing)
+    private async Task<bool> TryRestoreAsync(
+        InstantQuotationSessionState existing,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -776,16 +766,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 return false;
             }
 
-            var restoredQuote = parts.Length == 0
-                ? null
-                : pricingService.Quote(new InstantQuotationOrderState(parts));
             entries.Clear();
             entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
             session = existing;
-            OrderQuote = restoredQuote;
-            if (restoredQuote is not null)
+            OrderQuote = null;
+            if (parts.Length > 0)
             {
-                authoritativeQuoteRevision++;
+                await PersistAndPriceAsync(cancellationToken);
             }
             RefreshState();
             return true;
@@ -799,26 +786,59 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
     {
         var state = new InstantQuotationOrderState(CurrentParts());
-        var quote = state.Parts.Count == 0 ? null : pricingService.Quote(state);
         var updated = session! with
         {
             RequestState = state,
-            UpdatedAt = DateTimeOffset.UtcNow,
             QuoteAuthorization = null,
+            PhysicalReceipts = null,
         };
-        if (quote is not null && quoteTicketService is not null)
-        {
-            updated = updated with
-            {
-                QuoteAuthorization = quoteTicketService.Issue(updated, quote, updated.UpdatedAt),
-            };
-        }
         if (!await sessionStore.PutAsync(updated, ownerIdentity, cancellationToken))
         {
             throw new InvalidOperationException("The protected quotation session could not be updated.");
         }
 
-        session = updated;
+        session = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken)
+            ?? throw new InvalidOperationException("The protected quotation session could not be read.");
+        InstantQuotationOrderQuote? quote = null;
+        if (state.Parts.Count > 0)
+        {
+            quote = authoritativePricingService is null
+                ? pricingService.Quote(state)
+                : await authoritativePricingService.QuoteAsync(
+                    session, ownerIdentity, includeComparisons: true, cancellationToken);
+        }
+
+        if (quote is not null && quoteTicketService is not null)
+        {
+            var current = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken);
+            if (current is null || current.UpdatedAt != session.UpdatedAt)
+            {
+                quote = null;
+            }
+            else
+            {
+                var receipted = current with
+                {
+                    PhysicalReceipts = quote.Parts.SelectMany(part =>
+                            part.MaterialPrices.Select(price => price.PhysicalReceipt)
+                                .Append(part.PhysicalReceipt))
+                        .OfType<InstantQuotationPhysicalAnalysisReceipt>().Distinct().ToArray(),
+                };
+                receipted = receipted with
+                {
+                    QuoteAuthorization = quoteTicketService.Issue(receipted, quote, DateTimeOffset.UtcNow),
+                };
+                if (!await sessionStore.PutAsync(receipted, ownerIdentity, cancellationToken))
+                {
+                    quote = null;
+                }
+                else
+                {
+                    session = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken)
+                        ?? throw new InvalidOperationException("The protected quotation authorization could not be read.");
+                }
+            }
+        }
         OrderQuote = quote;
         if (OrderQuote is not null)
         {

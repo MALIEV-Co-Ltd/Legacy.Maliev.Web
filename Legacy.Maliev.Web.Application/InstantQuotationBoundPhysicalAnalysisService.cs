@@ -24,7 +24,8 @@ internal sealed record InstantQuotationPhysicalAnalysisBinding(
     string MaterialKey,
     BuildPreference BuildPreference,
     int Quantity,
-    string ProfileVersion);
+    string ProfileVersion,
+    string? ConfiguredMaterialKey = null);
 
 /// <summary>Physical evidence only. This result does not authorize money or a quote ticket.</summary>
 internal sealed record InstantQuotationBoundPhysicalAnalysisResult(
@@ -176,7 +177,8 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
             && string.Equals(upload.Status, "clean", StringComparison.Ordinal)
             && string.Equals(upload.Sha256, binding.UploadSha256, StringComparison.OrdinalIgnoreCase)
             && string.Equals(part.Geometry.Sha256, binding.UploadSha256, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(part.Configuration.MaterialKey, binding.MaterialKey, StringComparison.Ordinal)
+            && string.Equals(part.Configuration.MaterialKey,
+                binding.ConfiguredMaterialKey ?? binding.MaterialKey, StringComparison.Ordinal)
             && part.Configuration.BuildPreference == binding.BuildPreference
             && part.Configuration.Quantity == binding.Quantity;
     }

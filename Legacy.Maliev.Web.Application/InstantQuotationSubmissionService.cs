@@ -15,7 +15,8 @@ internal sealed class InstantQuotationSubmissionService(
     IInstantQuotationRequestFileClient requestFileClient,
     IInstantQuotationFulfillmentClient? fulfillmentClient = null,
     IInstantQuotationQuoteTicketService? quoteTicketService = null,
-    TimeProvider? timeProvider = null) : IInstantQuotationSubmissionService
+    TimeProvider? timeProvider = null,
+    IInstantQuotationAuthoritativePricingService? authoritativePricingService = null) : IInstantQuotationSubmissionService
 {
     private const int SubmissionIdLength = 64;
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
@@ -88,16 +89,38 @@ internal sealed class InstantQuotationSubmissionService(
         InstantQuotationOrderQuote quote;
         try
         {
-            quote = pricingService.Quote(session.RequestState);
+            if (authoritativePricingService is null
+                && session.Parts.Any(part => PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process
+                    == PrintProcess.Fdm))
+            {
+                return Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
+            }
+
+            quote = authoritativePricingService is null
+                ? pricingService.Quote(session.RequestState)
+                : await authoritativePricingService.QuoteAsync(
+                    session, ownerIdentity, includeComparisons: false, cancellationToken)
+                    ?? throw new InvalidOperationException("Physical pricing is unavailable.");
         }
         catch (ArgumentException)
         {
             return Rejected(InstantQuotationProblemCategory.Validation);
         }
+        catch (InvalidOperationException)
+        {
+            return Rejected(InstantQuotationProblemCategory.Conflict);
+        }
 
         if (quote.Parts.Count == 0 || quote.Parts.Count != session.Parts.Count)
         {
             return Rejected(InstantQuotationProblemCategory.Validation);
+        }
+
+        if (session.Parts.Any(part => PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process
+                == PrintProcess.Fdm)
+            && quoteTicketService is null)
+        {
+            return Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
         }
 
         if (quoteTicketService is not null

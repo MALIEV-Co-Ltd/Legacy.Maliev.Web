@@ -592,7 +592,7 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
-    public async Task RejectedQuantityRepriceKeepsPreviouslyValidBulkSavingsHiddenUntilPersistedRetry()
+    public async Task RejectedQuantityRepriceNeverShowsUnverifiedBulkSavings()
     {
         var persisted = PersistedPart("part.stl", "opaque") with
         {
@@ -606,7 +606,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         await workflow.InitializeAsync("protected-resume", default);
         var part = Assert.Single(workflow.Parts);
         var edits = new QuantityEditState();
-        Assert.NotNull(InstantQuotationBulkSavings.Calculate(part, false));
+        Assert.Null(InstantQuotationBulkSavings.Calculate(part, false));
 
         edits.Begin(part.PartId);
         store.RejectNextPut = true;
@@ -623,7 +623,7 @@ public sealed class InstantQuotationWorkflowUploadTests
             () => workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 10, default));
 
         Assert.False(edits.IsPending(part.PartId));
-        Assert.True(InstantQuotationBulkSavings.Calculate(Assert.Single(workflow.Parts), false) > 0);
+        Assert.Null(InstantQuotationBulkSavings.Calculate(Assert.Single(workflow.Parts), false));
     }
 
     [Fact]
@@ -941,7 +941,9 @@ public sealed class InstantQuotationWorkflowUploadTests
             client ?? new ControlledUploadClient(),
             pricing ?? new InstantQuotationPricingService(),
             ownerIdentity,
-            analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance);
+            analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance,
+            authoritativePricingService: pricing as IInstantQuotationAuthoritativePricingService
+                ?? SyntheticAuthoritativePricingTestService.Instance);
 
     private static InstantQuotationWorkflowUploadFile UploadFile(string name) => new(
         name,
@@ -1010,6 +1012,7 @@ public sealed class InstantQuotationWorkflowUploadTests
     private sealed class RecordingSessionStore : IInstantQuotationSessionStore
     {
         private InstantQuotationSessionState? createdSession;
+        private string? createdOwnerIdentity;
 
         public int CreateCalls { get; private set; }
 
@@ -1029,6 +1032,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         {
             CreateCalls++;
             LastOwnerIdentity = ownerIdentity;
+            createdOwnerIdentity = ownerIdentity;
             LastSavedState = requestState;
             createdSession = new InstantQuotationSessionState("protected-session", "submission", requestState, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
             return Task.FromResult(createdSession);
@@ -1039,11 +1043,11 @@ public sealed class InstantQuotationWorkflowUploadTests
             LastRequestedSessionId = sessionId;
             LastOwnerIdentity = ownerIdentity;
             return Task.FromResult(
-                ExistingSession?.SessionId == sessionId && ExistingOwnerIdentity == ownerIdentity
-                    ? ExistingSession
-                    : createdSession?.SessionId == sessionId && ExistingOwnerIdentity == ownerIdentity
+                createdSession?.SessionId == sessionId && createdOwnerIdentity == ownerIdentity
                         ? createdSession
-                        : null);
+                        : ExistingSession?.SessionId == sessionId && ExistingOwnerIdentity == ownerIdentity
+                            ? ExistingSession
+                            : null);
         }
 
         public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity, CancellationToken cancellationToken)
@@ -1079,17 +1083,23 @@ public sealed class InstantQuotationWorkflowUploadTests
         }
     }
 
-    private sealed class RecordingPricingService : IInstantQuotationPricingService
+    private sealed class RecordingPricingService : IInstantQuotationPricingService,
+        IInstantQuotationAuthoritativePricingService
     {
-        private readonly InstantQuotationPricingService inner = new();
-
         public int QuoteCalls { get; private set; }
 
         public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state)
         {
             QuoteCalls++;
-            return inner.Quote(state);
+            return SyntheticPhysicalPricingTestData.Quote(state);
         }
+
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(
+            InstantQuotationSessionState session,
+            string? ownerIdentity,
+            bool includeComparisons,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<InstantQuotationOrderQuote?>(Quote(session.RequestState));
     }
 
     private sealed class RecordingAnalyticsTracker : IInstantQuotationAnalyticsTracker

@@ -31,7 +31,7 @@ public sealed class InstantQuotationBuildPreferenceParityTests
         Assert.True(strength.UnitPrice > standard.UnitPrice);
         Assert.Equal(PricingCatalog.Materials.Count, quality.MaterialPrices.Count);
         Assert.Equal(PricingCatalog.Materials.Keys, quality.MaterialPrices.Select(static price => price.MaterialKey));
-        Assert.Equal(quality.UnitPrice, quality.MaterialPrices.Single(static price => price.MaterialKey == "PLA").UnitPrice, 2);
+        Assert.Equal(quality.UnitPrice, quality.MaterialPrices.Single(static price => price.MaterialKey == "PLA").UnitPrice!.Value, 2);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class InstantQuotationBuildPreferenceParityTests
             AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
             new InstantQuotationPartConfiguration("PLA", "Black", 1, preference));
 
-        return new InstantQuotationPricingService().Quote(new InstantQuotationOrderState([part])).Parts.Single();
+        return SyntheticPhysicalPricingTestData.Quote(new InstantQuotationOrderState([part])).Parts.Single();
     }
 
     private static string FindRepositoryRoot()

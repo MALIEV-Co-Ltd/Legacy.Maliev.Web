@@ -17,7 +17,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
     public sealed class AdditiveQuoteTicketService : IInstantQuotationQuoteTicketService
     {
         /// <summary>Current line-ticket schema version.</summary>
-        public const string LineSchemaVersion = "additive-line-quote.v2";
+        public const string LineSchemaVersion = "additive-line-quote.v3";
 
         /// <summary>Current upload-receipt schema version.</summary>
         public const string UploadSchemaVersion = "additive-upload-receipt.v1";
@@ -45,7 +45,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
         public AdditiveQuoteTicketService(IDataProtectionProvider provider)
         {
             ArgumentNullException.ThrowIfNull(provider);
-            this.lineProtector = provider.CreateProtector("Maliev.Web.AdditiveLineQuote.v2");
+            this.lineProtector = provider.CreateProtector("Maliev.Web.AdditiveLineQuote.v3");
             this.orderProtector = provider.CreateProtector("Maliev.Web.AdditiveOrderQuote.v2");
             this.uploadProtector = provider.CreateProtector("Maliev.Web.AdditiveUploadReceipt.v1");
         }
@@ -80,17 +80,30 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     throw new ArgumentException("The authoritative quotation line order is inconsistent.", nameof(quote));
                 }
 
+                InstantQuotationPhysicalAnalysisReceipt? physical = line.PhysicalReceipt;
+                if (line.Process == PrintProcess.Fdm
+                    && (physical is null || !ReceiptMatches(session, part, line, physical)
+                        || session.PhysicalReceipts?.Count(receipt => receipt == physical) != 1))
+                {
+                    throw new ArgumentException("The FDM line requires one current protected physical receipt.", nameof(quote));
+                }
+
                 return this.ProtectLine(new AdditiveLineQuotePayload
                 {
                     SchemaVersion = LineSchemaVersion,
                     PolicyVersion = PricingCatalog.AdditivePricingPolicyVersion,
                     SessionId = session.SessionId,
+                    OwnerIdentity = session.OwnerIdentity,
+                    PartId = part.PartId.ToString("D"),
                     FileName = part.DisplayFileName,
                     UploadId = part.UploadReference.Value,
                     StoragePath = NormalizePath(part.UploadReference.Value),
                     ContentSha256 = part.Geometry.Sha256,
                     AnalysisRevision = part.Geometry.ClaimVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ProfileVersion = PricingCatalog.AdditivePricingPolicyVersion,
+                    ProfileVersion = physical?.ProfileVersion ?? PricingCatalog.AdditivePricingPolicyVersion,
+                    ProfileSha256 = physical?.ProfileSha256 ?? string.Empty,
+                    PhysicalAnalysisVersion = physical?.AnalysisVersion ?? string.Empty,
+                    PhysicalSha256 = physical?.PhysicalSha256 ?? string.Empty,
                     Confidence = "provisional",
                     ReviewState = "engineer_review_required",
                     GeometryDigest = CreateGeometryDigest(part.Geometry),
@@ -180,6 +193,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     InstantQuotationPart part = session.Parts[index];
                     InstantQuotationPartQuote line = quote.Parts[index];
                     if (part.PartId != line.PartId
+                        || !string.Equals(payload.PartId, part.PartId.ToString("D"), StringComparison.Ordinal)
+                        || !string.Equals(payload.OwnerIdentity, session.OwnerIdentity, StringComparison.Ordinal)
                         || !this.MatchesLineIdentity(
                             payload,
                             session.SessionId,
@@ -193,6 +208,18 @@ namespace Legacy.Maliev.Web.Application.Pricing
                         || payload.DirectCostPerUnitThb != Convert.ToDecimal(line.DirectCostPerUnit)
                         || payload.UnitPriceThb != Convert.ToDecimal(line.UnitPrice)
                         || payload.SubtotalThb != Convert.ToDecimal(line.Subtotal))
+                    {
+                        return false;
+                    }
+
+                    if (line.Process == PrintProcess.Fdm
+                        && (line.PhysicalReceipt is not { } physical
+                            || !ReceiptMatches(session, part, line, physical)
+                            || session.PhysicalReceipts?.Count(receipt => receipt == physical) != 1
+                            || !string.Equals(payload.ProfileVersion, physical.ProfileVersion, StringComparison.Ordinal)
+                            || !string.Equals(payload.ProfileSha256, physical.ProfileSha256, StringComparison.Ordinal)
+                            || !string.Equals(payload.PhysicalAnalysisVersion, physical.AnalysisVersion, StringComparison.Ordinal)
+                            || !string.Equals(payload.PhysicalSha256, physical.PhysicalSha256, StringComparison.Ordinal)))
                     {
                         return false;
                     }
@@ -263,6 +290,10 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 || !IsSha256(payload.ContentSha256)
                 || string.IsNullOrWhiteSpace(payload.AnalysisRevision)
                 || string.IsNullOrWhiteSpace(payload.ProfileVersion)
+                || string.IsNullOrWhiteSpace(payload.PartId)
+                || (payload.Process == PrintProcess.Fdm && (!IsSha256(payload.ProfileSha256)
+                    || !IsSha256(payload.PhysicalSha256)
+                    || string.IsNullOrWhiteSpace(payload.PhysicalAnalysisVersion)))
                 || !string.Equals(payload.Confidence, "provisional", StringComparison.Ordinal)
                 || !string.Equals(payload.ReviewState, "engineer_review_required", StringComparison.Ordinal)
                 || string.IsNullOrWhiteSpace(payload.MaterialKey)
@@ -276,6 +307,25 @@ namespace Legacy.Maliev.Web.Application.Pricing
 
             return payload;
         }
+
+        private static bool ReceiptMatches(
+            InstantQuotationSessionState session,
+            InstantQuotationPart part,
+            InstantQuotationPartQuote line,
+            InstantQuotationPhysicalAnalysisReceipt receipt) =>
+            string.Equals(receipt.SessionId, session.SessionId, StringComparison.Ordinal)
+            && string.Equals(receipt.OwnerIdentity, session.OwnerIdentity, StringComparison.Ordinal)
+            && receipt.PartId == part.PartId
+            && part.PhysicalAnalysisUpload is { } upload
+            && receipt.FileId == upload.FileId
+            && string.Equals(receipt.UploadSha256, upload.Sha256, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(receipt.ConfiguredMaterialKey, part.Configuration.MaterialKey, StringComparison.Ordinal)
+            && string.Equals(receipt.MaterialKey, line.MaterialKey, StringComparison.Ordinal)
+            && string.Equals(line.MaterialKey, part.Configuration.MaterialKey, StringComparison.Ordinal)
+            && receipt.BuildPreference == line.BuildPreference
+            && receipt.BuildPreference == part.Configuration.BuildPreference
+            && receipt.Quantity == line.Quantity
+            && receipt.Quantity == part.Configuration.Quantity;
 
         /// <summary>Protects one canonical order quote.</summary>
         /// <param name="payload">Canonical payload.</param>

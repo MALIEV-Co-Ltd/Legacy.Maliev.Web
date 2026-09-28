@@ -157,10 +157,11 @@ public sealed class InstantQuotationWorkflowPricingTests
     [InlineData(10000, 10000)]
     public void Quote_PreservesQuantityRangeAndActiveBulkSample(int quantity, int expectedSample)
     {
-        var quote = PricingService.Quote(State(Part("PLA", "Black", quantity)));
+        var quote = SyntheticPhysicalPricingTestData.Quote(State(Part("PLA", "Black", quantity)));
 
         Assert.Equal(quantity, quote.Parts.Single().Quantity);
-        Assert.True(quote.Parts.Single().Tiers.Single(tier => tier.MinQuantity == expectedSample).Active);
+        Assert.Equal(expectedSample, PricingCatalog.ResolveBulkQuoteQuantity(quantity));
+        Assert.True(quote.Parts.Single().Tiers.Single(tier => tier.MinQuantity == quantity).Active);
         Assert.Equal(0, quote.Parts.Single().UnitPrice % 10, 2);
     }
 
@@ -174,7 +175,7 @@ public sealed class InstantQuotationWorkflowPricingTests
     }
 
     [Fact]
-    public void Quote_AcceptsOnlyGeometryFromSuccessfulUploadResult()
+    public void Quote_SuccessfulGeometryAloneCannotAuthorizeFdmPrice()
     {
         var upload = InstantQuotationUploadResult.Succeeded(
             "upload-operation",
@@ -188,7 +189,7 @@ public sealed class InstantQuotationWorkflowPricingTests
             AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, Claim())!,
             new InstantQuotationPartConfiguration("PLA", "Black", 1));
 
-        Assert.Single(PricingService.Quote(State(part)).Parts);
+        Assert.Throws<InvalidOperationException>(() => PricingService.Quote(State(part)));
     }
 
     [Fact]
@@ -201,7 +202,7 @@ public sealed class InstantQuotationWorkflowPricingTests
     [Fact]
     public void Quote_PreservesRoundedCustomerLinePricesInOrderTotal()
     {
-        var result = PricingService.Quote(State(
+        var result = SyntheticPhysicalPricingTestData.Quote(State(
             Part("PLA", "White", 1),
             Part("M68", "Gray", 2, heightMm: 12, volumeMm3: 6_000, footprintMm2: 225)));
 
@@ -227,7 +228,7 @@ public sealed class InstantQuotationWorkflowPricingTests
             Part("PLA", "White", 9),
             Part("M68", "Gray", 2, heightMm: 12, volumeMm3: 6_000, footprintMm2: 225));
 
-        var result = PricingService.Quote(state);
+        var result = SyntheticPhysicalPricingTestData.Quote(state);
         var expectedSubtotal = result.Parts.Sum(part => part.Subtotal);
         var expectedShipping = ShippingCalculator.CustomerShippingThb(
             result.Parts.Sum(part => part.WeightGramsPerUnit * part.Quantity),
@@ -253,10 +254,8 @@ public sealed class InstantQuotationWorkflowPricingTests
     [Fact]
     public void Quote_InternationalDestinationFailsClosedToShippingToBeQuoted()
     {
-        var service = new InstantQuotationPricingService();
-        var result = service.Quote(
-            State(Part("PLA", "White", 1)),
-            "Japan");
+        var result = SyntheticPhysicalPricingTestData.Quote(
+            State(Part("PLA", "White", 1)), "Japan");
 
         Assert.Equal(ShippingPricingState.ToBeQuoted, result.ShippingState);
         Assert.Equal("JAPAN", result.DestinationCountryCode);
@@ -287,7 +286,7 @@ public sealed class InstantQuotationWorkflowPricingTests
     [Fact]
     public void Quote_MixedFdmAndResinOrderUsesResinMinimumFloorRule()
     {
-        var result = PricingService.Quote(State(
+        var result = SyntheticPhysicalPricingTestData.Quote(State(
             Part("PLA", "White", 1, heightMm: 0.1, volumeMm3: 1, footprintMm2: 1),
             Part("M68", "Gray", 1, heightMm: 0.1, volumeMm3: 1, footprintMm2: 1)));
 
@@ -301,7 +300,7 @@ public sealed class InstantQuotationWorkflowPricingTests
             Part("PLA", "Black", 100),
             Part("K", "Gray", 4, heightMm: 18, volumeMm3: 7_500, footprintMm2: 300));
 
-        var result = PricingService.Quote(state);
+        var result = SyntheticPhysicalPricingTestData.Quote(state);
         var totalPrintMinutes = result.Parts.Sum(part => part.PrintTimeMinutesPerUnit * part.Quantity);
         var expectedMinimumDays = Math.Max(1, (int)Math.Ceiling(totalPrintMinutes / 1_440));
 
