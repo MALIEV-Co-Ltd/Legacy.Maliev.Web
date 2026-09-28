@@ -76,8 +76,9 @@ internal sealed class InstantQuotationAdmittedMeshService(
 
         try
         {
-            MeshInput parsed = AdmittedStlMeshReader.Read(input.Content!);
-            NormalizedMesh mesh = MeshNormalizer.Normalize(parsed, new GeometryTolerance(0.001, 0.02));
+            MeshInput parsed = AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
+            NormalizedMesh mesh = MeshNormalizer.Normalize(
+                parsed, new GeometryTolerance(0.001, 0.02), cancellationToken);
             return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None);
         }
         catch (Exception exception) when (exception is FormatException or DecoderFallbackException or SimulationGeometryException)

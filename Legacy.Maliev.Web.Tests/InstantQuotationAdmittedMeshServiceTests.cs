@@ -109,6 +109,27 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
         Assert.Single(AdmittedStlMeshReader.Read(ascii).Triangles);
         Assert.Throws<FormatException>(() => AdmittedStlMeshReader.Read(new byte[AdmittedStlMeshReader.MaximumBytes + 1]));
         Assert.Throws<FormatException>(() => AdmittedStlMeshReader.Read(BinaryBox(8)[..^1]));
+        byte[] tooManyTriangles = new byte[84 + ((AdmittedStlMeshReader.MaximumTriangles + 1) * 50)];
+        BitConverter.GetBytes((uint)(AdmittedStlMeshReader.MaximumTriangles + 1)).CopyTo(tooManyTriangles, 80);
+        Assert.Throws<FormatException>(() => AdmittedStlMeshReader.Read(tooManyTriangles));
+        Assert.Throws<FormatException>(() => AdmittedStlMeshReader.Read(
+            Encoding.UTF8.GetBytes("solid fake\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendsolid fake")));
+        Assert.Throws<FormatException>(() => AdmittedStlMeshReader.Read(
+            Encoding.UTF8.GetBytes("solid fake\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nendloop\nendfacet\nendsolid fake")));
+    }
+
+    [Fact]
+    public async Task CancellationAfterCleanRead_StopsMeshParsingBeforeNormalization()
+    {
+        byte[] bytes = BinaryBox(8);
+        string digest = Convert.ToHexString(SHA256.HashData(bytes));
+        using var cancellation = new CancellationTokenSource();
+        var reader = new RecordingInputReader(Ready(bytes, digest), cancellation.Cancel);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new InstantQuotationAdmittedMeshService(reader).ReadAsync(
+                SessionId, Owner, PartId, FileId, digest, cancellation.Token));
+        Assert.NotNull(reader.LastRequest);
     }
 
     private static InstantQuotationPhysicalAnalysisInputResult Ready(byte[] bytes, string? digest = null) =>
@@ -148,7 +169,9 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
         return stream.ToArray();
     }
 
-    private sealed class RecordingInputReader(InstantQuotationPhysicalAnalysisInputResult response)
+    private sealed class RecordingInputReader(
+        InstantQuotationPhysicalAnalysisInputResult response,
+        Action? onRead = null)
         : IInstantQuotationPhysicalAnalysisInputReader
     {
         public (string SessionId, string? Owner, Guid PartId)? LastRequest { get; private set; }
@@ -157,6 +180,7 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
             string sessionId, string? ownerIdentity, Guid partId, CancellationToken cancellationToken)
         {
             LastRequest = (sessionId, ownerIdentity, partId);
+            onRead?.Invoke();
             return Task.FromResult(response);
         }
     }
