@@ -89,8 +89,10 @@ public sealed class InstantQuotationFileServiceTransportTests
         Assert.Null(result.Content);
     }
 
-    [Fact]
-    public async Task CreateSession_SendsOnlyServiceJwtAndAcceptsExactCreatedContract()
+    [Theory]
+    [InlineData(104857600)]
+    [InlineData(209715200)]
+    public async Task CreateSession_SendsOnlyServiceJwtAndAcceptsExactCreatedContract(long maxUploadBytes)
     {
         var handler = new RecordingHandler(request =>
         {
@@ -109,7 +111,7 @@ public sealed class InstantQuotationFileServiceTransportTests
                   "sessionId":"{{SessionId}}",
                   "sessionToken":"opaque-capability-000000000000000",
                   "expiresAt":"2026-07-20T12:00:00+00:00",
-                  "maxUploadBytes":209715200,
+                  "maxUploadBytes":{{maxUploadBytes}},
                   "maxFilesPerSession":100,
                   "supportedExtensions":[".stl",".obj",".3mf",".step",".stp",".iges",".igs",".glb",".gltf"]
                 }
@@ -123,9 +125,27 @@ public sealed class InstantQuotationFileServiceTransportTests
         Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
         Assert.Equal(SessionId, result.Capability?.SessionId);
         Assert.Equal("opaque-capability-000000000000000", result.Capability?.SessionToken);
-        Assert.Equal(209715200, result.Capability?.MaxUploadBytes);
+        Assert.Equal(maxUploadBytes, result.Capability?.MaxUploadBytes);
         Assert.Equal(100, result.Capability?.MaxFilesPerSession);
         Assert.Equal([".stl", ".obj", ".3mf", ".step", ".stp", ".iges", ".igs", ".glb", ".gltf"], result.Capability?.SupportedExtensions);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(157286400)]
+    [InlineData(209715201)]
+    public async Task CreateSession_RejectsUnknownUploadCeiling(long maxUploadBytes)
+    {
+        var response = Json(
+            HttpStatusCode.Created,
+            $$"""{"sessionId":"{{SessionId}}","sessionToken":"opaque-capability-000000000000000","expiresAt":"2026-07-20T12:00:00Z","maxUploadBytes":{{maxUploadBytes}},"maxFilesPerSession":100,"supportedExtensions":[".stl",".obj",".3mf",".step",".stp",".iges",".igs",".glb",".gltf"]}""");
+        response.Headers.Location = new Uri($"/file/v1/instant-quotation/sessions/{SessionId}", UriKind.Relative);
+
+        var result = await Create(new RecordingHandler(_ => Task.FromResult(response)), "service-jwt")
+            .CreateSessionAsync(CancellationToken.None);
+
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Null(result.Capability);
     }
 
     [Fact]
@@ -159,8 +179,10 @@ public sealed class InstantQuotationFileServiceTransportTests
         Assert.Null(result.Capability);
     }
 
-    [Fact]
-    public async Task Upload_HashesBoundedRepeatableInputAndSendsExactMultipartContract()
+    [Theory]
+    [InlineData(104857600)]
+    [InlineData(209715200)]
+    public async Task Upload_HashesBoundedRepeatableInputAndSendsExactMultipartContract(long maxUploadBytes)
     {
         var bytes = Encoding.UTF8.GetBytes("solid example\nendsolid example\n");
         var opens = 0;
@@ -196,7 +218,7 @@ public sealed class InstantQuotationFileServiceTransportTests
         });
 
         var result = await Create(handler, "service-jwt").UploadAsync(
-            Capability(), upload, "upload-2222222222222222", CancellationToken.None);
+            Capability() with { MaxUploadBytes = maxUploadBytes }, upload, "upload-2222222222222222", CancellationToken.None);
 
         Assert.Equal(2, opens);
         Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
