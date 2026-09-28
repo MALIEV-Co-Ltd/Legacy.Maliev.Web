@@ -118,6 +118,26 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    internal InstantQuotationPhysicalAnalysisBinding? CurrentPhysicalAnalysisBinding(
+        Guid partId, string profileVersion)
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        var part = entries.SingleOrDefault(entry => entry.Part?.PartId == partId)?.Part;
+        var upload = part?.PhysicalAnalysisUpload;
+        if (part is null || upload is null || upload.FileId == Guid.Empty
+            || !string.Equals(upload.Status, "clean", StringComparison.Ordinal)
+            || !string.Equals(upload.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return new InstantQuotationPhysicalAnalysisBinding(
+            session!.SessionId, ownerIdentity, partId, upload.FileId, upload.Sha256,
+            part.Configuration.MaterialKey, part.Configuration.BuildPreference,
+            part.Configuration.Quantity, profileVersion);
+    }
+
     public InstantQuotationOrderQuote? OrderQuote { get; private set; }
 
     public long AuthoritativeQuoteRevision => authoritativeQuoteRevision;

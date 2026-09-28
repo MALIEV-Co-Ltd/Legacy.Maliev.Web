@@ -542,4 +542,8 @@
   <data name="(opens in a new tab)" xml:space="preserve"><value>(เปิดในแท็บใหม่)</value></data>
   <data name="Show details" xml:space="preserve"><value>แสดงรายละเอียด</value></data>
   <data name="Hide details" xml:space="preserve"><value>ซ่อนรายละเอียด</value></data>
+  <data name="Check physical build (not a price)" xml:space="preserve"><value>ตรวจสอบการพิมพ์จริง (ไม่ใช่ราคา)</value></data>
+  <data name="Checking physical build…" xml:space="preserve"><value>กำลังตรวจสอบการพิมพ์จริง…</value></data>
+  <data name="Physical build evidence is ready for engineering review. Price is unchanged." xml:space="preserve"><value>ข้อมูลการพิมพ์จริงพร้อมให้วิศวกรตรวจสอบ ราคายังไม่เปลี่ยนแปลง</value></data>
+  <data name="Physical build analysis is unavailable. Engineering review is required." xml:space="preserve"><value>ไม่สามารถวิเคราะห์การพิมพ์จริงได้ ต้องให้วิศวกรตรวจสอบ</value></data>
 </root>

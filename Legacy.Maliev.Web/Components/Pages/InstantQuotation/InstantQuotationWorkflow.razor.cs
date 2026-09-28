@@ -37,6 +37,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private readonly Dictionary<Guid, string> previewKeys = [];
     private readonly Dictionary<Guid, ThicknessStatus> thicknessStatuses = [];
     private readonly Dictionary<Guid, long> thicknessToggleRevisions = [];
+    private readonly Dictionary<Guid, InstantQuotationBoundPhysicalAnalysisResult> physicalAnalyses = [];
+    private CancellationTokenSource? physicalAnalysisCancellation;
+    private Guid? physicalAnalysisPartId;
+    private long physicalAnalysisGeneration;
     private readonly QuantityEditState quantityEdits = new();
     private readonly SemaphoreSlim uploadBatchGate = new(1, 1);
     private IInstantQuotationAnalyticsTracker analytics = NoOpInstantQuotationAnalyticsTracker.Instance;
@@ -387,6 +391,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task RemovePartAsync(Guid partId)
     {
+        InvalidatePhysicalAnalysis(partId);
         if (workflow is not null)
         {
             var part = Parts.SingleOrDefault(item => item.PartId == partId);
@@ -645,6 +650,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeMaterialAsync(Guid partId, ChangeEventArgs args)
     {
+        InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var material = args.Value?.ToString() ?? part.Configuration.MaterialKey;
         var colors = GetColors(material);
@@ -658,6 +664,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeColorAsync(Guid partId, ChangeEventArgs args)
     {
+        InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var color = args.Value?.ToString() ?? part.Configuration.Color;
         await UpdateConfigurationAsync(
@@ -675,6 +682,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
     {
+        InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
         return quantityEdits.RepriceAsync(partId,
@@ -683,6 +691,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
     {
+        InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(
             part.PartId,
@@ -744,6 +753,72 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task RepriceAsync(Func<Task> update) =>
         repricing.RunAsync(update, () => InvokeAsync(StateHasChanged));
+
+    private void InvalidatePhysicalAnalysis(Guid partId)
+    {
+        physicalAnalysisGeneration++;
+        physicalAnalyses.Remove(partId);
+        if (physicalAnalysisPartId == partId)
+        {
+            physicalAnalysisCancellation?.Cancel();
+        }
+    }
+
+    private async Task AnalyzePhysicalAsync(Guid partId)
+    {
+        if (workflow is null
+            || Services.GetService<InstantQuotationBoundPhysicalAnalysisService>() is not { } service
+            || Services.GetService<FdmRuntimeProfileCatalog>() is not { } catalog)
+        {
+            return;
+        }
+
+        InstantQuotationPhysicalAnalysisBinding? binding = workflow.CurrentPhysicalAnalysisBinding(
+            partId, catalog.ProfileVersion);
+        if (binding is null)
+        {
+            physicalAnalyses[partId] = InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
+                InstantQuotationBoundPhysicalAnalysisFailure.UploadUnavailable);
+            return;
+        }
+
+        physicalAnalysisCancellation?.Cancel();
+        var generation = ++physicalAnalysisGeneration;
+        using var cancellation = new CancellationTokenSource();
+        cancellation.CancelAfter(TimeSpan.FromSeconds(15));
+        physicalAnalysisCancellation = cancellation;
+        physicalAnalysisPartId = partId;
+        physicalAnalyses.Remove(partId);
+        try
+        {
+            InstantQuotationBoundPhysicalAnalysisResult result = await service.AnalyzeAsync(
+                binding, cancellation.Token);
+            if (!cancellation.IsCancellationRequested
+                && physicalAnalysisGeneration == generation
+                && Equals(workflow.CurrentPhysicalAnalysisBinding(partId, catalog.ProfileVersion), binding))
+            {
+                physicalAnalyses[partId] = result;
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            if (ReferenceEquals(physicalAnalysisCancellation, cancellation)
+                && physicalAnalysisGeneration == generation
+                && Equals(workflow.CurrentPhysicalAnalysisBinding(partId, catalog.ProfileVersion), binding))
+            {
+                physicalAnalyses[partId] = InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
+                    InstantQuotationBoundPhysicalAnalysisFailure.AnalysisUnavailable);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(physicalAnalysisCancellation, cancellation))
+            {
+                physicalAnalysisCancellation = null;
+                physicalAnalysisPartId = null;
+            }
+        }
+    }
 
     private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
         InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
@@ -887,6 +962,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        physicalAnalysisCancellation?.Cancel();
         try
         {
             await DisposePreviewInteropAsync();

@@ -31,7 +31,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             BaseAddress = origin,
         });
         using var readiness = await client.GetAsync(quoteUrl);
-        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        Assert.True(readiness.StatusCode == HttpStatusCode.OK,
+            await readiness.Content.ReadAsStringAsync());
 
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
@@ -77,8 +78,22 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             var uploadedPartId = Guid.Parse((await page.Locator("[data-workflow-part]")
                 .GetAttributeAsync("data-part-id"))!);
             await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(uploadedPartId);
+            Assert.NotNull(await factory.Services.GetRequiredService<IInstantQuotationSessionStore>()
+                .GetAsync(upload.SessionId, upload.OwnerIdentity, default));
+            var pricingCallsBeforePhysicalCheck = pricing.CallCount;
+
+            await page.Locator("[data-workflow-physical-analysis] button").ClickAsync();
+            await page.Locator("[data-physical-analysis-result]").WaitForAsync();
+            Assert.Equal("ready:None", await page.Locator("[data-physical-analysis-result]")
+                .GetAttributeAsync("data-physical-analysis-result") + ":" +
+                await page.Locator("[data-physical-analysis-result]")
+                    .GetAttributeAsync("data-physical-analysis-failure"));
+            Assert.Equal(pricingCallsBeforePhysicalCheck, pricing.CallCount);
 
             await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+            await page.Locator("[data-physical-analysis-result='ready']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
+            Assert.Equal(0, await page.Locator("[data-physical-analysis-result='ready']").CountAsync());
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
             await review.WaitForAsync();
             try
@@ -477,6 +492,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
                 services.AddSingleton<IInstantQuotationUploadClient>(upload);
                 services.RemoveAll<IInstantQuotationPricingService>();
                 services.AddSingleton<IInstantQuotationPricingService>(pricing);
+                services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
+                services.AddSingleton<IInstantQuotationPhysicalAnalysisInputReader>(upload);
             });
         }
     }
@@ -526,12 +543,17 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
         }
     }
 
-    private sealed class HashCheckingUploadClient : IInstantQuotationUploadClient
+    private sealed class HashCheckingUploadClient : IInstantQuotationUploadClient,
+        IInstantQuotationPhysicalAnalysisInputReader
     {
         private int verifiedUploads;
         private BrowserUpload? verifiedUpload;
 
         public int VerifiedUploads => Volatile.Read(ref verifiedUploads);
+
+        public string SessionId => verifiedUpload!.SessionId;
+
+        public string? OwnerIdentity => verifiedUpload!.OwnerIdentity;
 
         public async Task AssertAdmittedMeshMatchesBrowserUploadAsync(Guid partId)
         {
@@ -577,7 +599,25 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             return InstantQuotationUploadResult.Succeeded(
                 operationId,
                 new InstantQuotationUploadReference(fileId.ToString("D")),
-                sha256);
+                sha256,
+                new InstantQuotationPhysicalAnalysisUpload(
+                    fileId, fileName,
+                    string.IsNullOrWhiteSpace(contentType) ? "model/stl" : contentType,
+                    copy.Length, sha256, "clean"));
+        }
+
+        public Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(
+            string sessionId, string? ownerIdentity, Guid partId, CancellationToken cancellationToken)
+        {
+            BrowserUpload? upload = verifiedUpload;
+            return Task.FromResult(upload is not null
+                && upload.SessionId == sessionId && upload.OwnerIdentity == ownerIdentity
+                && partId != Guid.Empty
+                ? new InstantQuotationPhysicalAnalysisInputResult(
+                    upload.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None,
+                    upload.FileId, upload.FileName, upload.Sha256)
+                : InstantQuotationPhysicalAnalysisInputResult.Unavailable(
+                    InstantQuotationPhysicalAnalysisInputFailure.SessionUnavailable));
         }
 
         public Task<InstantQuotationRemoveResult> RemoveAsync(
