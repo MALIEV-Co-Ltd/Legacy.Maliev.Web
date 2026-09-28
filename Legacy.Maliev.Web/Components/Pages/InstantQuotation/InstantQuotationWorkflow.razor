@@ -30,6 +30,10 @@
             <span id="instant-quote-upload-help" class="instant-quote__sr-only">
                 @Localizer["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 200 MB each."]
             </span>
+            @if (uploadSelectionError is not null)
+            {
+                <p role="alert">@uploadSelectionError</p>
+            }
             @if (State is InstantQuotationWorkflowState.Empty)
             {
                 <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone>
