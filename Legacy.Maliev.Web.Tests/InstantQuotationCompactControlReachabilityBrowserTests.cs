@@ -32,6 +32,10 @@ public sealed class InstantQuotationCompactControlReachabilityBrowserTests(CncNa
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
 
+        // Synthetic workflow markup must not race the initial interactive render.
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined");
+
         // Exercise the target-native layout with a completed tier list. The hosted
         // preview has no uploaded part, so this is a CSS/keyboard geometry fixture,
         // not an end-to-end quotation or production pricing acceptance test.
