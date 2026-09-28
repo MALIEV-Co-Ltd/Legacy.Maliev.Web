@@ -511,6 +511,105 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             Assert.True(await review.IsEnabledAsync());
             Assert.Equal(1, upload.VerifiedUploads);
             Assert.Empty(pageErrors);
+
+            await material.SelectOptionAsync("M68");
+            await page.WaitForFunctionAsync("() => !document.querySelector('[data-dfm-code=thin-wall]')");
+            await toggle.ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__thickness-legend')?.textContent?.includes('0.60 mm')");
+            Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
+            Assert.Equal(1, upload.VerifiedUploads);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OneMillimeterFdmUploadDoesNotInventAThinWallWarning()
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync();
+        var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        Assert.Equal(200, response?.Status);
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var path = CreateBoxStl(20, 20, 1f, "maliev-one-millimeter-fdm");
+        try
+        {
+            await page.SetInputFilesAsync("#instant-quote-files", path);
+            await page.Locator("[data-workflow-part]").WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+            await page.WaitForFunctionAsync("() => !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)')");
+            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+            await page.Locator("[data-workflow-dfm-part]").WaitForAsync();
+
+            Assert.Equal(0, await page.Locator("[data-dfm-code='thin-wall']").CountAsync());
+            var toggle = page.Locator(".instant-quote__thickness-toggle");
+            Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
+            await toggle.ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__thickness-toggle')?.getAttribute('aria-pressed') === 'true'");
+            Assert.True(await page.Locator(".instant-quote__thickness-legend").IsVisibleAsync());
+            Assert.Contains("0.80 mm", await page.Locator(".instant-quote__thickness-legend").InnerTextAsync(), StringComparison.Ordinal);
+            Assert.Equal(1, upload.VerifiedUploads);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenSheetFailsClosedInsteadOfInventingSafeThickness()
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync();
+        var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        Assert.Equal(200, response?.Status);
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var path = CreateOpenSheetStl();
+        try
+        {
+            await page.SetInputFilesAsync("#instant-quote-files", path);
+            await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'error'");
+            Assert.Contains("The file could not be uploaded. Try again.",
+                await page.Locator("[role='alert']").InnerTextAsync(), StringComparison.Ordinal);
+            Assert.Equal(0, await page.Locator("[data-workflow-part]").CountAsync());
+            Assert.Equal(0, await page.Locator("[data-workflow-dfm-clear]").CountAsync());
         }
         finally
         {
@@ -567,6 +666,30 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
         writer.Write(new byte[80]);
         writer.Write((uint)faces.Length);
         foreach (var face in faces)
+        {
+            writer.Write(0f);
+            writer.Write(0f);
+            writer.Write(0f);
+            foreach (var value in points[face[0]]) writer.Write(value);
+            foreach (var value in points[face[1]]) writer.Write(value);
+            foreach (var value in points[face[2]]) writer.Write(value);
+            writer.Write((ushort)0);
+        }
+
+        return path;
+    }
+
+    private static string CreateOpenSheetStl()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"maliev-open-sheet-{Guid.NewGuid():N}.stl");
+        using var writer = new BinaryWriter(File.Create(path));
+        writer.Write(new byte[80]);
+        writer.Write((uint)2);
+        var points = new float[][]
+        {
+            [0, 0, 0], [20, 0, 0], [20, 20, 0], [0, 20, 0],
+        };
+        foreach (var face in new[] { new[] { 0, 2, 1 }, new[] { 0, 3, 2 } })
         {
             writer.Write(0f);
             writer.Write(0f);
