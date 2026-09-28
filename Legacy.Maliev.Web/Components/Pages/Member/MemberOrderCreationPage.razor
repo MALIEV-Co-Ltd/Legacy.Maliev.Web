@@ -3,6 +3,7 @@
 @page "/Member/Orders/CNC-Machining"
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Infrastructure
+@using System.Globalization
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
@@ -16,7 +17,7 @@
 <div data-migration-route-owner="blazor-static-ssr">
     <MemberWorkspaceShell>
         <section class="maliev-section" aria-labelledby="member-order-create-title">
-            <form method="post" action="@model.FormAction" enctype="multipart/form-data" class="maliev-panel maliev-form" data-terms-gated-form>
+            <form method="post" action="@(model.FormAction + "&culture=" + CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)" enctype="multipart/form-data" class="maliev-panel maliev-form" data-terms-gated-form>
                 @if (tokens is not null)
                 {
                     <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
