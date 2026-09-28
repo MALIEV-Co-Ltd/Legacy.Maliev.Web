@@ -126,6 +126,7 @@ public static class InstantQuotationCalculator
             shippingState = shippingQuote.State.ToString(),
             destinationCountryCode = shippingQuote.DestinationCountryCode,
             vat = Math.Round(order.Vat, 2),
+            priceBeforeVat = Math.Round(order.PriceBeforeVat, 2),
             finalOrderPrice = Math.Round(order.FinalOrderPrice, 2),
             currency = NormalizeCurrency(currency),
         };

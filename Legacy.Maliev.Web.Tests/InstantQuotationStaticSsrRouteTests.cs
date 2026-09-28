@@ -46,6 +46,7 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(json.RootElement.GetProperty("success").GetBoolean());
         Assert.Equal(3_000, json.RootElement.GetProperty("printing").GetDouble(), 2);
+        Assert.Equal(3_100, json.RootElement.GetProperty("priceBeforeVat").GetDouble(), 2);
         Assert.Equal("THB", json.RootElement.GetProperty("currency").GetString());
         Assert.True(json.RootElement.TryGetProperty("finalOrderPrice", out _));
     }
@@ -72,6 +73,28 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", page, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", page, StringComparison.Ordinal);
         Assert.True(json.RootElement.GetProperty("success").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DisabledRoute_OrderTotalHandlerPreservesPreVatField()
+    {
+        await using var fallbackFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:InstantQuotation", "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationSubmissionService, UnusedSubmissionService>();
+            });
+        });
+        using var client = CreateClient(fallbackFactory);
+        using var response = await client.GetAsync(
+            "/InstantQuotation/3D-Printing?handler=GetOrderTotal&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=USD&culture=th");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(3_100, json.RootElement.GetProperty("priceBeforeVat").GetDouble(), 2);
+        Assert.Equal("THB", json.RootElement.GetProperty("currency").GetString());
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> application) =>
