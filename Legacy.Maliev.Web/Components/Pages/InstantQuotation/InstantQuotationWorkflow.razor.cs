@@ -46,6 +46,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IInstantQuotationAnalyticsTracker analytics = NoOpInstantQuotationAnalyticsTracker.Instance;
     private bool previewAttached;
     private bool previewUnavailable;
+    private string? uploadSelectionError;
     private bool batchInProgress;
     private readonly RepricingActivity repricing = new();
     private Guid? selectedPreviewPartId;
@@ -289,7 +290,23 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         batchInProgress = true;
         try
         {
-            var browserFiles = args.GetMultipleFiles(100).ToArray();
+            uploadSelectionError = null;
+            var selectedFiles = args.GetMultipleFiles(100).ToArray();
+            var browserFiles = selectedFiles
+                .Where(file => file.Size <= InstantQuotationWorkflowCoordinator.MaximumFileSize)
+                .ToArray();
+            if (browserFiles.Length != selectedFiles.Length)
+            {
+                uploadSelectionError = Localizer["Files larger than {0} MB were skipped. Choose a smaller file.",
+                    InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)];
+            }
+
+            if (browserFiles.Length == 0)
+            {
+                await InvokePreviewAsync("discardSelection");
+                return;
+            }
+
             var keys = await BeginPreviewSelectionAsync();
             if (keys.Length != browserFiles.Length)
             {
@@ -428,7 +445,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
         try
         {
-            return await previewInterop.InvokeAsync<string[]>("beginSelection", fileInput.Element);
+            return await previewInterop.InvokeAsync<string[]>("beginSelection", fileInput.Element,
+                InstantQuotationWorkflowCoordinator.MaximumFileSize);
         }
         catch (JSException)
         {

@@ -47,6 +47,18 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
+    public void WorkflowSource_FiltersOversizedFilesBeforeStartingPreviewAnalysis()
+    {
+        string source = System.IO.File.ReadAllText(Path.Combine(WorkflowDirectory(), "InstantQuotationWorkflow.razor.cs"));
+        int sizeCheck = source.IndexOf("file.Size <= InstantQuotationWorkflowCoordinator.MaximumFileSize", StringComparison.Ordinal);
+        int previewStart = source.IndexOf("var keys = await BeginPreviewSelectionAsync();", StringComparison.Ordinal);
+
+        Assert.True(sizeCheck >= 0 && previewStart > sizeCheck);
+        Assert.Contains("uploadSelectionError = Localizer[", source, StringComparison.Ordinal);
+        Assert.Contains("InstantQuotationWorkflowCoordinator.MaximumFileSize);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Initialize_CreatesProtectedEmptySessionForStableMemberIdentity()
     {
         var store = new RecordingSessionStore();
