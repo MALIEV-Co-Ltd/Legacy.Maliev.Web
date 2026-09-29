@@ -395,6 +395,10 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             Assert.True(await preliminaryButton.IsEnabledAsync());
             await using var preview = await page.RunAndWaitForPopupAsync(() => preliminaryButton.ClickAsync());
             await preview.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            var logo = preview.Locator(".iq-preliminary-quotation-logo");
+            await preview.WaitForFunctionAsync("() => document.querySelector('.iq-preliminary-quotation-logo')?.complete === true");
+            Assert.True(await logo.EvaluateAsync<bool>("image => image.complete && image.naturalWidth > 0"));
+            Assert.StartsWith("data:image/webp;base64,", await logo.GetAttributeAsync("src"), StringComparison.Ordinal);
             var preliminaryNames = await preview.Locator(".iq-preliminary-quotation-part h2").AllInnerTextsAsync();
             Assert.Equal(reviewNames, preliminaryNames);
             var preliminaryPreviews = await preview.Locator(".iq-preliminary-quotation-thumbnail")
