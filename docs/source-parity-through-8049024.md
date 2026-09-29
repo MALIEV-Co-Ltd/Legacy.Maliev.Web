@@ -10,7 +10,7 @@
   the read-only source by `scripts/verify-complete-source-history-parity.ps1`.
 - Production deployment is outside this audit. The source repository was not modified.
 - Local-only Claude settings and Impeccable critique artifacts are intentionally excluded.
-- Source IBM Plex work is superseded by the owner-approved `Inter, "Noto Sans Thai", sans-serif` contract.
+- Source IBM Plex Sans/Thai typography is superseded by later source `7c416cc` and Legacy Web #262's self-hosted Outfit/Noto Sans Thai stack; this Web-local choice does not resolve the full `a00a44e` SHA.
 
 Status legend: **Migrated** means equivalent behavior is implemented and covered in Legacy Web; **Excluded** means repository tooling or an explicitly superseded choice; **Gate** means the Web implementation is present but release evidence belongs to GitOps or another Legacy service.
 
@@ -89,7 +89,7 @@ Status legend: **Migrated** means equivalent behavior is implemented and covered
 | `2fbee81` | Migrated | Finishing selection guidance. |
 | `7055e4e` | Migrated | Matcher diagnostics route only through consent-gated `malievAnalytics`; analytics tests. |
 | `4d16491` | Excluded | Critique snapshots. |
-| `a00a44e` | Excluded | IBM Plex choice superseded by the owner-approved Inter/Noto Sans Thai stack and font contract tests. |
+| `a00a44e` | Excluded | IBM Plex Sans/Thai was superseded by later source `7c416cc` and Web #262's self-hosted Outfit/Noto Sans Thai stack. This Web-local font choice does not retire the full source SHA: IBM Plex Mono remains unproven in Web, and the Workflows resolution is pending without retirement approval. |
 | `866fa2f` | Migrated | Matcher guidance and preview polish. |
 | `7987661` | Migrated | Consultation hover contrast and shared responsive UI contract. |
 | `94581dd` | Migrated | Color fidelity/PBR interaction and matcher core tests. |
