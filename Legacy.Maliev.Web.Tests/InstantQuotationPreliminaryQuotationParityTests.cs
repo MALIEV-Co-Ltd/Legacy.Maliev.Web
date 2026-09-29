@@ -62,6 +62,18 @@ public sealed class InstantQuotationPreliminaryQuotationParityTests
     }
 
     [Fact]
+    public void PreliminaryQuotation_LogoDataUriMatchesBundledWebpSignature()
+    {
+        var root = FindRepositoryRoot();
+        var component = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationPreliminaryQuotation.razor"));
+        var logo = File.ReadAllBytes(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "images", "navbar_logo_black.webp"));
+
+        Assert.Contains("data:image/webp;base64,", component, StringComparison.Ordinal);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(logo, 0, 4));
+        Assert.Equal("WEBP", System.Text.Encoding.ASCII.GetString(logo, 8, 4));
+    }
+
+    [Fact]
     public void PreliminaryQuotation_ExposesOnlyTheReviewActionAndNoConfigurationAction()
     {
         var root = FindRepositoryRoot();
