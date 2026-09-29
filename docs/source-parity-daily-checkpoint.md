@@ -125,12 +125,24 @@ idempotent. It does not reintroduce the rejected identity-bearing analytics payl
 source deployment scripts.
 
 Source commits `4533669` and `25418c9` add and harden the original UploadService
-Kubernetes Workload Identity and storage-authorization boundary. Their runtime behavior
-is represented by the Legacy FileService fail-closed storage, signed-URL rollback, and
-authorization contracts. The future production Deployment must select the existing
-isolated `legacy-maliev-file` service account and pass the GitOps binding gate; this is a
-release/deployment gate, not an unclassified source-parity gap, and deployment remains
-unauthorized during Aspire review.
+Kubernetes Workload Identity and storage-authorization boundary. In source commit
+`4533669`, `Maliev.Web.Tests/UploadServiceWorkloadIdentityDeploymentTests.cs` asserts
+UploadService deployment files and imperative deploy order; it exercises no Web runtime behavior.
+Legacy FileService's fail-closed storage, signed-URL rollback, and authorization
+contracts do not prove that a production Deployment selects the isolated
+`legacy-maliev-file` service account or that live Workload Identity works. Those
+FileService/GitOps release gates remain open under
+[FileService #13](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.FileService/issues/13) and
+[Workflows #220](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Workflows/issues/220);
+deployment remains unauthorized during Aspire review.
+
+The frozen `source-parity-delta-through-4486f0e.json` sequence 125 records a historical
+Web owner and `df03900` target reference for `4533669`. That reference is not current
+WIF acceptance evidence: `df03900` only corrected unrelated source-parity citations,
+with no upload or Deployment contract change. Workflows #220 owns the path-specific
+source-ledger disposition; do not count `4533669` as completed Web runtime parity or
+as fully resolved until that ownership decision and the separate release gates are
+verified.
 
 Legacy Web main commit `895b866` includes the final parity integration and a bounded
 test-host lifecycle. Release build completed with zero warnings and zero errors, the
