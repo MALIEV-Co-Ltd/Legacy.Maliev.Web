@@ -25,7 +25,7 @@ public sealed class TechnicalFilamentMinimumPricingTests
     [InlineData("PETG", false)]
     [InlineData("ABS", false)]
     [InlineData("ASA", false)]
-    [InlineData("ASA-CF", false)]
+    [InlineData("ASA-CF", true)]
     public void Catalog_ClassifiesDryingRequiredFilaments(string materialKey, bool expected)
     {
         Assert.Equal(expected, PricingCatalog.ResolveMaterial(materialKey)!.RequiresDrying);

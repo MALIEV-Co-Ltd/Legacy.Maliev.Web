@@ -4,7 +4,7 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingCatalog
 {
-    public const string AdditivePricingPolicyVersion = "additive-2026-09-30.v9";
+    public const string AdditivePricingPolicyVersion = "additive-2026-09-30.v10";
 
     public const double FdmLayerHeightMm = 0.2;
     public const double ResinLayerHeightMm = 0.05;
@@ -91,6 +91,10 @@ public static class PricingCatalog
         new(10, 0.05, 0.35),
         new(50, 0.10, 0.25),
         new(100, 0.15, 0.20),
+        new(500, 0.15, 0.18),
+        new(1000, 0.15, 0.17),
+        new(5000, 0.15, 0.16),
+        new(10000, 0.15, 0.15),
     ]);
 
     /// <summary>Display-only quote samples; these do not add commercial discount breakpoints.</summary>
@@ -266,22 +270,22 @@ public static class PricingCatalog
             Fdm("PLA", "PLA — Polylactic Acid", 1.24, 0.83, FdmFlowClass.Standard, 10),
             Fdm("PLA-CF", "PLA-CF — PLA + Carbon Fiber", 1.29, 1.925, FdmFlowClass.Engineering, 10),
             Fdm("PETG", "PETG — PET Glycol-modified", 1.27, 0.66, FdmFlowClass.Standard, 10),
-            Fdm("PETG-CF", "PETG-CF — PETG + Carbon Fiber", 1.29, 1.55, FdmFlowClass.Engineering, 10, requiresDrying: true),
+            Fdm("PETG-CF", "PETG-CF — PETG + Carbon Fiber", 1.30, 1.55, FdmFlowClass.Engineering, 10, requiresDrying: true),
             Fdm("PETG-ESD", "PETG-ESD — Electrostatic Discharge Safe", 1.31, 2.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
-            Fdm("PET-CF", "PET-CF — PET + Carbon Fiber", 1.30, 1.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
+            Fdm("PET-CF", "PET-CF — PET + Carbon Fiber", 1.34, 1.70, FdmFlowClass.Engineering, 10, requiresDrying: true),
             Fdm("ABS", "ABS — Acrylonitrile Butadiene Styrene", 1.04, 0.76, FdmFlowClass.Standard, 5, requiresHeatedEnclosure: true),
             Fdm("ABS-FR", "ABS-FR — Flame-Retardant ABS", 1.15, 1.60, FdmFlowClass.Standard, 5, requiresHeatedEnclosure: true),
             Fdm("ASA", "ASA — Acrylonitrile Styrene Acrylate", 1.07, 0.86, FdmFlowClass.Standard, 5),
-            Fdm("ASA-CF", "ASA-CF — ASA + Carbon Fiber", 1.11, 1.834, FdmFlowClass.Engineering, 5),
-            Fdm("HIPS", "HIPS — High Impact Polystyrene", 1.04, 0.925, FdmFlowClass.Standard, 6),
+            Fdm("ASA-CF", "ASA-CF — ASA + Carbon Fiber", 1.02, 1.834, FdmFlowClass.Engineering, 5, requiresDrying: true),
+            Fdm("HIPS", "HIPS — High Impact Polystyrene", 1.05, 0.925, FdmFlowClass.Standard, 6),
             Fdm("PC", "PC — Polycarbonate", 1.20, 1.05, FdmFlowClass.Engineering, 4, requiresDrying: true),
-            Fdm("PC-FR", "PC-FR — Flame-Retardant Polycarbonate", 1.25, 2.15, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PC-FR", "PC-FR — Flame-Retardant Polycarbonate", 1.19, 2.15, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PA612-ESD", "PA612-ESD — Fiberon ESD Nylon", 1.10, 3.38, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("ABS-ESD", "ABS-ESD — eSUN ESD ABS", 0.97, 1.09, FdmFlowClass.Engineering, 3, requiresDrying: true, requiresHeatedEnclosure: true),
             Fdm("PA6", "PA6 — Nylon 6", 1.14, 1.95, FdmFlowClass.Engineering, 4, requiresDrying: true),
-            Fdm("PA12", "PA12 — Nylon 12", 1.01, 2.034, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PA12", "PA12 — Nylon 12", 1.012, 2.034, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PA-CF", "PA-CF — Nylon + Carbon Fiber", 1.16, 3.534, FdmFlowClass.Engineering, 4, requiresDrying: true),
-            Fdm("TPU", "TPU — Flexible Thermoplastic Polyurethane", 1.21, 1.05, FdmFlowClass.Flexible, 12, requiresDrying: true),
+            Fdm("TPU", "TPU — Flexible Thermoplastic Polyurethane", 1.43, 1.05, FdmFlowClass.Flexible, 12, requiresDrying: true),
             Fdm("PVA", "PVA — Water-Soluble Support", 1.23, 2.568, FdmFlowClass.Standard, 8, requiresDrying: true),
             Resin("M68", "Standard Resin (M68)", 2.14),
             Resin("K", "Tough Resin (K)", 2.14),

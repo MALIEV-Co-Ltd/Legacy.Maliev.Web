@@ -17,6 +17,21 @@ namespace Legacy.Maliev.Web.Tests
         private static readonly DateTimeOffset Now = new DateTimeOffset(2026, 9, 14, 12, 0, 0, TimeSpan.Zero);
 
         [Fact]
+        public void LineTicket_OlderV9Economics_IsRejectedWithoutRelabelingPhysicalProfile()
+        {
+            var service = CreateService();
+            var oldPrice = LinePayload();
+            oldPrice.PolicyVersion = "additive-2026-09-30.v9";
+            oldPrice.ProfileVersion = "bambu-x1c-2026-09-30.5";
+            var ticket = service.ProtectLine(oldPrice);
+
+            var error = Assert.Throws<AdditiveQuoteTicketException>(() => service.UnprotectLine(ticket, Now.AddMinutes(1)));
+
+            Assert.Equal("quote_invalid", error.Code);
+            Assert.Equal("bambu-x1c-2026-09-30.5", oldPrice.ProfileVersion);
+        }
+
+        [Fact]
         public void LineTicket_RoundTripPreservesCanonicalMoneyAndIdentity()
         {
             AdditiveQuoteTicketService service = CreateService();

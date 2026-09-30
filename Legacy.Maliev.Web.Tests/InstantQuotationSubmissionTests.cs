@@ -161,6 +161,11 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Contains("Quantity: 2 piece(s)", call.Submission.Message, StringComparison.Ordinal);
         var quotedLine = SyntheticPhysicalPricingTestData
             .Quote(Session(PartWithDfm(quantity: 2)).RequestState).Parts.Single();
+        var physicalReceipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(quotedLine.PhysicalReceipt);
+        Assert.NotEqual(PricingCatalog.AdditivePricingPolicyVersion, physicalReceipt.ProfileVersion);
+        Assert.Contains($"Pricing policy: {PricingCatalog.AdditivePricingPolicyVersion}", call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains($"Profile version: {physicalReceipt.ProfileVersion}", call.Submission.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain($"Profile version: {PricingCatalog.AdditivePricingPolicyVersion}", call.Submission.Message, StringComparison.Ordinal);
         Assert.NotEqual(quotedLine.Subtotal, quotedLine.AllocatedOrderTotal);
         Assert.Contains($"Cost per unit: {quotedLine.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains($"Total cost: {quotedLine.Subtotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);

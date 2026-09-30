@@ -12,6 +12,167 @@ namespace Legacy.Maliev.Web.Tests
     /// <summary>Freezes the approved Service Pricing workbook calculation sequence.</summary>
     public sealed class AdditiveOrderCostCalculatorTests
     {
+        [Theory]
+        [InlineData(1, 500, 498, 50, 627.90, 43.95, 675, 631.05)]
+        [InlineData(2, 1000, 996, 100, 1194.91, 83.64, 1280, 1196.36)]
+        [InlineData(5, 2500, 2490, 250, 2895.94, 202.72, 3100, 2897.28)]
+        public void Calculate_PerUnitFloor_PrecedesAllCommercialStages(
+            int quantity, decimal manufacturing, decimal adjustment, decimal reserve,
+            decimal exVat, decimal vat, decimal gross, decimal commercial)
+        {
+            var line = CreateLine("floor", 1m);
+            line.Quantity = quantity;
+            line.MinimumLineBaseThb = 500m;
+            line.MinimumOrderPriceThb = 300m;
+
+            var result = AdditiveOrderCostCalculator.Calculate([line], WorkbookCharges);
+
+            Assert.Equal(manufacturing, result.BaseOrderThb);
+            Assert.Equal(adjustment, result.LineMinimumAdjustmentThb);
+            Assert.Equal(0m, result.MinimumOrderSurchargeThb);
+            Assert.Equal(reserve, result.ReserveThb);
+            Assert.Equal(exVat, result.PriceBeforeVatThb);
+            Assert.Equal(vat, result.VatThb);
+            Assert.Equal(gross, result.TotalThb);
+            Assert.Equal(commercial, result.CommercialSubtotalThb);
+            Assert.Equal(commercial, Assert.Single(result.CommercialLineAllocations).TotalThb);
+        }
+
+        [Fact]
+        public void Calculate_CommodityMinimum_SeparatesExplicitSurchargeFromCommercialSubtotal()
+        {
+            var line = CreateLine("commodity", 1m);
+            line.MinimumOrderPriceThb = 300m;
+
+            var result = AdditiveOrderCostCalculator.Calculate([line], WorkbookCharges);
+
+            Assert.Equal(2m, result.UnroundedBaseThb);
+            Assert.Equal(300m, result.BaseOrderThb);
+            Assert.Equal(295m, result.MinimumOrderSurchargeThb);
+            Assert.Equal(30m, result.ReserveThb);
+            Assert.Equal(401.10m, result.PriceBeforeVatThb);
+            Assert.Equal(28.08m, result.VatThb);
+            Assert.Equal(430m, result.TotalThb);
+            Assert.Equal(106.92m, result.CommercialSubtotalThb);
+        }
+
+        [Fact]
+        public void Calculate_DeliveryCommercialSubtotal_SubtractsUnroundedVatNotRoundedVat()
+        {
+            var line = CreateLine("delivery", 250m);
+            var charges = new AdditiveOrderCharges
+            {
+                SetupThb = 39.0625m,
+                PackagingThb = 20m,
+                DeliveryThb = 100.0051m,
+                PaymentFeeRate = .03m,
+                VatRate = .07m,
+            };
+
+            var result = AdditiveOrderCostCalculator.Calculate([line], charges);
+
+            Assert.Equal(731m, result.PriceBeforeVatThb);
+            Assert.Equal(51.17m, result.VatThb);
+            Assert.Equal(785m, result.TotalThb);
+            Assert.Equal(633.82m, decimal.Round(result.TotalThb - result.VatThb - result.DeliveryThb, 2, MidpointRounding.AwayFromZero));
+            Assert.Equal(633.83m, result.CommercialSubtotalThb);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Calculate_FlooredHeterogeneousReserves_ConservesGrossAndCommercialAllocations(bool reverse)
+        {
+            var first = CreateLine("a", 1m);
+            first.Quantity = 2;
+            first.MinimumLineBaseThb = 500m;
+            var second = CreateLine("b", 100m);
+            second.ReserveRate = .20m;
+
+            var result = AdditiveOrderCostCalculator.Calculate(reverse ? [second, first] : [first, second], WorkbookCharges);
+
+            Assert.Equal(204m, result.UnroundedBaseThb);
+            Assert.Equal(996m, result.LineMinimumAdjustmentThb);
+            Assert.Equal(1200m, result.BaseOrderThb);
+            Assert.Equal(140m, result.ReserveThb);
+            Assert.Equal(1545m, result.TotalThb);
+            Assert.Equal(1444.04m, result.CommercialSubtotalThb);
+            Assert.Equal(new[] { "a", "b" }, result.LineAllocations.Select(line => line.LineId));
+            Assert.Equal(new[] { 1287.50m, 257.50m }, result.LineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(new[] { "a", "b" }, result.CommercialLineAllocations.Select(line => line.LineId));
+            Assert.Equal(new[] { 1203.37m, 240.67m }, result.CommercialLineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(result.TotalThb, result.LineAllocations.Sum(line => line.TotalThb));
+            Assert.Equal(result.CommercialSubtotalThb, result.CommercialLineAllocations.Sum(line => line.TotalThb));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Calculate_EqualResidualShares_ConservesRoundedCommercialTotalWithStableTieBreak(bool reverse)
+        {
+            var lines = new[] { CreateLine("a", 100m), CreateLine("b", 100m), CreateLine("c", 100m) };
+            var result = AdditiveOrderCostCalculator.Calculate(reverse ? lines.Reverse() : lines, WorkbookCharges);
+
+            Assert.Equal(795m, result.TotalThb);
+            Assert.Equal(new[] { 265m, 265m, 265m }, result.LineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(new[] { "a", "b", "c" }, result.CommercialLineAllocations.Select(line => line.LineId));
+            Assert.Equal(new[] { 247.71m, 247.70m, 247.70m }, result.CommercialLineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(743.11m, result.CommercialSubtotalThb);
+            Assert.Equal(result.TotalThb, result.LineAllocations.Sum(line => line.TotalThb));
+            Assert.Equal(result.CommercialSubtotalThb, result.CommercialLineAllocations.Sum(line => line.TotalThb));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Calculate_NaturalHeterogeneousBases_AllocatesLiteralCommercialMoneyInStableOrder(bool reverse)
+        {
+            var first = CreateLine("a", 250m);
+            first.Quantity = 2;
+            var second = CreateLine("b", 100m);
+            second.ReserveRate = .20m;
+
+            var result = AdditiveOrderCostCalculator.Calculate(reverse ? [second, first] : [first, second], WorkbookCharges);
+
+            Assert.Equal(1545m, result.TotalThb);
+            Assert.Equal(new[] { 1287.50m, 257.50m }, result.LineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(new[] { "a", "b" }, result.CommercialLineAllocations.Select(line => line.LineId));
+            Assert.Equal(new[] { 1203.37m, 240.67m }, result.CommercialLineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(1444.04m, result.CommercialSubtotalThb);
+            Assert.Equal(result.TotalThb, result.LineAllocations.Sum(line => line.TotalThb));
+            Assert.Equal(result.CommercialSubtotalThb, result.CommercialLineAllocations.Sum(line => line.TotalThb));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Calculate_HeterogeneousReserves_ConservesLiteralGrossAllocationsInStableOrder(bool reverse)
+        {
+            // Natural manufacturing bases1000/200 freeze allocation behaviour independently
+            // of the separately tested technical floor; these are not slicer observations.
+            var first = CreateLine("a", 250m);
+            first.Quantity = 2;
+            var second = CreateLine("b", 100m);
+            second.ReserveRate = .20m;
+            var result = AdditiveOrderCostCalculator.Calculate(reverse ? [second, first] : [first, second], WorkbookCharges);
+
+            Assert.Equal(1200m, result.BaseOrderThb);
+            Assert.Equal(140m, result.ReserveThb);
+            Assert.Equal(1442.33m, result.PriceBeforeVatThb);
+            Assert.Equal(100.96m, result.VatThb);
+            Assert.Equal(1545m, result.TotalThb);
+            Assert.Equal(new[] { "a", "b" }, result.LineAllocations.Select(line => line.LineId));
+            Assert.Equal(new[] { 1287.50m, 257.50m }, result.LineAllocations.Select(line => line.TotalThb));
+            Assert.Equal(result.TotalThb, result.LineAllocations.Sum(line => line.TotalThb));
+        }
+
+        [Fact]
+        public void Calculate_DuplicateStableLineIds_RejectsRatherThanDoubleAllocatingResidualSatang()
+        {
+            Assert.Throws<ArgumentException>(() => AdditiveOrderCostCalculator.Calculate(
+                [CreateLine("duplicate", 100m), CreateLine("duplicate", 100m), CreateLine("third", 100m)], WorkbookCharges));
+        }
+
         private static readonly AdditiveOrderCharges WorkbookCharges = new AdditiveOrderCharges
         {
             SetupThb = 39.0625m,
