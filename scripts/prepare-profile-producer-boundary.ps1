@@ -45,12 +45,15 @@ $null = Pinned-Checkout 'Legacy.Maliev.ServiceDefaults' 'profile-auth-runtime/Le
 $null = Pinned-Checkout 'Legacy.Maliev.CompatibilityContracts' 'profile-auth-runtime/Legacy.Maliev.CompatibilityContracts' '78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7'
 
 # Distinct producer outputs preserve each service's exact-CI dependency runtime.
+# These isolated historical producers condition their local project references on
+# GITHUB_ACTIONS. Select that dependency graph per build without changing the
+# hosted job environment or bypassing any Web validation step.
 $customerRuntime = Join-Path $dependencies 'profile-producer-runtime'
 $authRuntime = Join-Path $dependencies 'profile-auth-runtime'
-Invoke-Checked dotnet @('build', (Join-Path $customer 'Legacy.Maliev.CustomerService.Api/Legacy.Maliev.CustomerService.Api.csproj'), '-c', 'Release', '--nologo', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$customerRuntime")
-Invoke-Checked dotnet @('build', (Join-Path $auth 'Legacy.Maliev.AuthService.Api/Legacy.Maliev.AuthService.Api.csproj'), '-c', 'Release', '--nologo', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$authRuntime")
-Invoke-Checked dotnet @('build', (Join-Path $root 'tools/profile-contract-seed/ProfileContractSeed.csproj'), '-c', 'Release', '--nologo', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$customerRuntime", "-p:ProfileProducerRoot=$customer")
-Invoke-Checked dotnet @('build', (Join-Path $root 'tools/profile-auth-seed/ProfileAuthSeed.csproj'), '-c', 'Release', '--nologo', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$authRuntime", "-p:ProfileAuthRoot=$auth")
+Invoke-Checked dotnet @('build', (Join-Path $customer 'Legacy.Maliev.CustomerService.Api/Legacy.Maliev.CustomerService.Api.csproj'), '-c', 'Release', '--nologo', '-p:GITHUB_ACTIONS=false', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$customerRuntime")
+Invoke-Checked dotnet @('build', (Join-Path $auth 'Legacy.Maliev.AuthService.Api/Legacy.Maliev.AuthService.Api.csproj'), '-c', 'Release', '--nologo', '-p:GITHUB_ACTIONS=false', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$authRuntime")
+Invoke-Checked dotnet @('build', (Join-Path $root 'tools/profile-contract-seed/ProfileContractSeed.csproj'), '-c', 'Release', '--nologo', '-p:GITHUB_ACTIONS=false', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$customerRuntime", "-p:ProfileProducerRoot=$customer")
+Invoke-Checked dotnet @('build', (Join-Path $root 'tools/profile-auth-seed/ProfileAuthSeed.csproj'), '-c', 'Release', '--nologo', '-p:GITHUB_ACTIONS=false', '-p:UseLocalMalievDependencies=true', "-p:MalievWorkspaceRoot=$authRuntime", "-p:ProfileAuthRoot=$auth")
 
 $outputs = @{
     MALIEV_PROFILE_PRODUCER_DLL = Join-Path $customer 'Legacy.Maliev.CustomerService.Api/bin/Release/net10.0/Legacy.Maliev.CustomerService.Api.dll'

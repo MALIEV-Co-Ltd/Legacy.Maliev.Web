@@ -66,6 +66,19 @@ Independent root acceptance on the final candidate (2026-09-30):
 
 Protected PR/exact-head and post-merge main CI remain separate gates; local evidence does not substitute for them.
 
+Hosted preparation correction (2026-09-30): PR #416's first required run failed
+before tests because the pinned historical ServiceDefaults projects omit their
+CompatibilityContracts project reference when `GITHUB_ACTIONS=true`. The four
+isolated producer/seed builds now explicitly select `-p:GITHUB_ACTIONS=false`,
+without changing the hosted job environment, dependency pins or validation gates.
+Running the preparation script with the ambient variable set to `true` passed
+all four Release builds with zero warnings/errors and left that variable unchanged.
+Root's corrected exact-pinned Web Release build passed with zero warnings/errors;
+the focused suite passed 158/158 and the complete suite passed 2,442/2,442,
+both with zero skips. The replacement full run took 10m37s; its durable result
+is `ci-preparation-full.trx` in the existing off-repository root artifact directory.
+Replacement required CI and post-merge main validation are still mandatory.
+
 `InstantQuotation:AuthenticatedProfileCompletion:Enabled` defaults to **false**. No deployment, persistent journal migration, role grant or activation is performed by this Web slice. Enabling the consumer requires separately approved schema/runtime readiness and existing guarded persistent acceptance gates. The producer returns 503 until the additive journal structure and needed role grants are verified. Its replay journal intentionally has no customer FK (history survives lifecycle changes); receipt hashes are pseudonymous, not anonymous.
 
 Local disposable proof and CI do not establish persistent Aspire/production parity. The five source ledger entries remain root-owned and must not be marked resolved from a manifest target, a mock-only result or this document alone. CNC, physical pricing, general parent148 work, deployments, notifications and shared databases are excluded.
