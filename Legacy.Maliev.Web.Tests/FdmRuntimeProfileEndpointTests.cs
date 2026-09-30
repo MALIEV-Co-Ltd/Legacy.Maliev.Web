@@ -23,6 +23,6 @@ public sealed class FdmRuntimeProfileEndpointTests(TestingWebApplicationFactory 
         Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
         var manifest = JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
         Assert.Equal("1.0", manifest["schemaVersion"]!.GetValue<string>());
-        Assert.Equal("bambu-x1c-2026-09-22.4", manifest["profileVersion"]!.GetValue<string>());
+        Assert.Equal("bambu-x1c-2026-09-30.5", manifest["profileVersion"]!.GetValue<string>());
     }
 }

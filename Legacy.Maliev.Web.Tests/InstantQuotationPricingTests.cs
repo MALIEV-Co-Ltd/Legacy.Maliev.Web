@@ -368,7 +368,9 @@ public sealed class InstantQuotationPricingTests
     {
         Assert.Equal(PrintProcess.Fdm, PricingCatalog.ResolveMaterial("pla")!.Process);
         Assert.Equal(PrintProcess.Resin, PricingCatalog.ResolveMaterial("F80")!.Process);
-        Assert.Equal(3.80, PricingCatalog.ResolveMaterial("PC-ESD")!.CostPerUnit, 2);
+        Assert.Equal(3.38, PricingCatalog.ResolveMaterial("pa612-esd")!.CostPerUnit, 2);
+        Assert.Equal(1.09, PricingCatalog.ResolveMaterial("abs-esd")!.CostPerUnit, 2);
+        Assert.Null(PricingCatalog.ResolveMaterial("PC-ESD"));
         Assert.Null(PricingCatalog.ResolveMaterial("NOT-A-MATERIAL"));
     }
 

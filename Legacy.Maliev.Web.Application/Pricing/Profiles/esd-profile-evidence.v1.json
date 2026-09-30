@@ -1,0 +1,14 @@
+{
+  "PA612-ESD": {
+    "filamentFile": "Resolved/maliev-fiberon-pa612-esd-x1c-filament.resolved.json",
+    "processFile": "Resolved/maliev-fiberon-pa612-esd-x1c-process.resolved.json",
+    "combinedSha256": "4AB7785FFA566C1C99AA030DB2118557381888EDA1BAEF8188D997B97796D6C4",
+    "hashMethod": "SHA-256 of exact resolved filament bytes followed by exact resolved process bytes"
+  },
+  "ABS-ESD": {
+    "filamentFile": "Resolved/maliev-esun-abs-esd-x1c-filament.resolved.json",
+    "processFile": "Resolved/maliev-esun-abs-esd-x1c-process.resolved.json",
+    "combinedSha256": "828F68AF2A9238BB3F4D15C88CD5E252A92B7CBFD3E643F10C48C4E861999C92",
+    "hashMethod": "SHA-256 of exact resolved filament bytes followed by exact resolved process bytes"
+  }
+}

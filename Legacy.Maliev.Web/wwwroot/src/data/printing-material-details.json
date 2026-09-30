@@ -207,18 +207,143 @@
     "image": "/src/images/services/printing/materials/material-petg-esd.webp",
     "alt": { "en": "3D printed electronics housing being checked with a circuit assembly", "th": "กล่องครอบอิเล็กทรอนิกส์พิมพ์ 3D กำลังตรวจสอบร่วมกับแผงวงจร" }
   },
-  "PC-ESD": {
-    "description": { "en": "Static-dissipative PC for stronger ESD fixtures and housings, subject to grade certification.", "th": "PC สลายประจุไฟฟ้าสถิตสำหรับฟิกซ์เจอร์และกล่องครอบ ESD ที่ต้องการความแข็งแรง โดยขึ้นกับใบรับรองเกรด" },
+  "PA612-ESD": {
+    "description": {
+      "en": "Fiberon PA612 nylon reinforced with carbon nanotubes and 10% carbon fiber for electronics fixtures. Printed-part ESD performance requires application testing.",
+      "th": "ไนลอน Fiberon PA612 เสริมคาร์บอนนาโนทิวบ์และคาร์บอนไฟเบอร์ 10% สำหรับฟิกซ์เจอร์อิเล็กทรอนิกส์ ต้องทดสอบสมบัติ ESD ของชิ้นงานตามการใช้งาน"
+    },
     "properties": [
-      { "label": { "en": "Mechanical range", "th": "ช่วงคุณสมบัติเชิงกล" }, "value": { "en": "PC-like; typically 45–65 MPa tensile strength", "th": "ใกล้เคียง PC โดยทั่วไป 45–65 MPa" } },
-      { "label": { "en": "Electrical property", "th": "คุณสมบัติทางไฟฟ้า" }, "value": { "en": "Surface resistance is formulation-specific; target and test method must be specified.", "th": "ค่าความต้านทานผิวขึ้นกับสูตรวัสดุ ต้องระบุเป้าหมายและวิธีทดสอบ" } },
-      { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PC-like resistance; solvents may cause stress cracking.", "th": "พฤติกรรมใกล้เคียง PC ตัวทำละลายอาจทำให้แตกร้าวจากความเค้น" } }
+      {
+        "label": {
+          "en": "Density",
+          "th": "ความหนาแน่น"
+        },
+        "value": {
+          "en": "1.10 g/cm³ (manufacturer TDS)",
+          "th": "1.10 g/cm³ (TDS ผู้ผลิต)"
+        }
+      },
+      {
+        "label": {
+          "en": "Heat deflection",
+          "th": "อุณหภูมิการเสียรูปภายใต้แรง"
+        },
+        "value": {
+          "en": "TDS: 125.4 °C at 1.8 MPa; 157 °C at 0.45 MPa. Manufacturer conditioned-specimen test values are not continuous-use ratings.",
+          "th": "TDS: 125.4 °C ที่ 1.8 MPa และ 157 °C ที่ 0.45 MPa ค่าทดสอบไม่ใช่พิกัดใช้งานต่อเนื่อง"
+        }
+      },
+      {
+        "label": {
+          "en": "Electrical behaviour",
+          "th": "สมบัติทางไฟฟ้า"
+        },
+        "value": {
+          "en": "Resistance varies with print temperature and orientation; specify and test the application requirement.",
+          "th": "ความต้านทานขึ้นกับอุณหภูมิและทิศทางพิมพ์ ต้องระบุข้อกำหนดและทดสอบตามการใช้งาน"
+        }
+      },
+      {
+        "label": {
+          "en": "Printing and preparation",
+          "th": "การพิมพ์และเตรียมวัสดุ"
+        },
+        "value": {
+          "en": "Nozzle 280–300 °C; bed 40–50 °C; dry 100 °C for 10 h. Abrasive: hardened nozzle required. TDS annealing: 100 °C for 16 h.",
+          "th": "หัวฉีด 280–300 °C เตียง 40–50 °C อบแห้ง 100 °C 10 ชม. วัสดุมีฤทธิ์ขัดสี ต้องใช้หัวฉีดแข็ง TDS ระบุอบหลังพิมพ์ 100 °C 16 ชม."
+        }
+      }
     ],
-    "colors": { "en": [], "th": [] },
-    "availability": { "en": "Material reference: 3DXTECH ESD-safe PC; colour, grade, certification and local availability are confirmed per quotation.", "th": "อ้างอิงวัสดุ 3DXTECH PC สำหรับงาน ESD: สี เกรด ใบรับรอง และความพร้อมในไทยจะยืนยันตามใบประเมินราคา" },
-    "application": { "en": "Representative strong ESD fixture", "th": "ตัวอย่างฟิกซ์เจอร์ ESD ที่ต้องการความแข็งแรง" },
-    "image": "/src/images/services/printing/materials/material-pc-esd.webp",
-    "alt": { "en": "Strong dark 3D printed fixture positioned in an industrial machine", "th": "ฟิกซ์เจอร์พิมพ์ 3D สีเข้มที่แข็งแรงวางในเครื่องจักรอุตสาหกรรม" }
+    "colors": {
+      "en": [
+        "Black"
+      ],
+      "th": [
+        "ดำ"
+      ]
+    },
+    "availability": {
+      "en": "Material reference: Fiberon PA612-ESD. Siamreprap lists black, 1.75 mm, 500 g (FG08001) in Thailand. Confirm stock and delivery before production.",
+      "th": "วัสดุอ้างอิง: Fiberon PA612-ESD ร้าน Siamreprap ในไทยมีรายการสีดำ 1.75 มม. 500 กรัม (FG08001) ต้องยืนยันสต็อกและกำหนดส่งก่อนผลิต"
+    },
+    "application": {
+      "en": "Illustrative fixture geometry; not a PA612-ESD material sample",
+      "th": "ภาพประกอบรูปทรงฟิกซ์เจอร์ ไม่ใช่ตัวอย่างวัสดุ PA612-ESD"
+    },
+    "image": "/src/images/services/printing/materials/material-pa612-esd.webp",
+    "alt": {
+      "en": "Illustrative dark fixture geometry; material grade is not demonstrated by this image",
+      "th": "ภาพประกอบรูปทรงฟิกซ์เจอร์สีเข้ม ภาพนี้ไม่แสดงหลักฐานเกรดวัสดุ"
+    }
+  },
+  "ABS-ESD": {
+    "description": {
+      "en": "eSUN ABS-ESD for static-dissipative electronics fixtures and housings. Resistance depends on product grade and printing; verify the finished part for its application.",
+      "th": "eSUN ABS-ESD สำหรับฟิกซ์เจอร์และกล่องอิเล็กทรอนิกส์ที่สลายประจุไฟฟ้าสถิต ความต้านทานขึ้นกับเกรดและการพิมพ์ ต้องทดสอบชิ้นงานตามการใช้งาน"
+    },
+    "properties": [
+      {
+        "label": {
+          "en": "Density",
+          "th": "ความหนาแน่น"
+        },
+        "value": {
+          "en": "0.97 g/cm³ (eSUN July 2024 TDS v1)",
+          "th": "0.97 g/cm³ (TDS eSUN ก.ค. 2024 v1)"
+        }
+      },
+      {
+        "label": {
+          "en": "Heat deflection",
+          "th": "อุณหภูมิการเสียรูปภายใต้แรง"
+        },
+        "value": {
+          "en": "96 °C at 0.45 MPa (July 2024 TDS); not a continuous-use rating.",
+          "th": "96 °C ที่ 0.45 MPa (TDS ก.ค. 2024) ไม่ใช่พิกัดใช้งานต่อเนื่อง"
+        }
+      },
+      {
+        "label": {
+          "en": "Electrical behaviour",
+          "th": "สมบัติทางไฟฟ้า"
+        },
+        "value": {
+          "en": "July 2024 TDS: surface resistance 10⁹ Ω, DIN IEC 60093. Current marketing differs; no guaranteed printed-part resistance range.",
+          "th": "TDS ก.ค. 2024: ความต้านทานผิว 10⁹ Ω ตาม DIN IEC 60093 ข้อมูลการตลาดปัจจุบันต่างกัน จึงไม่รับประกันช่วงความต้านทานชิ้นงานพิมพ์"
+        }
+      },
+      {
+        "label": {
+          "en": "Printing and preparation",
+          "th": "การพิมพ์และเตรียมวัสดุ"
+        },
+        "value": {
+          "en": "July 2024 TDS: nozzle 250–280 °C; PEI bed 90 °C; fan 10–40%; dry 85 °C for more than 8 h. The current product page gives 70 °C for more than 8 h; confirm current batch instructions.",
+          "th": "TDS ก.ค. 2024: หัวฉีด 250–280 °C เตียง PEI 90 °C พัดลม 10–40% อบแห้ง 85 °C มากกว่า 8 ชม. หน้าสินค้าปัจจุบันระบุ 70 °C มากกว่า 8 ชม. ต้องยืนยันคำแนะนำล็อตปัจจุบัน"
+        }
+      }
+    ],
+    "colors": {
+      "en": [
+        "Black"
+      ],
+      "th": [
+        "ดำ"
+      ]
+    },
+    "availability": {
+      "en": "Material reference: eSUN ABS-ESD. Molastic lists black, 1.75 mm, 1 kg in Thailand, currently out of stock. Procurement and delivery must be confirmed before production.",
+      "th": "วัสดุอ้างอิง: eSUN ABS-ESD ร้าน Molastic ในไทยมีรายการสีดำ 1.75 มม. 1 กก. แต่แจ้งสินค้าหมด ต้องยืนยันการจัดหาและกำหนดส่งก่อนผลิต"
+    },
+    "application": {
+      "en": "Illustrative ABS fixture geometry; not an ABS-ESD material sample",
+      "th": "ภาพประกอบรูปทรงฟิกซ์เจอร์ ABS ไม่ใช่ตัวอย่างวัสดุ ABS-ESD"
+    },
+    "image": "/src/images/services/printing/materials/material-abs-esd.webp",
+    "alt": {
+      "en": "Illustrative fixture geometry; ESD performance is not demonstrated by this image",
+      "th": "ภาพประกอบรูปทรงฟิกซ์เจอร์ ภาพนี้ไม่แสดงหลักฐานสมบัติ ESD"
+    }
   },
   "ABS-FR": {
     "description": { "en": "Flame-retardant ABS grades for housings where the required standard and certificate are specified up front.", "th": "ABS เกรดหน่วงไฟสำหรับกล่องครอบที่ต้องระบุมาตรฐานและใบรับรองตั้งแต่ต้น" },

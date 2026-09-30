@@ -1,0 +1,56 @@
+{
+    "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle",
+        "Bambu Lab X1 0.4 nozzle"
+    ],
+    "from": "User",
+    "gap_infill_speed": [
+        "200",
+        "nil"
+    ],
+    "inherits": "0.20mm Standard @BBL X1C",
+    "initial_layer_infill_speed": [
+        "50",
+        "nil"
+    ],
+    "inner_wall_speed": [
+        "200",
+        "nil"
+    ],
+    "internal_solid_infill_speed": [
+        "200",
+        "nil"
+    ],
+    "max_bridge_length": "10",
+    "name": "X1C eSUN  ABS-ESD Process",
+    "outer_wall_speed": [
+        "150",
+        "nil"
+    ],
+    "print_extruder_id": [
+        "1",
+        "1"
+    ],
+    "print_extruder_variant": [
+        "Direct Drive Standard",
+        "Direct Drive High Flow"
+    ],
+    "print_settings_id": "X1C eSUN  ABS-ESD Process",
+    "sparse_infill_speed": [
+        "200",
+        "nil"
+    ],
+    "support_type": "normal(auto)",
+    "top_shell_layers": "3",
+    "top_shell_thickness": "0.6",
+    "top_surface_speed": [
+        "150",
+        "nil"
+    ],
+    "travel_speed": [
+        "200",
+        "nil"
+    ],
+    "tree_support_wall_count": "1",
+    "version": "1.6.0.3"
+}

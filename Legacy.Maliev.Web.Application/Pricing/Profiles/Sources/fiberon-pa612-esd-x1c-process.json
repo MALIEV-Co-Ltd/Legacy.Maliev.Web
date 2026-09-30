@@ -1,0 +1,8 @@
+{
+    "from": "User",
+    "inherits": "0.20mm Standard @BBL X1C",
+    "is_custom_defined": "0",
+    "name": "0.20mm Standard Fiberon PA612-ESD Polymaker@BBL X1C",
+    "print_settings_id": "0.20mm Standard Fiberon PA612-ESD Polymaker@BBL X1C",
+    "version": "1.10.0.26"
+}

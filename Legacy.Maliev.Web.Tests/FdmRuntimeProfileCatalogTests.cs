@@ -43,7 +43,7 @@ public sealed class FdmRuntimeProfileCatalogTests
         var manifest = JsonNode.Parse(catalog.BrowserManifestJson)!.AsObject();
 
         Assert.Equal("1.0", manifest["schemaVersion"]!.GetValue<string>());
-        Assert.Equal("bambu-x1c-2026-09-22.4", catalog.ProfileVersion);
+        Assert.Equal("bambu-x1c-2026-09-30.5", catalog.ProfileVersion);
         Assert.Equal(
             PricingCatalog.Materials.Values.Where(static material => material.Process == PrintProcess.Fdm)
                 .Select(static material => material.Key).OrderBy(static key => key, StringComparer.Ordinal),

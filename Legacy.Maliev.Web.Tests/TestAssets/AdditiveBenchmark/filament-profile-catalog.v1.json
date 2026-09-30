@@ -150,15 +150,26 @@
       "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
     },
     {
-      "materialKey": "PC-ESD",
-      "preferredVendor": "eSUN",
-      "profileId": "X1C eSUN PC-ESD Filament",
-      "sourceAuthority": "operator_local_custom",
-      "resolvedSha256": "EFF7ABB2675A895F54CB6D8C5ABEE8DC5F682716EA3399295022BC2CAB610A6B",
-      "exactMaterialMatch": true,
-      "operatorApproved": true,
+      "materialKey": "PA612-ESD",
+      "preferredVendor": "Polymaker",
+      "profileId": null,
+      "sourceAuthority": "none",
+      "resolvedSha256": null,
+      "exactMaterialMatch": false,
+      "operatorApproved": false,
       "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "blockers": ["isolated_worker_not_active", "benchmark_operator_review_pending"]
+    },
+    {
+      "materialKey": "ABS-ESD",
+      "preferredVendor": "eSUN",
+      "profileId": null,
+      "sourceAuthority": "none",
+      "resolvedSha256": null,
+      "exactMaterialMatch": false,
+      "operatorApproved": false,
+      "automationEligible": false,
+      "blockers": ["isolated_worker_not_active", "benchmark_operator_review_pending"]
     },
     {
       "materialKey": "PA6",

@@ -4,7 +4,7 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingCatalog
 {
-    public const string AdditivePricingPolicyVersion = "additive-2026-09-19.v2";
+    public const string AdditivePricingPolicyVersion = "additive-2026-09-30.v9";
 
     public const double FdmLayerHeightMm = 0.2;
     public const double ResinLayerHeightMm = 0.05;
@@ -219,7 +219,8 @@ public static class PricingCatalog
             ["PA-CF"] = new FrozenList<string>(carbon),
             ["ASA-CF"] = new FrozenList<string>(carbon),
             ["PETG-ESD"] = new FrozenList<string>(carbon),
-            ["PC-ESD"] = new FrozenList<string>(["Black"]),
+            ["PA612-ESD"] = new FrozenList<string>(["Black"]),
+            ["ABS-ESD"] = new FrozenList<string>(["Black"]),
             ["PVA"] = new FrozenList<string>(["Natural"]),
             ["M68"] = new FrozenList<string>(["Gray", "Black", "White"]),
             ["K"] = new FrozenList<string>(["Gray", "Black"]),
@@ -275,7 +276,8 @@ public static class PricingCatalog
             Fdm("HIPS", "HIPS — High Impact Polystyrene", 1.04, 0.925, FdmFlowClass.Standard, 6),
             Fdm("PC", "PC — Polycarbonate", 1.20, 1.05, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PC-FR", "PC-FR — Flame-Retardant Polycarbonate", 1.25, 2.15, FdmFlowClass.Engineering, 4, requiresDrying: true),
-            Fdm("PC-ESD", "PC-ESD — ESD-Safe Polycarbonate (3DXTech)", 1.20, 3.80, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("PA612-ESD", "PA612-ESD — Fiberon ESD Nylon", 1.10, 3.38, FdmFlowClass.Engineering, 4, requiresDrying: true),
+            Fdm("ABS-ESD", "ABS-ESD — eSUN ESD ABS", 0.97, 1.09, FdmFlowClass.Engineering, 3, requiresDrying: true, requiresHeatedEnclosure: true),
             Fdm("PA6", "PA6 — Nylon 6", 1.14, 1.95, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PA12", "PA12 — Nylon 12", 1.01, 2.034, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PA-CF", "PA-CF — Nylon + Carbon Fiber", 1.16, 3.534, FdmFlowClass.Engineering, 4, requiresDrying: true),

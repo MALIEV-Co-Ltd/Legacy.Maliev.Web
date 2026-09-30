@@ -1,3 +1,5 @@
 * text=auto eol=lf
 Legacy.Maliev.Web.Tests/TestAssets/Cnc/*.step -text
 Legacy.Maliev.Web.Tests/TestAssets/cube.iges -text
+Legacy.Maliev.Web.Application/Pricing/Profiles/Resolved/*.json -text whitespace=cr-at-eol
+Legacy.Maliev.Web.Application/Pricing/Profiles/Sources/*.json -text whitespace=cr-at-eol

@@ -1,0 +1,58 @@
+{
+  "compatible_printers": [
+    "Bambu Lab X1 Carbon 0.4 nozzle",
+    "Bambu Lab X1 0.4 nozzle"
+  ],
+  "from": "user",
+  "gap_infill_speed": [
+    "200",
+    "200"
+  ],
+  "inherits": "0.20mm Standard @BBL X1C",
+  "initial_layer_infill_speed": [
+    "50",
+    "50"
+  ],
+  "inner_wall_speed": [
+    "200",
+    "200"
+  ],
+  "internal_solid_infill_speed": [
+    "200",
+    "200"
+  ],
+  "max_bridge_length": "10",
+  "name": "MALIEV esun-abs-esd X1C process",
+  "outer_wall_speed": [
+    "150",
+    "150"
+  ],
+  "print_extruder_id": [
+    "1",
+    "1"
+  ],
+  "print_extruder_variant": [
+    "Direct Drive Standard",
+    "Direct Drive High Flow"
+  ],
+  "print_settings_id": "X1C eSUN  ABS-ESD Process",
+  "sparse_infill_speed": [
+    "200",
+    "200"
+  ],
+  "support_type": "normal(auto)",
+  "top_shell_layers": "3",
+  "top_shell_thickness": "0.6",
+  "top_surface_speed": [
+    "150",
+    "150"
+  ],
+  "travel_speed": [
+    "200",
+    "200"
+  ],
+  "tree_support_wall_count": "1",
+  "version": "1.6.0.3",
+  "type": "process",
+  "curr_bed_type": "Textured PEI Plate"
+}
