@@ -96,7 +96,7 @@ internal sealed class RecaptchaEnterpriseVerifier(
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(exception, "reCAPTCHA Enterprise assessment was unavailable.");
+            logger.LogWarning("reCAPTCHA Enterprise assessment was unavailable.");
             return false;
         }
     }

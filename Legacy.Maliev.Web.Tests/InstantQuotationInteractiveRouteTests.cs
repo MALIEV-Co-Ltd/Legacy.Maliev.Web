@@ -25,6 +25,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         client = factory.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Testing");
+                builder.UseSetting("Recaptcha:ProjectId", "test-project");
+                builder.UseSetting("Recaptcha:SiteKey", "test-site-key");
                 builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<ICountryClient>();
