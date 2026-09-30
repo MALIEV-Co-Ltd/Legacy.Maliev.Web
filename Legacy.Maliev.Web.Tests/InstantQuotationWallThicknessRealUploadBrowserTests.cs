@@ -414,8 +414,11 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
         }
     }
 
-    [Fact]
-    public async Task ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview()
+    [Theory]
+    [InlineData("en", "Thin walls may print with defects", "Instant 3D Printing Estimate", "0.80 mm", "0.60 mm")]
+    [InlineData("th", "ผนังบางอาจเกิดข้อบกพร่อง", "ประเมินราคาพิมพ์ 3 มิติทันที", "0.80 มม.", "0.60 มม.")]
+    public async Task ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview(
+        string culture, string warningTitle, string pageTitle, string fdmLimit, string resinLimit)
     {
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
@@ -423,7 +426,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
-        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -453,7 +456,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
 
         var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         Assert.Equal(200, response?.Status);
-        Assert.Contains("Instant 3D Printing Estimate", await page.TitleAsync(), StringComparison.Ordinal);
+        Assert.Contains(pageTitle, await page.TitleAsync(), StringComparison.Ordinal);
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.OrdinalIgnoreCase);
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
 
@@ -484,7 +487,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             }
             await page.Locator("[data-dfm-code='thin-wall']").WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
             var warning = await page.Locator("[data-dfm-code='thin-wall']").InnerTextAsync();
-            Assert.Contains("0.80 mm", warning, StringComparison.Ordinal);
+            Assert.Contains(warningTitle, warning, StringComparison.Ordinal);
+            Assert.Contains(fdmLimit, warning, StringComparison.Ordinal);
 
             var material = page.Locator("[data-workflow-material-picker] select[name='material']");
             await material.SelectOptionAsync("ABS");
@@ -519,7 +523,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             await material.SelectOptionAsync("M68");
             await page.WaitForFunctionAsync("() => !document.querySelector('[data-dfm-code=thin-wall]')");
             await toggle.ClickAsync();
-            await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__thickness-legend')?.textContent?.includes('0.60 mm')");
+            await page.WaitForFunctionAsync("limit => document.querySelector('.instant-quote__thickness-legend')?.textContent?.includes(limit)", resinLimit);
             Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
             Assert.Equal(1, upload.VerifiedUploads);
         }
