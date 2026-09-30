@@ -141,8 +141,9 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("GetAndStoreTokens(context)", page, StringComparison.Ordinal);
         Assert.Contains("CreateLinkedTokenSource(context.RequestAborted)", page, StringComparison.Ordinal);
         Assert.Contains("GetCountriesAsync(timeout.Token).WaitAsync(timeout.Token)", page, StringComparison.Ordinal);
-        Assert.Contains("GetCustomerDatabaseIdAsync(context", page, StringComparison.Ordinal);
-        Assert.Contains("GetProfileAsync", page, StringComparison.Ordinal);
+        Assert.Contains("ProfileCompletionClient.ReadAsync(owner, budget.Token)", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetProfileAsync", page, StringComparison.Ordinal);
+        Assert.True(page.IndexOf("var tempData =", StringComparison.Ordinal) < page.IndexOf("var countriesResult = await", StringComparison.Ordinal));
         Assert.Contains("InstantQuotationSubmissionStatus", page, StringComparison.Ordinal);
         Assert.Contains("InstantQuotationRequestReference", page, StringComparison.Ordinal);
         Assert.Contains("InstantQuotationProblemCategory", page, StringComparison.Ordinal);

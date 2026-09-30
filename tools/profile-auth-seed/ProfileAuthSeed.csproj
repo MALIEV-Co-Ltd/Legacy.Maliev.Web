@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Maliev.ProfileAuthSeed</AssemblyName>
+  </PropertyGroup>
+  <!-- Standalone disposable fixture only; no Web production reference. -->
+  <ItemGroup>
+    <ProjectReference Include="$(ProfileAuthRoot)/Legacy.Maliev.AuthService.Infrastructure/Legacy.Maliev.AuthService.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+  </ItemGroup>
+  <Target Name="RequirePinnedAuth" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(ProfileAuthRoot)' == ''" Text="ProfileAuthRoot must name the separately pinned test Auth checkout." />
+  </Target>
+</Project>

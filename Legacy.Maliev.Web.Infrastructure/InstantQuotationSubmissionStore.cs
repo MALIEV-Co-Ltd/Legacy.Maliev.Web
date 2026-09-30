@@ -174,7 +174,10 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             cancellationToken.ThrowIfCancellationRequested();
             ArgumentNullException.ThrowIfNull(checkpoint);
             if (Volatile.Read(ref disposed) != 0
-                || !IsValidTransition(expectedPriorStatus, checkpoint.Status)
+                || (!IsValidTransition(expectedPriorStatus, checkpoint.Status)
+                    && !(expectedPriorStatus == InstantQuotationSubmissionCheckpointStatus.Persisted
+                        && checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Persisted
+                        && checkpoint.FrozenCustomer?.ProfileCompletion is not null && checkpoint.ProfileCompleted))
                 || !IsValid(checkpoint))
             {
                 return false;
@@ -195,7 +198,9 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                 checkpoint.WelcomeConfirmationToken,
                 checkpoint.CompensationRequired,
                 checkpoint.TransactionId,
-                checkpoint.JourneyId);
+                checkpoint.JourneyId,
+                checkpoint.FrozenCustomer,
+                checkpoint.ProfileCompleted);
             var payload = JsonSerializer.SerializeToUtf8Bytes(persisted);
             var protectedPayload = protector.Protect(payload);
             try
@@ -322,7 +327,9 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             persisted.WelcomeConfirmationToken,
             persisted.CompensationRequired,
             persisted.TransactionId,
-            persisted.JourneyId);
+            persisted.JourneyId,
+            persisted.FrozenCustomer,
+            persisted.ProfileCompleted);
 
         private static bool IsValidTransactionId(string transactionId, int requestReference) =>
             string.Equals(transactionId, $"request-{requestReference}", StringComparison.Ordinal);
@@ -343,7 +350,9 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
         string? WelcomeConfirmationToken,
         bool CompensationRequired = false,
         string? TransactionId = null,
-        Guid? JourneyId = null);
+        Guid? JourneyId = null,
+        InstantQuotationCustomerSubmission? FrozenCustomer = null,
+        bool ProfileCompleted = false);
 }
 
 internal sealed record InstantQuotationSubmissionAtomicRead(

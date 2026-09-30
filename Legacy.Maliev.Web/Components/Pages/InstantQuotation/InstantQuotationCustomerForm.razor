@@ -6,6 +6,14 @@
     </header>
     <span class="instant-quote__flow-step">@Localizer["Step 3 of 3"]</span>
     <p>@Localizer["Required fields are marked with an asterisk."]</p>
+    @if (Model.LockedFields.Count > 0)
+    {
+        <p role="note">@Localizer["Saved account values are locked. Only missing details can be added here."]</p>
+    }
+    @if (Model.ProfileUnavailable)
+    {
+        <p role="alert">@Localizer["We could not securely load your customer profile. Please try again."]</p>
+    }
     <div class="instant-quote__validation-summary" data-instant-quote-submit-feedback tabindex="-1" hidden>
         <h4 data-instant-quote-submit-heading></h4>
         <ul data-instant-quote-submit-errors></ul>
@@ -25,41 +33,49 @@
     <form id="instant-quotation-form"
           method="post"
           action="/InstantQuotation/3D-Printing?handler=SubmitRequest"
+          data-profile-unavailable="@(Model.ProfileUnavailable ? "true" : null)"
           data-optional-customer-fields
           data-submission-retry-heading="@Localizer["There are problems with the customer details."]"
           data-submission-unknown-heading="@Localizer["We could not confirm whether your request was received. Do not submit it again; contact MALIEV support."]"
           data-submission-generic-error="@Localizer["Please correct this field."]"
           data-address-validation-message="@Localizer["This field contains address details. Move them to the separate address fields below."]">
         <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryRequestToken" />
+        @foreach (var field in new[] { "Country", "TaxBranch", "ShippingCountry" })
+        {
+            if (Model.IsLocked(field))
+            {
+                <input type="hidden" name="@field" value="@(field == "Country" ? Model.Country : field == "TaxBranch" ? Model.TaxBranch : Model.ShippingCountry)" />
+            }
+        }
 
         <div>
             <label for="instant-quote-firstname">@Localizer["First name"] <span aria-hidden="true">*</span></label>
-            <input id="instant-quote-firstname" name="FirstName" value="@Model.FirstName" autocomplete="given-name" maxlength="50" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="@ErrorId("FirstName")" />
+            <input id="instant-quote-firstname" name="FirstName" value="@Model.FirstName" autocomplete="given-name" maxlength="50" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="@ErrorId("FirstName")" readonly="@Model.IsLocked("FirstName")" aria-readonly="@(Model.IsLocked("FirstName") ? "true" : null)" />
             @FieldError("FirstName")
         </div>
         <div>
             <label for="instant-quote-lastname">@Localizer["Last name"] <span aria-hidden="true">*</span></label>
-            <input id="instant-quote-lastname" name="LastName" value="@Model.LastName" autocomplete="family-name" maxlength="50" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="@ErrorId("LastName")" />
+            <input id="instant-quote-lastname" name="LastName" value="@Model.LastName" autocomplete="family-name" maxlength="50" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="@ErrorId("LastName")" readonly="@Model.IsLocked("LastName")" aria-readonly="@(Model.IsLocked("LastName") ? "true" : null)" />
             @FieldError("LastName")
         </div>
         <div>
             <label for="instant-quote-email">@Localizer["Email"] <span aria-hidden="true">*</span></label>
-            <input id="instant-quote-email" name="Email" value="@Model.Email" type="email" autocomplete="email" maxlength="50" required aria-invalid="@AriaInvalid("Email")" aria-describedby="@ErrorId("Email")" />
+            <input id="instant-quote-email" name="Email" value="@Model.Email" type="email" autocomplete="email" maxlength="50" required aria-invalid="@AriaInvalid("Email")" aria-describedby="@ErrorId("Email")" readonly="@Model.IsLocked("Email")" aria-readonly="@(Model.IsLocked("Email") ? "true" : null)" />
             @FieldError("Email")
         </div>
         <div>
             <label for="instant-quote-mobile">@Localizer["Mobile number"] <span aria-hidden="true">*</span></label>
-            <input id="instant-quote-mobile" name="Mobile" value="@Model.Mobile" type="tel" autocomplete="mobile tel" maxlength="50" required aria-invalid="@AriaInvalid("Mobile")" aria-describedby="@ErrorId("Mobile")" />
+            <input id="instant-quote-mobile" name="Mobile" value="@Model.Mobile" type="tel" autocomplete="mobile tel" maxlength="50" required aria-invalid="@AriaInvalid("Mobile")" aria-describedby="@ErrorId("Mobile")" readonly="@Model.IsLocked("Mobile")" aria-readonly="@(Model.IsLocked("Mobile") ? "true" : null)" />
             @FieldError("Mobile")
         </div>
         <div>
             <label for="instant-quote-telephone">@Localizer["Office phone (optional)"]</label>
-            <input id="instant-quote-telephone" name="Telephone" value="@Model.Telephone" type="tel" autocomplete="tel" maxlength="50" aria-invalid="@AriaInvalid("Telephone")" aria-describedby="@ErrorId("Telephone")" />
+            <input id="instant-quote-telephone" name="Telephone" value="@Model.Telephone" type="tel" autocomplete="tel" maxlength="50" aria-invalid="@AriaInvalid("Telephone")" aria-describedby="@ErrorId("Telephone")" readonly="@Model.IsLocked("Telephone")" aria-readonly="@(Model.IsLocked("Telephone") ? "true" : null)" />
             @FieldError("Telephone")
         </div>
         <div>
             <label for="instant-quote-country">@Localizer["Country"] <span aria-hidden="true">*</span></label>
-            <select id="instant-quote-country" name="Country" autocomplete="country-name" required aria-invalid="@AriaInvalid("Country")" aria-describedby="@ErrorId("Country")">
+            <select id="instant-quote-country" name="Country" autocomplete="country-name" required aria-invalid="@AriaInvalid("Country")" aria-describedby="@ErrorId("Country")" disabled="@Model.IsLocked("Country")">
                 @foreach (var country in Model.Countries)
                 {
                     <option value="@country.Name" selected="@(string.Equals(country.Name, Model.Country, StringComparison.OrdinalIgnoreCase))">@country.DisplayName</option>
@@ -69,24 +85,24 @@
         </div>
         <div>
             <label for="instant-quote-company">@Localizer["Company"]</label>
-            <input id="instant-quote-company" name="Company" value="@Model.Company" autocomplete="organization" maxlength="50" aria-invalid="@AriaInvalid("Company")" aria-describedby="@ErrorId("Company")" />
+            <input id="instant-quote-company" name="Company" value="@Model.Company" autocomplete="organization" maxlength="50" aria-invalid="@AriaInvalid("Company")" aria-describedby="@ErrorId("Company")" readonly="@Model.IsLocked("Company")" aria-readonly="@(Model.IsLocked("Company") ? "true" : null)" />
             @FieldError("Company")
         </div>
         <div>
             <label for="instant-quote-taxnumber">@Localizer["Tax number"]</label>
-            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" autocomplete="off" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" />
+            <input id="instant-quote-taxnumber" name="TaxNumber" value="@Model.TaxNumber" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" autocomplete="off" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="@ErrorId("TaxNumber")" readonly="@Model.IsLocked("TaxNumber")" aria-readonly="@(Model.IsLocked("TaxNumber") ? "true" : null)" />
             @FieldError("TaxNumber")
         </div>
         <div>
             <label for="instant-quote-tax-branch">@Localizer["Tax invoice issued to"]</label>
-            <select id="instant-quote-tax-branch" name="TaxBranch">
+            <select id="instant-quote-tax-branch" name="TaxBranch" disabled="@Model.IsLocked("TaxBranch")">
                 <option value="head-office" selected="@(Model.TaxBranch == "head-office")">@Localizer["Head office"]</option>
                 <option value="branch" selected="@(Model.TaxBranch == "branch")">@Localizer["Branch"]</option>
             </select>
         </div>
         <div>
             <label for="instant-quote-tax-branch-code">@Localizer["Branch code"]</label>
-            <input id="instant-quote-tax-branch-code" name="TaxBranchCode" value="@Model.TaxBranchCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" aria-invalid="@AriaInvalid("TaxBranchCode")" aria-describedby="@ErrorId("TaxBranchCode")" />
+            <input id="instant-quote-tax-branch-code" name="TaxBranchCode" value="@Model.TaxBranchCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" aria-invalid="@AriaInvalid("TaxBranchCode")" aria-describedby="@ErrorId("TaxBranchCode")" readonly="@Model.IsLocked("TaxBranchCode")" aria-readonly="@(Model.IsLocked("TaxBranchCode") ? "true" : null)" />
             @FieldError("TaxBranchCode")
         </div>
 
@@ -94,36 +110,36 @@
             <legend>@Localizer["Billing address"]</legend>
             <div>
                 <label for="instant-quote-billing-building">@Localizer["Building"]</label>
-                <input id="instant-quote-billing-building" name="BillingBuilding" value="@Model.BillingBuilding" autocomplete="billing address-line3" maxlength="256" aria-invalid="@AriaInvalid("BillingBuilding")" aria-describedby="instant-quote-billing-building-help @ErrorId("BillingBuilding")" data-address-server-invalid="@(HasError("BillingBuilding") ? "true" : null)" />
+                <input id="instant-quote-billing-building" name="BillingBuilding" value="@Model.BillingBuilding" autocomplete="billing address-line3" maxlength="256" aria-invalid="@AriaInvalid("BillingBuilding")" aria-describedby="instant-quote-billing-building-help @ErrorId("BillingBuilding")" data-address-server-invalid="@(HasError("BillingBuilding") ? "true" : null)" readonly="@Model.IsLocked("BillingBuilding")" aria-readonly="@(Model.IsLocked("BillingBuilding") ? "true" : null)" />
                 <small id="instant-quote-billing-building-help">@Localizer["Examples: a building, village, or organization name."]</small>
                 @AddressFieldError("BillingBuilding")
             </div>
-            <div><label for="instant-quote-billing-street1">@Localizer["Street address"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-street1" name="BillingStreet1" value="@Model.BillingStreet1" autocomplete="billing address-line1" maxlength="256" required aria-invalid="@AriaInvalid("BillingStreet1")" aria-describedby="@ErrorId("BillingStreet1")" />@FieldError("BillingStreet1")</div>
-            <div><label for="instant-quote-billing-street2">@Localizer["Sub-district"]</label><input id="instant-quote-billing-street2" name="BillingStreet2" value="@Model.BillingStreet2" autocomplete="billing address-line2" maxlength="256" /></div>
-            <div><label for="instant-quote-billing-city">@Localizer["City / district"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-city" name="BillingCity" value="@Model.BillingCity" autocomplete="billing address-level2" maxlength="256" required aria-invalid="@AriaInvalid("BillingCity")" aria-describedby="@ErrorId("BillingCity")" />@FieldError("BillingCity")</div>
-            <div><label for="instant-quote-billing-province">@Localizer["Province"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-province" name="BillingProvince" value="@Model.BillingProvince" autocomplete="billing address-level1" maxlength="256" required aria-invalid="@AriaInvalid("BillingProvince")" aria-describedby="@ErrorId("BillingProvince")" />@FieldError("BillingProvince")</div>
-            <div><label for="instant-quote-billing-postal">@Localizer["Postal code"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-postal" name="BillingPostalCode" value="@Model.BillingPostalCode" autocomplete="billing postal-code" maxlength="20" required aria-invalid="@AriaInvalid("BillingPostalCode")" aria-describedby="@ErrorId("BillingPostalCode")" />@FieldError("BillingPostalCode")</div>
+            <div><label for="instant-quote-billing-street1">@Localizer["Street address"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-street1" name="BillingStreet1" value="@Model.BillingStreet1" autocomplete="billing address-line1" maxlength="256" required aria-invalid="@AriaInvalid("BillingStreet1")" aria-describedby="@ErrorId("BillingStreet1")" readonly="@Model.IsLocked("BillingStreet1")" aria-readonly="@(Model.IsLocked("BillingStreet1") ? "true" : null)" />@FieldError("BillingStreet1")</div>
+            <div><label for="instant-quote-billing-street2">@Localizer["Sub-district"]</label><input id="instant-quote-billing-street2" name="BillingStreet2" value="@Model.BillingStreet2" autocomplete="billing address-line2" maxlength="256" readonly="@Model.IsLocked("BillingStreet2")" aria-readonly="@(Model.IsLocked("BillingStreet2") ? "true" : null)" /></div>
+            <div><label for="instant-quote-billing-city">@Localizer["City / district"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-city" name="BillingCity" value="@Model.BillingCity" autocomplete="billing address-level2" maxlength="256" required aria-invalid="@AriaInvalid("BillingCity")" aria-describedby="@ErrorId("BillingCity")" readonly="@Model.IsLocked("BillingCity")" aria-readonly="@(Model.IsLocked("BillingCity") ? "true" : null)" />@FieldError("BillingCity")</div>
+            <div><label for="instant-quote-billing-province">@Localizer["Province"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-province" name="BillingProvince" value="@Model.BillingProvince" autocomplete="billing address-level1" maxlength="256" required aria-invalid="@AriaInvalid("BillingProvince")" aria-describedby="@ErrorId("BillingProvince")" readonly="@Model.IsLocked("BillingProvince")" aria-readonly="@(Model.IsLocked("BillingProvince") ? "true" : null)" />@FieldError("BillingProvince")</div>
+            <div><label for="instant-quote-billing-postal">@Localizer["Postal code"] <span aria-hidden="true">*</span></label><input id="instant-quote-billing-postal" name="BillingPostalCode" value="@Model.BillingPostalCode" autocomplete="billing postal-code" maxlength="20" required aria-invalid="@AriaInvalid("BillingPostalCode")" aria-describedby="@ErrorId("BillingPostalCode")" readonly="@Model.IsLocked("BillingPostalCode")" aria-readonly="@(Model.IsLocked("BillingPostalCode") ? "true" : null)" />@FieldError("BillingPostalCode")</div>
         </fieldset>
 
         <div class="instant-quote__checkbox-field">
-            <input type="hidden" name="ShipToBillingAddress" value="false" />
-            <input id="instant-quote-ship-to-billing" type="checkbox" name="ShipToBillingAddress" value="true" checked="@Model.ShipToBillingAddress" />
+            <input type="hidden" name="ShipToBillingAddress" value="@(Model.IsLocked("ShipToBillingAddress") ? Model.ShipToBillingAddress.ToString().ToLowerInvariant() : "false")" />
+            <input id="instant-quote-ship-to-billing" type="checkbox" name="ShipToBillingAddress" value="true" checked="@Model.ShipToBillingAddress" disabled="@Model.IsLocked("ShipToBillingAddress")" />
             <label for="instant-quote-ship-to-billing">@Localizer["Shipping address is the same as billing"]</label>
         </div>
         <fieldset class="instant-quote__address-fields" data-instant-quote-shipping-address>
             <legend>@Localizer["Shipping address"]</legend>
             <div>
                 <label for="instant-quote-shipping-building">@Localizer["Building"]</label>
-                <input id="instant-quote-shipping-building" name="ShippingBuilding" value="@Model.ShippingBuilding" autocomplete="shipping address-line3" maxlength="256" aria-invalid="@AriaInvalid("ShippingBuilding")" aria-describedby="instant-quote-shipping-building-help @ErrorId("ShippingBuilding")" data-address-server-invalid="@(HasError("ShippingBuilding") ? "true" : null)" />
+                <input id="instant-quote-shipping-building" name="ShippingBuilding" value="@Model.ShippingBuilding" autocomplete="shipping address-line3" maxlength="256" aria-invalid="@AriaInvalid("ShippingBuilding")" aria-describedby="instant-quote-shipping-building-help @ErrorId("ShippingBuilding")" data-address-server-invalid="@(HasError("ShippingBuilding") ? "true" : null)" readonly="@Model.IsLocked("ShippingBuilding")" aria-readonly="@(Model.IsLocked("ShippingBuilding") ? "true" : null)" />
                 <small id="instant-quote-shipping-building-help">@Localizer["Examples: a building, village, or organization name."]</small>
                 @AddressFieldError("ShippingBuilding")
             </div>
-            <div><label for="instant-quote-shipping-street1">@Localizer["Street address"]</label><input id="instant-quote-shipping-street1" name="ShippingStreet1" value="@Model.ShippingStreet1" autocomplete="shipping address-line1" maxlength="256" aria-invalid="@AriaInvalid("ShippingStreet1")" aria-describedby="@ErrorId("ShippingStreet1")" />@FieldError("ShippingStreet1")</div>
-            <div><label for="instant-quote-shipping-street2">@Localizer["Sub-district"]</label><input id="instant-quote-shipping-street2" name="ShippingStreet2" value="@Model.ShippingStreet2" autocomplete="shipping address-line2" maxlength="256" /></div>
-            <div><label for="instant-quote-shipping-city">@Localizer["City / district"]</label><input id="instant-quote-shipping-city" name="ShippingCity" value="@Model.ShippingCity" autocomplete="shipping address-level2" maxlength="256" aria-invalid="@AriaInvalid("ShippingCity")" aria-describedby="@ErrorId("ShippingCity")" />@FieldError("ShippingCity")</div>
-            <div><label for="instant-quote-shipping-province">@Localizer["Province"]</label><input id="instant-quote-shipping-province" name="ShippingProvince" value="@Model.ShippingProvince" autocomplete="shipping address-level1" maxlength="256" aria-invalid="@AriaInvalid("ShippingProvince")" aria-describedby="@ErrorId("ShippingProvince")" />@FieldError("ShippingProvince")</div>
-            <div><label for="instant-quote-shipping-postal">@Localizer["Postal code"]</label><input id="instant-quote-shipping-postal" name="ShippingPostalCode" value="@Model.ShippingPostalCode" autocomplete="shipping postal-code" maxlength="20" aria-invalid="@AriaInvalid("ShippingPostalCode")" aria-describedby="@ErrorId("ShippingPostalCode")" />@FieldError("ShippingPostalCode")</div>
-            <div><label for="instant-quote-shipping-country">@Localizer["Country"]</label><select id="instant-quote-shipping-country" name="ShippingCountry" autocomplete="shipping country-name" aria-invalid="@AriaInvalid("ShippingCountry")" aria-describedby="@ErrorId("ShippingCountry")">@foreach (var country in Model.Countries){<option value="@country.Name" selected="@(string.Equals(country.Name, Model.ShippingCountry, StringComparison.OrdinalIgnoreCase))">@country.DisplayName</option>}</select>@FieldError("ShippingCountry")</div>
+            <div><label for="instant-quote-shipping-street1">@Localizer["Street address"]</label><input id="instant-quote-shipping-street1" name="ShippingStreet1" value="@Model.ShippingStreet1" autocomplete="shipping address-line1" maxlength="256" aria-invalid="@AriaInvalid("ShippingStreet1")" aria-describedby="@ErrorId("ShippingStreet1")" readonly="@Model.IsLocked("ShippingStreet1")" aria-readonly="@(Model.IsLocked("ShippingStreet1") ? "true" : null)" />@FieldError("ShippingStreet1")</div>
+            <div><label for="instant-quote-shipping-street2">@Localizer["Sub-district"]</label><input id="instant-quote-shipping-street2" name="ShippingStreet2" value="@Model.ShippingStreet2" autocomplete="shipping address-line2" maxlength="256" readonly="@Model.IsLocked("ShippingStreet2")" aria-readonly="@(Model.IsLocked("ShippingStreet2") ? "true" : null)" /></div>
+            <div><label for="instant-quote-shipping-city">@Localizer["City / district"]</label><input id="instant-quote-shipping-city" name="ShippingCity" value="@Model.ShippingCity" autocomplete="shipping address-level2" maxlength="256" aria-invalid="@AriaInvalid("ShippingCity")" aria-describedby="@ErrorId("ShippingCity")" readonly="@Model.IsLocked("ShippingCity")" aria-readonly="@(Model.IsLocked("ShippingCity") ? "true" : null)" />@FieldError("ShippingCity")</div>
+            <div><label for="instant-quote-shipping-province">@Localizer["Province"]</label><input id="instant-quote-shipping-province" name="ShippingProvince" value="@Model.ShippingProvince" autocomplete="shipping address-level1" maxlength="256" aria-invalid="@AriaInvalid("ShippingProvince")" aria-describedby="@ErrorId("ShippingProvince")" readonly="@Model.IsLocked("ShippingProvince")" aria-readonly="@(Model.IsLocked("ShippingProvince") ? "true" : null)" />@FieldError("ShippingProvince")</div>
+            <div><label for="instant-quote-shipping-postal">@Localizer["Postal code"]</label><input id="instant-quote-shipping-postal" name="ShippingPostalCode" value="@Model.ShippingPostalCode" autocomplete="shipping postal-code" maxlength="20" aria-invalid="@AriaInvalid("ShippingPostalCode")" aria-describedby="@ErrorId("ShippingPostalCode")" readonly="@Model.IsLocked("ShippingPostalCode")" aria-readonly="@(Model.IsLocked("ShippingPostalCode") ? "true" : null)" />@FieldError("ShippingPostalCode")</div>
+            <div><label for="instant-quote-shipping-country">@Localizer["Country"]</label><select id="instant-quote-shipping-country" name="ShippingCountry" autocomplete="shipping country-name" aria-invalid="@AriaInvalid("ShippingCountry")" aria-describedby="@ErrorId("ShippingCountry")" disabled="@Model.IsLocked("ShippingCountry")">@foreach (var country in Model.Countries){<option value="@country.Name" selected="@(string.Equals(country.Name, Model.ShippingCountry, StringComparison.OrdinalIgnoreCase))">@country.DisplayName</option>}</select>@FieldError("ShippingCountry")</div>
         </fieldset>
         <div>
             <label for="instant-quote-description">@Localizer["Project details"]</label>
@@ -143,7 +159,7 @@
         {
             <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
         }
-        <button type="submit" form="instant-quotation-form" data-instant-quote-submit>@Localizer["Submit"]</button>
+        <button type="submit" form="instant-quotation-form" data-instant-quote-submit disabled="@Model.ProfileUnavailable">@Localizer["Submit"]</button>
     </div>
 </section>
 

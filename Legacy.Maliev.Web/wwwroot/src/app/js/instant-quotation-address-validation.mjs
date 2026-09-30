@@ -55,7 +55,7 @@ export function wireInstantQuotationAddressValidation(form, submit = form?.query
 
         const components = group.components.map((name) => form.elements.namedItem(name)?.value ?? '');
         const applies = !group.separateShippingOnly || shipToBilling?.checked !== true;
-        const invalid = applies && buildingContainsAddressComponents(building.value, components);
+        const invalid = !building.readOnly && applies && buildingContainsAddressComponents(building.value, components);
         building.setCustomValidity(invalid ? message : '');
         if (invalid) {
             building.setAttribute?.('aria-invalid', 'true');
@@ -75,13 +75,13 @@ export function wireInstantQuotationAddressValidation(form, submit = form?.query
 
     const updateSubmit = () => {
         if (submit) {
-            submit.disabled = !form.checkValidity?.();
+            submit.disabled = form.dataset?.profileUnavailable === 'true' || !form.checkValidity?.();
         }
     };
 
     for (const group of groups) {
         const building = form.elements.namedItem(group.building);
-        if (building?.dataset?.addressServerInvalid === 'true') {
+        if (!building?.readOnly && building?.dataset?.addressServerInvalid === 'true') {
             building.setCustomValidity(message);
         }
 

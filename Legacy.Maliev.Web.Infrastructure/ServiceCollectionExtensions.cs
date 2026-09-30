@@ -38,6 +38,8 @@ public static class ServiceCollectionExtensions
             .ValidateOnStart();
         services.AddOptions<ServiceAuthenticationOptions>()
             .Bind(configuration.GetSection("ServiceAuthentication"));
+        services.AddOptions<InstantQuotationProfileCompletionOptions>()
+            .Bind(configuration.GetSection(InstantQuotationProfileCompletionOptions.SectionName));
         services.AddOptions<RecaptchaEnterpriseOptions>()
             .Bind(configuration.GetSection("Recaptcha"));
         services.AddOptions<GoogleMapsOptions>()
@@ -72,6 +74,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerEmailChangeWorkflow, CustomerEmailChangeWorkflow>();
         services.AddScoped<ICustomerProfileClient, CustomerProfileClient>();
         services.AddScoped<ICustomerAccountClient, CustomerAccountClient>();
+        services.AddScoped<IInstantQuotationProfileCompletionClient, InstantQuotationProfileCompletionClient>();
         services.AddScoped<ICustomerOrderClient, CustomerOrderClient>();
         services.AddScoped<ICustomerOrderCatalogClient, CustomerOrderCatalogClient>();
         services.AddScoped<ICustomerOrderSubmissionTransport, CustomerOrderSubmissionTransport>();

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Maliev.ProfileContractSeed</AssemblyName>
+  </PropertyGroup>
+  <!-- Standalone disposable test tool. Never referenced by Web or its application/infrastructure projects. -->
+  <ItemGroup>
+    <ProjectReference Include="$(ProfileProducerRoot)/Legacy.Maliev.CustomerService.Data/Legacy.Maliev.CustomerService.Data.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+  </ItemGroup>
+  <Target Name="RequirePinnedProducer" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(ProfileProducerRoot)' == ''" Text="ProfileProducerRoot must name the separately pinned disposable test producer checkout." />
+  </Target>
+</Project>

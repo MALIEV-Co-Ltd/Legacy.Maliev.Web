@@ -191,11 +191,55 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         var wantsJson = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
-        NormalizeOptionalCustomerFields();
+        InstantQuotationAuthenticatedPreparation? prepared = null;
+        if (User.Identity?.IsAuthenticated is true)
+        {
+            var trustedSession = User.FindFirstValue(InstantQuotationSessionIdentityClaim.Type);
+            var trustedOwner = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!IsValidSessionIdentity(trustedSession) || string.IsNullOrWhiteSpace(trustedOwner))
+            {
+                StoreRejected(InstantQuotationProblemCategory.Authorization);
+                return TerminalOrRedirect(wantsJson);
+            }
+            var profilePreparation = HttpContext.RequestServices?.GetService<IInstantQuotationAuthenticatedPreparationService>();
+            if (profilePreparation is null)
+            {
+                StoreRejected(InstantQuotationProblemCategory.DependencyUnavailable);
+                return TerminalOrRedirect(wantsJson);
+            }
+            Company = NormalizeOptionalCustomerText(Company);
+            TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
+            prepared = await profilePreparation.PrepareAsync(trustedSession!, trustedOwner, PostedProfile(), Description, cancellationToken);
+            if (prepared.Customer is null)
+            {
+                if (prepared.TerminalResult is not null) StoreResult(prepared.TerminalResult);
+                else StoreRejected(prepared.ProblemCategory);
+                if (prepared.SafeToRetry && wantsJson)
+                {
+                    var localizer = HttpContext.RequestServices?.GetService<Microsoft.Extensions.Localization.IStringLocalizer<ThreeDimensionalPrintingEstimateContent>>();
+                    var message = prepared.ProblemCategory == InstantQuotationProblemCategory.Authorization
+                        ? "Please sign in again to securely load your current customer details."
+                        : "We could not securely load your customer profile. Please try again.";
+                    ModelState.AddModelError(string.Empty, localizer?[message] ?? message);
+                    return RetryJson();
+                }
+                return TerminalOrRedirect(wantsJson);
+            }
+            ApplyProfile(prepared.Details!);
+            Description = prepared.Customer.Description;
+            ModelState.Remove(nameof(Description));
+            ValidateProfileProperty(nameof(Description));
+        }
+        if (prepared is null) NormalizeOptionalCustomerFields();
         ValidateConditionalCustomerFields();
-        ValidateBuildingFields();
+        ValidateBuildingFields(prepared?.LockedFields);
         if (!ModelState.IsValid)
         {
+            if (prepared?.TerminalResult is not null)
+            {
+                StoreResult(prepared.TerminalResult);
+                return TerminalOrRedirect(wantsJson);
+            }
             if (wantsJson)
             {
                 return RetryJson();
@@ -274,15 +318,24 @@ public sealed class ThreeDimensionalPrinting : PageModel
                     NormalizeOptional(ShippingCity),
                     NormalizeOptional(ShippingProvince),
                     NormalizeOptional(ShippingPostalCode),
-                    NormalizeOptional(ShippingCountry)),
+                    NormalizeOptional(ShippingCountry)) with
+                { ProfileCompletion = prepared?.Customer?.ProfileCompletion },
                 cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             logger?.LogError("Instant Quotation submission failed before a controlled result was returned.");
+            if (prepared?.TerminalResult is not null)
+            {
+                StoreResult(prepared.TerminalResult);
+                return TerminalOrRedirect(wantsJson);
+            }
             StoreRejected(InstantQuotationProblemCategory.Unexpected);
             return TerminalOrRedirect(wantsJson);
         }
+
+        if (prepared?.TerminalResult is not null && result.RequestReference is null)
+            result = prepared.TerminalResult;
 
         // Only validation is known to have failed before a request could be created.
         // A downstream timeout can hide a persisted request, so it is never a safe retry.
@@ -295,6 +348,101 @@ public sealed class ThreeDimensionalPrinting : PageModel
         StoreResult(result);
         return TerminalOrRedirect(wantsJson);
     }
+
+    private InstantQuotationProfileDetails PostedProfile() => new()
+    {
+        FirstName = FirstName ?? string.Empty,
+        LastName = LastName ?? string.Empty,
+        Email = Email ?? string.Empty,
+        Mobile = Mobile ?? string.Empty,
+        Telephone = Telephone ?? string.Empty,
+        Company = Company ?? string.Empty,
+        TaxNumber = TaxNumber ?? string.Empty,
+        TaxBranch = TaxBranch ?? string.Empty,
+        TaxBranchCode = TaxBranchCode ?? string.Empty,
+        BillingBuilding = BillingBuilding ?? string.Empty,
+        BillingStreet1 = BillingStreet1 ?? string.Empty,
+        BillingStreet2 = BillingStreet2 ?? string.Empty,
+        BillingCity = BillingCity ?? string.Empty,
+        BillingProvince = BillingProvince ?? string.Empty,
+        BillingPostalCode = BillingPostalCode ?? string.Empty,
+        Country = Country ?? string.Empty,
+        ShippingBuilding = ShippingBuilding ?? string.Empty,
+        ShippingStreet1 = ShippingStreet1 ?? string.Empty,
+        ShippingStreet2 = ShippingStreet2 ?? string.Empty,
+        ShippingCity = ShippingCity ?? string.Empty,
+        ShippingProvince = ShippingProvince ?? string.Empty,
+        ShippingPostalCode = ShippingPostalCode ?? string.Empty,
+        ShippingCountry = ShippingCountry ?? string.Empty,
+        ShipToBillingAddress = ShipToBillingAddress,
+    };
+
+    private void ApplyProfile(InstantQuotationProfileDetails details)
+    {
+        FirstName = details.FirstName;
+        ModelState.Remove(nameof(FirstName));
+        LastName = details.LastName;
+        ModelState.Remove(nameof(LastName));
+        Email = details.Email;
+        ModelState.Remove(nameof(Email));
+        Mobile = details.Mobile;
+        ModelState.Remove(nameof(Mobile));
+        Telephone = details.Telephone;
+        ModelState.Remove(nameof(Telephone));
+        Company = details.Company;
+        ModelState.Remove(nameof(Company));
+        TaxNumber = details.TaxNumber;
+        ModelState.Remove(nameof(TaxNumber));
+        TaxBranch = details.TaxBranch;
+        ModelState.Remove(nameof(TaxBranch));
+        TaxBranchCode = details.TaxBranchCode;
+        ModelState.Remove(nameof(TaxBranchCode));
+        BillingBuilding = details.BillingBuilding;
+        ModelState.Remove(nameof(BillingBuilding));
+        BillingStreet1 = details.BillingStreet1;
+        ModelState.Remove(nameof(BillingStreet1));
+        BillingStreet2 = details.BillingStreet2;
+        ModelState.Remove(nameof(BillingStreet2));
+        BillingCity = details.BillingCity;
+        ModelState.Remove(nameof(BillingCity));
+        BillingProvince = details.BillingProvince;
+        ModelState.Remove(nameof(BillingProvince));
+        BillingPostalCode = details.BillingPostalCode;
+        ModelState.Remove(nameof(BillingPostalCode));
+        Country = details.Country;
+        ModelState.Remove(nameof(Country));
+        ShippingBuilding = details.ShippingBuilding;
+        ModelState.Remove(nameof(ShippingBuilding));
+        ShippingStreet1 = details.ShippingStreet1;
+        ModelState.Remove(nameof(ShippingStreet1));
+        ShippingStreet2 = details.ShippingStreet2;
+        ModelState.Remove(nameof(ShippingStreet2));
+        ShippingCity = details.ShippingCity;
+        ModelState.Remove(nameof(ShippingCity));
+        ShippingProvince = details.ShippingProvince;
+        ModelState.Remove(nameof(ShippingProvince));
+        ShippingPostalCode = details.ShippingPostalCode;
+        ModelState.Remove(nameof(ShippingPostalCode));
+        ShippingCountry = details.ShippingCountry;
+        ModelState.Remove(nameof(ShippingCountry));
+        ShipToBillingAddress = details.ShipToBillingAddress;
+        ModelState.Remove(nameof(ShipToBillingAddress));
+        foreach (var field in typeof(InstantQuotationProfileDetails).GetProperties())
+        {
+            ValidateProfileProperty(field.Name);
+        }
+    }
+
+    private void ValidateProfileProperty(string field)
+    {
+        var property = GetType().GetProperty(field);
+        if (property is null) return;
+        var errors = new List<ValidationResult>();
+        Validator.TryValidateProperty(property.GetValue(this), new ValidationContext(this) { MemberName = field }, errors);
+        foreach (var error in errors)
+            ModelState.AddModelError(field, error.ErrorMessage ?? "Please correct this field.");
+    }
+
 
     private IActionResult TerminalOrRedirect(bool wantsJson) => wantsJson
         ? new JsonResult(new { outcome = "terminal", redirectUrl = "/InstantQuotation/3D-Printing" })
@@ -350,11 +498,11 @@ public sealed class ThreeDimensionalPrinting : PageModel
         Require(nameof(ShippingCountry), ShippingCountry);
     }
 
-    internal void ValidateBuildingFields()
+    internal void ValidateBuildingFields(IReadOnlySet<string>? lockedFields = null)
     {
         const string error = "This field contains address details. Move them to the separate address fields.";
 
-        if (BuildingContainsAddressComponents(
+        if (lockedFields?.Contains(nameof(BillingBuilding)) != true && BuildingContainsAddressComponents(
             BillingBuilding,
             BillingStreet1,
             BillingStreet2,
@@ -365,7 +513,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
             ModelState.AddModelError(nameof(BillingBuilding), error);
         }
 
-        if (!ShipToBillingAddress
+        if (!ShipToBillingAddress && lockedFields?.Contains(nameof(ShippingBuilding)) != true
             && BuildingContainsAddressComponents(
                 ShippingBuilding,
                 ShippingStreet1,

@@ -550,4 +550,7 @@
   <data name="Physical build analysis is unavailable. Engineering review is required." xml:space="preserve"><value>ไม่สามารถวิเคราะห์การพิมพ์จริงได้ ต้องให้วิศวกรตรวจสอบ</value></data>
   <data name="Price unavailable — engineering review required." xml:space="preserve"><value>ยังไม่สามารถแสดงราคาได้ ต้องให้วิศวกรตรวจสอบ</value></data>
   <data name="Price" xml:space="preserve"><value>ราคา</value></data>
+  <data name="Saved account values are locked. Only missing details can be added here." xml:space="preserve"><value>ข้อมูลบัญชีที่บันทึกไว้ถูกล็อกไว้ คุณสามารถเพิ่มได้เฉพาะข้อมูลที่ยังขาด</value></data>
+  <data name="We could not securely load your customer profile. Please try again." xml:space="preserve"><value>ไม่สามารถโหลดข้อมูลลูกค้าของคุณได้อย่างปลอดภัย กรุณาลองอีกครั้ง</value></data>
+  <data name="Please sign in again to securely load your current customer details." xml:space="preserve"><value>กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลลูกค้าปัจจุบันของคุณอย่างปลอดภัย</value></data>
 </root>

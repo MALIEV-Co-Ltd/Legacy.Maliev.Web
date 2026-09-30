@@ -12,6 +12,121 @@ public sealed class InstantQuotationSubmissionTests
     private const string UploadFileIdText = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
     [Fact]
+    public async Task AuthenticatedDurableQuote_CheckpointConflictKeepsKnownTerminalReferenceWithoutProfileEffects()
+    {
+        var events = new List<string>();
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true));
+        var profiles = new CompletionClient(events);
+        var customer = Customer() with { ProfileCompletion = new(7, Guid.NewGuid(), "\"" + new string('a', 64) + "\"", new(null, null, null, null, null, null, null, null, true)) };
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(Part()), Owner),
+            new InstantQuotationPricingService(), quotation, new RecordingSubmissionStore { AcceptWrites = false },
+            new RecordingUploadClient(events, SuccessfulFinalization()), SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance, authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance,
+            profileCompletionClient: profiles);
+        var result = await service.SubmitAsync(SessionId, Owner, customer, default);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(417, result.RequestReference);
+        Assert.Empty(profiles.Operations);
+        Assert.Empty(events);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CheckpointReadFailure_IsControlledBeforeGuestOrAuthenticatedEffects(bool authenticated, bool canceled)
+    {
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true));
+        var events = new List<string>();
+        var store = new RecordingSubmissionStore { ReadException = canceled ? new OperationCanceledException() : new TimeoutException() };
+        var profiles = new CompletionClient(events);
+        var owner = authenticated ? Owner : null;
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(Part()), owner),
+            new InstantQuotationPricingService(), quotation, store, new RecordingUploadClient(events, SuccessfulFinalization()),
+            SuccessfulRequestFileClient.Instance, quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance, profileCompletionClient: profiles);
+        var result = await service.SubmitAsync(SessionId, owner, Customer(), default);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Rejected, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, result.ProblemCategory);
+        Assert.Null(result.RequestReference);
+        Assert.Empty(quotation.Calls);
+        Assert.Empty(profiles.Operations);
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public async Task AuthenticatedProfileFailure_RetainsDurableReference_AndReplaysIdenticalOperationBeforeFiles()
+    {
+        var events = new List<string>();
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true));
+        var store = new RecordingSubmissionStore(events);
+        var profiles = new CompletionClient(events);
+        var operation = new InstantQuotationProfileCompletionOperation(7, Guid.NewGuid(), "\"" + new string('a', 64) + "\"",
+            new("Owner", "Name", null, "0800000000", null, null, null, null, true));
+        var customer = Customer() with { ProfileCompletion = operation };
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(Part()), Owner),
+            new InstantQuotationPricingService(), quotation, store, new RecordingUploadClient(events, SuccessfulFinalization()),
+            SuccessfulRequestFileClient.Instance, quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance, profileCompletionClient: profiles);
+        var first = await service.SubmitAsync(SessionId, Owner, customer, default);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, first.Outcome);
+        Assert.Equal(417, first.RequestReference);
+        Assert.Equal(["persisted", "profile"], events);
+        var retry = await service.SubmitAsync(SessionId, Owner, customer with { FirstName = "forged", Description = "changed" }, default);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, retry.Outcome);
+        Assert.Equal(417, retry.RequestReference);
+        Assert.Single(quotation.Calls);
+        Assert.Equal([operation, operation], profiles.Operations);
+        Assert.True(store.Checkpoint?.ProfileCompleted);
+        Assert.Equal("Owner", store.Checkpoint?.FrozenCustomer?.ProfileCompletion?.Body.FirstName);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProfileCompletionCheckpointFailure_KeepsDurableReferenceAndExactReplay(bool canceled)
+    {
+        var events = new List<string>();
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true));
+        var store = new RecordingSubmissionStore(events)
+        {
+            ProfileWriteException = canceled ? new OperationCanceledException() : new TimeoutException(),
+        };
+        var profiles = new CompletionClient(events) { AlwaysSucceed = true };
+        var operation = new InstantQuotationProfileCompletionOperation(7, Guid.NewGuid(), "\"" + new string('a', 64) + "\"",
+            new("Owner", "Name", null, null, null, null, null, null, true));
+        var customer = Customer() with { ProfileCompletion = operation };
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(Part()), Owner),
+            new InstantQuotationPricingService(), quotation, store, new RecordingUploadClient(events, SuccessfulFinalization()),
+            SuccessfulRequestFileClient.Instance, quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance, profileCompletionClient: profiles);
+        var first = await service.SubmitAsync(SessionId, Owner, customer, default);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, first.Outcome);
+        Assert.Equal(417, first.RequestReference);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, first.ProblemCategory);
+        Assert.Equal(["persisted", "profile"], events);
+        store.ProfileWriteException = null;
+        var retry = await service.SubmitAsync(SessionId, Owner, customer with { FirstName = "forged" }, default);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, retry.Outcome);
+        Assert.Single(quotation.Calls);
+        Assert.Equal([operation, operation], profiles.Operations);
+    }
+
+    private sealed class CompletionClient(List<string> events) : IInstantQuotationProfileCompletionClient
+    {
+        public List<InstantQuotationProfileCompletionOperation> Operations { get; } = [];
+        public bool AlwaysSucceed { get; init; }
+        public Task<InstantQuotationProfileGraphResult> ReadAsync(string ownerIdentity, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<InstantQuotationProfileCompletionResult> CompleteAsync(string ownerIdentity, InstantQuotationProfileCompletionOperation operation, CancellationToken cancellationToken)
+        {
+            events.Add("profile");
+            Operations.Add(operation);
+            return Task.FromResult(new InstantQuotationProfileCompletionResult(AlwaysSucceed || Operations.Count > 1, InstantQuotationProblemCategory.DependencyUnavailable));
+        }
+    }
+
+    [Fact]
     public async Task Submit_ValidCustomer_PersistsAuthoritativeRequestBeforeFinalizingUploads()
     {
         var events = new List<string>();
@@ -822,6 +937,8 @@ public sealed class InstantQuotationSubmissionTests
         QuoteAuthorization = new InstantQuotationQuoteAuthorization(["synthetic-line"], "synthetic-order"),
     };
 
+    internal static InstantQuotationSessionState ProfileContractSession(string sessionId) => Session(Part()) with { SessionId = sessionId };
+
     private static InstantQuotationPart Part(int quantity = 1) => new(
         Guid.Parse("11111111-2222-3333-4444-555555555555"),
         "bracket.stl",
@@ -866,7 +983,7 @@ public sealed class InstantQuotationSubmissionTests
             0.5),
         new InstantQuotationPartConfiguration("ABS", "Black", quantity, BuildPreference.Strength));
 
-    private static InstantQuotationFinalizationResult SuccessfulFinalization() =>
+    internal static InstantQuotationFinalizationResult SuccessfulFinalization() =>
         InstantQuotationFinalizationResult.Succeeded(
             "ignored",
             [new InstantQuotationFinalizedFile(
@@ -997,6 +1114,8 @@ public sealed class InstantQuotationSubmissionTests
         public int RenewalCount { get; private set; }
 
         public InstantQuotationSubmissionCheckpoint? ReadOverride { get; init; }
+        public Exception? ReadException { get; init; }
+        public Exception? ProfileWriteException { get; set; }
 
         public InstantQuotationSubmissionCheckpoint? Checkpoint
         {
@@ -1046,6 +1165,7 @@ public sealed class InstantQuotationSubmissionTests
             long leaseGeneration,
             CancellationToken cancellationToken)
         {
+            if (ReadException is not null) return Task.FromException<InstantQuotationSubmissionCheckpointRead>(ReadException);
             lock (sync)
             {
                 var valid = leased && generation == leaseGeneration;
@@ -1074,6 +1194,8 @@ public sealed class InstantQuotationSubmissionTests
             InstantQuotationSubmissionCheckpointStatus? expectedPriorStatus,
             CancellationToken cancellationToken)
         {
+            if (value.ProfileCompleted && ProfileWriteException is not null)
+                return Task.FromException<bool>(ProfileWriteException);
             lock (sync)
             {
                 ExpectedPriorStatuses.Add(expectedPriorStatus);
@@ -1123,7 +1245,7 @@ public sealed class InstantQuotationSubmissionTests
         }
     }
 
-    private sealed class SuccessfulRequestFileClient : IInstantQuotationRequestFileClient
+    internal sealed class SuccessfulRequestFileClient : IInstantQuotationRequestFileClient
     {
         public static SuccessfulRequestFileClient Instance { get; } = new();
 

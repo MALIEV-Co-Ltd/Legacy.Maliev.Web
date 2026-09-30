@@ -45,6 +45,9 @@ jobs:
       - name: Verify frozen source-parity manifest
         shell: pwsh
         run: ./scripts/verify-complete-source-history-parity.ps1 -ManifestOnly
+      - name: Build exact-pinned disposable profile boundary services
+        shell: pwsh
+        run: ./scripts/prepare-profile-producer-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
       - name: Install pinned Chromium browser

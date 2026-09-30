@@ -27,6 +27,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
 {
     private readonly WebApplicationFactory<Program> factory;
 
+
     public InstantQuotationSubmissionEndpointTests(WebApplicationFactory<Program> factory) => this.factory = factory;
 
     [Fact]
@@ -672,7 +673,8 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     private static WebApplicationFactory<Program> CreateFactory(
         RecordingSubmissionService service,
         RecordingTempDataProvider? tempData = null,
-        bool authenticated = false) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        bool authenticated = false,
+        IInstantQuotationAuthenticatedPreparationService? preparation = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
     {
         builder.UseEnvironment("Testing");
         builder.ConfigureServices(services =>
@@ -683,6 +685,8 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             services.AddSingleton<ICountryClient, ImmediateCountryClient>();
             services.RemoveAll<IAccountSessionManager>();
             services.AddSingleton<IAccountSessionManager, EmptyAccountSessionManager>();
+            services.RemoveAll<IInstantQuotationAuthenticatedPreparationService>();
+            services.AddSingleton(preparation ?? new BindingPreparation());
             if (tempData is not null)
             {
                 services.RemoveAll<ITempDataProvider>();
@@ -698,6 +702,14 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             }
         });
     });
+
+    private sealed class BindingPreparation : IInstantQuotationAuthenticatedPreparationService
+    {
+        public Task<InstantQuotationAuthenticatedPreparation> PrepareAsync(string sessionId, string ownerIdentity,
+            InstantQuotationProfileDetails posted, string? description, CancellationToken cancellationToken) =>
+            Task.FromResult(new InstantQuotationAuthenticatedPreparation(posted.ToSubmission(description), posted,
+                null, InstantQuotationProblemCategory.None, true));
+    }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> application) => application.CreateClient(
         new WebApplicationFactoryClientOptions
