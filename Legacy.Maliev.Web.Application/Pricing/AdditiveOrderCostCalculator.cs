@@ -47,10 +47,17 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 ValidateLine(line);
             }
 
+            if (orderedLines.Select(line => line.LineId).Distinct(StringComparer.Ordinal).Count() != orderedLines.Length)
+            {
+                throw new ArgumentException("Pricing line IDs must be unique.", nameof(lines));
+            }
+
             decimal unroundedBase = orderedLines.Sum(CalculateUnroundedLineBase);
+            decimal manufacturingBase = orderedLines.Sum(CalculateManufacturingLineBase);
             decimal minimumOrderPrice = orderedLines.Max(line => line.MinimumOrderPriceThb);
-            decimal baseOrder = RoundUp(Math.Max(minimumOrderPrice, unroundedBase), 5m);
-            decimal reserve = AllocateReserve(orderedLines, unroundedBase, baseOrder);
+            decimal baseOrder = RoundUp(Math.Max(minimumOrderPrice, manufacturingBase), 5m);
+            decimal minimumOrderSurcharge = Math.Max(0m, baseOrder - RoundUp(manufacturingBase, 5m));
+            decimal reserve = AllocateReserve(orderedLines, manufacturingBase, baseOrder);
             decimal preRush = baseOrder
                 + charges.SetupThb
                 + reserve
@@ -62,13 +69,18 @@ namespace Legacy.Maliev.Web.Application.Pricing
             decimal vat = exVat * charges.VatRate;
             decimal unroundedGross = exVat + vat;
             decimal gross = RoundUp(unroundedGross, 5m);
-            IReadOnlyList<AdditiveOrderCostAllocation> allocations = AllocateLineTotals(orderedLines, unroundedBase, gross);
+            IReadOnlyList<AdditiveOrderCostAllocation> allocations = AllocateLineTotals(orderedLines, manufacturingBase, gross);
+            decimal commercialSubtotal = RoundCurrency(gross - vat - charges.DeliveryThb - minimumOrderSurcharge);
+            IReadOnlyList<AdditiveOrderCostAllocation> commercialAllocations = AllocateLineTotals(orderedLines, manufacturingBase, commercialSubtotal);
 
             return new AdditiveOrderCostBreakdown
             {
                 Currency = "THB",
                 UnroundedBaseThb = RoundCurrency(unroundedBase),
+                LineMinimumAdjustmentThb = RoundCurrency(manufacturingBase - unroundedBase),
                 BaseOrderThb = baseOrder,
+                MinimumOrderSurchargeThb = RoundCurrency(minimumOrderSurcharge),
+                CommercialSubtotalThb = commercialSubtotal,
                 SetupThb = charges.SetupThb,
                 ReserveThb = RoundCurrency(reserve),
                 PackagingThb = charges.PackagingThb,
@@ -80,6 +92,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 RoundingAdjustmentThb = RoundCurrency(gross - unroundedGross),
                 TotalThb = gross,
                 LineAllocations = allocations,
+                CommercialLineAllocations = commercialAllocations,
             };
         }
 
@@ -92,7 +105,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
             {
                 decimal share = unroundedBase == 0m
                     ? 1m / lines.Count
-                    : CalculateUnroundedLineBase(line) / unroundedBase;
+                    : CalculateManufacturingLineBase(line) / unroundedBase;
                 decimal raw = total * share;
                 decimal floor = decimal.Floor(raw * 100m) / 100m;
                 return new { line.LineId, Raw = raw, Floor = floor, Fraction = raw - floor };
@@ -123,6 +136,11 @@ namespace Legacy.Maliev.Web.Application.Pricing
             return marginPrice * (1m - line.DiscountRate) * line.Quantity;
         }
 
+        private static decimal CalculateManufacturingLineBase(AdditiveOrderCostLine line)
+        {
+            return Math.Max(line.MinimumLineBaseThb * line.Quantity, CalculateUnroundedLineBase(line));
+        }
+
         private static decimal AllocateReserve(
             IReadOnlyCollection<AdditiveOrderCostLine> lines,
             decimal unroundedBase,
@@ -136,7 +154,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
 
             return lines.Sum(line =>
             {
-                decimal share = CalculateUnroundedLineBase(line) / unroundedBase;
+                decimal share = CalculateManufacturingLineBase(line) / unroundedBase;
                 return baseOrder * share * line.ReserveRate;
             });
         }
@@ -159,6 +177,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
             }
 
             RequireNonNegative(line.DirectCostPerUnitThb, nameof(line.DirectCostPerUnitThb));
+            RequireNonNegative(line.MinimumLineBaseThb, nameof(line.MinimumLineBaseThb));
             RequireNonNegative(line.MinimumOrderPriceThb, nameof(line.MinimumOrderPriceThb));
             RequireRate(line.DiscountRate, nameof(line.DiscountRate), allowOne: true);
             RequireRate(line.TargetMarginRate, nameof(line.TargetMarginRate), allowOne: false);
@@ -230,6 +249,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
         /// <summary>Gets or sets the named commercial reprint-reserve rate.</summary>
         internal decimal ReserveRate { get; set; }
 
+        /// <summary>Gets or sets the manufacturing floor per ordered unit.</summary>
+        internal decimal MinimumLineBaseThb { get; set; }
+
         /// <summary>Gets or sets the minimum order price contributed by this process.</summary>
         internal decimal MinimumOrderPriceThb { get; set; }
     }
@@ -265,8 +287,17 @@ namespace Legacy.Maliev.Web.Application.Pricing
         /// <summary>Gets or sets manufacturing base before minimum and THB 5 ceiling.</summary>
         internal decimal UnroundedBaseThb { get; set; }
 
+        /// <summary>Gets or sets the adjustment contributed by per-line manufacturing floors.</summary>
+        internal decimal LineMinimumAdjustmentThb { get; set; }
+
         /// <summary>Gets or sets the minimum-adjusted manufacturing base.</summary>
         internal decimal BaseOrderThb { get; set; }
+
+        /// <summary>Gets or sets the explicit process-minimum surcharge.</summary>
+        internal decimal MinimumOrderSurchargeThb { get; set; }
+
+        /// <summary>Gets or sets the commercial subtotal excluding delivery, VAT and minimum surcharge.</summary>
+        internal decimal CommercialSubtotalThb { get; set; }
 
         /// <summary>Gets or sets once-per-order setup.</summary>
         internal decimal SetupThb { get; set; }
@@ -300,6 +331,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
 
         /// <summary>Gets or sets deterministic line allocations that reconcile to the total.</summary>
         internal IReadOnlyList<AdditiveOrderCostAllocation> LineAllocations { get; set; } = Array.Empty<AdditiveOrderCostAllocation>();
+
+        /// <summary>Gets or sets deterministic allocations of the rounded commercial subtotal.</summary>
+        internal IReadOnlyList<AdditiveOrderCostAllocation> CommercialLineAllocations { get; set; } = Array.Empty<AdditiveOrderCostAllocation>();
     }
 
     /// <summary>One deterministic satang-accurate allocation of the order total.</summary>

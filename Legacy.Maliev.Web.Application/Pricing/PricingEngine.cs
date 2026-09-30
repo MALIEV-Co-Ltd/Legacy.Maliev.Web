@@ -32,13 +32,9 @@ public static class PricingEngine
             throw new ArgumentException("The physical FDM cost is not finite and positive.", nameof(physical));
         }
 
-        var setupLabor = PricingCatalog.SetupHours(PrintProcess.Fdm) * PricingCatalog.LaborRatePerHour;
-        var failureRate = PricingCatalog.FailureReserveRate(PrintProcess.Fdm);
-        var paymentGrossUp = 1 + (PricingCatalog.PaymentFeeRate / (1 - PricingCatalog.PaymentFeeRate));
-        var calculated = RoundUnitPrice(AllInUnitPrice(
-            directCost, setupLabor, failureRate, paymentGrossUp,
-            PricingCatalog.ResolveTier(quantity), quantity));
-        var unitPrice = ApplyTechnicalFilamentMinimumUnitPrice(calculated, quantity, material);
+        var price = CalculateStandalonePrice(material, directCost, quantity, PricingCatalog.ResolveTier(quantity));
+        var unitPrice = RoundUnitPrice(Convert.ToDouble(price.CommercialSubtotalThb / quantity));
+        var minimumAdjustment = material.RequiresDrying ? Convert.ToDouble(price.LineMinimumAdjustmentThb) : 0;
         return new ItemQuote
         {
             Process = PrintProcess.Fdm,
@@ -49,9 +45,9 @@ public static class PricingEngine
             BoundingCm3PerUnit = boundingCm3PerUnit,
             UnitPrice = unitPrice,
             Subtotal = unitPrice * quantity,
-            TechnicalFilamentMinimumApplied = unitPrice > calculated,
+            TechnicalFilamentMinimumApplied = minimumAdjustment > 0,
             TechnicalFilamentMinimumPrice = material.RequiresDrying ? PricingCatalog.TechnicalFilamentMinimumPrice : 0,
-            TechnicalFilamentMinimumAdjustment = (unitPrice - calculated) * quantity,
+            TechnicalFilamentMinimumAdjustment = minimumAdjustment,
             // Other quantities require their own physical simulation; do not fabricate tier prices.
             Tiers = [new BulkTier { MinQuantity = quantity, UnitPrice = unitPrice, Active = true }],
         };
@@ -151,6 +147,31 @@ public static class PricingEngine
             TechnicalFilamentMinimumAdjustment = subtotal - calculatedSubtotal,
             Tiers = tiers,
         };
+    }
+
+    private static AdditiveOrderCostBreakdown CalculateStandalonePrice(
+        MaterialInfo material, double directCostPerUnit, int quantity, DiscountTier tier)
+    {
+        return AdditiveOrderCostCalculator.Calculate(
+            [new AdditiveOrderCostLine
+            {
+                LineId = "standalone",
+                Quantity = quantity,
+                DirectCostPerUnitThb = Convert.ToDecimal(directCostPerUnit),
+                TargetMarginRate = Convert.ToDecimal(tier.TargetMargin),
+                DiscountRate = Convert.ToDecimal(tier.BulkDiscount),
+                ReserveRate = Convert.ToDecimal(PricingCatalog.FailureReserveRate(material.Process)),
+                MinimumLineBaseThb = material.RequiresDrying ? Convert.ToDecimal(PricingCatalog.TechnicalFilamentMinimumPrice) : 0m,
+                MinimumOrderPriceThb = Convert.ToDecimal(PricingCatalog.MinimumOrderPrice(material.Process)),
+            }],
+            new AdditiveOrderCharges
+            {
+                SetupThb = Convert.ToDecimal(PricingCatalog.SetupHours(material.Process) * PricingCatalog.LaborRatePerHour),
+                PackagingThb = Convert.ToDecimal(PricingCatalog.PackagingCost(material.Process)),
+                RushRate = Convert.ToDecimal(PricingCatalog.RushSurcharge),
+                PaymentFeeRate = Convert.ToDecimal(PricingCatalog.PaymentFeeRate),
+                VatRate = Convert.ToDecimal(PricingCatalog.VatRate),
+            });
     }
 
     private static double ApplyTechnicalFilamentMinimumUnitPrice(

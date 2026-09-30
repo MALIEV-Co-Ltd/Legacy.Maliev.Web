@@ -600,7 +600,10 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Material: {partQuote.MaterialKey}");
             message.AppendLine($"Pricing policy: {PricingCatalog.AdditivePricingPolicyVersion}");
             message.AppendLine($"Analysis revision: {part.Geometry.ClaimVersion.ToString(CultureInfo.InvariantCulture)}");
-            message.AppendLine($"Profile version: {PricingCatalog.AdditivePricingPolicyVersion}");
+            if (!string.IsNullOrWhiteSpace(partQuote.PhysicalReceipt?.ProfileVersion))
+            {
+                message.AppendLine($"Profile version: {partQuote.PhysicalReceipt.ProfileVersion}");
+            }
             message.AppendLine("Estimate confidence: provisional");
             message.AppendLine("Review state: engineer_review_required");
             message.AppendLine($"Color: {SingleLine(partQuote.Color)}");

@@ -225,7 +225,7 @@ public sealed class InstantQuotationPricingTests
     }
 
     [Fact]
-    public void FrameChassisPetCfStrength_ReconcilesWithSlicerReference()
+    public void HistoricalAnalyticFrameChassisPetCfStrength_PreservesOriginalSlicerReferenceComposition()
     {
         var geometry = new GeometryInput
         {
@@ -256,9 +256,22 @@ public sealed class InstantQuotationPricingTests
             ],
         };
 
+        // Historical analytical reference at density1.30; this is not calibration
+        // evidence for the current density1.34 grade or an admitted physical ledger.
+        var historicalPetCf = new MaterialInfo
+        {
+            Key = "PET-CF",
+            DisplayName = "Historical PET-CF reference composition",
+            Process = PrintProcess.Fdm,
+            DensityGramsPerCm3 = 1.30,
+            CostPerUnit = 1.70,
+            FlowClass = FdmFlowClass.Engineering,
+            MinLayerSeconds = 10,
+            RequiresDrying = true,
+        };
         var quote = PricingEngine.QuoteItem(
             geometry,
-            PricingCatalog.ResolveMaterial("PET-CF")!,
+            historicalPetCf,
             1,
             BuildPreference.Strength);
 
@@ -307,8 +320,8 @@ public sealed class InstantQuotationPricingTests
     {
         Assert.Equal(1, PricingCatalog.ResolveTier(0).MinQuantity);
         Assert.Equal(10, PricingCatalog.ResolveTier(49).MinQuantity);
-        Assert.Equal(100, PricingCatalog.ResolveTier(5_000).MinQuantity);
-        Assert.Equal(100, PricingCatalog.ResolveTier(10_000).MinQuantity);
+        Assert.Equal(5_000, PricingCatalog.ResolveTier(5_000).MinQuantity);
+        Assert.Equal(10_000, PricingCatalog.ResolveTier(10_000).MinQuantity);
 
         var geometry = new GeometryInput
         {
