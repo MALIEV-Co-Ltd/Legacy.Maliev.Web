@@ -67,6 +67,22 @@ public sealed class FdmEstimate
     public double SupportGrams { get; init; }
 }
 
+// Provisional server estimate, not manufacturing authority or a public price payload.
+internal sealed class ResinEstimate
+{
+    internal double PrintMinutes { get; init; }
+
+    internal double ModelResinMl { get; init; }
+
+    internal double SupportResinMl { get; init; }
+
+    internal double RaftResinMl { get; init; }
+
+    internal double WasteResinMl { get; init; }
+
+    internal double TotalResinMl { get; init; }
+}
+
 public sealed class GeometryInput
 {
     public double HeightMm { get; init; }
@@ -97,6 +113,9 @@ public sealed class BulkTier
 
 public sealed class ItemQuote
 {
+    // Exact resolved provisional identity; internal and omitted from public serialization.
+    internal ResinQuoteProfileIdentity? ResinProfile { get; init; }
+
     public PrintProcess Process { get; init; }
 
     public double DirectCostPerUnit { get; init; }
@@ -121,6 +140,8 @@ public sealed class ItemQuote
 
     public IReadOnlyList<BulkTier> Tiers { get; init; } = [];
 }
+
+internal sealed record ResinQuoteProfileIdentity(string ProfileVersion, string CompositionSha256);
 
 public sealed class OrderLine
 {

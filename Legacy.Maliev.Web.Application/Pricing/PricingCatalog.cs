@@ -4,7 +4,7 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PricingCatalog
 {
-    public const string AdditivePricingPolicyVersion = "additive-2026-09-30.v10";
+    public const string AdditivePricingPolicyVersion = "additive-2026-10-01.v11";
 
     public const double FdmLayerHeightMm = 0.2;
     public const double ResinLayerHeightMm = 0.05;

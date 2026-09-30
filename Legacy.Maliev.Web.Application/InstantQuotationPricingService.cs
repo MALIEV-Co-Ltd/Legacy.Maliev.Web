@@ -208,7 +208,10 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
             item.Tiers,
             buildPreference,
             materialPrices,
-            PhysicalReceipt: receipt);
+            PhysicalReceipt: receipt)
+        {
+            ResinProfile = item.ResinProfile,
+        };
     }
 
     private static InstantQuotationMaterialPrice MaterialPrice(
@@ -220,8 +223,15 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
     {
         if (candidate.Process == PrintProcess.Resin)
         {
-            return new(candidate.Key, PricingEngine.QuoteItem(
-                geometry, candidate, part.Configuration.Quantity, BuildPreference.Standard).UnitPrice);
+            try
+            {
+                return new(candidate.Key, PricingEngine.QuoteItem(
+                    geometry, candidate, part.Configuration.Quantity, BuildPreference.Standard).UnitPrice);
+            }
+            catch (ArgumentException)
+            {
+                return new(candidate.Key, null);
+            }
         }
 
         if (physical is null
