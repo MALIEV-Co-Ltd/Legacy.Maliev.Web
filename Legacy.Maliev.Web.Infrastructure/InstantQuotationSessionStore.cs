@@ -308,7 +308,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 geometry.TopologyChecked,
                 geometry.NonWatertight,
                 geometry.NonManifold,
-                geometry.MinThicknessMm);
+                geometry.MinThicknessMm,
+                geometry.UnsupportedAreaProfileMm2 is { Count: 0 } ? null : geometry.UnsupportedAreaProfileMm2);
         return part is not null
             && part.PartId != Guid.Empty
             && !string.IsNullOrWhiteSpace(part.DisplayFileName)
@@ -369,7 +370,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 geometry.TopologyChecked,
                 geometry.NonWatertight,
                 geometry.NonManifold,
-                geometry.MinThicknessMm),
+                geometry.MinThicknessMm,
+                geometry.UnsupportedAreaProfileMm2.Count == 0 ? null : geometry.UnsupportedAreaProfileMm2.ToArray()),
             new PersistedConfiguration(
                 part.Configuration.MaterialKey,
                 part.Configuration.Color,
@@ -413,7 +415,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 geometry.TopologyChecked,
                 geometry.NonWatertight,
                 geometry.NonManifold,
-                geometry.MinThicknessMm),
+                geometry.MinThicknessMm,
+                geometry.UnsupportedAreaProfileMm2),
             new InstantQuotationPartConfiguration(
                 configuration.MaterialKey!,
                 configuration.Color!,
@@ -453,7 +456,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 geometry.TopologyChecked,
                 geometry.NonWatertight,
                 geometry.NonManifold,
-                geometry.MinThicknessMm),
+                geometry.MinThicknessMm,
+                geometry.UnsupportedAreaProfileMm2),
             part.Configuration with { },
             part.PhysicalAnalysisUpload is null ? null : part.PhysicalAnalysisUpload with { });
     }
@@ -501,7 +505,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
         bool TopologyChecked,
         bool NonWatertight,
         bool NonManifold,
-        double MinThicknessMm);
+        double MinThicknessMm,
+        IReadOnlyList<double>? UnsupportedAreaProfileMm2 = null);
 
     private sealed record PersistedConfiguration(
         string? MaterialKey,

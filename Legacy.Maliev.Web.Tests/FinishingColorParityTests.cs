@@ -18,6 +18,7 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
         var web = Path.Combine(root, "Legacy.Maliev.Web");
         var page = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "FinishingAndColorPage.razor"));
         var entry = File.ReadAllText(Path.Combine(web, "assets", "route-service-finishing.js"));
+        var threeRuntime = File.ReadAllText(Path.Combine(web, "assets", "finishing-three-runtime.js"));
         var vendor = File.ReadAllText(Path.Combine(web, "assets", "vendor-entry.js"));
         var atlas = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "hlc-colour-atlas-data.js"));
         var core = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "finish-color-matcher-core.js"));
@@ -36,7 +37,10 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
         Assert.Contains("finish-color-matcher-preview.js", entry, StringComparison.Ordinal);
         Assert.Contains("finish-color-matcher.js", entry, StringComparison.Ordinal);
         Assert.DoesNotContain("window.THREE", vendor, StringComparison.Ordinal);
-        Assert.Contains("window.MalievFinishingThree = THREE", entry, StringComparison.Ordinal);
+        Assert.Contains("import './finishing-three-runtime.js'", entry, StringComparison.Ordinal);
+        Assert.True(entry.IndexOf("finishing-three-runtime.js", StringComparison.Ordinal)
+            < entry.IndexOf("finish-color-matcher.js", StringComparison.Ordinal));
+        Assert.Contains("window.MalievFinishingThree = THREE", threeRuntime, StringComparison.Ordinal);
         Assert.Contains("global.MalievFinishingThree", preview, StringComparison.Ordinal);
         Assert.Contains("window.MalievHlcColourAtlas", atlas, StringComparison.Ordinal);
         Assert.Contains("\"version\":\"2.03\"", atlas, StringComparison.Ordinal);
