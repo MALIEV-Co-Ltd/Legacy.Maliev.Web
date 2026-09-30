@@ -554,4 +554,5 @@
   <data name="Saved account values are locked. Only missing details can be added here." xml:space="preserve"><value>ข้อมูลบัญชีที่บันทึกไว้ถูกล็อกไว้ คุณสามารถเพิ่มได้เฉพาะข้อมูลที่ยังขาด</value></data>
   <data name="We could not securely load your customer profile. Please try again." xml:space="preserve"><value>ไม่สามารถโหลดข้อมูลลูกค้าของคุณได้อย่างปลอดภัย กรุณาลองอีกครั้ง</value></data>
   <data name="Please sign in again to securely load your current customer details." xml:space="preserve"><value>กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลลูกค้าปัจจุบันของคุณอย่างปลอดภัย</value></data>
+  <data name="Preview only. No physical price is available. Repair the mesh and upload it again." xml:space="preserve"><value>แสดงตัวอย่างเท่านั้น ยังไม่มีราคาจากการวิเคราะห์การพิมพ์จริง กรุณาแก้ไขเมชแล้วอัปโหลดใหม่</value></data>
 </root>

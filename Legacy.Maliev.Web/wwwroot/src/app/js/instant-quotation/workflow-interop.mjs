@@ -32,6 +32,19 @@ export function previewColorForSelection(value) {
 const supportedExtensions = new Set(supportedPreviewExtensions);
 const STALL_TIMEOUT_MS = 120_000;
 
+// Advisory-only classification. Never relax the server's positive-volume claim.
+export function classifyIncompletePreview(file, claim) {
+  const dimensions = [claim?.dimensionXmm, claim?.dimensionYmm, claim?.dimensionZmm];
+  return extensionOf(file?.name) === 'stl'
+    && Number.isSafeInteger(file?.size) && file.size > 0 && file.size <= 8 * 1024 * 1024
+    && dimensions.every(value => Number.isFinite(value) && value >= 0 && value <= 350)
+    && dimensions.filter(value => value === 0).length === 1
+    && claim.volumeMm3 === 0 && Number.isFinite(claim.surfaceAreaMm2) && claim.surfaceAreaMm2 > 0
+    && Number.isSafeInteger(claim.facetCount) && claim.facetCount > 0 && claim.facetCount <= 50_000
+    && claim.bodyCount === 1 && claim.topologyChecked === true
+    && claim.nonWatertight === true && claim.nonManifold === false;
+}
+
 export function configureFilePickerForPlatform(input, navigatorLike = globalThis.navigator ?? {}) {
   if (!input) return false;
   const userAgent = String(navigatorLike.userAgent ?? '');
@@ -59,6 +72,7 @@ export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter
     createViewer: viewerModule.createThreeModelViewer,
     reportStatus: () => dotNetStatusReporter?.invokeMethodAsync('ReportPreviewUnavailableAsync'),
     reportThickness: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportThicknessStateAsync', ...args),
+    reportIncomplete: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportIncompletePreviewAsync', ...args),
   });
 }
 
@@ -68,6 +82,7 @@ export function createWorkflowPreviewInterop({
   createViewer,
   reportStatus = () => {},
   reportThickness = () => {},
+  reportIncomplete = () => {},
   thicknessAnalyzer = createWallThicknessAnalyzer(),
 }) {
   if (typeof loadModel !== 'function'
@@ -86,6 +101,8 @@ export function createWorkflowPreviewInterop({
   const guardedResources = new WeakSet();
   const viewerDisposedResources = new WeakSet();
   let viewer = null;
+  let incompleteEntry = null;
+  let incompleteViewer = null;
   let disposed = false;
   let availability = 'ready';
   let nextKey = 0;
@@ -136,6 +153,9 @@ export function createWorkflowPreviewInterop({
       quarantined: false,
       attached: false,
       thicknessEvidence: null,
+      evidenceCompleted: false,
+      incompleteRevision: 0,
+      previewOnly: false,
       thicknessMaterial: '',
       thicknessVisible: false,
       thicknessRevision: 0,
@@ -160,19 +180,31 @@ export function createWorkflowPreviewInterop({
           ...analyzeGeometry(object),
           sha256: hash,
         });
+        entry.previewOnly = classifyIncompletePreview(file, entry.geometryClaim);
       } catch (error) {
         disposeModel(object, disposedResources);
         failPreview(entry, error);
         return null;
       }
       completePreview(entry, object);
+      // Zero-volume planar inputs outside the exceptional budget/shape contract
+      // remain rejected. Do not send them to the larger normal-part worker budget.
+      if (!entry.previewOnly && entry.geometryClaim.volumeMm3 === 0
+          && [entry.geometryClaim.dimensionXmm, entry.geometryClaim.dimensionYmm,
+            entry.geometryClaim.dimensionZmm].some(value => value === 0)) return entry.geometryClaim;
       Promise.resolve(thicknessAnalyzer.analyze(object, controller.signal)).then(evidence => {
         if (!isCurrent(entry)) return;
         entry.thicknessEvidence = evidence;
+        entry.evidenceCompleted = true;
         if (entry.attached && evidence) viewer?.setThicknessEvidence?.(entry.partId, evidence);
         notifyThickness(entry);
+        notifyIncomplete(entry);
       }).catch(() => {
-        if (isCurrent(entry)) notifyThickness(entry);
+        if (isCurrent(entry)) {
+          entry.evidenceCompleted = true;
+          notifyThickness(entry);
+          notifyIncomplete(entry);
+        }
       });
       return entry.geometryClaim;
     }).catch(error => {
@@ -244,7 +276,7 @@ export function createWorkflowPreviewInterop({
   function admit(key, partId, material = '') {
     assertActive();
     const entry = requirePreview(key);
-    if (entry.released || entry.quarantined || !partId) return false;
+    if (entry.released || entry.quarantined || entry.previewOnly || !partId) return false;
     entry.partId = partId;
     entry.thicknessMaterial = material;
     entry.file = null;
@@ -264,6 +296,10 @@ export function createWorkflowPreviewInterop({
   function quarantine(key) {
     const entry = previews.get(key);
     if (!entry || entry.released || entry.quarantined) return;
+    if (incompleteEntry === entry) {
+      release(key);
+      return;
+    }
     entry.controller?.abort();
     clearTimeout(entry.stallTimer);
     entry.stallTimer = null;
@@ -278,6 +314,11 @@ export function createWorkflowPreviewInterop({
   function release(key) {
     const entry = previews.get(key);
     if (!entry) return;
+    if (incompleteEntry === entry) {
+      incompleteEntry = null;
+      incompleteViewer?.dispose();
+      incompleteViewer = null;
+    }
     previews.delete(key);
     entry.released = true;
     clearTimeout(entry.stallTimer);
@@ -392,6 +433,53 @@ export function createWorkflowPreviewInterop({
   }
   function status() { return availability; }
 
+  function isIncompletePreview(key) {
+    const entry = previews.get(key);
+    return !!(entry?.previewOnly && entry.object && isCurrent(entry) && !entry.partId);
+  }
+
+  function retainIncompletePreview(key, canvas) {
+    if (!isIncompletePreview(key) || disposed) return false;
+    const entry = previews.get(key);
+    if (incompleteEntry === entry) return true;
+    if (incompleteEntry) release(incompleteEntry.key);
+    incompleteViewer = createViewer(canvas);
+    incompleteEntry = entry;
+    entry.file = null; // Retain bounded geometry, not another copy of selected bytes.
+    // A planar sheet has no inside: display either winding only in this local
+    // exceptional viewer. Owned loader materials require no clone or extra lifetime.
+    entry.object.traverse?.(child => {
+      if (!child.isMesh) return;
+      for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+        if (material) { material.side = 2; material.needsUpdate = true; } // THREE.DoubleSide
+      }
+    });
+    incompleteViewer.addPart(key, entry.object);
+    incompleteViewer.select(key);
+    notifyIncomplete(entry);
+    return true;
+  }
+
+  function notifyIncomplete(entry) {
+    if (incompleteEntry !== entry || !isCurrent(entry) || !entry.evidenceCompleted) return;
+    try {
+      Promise.resolve(reportIncomplete(entry.key, ++entry.incompleteRevision, true)).catch(() => {});
+    } catch {
+      // Local preview cannot authorize admission or pricing.
+    }
+  }
+
+  function removeIncompletePreview(key) {
+    if (incompleteEntry?.key !== key) return false;
+    release(key);
+    return true;
+  }
+
+  function getIncompletePreviewState() {
+    return incompleteEntry ? { key: incompleteEntry.key, revision: incompleteEntry.incompleteRevision,
+      incomplete: incompleteEntry.evidenceCompleted } : null;
+  }
+
   function setUnavailable() {
     if (availability === 'unavailable') return;
     availability = 'unavailable';
@@ -444,6 +532,10 @@ export function createWorkflowPreviewInterop({
     fullscreen,
     renderReviewThumbnails,
     updatePartAppearance,
+    isIncompletePreview,
+    retainIncompletePreview,
+    removeIncompletePreview,
+    getIncompletePreviewState,
     status,
     dispose,
   });

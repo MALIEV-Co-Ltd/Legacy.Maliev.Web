@@ -52,6 +52,19 @@
         <p role="alert">@Localizer["The file could not be uploaded. Try again."]</p>
     }
 
+    @if (incompletePreviewKey is not null)
+    {
+        <section data-workflow-incomplete-preview aria-label="@Localizer["3D preview"]">
+            <h3>@Localizer["3D preview"]</h3>
+            <p role="status">@(incompletePreviewMeasured ? Localizer["Thickness analysis is incomplete"] : Localizer["Checking physical build…"])</p>
+            <p>@Localizer["Preview only. No physical price is available. Repair the mesh and upload it again."]</p>
+            <canvas @ref="incompletePreviewCanvas" tabindex="0"
+                    style="display:block;width:100%;max-width:600px;height:300px"
+                    aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
+            <button type="button" @onclick="RemoveIncompletePreviewAsync">@Localizer["Remove"]</button>
+        </section>
+    }
+
     @if (VisibleSections.Viewer)
     {
         <section data-workflow-viewer aria-labelledby="instant-quote-viewer-heading">
