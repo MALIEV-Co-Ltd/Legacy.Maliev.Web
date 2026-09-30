@@ -13,6 +13,24 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         this.factory = factory;
     }
 
+    [Theory]
+    [InlineData("en", "Previous sample · PC-ESD", "Reinforced ESD nylon", "Static-dissipative ABS")]
+    [InlineData("th", "ตัวอย่างเดิม · PC-ESD", "ไนลอน ESD เสริมแรง", "ABS สลายประจุไฟฟ้าสถิต")]
+    public async Task MaterialComparisonOffersCurrentEsdGradesWithoutRelabelingHistoricalSample(
+        string culture, string historicalLabel, string nylonDescription, string absDescription)
+    {
+        using var client = factory.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-printing?culture={culture}"));
+        Assert.Contains("data-material-key=\"PA612-ESD\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-material-key=\"ABS-ESD\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-material-key=\"PC-ESD\"", html, StringComparison.Ordinal);
+        Assert.Contains(historicalLabel, html, StringComparison.Ordinal);
+        Assert.Contains("part-bento-pc-esd-threaded-component.webp", html, StringComparison.Ordinal);
+        Assert.Contains(nylonDescription, html, StringComparison.Ordinal);
+        Assert.Contains(absDescription, html, StringComparison.Ordinal);
+        Assert.Contains("printing-material-details.json?v=3", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ThreeDimensionalPrintingRoute_RendersTheCurrentSourceAssemblyAndFileGuidance()
     {
@@ -162,7 +180,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("<caption class=\"sr-only\"", component, StringComparison.Ordinal);
         Assert.Contains("scope=\"col\"", component, StringComparison.Ordinal);
         Assert.Contains("scope=\"row\"", component, StringComparison.Ordinal);
-        Assert.Equal(24, MaterialRowRegex().Matches(component).Count);
+        Assert.Equal(25, MaterialRowRegex().Matches(component).Count);
         Assert.Contains("material-comparison.js", appEntry, StringComparison.Ordinal);
         Assert.Contains("data-material-row", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("data-material-empty", comparisonScript, StringComparison.Ordinal);

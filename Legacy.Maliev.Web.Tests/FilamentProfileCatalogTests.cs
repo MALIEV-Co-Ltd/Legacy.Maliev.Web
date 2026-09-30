@@ -52,7 +52,22 @@ public sealed class FilamentProfileCatalogTests
 
         Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
         Assert.DoesNotContain(validation.Entries, entry => entry.AutomationEligible);
-        Assert.All(validation.Entries, entry => Assert.True(entry.OperatorApproved));
+        // Source-derived runtime profiles do not inherit the historical PC-ESD
+        // benchmark operator approval. Keep the two new decisions explicitly blocked.
+        Assert.All(validation.Entries, entry =>
+        {
+            if (entry.MaterialKey is "PA612-ESD" or "ABS-ESD")
+            {
+                Assert.False(entry.OperatorApproved);
+                Assert.False(entry.ExactMaterialMatch);
+                Assert.Null(entry.ProfileId);
+                Assert.Null(entry.ResolvedSha256);
+            }
+            else
+            {
+                Assert.True(entry.OperatorApproved);
+            }
+        });
         Assert.Contains(validation.Entries, entry => entry.MaterialKey == "ABS-FR" && entry.ExactMaterialMatch);
         Assert.Contains(validation.Entries, entry => entry.MaterialKey == "PA12" && !entry.ExactMaterialMatch);
     }

@@ -73,6 +73,13 @@ public sealed class FdmRuntimeProfileCatalog
             ["supported_material_ids"] = materialKey,
         };
         var process = new Dictionary<string, string>(build.Settings!, StringComparer.Ordinal);
+        if (releaseMaterial.BuildOverrides!.TryGetValue(preference.ToString(), out var overrides))
+        {
+            foreach (var (key, value) in overrides)
+            {
+                process[key] = value;
+            }
+        }
         var density = catalogMaterial.DensityGramsPerCm3.ToString(CultureInfo.InvariantCulture);
         var flow = releaseMaterial.MaximumVolumetricFlowMm3PerSecond!;
         var filament = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -180,12 +187,38 @@ public sealed class FdmRuntimeProfileCatalog
                 || !NonNegative(material.MinimumLayerTimeSeconds)
                 || !Positive(material.MinimumCoolingSpeedMmPerSecond)
                 || material.ReasonCodes is null
+                || !ValidBuildOverrides(material.BuildOverrides, manifest.Builds)
                 || material.ReasonCodes.Any(static reason => !HasBoundedValue(reason, 128))
                 || (material.AutomaticPricingEligible && material.ReasonCodes.Count != 0))
             {
                 throw new InvalidDataException($"The FDM material profile '{key}' is invalid.");
             }
         }
+    }
+
+    private static bool ValidBuildOverrides(
+        Dictionary<string, Dictionary<string, string>>? overrides,
+        Dictionary<string, ProfileSettings> builds)
+    {
+        if (overrides is null || overrides.Count > builds.Count)
+        {
+            return false;
+        }
+        foreach (var (buildKey, settings) in overrides)
+        {
+            if (!builds.TryGetValue(buildKey, out var build) || settings is null
+                || settings.Count > 256
+                || settings.Any(pair => !build.Settings!.ContainsKey(pair.Key)
+                    || !HasBoundedValue(pair.Value, 4096)
+                    || !ValidSettingValue(pair.Key, pair.Value, machine: false)))
+            {
+                return false;
+            }
+            var merged = new Dictionary<string, string>(build.Settings!, StringComparer.Ordinal);
+            foreach (var (key, value) in settings) { merged[key] = value; }
+            if (!ValidSettings(merged, machine: false)) { return false; }
+        }
+        return true;
     }
 
     private static bool ValidSettings(Dictionary<string, string>? settings, bool machine)
@@ -263,6 +296,7 @@ public sealed class FdmRuntimeProfileCatalog
         public string? MaximumVolumetricFlowMm3PerSecond { get; set; }
         public string? MinimumLayerTimeSeconds { get; set; }
         public string? MinimumCoolingSpeedMmPerSecond { get; set; }
+        public Dictionary<string, Dictionary<string, string>>? BuildOverrides { get; set; } = [];
         public bool AutomaticPricingEligible { get; set; }
         public List<string>? ReasonCodes { get; set; }
     }

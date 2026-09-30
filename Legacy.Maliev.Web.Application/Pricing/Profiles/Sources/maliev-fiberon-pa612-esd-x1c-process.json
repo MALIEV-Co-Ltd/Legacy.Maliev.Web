@@ -1,0 +1,10 @@
+{
+  "from": "user",
+  "inherits": "0.20mm Standard @BBL X1C",
+  "is_custom_defined": "0",
+  "name": "MALIEV fiberon-pa612-esd X1C process",
+  "print_settings_id": "0.20mm Standard Fiberon PA612-ESD Polymaker@BBL X1C",
+  "version": "1.10.0.26",
+  "type": "process",
+  "curr_bed_type": "Textured PEI Plate"
+}

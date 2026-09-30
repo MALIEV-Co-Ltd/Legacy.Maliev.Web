@@ -23,7 +23,8 @@ public sealed class InstantQuotationWorkflowPricingTests
         { "HIPS", PrintProcess.Fdm, "White" },
         { "PC", PrintProcess.Fdm, "Gray" },
         { "PC-FR", PrintProcess.Fdm, "Natural" },
-        { "PC-ESD", PrintProcess.Fdm, "Black" },
+        { "PA612-ESD", PrintProcess.Fdm, "Black" },
+        { "ABS-ESD", PrintProcess.Fdm, "Black" },
         { "PA6", PrintProcess.Fdm, "White" },
         { "PA12", PrintProcess.Fdm, "Any" },
         { "PA-CF", PrintProcess.Fdm, "Natural" },
@@ -55,7 +56,8 @@ public sealed class InstantQuotationWorkflowPricingTests
         { "PA-CF", ["Black", "Natural"] },
         { "ASA-CF", ["Black", "Natural"] },
         { "PETG-ESD", ["Black", "Natural"] },
-        { "PC-ESD", ["Black"] },
+        { "PA612-ESD", ["Black"] },
+        { "ABS-ESD", ["Black"] },
         { "PVA", ["Natural"] },
         { "M68", ["Gray", "Black", "White"] },
         { "K", ["Gray", "Black"] },
@@ -123,7 +125,7 @@ public sealed class InstantQuotationWorkflowPricingTests
         var expected = new[]
         {
             "PLA", "PLA-CF", "PETG", "PETG-CF", "PETG-ESD", "PET-CF", "ABS", "ABS-FR",
-            "ASA", "ASA-CF", "HIPS", "PC", "PC-FR", "PC-ESD", "PA6", "PA12", "PA-CF",
+            "ASA", "ASA-CF", "HIPS", "PC", "PC-FR", "PA612-ESD", "ABS-ESD", "PA6", "PA12", "PA-CF",
             "TPU", "PVA", "M68", "K", "G217", "F80", "CASTWAX",
         };
 

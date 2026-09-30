@@ -440,7 +440,8 @@
   <data name="HIPS — High Impact Polystyrene" xml:space="preserve"><value>HIPS — โพลิสไตรีนทนแรงกระแทกสูง</value></data>
   <data name="PC — Polycarbonate" xml:space="preserve"><value>PC — โพลีคาร์บอเนต</value></data>
   <data name="PC-FR — Flame-Retardant Polycarbonate" xml:space="preserve"><value>PC-FR — โพลีคาร์บอเนตชนิดหน่วงการลามไฟ</value></data>
-  <data name="PC-ESD — ESD-Safe Polycarbonate (3DXTech)" xml:space="preserve"><value>PC-ESD — โพลีคาร์บอเนตป้องกันไฟฟ้าสถิต (3DXTech)</value></data>
+  <data name="PA612-ESD — Fiberon ESD Nylon" xml:space="preserve"><value>PA612-ESD — ไนลอน ESD จาก Fiberon</value></data>
+  <data name="ABS-ESD — eSUN ESD ABS" xml:space="preserve"><value>ABS-ESD — ABS ESD จาก eSUN</value></data>
   <data name="PA6 — Nylon 6" xml:space="preserve"><value>PA6 — ไนลอน 6</value></data>
   <data name="PA12 — Nylon 12" xml:space="preserve"><value>PA12 — ไนลอน 12</value></data>
   <data name="PA-CF — Nylon + Carbon Fiber" xml:space="preserve"><value>PA-CF — ไนลอนผสมเส้นใยคาร์บอน</value></data>
