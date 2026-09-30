@@ -8,6 +8,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
     using Microsoft.AspNetCore.DataProtection;
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
     using System.Security.Cryptography;
     using System.Text;
@@ -17,7 +18,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
     public sealed class AdditiveQuoteTicketService : IInstantQuotationQuoteTicketService
     {
         /// <summary>Current line-ticket schema version.</summary>
-        public const string LineSchemaVersion = "additive-line-quote.v3";
+        public const string LineSchemaVersion = "additive-line-quote.v4";
 
         /// <summary>Current upload-receipt schema version.</summary>
         public const string UploadSchemaVersion = "additive-upload-receipt.v1";
@@ -45,7 +46,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
         public AdditiveQuoteTicketService(IDataProtectionProvider provider)
         {
             ArgumentNullException.ThrowIfNull(provider);
-            this.lineProtector = provider.CreateProtector("Maliev.Web.AdditiveLineQuote.v3");
+            this.lineProtector = provider.CreateProtector("Maliev.Web.AdditiveLineQuote.v4");
             this.orderProtector = provider.CreateProtector("Maliev.Web.AdditiveOrderQuote.v2");
             this.uploadProtector = provider.CreateProtector("Maliev.Web.AdditiveUploadReceipt.v1");
         }
@@ -498,9 +499,30 @@ namespace Legacy.Maliev.Web.Application.Pricing
 
         private static string CreateGeometryDigest(AuthoritativeInstantQuotationGeometry geometry)
         {
-            string canonical = FormattableString.Invariant(
-                $"{geometry.Sha256}|{geometry.DimensionXmm:R}|{geometry.DimensionYmm:R}|{geometry.DimensionZmm:R}|{geometry.VolumeMm3:R}|{geometry.SurfaceAreaMm2:R}|{geometry.FacetCount}|{geometry.BodyCount}|{geometry.MinThicknessMm:R}");
-            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+            var canonical = new StringBuilder(FormattableString.Invariant(
+                $"{geometry.Sha256}|{geometry.DimensionXmm:R}|{geometry.DimensionYmm:R}|{geometry.DimensionZmm:R}|{geometry.VolumeMm3:R}|{geometry.SurfaceAreaMm2:R}|{geometry.FacetCount}|{geometry.BodyCount}|{geometry.MinThicknessMm:R}"));
+            AppendGeometryProfile(canonical, "area-mm2", geometry.AreaProfileMm2);
+            AppendGeometryProfile(canonical, "perimeter-mm", geometry.PerimeterProfileMm);
+            AppendGeometryProfile(canonical, "unsupported-area-mm2", geometry.UnsupportedAreaProfileMm2);
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())));
+        }
+
+        private static void AppendGeometryProfile(StringBuilder canonical, string tag, IReadOnlyList<double> values)
+        {
+            canonical.Append('|').Append(tag).Append(':');
+            if (values.Count == 0)
+            {
+                canonical.Append("unavailable");
+                return;
+            }
+
+            canonical.Append(values.Count.ToString(CultureInfo.InvariantCulture)).Append('[');
+            foreach (double value in values)
+            {
+                canonical.Append(value.ToString("R", CultureInfo.InvariantCulture)).Append(';');
+            }
+
+            canonical.Append(']');
         }
 
         private T Unprotect<T>(IDataProtector protector, string ticket)
