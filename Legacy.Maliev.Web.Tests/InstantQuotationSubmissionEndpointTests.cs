@@ -674,7 +674,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         RecordingSubmissionService service,
         RecordingTempDataProvider? tempData = null,
         bool authenticated = false,
-        IInstantQuotationAuthenticatedPreparationService? preparation = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        IInstantQuotationAuthenticatedPreparationService? preparation = null) => new TestingWebApplicationFactory().WithWebHostBuilder(builder =>
     {
         builder.UseEnvironment("Testing");
         builder.ConfigureServices(services =>

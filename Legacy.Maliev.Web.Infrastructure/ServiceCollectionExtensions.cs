@@ -40,8 +40,10 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("ServiceAuthentication"));
         services.AddOptions<InstantQuotationProfileCompletionOptions>()
             .Bind(configuration.GetSection(InstantQuotationProfileCompletionOptions.SectionName));
+        services.AddSingleton<IValidateOptions<RecaptchaEnterpriseOptions>, RecaptchaEnterpriseOptionsValidator>();
         services.AddOptions<RecaptchaEnterpriseOptions>()
-            .Bind(configuration.GetSection("Recaptcha"));
+            .Bind(configuration.GetSection("Recaptcha"))
+            .ValidateOnStart();
         services.AddOptions<GoogleMapsOptions>()
             .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));
         services.AddOptions<LineLiffOptions>()

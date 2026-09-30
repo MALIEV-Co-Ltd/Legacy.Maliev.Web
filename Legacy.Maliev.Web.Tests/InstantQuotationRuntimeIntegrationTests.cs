@@ -21,6 +21,8 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Testing");
+            builder.UseSetting("Recaptcha:ProjectId", "test-project");
+            builder.UseSetting("Recaptcha:SiteKey", "test-site-key");
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ICountryClient>();

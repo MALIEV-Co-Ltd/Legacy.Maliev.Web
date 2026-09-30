@@ -300,6 +300,8 @@ public sealed class RedisRuntimeFixture : IAsyncLifetime
         {
             builder
                 .UseEnvironment("RedisIntegration")
+                .UseSetting("Recaptcha:ProjectId", "test-project")
+                .UseSetting("Recaptcha:SiteKey", "test-site-key")
                 .UseSetting("ConnectionStrings:redis", redisConnectionString)
                 .UseSetting("DataProtection:CertificatePfxBase64", pfxBase64)
                 .UseSetting("DataProtection:CertificatePassword", pfxPassword)

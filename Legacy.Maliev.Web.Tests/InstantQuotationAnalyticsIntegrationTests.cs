@@ -10,7 +10,10 @@ public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<We
 
     public InstantQuotationAnalyticsIntegrationTests(WebApplicationFactory<Program> factory)
     {
-        this.factory = factory.WithWebHostBuilder(builder => builder.UseSetting("environment", "Testing"));
+        this.factory = factory.WithWebHostBuilder(builder => builder
+            .UseSetting("environment", "Testing")
+            .UseSetting("Recaptcha:ProjectId", "test-project")
+            .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
 
     [Fact]
