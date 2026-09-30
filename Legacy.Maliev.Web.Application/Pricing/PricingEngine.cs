@@ -67,21 +67,36 @@ public static class PricingEngine
         double materialPerUnit;
         double weightGrams;
         Func<int, double> complexityAdjustedCostAtQuantity;
+        ResinQuoteProfileIdentity? resinProfile = null;
 
         if (material.Process == PrintProcess.Resin)
         {
-            printTime = PrintTimeCalculator.ResinMinutes(geometry);
-            var resinMilliliters = (Math.Abs(geometry.VolumeMm3) / 1_000.0)
-                * (1 + PricingCatalog.ResinSupportAllowance);
+            var profile = ResinBuildProfileCatalog.ResolveProvisionalSupportProfile();
+            var estimate = PrintTimeCalculator.EstimateResin(geometry, profile);
+            printTime = estimate.PrintMinutes;
+            var resinMilliliters = estimate.TotalResinMl;
+            if (!IsAdmittedResinValue(printTime) || printTime > 20_160
+                || !IsAdmittedResinValue(resinMilliliters))
+            {
+                throw new ArgumentException("The provisional resin estimate is unavailable or outside pricing bounds.", nameof(geometry));
+            }
+
+            resinProfile = new(profile.ProfileVersion!, ResinBuildProfileComposition.CreateSha256(profile));
             materialPerUnit = resinMilliliters;
             weightGrams = resinMilliliters * ShippingCalculator.ResinDensityGramsPerMl;
             var capacityPerPlate = PricingCatalog.EstimatePartsPerPlate(geometry.FootprintMm2);
-            complexityAdjustedCostAtQuantity = pricedQuantity => ResinDirectCost(
-                printTime,
-                resinMilliliters,
-                material,
-                pricedQuantity,
-                capacityPerPlate) * PricingCatalog.ComplexityFactor;
+            complexityAdjustedCostAtQuantity = pricedQuantity =>
+            {
+                var cost = ResinDirectCost(printTime, resinMilliliters, material,
+                    pricedQuantity, capacityPerPlate) * PricingCatalog.ComplexityFactor;
+                if (!IsAdmittedResinValue(cost)
+                    || cost >= (double)decimal.MaxValue / (PricingCatalog.MaximumAdditiveQuantity * 10d))
+                {
+                    throw new ArgumentException("The resin direct cost is outside monetary bounds.", nameof(material));
+                }
+
+                return cost;
+            };
         }
         else
         {
@@ -105,7 +120,11 @@ public static class PricingEngine
         var tiers = PricingCatalog.BulkQuoteQuantities.Select(bulkQuantity => new BulkTier
         {
             MinQuantity = bulkQuantity,
-            UnitPrice = ApplyTechnicalFilamentMinimumUnitPrice(
+            UnitPrice = material.Process == PrintProcess.Resin
+                ? RoundUnitPrice(Convert.ToDouble(CalculateStandalonePrice(material,
+                    complexityAdjustedCostAtQuantity(bulkQuantity), bulkQuantity,
+                    PricingCatalog.ResolveTier(bulkQuantity)).CommercialSubtotalThb / bulkQuantity))
+                : ApplyTechnicalFilamentMinimumUnitPrice(
                 RoundUnitPrice(AllInUnitPrice(
                     complexityAdjustedCostAtQuantity(bulkQuantity),
                     setupLabor,
@@ -116,17 +135,24 @@ public static class PricingEngine
                 bulkQuantity,
                 material),
             Active = bulkQuantity == activeBulkQuantity,
-        }).ToArray();
+        }).ToList();
+        if (material.Process == PrintProcess.Resin)
+        {
+            tiers = CollapseRepeatedTerminalTiers(tiers, normalizedQuantity);
+        }
 
         var complexityAdjustedCost = complexityAdjustedCostAtQuantity(normalizedQuantity);
-        var unroundedUnitPrice = AllInUnitPrice(
+        var unroundedUnitPrice = material.Process == PrintProcess.Resin ? 0 : AllInUnitPrice(
             complexityAdjustedCost,
             setupLabor,
             failureRate,
             paymentGrossUp,
             activeTier,
             normalizedQuantity);
-        var calculatedUnitPrice = RoundUnitPrice(unroundedUnitPrice);
+        var calculatedUnitPrice = material.Process == PrintProcess.Resin
+            ? RoundUnitPrice(Convert.ToDouble(CalculateStandalonePrice(material,
+                complexityAdjustedCost, normalizedQuantity, activeTier).CommercialSubtotalThb / normalizedQuantity))
+            : RoundUnitPrice(unroundedUnitPrice);
         var unitPrice = ApplyTechnicalFilamentMinimumUnitPrice(calculatedUnitPrice, normalizedQuantity, material);
         var calculatedSubtotal = calculatedUnitPrice * normalizedQuantity;
         var subtotal = unitPrice * normalizedQuantity;
@@ -134,6 +160,7 @@ public static class PricingEngine
 
         return new ItemQuote
         {
+            ResinProfile = resinProfile,
             Process = material.Process,
             DirectCostPerUnit = complexityAdjustedCost,
             PrintTimeMinutesPerUnit = printTime,
@@ -147,6 +174,27 @@ public static class PricingEngine
             TechnicalFilamentMinimumAdjustment = subtotal - calculatedSubtotal,
             Tiers = tiers,
         };
+    }
+
+    private static bool IsAdmittedResinValue(double value) =>
+        double.IsFinite(value) && value > 0 && value < (double)decimal.MaxValue;
+
+    private static List<BulkTier> CollapseRepeatedTerminalTiers(List<BulkTier> tiers, int quantity)
+    {
+        var keepCount = tiers.Count;
+        while (keepCount > 1 && tiers[keepCount - 1].UnitPrice == tiers[keepCount - 2].UnitPrice)
+        {
+            keepCount--;
+        }
+
+        var visible = tiers.Take(keepCount).ToList();
+        var activeQuantity = PricingCatalog.ResolveBulkQuoteQuantity(quantity);
+        if (visible.All(tier => tier.MinQuantity != activeQuantity))
+        {
+            visible.Add(tiers.Single(tier => tier.MinQuantity == activeQuantity));
+        }
+
+        return visible;
     }
 
     private static AdditiveOrderCostBreakdown CalculateStandalonePrice(

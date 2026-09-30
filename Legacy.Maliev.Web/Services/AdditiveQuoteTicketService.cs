@@ -82,6 +82,11 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 }
 
                 InstantQuotationPhysicalAnalysisReceipt? physical = line.PhysicalReceipt;
+                if (line.Process == PrintProcess.Resin
+                    && (physical != null || !ResinIdentityMatchesCurrent(line.ResinProfile)))
+                {
+                    throw new ArgumentException("The resin line requires its resolved provisional composition.", nameof(quote));
+                }
                 if (line.Process == PrintProcess.Fdm
                     && (physical is null || !ReceiptMatches(session, part, line, physical)
                         || session.PhysicalReceipts?.Count(receipt => receipt == physical) != 1))
@@ -101,8 +106,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     StoragePath = NormalizePath(part.UploadReference.Value),
                     ContentSha256 = part.Geometry.Sha256,
                     AnalysisRevision = part.Geometry.ClaimVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ProfileVersion = physical?.ProfileVersion ?? PricingCatalog.AdditivePricingPolicyVersion,
-                    ProfileSha256 = physical?.ProfileSha256 ?? string.Empty,
+                    ProfileVersion = physical?.ProfileVersion ?? line.ResinProfile?.ProfileVersion ?? PricingCatalog.AdditivePricingPolicyVersion,
+                    ProfileSha256 = physical?.ProfileSha256 ?? line.ResinProfile?.CompositionSha256 ?? string.Empty,
                     PhysicalAnalysisVersion = physical?.AnalysisVersion ?? string.Empty,
                     PhysicalSha256 = physical?.PhysicalSha256 ?? string.Empty,
                     Confidence = "provisional",
@@ -224,6 +229,14 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     {
                         return false;
                     }
+
+                    if (line.Process == PrintProcess.Resin
+                        && (line.PhysicalReceipt != null || !ResinIdentityMatchesCurrent(line.ResinProfile)
+                            || !string.Equals(payload.ProfileVersion, line.ResinProfile!.ProfileVersion, StringComparison.Ordinal)
+                            || !string.Equals(payload.ProfileSha256, line.ResinProfile.CompositionSha256, StringComparison.Ordinal)))
+                    {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -295,6 +308,10 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 || (payload.Process == PrintProcess.Fdm && (!IsSha256(payload.ProfileSha256)
                     || !IsSha256(payload.PhysicalSha256)
                     || string.IsNullOrWhiteSpace(payload.PhysicalAnalysisVersion)))
+                || (payload.Process == PrintProcess.Resin
+                    && (!string.IsNullOrEmpty(payload.PhysicalAnalysisVersion)
+                        || !string.IsNullOrEmpty(payload.PhysicalSha256)
+                        || !ResinIdentityMatchesCurrent(new ResinQuoteProfileIdentity(payload.ProfileVersion, payload.ProfileSha256))))
                 || !string.Equals(payload.Confidence, "provisional", StringComparison.Ordinal)
                 || !string.Equals(payload.ReviewState, "engineer_review_required", StringComparison.Ordinal)
                 || string.IsNullOrWhiteSpace(payload.MaterialKey)
@@ -307,6 +324,18 @@ namespace Legacy.Maliev.Web.Application.Pricing
             }
 
             return payload;
+        }
+
+        private static bool ResinIdentityMatchesCurrent(ResinQuoteProfileIdentity? identity)
+        {
+            if (identity == null || !IsSha256(identity.CompositionSha256))
+            {
+                return false;
+            }
+
+            var profile = ResinBuildProfileCatalog.ResolveProvisionalSupportProfile();
+            return string.Equals(identity.ProfileVersion, profile.ProfileVersion, StringComparison.Ordinal)
+                && string.Equals(identity.CompositionSha256, ResinBuildProfileComposition.CreateSha256(profile), StringComparison.Ordinal);
         }
 
         private static bool ReceiptMatches(

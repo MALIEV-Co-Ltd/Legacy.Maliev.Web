@@ -328,7 +328,11 @@ public sealed record InstantQuotationPartQuote(
     BuildPreference BuildPreference,
     IReadOnlyList<InstantQuotationMaterialPrice> MaterialPrices,
     double AllocatedOrderTotal = 0,
-    InstantQuotationPhysicalAnalysisReceipt? PhysicalReceipt = null);
+    InstantQuotationPhysicalAnalysisReceipt? PhysicalReceipt = null)
+{
+    // Exact resolved provisional identity; internal and omitted from public serialization.
+    internal ResinQuoteProfileIdentity? ResinProfile { get; init; }
+}
 
 public sealed record InstantQuotationOrderQuote(
     IReadOnlyList<InstantQuotationPartQuote> Parts,

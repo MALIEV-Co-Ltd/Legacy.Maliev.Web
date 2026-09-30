@@ -2,6 +2,135 @@ namespace Legacy.Maliev.Web.Application.Pricing;
 
 public static class PrintTimeCalculator
 {
+    // Retained server policy: capped projected support and 15% handling waste.
+    // Provisional pricing estimate, not a manufacturing receipt.
+    internal static ResinEstimate EstimateResin(
+        GeometryInput? geometry,
+        ResinBuildProfileEvidence? profile)
+    {
+        const int maximumModelLayers = 20_000;
+        const int maximumRaftLayers = 20_000;
+        if (geometry is null || profile is null
+            || !AdditiveGeometryValidator.Validate(geometry, 1).IsValid
+            || !ResinBuildProfileEvidenceValidator.Assess(profile).IsReady
+            || !ResinBuildProfileEvidenceValidator.HasCompleteSupportComposition(profile))
+        {
+            return new();
+        }
+
+        var layerHeight = (double)profile.LayerHeightMm!.Value;
+        var modelLayerCount = Math.Ceiling(geometry.HeightMm / layerHeight);
+        if (!double.IsFinite(modelLayerCount) || modelLayerCount < 1 || modelLayerCount > maximumModelLayers)
+        {
+            return new();
+        }
+
+        var layers = (int)modelLayerCount;
+        var footprint = geometry.FootprintMm2;
+        var unsupportedProfile = geometry.UnsupportedAreaProfileMm2 ?? [];
+        var areaProfile = geometry.AreaProfileMm2 ?? [];
+        var demands = new double[layers];
+        var explicitDemand = unsupportedProfile.Count > 0;
+        if (explicitDemand)
+        {
+            var samples = unsupportedProfile;
+            for (var index = 1; index < samples.Count; index++)
+            {
+                var layer = (int)Math.Round(index / (double)(samples.Count - 1) * (layers - 1));
+                if (layer > 0)
+                {
+                    demands[layer] = Math.Min(footprint, demands[layer] + samples[index]);
+                }
+            }
+        }
+        else
+        {
+            // Named provisional area-growth policy, not fabricated zero demand.
+            var uniformArea = geometry.VolumeMm3 / geometry.HeightMm;
+            var previousArea = InterpolateResinAreaProfile(areaProfile, .5 / layers, uniformArea);
+            for (var layer = 1; layer < layers; layer++)
+            {
+                var area = InterpolateResinAreaProfile(areaProfile, (layer + .5) / layers, uniformArea);
+                demands[layer] = Math.Min(footprint, Math.Max(0, area - previousArea));
+                previousArea = area;
+            }
+        }
+
+        // Every positive demand contributes an interval. Prefix accumulation applies
+        // the same overlap cap as the source, in O(samples + modelLayers) work.
+        var intervalDeltas = new double[layers + 1];
+        for (var layer = 1; layer < layers; layer++)
+        {
+            var start = explicitDemand ? 0 : layer - (int)Math.Ceiling(layer * .5);
+            intervalDeltas[start] += demands[layer];
+            intervalDeltas[layer] -= demands[layer];
+        }
+
+        double activeArea = 0;
+        double envelopeAreaSum = 0;
+        for (var layer = 0; layer < layers; layer++)
+        {
+            activeArea += intervalDeltas[layer];
+            envelopeAreaSum += Math.Min(footprint, Math.Max(0, activeArea));
+        }
+
+        var modelMl = geometry.VolumeMm3 / 1000;
+        var supportMl = envelopeAreaSum * (double)profile.SupportEnvelopeDensity!.Value * layerHeight / 1000;
+        var supported = supportMl > 0;
+        var raftThickness = supported ? (double)profile.RaftThicknessMm!.Value : 0;
+        var finalLayerCount = Math.Ceiling((geometry.HeightMm + raftThickness) / layerHeight);
+        if (!double.IsFinite(finalLayerCount) || finalLayerCount < modelLayerCount
+            || finalLayerCount - modelLayerCount > maximumRaftLayers)
+        {
+            return new();
+        }
+
+        var raftMl = supported ? footprint * (double)profile.RaftAreaRatio!.Value * raftThickness / 1000 : 0;
+        var wasteMl = (modelMl + supportMl + raftMl) * .15;
+        var totalMl = modelMl + supportMl + raftMl + wasteMl;
+        var cycleSeconds = (double)profile.NormalExposureSeconds!.Value
+            + (double)profile.RestSecondsPerLayer!.Value
+            + (double)profile.LiftDistanceMm!.Value / (double)profile.LiftSpeedMmPerSecond!.Value
+            + (double)profile.RetractDistanceMm!.Value / (double)profile.RetractSpeedMmPerSecond!.Value;
+        var bottomExtra = (double)profile.BottomExposureSeconds!.Value - (double)profile.NormalExposureSeconds.Value;
+        var minutes = (finalLayerCount * cycleSeconds
+            + Math.Min(finalLayerCount, profile.BottomLayerCount!.Value) * bottomExtra) / 60;
+        if (!double.IsFinite(totalMl) || !double.IsFinite(minutes) || totalMl <= 0 || minutes <= 0)
+        {
+            return new();
+        }
+
+        return new ResinEstimate
+        {
+            ModelResinMl = modelMl,
+            SupportResinMl = supportMl,
+            RaftResinMl = raftMl,
+            WasteResinMl = wasteMl,
+            TotalResinMl = totalMl,
+            PrintMinutes = minutes,
+        };
+    }
+
+    private static double InterpolateResinAreaProfile(IReadOnlyList<double> profile, double fraction, double fallback)
+    {
+        if (profile.Count == 0)
+        {
+            return fallback;
+        }
+
+        if (profile.Count == 1)
+        {
+            return profile[0];
+        }
+
+        var position = Math.Clamp(fraction, 0, 1) * (profile.Count - 1);
+        var lower = (int)Math.Floor(position);
+        var upper = Math.Min(lower + 1, profile.Count - 1);
+        // Inputs are already nonnegative/finite. Preserve constant sampled areas
+        // exactly so interpolation noise cannot invent support and a chargeable raft.
+        return profile[lower] + (profile[upper] - profile[lower]) * (position - lower);
+    }
+
     public static FdmEstimate EstimateFdm(
         GeometryInput? geometry,
         MaterialInfo? material,
