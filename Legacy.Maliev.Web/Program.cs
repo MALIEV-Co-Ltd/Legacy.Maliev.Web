@@ -397,6 +397,7 @@ builder.Services.AddSingleton<IInstantQuotationQuoteTicketService>(services =>
 builder.Services.AddScoped<IInstantQuotationAnalyticsSink, JsInstantQuotationAnalyticsSink>();
 builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAnalyticsTracker>();
 builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
+builder.Services.AddScoped<IInstantQuotationAuthenticatedPreparationService, InstantQuotationAuthenticatedPreparationService>();
 builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
 builder.Services.AddScoped<
     IInstantQuotationWorkflowSessionIdentityAccessor,

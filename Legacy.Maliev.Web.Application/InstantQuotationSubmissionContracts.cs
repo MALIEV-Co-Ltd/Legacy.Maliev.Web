@@ -23,7 +23,11 @@ public sealed record InstantQuotationCustomerSubmission(
     string? ShippingCity = null,
     string? ShippingProvince = null,
     string? ShippingPostalCode = null,
-    string? ShippingCountry = null);
+    string? ShippingCountry = null)
+{
+    // Server-generated only; never populated through browser model binding.
+    public InstantQuotationProfileCompletionOperation? ProfileCompletion { get; init; }
+}
 
 public enum InstantQuotationSubmissionCheckpointStatus
 {
@@ -53,7 +57,9 @@ public sealed record InstantQuotationSubmissionCheckpoint(
     string? WelcomeConfirmationToken = null,
     bool CompensationRequired = false,
     string? TransactionId = null,
-    Guid? JourneyId = null);
+    Guid? JourneyId = null,
+    InstantQuotationCustomerSubmission? FrozenCustomer = null,
+    bool ProfileCompleted = false);
 
 public sealed record InstantQuotationSubmissionCheckpointRead(
     bool LeaseValid,

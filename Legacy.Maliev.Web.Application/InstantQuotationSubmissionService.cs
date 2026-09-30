@@ -16,7 +16,8 @@ internal sealed class InstantQuotationSubmissionService(
     IInstantQuotationFulfillmentClient? fulfillmentClient = null,
     IInstantQuotationQuoteTicketService? quoteTicketService = null,
     TimeProvider? timeProvider = null,
-    IInstantQuotationAuthoritativePricingService? authoritativePricingService = null) : IInstantQuotationSubmissionService
+    IInstantQuotationAuthoritativePricingService? authoritativePricingService = null,
+    IInstantQuotationProfileCompletionClient? profileCompletionClient = null) : IInstantQuotationSubmissionService
 {
     private const int SubmissionIdLength = 64;
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
@@ -54,8 +55,7 @@ internal sealed class InstantQuotationSubmissionService(
             return Rejected(InstantQuotationProblemCategory.Authorization);
         }
 
-        if (!IsValidCustomer(customer)
-            || session.Parts is not { Count: > 0 }
+        if (session.Parts is not { Count: > 0 }
             || !IsValidSubmissionId(session.SubmissionId))
         {
             return Rejected(InstantQuotationProblemCategory.Validation);
@@ -85,6 +85,31 @@ internal sealed class InstantQuotationSubmissionService(
         }
 
         await using var acquiredSubmissionLease = submissionLease;
+
+        InstantQuotationSubmissionCheckpointRead earlyRead;
+        try
+        {
+            earlyRead = await acquiredSubmissionLease.ReadAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
+        }
+        catch (TimeoutException)
+        {
+            return Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
+        }
+        if (!earlyRead.LeaseValid) return Rejected(InstantQuotationProblemCategory.Conflict);
+        if (earlyRead.Checkpoint?.FrozenCustomer is { } frozen)
+        {
+            customer = frozen;
+            if (earlyRead.Checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Completed)
+                return Completed(earlyRead.Checkpoint.RequestReference, earlyRead.Checkpoint.TransactionId, earlyRead.Checkpoint.JourneyId);
+        }
+        if (!IsValidCustomer(customer)) return Rejected(InstantQuotationProblemCategory.Validation);
+        if (customer.ProfileCompletion is not null && (ownerIdentity is null || profileCompletionClient is null))
+            return earlyRead.Checkpoint is { } durable ? Partial(durable, InstantQuotationProblemCategory.DependencyUnavailable)
+                : Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
 
         InstantQuotationOrderQuote quote;
         try
@@ -135,19 +160,7 @@ internal sealed class InstantQuotationSubmissionService(
         }
 
         var snapshotDigest = CreateSnapshotDigest(session, quote, customer);
-        InstantQuotationSubmissionCheckpointRead checkpointRead;
-        try
-        {
-            checkpointRead = await acquiredSubmissionLease.ReadAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            return Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
-        }
-        catch (TimeoutException)
-        {
-            return Rejected(InstantQuotationProblemCategory.DependencyUnavailable);
-        }
+        var checkpointRead = earlyRead;
 
         if (!checkpointRead.LeaseValid)
         {
@@ -198,6 +211,27 @@ internal sealed class InstantQuotationSubmissionService(
             }
 
             checkpoint = creation.Checkpoint!;
+        }
+
+        if (customer.ProfileCompletion is { } operation && !checkpoint.ProfileCompleted)
+        {
+            if (!await RenewLeaseAsync(acquiredSubmissionLease, cancellationToken))
+                return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+            InstantQuotationProfileCompletionResult completion;
+            try
+            {
+                completion = await profileCompletionClient!.CompleteAsync(ownerIdentity!, operation, cancellationToken);
+                if (!completion.Succeeded) return Partial(checkpoint, completion.ProblemCategory);
+                var completedProfile = checkpoint with { ProfileCompleted = true };
+                if (!await acquiredSubmissionLease.TryPutAsync(completedProfile, checkpoint.Status, cancellationToken))
+                    return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+                checkpoint = completedProfile;
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TimeoutException
+                || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
+            }
         }
 
         return await FinalizeAsync(
@@ -284,7 +318,8 @@ internal sealed class InstantQuotationSubmissionService(
             InstantQuotationSubmissionCheckpointStatus.Persisted,
             snapshotDigest,
             TransactionId: quotationResult.TransactionId,
-            JourneyId: quotationResult.JourneyId);
+            JourneyId: quotationResult.JourneyId,
+            FrozenCustomer: customer.ProfileCompletion is null ? null : customer);
         bool stored;
         try
         {
@@ -295,16 +330,19 @@ internal sealed class InstantQuotationSubmissionService(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return (null, Rejected(InstantQuotationProblemCategory.DependencyUnavailable));
+            return (null, customer.ProfileCompletion is null ? Rejected(InstantQuotationProblemCategory.DependencyUnavailable)
+                : Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable));
         }
         catch (TimeoutException)
         {
-            return (null, Rejected(InstantQuotationProblemCategory.DependencyUnavailable));
+            return (null, customer.ProfileCompletion is null ? Rejected(InstantQuotationProblemCategory.DependencyUnavailable)
+                : Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable));
         }
 
         return stored
             ? (checkpoint, null)
-            : (null, Rejected(InstantQuotationProblemCategory.Conflict));
+            : (null, customer.ProfileCompletion is null ? Rejected(InstantQuotationProblemCategory.Conflict)
+                : Partial(checkpoint, InstantQuotationProblemCategory.Conflict));
     }
 
     private async Task<InstantQuotationSubmissionResult> FinalizeAsync(

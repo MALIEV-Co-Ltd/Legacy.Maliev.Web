@@ -15,6 +15,31 @@ public sealed class InstantQuotationSubmissionStoreTests
     private static readonly TimeSpan LeaseLifetime = TimeSpan.FromMinutes(2);
 
     [Fact]
+    public async Task FrozenProfileOperation_IsProtectedRoundTripsAndRecordsCompletionBeforeFinalization()
+    {
+        var storage = new FakeAtomicStorage();
+        var store = CreateStore(storage);
+        await using var lease = await store.TryAcquireAsync("submission-profile", "customer:7", default);
+        Assert.NotNull(lease);
+        var operation = new InstantQuotationProfileCompletionOperation(7, Guid.NewGuid(), "\"" + new string('a', 64) + "\"",
+            new("Owner", "Name", null, "0812345678", null, null, null, null, false));
+        var customer = new InstantQuotationProfileDetails { FirstName = "Owner", LastName = "Name", Email = "private@example.test" }
+            .ToSubmission("Original project") with
+        { ProfileCompletion = operation };
+        var checkpoint = Persisted("submission-profile") with { FrozenCustomer = customer };
+        Assert.True(await lease.TryPutAsync(checkpoint, null, default));
+        var raw = Encoding.UTF8.GetString(storage.LastPayload!);
+        Assert.DoesNotContain("private@example.test", raw, StringComparison.Ordinal);
+        Assert.DoesNotContain(operation.Key.ToString("D"), raw, StringComparison.Ordinal);
+        Assert.Equal(customer, (await lease.ReadAsync(default)).Checkpoint?.FrozenCustomer);
+        Assert.True(await lease.TryPutAsync(checkpoint with { ProfileCompleted = true }, InstantQuotationSubmissionCheckpointStatus.Persisted, default));
+        var read = await lease.ReadAsync(default);
+        Assert.True(read.Checkpoint?.ProfileCompleted);
+        Assert.Equal(customer, read.Checkpoint?.FrozenCustomer);
+        Assert.Equal(checkpoint.RequestReference, read.Checkpoint?.RequestReference);
+    }
+
+    [Fact]
     public async Task TryAcquireAsync_ConcurrentOwnerAndSubmission_AllowsOnlyOneLease()
     {
         var storage = new FakeAtomicStorage();

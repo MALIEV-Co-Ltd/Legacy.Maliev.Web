@@ -21,6 +21,41 @@ public sealed record InstantQuotationCustomerDisplayModel(
     public const string RejectedStatus = "rejected";
 
     public IReadOnlyList<string> InvalidFields { get; init; } = [];
+    // InteractiveServer parameters cross a JSON boundary. IReadOnlySet cannot
+    // be materialized by System.Text.Json; a concrete set retains ordinal locks.
+    public HashSet<string> LockedFields { get; init; } = new(StringComparer.Ordinal);
+    public bool ProfileUnavailable { get; init; }
+    public bool IsLocked(string field) => LockedFields.Contains(field);
+
+    public static InstantQuotationCustomerDisplayModel FromProfile(InstantQuotationCustomerDisplayModel model,
+        Legacy.Maliev.Web.Application.InstantQuotationAuthenticatedProfile profile) => model with
+        {
+            FirstName = profile.Details.FirstName,
+            LastName = profile.Details.LastName,
+            Email = profile.Details.Email,
+            Mobile = profile.Details.Mobile,
+            Telephone = profile.Details.Telephone,
+            Company = profile.Details.Company,
+            TaxNumber = profile.Details.TaxNumber,
+            TaxBranch = profile.Details.TaxBranch,
+            TaxBranchCode = profile.Details.TaxBranchCode,
+            BillingBuilding = profile.Details.BillingBuilding,
+            BillingStreet1 = profile.Details.BillingStreet1,
+            BillingStreet2 = profile.Details.BillingStreet2,
+            BillingCity = profile.Details.BillingCity,
+            BillingProvince = profile.Details.BillingProvince,
+            BillingPostalCode = profile.Details.BillingPostalCode,
+            Country = string.IsNullOrWhiteSpace(profile.Details.Country) ? model.Country : profile.Details.Country,
+            ShippingBuilding = profile.Details.ShippingBuilding,
+            ShippingStreet1 = profile.Details.ShippingStreet1,
+            ShippingStreet2 = profile.Details.ShippingStreet2,
+            ShippingCity = profile.Details.ShippingCity,
+            ShippingProvince = profile.Details.ShippingProvince,
+            ShippingPostalCode = profile.Details.ShippingPostalCode,
+            ShippingCountry = string.IsNullOrWhiteSpace(profile.Details.ShippingCountry) ? model.ShippingCountry : profile.Details.ShippingCountry,
+            ShipToBillingAddress = profile.Details.ShipToBillingAddress,
+            LockedFields = new HashSet<string>(profile.LockedFields, StringComparer.Ordinal),
+        };
     public IReadOnlyList<string> OverlengthBuildingFields { get; init; } = [];
 
     public string Mobile { get; init; } = string.Empty;

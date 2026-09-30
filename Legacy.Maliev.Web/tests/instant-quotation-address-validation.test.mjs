@@ -7,6 +7,16 @@ import {
     wireInstantQuotationAddressValidation,
 } from '../wwwroot/src/app/js/instant-quotation-address-validation.mjs';
 
+test('profile readiness gate cannot be cleared by editing otherwise valid fields', () => {
+    const submit = { disabled: false };
+    const form = fakeForm(new Map(), { hidden: true }, submit);
+    form.dataset.profileUnavailable = 'true';
+    wireInstantQuotationAddressValidation(form, submit);
+    assert.equal(submit.disabled, true);
+    form.dispatch('input');
+    assert.equal(submit.disabled, true);
+});
+
 test('address comparison normalizes Thai punctuation and rejects two distinct repeated components', () => {
     assert.equal(normalizeAddressForComparison(' 155, ซอย วงศ์สว่าง11 '), '155ซอยวงศสวาง11');
     assert.equal(buildingContainsAddressComponents(
@@ -94,6 +104,21 @@ test('validation controls the submit button rendered outside the form', () => {
     fields.get('BillingBuilding').dispatch('input');
 
     assert.equal(submit.disabled, true);
+});
+
+test('locked populated building is preserved without applying new-entry address heuristics', () => {
+    const building = control('Stored Street Bangkok');
+    building.readOnly = true;
+    const fields = new Map([
+        ['BillingBuilding', building], ['BillingStreet1', control('Stored Street')],
+        ['BillingCity', control('Bangkok')], ['ShipToBillingAddress', control('true', true)],
+    ]);
+    const submit = { disabled: false };
+    const form = fakeForm(fields, { hidden: true }, submit);
+    wireInstantQuotationAddressValidation(form, submit);
+    building.dispatch('input');
+    assert.equal(building.validationMessage, '');
+    assert.equal(submit.disabled, false);
 });
 
 function control(value, checked = false) {
