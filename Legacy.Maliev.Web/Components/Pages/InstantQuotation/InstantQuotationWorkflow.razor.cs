@@ -28,6 +28,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private InputFile? fileInput;
     private ElementReference workflowSection;
     private ElementReference previewCanvas;
+    private ElementReference incompletePreviewCanvas;
+    private string? incompletePreviewKey;
+    private bool incompletePreviewAttached;
+    private bool incompletePreviewMeasured;
+    private long incompletePreviewRevision;
+    private bool disposed;
     private ElementReference configurationSection;
     private ElementReference reviewSection;
     private ElementReference customerDetailsSection;
@@ -155,6 +161,45 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
 
         await EnsurePreviewInputBoundAsync();
+
+        if (incompletePreviewKey is { } incompleteKey && !incompletePreviewAttached && previewInterop is not null)
+        {
+            try
+            {
+                var retained = await previewInterop.InvokeAsync<bool>(
+                    "retainIncompletePreview", incompleteKey, incompletePreviewCanvas);
+                if (!disposed && incompletePreviewKey == incompleteKey)
+                {
+                    var eligible = retained && await previewInterop.InvokeAsync<bool>("isIncompletePreview", incompleteKey);
+                    if (!disposed && incompletePreviewKey == incompleteKey)
+                    {
+                        if (eligible)
+                        {
+                            incompletePreviewAttached = true;
+                        }
+                        else
+                        {
+                            await RemoveIncompletePreviewAsync();
+                            if (!disposed)
+                            {
+                                await InvokeAsync(StateHasChanged);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (JSException)
+            {
+                if (!disposed && incompletePreviewKey == incompleteKey)
+                {
+                    await RemoveIncompletePreviewAsync();
+                    if (!disposed)
+                    {
+                        await InvokeAsync(StateHasChanged);
+                    }
+                }
+            }
+        }
 
         if (VisibleSections.Viewer && !previewAttached && previewInterop is not null)
         {
@@ -291,6 +336,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         try
         {
             uploadSelectionError = null;
+            // A new accepted selection replaces the one local exceptional preview,
+            // not previously admitted parts. Rejected/normal replacements also release it.
+            await RemoveIncompletePreviewAsync();
             var selectedFiles = args.GetMultipleFiles(100).ToArray();
             var browserFiles = selectedFiles
                 .Where(file => file.Size <= InstantQuotationWorkflowCoordinator.MaximumFileSize)
@@ -327,6 +375,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     var claim = await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>(
                         "getGeometryClaim",
                         keys[index]);
+                    if (await previewInterop!.InvokeAsync<bool>("isIncompletePreview", keys[index]))
+                    {
+                        await RemoveIncompletePreviewAsync();
+                        incompletePreviewKey = keys[index];
+                        incompletePreviewMeasured = false;
+                        incompletePreviewRevision = 0;
+                        await InvokeAsync(StateHasChanged);
+                    }
                     analyzed.Add((browserFiles[index], keys[index], claim));
                 }
                 catch (JSException)
@@ -531,7 +587,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
-                await QuarantinePreviewAsync(localId);
+                if (key != incompletePreviewKey || upload.Status is InstantQuotationWorkflowUploadStatus.Cancelled)
+                {
+                    await QuarantinePreviewAsync(localId);
+                }
             }
             else if (upload is null)
             {
@@ -540,15 +599,26 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private Task QuarantinePreviewAsync(Guid localId) =>
-        previewKeys.TryGetValue(localId, out var key)
-            ? InvokePreviewAsync("quarantine", key)
-            : Task.CompletedTask;
+    private async Task QuarantinePreviewAsync(Guid localId)
+    {
+        if (previewKeys.TryGetValue(localId, out var key))
+        {
+            if (key == incompletePreviewKey)
+            {
+                await RemoveIncompletePreviewAsync();
+            }
+            await InvokePreviewAsync("quarantine", key);
+        }
+    }
 
     private async Task ReleasePreviewAsync(Guid localId)
     {
         if (previewKeys.Remove(localId, out var key))
         {
+            if (key == incompletePreviewKey)
+            {
+                await RemoveIncompletePreviewAsync();
+            }
             await InvokePreviewAsync("release", key);
         }
     }
@@ -639,6 +709,33 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     internal static bool ShouldAcceptThicknessReport(bool partExists, long? currentRevision, long revision)
         => partExists && revision > 0 && (!currentRevision.HasValue || revision > currentRevision.Value);
+
+    [JSInvokable]
+    public Task ReportIncompletePreviewAsync(string key, long revision, bool incomplete)
+        => InvokeAsync(() =>
+        {
+            if (disposed || key != incompletePreviewKey || revision <= incompletePreviewRevision || !incomplete)
+            {
+                return;
+            }
+            incompletePreviewRevision = revision;
+            incompletePreviewMeasured = true;
+            StateHasChanged();
+        });
+
+    private async Task RemoveIncompletePreviewAsync()
+    {
+        var key = incompletePreviewKey;
+        incompletePreviewKey = null;
+        incompletePreviewAttached = false;
+        incompletePreviewMeasured = false;
+        incompletePreviewRevision = 0;
+        if (key is not null)
+        {
+            await InvokePreviewAsync("removeIncompletePreview", key);
+            await InvokePreviewAsync("release", key);
+        }
+    }
 
     private async Task InvokePreviewAsync(string identifier, params object?[] arguments)
     {
@@ -984,6 +1081,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        disposed = true;
+        incompletePreviewKey = null;
         physicalAnalysisCancellation?.Cancel();
         try
         {
