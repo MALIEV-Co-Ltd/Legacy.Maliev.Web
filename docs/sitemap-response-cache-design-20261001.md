@@ -69,3 +69,18 @@ Root initially supplied a nonexistent local dependency path and the build failed
 Root rebased the three owned files onto protected main `c0e63e2c51865433703ec551228b806443b93ba3`, preserving all new tests and unrelated work. The newly accepted SCB boundary adds24 existing cases to this base; this sitemap slice still adds only5. Independently prepared private profile and SCB helper builds and the affected Web Release build each finished with0warnings/0errors. New HTTP focus5PASS/0skip. Exclusive serial full suite:2735executed/2735PASS/0failed/0skipped in11m3s, terminalexit0. TRX `TestResults/root-sitemap434-serial-full/root-sitemap434-serial-full.trx`, SHA256 `666ACC159D100A68F6AA36603515C7117FBE4EFFEF819E36AC5644852FFB2103`.
 
 Root whole-solution format verification, all five dependency audits, actionlint and diff checks passed on this integrated candidate. Earlier failed evidence remains recorded; the serial result supersedes it for acceptance without changing any browser timeout/assertion/skip. No output-cache hit, deployed edge behavior, complete source-owner resolution, production data parity or Aspire acceptance is claimed. Protected head and post-merge CI remain required before closure.
+
+## Replacement-head integration with accepted culture canonicalization
+
+After Web438 merged, root rebased this same three-file slice onto protected main
+`33eff14e8e1aa88c7833507add00f7032cb96cf2`; resulting runtime/test commit is
+`86c31d2b08a8713f3881f4ce0f80848907f3c3af`. The old PR-head CI result is not
+acceptance of this replacement. Independent private profile/SCB preparation and Web
+Release build completed with zero warnings/errors. HTTP focus37 passed without
+skips. Exclusive serial full suite executed2767/PASS2767/failed0/skipped0 in10m13s,
+terminal exit0. TRX `TestResults/root-sitemap434-cookie-integration-full/integrated-full.trx`,
+SHA256 `3C05D4B78DC9D8BDAB30C1B791E196A46A2CA650AE91F4680930E65200780331`.
+The accepted culture changes contribute32 cases; this slice still contributes5.
+All earlier failure evidence is retained. No server-cache-hit, deployed edge,
+Aspire, complete source-owner or production-data parity claim follows from this run.
+Replacement-head CI and subsequent exact-main CI remain required.
