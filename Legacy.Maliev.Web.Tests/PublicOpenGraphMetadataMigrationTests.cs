@@ -56,7 +56,7 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<Testin
         var model = File.ReadAllText(modelPath);
         Assert.Contains("CanonicalUrlPolicy.GetLocalizedUrl", model, StringComparison.Ordinal);
         Assert.DoesNotContain("Request.Host", model, StringComparison.Ordinal);
-        Assert.Contains("Request.Query[\"culture\"]", model, StringComparison.Ordinal);
+        Assert.Contains("CultureInfo.CurrentUICulture.TwoLetterISOLanguageName", model, StringComparison.Ordinal);
         Assert.DoesNotContain("AccessToken", model, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RefreshToken", model, StringComparison.OrdinalIgnoreCase);
     }

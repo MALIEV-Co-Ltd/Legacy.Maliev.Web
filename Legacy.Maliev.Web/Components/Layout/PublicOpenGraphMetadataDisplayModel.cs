@@ -19,12 +19,7 @@ public sealed record PublicOpenGraphMetadataDisplayModel(
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentCulture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
-        var requestedCulture = context.Request.Query["culture"].ToString();
-        var culture = string.Equals(requestedCulture, "en", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(requestedCulture, "th", StringComparison.OrdinalIgnoreCase)
-            ? requestedCulture.ToLowerInvariant()
-            : currentCulture;
+        var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
         culture = string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "th";
         var imageText = GetText(image);
 
