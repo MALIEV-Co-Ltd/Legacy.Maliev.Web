@@ -4,10 +4,13 @@
 
 namespace Legacy.Maliev.Web
 {
+    using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
     using Legacy.Maliev.Web.Pages;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Http.Extensions;
+    using Microsoft.AspNetCore.Localization;
+    using Microsoft.AspNetCore.WebUtilities;
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
@@ -176,6 +179,15 @@ namespace Legacy.Maliev.Web
             string requestPath = request.Path.HasValue ? request.Path.Value : "/";
             string canonicalPath = GetCanonicalPath(request.Path);
             bool pathChanged = !string.Equals(requestPath, canonicalPath, StringComparison.Ordinal);
+            string? explicitCulture = GetSupportedCulture(request.Query[CultureQueryKey].ToString());
+            string? cookieCulture = GetCookieCulture(request);
+            bool cultureQueryNeedsNormalization = IsPublicRoute(request.Path)
+                && !InstantQuotationCompatibilityEndpoint.Matches(request.HttpContext)
+                && explicitCulture is null
+                && string.Equals(cookieCulture, EnglishCulture, StringComparison.OrdinalIgnoreCase);
+            string redirectQuery = cultureQueryNeedsNormalization
+                ? BuildEnglishQueryString(request.QueryString.Value)
+                : request.QueryString.Value ?? string.Empty;
             string requestHost = request.Host.Host.TrimEnd('.');
             bool isCanonicalHost = string.Equals(requestHost, CanonicalHost, StringComparison.OrdinalIgnoreCase);
             bool isAlternateHost = AlternateHosts.Contains(requestHost);
@@ -183,20 +195,54 @@ namespace Legacy.Maliev.Web
             bool hasCanonicalPort = !request.Host.Port.HasValue || request.Host.Port == 443;
 
             if (isConfiguredPublicHost
-                && (!isCanonicalHost || !hasCanonicalPort || pathChanged))
+                && (!isCanonicalHost || !hasCanonicalPort || pathChanged || cultureQueryNeedsNormalization))
             {
-                location = string.Concat(GetCanonicalUrl(request.Path), request.QueryString.Value);
+                location = string.Concat(GetCanonicalUrl(request.Path), redirectQuery);
                 return true;
             }
 
-            if (pathChanged)
+            if (pathChanged || cultureQueryNeedsNormalization)
             {
-                location = string.Concat(new PathString(canonicalPath).ToUriComponent(), request.QueryString.Value);
+                location = string.Concat(new PathString(canonicalPath).ToUriComponent(), redirectQuery);
                 return true;
             }
 
             location = string.Empty;
             return false;
+        }
+
+        private static bool IsPublicRoute(PathString requestPath)
+        {
+            string path = requestPath.HasValue ? requestPath.Value ?? "/" : "/";
+            string lookupPath = path.Length > 1 ? path.TrimEnd('/') : path;
+            if (lookupPath.Length == 0) lookupPath = "/";
+            return RouteAliases.ContainsKey(lookupPath)
+                || PublicSearchRouteCatalog.TryGetCanonicalPath(lookupPath, out _);
+        }
+
+        private static string? GetSupportedCulture(string? culture) =>
+            string.Equals(culture, EnglishCulture, StringComparison.OrdinalIgnoreCase) ? EnglishCulture
+            : string.Equals(culture, ThaiCulture, StringComparison.OrdinalIgnoreCase) ? ThaiCulture : null;
+
+        private static string? GetCookieCulture(HttpRequest request)
+        {
+            string? cookie = request.Cookies[CookieRequestCultureProvider.DefaultCookieName];
+            if (string.IsNullOrWhiteSpace(cookie)) return null;
+            ProviderCultureResult? parsed = CookieRequestCultureProvider.ParseCookieValue(cookie);
+            return GetSupportedCulture(parsed?.UICultures.FirstOrDefault().Value);
+        }
+
+        private static string BuildEnglishQueryString(string? queryString)
+        {
+            QueryBuilder query = new();
+            foreach (var pair in QueryHelpers.ParseQuery(queryString ?? string.Empty))
+            {
+                if (string.Equals(pair.Key, CultureQueryKey, StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (string? value in pair.Value) query.Add(pair.Key, value ?? string.Empty);
+            }
+
+            query.Add(CultureQueryKey, EnglishCulture);
+            return query.ToQueryString().Value ?? string.Empty;
         }
     }
 

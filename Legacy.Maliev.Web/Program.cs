@@ -581,10 +581,7 @@ if (useBlazorRouteHost)
             "/",
             ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>
             {
-                if (culture is not ("th" or "en"))
-                {
-                    culture = "th";
-                }
+                culture = CanonicalUrlPolicy.NormalizeSupportedCulture(culture);
 
                 context.Response.Cookies.Append(
                     CookieRequestCultureProvider.DefaultCookieName,
@@ -598,7 +595,7 @@ if (useBlazorRouteHost)
                         Secure = true
                     });
 
-                return Results.LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? "~/" : returnUrl);
+                return Results.LocalRedirect(CanonicalUrlPolicy.GetLocalizedReturnUrl(returnUrl, culture));
             })
         .WithMetadata(new RequireAntiforgeryTokenAttribute(true));
 }
