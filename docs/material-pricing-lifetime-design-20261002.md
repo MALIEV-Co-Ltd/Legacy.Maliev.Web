@@ -2,7 +2,7 @@
 
 ## Current implemented scope (2026-10-02)
 
-The coordinator-only lifetime repair is implemented on `031244c096cceb4b9842f6812d0a762c62253b3d`, with private Defaults `6ea131df4bcf8d213d7d121cb8c865697bee7420` and Contracts `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`. The accepted backend observer implementation is unchanged. The coordinator still uses its four-argument pricing overload. No progress snapshot, observer activation, Razor/resource or financial change is included.
+The coordinator-only lifetime repair was first validated on `031244c096cceb4b9842f6812d0a762c62253b3d`, with private Defaults `6ea131df4bcf8d213d7d121cb8c865697bee7420` and Contracts `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`. Root subsequently integrated the three-file repair as `e9d5947495838487b441ce14c38a9e07fb53bae9` above the PR456 candidate `ddff8f43f5a6a029d71bd802ab9564168a4979b7`. The backend observer implementation is unchanged. The coordinator still uses its four-argument pricing overload. No progress snapshot, observer activation, Razor/resource or financial change is included.
 
 Scope: [Web #457](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/issues/457), the reached disposal defect from the frozen #454 consumer probe, not observer activation or parent #380 completion. Only the coordinator and new lifetime tests belong to this repair. The existing two consumer files remain frozen and their observer-selection requirements remain RED. Source `c4dd00b323a350f06a27afbce03dcbbcc56e16fb` and `744d3c5225e7cbf7a88af5c1f4fdb47442e2c325` remain pending; this correctness slice does not resolve their full owner behavior.
 
@@ -57,3 +57,29 @@ Whole-solution verify-only formatting, three owned-content redacted secret scans
 and diff checks passed. Only these three files are eligible for the local logical
 commit; the two frozen feature-RED files remain unstaged. Full integration and
 protected-head/post-main CI are subsequent gates, not inferred from these results.
+
+## Root integrated acceptance
+
+Root prepared all seven exact-pinned boundary helpers in the same process before
+the fresh Release warnings-as-errors build: zero warnings/errors. Corrected
+positive affected selection executed156 PASS, zero skips. The unfiltered full
+suite at `e9d5947495838487b441ce14c38a9e07fb53bae9` executed **3121 PASS**, zero
+failures/errors/skips, duration12m43s. TRX:
+`TestResults/root-lifetime-integrated-full/full.trx`; SHA256:
+`B922DF5301F8AB72A9484C84C9B6067D9952FBC3DA37D0C488F0B4C237385CDB`.
+Whole-solution verify-only formatting and transitive vulnerability audit passed.
+No old committed test was removed, skipped or weakened. The original untracked
+consumer probe is held separately, not part of this bounded lifetime repair.
+
+Unexcluded collector:
+`TestResults/root-lifetime-integrated-full/33f40565-42aa-47a8-9a36-aac02af2ef37/coverage.cobertura.xml`.
+Raw line/branch rates: Web87.97/67.76%, Application81.96/72.63%,
+Infrastructure85.41/72.95%, AdditiveBenchmark73.13/59.30%,
+ServiceDefaults11.66/9.05%, CompatibilityContracts0/100%. These are not a claim
+that every package meets80%, nor a coverage waiver.
+
+An extra EOF blank line in the first isolated local commit failed diff checking;
+root removed only that whitespace and amended before integration. Final owned
+content and staged diff must pass redacted secret scans and diff checks before
+publication. Protected-head and post-merge exact-main CI remain acceptance gates;
+this local evidence alone does not close457, parent380 or either source owner.
