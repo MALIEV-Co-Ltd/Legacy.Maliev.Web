@@ -8,6 +8,15 @@
         }
 
         function classifyContact(anchor) {
+            var contactEmail = (anchor.getAttribute('data-contact-email') || '').trim().toLowerCase();
+            var knownContactEmails = [
+                'info@@maliev.com', 'manufacturing@@maliev.com', 'nda@@maliev.com',
+                'career@@maliev.com', 'support@@maliev.com'
+            ];
+            if (knownContactEmails.indexOf(contactEmail) >= 0) {
+                return { eventName: 'email_click', channel: 'email', destination: 'business_email', mailto: contactEmail };
+            }
+
             var url;
             var baseHost;
             try {
@@ -163,7 +172,7 @@
 
             var targetName = (anchor.getAttribute('target') || '').toLowerCase();
             var isSameWindow = !targetName || targetName === '_self';
-            var targetUrl = anchor.href;
+            var targetUrl = contact.mailto ? 'mailto:' + contact.mailto : anchor.href;
             if (isSameWindow) {
                 event.preventDefault();
             }
