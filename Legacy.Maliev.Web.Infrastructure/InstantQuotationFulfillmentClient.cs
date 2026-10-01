@@ -160,7 +160,13 @@ internal sealed class InstantQuotationFulfillmentClient(
         var finish = options.Options.SurfaceFinishes.FirstOrDefault(candidate =>
             string.Equals(candidate.Name, "As printed", StringComparison.OrdinalIgnoreCase));
         var currency = await catalogClient.GetCurrencyAsync("THB", cancellationToken);
-        if (!currency.ServiceAvailable || currency.Value is not { Id: > 0 } thb || color is null || finish is null)
+        if (!currency.ServiceAvailable)
+        {
+            LogStageFailure("order-currency", "dependency_unavailable");
+            return new(null, false, false, true, false);
+        }
+
+        if (currency.Value is not { Id: > 0 } thb || color is null || finish is null)
         {
             LogStageFailure("order-catalog-mapping", "unexpected");
             return UnexpectedOrderFailure();
