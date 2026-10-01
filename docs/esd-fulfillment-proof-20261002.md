@@ -1,5 +1,21 @@
 # ESD fulfillment transport proof
 
+## Root integration and current candidate validation
+
+Root integrated merged PR447 main `d2165c69afc27f2084a31fe06bf2d5f75373321a`
+at `679af5c7d0cd907a0dc45de7b7e710fc7a7ea9d6`. Its actual mandatory private
+member-Auth helper built cleanly; fresh solution Release passed zero warnings/errors.
+Combined ESD/real-Auth57 focused regressions passed, zero skips. The current
+integrated unfiltered suite passed2963, zero failures/skips,12m59s. Complete original
+`TestResults/root-esd-integrated-full/integrated-full.trx` was independently parsed;
+SHA256 `0879BF9CCF62DDF97AAA9D58358D83ECC55FAD15E1BF24F2CE948C4D7FC031E6`.
+Whole formatting, actionlint and whitespace passed. This supersedes the historical
+pre-integration2946 result below, which remains separately preserved.
+
+PR449 still requires its fresh exact-head CI and post-main acceptance. PR447's
+post-main gate remains pending at this checkpoint; no application publication,
+physical calibration, joined persistence or whole-source-owner closure is claimed.
+
 ## Scope and provenance
 
 This bounded [Web #448 currency-failure slice](https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/issues/448)
