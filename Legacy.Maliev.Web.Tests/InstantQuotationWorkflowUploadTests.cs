@@ -645,7 +645,7 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         var afterFailure = Assert.Single(workflow.Parts);
         Assert.Equal(10, afterFailure.Configuration.Quantity);
-        Assert.Equal(10, afterFailure.Quote!.Quantity);
+        Assert.Null(afterFailure.Quote);
         Assert.True(edits.IsPending(part.PartId));
         Assert.Null(InstantQuotationBulkSavings.Calculate(afterFailure, edits.IsPending(part.PartId)));
 
@@ -653,6 +653,7 @@ public sealed class InstantQuotationWorkflowUploadTests
             () => workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 10, default));
 
         Assert.False(edits.IsPending(part.PartId));
+        Assert.Equal(10, Assert.Single(workflow.Parts).Quote!.Quantity);
         Assert.Null(InstantQuotationBulkSavings.Calculate(Assert.Single(workflow.Parts), false));
     }
 

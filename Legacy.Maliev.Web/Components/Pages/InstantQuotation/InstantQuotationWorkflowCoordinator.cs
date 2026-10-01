@@ -785,6 +785,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
     {
+        OrderQuote = null;
         var state = new InstantQuotationOrderState(CurrentParts());
         var updated = session! with
         {
