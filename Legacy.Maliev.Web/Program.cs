@@ -503,6 +503,20 @@ builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 
 var app = builder.Build();
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/account", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/member", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers["X-Robots-Tag"] = "noindex, follow";
+            return Task.CompletedTask;
+        });
+    }
+
+    await next();
+});
 app.UseStandardMiddleware();
 app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
 app.UseExceptionHandler("/Error");

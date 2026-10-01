@@ -3,7 +3,7 @@
 @using Legacy.Maliev.Web.Components.Pages.Account
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<AccountIndexContent> AccountIndexLocalizer
-@{ ViewData["Title"] = AccountIndexLocalizer["Member account | MALIEV"]; }
+@{ ViewData["Title"] = AccountIndexLocalizer["Member account | MALIEV"]; ViewData["Robots"] = "noindex,follow"; }
 <main class="auth-page">
     <div class="maliev-container auth-shell">
         <section class="auth-intro">
