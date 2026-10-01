@@ -7,8 +7,12 @@ internal static class SitemapEndpointRouteBuilderExtensions
     internal static IEndpointConventionBuilder MapLegacySitemap(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet(
                 "/Sitemap",
-                () => Results.Text(
-                    SitemapXmlRenderer.Render(PublicSearchRouteCatalog.Routes),
-                    "application/xml; charset=utf-8"))
+                (HttpContext context) =>
+                {
+                    context.Response.Headers.CacheControl = "public,max-age=3600";
+                    return Results.Text(
+                        SitemapXmlRenderer.Render(PublicSearchRouteCatalog.Routes),
+                        "application/xml; charset=utf-8");
+                })
             .ExcludeFromDescription();
 }
