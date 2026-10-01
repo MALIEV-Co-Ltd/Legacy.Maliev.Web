@@ -62,6 +62,11 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly SemaphoreSlim stateGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly CancellationToken lifetimeToken;
+    private readonly object displayGate = new();
+    private readonly Dictionary<long, Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask>> displaySubscribers = [];
+    private InstantQuotationMaterialPriceDisplaySnapshot materialPriceDisplay = new(1);
+    private DisplayPricingContext? displayContext;
+    private long nextDisplaySubscriber;
     private readonly List<UploadEntry> entries = [];
     private InstantQuotationSessionState? session;
     private long authoritativeQuoteRevision;
@@ -146,6 +151,25 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     public InstantQuotationOrderQuote? OrderQuote { get; private set; }
 
     public long AuthoritativeQuoteRevision => authoritativeQuoteRevision;
+
+    public InstantQuotationMaterialPriceDisplaySnapshot MaterialPriceDisplay
+    {
+        get { lock (displayGate) return materialPriceDisplay; }
+    }
+
+    /// <summary>Subscribes to display-only frames. Renderers must dispatch and recheck generation themselves.</summary>
+    public IDisposable SubscribeMaterialPriceDisplay(
+        Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask> subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        lock (displayGate)
+        {
+            ThrowIfDisposed();
+            var id = checked(++nextDisplaySubscriber);
+            displaySubscribers.Add(id, subscriber);
+            return new DisplaySubscription(this, id);
+        }
+    }
 
     public bool HasCompleteAuthoritativeQuote => IsCompleteAuthoritativeQuote();
 
@@ -444,6 +468,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
 
         disposed = true;
+        lock (displayGate)
+        {
+            displayContext = null;
+            materialPriceDisplay = new(materialPriceDisplay.Generation);
+            displaySubscribers.Clear();
+        }
         lifetimeCancellation.Cancel();
         foreach (var entry in entries)
         {
@@ -771,16 +801,20 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 return false;
             }
 
-            entries.Clear();
-            entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
-            session = existing;
-            OrderQuote = null;
-            if (parts.Length > 0)
+            await WaitForStateGateAsync(cancellationToken);
+            try
             {
-                await PersistAndPriceAsync(cancellationToken);
+                ThrowIfPricingCanceled(cancellationToken);
+                entries.Clear();
+                entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
+                session = existing;
+                OrderQuote = null;
+                if (parts.Length > 0) await PersistAndPriceAsync(cancellationToken);
+                else BeginMaterialDisplay();
+                RefreshState();
+                return true;
             }
-            RefreshState();
-            return true;
+            finally { stateGate.Release(); }
         }
         catch (ArgumentException)
         {
@@ -790,19 +824,26 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
     {
+        var generation = BeginMaterialDisplay();
         using var pricingCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
         try
         {
-            await PersistAndPriceCoreAsync(pricingCancellation.Token);
+            await PersistAndPriceCoreAsync(pricingCancellation.Token, generation);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            ClearMaterialDisplay(generation);
             cancellationToken.ThrowIfCancellationRequested();
+            throw;
+        }
+        catch
+        {
+            ClearMaterialDisplay(generation);
             throw;
         }
     }
 
-    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken)
+    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken, long generation)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OrderQuote = null;
@@ -831,14 +872,17 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
             else
             {
+                var context = CaptureMaterialDisplay(generation, state.Parts, session, cancellationToken);
                 var pricing = authoritativePricingService.QuoteAsync(
-                    session, ownerIdentity, includeComparisons: true, cancellationToken);
+                    session, ownerIdentity, includeComparisons: true,
+                    (frame, token) => PublishMaterialDisplayAsync(context, frame, token), cancellationToken);
                 // Cancellation stops this consumer even when a dependency ignores its token.
                 // An abandoned dependency has no continuation into ticket/publication code.
                 _ = pricing.ContinueWith(static task => { _ = task.Exception; },
                     CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
                     TaskScheduler.Default);
                 quote = await pricing.WaitAsync(cancellationToken);
+                CompleteMaterialDisplay(generation);
             }
         }
 
@@ -877,12 +921,121 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
+        if (quote is null) ClearMaterialDisplay(generation);
         OrderQuote = quote;
         if (OrderQuote is not null)
         {
             authoritativeQuoteRevision++;
         }
         RefreshState();
+    }
+
+    private long BeginMaterialDisplay()
+    {
+        lock (displayGate)
+        {
+            displayContext = null;
+            materialPriceDisplay = new(checked(materialPriceDisplay.Generation + 1));
+            return materialPriceDisplay.Generation;
+        }
+    }
+
+    private void ClearMaterialDisplay(long generation)
+    {
+        lock (displayGate)
+        {
+            if (materialPriceDisplay.Generation != generation) return;
+            displayContext = null;
+            materialPriceDisplay = new(generation);
+        }
+    }
+
+    private void CompleteMaterialDisplay(long generation)
+    {
+        lock (displayGate)
+        {
+            if (materialPriceDisplay.Generation == generation) displayContext = null;
+        }
+    }
+
+    private DisplayPricingContext? CaptureMaterialDisplay(long generation,
+        IReadOnlyList<InstantQuotationPart> acceptedParts, InstantQuotationSessionState persisted,
+        CancellationToken cancellationToken)
+    {
+        var accepted = acceptedParts.Select(DisplayPartBinding.Create).ToArray();
+        var retained = persisted.Parts.Select(DisplayPartBinding.Create).ToArray();
+        if (accepted.Select(part => part.PartId).Distinct().Count() != accepted.Length
+            || !accepted.SequenceEqual(retained)
+            || !string.Equals(ownerIdentity, persisted.OwnerIdentity, StringComparison.Ordinal)) return null;
+        var context = new DisplayPricingContext(generation, persisted.SessionId, persisted.UpdatedAt,
+            persisted.OwnerIdentity, Array.AsReadOnly(retained), cancellationToken);
+        lock (displayGate)
+        {
+            if (disposed || cancellationToken.IsCancellationRequested || materialPriceDisplay.Generation != generation) return null;
+            displayContext = context;
+        }
+        return context;
+    }
+
+    private async ValueTask PublishMaterialDisplayAsync(DisplayPricingContext? context,
+        InstantQuotationMaterialPricingProgress frame, CancellationToken cancellationToken)
+    {
+        InstantQuotationMaterialPriceDisplaySnapshot snapshot;
+        KeyValuePair<long, Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask>>[] subscribers;
+        lock (displayGate)
+        {
+            if (!IsCurrentMaterialDisplay(context, cancellationToken)) return;
+            if (frame is null || string.IsNullOrWhiteSpace(frame.MaterialKey)
+                || !context!.Parts.Any(part => part.PartId == frame.PartId)
+                || !PricingCatalog.Materials.ContainsKey(frame.MaterialKey))
+                throw new InvalidOperationException("The material display frame does not match the pricing context.");
+            try { snapshot = materialPriceDisplay.Apply(frame); }
+            catch (ArgumentException exception) { throw new InvalidOperationException("The material display frame is invalid.", exception); }
+            if (ReferenceEquals(snapshot, materialPriceDisplay)) return;
+            materialPriceDisplay = snapshot;
+            subscribers = displaySubscribers.ToArray();
+        }
+
+        foreach (var subscriber in subscribers)
+        {
+            var notification = Task.Run(async () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                lock (displayGate)
+                {
+                    if (!IsCurrentMaterialDisplay(context, cancellationToken)
+                        || !displaySubscribers.ContainsKey(subscriber.Key)) return;
+                }
+                await subscriber.Value(snapshot, cancellationToken);
+            }, cancellationToken);
+            _ = notification.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            try { await notification.WaitAsync(cancellationToken); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception exception) { throw new InvalidOperationException("Material display notification failed.", exception); }
+        }
+    }
+
+    private bool IsCurrentMaterialDisplay(DisplayPricingContext? context, CancellationToken token) =>
+        context is not null && ReferenceEquals(displayContext, context)
+        && materialPriceDisplay.Generation == context.Generation && !disposed
+        && !context.CancellationToken.IsCancellationRequested && !token.IsCancellationRequested;
+
+    private sealed record DisplayPricingContext(long Generation, string SessionId, DateTimeOffset UpdatedAt,
+        string? OwnerIdentity, IReadOnlyList<DisplayPartBinding> Parts, CancellationToken CancellationToken);
+
+    private sealed record DisplayPartBinding(Guid PartId, string UploadReference, Guid? FileId, string GeometrySha256,
+        string? UploadSha256, string MaterialKey, string Color, int Quantity, BuildPreference BuildPreference)
+    {
+        public static DisplayPartBinding Create(InstantQuotationPart part) => new(part.PartId,
+            part.UploadReference.Value, part.PhysicalAnalysisUpload?.FileId, part.Geometry.Sha256,
+            part.PhysicalAnalysisUpload?.Sha256, part.Configuration.MaterialKey, part.Configuration.Color,
+            part.Configuration.Quantity, part.Configuration.BuildPreference);
+    }
+
+    private sealed class DisplaySubscription(InstantQuotationWorkflowCoordinator owner, long id) : IDisposable
+    {
+        public void Dispose() { lock (owner.displayGate) owner.displaySubscribers.Remove(id); }
     }
 
     private async Task WaitForStateGateAsync(CancellationToken cancellationToken)
