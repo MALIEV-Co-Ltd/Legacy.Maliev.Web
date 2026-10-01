@@ -1,5 +1,10 @@
 @page
 @model Legacy.Maliev.Web.Pages.Legal.IndexModel
 @using Legacy.Maliev.Web.Components.Pages.Legal
-@{ ViewData["Title"] = Localizer["Legal information | MALIEV"]; }
+@{
+    ViewData["Title"] = Localizer["Legal information | MALIEV"];
+    ViewData["Description"] = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th"
+        ? "รวมข้อมูลด้านกฎหมาย นโยบายความเป็นส่วนตัว ข้อกำหนดการใช้งาน และข้อตกลงรักษาความลับสำหรับการติดต่อและโปรเจ็คงานผลิตกับ MALIEV"
+        : "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.";
+}
 <component type="typeof(LegalContent)" render-mode="Static" />

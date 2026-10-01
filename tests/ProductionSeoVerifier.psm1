@@ -342,6 +342,39 @@ function Get-HtmlAttributeValue {
     return [System.Net.WebUtility]::HtmlDecode($match.Groups['value'].Value)
 }
 
+function Test-JsonLdScriptOpeningTag {
+    param([Parameter(Mandatory = $true)][string]$Tag)
+
+    $attributePattern = '\G\s+(?<name>[^\s/"''=<>`]+)(?:\s*=\s*(?:"(?<value>[^"]*)"|''(?<value>[^'']*)''|(?<value>[^\s"''=<>`]+)))?'
+    $attributes = [regex]::new($attributePattern)
+    $position = '<script'.Length
+    $typeCount = 0
+    $typeValue = ''
+    while ($position -lt $Tag.Length) {
+        if ($Tag.Substring($position) -match '^\s*/?>$') {
+            return $typeCount -eq 1 -and $typeValue -ieq 'application/ld+json'
+        }
+        $attribute = $attributes.Match($Tag, $position)
+        if (-not $attribute.Success) { return $false }
+        if ($attribute.Groups['name'].Value -ieq 'type') {
+            $typeCount++
+            $typeValue = [System.Net.WebUtility]::HtmlDecode($attribute.Groups['value'].Value)
+        }
+        $position = $attribute.Index + $attribute.Length
+    }
+    return $false
+}
+
+function Get-JsonLdScriptMatches {
+    param([Parameter(Mandatory = $true)][string]$Html)
+
+    foreach ($match in [regex]::Matches($Html, '(?is)(?<tag><script\b(?:[^>"'']|"[^"]*"|''[^'']*'')*>)(?<json>.*?)</script>')) {
+        if (Test-JsonLdScriptOpeningTag -Tag $match.Groups['tag'].Value) {
+            $match
+        }
+    }
+}
+
 function Test-PublicPageSeoContract {
     param(
         [Parameter(Mandatory = $true)]
@@ -366,7 +399,7 @@ function Test-PublicPageSeoContract {
 
     $documentHtml = [regex]::Replace(
         $Html,
-        '(?is)<script\b(?![^>]*\btype\s*=\s*["'']application/ld\+json["''])[^>]*>.*?</script>',
+        '(?is)<script\b[^>]*>.*?</script>',
         '')
     $metaTags = @([regex]::Matches($documentHtml, '(?is)<meta\b[^>]*>'))
     $linkTags = @([regex]::Matches($documentHtml, '(?is)<link\b[^>]*>'))
@@ -424,8 +457,22 @@ function Test-PublicPageSeoContract {
         ''
     }
     $expectedPath = ([uri]$PageUri).AbsolutePath
-    $expectedCanonical = $CanonicalOrigin.TrimEnd('/') + $(if ($expectedPath -eq '/') { '/' } else { $expectedPath })
-    $expectedEnglish = "${expectedCanonical}?culture=en"
+    $expectedThai = $CanonicalOrigin.TrimEnd('/') + $(if ($expectedPath -eq '/') { '/' } else { $expectedPath })
+    $expectedEnglish = "${expectedThai}?culture=en"
+    $query = [System.Web.HttpUtility]::ParseQueryString(([uri]$PageUri).Query)
+    $cultures = @($query.GetValues('culture') | Where-Object { $null -ne $_ })
+    $uiCultures = @($query.GetValues('ui-culture') | Where-Object { $null -ne $_ })
+    $queryUnambiguous = $cultures.Count -le 1 -and $uiCultures.Count -le 1
+    $selectedCulture = if ($uiCultures.Count -eq 1 -and -not [string]::IsNullOrEmpty($uiCultures[0])) {
+        $uiCultures[0]
+    }
+    elseif ($cultures.Count -eq 1) {
+        $cultures[0]
+    }
+    else {
+        'th'
+    }
+    $expectedCanonical = if ($selectedCulture -ieq 'en') { $expectedEnglish } else { $expectedThai }
 
     $alternateValues = @{}
     $duplicateAlternate = $false
@@ -446,9 +493,7 @@ function Test-PublicPageSeoContract {
     $robotsContent = @($robotsTags | ForEach-Object {
         Get-HtmlAttributeValue -Tag $_.Value -Name 'content'
     }) -join ','
-    $jsonLdTags = @([regex]::Matches(
-        $Html,
-        '(?is)<script\b[^>]*type\s*=\s*["'']application/ld\+json["''][^>]*>(?<json>.*?)</script>'))
+    $jsonLdTags = @(Get-JsonLdScriptMatches -Html $Html)
     $invalidJsonLd = 0
     foreach ($tag in $jsonLdTags) {
         try {
@@ -462,15 +507,15 @@ function Test-PublicPageSeoContract {
     $titlePassed = $titleTags.Count -eq 1 -and -not [string]::IsNullOrWhiteSpace($title)
     $descriptionPassed = $descriptionTags.Count -eq 1 -and $description.Trim().Length -ge 40
     $robotsPassed = $robotsTags.Count -le 1 -and $robotsContent -notmatch '(?i)\b(?:noindex|nofollow)\b'
-    $canonicalPassed = $canonicalTags.Count -eq 1 -and $canonicalHref -ceq $expectedCanonical
+    $canonicalPassed = $queryUnambiguous -and $canonicalTags.Count -eq 1 -and $canonicalHref -ceq $expectedCanonical
     $alternatePassed = $alternateValues.Count -eq 3 `
         -and -not $duplicateAlternate `
         -and $alternateValues.ContainsKey('en') `
         -and $alternateValues.ContainsKey('th') `
         -and $alternateValues.ContainsKey('x-default') `
         -and $alternateValues['en'] -ceq $expectedEnglish `
-        -and $alternateValues['th'] -ceq $expectedCanonical `
-        -and $alternateValues['x-default'] -ceq $expectedCanonical
+        -and $alternateValues['th'] -ceq $expectedThai `
+        -and $alternateValues['x-default'] -ceq $expectedThai
     $openGraphCorePassed = $ogTitleTags.Count -eq 1 -and $ogDescriptionTags.Count -eq 1 `
         -and -not [string]::IsNullOrWhiteSpace((Get-HtmlAttributeValue -Tag $ogTitleTags[0].Value -Name 'content')) `
         -and -not [string]::IsNullOrWhiteSpace((Get-HtmlAttributeValue -Tag $ogDescriptionTags[0].Value -Name 'content'))
@@ -597,7 +642,7 @@ function Test-ServiceJsonLdContract {
 
     $serviceNodes = @()
     $invalidJsonLd = 0
-    foreach ($match in [regex]::Matches($Html, '(?is)<script\b[^>]*type\s*=\s*["'']application/ld\+json["''][^>]*>(?<json>.*?)</script>')) {
+    foreach ($match in Get-JsonLdScriptMatches -Html $Html) {
         try {
             $json = $match.Groups['json'].Value | ConvertFrom-Json -ErrorAction Stop
             $serviceNodes += @(Find-JsonLdNode -Value $json | Where-Object {
@@ -627,7 +672,7 @@ function Test-LocalBusinessHoursContract {
     )
 
     $localBusinesses = @()
-    foreach ($match in [regex]::Matches($Html, '(?is)<script\b[^>]*type\s*=\s*["'']application/ld\+json["''][^>]*>(?<json>.*?)</script>')) {
+    foreach ($match in Get-JsonLdScriptMatches -Html $Html) {
         try {
             $json = $match.Groups['json'].Value | ConvertFrom-Json
             $localBusinesses += @(Find-JsonLdNode -Value $json | Where-Object { $_.'@type' -eq 'LocalBusiness' })
