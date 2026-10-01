@@ -2395,7 +2395,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(documentHeading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(downloadLabel, decodedSource, StringComparison.Ordinal);
-        Assert.Contains("href=\"mailto:nda@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/contact#contact-us\" data-contact-email=\"nda@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -3569,7 +3569,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains($">{qualifications}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{offerHeading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("href=\"mailto:career@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/contact#contact-us\" data-contact-email=\"career@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("onclick=\"PrintJobDescription()\"", source, StringComparison.Ordinal);
         Assert.Contains("function PrintJobDescription()", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Career\"", source, StringComparison.Ordinal);

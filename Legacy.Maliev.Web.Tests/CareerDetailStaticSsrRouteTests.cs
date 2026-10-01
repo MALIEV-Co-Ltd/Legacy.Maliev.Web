@@ -79,7 +79,7 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"mailto:career@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/contact#contact-us\" data-contact-email=\"career@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("onclick=\"PrintJobDescription()\"", source, StringComparison.Ordinal);
         Assert.Contains("function PrintJobDescription()", source, StringComparison.Ordinal);
         Assert.Equal(1, CountLink(source, "canonical", culture == "en"

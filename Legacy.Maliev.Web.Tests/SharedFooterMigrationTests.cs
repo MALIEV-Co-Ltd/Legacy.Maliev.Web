@@ -82,7 +82,7 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
         Assert.Contains(businessHours, source, StringComparison.Ordinal);
         Assert.Contains(rights, source, StringComparison.Ordinal);
         Assert.Contains($"<a href=\"/Knowledges\">{knowledgeCenter}</a>", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"mailto:info@maliev.com\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/contact#contact-us\" data-contact-email=\"info@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66818030404\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66898950690\"", source, StringComparison.Ordinal);
         Assert.Contains($"href=\"{SocialNetworks.Line}\"", source, StringComparison.Ordinal);
