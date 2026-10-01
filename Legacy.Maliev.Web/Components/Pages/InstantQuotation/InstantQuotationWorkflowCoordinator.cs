@@ -61,6 +61,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly string? ownerIdentity;
     private readonly SemaphoreSlim stateGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCancellation = new();
+    private readonly CancellationToken lifetimeToken;
     private readonly List<UploadEntry> entries = [];
     private InstantQuotationSessionState? session;
     private long authoritativeQuoteRevision;
@@ -82,6 +83,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         this.analytics = analytics ?? NoOpInstantQuotationAnalyticsTracker.Instance;
         this.quoteTicketService = quoteTicketService;
         this.authoritativePricingService = authoritativePricingService;
+        lifetimeToken = lifetimeCancellation.Token;
     }
 
     public InstantQuotationWorkflowState State { get; private set; } = InstantQuotationWorkflowState.Empty;
@@ -283,6 +285,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.Part!.UploadReference,
             operationId,
             cancellationToken);
+        ThrowIfPricingCanceled(cancellationToken);
         if (result.OperationId != operationId
             || result.ServiceStatus is not InstantQuotationServiceStatus.Available
             || result.AuthorizationStatus is not InstantQuotationAuthorizationStatus.Authorized
@@ -295,9 +298,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             return;
         }
 
-        await stateGate.WaitAsync(cancellationToken);
+        await WaitForStateGateAsync(cancellationToken);
         try
         {
+            ThrowIfPricingCanceled(cancellationToken);
             entries.Remove(entry);
             await PersistAndPriceAsync(cancellationToken);
         }
@@ -367,9 +371,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(quantity));
         }
 
-        await stateGate.WaitAsync(cancellationToken);
+        await WaitForStateGateAsync(cancellationToken);
         try
         {
+            ThrowIfPricingCanceled(cancellationToken);
             var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
                 ?? throw new ArgumentException("The part was not found.", nameof(partId));
             var previous = entry.Part!;
@@ -461,7 +466,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         entry.OperationCancellation?.Dispose();
         entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
-            lifetimeCancellation.Token);
+            lifetimeToken);
         var operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
             && entry.OperationId is { Length: > 0 } retainedOperationId
                 ? retainedOperationId
@@ -785,6 +790,21 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
     {
+        using var pricingCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
+        try
+        {
+            await PersistAndPriceCoreAsync(pricingCancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw;
+        }
+    }
+
+    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         OrderQuote = null;
         var state = new InstantQuotationOrderState(CurrentParts());
         var updated = session! with
@@ -798,20 +818,35 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new InvalidOperationException("The protected quotation session could not be updated.");
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         session = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken)
             ?? throw new InvalidOperationException("The protected quotation session could not be read.");
+        cancellationToken.ThrowIfCancellationRequested();
         InstantQuotationOrderQuote? quote = null;
         if (state.Parts.Count > 0)
         {
-            quote = authoritativePricingService is null
-                ? pricingService.Quote(state)
-                : await authoritativePricingService.QuoteAsync(
+            if (authoritativePricingService is null)
+            {
+                quote = pricingService.Quote(state);
+            }
+            else
+            {
+                var pricing = authoritativePricingService.QuoteAsync(
                     session, ownerIdentity, includeComparisons: true, cancellationToken);
+                // Cancellation stops this consumer even when a dependency ignores its token.
+                // An abandoned dependency has no continuation into ticket/publication code.
+                _ = pricing.ContinueWith(static task => { _ = task.Exception; },
+                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+                quote = await pricing.WaitAsync(cancellationToken);
+            }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (quote is not null && quoteTicketService is not null)
         {
             var current = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             if (current is null || current.UpdatedAt != session.UpdatedAt)
             {
                 quote = null;
@@ -829,6 +864,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 {
                     QuoteAuthorization = quoteTicketService.Issue(receipted, quote, DateTimeOffset.UtcNow),
                 };
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!await sessionStore.PutAsync(receipted, ownerIdentity, cancellationToken))
                 {
                     quote = null;
@@ -840,12 +876,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 }
             }
         }
+        cancellationToken.ThrowIfCancellationRequested();
         OrderQuote = quote;
         if (OrderQuote is not null)
         {
             authoritativeQuoteRevision++;
         }
         RefreshState();
+    }
+
+    private async Task WaitForStateGateAsync(CancellationToken cancellationToken)
+    {
+        using var gateCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
+        try
+        {
+            await stateGate.WaitAsync(gateCancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw;
+        }
+    }
+
+    private void ThrowIfPricingCanceled(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lifetimeToken.ThrowIfCancellationRequested();
     }
 
     private InstantQuotationPart[] CurrentParts() => entries
