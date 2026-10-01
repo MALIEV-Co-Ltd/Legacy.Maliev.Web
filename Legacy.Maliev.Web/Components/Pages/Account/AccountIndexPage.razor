@@ -13,6 +13,7 @@
     var tokens = model.IsAuthenticated ? Antiforgery.GetAndStoreTokens(context) : null;
 }
 <PageTitle>@Localizer["Member account | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
 <main class="auth-page" data-migration-route-owner="blazor-static-ssr">
     <div class="maliev-container auth-shell">
         <section class="auth-intro">
