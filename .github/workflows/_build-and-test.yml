@@ -51,6 +51,9 @@ jobs:
       - name: Build exact-pinned disposable profile boundary services
         shell: pwsh
         run: ./scripts/prepare-profile-producer-boundary.ps1
+      - name: Build exact-pinned disposable member authentication proof
+        shell: pwsh
+        run: ./scripts/prepare-member-auth-indexing-proof.ps1
       - name: Build exact-pinned disposable SCB payment boundary service
         shell: pwsh
         run: ./scripts/prepare-scb-payment-boundary.ps1
