@@ -120,48 +120,8 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         InstantQuotationPart part,
         IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>? physical)
     {
-        ArgumentNullException.ThrowIfNull(part);
-        ArgumentNullException.ThrowIfNull(part.Geometry);
-        ArgumentNullException.ThrowIfNull(part.Configuration);
-
+        var (material, geometryInput, buildPreference) = ValidatePart(part);
         var configuration = part.Configuration;
-        if (configuration.Quantity < 1 || configuration.Quantity > PricingCatalog.MaximumAdditiveQuantity)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(configuration.Quantity),
-                configuration.Quantity,
-                $"Quantity must be between 1 and {PricingCatalog.MaximumAdditiveQuantity}.");
-        }
-
-        var material = PricingCatalog.ResolveMaterial(configuration.MaterialKey)
-            ?? throw new ArgumentException("The selected material is not supported.", nameof(configuration.MaterialKey));
-        if (!PricingCatalog.IsColorSupported(material.Key, configuration.Color))
-        {
-            throw new ArgumentException(
-                "The selected color is not supported for the selected material.",
-                nameof(configuration.Color));
-        }
-
-        var geometry = part.Geometry;
-        var geometryInput = new GeometryInput
-        {
-            HeightMm = geometry.HeightMm,
-            VolumeMm3 = geometry.VolumeMm3,
-            FootprintMm2 = geometry.FootprintMm2,
-            AreaProfileMm2 = geometry.AreaProfileMm2,
-            PerimeterProfileMm = geometry.PerimeterProfileMm,
-            UnsupportedAreaProfileMm2 = geometry.UnsupportedAreaProfileMm2,
-        };
-        var validation = AdditiveGeometryValidator.Validate(geometryInput, configuration.Quantity);
-        if (!validation.IsValid)
-        {
-            throw new ArgumentException(
-                $"The submitted geometry is not eligible for pricing: {string.Join(',', validation.ReasonCodes)}.",
-                nameof(part.Geometry));
-        }
-        var buildPreference = material.Process == PrintProcess.Resin
-            ? BuildPreference.Standard
-            : configuration.BuildPreference;
         InstantQuotationPhysicalAnalysisReceipt? receipt = null;
         ItemQuote item;
         if (material.Process == PrintProcess.Fdm)
@@ -212,6 +172,65 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         {
             ResinProfile = item.ResinProfile,
         };
+    }
+
+    // Reuses the exact candidate kernel and validation; never projects its receipt.
+    internal double? MaterialUnitPrice(
+        InstantQuotationPart part,
+        MaterialInfo candidate,
+        IReadOnlyDictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult> physical)
+    {
+        var (_, geometry, build) = ValidatePart(part);
+        var amount = MaterialPrice(part, candidate, geometry, build, physical).UnitPrice;
+        return amount is { } value && double.IsFinite(value) && value > 0 ? value : null;
+    }
+
+    private static (MaterialInfo Material, GeometryInput Geometry, BuildPreference Build) ValidatePart(
+        InstantQuotationPart part)
+    {
+        ArgumentNullException.ThrowIfNull(part);
+        ArgumentNullException.ThrowIfNull(part.Geometry);
+        ArgumentNullException.ThrowIfNull(part.Configuration);
+
+        var configuration = part.Configuration;
+        if (configuration.Quantity < 1 || configuration.Quantity > PricingCatalog.MaximumAdditiveQuantity)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(configuration.Quantity),
+                configuration.Quantity,
+                $"Quantity must be between 1 and {PricingCatalog.MaximumAdditiveQuantity}.");
+        }
+
+        var material = PricingCatalog.ResolveMaterial(configuration.MaterialKey)
+            ?? throw new ArgumentException("The selected material is not supported.", nameof(configuration.MaterialKey));
+        if (!PricingCatalog.IsColorSupported(material.Key, configuration.Color))
+        {
+            throw new ArgumentException(
+                "The selected color is not supported for the selected material.",
+                nameof(configuration.Color));
+        }
+
+        var geometry = part.Geometry;
+        var geometryInput = new GeometryInput
+        {
+            HeightMm = geometry.HeightMm,
+            VolumeMm3 = geometry.VolumeMm3,
+            FootprintMm2 = geometry.FootprintMm2,
+            AreaProfileMm2 = geometry.AreaProfileMm2,
+            PerimeterProfileMm = geometry.PerimeterProfileMm,
+            UnsupportedAreaProfileMm2 = geometry.UnsupportedAreaProfileMm2,
+        };
+        var validation = AdditiveGeometryValidator.Validate(geometryInput, configuration.Quantity);
+        if (!validation.IsValid)
+        {
+            throw new ArgumentException(
+                $"The submitted geometry is not eligible for pricing: {string.Join(',', validation.ReasonCodes)}.",
+                nameof(part.Geometry));
+        }
+        var buildPreference = material.Process == PrintProcess.Resin
+            ? BuildPreference.Standard
+            : configuration.BuildPreference;
+        return (material, geometryInput, buildPreference);
     }
 
     private static InstantQuotationMaterialPrice MaterialPrice(
