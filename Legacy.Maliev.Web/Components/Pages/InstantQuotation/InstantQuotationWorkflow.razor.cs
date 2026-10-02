@@ -144,7 +144,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials => workflow?.Materials ?? [];
 
-    private InstantQuotationOrderQuote? OrderQuote => workflow?.OrderQuote;
+    private bool HasUnacceptedConfiguration(InstantQuotationWorkflowPartViewModel part) =>
+        quantityEdits.IsPending(part.PartId)
+        || displayIntents.TryGetValue(part.PartId, out var intended) && intended != part.Configuration;
+
+    private InstantQuotationPartQuote? DisplayQuote(InstantQuotationWorkflowPartViewModel part) =>
+        HasUnacceptedConfiguration(part) ? null : part.Quote;
+
+    private InstantQuotationOrderQuote? OrderQuote =>
+        Parts.Any(HasUnacceptedConfiguration) ? null : workflow?.OrderQuote;
 
     private bool HasConfigurationWarnings => ConfigurationParts.Any(HasManufacturingWarning);
 
