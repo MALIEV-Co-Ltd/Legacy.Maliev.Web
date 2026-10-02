@@ -7,10 +7,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
+public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData(320, "th")]
@@ -340,10 +341,55 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests
             {
                 var partId = await parts.Nth(index).GetAttributeAsync("data-part-id");
                 await parts.Nth(index).Locator("button[aria-label^='View']").ClickAsync();
-                await page.WaitForFunctionAsync(
-                    "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
-                    partId);
+                try
+                {
+                    await page.WaitForFunctionAsync(
+                        "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                        partId);
+                }
+                catch (TimeoutException original)
+                {
+                    await SelectedPrintTimeTimeoutDiagnostics.AttachAsync(original, index + 1, partId,
+                        () => page.EvaluateAsync<string>("""
+                            () => {
+                                const duration = document.querySelector('[data-workflow-selected-print-time]');
+                                const configuration = document.querySelector('[data-workflow-material-picker]');
+                                const quantity = configuration?.querySelector('input[name="quantity"]');
+                                return JSON.stringify({
+                                    actualPartId: duration?.getAttribute('data-part-id'),
+                                    configurationPartId: quantity?.id?.replace(/^quantity-/, ''),
+                                    workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                                    isRepricing: !!document.querySelector('[data-pricing-loading-status]'),
+                                    material: configuration?.querySelector('select[name="material"]')?.value,
+                                    quantity: quantity?.value,
+                                    durationPresent: !!duration,
+                                    unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]')
+                                });
+                            }
+                            """), description => output.WriteLine(description));
+                    throw;
+                }
+                using var completionScope = factory.Services.CreateScope();
+                var completionStore = completionScope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
+                var beforeMaterialChange = await completionStore.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                Assert.NotNull(beforeMaterialChange);
                 await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+                using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                {
+                    try
+                    {
+                        while (!SelectedPrintTimeTimeoutDiagnostics.IsMaterialChangeComplete(
+                            await completionStore.GetAsync(upload.SessionId, upload.OwnerIdentity, completionDeadline.Token)
+                                .WaitAsync(completionDeadline.Token), beforeMaterialChange.UpdatedAt, Guid.Parse(partId!)))
+                        {
+                            await Task.Delay(TimeSpan.FromMilliseconds(100), completionDeadline.Token);
+                        }
+                    }
+                    catch (OperationCanceledException) when (completionDeadline.IsCancellationRequested)
+                    {
+                        throw new TimeoutException("Protected material change completion was not observed.");
+                    }
+                }
                 await page.WaitForFunctionAsync(
                     "() => !document.querySelector('[data-pricing-loading-status]')");
             }
