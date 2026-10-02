@@ -549,6 +549,7 @@
   <data name="Checking physical build…" xml:space="preserve"><value>กำลังตรวจสอบการพิมพ์จริง…</value></data>
   <data name="Physical build evidence is ready. Verified analysis is used for the current price." xml:space="preserve"><value>ข้อมูลการพิมพ์จริงพร้อมแล้ว ราคาปัจจุบันคำนวณจากผลการวิเคราะห์ที่ตรวจสอบแล้ว</value></data>
   <data name="Physical build analysis is unavailable. Engineering review is required." xml:space="preserve"><value>ไม่สามารถวิเคราะห์การพิมพ์จริงได้ ต้องให้วิศวกรตรวจสอบ</value></data>
+  <data name="Calculating price…" xml:space="preserve"><value>กำลังคำนวณราคา…</value></data>
   <data name="Price unavailable — engineering review required." xml:space="preserve"><value>ยังไม่สามารถแสดงราคาได้ ต้องให้วิศวกรตรวจสอบ</value></data>
   <data name="Price" xml:space="preserve"><value>ราคา</value></data>
   <data name="Saved account values are locked. Only missing details can be added here." xml:space="preserve"><value>ข้อมูลบัญชีที่บันทึกไว้ถูกล็อกไว้ คุณสามารถเพิ่มได้เฉพาะข้อมูลที่ยังขาด</value></data>

@@ -34,6 +34,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool incompletePreviewMeasured;
     private long incompletePreviewRevision;
     private bool disposed;
+    private IDisposable? materialDisplaySubscription;
+    private long minimumDisplayGeneration;
+    private readonly Dictionary<Guid, InstantQuotationPartConfiguration> displayIntents = [];
+    private readonly Dictionary<Guid, (long Revision, string Raw)> quantityDrafts = [];
+    private long quantityDraftRevision;
     private ElementReference configurationSection;
     private ElementReference reviewSection;
     private ElementReference customerDetailsSection;
@@ -69,18 +74,58 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         : workflow?.State ?? InitialState;
 
     private WorkflowSectionVisibility VisibleSections =>
-        State is InstantQuotationWorkflowState.Error && Parts.Count > 0
-            ? new(Upload: true, Error: true, Viewer: true, Parts: true, Configuration: true)
+        (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
+            || (State is InstantQuotationWorkflowState.Empty && HasMaterialDisplay && Parts.Count > 0)
+            ? new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Viewer: true, Parts: true, Configuration: true)
             : GetVisibleSections(State);
 
     private bool IsBusy => State is InstantQuotationWorkflowState.Uploading;
 
     private bool IsRepricing => repricing.IsActive;
 
+    private bool HasMaterialDisplay => workflow?.MaterialPriceDisplay.Entries.Count > 0;
+
+    private string QuantityInputValue(InstantQuotationWorkflowPartViewModel part) =>
+        quantityDrafts.TryGetValue(part.PartId, out var draft)
+            ? draft.Raw
+            : part.Configuration.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private IReadOnlyList<InstantQuotationMaterialPricingProgress> DisplayRows(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (quantityEdits.IsPending(part.PartId) && !displayIntents.ContainsKey(part.PartId)
+            || displayIntents.TryGetValue(part.PartId, out var intended) && intended != part.Configuration)
+            return [];
+        var snapshot = workflow?.MaterialPriceDisplay;
+        if (snapshot is not null && snapshot.Generation > minimumDisplayGeneration)
+            return snapshot.Entries.Where(row => row.PartId == part.PartId).ToArray();
+        return [];
+    }
+
+    private ValueTask MaterialDisplayChangedAsync(InstantQuotationMaterialPriceDisplaySnapshot snapshot, CancellationToken token)
+    {
+        if (disposed || token.IsCancellationRequested) return ValueTask.CompletedTask;
+        return new(InvokeAsync(() =>
+        {
+            if (disposed || token.IsCancellationRequested || workflow is null
+                || workflow.MaterialPriceDisplay.Generation != snapshot.Generation) return;
+            StateHasChanged();
+        }));
+    }
+
     private bool InputDisabled => IsBusy || batchInProgress;
 
-    private bool CanEnterReview => workflow?.State is InstantQuotationWorkflowState.Configured
-        && workflow.OrderQuote is not null;
+    private bool CanEnterReview
+    {
+        get
+        {
+            if (disposed || IsRepricing || workflow?.State is not InstantQuotationWorkflowState.Configured
+                || workflow.OrderQuote is null) return false;
+            var parts = Parts;
+            return !parts.Any(part => quantityEdits.IsPending(part.PartId))
+                && displayIntents.All(intent => parts.Any(part => part.PartId == intent.Key
+                    && part.Configuration == intent.Value));
+        }
+    }
 
     private IReadOnlyList<InstantQuotationWorkflowUploadViewModel> Uploads => workflow?.Uploads ?? [];
 
@@ -288,6 +333,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             analytics,
             quoteTicketService,
             authoritativePricingService);
+        materialDisplaySubscription = workflow.SubscribeMaterialPriceDisplay(MaterialDisplayChangedAsync);
         try
         {
             var identityAccessor = Services.GetService<IInstantQuotationWorkflowSessionIdentityAccessor>();
@@ -478,6 +524,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 thicknessStatuses.Remove(partId);
                 thicknessToggleRevisions.Remove(partId);
                 quantityEdits.Forget(partId);
+                quantityDrafts.Remove(partId);
+                displayIntents.Remove(partId);
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
                 if (selectedPreviewPartId == partId)
                 {
@@ -794,24 +842,32 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         await UpdatePartAppearanceAsync(partId, color);
     }
 
-    private void OnQuantityInput(Guid partId)
+    private void OnQuantityInput(Guid partId, ChangeEventArgs args)
     {
+        if (Parts.All(part => part.PartId != partId)) return;
+        quantityDrafts[partId] = (checked(++quantityDraftRevision), args.Value?.ToString() ?? "");
+        minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
+        displayIntents.Remove(partId);
         quantityEdits.Begin(partId);
     }
 
-    private Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
+    private async Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
     {
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
-        return quantityEdits.RepriceAsync(partId,
+        var revision = quantityDrafts.GetValueOrDefault(partId).Revision;
+        await quantityEdits.RepriceAsync(partId,
             () => UpdateConfigurationAsync(part, part.Configuration.MaterialKey, part.Configuration.Color, quantity));
+        if (quantityDrafts.TryGetValue(partId, out var current) && current.Revision == revision)
+            quantityDrafts.Remove(partId);
     }
 
     private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
     {
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
+        displayIntents[partId] = part.Configuration with { BuildPreference = buildPreference };
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(
             part.PartId,
             part.Configuration.MaterialKey,
@@ -867,11 +923,23 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         InstantQuotationWorkflowPartViewModel part,
         string material,
         string color,
-        int quantity) => RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
+        int quantity)
+    {
+        displayIntents[part.PartId] = part.Configuration with { MaterialKey = material, Color = color, Quantity = quantity };
+        return RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
             ?? Task.CompletedTask);
+    }
 
-    private Task RepriceAsync(Func<Task> update) =>
-        repricing.RunAsync(update, () => InvokeAsync(StateHasChanged));
+    private async Task RepriceAsync(Func<Task> update)
+    {
+        minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
+        try { await repricing.RunAsync(update, () => InvokeAsync(StateHasChanged)); }
+        finally
+        {
+            if (!repricing.IsActive) displayIntents.Clear();
+            if (!disposed) await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private void InvalidatePhysicalAnalysis(Guid partId)
     {
@@ -1014,6 +1082,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private void EnterReview()
     {
+        if (!CanEnterReview) return;
         workflow?.EnterReview();
         pendingFocus = PendingWorkflowFocus.Review;
     }
@@ -1082,6 +1151,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         disposed = true;
+        materialDisplaySubscription?.Dispose();
+        materialDisplaySubscription = null;
+        quantityDrafts.Clear();
+        displayIntents.Clear();
         incompletePreviewKey = null;
         physicalAnalysisCancellation?.Cancel();
         try
