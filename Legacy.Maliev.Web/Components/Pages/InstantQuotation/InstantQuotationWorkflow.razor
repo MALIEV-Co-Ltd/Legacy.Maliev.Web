@@ -223,6 +223,7 @@
             @foreach (var part in ConfigurationParts)
             {
                 var partNumber = PartNumber(part.PartId);
+                var displayQuote = DisplayQuote(part);
                 <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
                     <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
                     <label for="material-@part.PartId">@Localizer["Material"]</label>
@@ -247,7 +248,7 @@
                     </select>
                     <div class="instant-quote__quantity-heading">
                         <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
-                        @if (InstantQuotationBulkSavings.Calculate(part, quantityEdits.IsPending(part.PartId)) is { } savings)
+                        @if (InstantQuotationBulkSavings.Calculate(part, HasUnacceptedConfiguration(part)) is { } savings)
                         {
                             <span data-workflow-bulk-savings>@Localizer["Saved"] @Money(savings)</span>
                         }
@@ -342,12 +343,12 @@
                         </ul>
                     </details>
                 }
-                else if (part.Quote is not null && !IsRepricing && !quantityEdits.IsPending(part.PartId))
+                else if (displayQuote is not null && !IsRepricing)
                 {
                     <details data-workflow-material-comparison>
                         <summary>@Localizer["Compare material prices"]</summary>
                         <ul>
-                            @foreach (var materialPrice in part.Quote.MaterialPrices)
+                            @foreach (var materialPrice in displayQuote.MaterialPrices)
                             {
                                 <li data-workflow-material-price="@materialPrice.MaterialKey">
                                     <span>@Localizer[MaterialDisplayName(materialPrice.MaterialKey)]</span>
@@ -361,39 +362,39 @@
                 }
 
                 <dl data-workflow-part-price data-workflow-part-pricing>
-                    @if (part.Quote is null)
+                    @if (part.Quote is null && !HasUnacceptedConfiguration(part))
                     {
                         <div role="status" data-workflow-price-unavailable>
                             <dt>@Localizer["Price"]</dt>
                             <dd>@Localizer["Price unavailable — engineering review required."]</dd>
                         </div>
                     }
-                    @if (InstantQuotationSelectedPrintTime.IsVisible(part.Quote?.PrintTimeMinutesPerUnit, IsRepricing))
+                    @if (InstantQuotationSelectedPrintTime.IsVisible(displayQuote?.PrintTimeMinutesPerUnit, IsRepricing))
                     {
                         <div data-workflow-selected-print-time data-part-id="@part.PartId">
                             <dt>@Localizer["Estimated print time per part"]</dt>
-                            <dd>@FormatPrintDuration(part.Quote!.PrintTimeMinutesPerUnit)</dd>
+                            <dd>@FormatPrintDuration(displayQuote!.PrintTimeMinutesPerUnit)</dd>
                         </div>
                     }
                     <div>
                         <dt>@Localizer["Unit price"]</dt>
-                        <dd>@Money(part.Quote?.UnitPrice)</dd>
+                        <dd>@Money(displayQuote?.UnitPrice)</dd>
                     </div>
                     <div>
                         <dt>@Localizer["Subtotal"]</dt>
-                        <dd>@Money(part.Quote?.Subtotal)</dd>
+                        <dd>@Money(displayQuote?.Subtotal)</dd>
                     </div>
-                    @if (part.Quote is { TechnicalFilamentMinimumApplied: true } technicalQuote)
+                    @if (displayQuote is { TechnicalFilamentMinimumApplied: true } technicalQuote)
                     {
                         <div data-technical-filament-minimum>
                             <dt>@Localizer["Technical filament preparation minimum included"]</dt>
                             <dd>+@Money(technicalQuote.TechnicalFilamentMinimumAdjustment)</dd>
                         </div>
                     }
-                    @if (part.Quote is not null)
+                    @if (displayQuote is not null)
                     {
                         <div class="instant-quote__bulk-pricing" data-workflow-bulk-pricing tabindex="0" role="region" aria-label="@Localizer["Bulk pricing table"]">
-                            @foreach (var tier in part.Quote.Tiers)
+                            @foreach (var tier in displayQuote.Tiers)
                             {
                                 <div data-workflow-price-tier aria-current="@(tier.Active ? "true" : null)">
                                     <dt>@Localizer["Quantity"] @tier.MinQuantity.ToString("N0")</dt>
