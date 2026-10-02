@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Application.Pricing
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
 
@@ -257,8 +258,9 @@
                            min="1"
                            max="@PricingCatalog.MaximumAdditiveQuantity"
                            aria-describedby="quantity-hint-@part.PartId"
-                           value="@part.Configuration.Quantity"
-                           @oninput="() => OnQuantityInput(part.PartId)"
+                           @bind:get="QuantityInputValue(part)"
+                           @bind:set="raw => OnQuantityInput(part.PartId, new ChangeEventArgs { Value = raw })"
+                           @bind:event="oninput"
                            @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
                     <small id="quantity-hint-@part.PartId">@Localizer["Maximum {0} pieces", PricingCatalog.MaximumAdditiveQuantity.ToString("N0")]</small>
                     <fieldset data-workflow-build-preference>
@@ -316,7 +318,31 @@
                     </div>
                 }
 
-                @if (part.Quote is not null)
+                @if (DisplayRows(part) is { Count: > 0 } displayRows)
+                {
+                    <details data-workflow-material-comparison>
+                        <summary>@Localizer["Compare material prices"]</summary>
+                        <ul>
+                            @foreach (var row in displayRows)
+                            {
+                                <li data-workflow-material-price="@row.MaterialKey">
+                                    <span>@Localizer[MaterialDisplayName(row.MaterialKey)]</span>
+                                    @if (row.Status is InstantQuotationMaterialPricingStatus.Completed)
+                                    {
+                                        <strong>@Money(row.UnitPrice) @Localizer["per piece"]</strong>
+                                    }
+                                    else
+                                    {
+                                        <strong role="status">@(row.Status is InstantQuotationMaterialPricingStatus.Pending
+                                            ? Localizer["Calculating price…"]
+                                            : Localizer["Price unavailable — engineering review required."])</strong>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </details>
+                }
+                else if (part.Quote is not null && !IsRepricing && !quantityEdits.IsPending(part.PartId))
                 {
                     <details data-workflow-material-comparison>
                         <summary>@Localizer["Compare material prices"]</summary>
