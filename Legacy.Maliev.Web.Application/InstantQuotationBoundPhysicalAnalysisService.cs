@@ -12,6 +12,9 @@ internal enum InstantQuotationBoundPhysicalAnalysisFailure
     ProfileUnavailable,
     UploadUnavailable,
     AnalysisUnavailable,
+    GeometryReview,
+    ComplexityExceeded,
+    SimulationUnavailable,
 }
 
 /// <summary>Server-only identity of one current upload and FDM configuration.</summary>
@@ -102,7 +105,9 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         if (!admitted.IsReady)
         {
             return InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
-                InstantQuotationBoundPhysicalAnalysisFailure.UploadUnavailable);
+                admitted.Failure == InstantQuotationAdmittedMeshFailure.InvalidMesh
+                    ? InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable
+                    : InstantQuotationBoundPhysicalAnalysisFailure.UploadUnavailable);
         }
 
         if (!await AnalysisSlots.WaitAsync(0, cancellationToken))
@@ -118,6 +123,17 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
                 admitted.Mesh!, new Pose("source", Matrix4x4.Identity), profile!, binding.Quantity,
                 new AnalysisBudget(MaximumTriangles, MaximumLayers, MaximumPathSegments, cancellationToken))),
                 cancellationToken);
+        }
+        catch (SimulationGeometryException exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return InstantQuotationBoundPhysicalAnalysisResult.Unavailable(exception.ReasonCode switch
+            {
+                "geometry_requires_review" => InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview,
+                "triangle_budget_exceeded" or "layer_budget_exceeded" or "path_segment_budget_exceeded"
+                    => InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded,
+                _ => InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable,
+            });
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
