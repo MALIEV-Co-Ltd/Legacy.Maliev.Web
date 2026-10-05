@@ -2,7 +2,7 @@ name: PR validation
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, codex/web-fx-joined-483-20261005]
 
 permissions:
   contents: read

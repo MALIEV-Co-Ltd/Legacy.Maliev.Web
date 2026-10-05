@@ -16,4 +16,4 @@
   <data name="Workflow" xml:space="preserve"><value>ขั้นตอนงาน</value></data>
   <data name="Contents" xml:space="preserve"><value>สารบัญ</value></data>
   <data name="Home" xml:space="preserve"><value>หน้าหลัก</value></data>
-</root>
+  <data name="Overview" xml:space="preserve"><value>ภาพรวม</value></data>  <data name="All service specifications" xml:space="preserve"><value>ข้อแนะนำทุกบริการ</value></data></root>
