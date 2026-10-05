@@ -1,0 +1,21 @@
+{
+  "status": "source-preparation-only; not executable admission or acceptance",
+  "webCommit": "224bcde1d1fc7e915f4d0d0de9b3863bcae4fcff",
+  "webDefaultsCommit": "6ea131df4bcf8d213d7d121cb8c865697bee7420",
+  "issuanceBaseCommit": "5a81aba3d85c2a22cf999d7f02cdcd7f7fa38198",
+  "issuanceFirstPublishedTestsCommit": "d276b946f59c31f82e78eeb73c01b1b8de014afd",
+  "issuanceTestsFirstCommit": "a0e43592b6d4e9f7c693b0023c278159e9b26676",
+  "issuanceCommit": "882f5c1df547d085e81ca9f5df91a12711e2634f",
+  "issuanceBaseDefaultsCommit": "c40a7f82cea347b949444dcd7fb730f2b8dc3c0e",
+  "issuanceDefaultsCommit": "c40a7f82cea347b949444dcd7fb730f2b8dc3c0e",
+  "catalogCommit": "e3db3f3bfeba7e470d0ba12ed580c8c580acd9aa",
+  "catalogDefaultsCommit": "003b255f0fb0f0bce032f5b5ff15d28be0c8c391",
+  "contractsCommit": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7",
+  "configuredWebPermissionCount": 19,
+  "sourceOwnedAdditionalPermission": "legacy-catalog.currencies.read",
+  "fixtureAssignsCurrencyRead": false,
+  "separateProducerProcesses": true,
+  "nativeValidationExecuted": false,
+  "admission": "requires reviewed post-136 Auth runtime head, exact dependency readback and native producer proofs",
+  "legacyProfileProofPinsRemainUnchanged": true
+}

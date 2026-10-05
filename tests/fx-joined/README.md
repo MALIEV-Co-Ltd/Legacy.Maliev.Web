@@ -1,0 +1,9 @@
+# Native additive FX boundary
+
+This separate hosted lane exercises Web's normal service-token provider against actual Auth and Catalog Programs in separate processes. It does not construct JWTs, configure currency-read into fixture clients, or replace bearer validation, token issuance or permission policies. The primary Frankfurter transport is routed to a UUID-owned loopback fixture; its real typed client and resilience remain registered.
+
+The reviewed candidate is Auth 882f5c1df547d085e81ca9f5df91a12711e2634f with Defaults c40a7f82, Catalog e3db3f3b with Defaults 003b255f, and Contracts 78e48ffc. Web retains its own Defaults 6ea131df. The checked-in candidate graph records the Web production baseline; CI records and verifies the exact new consumer head before any native starts. No producer source is modified.
+
+There are 65 source-declared native rows: actor/authorization 25, provider failure 28 and protected state/ticket 12. Three fresh graphs keep each subset below the normal Auth login limit. Each graph runs actual PostgreSQL18 migrations, checks native readiness and records DLL hashes and TRX. Cache controls exercise 29-minute reuse, 30-minute expiry, stale-refusal and separate protected sessions. Ticket controls use the real session store, cookie and ticket service, preserving protected THB money, identity and engineer review across foreign display conversion.
+
+Run offline guards with `python tests/fx-joined/test_orchestration_guards.py`. Run native orchestration only in the hosted workflow. The script refuses local execution, dirty/mismatched producers, unresolved pins and cleanup of containers owned by another graph. The eight offline guards are not native actor evidence. Full producer/Web suites and raw generated-inclusive coverage remain separate required acceptance inputs; no source closure, merge, deployment or live IAM state is inferred from a manifest or readiness response.
