@@ -7,6 +7,7 @@ on:
       - '.github/workflows/web-packaged-image.yml'
       - 'scripts/run-web-packaged-hosted.py'
       - 'tests/WebPackagedHostedGuardTests.py'
+      - 'tests/fx-joined/candidate-graph.json'
       - 'Legacy.Maliev.Web/Dockerfile'
 
 permissions:

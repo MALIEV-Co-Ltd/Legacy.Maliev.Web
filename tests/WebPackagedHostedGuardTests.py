@@ -45,6 +45,12 @@ class Guards(unittest.TestCase):
         self.assertEqual(job['permissions']['id-token'], 'write')
         self.assertEqual(job['if'], "vars.LEGACY_DEPLOY_ENABLED == 'true'")
 
+    def test_fx_graph_change_requires_fresh_actual_image_proof(self):
+        import yaml
+        workflow = yaml.safe_load((path.parents[1] / '.github/workflows/web-packaged-image.yml').read_text())
+        events = workflow.get('on', workflow.get(True))
+        self.assertIn('tests/fx-joined/candidate-graph.json', events['pull_request']['paths'])
+
     def test_scratch_missing_revision_and_not_applicable_receipts_refused(self):
         for receipt in ({}, {'status': 'not-applicable'},
                         {'status': 'accepted', 'sourceRevision': 'b' * 40}):
