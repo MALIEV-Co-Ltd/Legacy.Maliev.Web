@@ -63,8 +63,9 @@ jobs:
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected|FullyQualifiedName~IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid"
-          --results-directory ./ticket-test-results
+          --logger trx --results-directory ./ticket-test-results
       - name: Install pinned Chromium browser
         shell: pwsh
         run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
@@ -82,6 +83,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~InstantQuotationPhysicalResultRendererTests|FullyQualifiedName~InstantQuotationSummaryTransitionBrowserTests|FullyQualifiedName~PublicCookieConsentMigrationTests|FullyQualifiedName~PublicCookieConsentBrowserTests|FullyQualifiedName~MeasurementLifecycleBrowserTests"
           --logger trx --results-directory ./physical-result-test-results
+      - name: Verify Accounting numeric email state response compatibility
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CustomerQuotationClientTests"
+          --logger trx --results-directory ./quotation-response-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -93,7 +101,7 @@ jobs:
         run: |
           ./tests/WebFxRawCoverage.Tests.ps1
           ./tests/Test-WebFxRawCoverage.ps1 -ResultsRoot ./Legacy.Maliev.Web.Tests/TestResults
-      - name: Preserve synthetic Web test and raw coverage evidence
+      - name: Preserve independent focused groups and full raw coverage evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -105,6 +113,7 @@ jobs:
             ticket-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
             physical-result-test-results/**/*.trx
+            quotation-response-test-results/**/*.trx
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7
           if-no-files-found: error
