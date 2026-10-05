@@ -292,7 +292,9 @@ def main():
                     '-p:MalievWorkspaceRoot=' + str(args.web_runtime_root.resolve()), '-p:FxWebRoot=' + str(root), '--filter', test_filter,
                     '--logger', 'trx;LogFileName=joined.trx', '--results-directory', str(output.resolve())],
                     environment)
-            test.wait(timeout=1200)
+            # Invalid upstream bodies can traverse both normal resilience pipelines.
+            # This bounds observation only; production request/retry timeouts are unchanged.
+            test.wait(timeout=2100 if lane == 'provider' else 1200)
             trx = output / 'joined.trx'
             raw_hash = digest(trx)
             # Preserve the raw hash; sanitize only sensitive fixture values if an assertion exposes them.
