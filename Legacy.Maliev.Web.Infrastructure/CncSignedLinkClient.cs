@@ -2,13 +2,15 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
+using Microsoft.Extensions.Options;
 using Polly;
 
 namespace Legacy.Maliev.Web.Infrastructure;
 
 internal sealed class CncSignedLinkClient(
     IHttpClientFactory clients,
-    IServiceAccessTokenProvider tokens) : ICncSignedLinkClient
+    IServiceAccessTokenProvider tokens,
+    IOptions<CncSignedLinkDeadlineOptions> options) : ICncSignedLinkClient
 {
     private const string Bucket = "maliev-quotation-requests";
     private const int MaximumResponseBytes = 65_536;
@@ -42,7 +44,9 @@ internal sealed class CncSignedLinkClient(
             $"uploads/signedurl?bucket={Bucket}&objectName={Uri.EscapeDataString(objectName)}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(client.Timeout);
+        // Standard resilience sets HttpClient.Timeout to Infinite. Keep the
+        // complete signed-link operation budget separate from that transport policy.
+        deadline.CancelAfter(options.Value.Timeout);
         HttpResponseMessage? response = null;
         Task<HttpResponseMessage>? pendingResponse = null;
         Task? pendingBuffer = null;
@@ -170,4 +174,13 @@ internal sealed class CncSignedLinkClient(
     private static bool IsTransportFailure(Exception exception) => exception is HttpRequestException
         or OperationCanceledException or InvalidOperationException or IOException or JsonException
         or ExecutionRejectedException;
+}
+
+internal sealed class CncSignedLinkDeadlineOptions
+{
+    public CncSignedLinkDeadlineOptions()
+    {
+    }
+
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 }

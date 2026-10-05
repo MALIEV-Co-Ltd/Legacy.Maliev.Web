@@ -7,6 +7,7 @@ using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using static Legacy.Maliev.Web.Components.Pages.InstantQuotation.CncSubmissionAdmission;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -184,7 +185,7 @@ public sealed class CncSignedLinkClientTests
     {
         var content = new GatedContent(cooperative, "\"https://storage.googleapis.test/late\"");
         using var harness = new DeadlineHarness(content,
-            infinite ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), false);
+            infinite ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), true);
         using var caller = new CancellationTokenSource();
         Task<Uri?> operation = harness.Client.GetAsync(ObjectName, caller.Token);
         try
@@ -247,11 +248,12 @@ public sealed class CncSignedLinkClientTests
     }
 
     [Fact]
-    public void NormalFilesRegistration_PreservesConfiguredTenSecondTimeout()
+    public void NormalFilesRegistration_PreservesResilienceAndSeparateTenSecondOperationBudget()
     {
         var content = new GatedContent(true, "\"https://storage.googleapis.test/object\"");
         using var harness = new DeadlineHarness(content, null, true);
-        Assert.Equal(TimeSpan.FromSeconds(10), harness.Http.Timeout);
+        Assert.Equal(Timeout.InfiniteTimeSpan, harness.Http.Timeout);
+        Assert.Equal(TimeSpan.FromSeconds(10), harness.OperationTimeout);
         Assert.Empty(harness.Handler.Requests);
     }
 
@@ -443,6 +445,13 @@ public sealed class CncSignedLinkClientTests
                 await stream.WriteAsync(Encoding.UTF8.GetBytes(body),
                     cooperative ? cancellationToken : CancellationToken.None);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Cooperative WaitAsync can unregister the earlier diagnostic callback
+                // while unwinding. Observe cancellation consumed by the serializer itself.
+                Cancelled.TrySetResult(true);
+                throw;
+            }
             finally { Finished.TrySetResult(true); }
         }
         protected override void Dispose(bool disposing)
@@ -454,6 +463,7 @@ public sealed class CncSignedLinkClientTests
 
     private sealed class BoundaryFactory(HttpClient client) : IHttpClientFactory
     {
+        internal TimeSpan Timeout => client.Timeout;
         public HttpClient CreateClient(string name)
         {
             Assert.Equal("files", name);
@@ -468,9 +478,11 @@ public sealed class CncSignedLinkClientTests
         internal RecordingTokenProvider Tokens { get; } = new("service-token");
         internal HttpClient Http { get; }
         internal ICncSignedLinkClient Client { get; }
+        internal TimeSpan OperationTimeout { get; }
 
         internal DeadlineHarness(GatedContent content, TimeSpan? timeout, bool normalRegistration)
         {
+            OperationTimeout = timeout ?? TimeSpan.FromSeconds(10);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             Handler = new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
             if (normalRegistration)
@@ -480,11 +492,12 @@ public sealed class CncSignedLinkClientTests
                 collection.AddLegacyServiceClients(new ConfigurationBuilder().AddInMemoryCollection(
                     new Dictionary<string, string?> { ["Services:File"] = "https://files.test/" }).Build());
                 collection.AddSingleton<IServiceAccessTokenProvider>(Tokens);
-                var registration = collection.AddHttpClient("files").ConfigurePrimaryHttpMessageHandler(() => Handler);
-                if (timeout is not null) registration.ConfigureHttpClient(client => client.Timeout = timeout.Value);
+                collection.AddHttpClient("files").ConfigurePrimaryHttpMessageHandler(() => Handler);
+                if (timeout is not null) collection.Configure<CncSignedLinkDeadlineOptions>(options => options.Timeout = timeout.Value);
                 services = collection.BuildServiceProvider();
+                OperationTimeout = services.GetRequiredService<IOptions<CncSignedLinkDeadlineOptions>>().Value.Timeout;
                 Http = services.GetRequiredService<IHttpClientFactory>().CreateClient("files");
-                Client = CreateClient(new BoundaryFactory(Http), Tokens);
+                Client = services.GetRequiredService<ICncSignedLinkClient>();
             }
             else
             {
@@ -503,7 +516,8 @@ public sealed class CncSignedLinkClientTests
     {
         var constructor = typeof(CncSignedLinkClient).GetConstructors(
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Single();
-        return (ICncSignedLinkClient)constructor.Invoke([factory, tokens]);
+        var timeout = factory is BoundaryFactory boundary ? boundary.Timeout : TimeSpan.FromSeconds(10);
+        return (ICncSignedLinkClient)constructor.Invoke([factory, tokens, Options.Create(new CncSignedLinkDeadlineOptions { Timeout = timeout })]);
     }
 
     private sealed class UnexpectedNotifications : INotificationClient
@@ -521,8 +535,7 @@ public sealed class CncSignedLinkClientTests
 
     private static ICncSignedLinkClient CreateClient(HttpMessageHandler handler, IServiceAccessTokenProvider tokens)
     {
-        var constructor = typeof(CncSignedLinkClient).GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Single();
-        return (ICncSignedLinkClient)constructor.Invoke([new Factory(handler), tokens]);
+        return CreateClient(new Factory(handler), tokens);
     }
 
     private static HttpResponseMessage Json(string body) => new(HttpStatusCode.OK)
