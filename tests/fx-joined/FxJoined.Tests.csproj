@@ -6,6 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <AssemblyName>Legacy.Maliev.Web.Tests</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
