@@ -309,12 +309,7 @@
                         }
                         else if (physicalAnalyses.TryGetValue(part.PartId, out var physical))
                         {
-                            <p role="status" data-physical-analysis-result="@(physical.IsReady ? "ready" : "unavailable")"
-                               data-physical-analysis-failure="@physical.Failure">
-                                @(physical.IsReady
-                                    ? Localizer["Physical build evidence is ready. Verified analysis is used for the current price."]
-                                    : Localizer["Physical build analysis is unavailable. Engineering review is required."])
-                            </p>
+                            <InstantQuotationPhysicalResult IsReady="@physical.IsReady" Failure="@physical.Failure.ToString()" />
                         }
                     </div>
                 }

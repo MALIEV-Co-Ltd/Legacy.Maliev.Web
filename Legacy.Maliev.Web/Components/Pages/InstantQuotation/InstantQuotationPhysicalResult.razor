@@ -1,0 +1,23 @@
+@using Legacy.Maliev.Web.Application
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+
+<p role="status" data-physical-analysis-result="@(IsReady ? "ready" : "unavailable")"
+   data-physical-analysis-failure="@Failure">@Localizer[Message]</p>
+
+@code {
+    [Parameter] public bool IsReady { get; set; }
+    [Parameter] public string Failure { get; set; } = string.Empty;
+
+    private string Message => IsReady
+        ? "Physical build evidence is ready. Verified analysis is used for the current price."
+        : Failure switch
+        {
+            nameof(InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview) =>
+                "This mesh has open or non-manifold surfaces. Contact our engineers for a file review.",
+            nameof(InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded) =>
+                "This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation.",
+            nameof(InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable) =>
+                "Print simulation is unavailable for this file. Contact our engineers for a quotation.",
+            _ => "Physical build analysis is unavailable. Engineering review is required.",
+        };
+}

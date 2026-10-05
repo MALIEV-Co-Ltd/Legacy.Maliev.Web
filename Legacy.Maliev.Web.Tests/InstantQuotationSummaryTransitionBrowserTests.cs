@@ -18,6 +18,55 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
     [Theory]
     [InlineData("en", 375)]
     [InlineData("th", 320)]
+    [InlineData("en", 1280)]
+    [InlineData("th", 1280)]
+    public async Task ActualSummaryDisclosureKeepsLegalChoicesAndKeyboardBreakdownOperable(string culture, int width)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, width);
+        await fixture.AssertFinalAsync(2);
+        var dock = fixture.Summary;
+        var disclosure = dock.Locator("summary");
+        var legal = fixture.Page.Locator("[data-summary-legal]");
+        var consultation = fixture.Page.Locator("[data-summary-consultation]");
+        // Shared fixture opens the dock for pricing assertions; close it through its real keyboard control.
+        Assert.True(await dock.EvaluateAsync<bool>("element => element.open"));
+        await disclosure.FocusAsync();
+        await fixture.Page.Keyboard.PressAsync("Space");
+        Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
+        await Assertions.Expect(dock.Locator("[data-summary-show]")).ToBeVisibleAsync();
+        await Assertions.Expect(dock.Locator("[data-summary-hide]")).ToBeHiddenAsync();
+        await Assertions.Expect(disclosure.Locator("[data-workflow-lead-time]")).ToBeVisibleAsync();
+        await Assertions.Expect(legal).ToBeVisibleAsync();
+        Assert.True(await legal.EvaluateAsync<bool>("element => !element.closest('details')"));
+        await Assertions.Expect(consultation).ToBeVisibleAsync();
+        Assert.Equal("/contact#contact-us", await consultation.GetAttributeAsync("href"));
+        Assert.Equal("_blank", await consultation.GetAttributeAsync("target"));
+        Assert.Contains("noopener", await consultation.GetAttributeAsync("rel"), StringComparison.Ordinal);
+
+        await disclosure.FocusAsync();
+        await fixture.Page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(dock).ToHaveAttributeAsync("open", "");
+        await Assertions.Expect(dock.Locator("[data-summary-part-details]")).ToBeVisibleAsync();
+        await Assertions.Expect(dock.Locator("[data-summary-hide]")).ToBeVisibleAsync();
+        await disclosure.FocusAsync();
+        await fixture.Page.Keyboard.PressAsync("Tab");
+        Assert.True(await fixture.Breakdown.EvaluateAsync<bool>("element => document.activeElement === element"),
+            "The actual summary breakdown must be reachable from its disclosure by keyboard.");
+        Assert.Equal(culture == "th" ? "สรุปชิ้นงานและราคา" : "Part and price summary",
+            await fixture.Breakdown.GetAttributeAsync("aria-label"));
+        await disclosure.FocusAsync();
+        await fixture.Page.Keyboard.PressAsync("Space");
+        Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
+        await Assertions.Expect(legal).ToBeVisibleAsync();
+        await Assertions.Expect(disclosure.Locator("[data-workflow-lead-time]")).ToBeVisibleAsync();
+        Assert.True(await fixture.Page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
+        await fixture.CaptureAsync("keyboard-disclosure");
+        await fixture.AssertHealthAsync();
+    }
+
+    [Theory]
+    [InlineData("en", 375)]
+    [InlineData("th", 320)]
     public async Task AcceptedRepriceHidesPriorSummaryAndDurationUntilCurrentFinalQuote(string culture, int width)
     {
         await using var fixture = await Fixture.CreateAsync(culture, width);

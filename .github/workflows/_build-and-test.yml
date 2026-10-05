@@ -75,6 +75,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews"
           --logger trx --results-directory ./publisher-mesh-test-results
+      - name: Verify localized physical result, actual summary and consent browser boundaries
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~InstantQuotationPhysicalResultRendererTests|FullyQualifiedName~InstantQuotationSummaryTransitionBrowserTests|FullyQualifiedName~PublicCookieConsentMigrationTests|FullyQualifiedName~PublicCookieConsentBrowserTests|FullyQualifiedName~MeasurementLifecycleBrowserTests"
+          --logger trx --results-directory ./physical-result-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -90,13 +97,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: web-fx-native-${{ github.sha }}
+          name: web-combined-native-${{ github.sha }}
           path: |
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
             ticket-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
+            physical-result-test-results/**/*.trx
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7
           if-no-files-found: error

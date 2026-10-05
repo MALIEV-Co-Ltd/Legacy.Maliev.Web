@@ -549,6 +549,9 @@
   <data name="Checking physical build…" xml:space="preserve"><value>กำลังตรวจสอบการพิมพ์จริง…</value></data>
   <data name="Physical build evidence is ready. Verified analysis is used for the current price." xml:space="preserve"><value>ข้อมูลการพิมพ์จริงพร้อมแล้ว ราคาปัจจุบันคำนวณจากผลการวิเคราะห์ที่ตรวจสอบแล้ว</value></data>
   <data name="Physical build analysis is unavailable. Engineering review is required." xml:space="preserve"><value>ไม่สามารถวิเคราะห์การพิมพ์จริงได้ ต้องให้วิศวกรตรวจสอบ</value></data>
+  <data name="This mesh has open or non-manifold surfaces. Contact our engineers for a file review." xml:space="preserve"><value>ไฟล์เมชมีพื้นผิวเปิดหรือโครงสร้างไม่สมบูรณ์ กรุณาติดต่อวิศวกรเพื่อช่วยตรวจสอบไฟล์</value></data>
+  <data name="This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation." xml:space="preserve"><value>ไฟล์นี้เกินขีดจำกัดของการวิเคราะห์ กรุณาลดความซับซ้อนของเมชหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา</value></data>
+  <data name="Print simulation is unavailable for this file. Contact our engineers for a quotation." xml:space="preserve"><value>ไม่สามารถจำลองการพิมพ์สำหรับไฟล์นี้ได้ กรุณาติดต่อวิศวกรเพื่อขอใบเสนอราคา</value></data>
   <data name="Calculating price…" xml:space="preserve"><value>กำลังคำนวณราคา…</value></data>
   <data name="Price unavailable — engineering review required." xml:space="preserve"><value>ยังไม่สามารถแสดงราคาได้ ต้องให้วิศวกรตรวจสอบ</value></data>
   <data name="Price" xml:space="preserve"><value>ราคา</value></data>
