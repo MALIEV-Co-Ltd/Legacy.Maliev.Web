@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.CatalogService
-          ref: e6b4bf77c793b4063052853a34976955df4f661a
+          ref: e071c5967108fff79690c537da7fdb88365a89f4
           path: .dependencies/fx/catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

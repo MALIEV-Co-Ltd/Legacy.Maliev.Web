@@ -89,7 +89,10 @@ internal sealed class InstantQuotationAuthoritativePricingService(
                         // The final kernel includes resin cards even without an admitted STL.
                         if (candidate.Process == PrintProcess.Fdm && !IsAdmittedStl(part)) continue;
                         if (comparison.IsCancellationRequested) break;
-                        await PublishAsync(part, candidate, InstantQuotationMaterialPricingStatus.Pending, null, comparison.Token);
+                        // Display delivery keeps its original absolute budget; only optional
+                        // comparison analysis owns the shorter budget. Avoid comparison-budget
+                        // cancellation between the display owner's check and state application.
+                        await PublishAsync(part, candidate, InstantQuotationMaterialPricingStatus.Pending, null, absolute.Token);
                         if (candidate.Process == PrintProcess.Fdm)
                         {
                             InstantQuotationBoundPhysicalAnalysisResult result;
@@ -111,7 +114,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
                         var amount = CandidatePrice(part, candidate);
                         await PublishAsync(part, candidate, amount is null
                             ? InstantQuotationMaterialPricingStatus.Unavailable : InstantQuotationMaterialPricingStatus.Completed,
-                            amount, comparison.Token);
+                            amount, absolute.Token);
                     }
                 }
             }

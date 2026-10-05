@@ -466,7 +466,7 @@ public sealed class JoinedFxNativeHttpTests
             var authCommit = root.GetProperty("issuanceCommit").GetString();
             Assert.Matches("^[0-9a-f]{40}$", authCommit!);
             Assert.NotEqual("5a81aba3d85c2a22cf999d7f02cdcd7f7fa38198", authCommit);
-            Assert.Equal("e6b4bf77c793b4063052853a34976955df4f661a", root.GetProperty("catalogCommit").GetString());
+            Assert.Equal("e071c5967108fff79690c537da7fdb88365a89f4", root.GetProperty("catalogCommit").GetString());
             Assert.Equal("7edcd961024868513fd5f373cab3dcb261197f77", root.GetProperty("catalogDefaultsCommit").GetString());
             Assert.Equal("78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7", root.GetProperty("contractsCommit").GetString());
             // A recorded pin is only provenance input. It never substitutes for HTTP assertions above.
