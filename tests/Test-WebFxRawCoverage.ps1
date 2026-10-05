@@ -6,8 +6,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $reports = @(Get-ChildItem -LiteralPath $ResultsRoot -Filter coverage.json -Recurse -File)
-if ($reports.Count -ne 1) {
-    throw "Expected one raw coverage.json report, found $($reports.Count)."
+if ($reports.Count -eq 0) {
+    throw 'Missing raw coverage.json report.'
+}
+$identities = @($reports | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash } | Sort-Object -Unique)
+if ($identities.Count -ne 1) {
+    throw 'Conflicting raw coverage reports; refusing selection or aggregation.'
 }
 $coverage = Get-Content -Raw -LiteralPath $reports[0].FullName | ConvertFrom-Json -AsHashtable
 $required = @('Legacy.Maliev.Web.dll', 'Legacy.Maliev.Web.Application.dll', 'Legacy.Maliev.Web.Infrastructure.dll')

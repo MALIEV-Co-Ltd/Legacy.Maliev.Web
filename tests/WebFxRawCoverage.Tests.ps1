@@ -47,6 +47,20 @@ try {
     $generated = New-Report
     $generated['Legacy.Maliev.Web.dll']['uncovered-generated.g.cs'] = @{ 'Generated.Other' = @{ 'Generated.Other()' = @{ Lines = @{ '1' = 0; '2' = 0 } } } }
     Assert-GateOutcome 'generated-lines-remain-in-denominator' $generated $false
+    $copies = Join-Path $root 'identical-copies'
+    New-Item -ItemType Directory -Path (Join-Path $copies 'first'), (Join-Path $copies 'second') | Out-Null
+    $copySource = Join-Path $root 'exact-floor/coverage.json'
+    Copy-Item -LiteralPath $copySource -Destination (Join-Path $copies 'first/coverage.json')
+    Copy-Item -LiteralPath $copySource -Destination (Join-Path $copies 'second/coverage.json')
+    & $gate -ResultsRoot $copies | Out-Null
+    $checks++
+    (New-Report) | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $copies 'second/coverage.json') -Encoding utf8
+    Add-Content -LiteralPath (Join-Path $copies 'second/coverage.json') -Value ' ' -Encoding utf8
+    $conflictRejected = $false
+    try { & $gate -ResultsRoot $copies | Out-Null }
+    catch { $conflictRejected = $true }
+    if (!$conflictRejected) { throw 'Conflicting reports were accepted.' }
+    $checks++
     Write-Output "Raw Web coverage gate controls: $checks passed."
 }
 finally {
