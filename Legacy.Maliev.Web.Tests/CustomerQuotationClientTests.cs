@@ -115,8 +115,8 @@ public sealed class CustomerQuotationClientTests
         // ProviderMessageId is deliberately absent; the BFF consumes only InvoiceId.
         var accountingHandler = new RecordingHandler(request => request.Method == HttpMethod.Get
             ? Json(HttpStatusCode.OK, InvoicePreviewJson)
-            : Json(HttpStatusCode.OK, $$"""
-                {"InvoiceId":23,"State":0,"EmailState":{{emailState}},"StoredFile":{"Bucket":"maliev.com","ObjectName":"invoices/23/invoice_020826-42-9.pdf"}}
+            : Json(HttpStatusCode.OK, $$$"""
+                {"InvoiceId":23,"State":0,"EmailState":{{{emailState}}},"StoredFile":{"Bucket":"maliev.com","ObjectName":"invoices/23/invoice_020826-42-9.pdf"}}
                 """));
         var client = CreateClient(quotationHandler, accountingHandler);
 
