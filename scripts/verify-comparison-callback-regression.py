@@ -55,7 +55,11 @@ def verify_negative_trx(path: Path) -> dict:
 
 
 def run(root: Path, directory: Path, name: str, command: list[str], build: bool = False) -> int:
-    completed = subprocess.run(command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    # Match the existing acceptance-host build's checked-out dependency selection.
+    # The helper itself still requires the authenticated, owned hosted environment.
+    environment = dict(os.environ, GITHUB_ACTIONS="false") if build else None
+    completed = subprocess.run(command, cwd=root, env=environment,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                text=True, timeout=300, check=False)
     (directory / f"{name}.log").write_text(completed.stdout, encoding="utf-8")
     warnings = re.findall(r"\b(\d+) Warning\(s\)", completed.stdout)

@@ -81,6 +81,14 @@ class Guards(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.verify(self.fixture(unqualified))
 
+    def test_build_matches_existing_host_dependency_selection(self):
+        completed = control.subprocess.CompletedProcess([], 0, "0 Warning(s)\n0 Error(s)")
+        with tempfile.TemporaryDirectory(prefix="maliev-pricing-build-") as directory:
+            with patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}), patch.object(control.subprocess, "run", return_value=completed) as execute:
+                control.run(Path(directory), Path(directory), "guard-build", ["never-executed"], build=True)
+                self.assertEqual("false", execute.call_args.kwargs["env"]["GITHUB_ACTIONS"])
+                self.assertEqual("true", os.environ["GITHUB_ACTIONS"])
+
     def test_rejects_nonzero_build_warning_summary(self):
         completed = control.subprocess.CompletedProcess([], 0, "0 Warning(s)\n1 Warning(s)\n0 Error(s)")
         with tempfile.TemporaryDirectory(prefix="maliev-pricing-build-") as directory:
