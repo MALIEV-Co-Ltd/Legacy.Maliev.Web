@@ -1,0 +1,41 @@
+name: Actual packaged Web image join
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/publish-image.yml'
+      - '.github/workflows/web-packaged-image.yml'
+      - 'scripts/run-web-packaged-hosted.py'
+      - 'tests/WebPackagedHostedGuardTests.py'
+      - 'Legacy.Maliev.Web/Dockerfile'
+
+permissions:
+  contents: read
+
+jobs:
+  actual-web-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Install producer YAML reader
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+      - name: Verify offline owned-runner and acceptance controls
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 tests/WebPackagedHostedGuardTests.py
+      - name: Build actual Web image and execute immutable accepted producer gate
+        env:
+          WEB_HEAD: ${{ github.event.pull_request.head.sha }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 scripts/run-web-packaged-hosted.py
+      - name: Retain exact actual image proof and failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: web-packaged-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/web-packaged-proof
+          if-no-files-found: error
