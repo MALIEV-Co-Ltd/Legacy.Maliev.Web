@@ -222,7 +222,9 @@ def main():
             inspected = json.loads(checked(['docker', 'inspect', container], capture_output=True).stdout)[0]
             pg_port = int(inspected['NetworkSettings']['Ports']['5432/tcp'][0]['HostPort'])
             for _ in range(60):
-                result = subprocess.run(['docker', 'exec', container, 'pg_isready', '-U', 'postgres'], capture_output=True)
+                # The image's temporary initialization server accepts Unix sockets only.
+                # TCP readiness waits for the final server that native hosts will use.
+                result = subprocess.run(['docker', 'exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'], capture_output=True)
                 if result.returncode == 0:
                     break
                 time.sleep(1)
@@ -231,7 +233,7 @@ def main():
             names = ('CustomerIdentity', 'EmployeeIdentity', 'RefreshSessions', 'CatalogDbContext', 'CountryDbContext', 'CurrencyDbContext')
             databases = {name: 'fx_' + uuid.UUID(run).hex + '_' + name.lower() for name in names}
             sql = ''.join('CREATE DATABASE "' + database + '";\n' for database in databases.values())
-            checked(['docker', 'exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1'], input=sql, capture_output=True)
+            checked(['docker', 'exec', '-i', container, 'psql', '-h', '127.0.0.1', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1'], input=sql, capture_output=True)
             connection = lambda name: f'Host=127.0.0.1;Port={pg_port};Database={databases[name]};Username=postgres;Password={pg_secret}'
             provider_port, catalog_port = port(), port()
             provider_origin = f'http://127.0.0.1:{provider_port}/'
