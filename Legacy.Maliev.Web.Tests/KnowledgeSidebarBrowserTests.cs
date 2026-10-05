@@ -31,11 +31,13 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
             Assert.Equal(1, await sidebar.CountAsync());
             var overview = sidebar.GetByRole(AriaRole.Link, new LocatorGetByRoleOptions
             {
-                Name = culture == "th" ? "ศูนย์ความรู้" : "Knowledge center", Exact = true
+                Name = culture == "th" ? "ศูนย์ความรู้" : "Knowledge center",
+                Exact = true
             });
             var specifications = sidebar.GetByRole(AriaRole.Link, new LocatorGetByRoleOptions
             {
-                Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications", Exact = true
+                Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications",
+                Exact = true
             });
             Assert.Equal(1, await overview.CountAsync());
             Assert.Equal(1, await specifications.CountAsync());
@@ -53,6 +55,12 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
                 Assert.Equal("false", await opener.GetAttributeAsync("aria-expanded"));
                 Assert.True(await opener.EvaluateAsync<bool>("element => document.activeElement === element"));
                 await page.Keyboard.PressAsync("Enter");
+                await page.WaitForFunctionAsync("""
+                    () => {
+                        const bounds = document.querySelector('#knowledge-navigation')?.getBoundingClientRect();
+                        return !!bounds && bounds.left >= 0 && bounds.right <= window.innerWidth;
+                    }
+                    """);
             }
 
             Assert.True(await overview.IsVisibleAsync());
@@ -66,7 +74,8 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
                 Directory.CreateDirectory(screenshotDirectory);
                 await page.ScreenshotAsync(new PageScreenshotOptions
                 {
-                    Path = Path.Combine(screenshotDirectory, $"{culture}-{width}.png"), FullPage = true
+                    Path = Path.Combine(screenshotDirectory, $"{culture}-{width}.png"),
+                    FullPage = true
                 });
             }
 
@@ -83,7 +92,8 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
             await page.Locator("#knowledge-navigation").GetByRole(AriaRole.Link,
                 new LocatorGetByRoleOptions
                 {
-                    Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications", Exact = true
+                    Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications",
+                    Exact = true
                 }).FocusAsync();
             await page.Keyboard.PressAsync("Enter");
             await page.WaitForURLAsync(new Uri(origin, "/knowledges/specifications").ToString());
