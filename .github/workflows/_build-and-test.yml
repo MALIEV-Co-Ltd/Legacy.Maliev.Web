@@ -59,6 +59,12 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify protected ticket currency identity
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          --filter "FullyQualifiedName~ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected|FullyQualifiedName~IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid"
+          --results-directory ./ticket-test-results
       - name: Install pinned Chromium browser
         shell: pwsh
         run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
@@ -82,6 +88,7 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
+            ticket-test-results/**/*.trx
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7
           if-no-files-found: error
