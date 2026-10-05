@@ -28,6 +28,10 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
         var disclosure = dock.Locator("summary");
         var legal = fixture.Page.Locator("[data-summary-legal]");
         var consultation = fixture.Page.Locator("[data-summary-consultation]");
+        // Shared fixture opens the dock for pricing assertions; close it through its real keyboard control.
+        Assert.True(await dock.EvaluateAsync<bool>("element => element.open"));
+        await disclosure.FocusAsync();
+        await fixture.Page.Keyboard.PressAsync("Space");
         Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
         await Assertions.Expect(dock.Locator("[data-summary-show]")).ToBeVisibleAsync();
         await Assertions.Expect(dock.Locator("[data-summary-hide]")).ToBeHiddenAsync();
