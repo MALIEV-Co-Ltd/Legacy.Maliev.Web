@@ -154,6 +154,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     {
     }
 
+    [NonHandler]
     public JsonResult OnGetGetEstimate(
         string? material,
         double dimensionZ,
@@ -174,6 +175,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
             quantity,
             unsupportedAreaProfile));
 
+    [NonHandler]
     public JsonResult OnGetGetOrderTotal(
         string? processes,
         string? subtotals,
@@ -187,6 +189,35 @@ public sealed class ThreeDimensionalPrinting : PageModel
             totalBoundingCm3,
             currency,
             destinationCountry));
+
+    public async Task<JsonResult> OnGetGetEstimateAsync(
+        string? material,
+        double dimensionZ,
+        double volume,
+        double footprint,
+        string? areaProfile,
+        string? perimeterProfile,
+        string? currency,
+        int quantity,
+        string? unsupportedAreaProfile = null)
+    {
+        var payload = OnGetGetEstimate(material, dimensionZ, volume, footprint, areaProfile, perimeterProfile, currency, quantity, unsupportedAreaProfile).Value!;
+        var result = await HttpContext.RequestServices.GetRequiredService<InstantQuotationFxHandler>().ConvertAsync(HttpContext, payload, currency);
+        return new JsonResult(result.Payload) { StatusCode = result.StatusCode };
+    }
+
+    public async Task<JsonResult> OnGetGetOrderTotalAsync(
+        string? processes,
+        string? subtotals,
+        double totalWeightGrams,
+        double totalBoundingCm3,
+        string? currency,
+        string? destinationCountry = null)
+    {
+        var payload = OnGetGetOrderTotal(processes, subtotals, totalWeightGrams, totalBoundingCm3, currency, destinationCountry).Value!;
+        var result = await HttpContext.RequestServices.GetRequiredService<InstantQuotationFxHandler>().ConvertAsync(HttpContext, payload, currency);
+        return new JsonResult(result.Payload) { StatusCode = result.StatusCode };
+    }
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {

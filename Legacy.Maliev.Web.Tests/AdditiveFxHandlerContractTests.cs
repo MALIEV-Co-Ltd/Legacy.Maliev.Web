@@ -10,8 +10,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Legacy.Maliev.Web.Tests;
 
 // The token below is transport-only test data. These tests do not establish Catalog actor permissions.
-public sealed class AdditiveFxHandlerContractTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory factory)
+    : IClassFixture<TestingWebApplicationFactory>
 {
     public static TheoryData<bool, string> RenderersAndCultures => new()
     {
@@ -301,7 +301,7 @@ public sealed class AdditiveFxHandlerContractTests(WebApplicationFactory<Program
 
     private sealed class AdjustableClock : TimeProvider
     {
-        private DateTimeOffset now = new(2026, 10, 4, 12, 0, 0, TimeSpan.Zero);
+        private DateTimeOffset now = DateTimeOffset.UtcNow;
         public override DateTimeOffset GetUtcNow() => now;
         public void Advance(TimeSpan duration) => now += duration;
     }

@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IInstantQuotationProfileCompletionClient, InstantQuotationProfileCompletionClient>();
         services.AddScoped<ICustomerOrderClient, CustomerOrderClient>();
         services.AddScoped<ICustomerOrderCatalogClient, CustomerOrderCatalogClient>();
+        services.AddScoped<IInstantQuotationExchangeRateClient, InstantQuotationExchangeRateClient>();
         services.AddScoped<ICustomerOrderSubmissionTransport, CustomerOrderSubmissionTransport>();
         services.AddScoped<IInstantQuotationFulfillmentClient, InstantQuotationFulfillmentClient>();
         services.AddScoped<ICustomerOrderSubmissionService, CustomerOrderSubmissionService>();

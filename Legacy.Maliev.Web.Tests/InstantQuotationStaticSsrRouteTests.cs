@@ -26,7 +26,7 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
 
         var page = await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en");
         using var response = await client.GetAsync(
-            "/InstantQuotation/3D-Printing?handler=GetEstimate&material=PLA&dimensionZ=30&volume=20000&footprint=400&quantity=1&currency=USD");
+            "/InstantQuotation/3D-Printing?handler=GetEstimate&material=PLA&dimensionZ=30&volume=20000&footprint=400&quantity=1&currency=THB");
         using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
 
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", page, StringComparison.Ordinal);
@@ -43,7 +43,7 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
     {
         using var client = CreateClient(factory);
         using var response = await client.GetAsync(
-            "/InstantQuotation/3D-Printing?handler=GetOrderTotal&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=USD");
+            "/InstantQuotation/3D-Printing?handler=GetOrderTotal&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=THB");
         using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -92,7 +92,7 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
         });
         using var client = CreateClient(fallbackFactory);
         using var response = await client.GetAsync(
-            "/InstantQuotation/3D-Printing?handler=GetOrderTotal&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=USD&culture=th");
+            "/InstantQuotation/3D-Printing?handler=GetOrderTotal&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=THB&culture=th");
         using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

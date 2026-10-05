@@ -399,6 +399,7 @@ builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAn
 builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
 builder.Services.AddScoped<IInstantQuotationAuthenticatedPreparationService, InstantQuotationAuthenticatedPreparationService>();
 builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
+builder.Services.AddScoped<InstantQuotationFxHandler>();
 builder.Services.AddScoped<
     IInstantQuotationWorkflowSessionIdentityAccessor,
     AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor>();
