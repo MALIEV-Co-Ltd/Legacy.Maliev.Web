@@ -69,12 +69,27 @@ jobs:
       - name: Install pinned Chromium browser
         shell: pwsh
         run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
-      - name: Verify accepted publisher contract and original nine-mesh failure scenario
+      - name: Verify regressions reject exact pre-fix pricing source and restore patched HEAD
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 tests/ComparisonCallbackRegressionGuardTests.py
+          python3 scripts/verify-comparison-callback-regression.py
+      - name: Preserve separate expected-failure pricing regression control
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pricing-regression-parent-control-${{ github.sha }}
+          path: pricing-regression-parent-control/**
+          retention-days: 7
+          if-no-files-found: error
+      - name: Verify accepted publisher, original nine meshes and pricing callback budgets
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews"
+          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~ComparisonCallback"
           --logger trx --results-directory ./publisher-mesh-test-results
       - name: Verify localized physical result, actual summary and consent browser boundaries
         run: >-

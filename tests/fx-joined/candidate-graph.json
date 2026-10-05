@@ -9,7 +9,7 @@
   "issuanceProtectedBaseCommit": "b27fbef06a3aa58c1f4fc0e75d7c70b32be76266",
   "issuanceBaseDefaultsCommit": "c40a7f82cea347b949444dcd7fb730f2b8dc3c0e",
   "issuanceDefaultsCommit": "7edcd961024868513fd5f373cab3dcb261197f77",
-  "catalogCommit": "e6b4bf77c793b4063052853a34976955df4f661a",
+  "catalogCommit": "e071c5967108fff79690c537da7fdb88365a89f4",
   "catalogDefaultsCommit": "7edcd961024868513fd5f373cab3dcb261197f77",
   "contractsCommit": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7",
   "configuredWebPermissionCount": 19,
