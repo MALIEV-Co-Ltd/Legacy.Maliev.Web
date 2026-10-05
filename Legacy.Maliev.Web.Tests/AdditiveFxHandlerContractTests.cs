@@ -219,9 +219,18 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
         "/InstantQuotation/3D-Printing",
         new Dictionary<string, string?>
         {
-            ["handler"] = handler, ["currency"] = currency, ["culture"] = culture,
-            ["material"] = "PLA", ["dimensionZ"] = "30", ["volume"] = "20000", ["footprint"] = "400", ["quantity"] = "1",
-            ["processes"] = "fdm,resin", ["subtotals"] = "1200,1800", ["totalWeightGrams"] = "500", ["totalBoundingCm3"] = "2000",
+            ["handler"] = handler,
+            ["currency"] = currency,
+            ["culture"] = culture,
+            ["material"] = "PLA",
+            ["dimensionZ"] = "30",
+            ["volume"] = "20000",
+            ["footprint"] = "400",
+            ["quantity"] = "1",
+            ["processes"] = "fdm,resin",
+            ["subtotals"] = "1200,1800",
+            ["totalWeightGrams"] = "500",
+            ["totalBoundingCm3"] = "2000",
         });
 
     private static async Task<JsonDocument> ReadSuccessAsync(HttpClient client, string handler, string currency, string culture)

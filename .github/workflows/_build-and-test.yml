@@ -67,3 +67,21 @@ jobs:
         with:
           solution: Legacy.Maliev.Web.slnx
           use-local-maliev-dependencies: 'true'
+      - name: Gate raw generated-inclusive Web coverage
+        if: always()
+        shell: pwsh
+        run: |
+          ./tests/WebFxRawCoverage.Tests.ps1
+          ./tests/Test-WebFxRawCoverage.ps1 -ResultsRoot ./Legacy.Maliev.Web.Tests/TestResults
+      - name: Preserve synthetic Web test and raw coverage evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: web-fx-native-${{ github.sha }}
+          path: |
+            Legacy.Maliev.Web.Tests/TestResults/**/*.trx
+            Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
+            Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
+            tests/web-fx-generated-inclusive.runsettings
+          retention-days: 7
+          if-no-files-found: error
