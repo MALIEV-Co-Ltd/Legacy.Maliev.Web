@@ -55,10 +55,14 @@ public sealed class JoinedFxNativeHttpTests
         var principal = new JwtSecurityTokenHandler { MapInboundClaims = false }.ValidateToken(token,
             new TokenValidationParameters
             {
-                ValidateIssuer = true, ValidIssuer = graph.Issuer,
-                ValidateAudience = true, ValidAudience = graph.Audience,
-                ValidateIssuerSigningKey = true, IssuerSigningKey = new RsaSecurityKey(signer),
-                ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
+                ValidateIssuer = true,
+                ValidIssuer = graph.Issuer,
+                ValidateAudience = true,
+                ValidAudience = graph.Audience,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new RsaSecurityKey(signer),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
                 ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
             }, out _);
         Assert.Equal("service:legacy-web", principal.FindFirst("sub")?.Value);
@@ -386,7 +390,9 @@ public sealed class JoinedFxNativeHttpTests
 
     private static HttpClient Browser(WebApplicationFactory<Program> web) => web.CreateClient(new()
     {
-        AllowAutoRedirect = false, HandleCookies = true, BaseAddress = new Uri("https://localhost"),
+        AllowAutoRedirect = false,
+        HandleCookies = true,
+        BaseAddress = new Uri("https://localhost"),
     });
 
     private static async Task<string> LoginAsync(HttpClient auth, string clientId, string secret)
@@ -427,10 +433,18 @@ public sealed class JoinedFxNativeHttpTests
     private static string Route(string handler, string currency, string culture) => QueryHelpers.AddQueryString(
         "/InstantQuotation/3D-Printing", new Dictionary<string, string?>
         {
-            ["handler"] = handler, ["currency"] = currency, ["culture"] = culture,
-            ["material"] = "PLA", ["dimensionZ"] = "30", ["volume"] = "20000", ["footprint"] = "400",
-            ["quantity"] = "1", ["processes"] = "fdm,resin", ["subtotals"] = "1200,1800",
-            ["totalWeightGrams"] = "500", ["totalBoundingCm3"] = "2000",
+            ["handler"] = handler,
+            ["currency"] = currency,
+            ["culture"] = culture,
+            ["material"] = "PLA",
+            ["dimensionZ"] = "30",
+            ["volume"] = "20000",
+            ["footprint"] = "400",
+            ["quantity"] = "1",
+            ["processes"] = "fdm,resin",
+            ["subtotals"] = "1200,1800",
+            ["totalWeightGrams"] = "500",
+            ["totalBoundingCm3"] = "2000",
         });
 
     private sealed record Graph(Uri Auth, Uri Catalog, string WebSecret, string OtherSecret,
