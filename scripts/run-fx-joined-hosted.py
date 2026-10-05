@@ -81,7 +81,7 @@ def env_for_child():
     result = {name: value for name, value in os.environ.items() if not name.startswith(blocked)}
     result.update(DOTNET_ENVIRONMENT='Production', ASPNETCORE_ENVIRONMENT='Production',
                   Logging__LogLevel__Default='Warning', Cache__RedisEnabled='false',
-                  EmployeeRecovery__Enabled='false', CORS__AllowedOrigins='https://localhost')
+                  EmployeeRecovery__Enabled='true', CORS__AllowedOrigins='https://localhost')
     return result
 
 
