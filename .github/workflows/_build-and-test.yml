@@ -154,6 +154,7 @@ jobs:
             home-process-test-results/**/*.trx
             authenticated-profile-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
+            Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7
           if-no-files-found: error

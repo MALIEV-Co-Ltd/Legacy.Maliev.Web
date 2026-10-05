@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using System.Text.Json;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -80,8 +81,8 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
             }
 
             await overview.FocusAsync();
-            await page.Keyboard.PressAsync("Enter");
-            await page.WaitForURLAsync(new Uri(origin, "/knowledges").ToString());
+            await ActivateLinkAsync(page, overview, new Uri(origin, "/knowledges").ToString(),
+                route.Path, culture, width, "overview");
 
             await page.GotoAsync(url);
             if (width < 992)
@@ -89,16 +90,111 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
                 await page.Locator("[data-workspace-open]").FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
             }
-            await page.Locator("#knowledge-navigation").GetByRole(AriaRole.Link,
+            var specificationsLink = page.Locator("#knowledge-navigation").GetByRole(AriaRole.Link,
                 new LocatorGetByRoleOptions
                 {
                     Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications",
                     Exact = true
-                }).FocusAsync();
-            await page.Keyboard.PressAsync("Enter");
-            await page.WaitForURLAsync(new Uri(origin, "/knowledges/specifications").ToString());
+                });
+            await specificationsLink.FocusAsync();
+            await ActivateLinkAsync(page, specificationsLink,
+                new Uri(origin, "/knowledges/specifications").ToString(),
+                route.Path, culture, width, "specifications");
         }
 
         Assert.Empty(errors);
+    }
+
+    private static async Task ActivateLinkAsync(IPage page, ILocator link, string destination,
+        string sourceRoute, string culture, int width, string phase)
+    {
+        var events = new List<string>();
+        void Record(string value)
+        {
+            lock (events)
+            {
+                if (events.Count < 64) events.Add(value);
+            }
+        }
+        void Navigated(object? sender, IFrame frame)
+        {
+            if (frame == page.MainFrame && Uri.TryCreate(frame.Url, UriKind.Absolute, out var uri))
+                Record($"navigated:{uri.AbsolutePath}");
+        }
+        void Loaded(object? sender, IPage loadedPage) => Record("load");
+        page.FrameNavigated += Navigated;
+        page.Load += Loaded;
+        Task? navigation = null;
+        try
+        {
+            Assert.True(await link.EvaluateAsync<bool>("element => document.activeElement === element"));
+            // Register the same exact-URL, Load, 30-second observer before keyboard activation.
+            navigation = page.WaitForURLAsync(destination, new PageWaitForURLOptions
+            {
+                WaitUntil = WaitUntilState.Load,
+                Timeout = 30_000
+            });
+            Record("waiter-armed");
+            await page.Keyboard.PressAsync("Enter");
+            Record("enter-returned");
+            await navigation;
+        }
+        catch (Exception error)
+        {
+            try
+            {
+                string? focus = null;
+                try
+                {
+                    focus = await page.Locator("body").EvaluateAsync<string>("""
+                        () => JSON.stringify({
+                            readyState: document.readyState,
+                            tag: document.activeElement?.tagName?.slice(0, 32),
+                            id: document.activeElement?.id?.slice(0, 128),
+                            href: document.activeElement?.getAttribute('href')?.slice(0, 256),
+                            drawerOpen: document.querySelector('#knowledge-navigation')?.classList.contains('is-open')
+                        })
+                        """, options: new LocatorEvaluateOptions { Timeout = 2_000 });
+                }
+                catch (Exception diagnosticError)
+                {
+                    focus = $"diagnostic-unavailable:{diagnosticError.GetType().Name}";
+                }
+                var directory = Path.GetFullPath(Path.Combine(
+                    BrowserHostIdentityVerifier.SourceProjectDirectory(), "..", "Legacy.Maliev.Web.Tests",
+                    "TestResults", "knowledge-navigation-browser"));
+                Directory.CreateDirectory(directory);
+                string[] eventSnapshot;
+                lock (events) eventSnapshot = events.ToArray();
+                var receipt = JsonSerializer.Serialize(new
+                {
+                    sourceRoute,
+                    culture,
+                    width,
+                    phase,
+                    destination = new Uri(destination).AbsolutePath,
+                    currentRoute = new Uri(page.Url).AbsolutePath,
+                    error = error.GetType().Name,
+                    events = eventSnapshot,
+                    focus
+                }, new JsonSerializerOptions { WriteIndented = true });
+                var name = $"{culture}-{width}-{sourceRoute.Replace('/', '_')}-{phase}-{Guid.NewGuid():N}.json";
+                await File.WriteAllTextAsync(Path.Combine(directory, name), receipt);
+                Console.WriteLine(receipt);
+            }
+            catch (Exception)
+            {
+                // Failure evidence is best effort and must preserve the original assertion/navigation failure.
+            }
+            throw;
+        }
+        finally
+        {
+            page.FrameNavigated -= Navigated;
+            page.Load -= Loaded;
+            // Observe a pending waiter if the keyboard action itself failed first.
+            if (navigation is not null) _ = navigation.ContinueWith(task => _ = task.Exception,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+        }
     }
 }
