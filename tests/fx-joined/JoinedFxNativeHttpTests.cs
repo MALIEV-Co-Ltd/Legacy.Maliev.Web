@@ -60,7 +60,12 @@ public sealed class JoinedFxNativeHttpTests
                 ValidateAudience = true,
                 ValidAudience = graph.Audience,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new RsaSecurityKey(signer),
+                IssuerSigningKey = new RsaSecurityKey(signer)
+                {
+                    KeyId = "disposable-fx",
+                    // Each row owns and disposes its RSA. A cached verifier must not outlive it.
+                    CryptoProviderFactory = new CryptoProviderFactory { CacheSignatureProviders = false },
+                },
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero,
                 ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
