@@ -101,6 +101,34 @@ public sealed class CustomerQuotationClientTests
             });
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task Accept_PascalCaseInvoiceResponseDoesNotInterpretEmailStateAsDelivery(int emailState)
+    {
+        var quotationHandler = new RecordingHandler(request => request.Method == HttpMethod.Get
+            ? Json(HttpStatusCode.OK, OwnedQuotationJson)
+            : Json(HttpStatusCode.OK, "{\"status\":0}"));
+        // Producer numeric ProviderAccepted=3 is compatible with old 0/1/2 states.
+        // ProviderMessageId is deliberately absent; the BFF consumes only InvoiceId.
+        var accountingHandler = new RecordingHandler(request => request.Method == HttpMethod.Get
+            ? Json(HttpStatusCode.OK, InvoicePreviewJson)
+            : Json(HttpStatusCode.OK, $$"""
+                {"InvoiceId":23,"State":0,"EmailState":{{emailState}},"StoredFile":{"Bucket":"maliev.com","ObjectName":"invoices/23/invoice_020826-42-9.pdf"}}
+                """));
+        var client = CreateClient(quotationHandler, accountingHandler);
+
+        var result = await client.DecideAsync(42, 9, true, Guid.NewGuid(), CancellationToken.None);
+
+        Assert.Equal(new CustomerQuotationDecisionResult(true, true, true, false, 23), result);
+        Assert.Equal(2, quotationHandler.Requests.Count);
+        Assert.Equal(HttpMethod.Put, quotationHandler.Requests[1].Method);
+        Assert.Contains("\"accepted\":true", quotationHandler.Requests[1].Body, StringComparison.Ordinal);
+        Assert.Equal(2, accountingHandler.Requests.Count);
+    }
+
     [Fact]
     public async Task Accept_RejectsAccountingPreviewForAnotherCustomerBeforeInvoiceCreation()
     {
