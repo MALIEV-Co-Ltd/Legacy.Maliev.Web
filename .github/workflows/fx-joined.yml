@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.AuthService
-          ref: 882f5c1df547d085e81ca9f5df91a12711e2634f
+          ref: d82dd6f0fe4fd05f36d98c8b38c40d07cfd6f755
           path: .dependencies/fx/auth
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: c40a7f82cea347b949444dcd7fb730f2b8dc3c0e
+          ref: 7edcd961024868513fd5f373cab3dcb261197f77
           path: .dependencies/fx/auth-runtime/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
