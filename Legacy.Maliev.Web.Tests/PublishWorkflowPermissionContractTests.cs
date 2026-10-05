@@ -27,7 +27,7 @@ public sealed class PublishWorkflowPermissionContractTests
         Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED != 'true'", source, StringComparison.Ordinal);
         Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED == 'true'", source, StringComparison.Ordinal);
         Assert.Contains(
-            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@6017816fa67f369d785ed30794f002cfd6299af7",
+            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@d583f55473f47f72d33b51060fa5d14e0974daf5",
             source,
             StringComparison.Ordinal);
         Assert.DoesNotContain("deploy.ps1", source, StringComparison.OrdinalIgnoreCase);
@@ -63,6 +63,7 @@ public sealed class PublishWorkflowPermissionContractTests
             var job = publishJob.Groups["body"].Value;
             Assert.Contains("permissions:", job, StringComparison.Ordinal);
             Assert.Contains("contents: read", job, StringComparison.Ordinal);
+            Assert.Contains("actions: read", job, StringComparison.Ordinal);
             Assert.Contains("id-token: write", job, StringComparison.Ordinal);
         }
 

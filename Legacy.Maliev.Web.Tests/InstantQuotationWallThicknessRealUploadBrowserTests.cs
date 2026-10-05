@@ -387,6 +387,15 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     }
                     catch (OperationCanceledException) when (completionDeadline.IsCancellationRequested)
                     {
+                        // Bounded booleans/count only; never replace the primary timeout with a diagnostic failure.
+                        try
+                        {
+                            var observed = await completionStore.GetAsync(upload.SessionId, upload.OwnerIdentity, default)
+                                .WaitAsync(TimeSpan.FromSeconds(1));
+                            var observedPart = observed?.Parts.FirstOrDefault(candidate => candidate.PartId == Guid.Parse(partId!));
+                            output.WriteLine($"[material-completion] iteration={index + 1}; revisionChanged={observed is not null && observed.UpdatedAt != beforeMaterialChange.UpdatedAt}; authorizationPresent={observed?.QuoteAuthorization is not null}; partPresent={observedPart is not null}; materialMatched={observedPart?.Configuration.MaterialKey == "ABS"}; quantityMatched={observedPart?.Configuration.Quantity == 1}; partCount={Math.Min(observed?.Parts.Count ?? 0, 9)}");
+                        }
+                        catch { /* Secondary observation must not mask the material-completion timeout. */ }
                         throw new TimeoutException("Protected material change completion was not observed.");
                     }
                 }
