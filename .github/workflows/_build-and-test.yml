@@ -112,6 +112,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~KnowledgeSidebarRouteTests|FullyQualifiedName~KnowledgeSidebarBrowserTests"
           --logger trx --results-directory ./knowledge-navigation-test-results
+      - name: Verify localized ordered Home process across active and retained renderers
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~HomeStaticSsrRouteTests"
+          --logger trx --results-directory ./home-process-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -137,6 +144,7 @@ jobs:
             physical-result-test-results/**/*.trx
             quotation-response-test-results/**/*.trx
             knowledge-navigation-test-results/**/*.trx
+            home-process-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7
