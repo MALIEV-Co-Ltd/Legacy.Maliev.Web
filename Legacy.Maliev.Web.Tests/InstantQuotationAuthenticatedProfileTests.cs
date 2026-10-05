@@ -52,6 +52,51 @@ public sealed class InstantQuotationAuthenticatedProfileTests
         Assert.False(profile.IsLocked(nameof(merged.BillingCity)));
     }
 
+    [Fact]
+    public void Create_StoredShippingWithoutBilling_PreservesDistinctShippingSelection()
+    {
+        var profile = InstantQuotationAuthenticatedProfile.Create(Customer(null, Address(12, "Stored shipping", "Bang Na")),
+            [new Country(66, "Thailand", null, null, null, null, null, null)], "owner@example.test", null);
+
+        Assert.False(profile.Details.ShipToBillingAddress);
+        Assert.True(profile.IsLocked(nameof(InstantQuotationProfileDetails.ShipToBillingAddress)));
+        var merged = profile.MergeMissing(new InstantQuotationProfileDetails
+        {
+            ShipToBillingAddress = true,
+            BillingStreet1 = "New billing",
+            Country = "Thailand",
+            ShippingStreet1 = "Forged shipping",
+            ShippingCountry = "Forged country",
+        });
+        Assert.False(merged.ShipToBillingAddress);
+        Assert.Equal("Stored shipping", merged.ShippingStreet1);
+        Assert.Equal("Thailand", merged.ShippingCountry);
+        Assert.Equal("New billing", merged.BillingStreet1);
+        Assert.False(profile.IsLocked(nameof(InstantQuotationProfileDetails.BillingStreet1)));
+        var submission = merged.ToSubmission("project");
+        Assert.False(submission.ShipToBillingAddress);
+        Assert.Equal("Stored shipping", submission.ShippingAddressLine1);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Create_WithoutStoredShipping_LeavesShippingSelectionEditable(bool hasBilling)
+    {
+        var profile = InstantQuotationAuthenticatedProfile.Create(Customer(hasBilling ? Address(10, "Stored billing", "Bangkok") : null, null),
+            [new Country(66, "Thailand", null, null, null, null, null, null)], null, null);
+        Assert.True(profile.Details.ShipToBillingAddress);
+        Assert.False(profile.IsLocked(nameof(InstantQuotationProfileDetails.ShipToBillingAddress)));
+        var merged = profile.MergeMissing(new InstantQuotationProfileDetails
+        {
+            ShipToBillingAddress = false,
+            ShippingStreet1 = "New shipping",
+            ShippingCountry = "Thailand",
+        });
+        Assert.False(merged.ShipToBillingAddress);
+        Assert.Equal("New shipping", merged.ShippingStreet1);
+    }
+
     [Theory]
     [InlineData("0115562011815 (สาขาที่ 3)", "branch", "00003")]
     [InlineData("0115562011815 (สำนักงานใหญ่)", "head-office", "")]
