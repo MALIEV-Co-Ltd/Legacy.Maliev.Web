@@ -199,8 +199,9 @@ public sealed class JoinedFxNativeHttpTests
         control.DefaultRequestHeaders.Add("X-Fx-Fixture-Run", runId);
         async Task SetScenario(string scenario)
         {
-            using var response = await control.PostAsJsonAsync("runs/" + runId + "/control/scenario",
-                new { mode = scenario, resetRequests = true });
+            using var body = new StringContent(JsonSerializer.Serialize(new { mode = scenario, resetRequests = true }),
+                System.Text.Encoding.UTF8, "application/json");
+            using var response = await control.PostAsync("runs/" + runId + "/control/scenario", body);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
         await SetScenario(mode);
@@ -351,8 +352,9 @@ public sealed class JoinedFxNativeHttpTests
     {
         using var client = new HttpClient { BaseAddress = Graph.Loopback("MALIEV_FX_PROVIDER_ORIGIN") };
         client.DefaultRequestHeaders.Add("X-Fx-Fixture-Run", Graph.RunId());
-        using var response = await client.PostAsJsonAsync("runs/" + Graph.RunId() + "/control/scenario",
-            new { mode, resetRequests = reset });
+        using var body = new StringContent(JsonSerializer.Serialize(new { mode, resetRequests = reset }),
+            System.Text.Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("runs/" + Graph.RunId() + "/control/scenario", body);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
     private static async Task<int> ProviderCount()
