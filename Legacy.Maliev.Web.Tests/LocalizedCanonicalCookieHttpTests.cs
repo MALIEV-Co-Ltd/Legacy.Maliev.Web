@@ -41,8 +41,8 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
             HandleCookies = true
         });
         var query = handler == "GetEstimate"
-            ? "&material=PLA&dimensionZ=30&volume=20000&footprint=400&quantity=1&currency=USD"
-            : "&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=USD";
+            ? "&material=PLA&dimensionZ=30&volume=20000&footprint=400&quantity=1&currency=THB"
+            : "&processes=fdm%2Cresin&subtotals=1200%2C1800&totalWeightGrams=500&totalBoundingCm3=2000&currency=THB";
         using var request = Request("GET", "/InstantQuotation/3D-Printing?handler=" + handler + query, EnglishCookie);
         using var response = await client.SendAsync(request);
 

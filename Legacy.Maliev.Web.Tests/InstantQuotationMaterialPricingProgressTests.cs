@@ -119,6 +119,109 @@ public sealed class InstantQuotationMaterialPricingProgressTests
             && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
     }
 
+    [Theory]
+    [InlineData(InstantQuotationMaterialPricingStatus.Pending)]
+    [InlineData(InstantQuotationMaterialPricingStatus.Completed)]
+    public async Task ComparisonCallbackBudget_ClosesAttemptedCardAndPreservesSelectedQuote(InstantQuotationMaterialPricingStatus gatedStatus)
+    {
+        var clock = new ManualClock();
+        await using var fixture = new Fixture(clock: clock);
+        var session = await fixture.CreateAsync();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var frames = new System.Collections.Concurrent.ConcurrentQueue<InstantQuotationMaterialPricingProgress>();
+        using var caller = new CancellationTokenSource();
+        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
+        {
+            frames.Enqueue(frame);
+            if (frame.MaterialKey != "ABS" && frame.Status == gatedStatus)
+            {
+                entered.TrySetResult();
+                return new ValueTask(release.Task); // A late observer must never resume the producer.
+            }
+            return ValueTask.CompletedTask;
+        }, caller.Token);
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var readsAtDeadline = fixture.Reader.ReadCount;
+            clock.Advance(TimeSpan.FromSeconds(3));
+            Assert.False(run.IsCompleted);
+            release.TrySetResult();
+            var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.NotNull(quote);
+            Assert.False(caller.IsCancellationRequested);
+            Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
+            Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
+            var attempted = Assert.Single(frames, frame => frame.MaterialKey != "ABS"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Pending);
+            Assert.All(frames.Where(frame => frame.MaterialKey != "ABS"),
+                frame => Assert.Equal(attempted.MaterialKey, frame.MaterialKey));
+            if (gatedStatus == InstantQuotationMaterialPricingStatus.Pending)
+                Assert.Contains(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable && frame.UnitPrice is null);
+            else
+                Assert.DoesNotContain(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+            var display = new Legacy.Maliev.Web.Components.Pages.InstantQuotation.InstantQuotationMaterialPriceDisplaySnapshot(1);
+            foreach (var frame in frames) display = display.Apply(frame);
+            Assert.DoesNotContain(display.Entries, frame => frame.Status == InstantQuotationMaterialPricingStatus.Pending);
+            release.TrySetResult();
+            Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
+        }
+        finally
+        {
+            caller.Cancel();
+            release.TrySetResult();
+            // Bounded cleanup cannot mask the primary regression assertion or timeout.
+            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); } catch { }
+        }
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationMaterialPricingStatus.Pending)]
+    [InlineData(InstantQuotationMaterialPricingStatus.Completed)]
+    public async Task ComparisonCallbackAbsoluteDeadline_RejectsQuoteAndLateCompletionCannotResume(InstantQuotationMaterialPricingStatus gatedStatus)
+    {
+        var clock = new ManualClock();
+        await using var fixture = new Fixture(clock: clock);
+        var session = await fixture.CreateAsync();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var caller = new CancellationTokenSource();
+        CancellationToken callbackToken = default;
+        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
+        {
+            if (frame.MaterialKey != "ABS" && frame.Status == gatedStatus)
+            {
+                callbackToken = token;
+                entered.TrySetResult();
+                return new ValueTask(release.Task);
+            }
+            return ValueTask.CompletedTask;
+        }, caller.Token);
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var readsAtDeadline = fixture.Reader.ReadCount;
+            clock.Advance(TimeSpan.FromSeconds(3));
+            Assert.False(run.IsCompleted);
+            Assert.False(callbackToken.IsCancellationRequested);
+            clock.Advance(TimeSpan.FromSeconds(30));
+            Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.True(callbackToken.IsCancellationRequested);
+            Assert.False(caller.IsCancellationRequested);
+            release.TrySetResult();
+            Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
+        }
+        finally
+        {
+            caller.Cancel();
+            release.TrySetResult();
+            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); } catch { }
+        }
+    }
+
     [Fact]
     public async Task NoncooperativeObserver_CallerAbortStopsWaitAndLateCompletionCannotContinueAnalysis()
     {

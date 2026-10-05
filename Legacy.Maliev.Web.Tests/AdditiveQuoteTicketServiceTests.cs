@@ -16,6 +16,68 @@ namespace Legacy.Maliev.Web.Tests
     {
         private static readonly DateTimeOffset Now = new DateTimeOffset(2026, 9, 14, 12, 0, 0, TimeSpan.Zero);
 
+        [Theory]
+        [InlineData(false, "USD", "1")]
+        [InlineData(true, "USD", "1")]
+        [InlineData(false, "thb", "1")]
+        [InlineData(true, "thb", "1")]
+        [InlineData(false, "", "1")]
+        [InlineData(true, "", "1")]
+        [InlineData(false, null, "1")]
+        [InlineData(true, null, "1")]
+        [InlineData(false, "THB", "0")]
+        [InlineData(true, "THB", "0")]
+        [InlineData(false, "THB", "-1")]
+        [InlineData(true, "THB", "-1")]
+        [InlineData(false, "THB", "2")]
+        [InlineData(true, "THB", "2")]
+        public void ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected(bool order, string? currency, string rate)
+        {
+            var service = CreateService();
+            var session = Session();
+            var quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            var authorization = service.Issue(session, quote, Now);
+            var multiplier = decimal.Parse(rate, System.Globalization.CultureInfo.InvariantCulture);
+
+            if (order)
+            {
+                var payload = service.UnprotectOrder(authorization.OrderTicket, Now);
+                payload.EffectiveCurrency = currency!;
+                payload.ExchangeRate = multiplier;
+                var ticket = service.ProtectOrder(payload);
+                var error = Assert.Throws<AdditiveQuoteTicketException>(() => service.UnprotectOrder(ticket, Now));
+                Assert.Equal("quote_invalid", error.Code);
+            }
+            else
+            {
+                var payload = service.UnprotectLine(authorization.LineTickets[0], Now);
+                payload.EffectiveCurrency = currency!;
+                payload.ExchangeRate = multiplier;
+                var ticket = service.ProtectLine(payload);
+                var error = Assert.Throws<AdditiveQuoteTicketException>(() => service.UnprotectLine(ticket, Now));
+                Assert.Equal("quote_invalid", error.Code);
+            }
+        }
+
+        [Fact]
+        public void IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid()
+        {
+            var service = CreateService();
+            var session = Session();
+            var quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            var authorization = service.Issue(session, quote, Now);
+            var line = service.UnprotectLine(authorization.LineTickets[0], Now);
+            var order = service.UnprotectOrder(authorization.OrderTicket, Now);
+
+            Assert.Equal("THB", line.EffectiveCurrency);
+            Assert.Equal(1m, line.ExchangeRate);
+            Assert.Equal("THB", order.EffectiveCurrency);
+            Assert.Equal(1m, order.ExchangeRate);
+            Assert.Equal("provisional", line.Confidence);
+            Assert.Equal("engineer_review_required", line.ReviewState);
+            Assert.True(service.Validate(session, quote, authorization, Now));
+        }
+
         [Fact]
         public void LineTicket_OlderV9Economics_IsRejectedWithoutRelabelingPhysicalProfile()
         {

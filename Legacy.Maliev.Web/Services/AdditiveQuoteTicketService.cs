@@ -299,6 +299,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
             ValidateEnvelope(payload.SchemaVersion, LineSchemaVersion, payload.PolicyVersion, payload.IssuedAtUtc, payload.ExpiresAtUtc, now);
             if (string.IsNullOrWhiteSpace(payload.SessionId)
                 || string.IsNullOrWhiteSpace(payload.FileName)
+                || !string.Equals(payload.EffectiveCurrency, "THB", StringComparison.Ordinal)
+                || payload.ExchangeRate != 1m
                 || string.IsNullOrWhiteSpace(payload.UploadId)
                 || string.IsNullOrWhiteSpace(payload.StoragePath)
                 || !IsSha256(payload.ContentSha256)
@@ -377,6 +379,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
             ValidateEnvelope(payload.SchemaVersion, OrderSchemaVersion, payload.PolicyVersion, payload.IssuedAtUtc, payload.ExpiresAtUtc, now);
             if (string.IsNullOrWhiteSpace(payload.SessionId)
                 || payload.LineTicketDigests == null
+                || !string.Equals(payload.EffectiveCurrency, "THB", StringComparison.Ordinal)
+                || payload.ExchangeRate != 1m
                 || payload.LineTicketDigests.Count == 0
                 || payload.AllocatedLineTotalsThb == null
                 || payload.AllocatedLineTotalsThb.Count != payload.LineTicketDigests.Count
