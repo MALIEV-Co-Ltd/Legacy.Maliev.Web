@@ -34,6 +34,17 @@ class Guards(unittest.TestCase):
         with self.assertRaises(ValueError):
             packaged.producer_gate({'sha': packaged.PRODUCER_BLOB, 'content': 'cHJpbnQoMSk='})
 
+    def test_caller_joins_exact_producer_with_validation_read_permission_and_deploy_guard(self):
+        import yaml
+        caller = yaml.safe_load((path.parents[1] / '.github/workflows/publish-image.yml').read_text())
+        job = caller['jobs']['publish']
+        self.assertEqual(job['uses'], 'MALIEV-Co-Ltd/Legacy.Maliev.Workflows/'
+                         '.github/workflows/publish-image.yml@' + packaged.PRODUCER)
+        self.assertEqual(job['permissions']['actions'], 'read')
+        self.assertEqual(job['permissions']['contents'], 'read')
+        self.assertEqual(job['permissions']['id-token'], 'write')
+        self.assertEqual(job['if'], "vars.LEGACY_DEPLOY_ENABLED == 'true'")
+
     def test_scratch_missing_revision_and_not_applicable_receipts_refused(self):
         for receipt in ({}, {'status': 'not-applicable'},
                         {'status': 'accepted', 'sourceRevision': 'b' * 40}):
