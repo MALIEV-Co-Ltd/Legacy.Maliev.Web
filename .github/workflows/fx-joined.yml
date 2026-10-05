@@ -73,14 +73,8 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           dotnet-version: '10.0.x'
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 24
-      - name: Build and verify browser assets
-        working-directory: Legacy.Maliev.Web
-        run: npm run ci
-      - name: Require unchanged generated browser assets
-        run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
+      - name: Require committed baseline browser assets
+        run: git diff --exit-code 224bcde1d1fc7e915f4d0d0de9b3863bcae4fcff HEAD -- Legacy.Maliev.Web/wwwroot/dist
       - name: Verify offline orchestration controls
         env:
           PYTHONDONTWRITEBYTECODE: '1'

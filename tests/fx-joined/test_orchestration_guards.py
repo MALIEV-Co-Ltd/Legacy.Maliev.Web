@@ -66,6 +66,10 @@ class OrchestrationGuards(unittest.TestCase):
                 orchestration.checked(arguments)
             self.assertNotIn(sensitive, str(caught.exception))
 
+    def test_assertion_output_redacts_generated_fixture_credentials(self):
+        secret = 'disposable-credential-value'
+        self.assertEqual('failed with [REDACTED]', orchestration.sanitize('failed with ' + secret, [secret]))
+
     def test_skipped_trx_cannot_count_as_native_green(self):
         document = ET.ElementTree(ET.fromstring('<TestRun xmlns="urn:trx"><Counters total="4" executed="3" passed="3" notExecuted="1"/></TestRun>'))
         with patch.object(orchestration.ET, 'parse', return_value=document):

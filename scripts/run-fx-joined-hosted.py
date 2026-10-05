@@ -40,6 +40,12 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def sanitize(text, sensitive):
+    for value in sensitive:
+        text = text.replace(value, '[REDACTED]')
+    return re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[JWT REDACTED]', text)
+
+
 def stop_owned_container(container, run):
     inspected = json.loads(checked(['docker', 'inspect', container], capture_output=True).stdout)[0]
     if inspected['Config']['Labels'].get('maliev.fx.run') != run:
@@ -98,10 +104,7 @@ class Children:
                         if '-----END' in line:
                             pem = False
                         continue
-                    for value in self.sensitive:
-                        line = line.replace(value, '[REDACTED]')
-                    line = re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[JWT REDACTED]', line)
-                    output.write(line)
+                    output.write(sanitize(line, self.sensitive))
                     output.flush()
         thread = threading.Thread(target=drain, daemon=True)
         thread.start()
@@ -185,6 +188,13 @@ def main():
         text = (args.output / (name + '-build.log')).read_text(encoding='utf-8')
         if not re.search(r'\b0 Warning\(s\)', text) or not re.search(r'\b0 Error\(s\)', text):
             raise RuntimeError('Zero-warning/error build evidence missing: ' + name)
+    for name, target, runtime, extra in build_jobs:
+        formatting = dict(os.environ, GITHUB_ACTIONS='false', UseLocalMalievDependencies='true',
+                          MalievWorkspaceRoot=str(runtime.resolve()), FxAuthRoot=str(args.auth_root.resolve()),
+                          FxCatalogRoot=str(args.catalog_root.resolve()), FxWebRoot=str(root))
+        with (args.output / (name + '-format.log')).open('w', encoding='utf-8') as log:
+            checked(['dotnet', 'format', str(target), '--verify-no-changes', '--no-restore'],
+                    env=formatting, stdout=log, stderr=subprocess.STDOUT)
     auth_dll = root / 'tools/fx-auth-host/bin/Release/net10.0/Maliev.FxAuthHost.dll'
     catalog_dll = root / 'tools/fx-catalog-host/bin/Release/net10.0/Maliev.FxCatalogHost.dll'
     binary_receipts = {str(path.relative_to(root)): digest(path) for path in (auth_dll, catalog_dll,
@@ -275,28 +285,25 @@ def main():
                 MALIEV_FX_WEB_SECRET=web_secret, MALIEV_FX_OTHER_SECRET=other_secret, MALIEV_FX_PUBLIC_KEY_PEM=public)
             for variant in ('WRONG_AUDIENCE', 'WRONG_SIGNING_KEY', 'EXPIRED'):
                 environment['MALIEV_FX_AUTH_' + variant + '_ORIGIN'] = origins[variant]
-            with (output / 'joined-test.log').open('w', encoding='utf-8') as log:
-                result = subprocess.run(['dotnet', 'test', str(project), '-c', 'Release', '--no-build', '--no-restore',
+            test = children.start('joined-test', ['dotnet', 'test', str(project), '-c', 'Release', '--no-build', '--no-restore',
                     '-p:CI=false', '-p:GITHUB_ACTIONS=false', '-p:UseLocalMalievDependencies=true',
                     '-p:MalievWorkspaceRoot=' + str(args.web_runtime_root.resolve()), '-p:FxWebRoot=' + str(root), '--filter', test_filter,
                     '--logger', 'trx;LogFileName=joined.trx', '--results-directory', str(output.resolve())],
-                    env=environment, stdout=log, stderr=subprocess.STDOUT)
+                    environment)
+            test.wait(timeout=1200)
             trx = output / 'joined.trx'
             raw_hash = digest(trx)
             # Preserve the raw hash; sanitize only sensitive fixture values if an assertion exposes them.
             text = trx.read_text(encoding='utf-8')
-            sanitized = text
-            for secret in (web_secret, other_secret, pg_secret):
-                sanitized = sanitized.replace(secret, '[REDACTED]')
-            sanitized = re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[JWT REDACTED]', sanitized)
+            sanitized = sanitize(text, (web_secret, other_secret, pg_secret))
             if sanitized != text:
                 trx.write_text(sanitized, encoding='utf-8')
             counters = verify_trx(trx, {'actor': 25, 'provider': 28, 'state': 12, 'actor-red': 4}[lane], args.expect_red)
-            receipts.append({'lane': lane, 'runId': run, 'exitCode': result.returncode, 'counters': counters,
+            receipts.append({'lane': lane, 'runId': run, 'exitCode': test.returncode, 'counters': counters,
                              'rawTrxSha256': raw_hash, 'publishedTrxSha256': digest(trx), 'sensitiveRedaction': sanitized != text})
-            if result.returncode != 0 and not args.expect_red:
+            if test.returncode != 0 and not args.expect_red:
                 raise RuntimeError('Actual native joined tests failed: ' + lane)
-            if args.expect_red and result.returncode == 0:
+            if args.expect_red and test.returncode == 0:
                 raise RuntimeError('Expected native RED did not fail')
         finally:
             children.close()
