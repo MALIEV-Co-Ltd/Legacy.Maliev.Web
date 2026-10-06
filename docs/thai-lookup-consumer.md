@@ -2,7 +2,9 @@
 
 This is unvalidated consumer preparation for AppHost #144, using concrete Catalog candidate definitions at 6b591f86a720ae4953d9bd33c93724f4b5703b89 and #44 comment6010909664, #45 comment6010910043, #46 comment6010910391. Conflicts use string field identifiers, with null uniqueness fields omitted by Catalog. Producer hosted acceptance, Web hosted validation and final protected-main integration are pending. No deployment or provider enablement is included.
 
-New reusable pieces: Application wire projections/validation, Infrastructure workload client/registration, Web boundary/registration, localized lookup component with interactive lifecycle support and existing-field surface mappings, responsive CSS, progressive JavaScript, Thai resources, client/HTTP/browser regression sources. The Web migration owner explicitly handed off minimal additive startup/form hooks in this isolated successor branch. Web #493 and its checkout remain unchanged; final integration waits for its verified protected-main commit. Shadcn is untouched.
+New reusable pieces: Application wire projections/validation, Infrastructure workload client/registration, Web boundary/registration, localized lookup component with interactive lifecycle support and existing-field surface mappings, responsive CSS, progressive JavaScript, Thai resources, client/HTTP/browser regression sources. The Web migration owner explicitly handed off minimal additive startup/form hooks in this isolated successor branch. The integration prerequisite is now fulfilled by verified protected-main commit `0238db5c9c1630aa4d557fd380f23cf7d5138e32` from Web #493. Shadcn is untouched.
+
+The combined successor also incorporates the reviewed release-asset coverage repair from #482, historical gallery browser checks from #488, and stored shipping lock from #489. Existing main gates and all original focused assertions are retained. Fresh combined-head hosted validation is pending; prior individual runs do not establish combined acceptance. Provider enablement and joined customer save/readback remain separate rollout evidence.
 
 ## Required owner hooks
 
@@ -31,7 +33,7 @@ The address widget uses explicit tuple selection, preserving postcode ambiguity.
 
 Company search currently uses name suggestions. Tax-ID search and detail enrichment are deliberately not enabled from an unconfirmed capability. Null provider facts remain unknown; no status/type/objectives/address is synthesized or persisted. Only explicitly reviewed editable company name/tax fields can be applied. Creden access rights and production setup remain unresolved with the Catalog owner.
 
-Same-origin routes are bounded POST lookups, require the existing antiforgery token, rate limit at 30 per minute, return no-store, and do not modify customer data. Raw pasted addresses and company queries are not logged by the new code. Catalog replies are bounded to 256 KiB and a 10-second operation deadline; authentication failures are mapped to unavailable and invalidate the workload token. 400/422/503 stay distinct. Existing hosted tracing/logging must still be reviewed for request-body capture before release.
+Same-origin routes are bounded POST lookups, require the existing antiforgery token, rate limit at 30 per minute, return no-store, and do not modify customer data. Raw pasted addresses and company queries are not logged by the new code. Catalog replies are bounded to 256 KiB and a 10-second operation deadline; authentication failures are mapped to unavailable and invalidate the workload token. 400/422/429/503 stay distinct. Throttling shows English/Thai manual-entry feedback without changing manual fields. Existing hosted tracing/logging must still be reviewed for request-body capture before release.
 
 ## Validation status
 
