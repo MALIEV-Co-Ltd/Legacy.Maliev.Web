@@ -12,6 +12,10 @@ public sealed class RecaptchaEnterpriseOptions
 
     public string ProjectId { get; set; } = string.Empty;
 
+    public string KeyId { get; set; } = string.Empty;
+
+    public string? CredentialsPath { get; set; }
+
     public float MinimumScore { get; set; } = 0.5f;
 }
 
@@ -27,10 +31,16 @@ internal interface IRecaptchaAssessmentClient
         CancellationToken cancellationToken);
 }
 
-internal sealed class GoogleRecaptchaAssessmentClient : IRecaptchaAssessmentClient
+internal sealed class GoogleRecaptchaAssessmentClient(IOptions<RecaptchaEnterpriseOptions> options) : IRecaptchaAssessmentClient
 {
     private readonly Lazy<Task<RecaptchaEnterpriseServiceClient>> client =
-        new(() => RecaptchaEnterpriseServiceClient.CreateAsync());
+        new(() => CreateBuilder(options.Value).BuildAsync());
+
+    internal static RecaptchaEnterpriseServiceClientBuilder CreateBuilder(RecaptchaEnterpriseOptions options) =>
+        new()
+        {
+            CredentialsPath = string.IsNullOrWhiteSpace(options.CredentialsPath) ? null : options.CredentialsPath,
+        };
 
     public async Task<RecaptchaAssessment> AssessAsync(
         string projectId,
