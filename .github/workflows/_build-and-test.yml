@@ -120,6 +120,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~HomeStaticSsrRouteTests"
           --logger trx --results-directory ./home-process-test-results
+      - name: Verify historical service gallery framing and actual mobile composition
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ServiceGalleryHistoricalBrowserTests"
+          --logger trx --results-directory ./service-gallery-test-results
       - name: Verify resolved material identity across Catalog and Order boundaries
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -197,6 +204,7 @@ jobs:
             quotation-response-test-results/**/*.trx
             knowledge-navigation-test-results/**/*.trx
             home-process-test-results/**/*.trx
+            service-gallery-test-results/**/*.trx
             material-identity-test-results/**/*.trx
             signed-link-test-results/**/*.trx
             startup-security-test-results/**/*.trx
