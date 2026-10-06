@@ -1,4 +1,5 @@
 using Google.Api.Gax.ResourceNames;
+using Google.Apis.Auth.OAuth2;
 using Google.Cloud.RecaptchaEnterprise.V1;
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Logging;
@@ -36,11 +37,21 @@ internal sealed class GoogleRecaptchaAssessmentClient(IOptions<RecaptchaEnterpri
     private readonly Lazy<Task<RecaptchaEnterpriseServiceClient>> client =
         new(() => CreateBuilder(options.Value).BuildAsync());
 
-    internal static RecaptchaEnterpriseServiceClientBuilder CreateBuilder(RecaptchaEnterpriseOptions options) =>
-        new()
+    internal static RecaptchaEnterpriseServiceClientBuilder CreateBuilder(
+        RecaptchaEnterpriseOptions options, Func<string, GoogleCredential>? loadCredential = null)
+    {
+        var builder = new RecaptchaEnterpriseServiceClientBuilder();
+        if (!string.IsNullOrWhiteSpace(options.CredentialsPath))
         {
-            CredentialsPath = string.IsNullOrWhiteSpace(options.CredentialsPath) ? null : options.CredentialsPath,
-        };
+            // This builder is created only by the lazy assessment client. Explicit
+            // mounted credentials are service-account documents; ADC remains the
+            // default for ambient workload identity when no path is configured.
+            builder.GoogleCredential = loadCredential is null
+                ? CredentialFactory.FromFile<ServiceAccountCredential>(options.CredentialsPath).ToGoogleCredential()
+                : loadCredential(options.CredentialsPath);
+        }
+        return builder;
+    }
 
     public async Task<RecaptchaAssessment> AssessAsync(
         string projectId,
