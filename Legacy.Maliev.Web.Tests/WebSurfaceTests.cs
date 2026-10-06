@@ -3961,9 +3961,13 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         return (WebUtility.HtmlDecode(action.Groups[1].Value), new Dictionary<string, string>
         {
             ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
-            ["FirstName"] = "Mali", ["LastName"] = "Ev", ["Email"] = "inquiry-locale@example.com",
-            ["Country"] = "Thailand", ["Message"] = "<script>inquiry-probe</script>",
-            ["g-recaptcha-response"] = "browser-token", ["SubmissionId"] = Guid.NewGuid().ToString(),
+            ["FirstName"] = "Mali",
+            ["LastName"] = "Ev",
+            ["Email"] = "inquiry-locale@example.com",
+            ["Country"] = "Thailand",
+            ["Message"] = "<script>inquiry-probe</script>",
+            ["g-recaptcha-response"] = "browser-token",
+            ["SubmissionId"] = Guid.NewGuid().ToString(),
             ["ServiceContext"] = "custom_manufacturing",
         });
     }
