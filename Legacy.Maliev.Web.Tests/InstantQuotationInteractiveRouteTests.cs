@@ -400,8 +400,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             Assert.All(lookupButtons, match =>
             {
                 Assert.Contains("type=\"button\"", match.Value, StringComparison.Ordinal);
-                Assert.True(new[] { "data-lookup-resolve", "data-lookup-unconstrained", "data-lookup-more", "data-lookup-apply", "data-lookup-cancel" }
-                    .Any(action => match.Value.Contains(action, StringComparison.Ordinal)));
+                Assert.Contains(new[] { "data-lookup-resolve", "data-lookup-unconstrained", "data-lookup-more", "data-lookup-apply", "data-lookup-cancel" },
+                    action => match.Value.Contains(action, StringComparison.Ordinal));
             });
             Assert.Equal(5, enabledButtons.Count);
             Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
