@@ -586,12 +586,19 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
 
             await review.ClickAsync();
             await page.Locator("[data-workflow-review-content]").WaitForAsync();
+            var reviewTotal = page.Locator("[data-workflow-review-total] > div")
+                .Filter(new LocatorFilterOptions
+                {
+                    Has = page.GetByText(culture == "th" ? "รวมทั้งหมด" : "Total", new PageGetByTextOptions { Exact = true }),
+                }).Locator("dd");
+            Assert.Equal(1, await reviewTotal.CountAsync());
+            Assert.Equal(before, await reviewTotal.InnerTextAsync());
             await page.Locator("[data-review-part-details] > summary").ClickAsync();
             var reviewedWarnings = await page.Locator("[data-review-dfm-warnings] li").AllInnerTextsAsync();
             Assert.Contains(reviewedWarnings, item => item.Contains(warningTitle, StringComparison.Ordinal)
                 && item.Contains(fdmLimit, StringComparison.Ordinal));
             await AssertPrintableDfmMatchesReviewAsync(page, reviewedWarnings);
-            Assert.Equal(before, await total.InnerTextAsync());
+            Assert.Equal(before, await reviewTotal.InnerTextAsync());
             Assert.Equal(pricingCalls, pricing.CallCount);
             await page.Locator("[data-review-back]").ClickAsync();
 
@@ -602,14 +609,16 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
             Assert.Equal(1, upload.VerifiedUploads);
 
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+            var resinPrice = await total.InnerTextAsync();
             await review.ClickAsync();
             await page.Locator("[data-workflow-review-content]").WaitForAsync();
             var resinWarnings = await page.Locator("[data-review-dfm-warnings] li").AllInnerTextsAsync();
             Assert.DoesNotContain(resinWarnings, item => item.Contains(warningTitle, StringComparison.Ordinal));
-            var resinPrice = await total.InnerTextAsync();
+            Assert.Equal(resinPrice, await reviewTotal.InnerTextAsync());
             var resinPricingCalls = pricing.CallCount;
             await AssertPrintableDfmMatchesReviewAsync(page, resinWarnings);
-            Assert.Equal(resinPrice, await total.InnerTextAsync());
+            Assert.Equal(resinPrice, await reviewTotal.InnerTextAsync());
             Assert.Equal(resinPricingCalls, pricing.CallCount);
             Assert.Equal(1, upload.VerifiedUploads);
             Assert.Empty(pageErrors);
