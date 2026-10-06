@@ -2748,7 +2748,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains($"data-password-mismatch=\"{mismatchLabel}\"", decodedSource, StringComparison.Ordinal);
         Assert.Contains("data-password-primary", source, StringComparison.Ordinal);
         Assert.Contains("data-password-confirm", source, StringComparison.Ordinal);
-        Assert.Contains("formaction=\"/Account/Signup?handler=SignUp\"", source, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/Signup?handler=SignUp&amp;culture=", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\" id=\"signup-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"RecaptchaToken\"", source, StringComparison.Ordinal);
@@ -2822,7 +2822,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains($"data-password-mismatch=\"{mismatchLabel}\"", decodedSource, StringComparison.Ordinal);
         Assert.Contains("data-password-primary", source, StringComparison.Ordinal);
         Assert.Contains("data-password-confirm", source, StringComparison.Ordinal);
-        Assert.Contains("formaction=\"/Account/ResetPassword?handler=ChangePassword\"", source, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/ResetPassword?handler=ChangePassword&amp;culture=", source, StringComparison.Ordinal);
         Assert.Contains("name=\"Email\" value=\"user@example.com\"", source, StringComparison.Ordinal);
         Assert.Contains($"name=\"Token\" value=\"{token}\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
@@ -2857,12 +2857,14 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.DoesNotContain(submittedConfirmation, source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken()
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken(string culture)
     {
         const string token = "abcdefghijklmnopqrstuvwxyz123456";
         var form = await GetAntiforgeryFormAsync(
-            $"/account/resetpassword?email=user%40example.com&token={token}");
+            $"/account/resetpassword?culture={culture}&email=user%40example.com&token={token}");
         form["Email"] = "user@example.com";
         form["Token"] = token;
         var submittedPassword = new string('z', 12);
@@ -2870,11 +2872,11 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         form["ConfirmPassword"] = submittedPassword;
 
         using var response = await client.PostAsync(
-            "/account/resetpassword?handler=ChangePassword",
+            $"/account/resetpassword?handler=ChangePassword&culture={culture}",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal("/Account/Login?email=user@example.com", response.Headers.Location?.OriginalString);
+        Assert.Equal($"/Account/Login?email=user@example.com&culture={culture}", response.Headers.Location?.OriginalString);
         Assert.DoesNotContain(token, response.Headers.Location?.OriginalString, StringComparison.Ordinal);
     }
 
@@ -3012,6 +3014,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/SetInitialPassword?", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
         Assert.Contains("token=opaque-setup-token-12345678901234567890", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
+        Assert.Contains("culture=en", response.Headers.Location?.OriginalString, StringComparison.Ordinal);
         Assert.Contains("returnUrl=%2FMember%2FOrders", response.Headers.Location?.OriginalString, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
             response.Headers.GetValues("Set-Cookie"),
@@ -3197,7 +3200,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains($">{emailLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{submitLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{backLabel}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains("formaction=\"/Account/ForgotPassword?handler=PasswordReset\"", source, StringComparison.Ordinal);
+        Assert.Contains("formaction=\"/Account/ForgotPassword?handler=PasswordReset&amp;culture=", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"email\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("reset-token", source, StringComparison.OrdinalIgnoreCase);
@@ -3740,6 +3743,47 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             LastNotification = notification;
             Notifications.Add(notification);
             return Task.FromResult(new NotificationResult(true, true, true));
+        }
+    }
+
+    [Theory]
+    [InlineData("ResetPassword", "en", "Email address is required")]
+    [InlineData("ResetPassword", "th", "กรุณากรอกอีเมล")]
+    [InlineData("ForgotPassword", "en", "Email address is required")]
+    [InlineData("ForgotPassword", "th", "กรุณากรอกอีเมล")]
+    [InlineData("Signup", "en", "Email address is required")]
+    [InlineData("Signup", "th", "กรุณากรอกอีเมล")]
+    [InlineData("Login", "en", "Email address is required")]
+    [InlineData("Login", "th", "กรุณากรอกอีเมล")]
+    public async Task AccountForm_PostsRenderedActionAndPreservesQueryOnlyCulture(
+        string page, string culture, string requiredEmail)
+    {
+        var path = $"/Account/{page}?culture={culture}";
+        if (page == "ResetPassword")
+        {
+            path += "&email=user%40example.com&token=abcdefghijklmnopqrstuvwxyz123456";
+        }
+
+        var source = await client.GetStringAsync(path);
+        var action = Regex.Match(source, "formaction=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(action.Success, "The actual account form must declare its owned POST action.");
+        var renderedAction = WebUtility.HtmlDecode(action.Groups[1].Value);
+        Assert.Contains($"culture={culture}", renderedAction, StringComparison.Ordinal);
+        var token = Regex.Match(source, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(token.Success);
+        using var response = await client.PostAsync(renderedAction, new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+                ["Email"] = string.Empty,
+            }));
+        var result = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(requiredEmail, result, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=\"Password\" value=", result, StringComparison.Ordinal);
+        if (culture == "th")
+        {
+            Assert.DoesNotContain("Email address is required", result, StringComparison.Ordinal);
         }
     }
 

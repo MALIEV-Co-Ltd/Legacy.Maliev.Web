@@ -197,4 +197,18 @@
   <data name="We could not send the confirmation email. Please try again later." xml:space="preserve"><value>ระบบไม่สามารถส่งอีเมลยืนยันได้ กรุณาลองใหม่ภายหลัง</value></data>
   <data name="We could not finish setting up your account. Please contact us." xml:space="preserve"><value>ระบบตั้งค่าบัญชีของคุณไม่สำเร็จ กรุณาติดต่อเรา</value></data>
   <data name="Account created. Check your email and follow the link to confirm your address before signing in." xml:space="preserve"><value>สร้างบัญชีเรียบร้อยแล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ</value></data>
+  <data name="The submitted value is invalid." xml:space="preserve"><value>ข้อมูลที่ส่งมาไม่ถูกต้อง</value></data>
+  <data name="Email address is required" xml:space="preserve"><value>กรุณากรอกอีเมล</value></data>
+  <data name="Email address is too long." xml:space="preserve"><value>อีเมลยาวเกินไป</value></data>
+  <data name="First name is too long." xml:space="preserve"><value>ชื่อยาวเกินไป</value></data>
+  <data name="Last name is too long." xml:space="preserve"><value>นามสกุลยาวเกินไป</value></data>
+  <data name="Please confirm your new password" xml:space="preserve"><value>กรุณายืนยันรหัสผ่านใหม่</value></data>
+  <data name="The password must be between 8 and 1024 characters." xml:space="preserve"><value>รหัสผ่านต้องมีความยาวระหว่าง 8 ถึง 1024 ตัวอักษร</value></data>
+  <data name="Security verification failed. Please try again." xml:space="preserve"><value>การตรวจสอบความปลอดภัยไม่สำเร็จ กรุณาลองอีกครั้ง</value></data>
+  <data name="We could not create your account. Please try again." xml:space="preserve"><value>ระบบไม่สามารถสร้างบัญชีได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="Account created, but confirmation delivery is unavailable. Please contact info@maliev.com." xml:space="preserve"><value>สร้างบัญชีแล้ว แต่ระบบไม่สามารถส่งอีเมลยืนยันได้ กรุณาติดต่อ info@maliev.com</value></data>
+  <data name="Confirm your MALIEV account" xml:space="preserve"><value>ยืนยันบัญชี MALIEV ของคุณ</value></data>
+  <data name="Hello {0}," xml:space="preserve"><value>สวัสดี {0}</value></data>
+  <data name="Confirm your account using this single-use link:" xml:space="preserve"><value>ยืนยันบัญชีของคุณด้วยลิงก์นี้ ลิงก์ใช้ได้ครั้งเดียว:</value></data>
+  <data name="Confirm account" xml:space="preserve"><value>ยืนยันบัญชี</value></data>
 </root>

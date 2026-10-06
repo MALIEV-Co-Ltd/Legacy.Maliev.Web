@@ -51,10 +51,13 @@
     <p class="maliev-form-help">@Localizer["By signing up, you agree to our"] <a href="/Legal/TermsConditions">@Localizer["Terms and Conditions"]</a> @Localizer["and"] <a href="/Legal/PrivacyPolicy">@Localizer["Privacy Policy"]</a>.</p>
     <p class="maliev-form-help">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
     <p id="signup-recaptcha-error" class="maliev-form-error" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
-    <button type="submit" class="maliev-button" formaction="/Account/Signup?handler=SignUp" id="submit-button"><span data-submit-label>@Localizer["Sign Up"]</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+    <button type="submit" class="maliev-button" formaction="@FormAction" id="submit-button"><span data-submit-label>@Localizer["Sign Up"]</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
 </div>
 
 @code {
+    private static string FormAction =>
+        $"/Account/Signup?handler=SignUp&culture={Uri.EscapeDataString(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)}";
+
     [Parameter, EditorRequired]
     public SignupFormDisplayModel Model { get; set; } = null!;
 

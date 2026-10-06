@@ -4,33 +4,36 @@ using Legacy.Maliev.Web.Components.Pages.Account;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Localization;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
 [EnableRateLimiting("account")]
-public sealed class ResetPassword(ICustomerAuthenticationClient authenticationClient) : PageModel
+public sealed class ResetPassword(
+    ICustomerAuthenticationClient authenticationClient,
+    IStringLocalizer<ResetPasswordContent> localizer) : PageModel
 {
     [BindProperty]
-    [Required]
-    [EmailAddress]
-    [StringLength(320)]
+    [Required(ErrorMessage = "Email address is required")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+    [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
-    [StringLength(256, MinimumLength = 32)]
+    [Required(ErrorMessage = "The password reset token is required.")]
+    [StringLength(256, MinimumLength = 32, ErrorMessage = "The password reset token is invalid.")]
     public string Token { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Password is required")]
     [DataType(DataType.Password)]
-    [StringLength(1024, MinimumLength = 8)]
+    [StringLength(1024, MinimumLength = 8, ErrorMessage = "The password must be between 8 and 1024 characters.")]
     public string Password { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please confirm your new password")]
     [DataType(DataType.Password)]
-    [StringLength(1024, MinimumLength = 8)]
+    [StringLength(1024, MinimumLength = 8, ErrorMessage = "The password must be between 8 and 1024 characters.")]
     [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
@@ -45,11 +48,20 @@ public sealed class ResetPassword(ICustomerAuthenticationClient authenticationCl
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? "The submitted value is invalid."
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal));
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var result = localizer[key];
+        return !result.ResourceNotFound
+            ? result.Value
+            : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                ? key
+                : localizer["The submitted value is invalid."].Value;
+    }
 
     public IActionResult OnGet(string? email, string? token)
     {
@@ -82,8 +94,8 @@ public sealed class ResetPassword(ICustomerAuthenticationClient authenticationCl
             return Page();
         }
 
-        Notification = "Password changed. You can now sign in.";
-        return RedirectToPage("/Account/Login", new { email = Email });
+        Notification = localizer["Password changed. You can now sign in."];
+        return RedirectToPage("/Account/Login", new { email = Email, culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName });
     }
 
     private void ProtectChallengeResponse()

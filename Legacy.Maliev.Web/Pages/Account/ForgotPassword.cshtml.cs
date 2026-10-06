@@ -7,18 +7,21 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 
+using Microsoft.Extensions.Localization;
+
 namespace Legacy.Maliev.Web.Pages.Account;
 
 [EnableRateLimiting("account")]
 public sealed class ForgotPassword(
     ICustomerAuthenticationClient authenticationClient,
     INotificationClient notificationClient,
+    IStringLocalizer<ForgotPasswordContent> localizer,
     ILogger<ForgotPassword> logger) : PageModel
 {
     [BindProperty]
-    [Required]
-    [EmailAddress]
-    [StringLength(320)]
+    [Required(ErrorMessage = "Email address is required")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+    [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
     [TempData]
@@ -32,11 +35,20 @@ public sealed class ForgotPassword(
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? "The submitted value is invalid."
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal));
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var result = localizer[key];
+        return !result.ResourceNotFound
+            ? result.Value
+            : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                ? key
+                : localizer["The submitted value is invalid."].Value;
+    }
 
     public async Task<IActionResult> OnPostPasswordResetAsync(CancellationToken cancellationToken)
     {
@@ -53,8 +65,8 @@ public sealed class ForgotPassword(
             _ = await SendResetAsync(challenge.Token, cancellationToken);
         }
 
-        Notification = "If an eligible account exists, a password reset link has been sent.";
-        return RedirectToPage();
+        Notification = localizer["If an eligible account exists, a password reset link has been sent."];
+        return RedirectToPage(new { culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName });
     }
 
     private async Task<bool> SendResetAsync(string token, CancellationToken cancellationToken)
@@ -65,6 +77,7 @@ public sealed class ForgotPassword(
             {
                 ["email"] = Email.Trim(),
                 ["token"] = token,
+                ["culture"] = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
             });
 
         try
@@ -74,8 +87,8 @@ public sealed class ForgotPassword(
                 NotificationChannel.NoReply,
                 new EmailNotification(
                     Email.Trim(),
-                    "Reset your MALIEV password",
-                    $"<p>Use this single-use link to reset your password:</p><p><a href=\"{safeCallback}\">Reset password</a></p><p>If you did not request this, you can ignore this email.</p>",
+                    localizer["Reset your MALIEV password"],
+                    $"<p>{WebUtility.HtmlEncode(localizer["Use this single-use link to reset your password:"])}</p><p><a href=\"{safeCallback}\">{WebUtility.HtmlEncode(localizer["Reset password"])}</a></p><p>{WebUtility.HtmlEncode(localizer["If you did not request this, you can ignore this email."])}</p>",
                     null,
                     null,
                     ["mail-tracking@maliev.com"]),

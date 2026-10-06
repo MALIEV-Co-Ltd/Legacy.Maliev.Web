@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
+using Microsoft.Extensions.Localization;
+
 namespace Legacy.Maliev.Web.Pages.Account;
 
 [EnableRateLimiting("account")]
@@ -18,32 +20,33 @@ public sealed class Signup(
     INotificationClient notificationClient,
     IAntiBotVerifier antiBotVerifier,
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
+    IStringLocalizer<SignupContent> localizer,
     ILogger<Signup> logger) : PageModel
 {
     [BindProperty]
-    [Required]
-    [StringLength(100)]
+    [Required(ErrorMessage = "First name is required")]
+    [StringLength(100, ErrorMessage = "First name is too long.")]
     public string FirstName { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
-    [StringLength(100)]
+    [Required(ErrorMessage = "Last name is required")]
+    [StringLength(100, ErrorMessage = "Last name is too long.")]
     public string LastName { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
-    [EmailAddress]
-    [StringLength(320)]
+    [Required(ErrorMessage = "Email address is required")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+    [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Password is required")]
     [DataType(DataType.Password)]
-    [StringLength(1024, MinimumLength = 8)]
+    [StringLength(1024, MinimumLength = 8, ErrorMessage = "The password must be between 8 and 1024 characters.")]
     public string Password { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please confirm your new password")]
     [DataType(DataType.Password)]
     [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
@@ -65,11 +68,20 @@ public sealed class Signup(
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? "The submitted value is invalid."
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal));
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var result = localizer[key];
+        return !result.ResourceNotFound
+            ? result.Value
+            : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                ? key
+                : localizer["The submitted value is invalid."].Value;
+    }
 
     public IActionResult OnGet() => User.Identity?.IsAuthenticated == true
         ? LocalRedirect("~/Account")
@@ -124,8 +136,8 @@ public sealed class Signup(
             && await SendConfirmationAsync(challenge.Token, cancellationToken);
         if (!sent)
         {
-            Notification = "Account created, but confirmation delivery is unavailable. Please contact info@maliev.com.";
-            return RedirectToPage();
+            Notification = localizer["Account created, but confirmation delivery is unavailable. Please contact info@maliev.com."];
+            return RedirectToPage(new { culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName });
         }
 
         return RedirectToPage(
@@ -134,6 +146,7 @@ public sealed class Signup(
             {
                 email = Email.Trim(),
                 accountCreated = true,
+                culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
             });
     }
 
@@ -147,16 +160,17 @@ public sealed class Signup(
             {
                 ["email"] = Email.Trim(),
                 ["token"] = token,
+                ["culture"] = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
             });
 
-        var name = WebUtility.HtmlEncode($"{FirstName.Trim()} {LastName.Trim()}");
+        var greeting = WebUtility.HtmlEncode(localizer["Hello {0},", $"{FirstName.Trim()} {LastName.Trim()}"]);
         var safeCallback = WebUtility.HtmlEncode(callback);
         var result = await notificationClient.SendAsync(
             NotificationChannel.NoReply,
             new EmailNotification(
                 Email.Trim(),
-                "Confirm your MALIEV account",
-                $"<p>Hello {name},</p><p>Confirm your account using this single-use link:</p><p><a href=\"{safeCallback}\">Confirm account</a></p>",
+                localizer["Confirm your MALIEV account"],
+                $"<p>{greeting}</p><p>{WebUtility.HtmlEncode(localizer["Confirm your account using this single-use link:"])}</p><p><a href=\"{safeCallback}\">{WebUtility.HtmlEncode(localizer["Confirm account"])}</a></p>",
                 null,
                 null,
                 ["mail-tracking@maliev.com"]),
