@@ -584,17 +584,53 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(1, upload.VerifiedUploads);
             Assert.Empty(pageErrors);
 
+            await review.ClickAsync();
+            await page.Locator("[data-workflow-review-content]").WaitForAsync();
+            await page.Locator("[data-review-part-details] > summary").ClickAsync();
+            var reviewedWarnings = await page.Locator("[data-review-dfm-warnings] li").AllInnerTextsAsync();
+            Assert.Contains(reviewedWarnings, item => item.Contains(warningTitle, StringComparison.Ordinal)
+                && item.Contains(fdmLimit, StringComparison.Ordinal));
+            await AssertPrintableDfmMatchesReviewAsync(page, reviewedWarnings);
+            Assert.Equal(before, await total.InnerTextAsync());
+            Assert.Equal(pricingCalls, pricing.CallCount);
+            await page.Locator("[data-review-back]").ClickAsync();
+
             await material.SelectOptionAsync("M68");
             await page.WaitForFunctionAsync("() => !document.querySelector('[data-dfm-code=thin-wall]')");
             await toggle.ClickAsync();
             await page.WaitForFunctionAsync("limit => document.querySelector('.instant-quote__thickness-legend')?.textContent?.includes(limit)", resinLimit);
             Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
             Assert.Equal(1, upload.VerifiedUploads);
+
+            await review.ClickAsync();
+            await page.Locator("[data-workflow-review-content]").WaitForAsync();
+            var resinWarnings = await page.Locator("[data-review-dfm-warnings] li").AllInnerTextsAsync();
+            Assert.DoesNotContain(resinWarnings, item => item.Contains(warningTitle, StringComparison.Ordinal));
+            var resinPrice = await total.InnerTextAsync();
+            var resinPricingCalls = pricing.CallCount;
+            await AssertPrintableDfmMatchesReviewAsync(page, resinWarnings);
+            Assert.Equal(resinPrice, await total.InnerTextAsync());
+            Assert.Equal(resinPricingCalls, pricing.CallCount);
+            Assert.Equal(1, upload.VerifiedUploads);
+            Assert.Empty(pageErrors);
         }
         finally
         {
             File.Delete(path);
         }
+    }
+
+    private static async Task AssertPrintableDfmMatchesReviewAsync(IPage page, IReadOnlyList<string> reviewedWarnings)
+    {
+        var preliminary = page.Locator("#preliminary-quotation-button");
+        Assert.True(await preliminary.IsEnabledAsync());
+        await using var preview = await page.RunAndWaitForPopupAsync(() => preliminary.ClickAsync());
+        await preview.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+        Assert.Equal(1, await preview.Locator(".iq-preliminary-quotation-part").CountAsync());
+        var printableWarnings = await preview.Locator(".iq-preliminary-quotation-part .iq-preliminary-quotation-warnings li").AllInnerTextsAsync();
+        Assert.Equal(reviewedWarnings, printableWarnings);
+        Assert.Equal(reviewedWarnings.Count == 0 ? 1 : 0,
+            await preview.Locator(".iq-preliminary-quotation-part .iq-preliminary-quotation-dfm-ok").CountAsync());
     }
 
     [Fact]
