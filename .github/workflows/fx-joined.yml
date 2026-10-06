@@ -1,0 +1,105 @@
+name: Native FX join
+
+on:
+  pull_request:
+    paths:
+      - 'tests/fx-joined/**'
+      - 'tools/fx-auth-host/**'
+      - 'tools/fx-catalog-host/**'
+      - 'tools/fx-provider-transport/**'
+      - 'scripts/run-fx-joined-hosted.py'
+      - '.github/workflows/fx-joined.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-fx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.AuthService
+          ref: d82dd6f0fe4fd05f36d98c8b38c40d07cfd6f755
+          path: .dependencies/fx/auth
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CatalogService
+          ref: e071c5967108fff79690c537da7fdb88365a89f4
+          path: .dependencies/fx/catalog
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 7edcd961024868513fd5f373cab3dcb261197f77
+          path: .dependencies/fx/auth-runtime/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/fx/auth-runtime/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 7edcd961024868513fd5f373cab3dcb261197f77
+          path: .dependencies/fx/catalog-runtime/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/fx/catalog-runtime/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          path: .dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: '10.0.x'
+      - name: Require committed baseline browser assets
+        run: git diff --exit-code 224bcde1d1fc7e915f4d0d0de9b3863bcae4fcff HEAD -- Legacy.Maliev.Web/wwwroot/dist
+      - name: Verify offline orchestration controls
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 tests/fx-joined/test_orchestration_guards.py
+      - name: Record exact consumer head
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          graph = json.loads(pathlib.Path('tests/fx-joined/candidate-graph.json').read_text())
+          graph['webBaseCommit'] = graph['webCommit']
+          graph['webCommit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          pathlib.Path('.dependencies/fx/graph.json').write_text(json.dumps(graph, indent=2))
+          PY
+      - name: Build first and execute actual joined actor, provider and state lanes
+        run: >-
+          python3 scripts/run-fx-joined-hosted.py --graph .dependencies/fx/graph.json
+          --web-root . --auth-root .dependencies/fx/auth --catalog-root .dependencies/fx/catalog
+          --web-runtime-root .dependencies --auth-runtime-root .dependencies/fx/auth-runtime
+          --catalog-runtime-root .dependencies/fx/catalog-runtime --output .dependencies/fx/native-evidence
+      - name: Preserve exact native evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fx-joined-${{ github.event.pull_request.head.sha }}
+          path: .dependencies/fx/native-evidence
+          if-no-files-found: error
+          retention-days: 7

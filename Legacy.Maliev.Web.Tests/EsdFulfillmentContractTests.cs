@@ -5,6 +5,7 @@ using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -97,6 +98,110 @@ public sealed class EsdFulfillmentContractTests
                 "material-403", "colors-401", "finish-403", "currency-403", "material-502", "currency-502", "material-network", "colors-timeout",
                 "currency-network", "currency-timeout" })
                 yield return [material, failure];
+    }
+
+    [Theory]
+    [InlineData("PA612-ESD", " pa612-esd ", "PA612-ESD")]
+    [InlineData("ABS-ESD", "\tabs-esd\r\n", "ABS-ESD")]
+    [InlineData("TPU", " tpu ", "TPU (Shore 95A)")]
+    [InlineData("PC", " pc ", "Polycarbonate (PC)")]
+    [InlineData("M68", " m68 ", "Resin Standard")]
+    public async Task Configuration_RecognizedPaddedMaterialKey_PersistsCanonicalIdentityBeforeFulfillment(
+        string canonicalKey, string suppliedKey, string databaseName)
+    {
+        using var boundary = new Boundary(canonicalKey, databaseName: databaseName);
+        var original = Part(canonicalKey, BuildPreference.Standard);
+        var store = new AdmissionStore(original);
+        var pricing = new AdmissionPricing();
+        await using var workflow = new InstantQuotationWorkflowCoordinator(
+            store, Unexpected<IInstantQuotationUploadClient>(), pricing, null, authoritativePricingService: pricing);
+        await workflow.InitializeAsync(store.State.SessionId, default);
+        await workflow.UpdateConfigurationAsync(original.PartId, suppliedKey, "Black", 2, default);
+        var part = Assert.Single(store.State.Parts);
+        Assert.Equal(canonicalKey, part.Configuration.MaterialKey);
+        Assert.Equal(canonicalKey, Assert.Single(workflow.Parts).Configuration.MaterialKey);
+        var quote = Assert.Single(workflow.OrderQuote!.Parts);
+
+        var result = await boundary.Client.ProvisionOrderAsync(
+            SubmissionId, 0, CustomerId, null, part, quote, 7, File, default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(OrderId, result.OrderId);
+        var create = Assert.Single(boundary.Requests, request => request.Method == "POST" && request.Path == "orders");
+        using var document = JsonDocument.Parse(create.Body!);
+        Assert.Equal(boundary.MaterialId, document.RootElement.GetProperty("materialId").GetInt32());
+        Assert.Equal(9, document.RootElement.GetProperty("colorId").GetInt32());
+        Assert.Equal(764, document.RootElement.GetProperty("currencyId").GetInt32());
+        Assert.Contains("3D printing:", document.RootElement.GetProperty("description").GetString()!, StringComparison.Ordinal);
+        Assert.Contains(boundary.Requests, request => request.Path == $"materials/{boundary.MaterialId}/colors");
+        Assert.DoesNotContain(boundary.Requests, request => request.Path.StartsWith("materials/999/", StringComparison.Ordinal));
+        Assert.Equal(3, boundary.Requests.Count(request => request.Method == "POST"));
+        Assert.All(boundary.Requests, request => Assert.Equal("Bearer controlled-service-token", request.Authorization));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    public async Task Configuration_NullOrBlankColor_IsRejectedBeforePersistenceCatalogOrOrder(string? suppliedColor)
+    {
+        using var boundary = new Boundary("PA612-ESD");
+        var validPart = Part("PA612-ESD", BuildPreference.Standard);
+        var store = new AdmissionStore(validPart);
+        var pricing = new AdmissionPricing();
+        await using var workflow = new InstantQuotationWorkflowCoordinator(
+            store, Unexpected<IInstantQuotationUploadClient>(), pricing, null, authoritativePricingService: pricing);
+        await workflow.InitializeAsync(store.State.SessionId, default);
+        var saves = store.Saves;
+        var prices = pricing.Calls;
+
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+        {
+            await workflow.UpdateConfigurationAsync(validPart.PartId, "PA612-ESD", suppliedColor!, 2, default);
+            var part = Assert.Single(store.State.Parts);
+            await boundary.Client.ProvisionOrderAsync(
+                SubmissionId, 0, CustomerId, null, part, Assert.Single(workflow.OrderQuote!.Parts), 7, File, default);
+        });
+
+        Assert.Equal(saves, store.Saves);
+        Assert.Equal(prices, pricing.Calls);
+        Assert.Equal("Black", Assert.Single(store.State.Parts).Configuration.Color);
+        Assert.Equal("Black", Assert.Single(workflow.Parts).Configuration.Color);
+        Assert.Empty(boundary.Requests);
+    }
+
+    private sealed class AdmissionStore(InstantQuotationPart part) : IInstantQuotationSessionStore
+    {
+        public InstantQuotationSessionState State { get; private set; } = new(
+            "owned-admission-session", SubmissionId, new([part]), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+        public int Saves { get; private set; }
+        public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity,
+            InstantQuotationOrderState requestState, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The owned protected session must be restored.");
+        public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity,
+            CancellationToken cancellationToken) => Task.FromResult<InstantQuotationSessionState?>(State);
+        public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity,
+            CancellationToken cancellationToken)
+        {
+            State = session;
+            Saves++;
+            return Task.FromResult(true);
+        }
+        public Task<bool> RemoveAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Admission proof must not remove the protected session.");
+    }
+
+    private sealed class AdmissionPricing : IInstantQuotationPricingService, IInstantQuotationAuthoritativePricingService
+    {
+        public int Calls { get; private set; }
+        public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state)
+        {
+            Calls++;
+            return SyntheticPhysicalPricingTestData.Quote(state);
+        }
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session, string? ownerIdentity,
+            bool includeComparisons, CancellationToken cancellationToken) =>
+            Task.FromResult<InstantQuotationOrderQuote?>(Quote(session.RequestState));
     }
 
     [Theory]
@@ -205,15 +310,17 @@ public sealed class EsdFulfillmentContractTests
     {
         private readonly Dictionary<string, HttpClient> clients;
         private readonly string material;
+        private readonly string processName;
         private readonly string? failure;
         public int MaterialId { get; }
         public List<Request> Requests { get; } = [];
         public Tokens Tokens { get; } = new();
         public InstantQuotationFulfillmentClient Client { get; }
 
-        public Boundary(string material, string? failure = null)
+        public Boundary(string material, string? failure = null, string? databaseName = null)
         {
-            this.material = material;
+            this.material = databaseName ?? material;
+            processName = PricingCatalog.ResolveMaterial(material)?.Process == PrintProcess.Resin ? "SLA" : "FDM";
             this.failure = failure;
             MaterialId = material == "PA612-ESD" ? 612 : 970;
             clients = new(StringComparer.Ordinal)
@@ -244,7 +351,8 @@ public sealed class EsdFulfillmentContractTests
                 return new(failure == "currency-403" ? HttpStatusCode.Forbidden : HttpStatusCode.BadGateway);
             return path switch
             {
-                "orders/processes/additive" => Json("[{\"id\":3,\"categoryId\":1,\"name\":\"FDM\"}]"),
+                "orders/processes/additive" => Json(JsonSerializer.Serialize(
+                    new[] { new { id = 3, categoryId = 1, name = processName } })),
                 "orders/fileformats" => Json("[{\"id\":2,\"name\":\"STL\",\"extension\":\".stl\"}]"),
                 "materials/printable" => Json(JsonSerializer.Serialize(failure == "missing-material"
                     ? new[] { new { id = 999, materialGroupId = 8, printable = true, name = "PC-ESD" } }

@@ -5,6 +5,21 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class PublishWorkflowPermissionContractTests
 {
     [Fact]
+    public void ReleaseAssetCoverage_PreservesNodeFailureThroughEvidencePipeline()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "release-asset-coverage.yml"));
+        var step = Regex.Match(source,
+            @"(?ms)^      - name: Collect and gate validator coverage\r?\n(?<body>.*?)(?=^      - name:|\z)");
+
+        Assert.True(step.Success, "The release validator requires its independent coverage gate.");
+        var body = step.Groups["body"].Value;
+        Assert.True(Regex.IsMatch(body, @"(?m)^        shell: bash\r?$"),
+            "Explicit bash enables pipefail so tee cannot mask a failed Node test or coverage floor.");
+        Assert.Contains("--test-coverage-lines=80", body, StringComparison.Ordinal);
+        Assert.Contains("| tee ../runner-results/validator-tests.txt", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ValidationWorkflow_UsesRedactedJwtResourceScanner()
     {
         var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
@@ -27,7 +42,7 @@ public sealed class PublishWorkflowPermissionContractTests
         Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED != 'true'", source, StringComparison.Ordinal);
         Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED == 'true'", source, StringComparison.Ordinal);
         Assert.Contains(
-            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@6017816fa67f369d785ed30794f002cfd6299af7",
+            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@d583f55473f47f72d33b51060fa5d14e0974daf5",
             source,
             StringComparison.Ordinal);
         Assert.DoesNotContain("deploy.ps1", source, StringComparison.OrdinalIgnoreCase);
@@ -63,6 +78,7 @@ public sealed class PublishWorkflowPermissionContractTests
             var job = publishJob.Groups["body"].Value;
             Assert.Contains("permissions:", job, StringComparison.Ordinal);
             Assert.Contains("contents: read", job, StringComparison.Ordinal);
+            Assert.Contains("actions: read", job, StringComparison.Ordinal);
             Assert.Contains("id-token: write", job, StringComparison.Ordinal);
         }
 

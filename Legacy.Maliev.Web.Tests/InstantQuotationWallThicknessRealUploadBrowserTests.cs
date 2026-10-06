@@ -293,8 +293,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     {
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
+        var observation = new MaterialCompletionObservation();
         await using var factory = new RealUploadTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing, observation);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
@@ -373,6 +374,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 var completionStore = completionScope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
                 var beforeMaterialChange = await completionStore.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
                 Assert.NotNull(beforeMaterialChange);
+                observation.BeginEdit();
                 await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
                 using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
                 {
@@ -387,6 +389,16 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     }
                     catch (OperationCanceledException) when (completionDeadline.IsCancellationRequested)
                     {
+                        // Bounded booleans/count only; never replace the primary timeout with a diagnostic failure.
+                        try
+                        {
+                            output.WriteLine($"[material-services] iteration={index + 1}; {observation.Describe()}");
+                            var observed = await completionStore.GetAsync(upload.SessionId, upload.OwnerIdentity, default)
+                                .WaitAsync(TimeSpan.FromSeconds(1));
+                            var observedPart = observed?.Parts.FirstOrDefault(candidate => candidate.PartId == Guid.Parse(partId!));
+                            output.WriteLine($"[material-completion] iteration={index + 1}; revisionChanged={observed is not null && observed.UpdatedAt != beforeMaterialChange.UpdatedAt}; authorizationPresent={observed?.QuoteAuthorization is not null}; partPresent={observedPart is not null}; materialMatched={observedPart?.Configuration.MaterialKey == "ABS"}; quantityMatched={observedPart?.Configuration.Quantity == 1}; partCount={Math.Min(observed?.Parts.Count ?? 0, 9)}");
+                        }
+                        catch { /* Secondary observation must not mask the material-completion timeout. */ }
                         throw new TimeoutException("Protected material change completion was not observed.");
                     }
                 }
@@ -452,6 +464,12 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(9, preliminaryPreviews.Length);
             Assert.All(preliminaryPreviews, source => Assert.StartsWith("data:image/png", source, StringComparison.Ordinal));
             Assert.Equal(9, preliminaryPreviews.Distinct(StringComparer.Ordinal).Count());
+            Assert.True(await preview.Locator(".iq-preliminary-quotation-thumbnail").EvaluateAllAsync<bool>("""
+                images => images.length === 9 && images.every(image => {
+                    const bounds = image.getBoundingClientRect();
+                    return bounds.width >= 150 && bounds.height >= 150 && getComputedStyle(image).objectFit === 'contain';
+                })
+                """));
             Assert.Empty(pageErrors);
         }
         finally
@@ -683,7 +701,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     private sealed class RealUploadTestingWebApplicationFactory(
         string contentRoot,
         HashCheckingUploadClient upload,
-        CountingPricingService pricing) : TestingWebApplicationFactory(contentRoot)
+        CountingPricingService pricing,
+        MaterialCompletionObservation? observation = null) : TestingWebApplicationFactory(contentRoot)
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -698,6 +717,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 services.AddScoped<IInstantQuotationPhysicalAnalysisInputReader>(provider =>
                     new BrowserMultiUploadInputReader(upload,
                         provider.GetRequiredService<IInstantQuotationSessionStore>()));
+                observation?.Decorate(services);
             });
         }
     }

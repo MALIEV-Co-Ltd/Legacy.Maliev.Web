@@ -2,6 +2,12 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <VSTestCollect>XPlat Code Coverage</VSTestCollect>
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)/../tests/web-fx-generated-inclusive.runsettings</RunSettingsFilePath>
+    <VSTestLogger>trx</VSTestLogger>
+    <VSTestResultsDirectory>$(MSBuildProjectDirectory)/TestResults</VSTestResultsDirectory>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />

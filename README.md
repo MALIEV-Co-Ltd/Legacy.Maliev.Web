@@ -70,3 +70,9 @@ The reproducible local resource and latency measurement command and the Razor Pa
 The standalone .NET 10 Blazor Web App/BFF foundation, Scalar/OpenAPI endpoint, health endpoints, resilient service-client boundary, and security architecture gates are active. All indexed public routes and authenticated Member GET routes are Blazor static SSR route owners; server-side write handlers remain isolated behind POST, authorization, antiforgery, and downstream ownership checks. The localized XML sitemap, consent-gated analytics bridge, and legacy URL aliases are covered by regression tests. Runtime integration and deployment readiness are tracked in [MALIEV Legacy Migration Project #2](https://github.com/orgs/MALIEV-Co-Ltd/projects/2).
 
 Production deployment is intentionally deferred for owner review in Aspire and explicit cutover approval. Live GTM/GA4/Ads/Search Console verification remains an external-console review item and is not inferred from local tests.
+
+## Current shared dependency and private observation
+
+Web adopts Legacy.Maliev.ServiceDefaults at `3c790ba6414b2a539f24aabb6948549ffd81a86b` in the normal build, Dockerfile and joined Web graph. CompatibilityContracts remains `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`; dedicated historical producer proof graphs retain their own pins.
+
+Actual Program registers `AddPrivateRequestObservation("web")`. GET `/web/liveness` and `/web/readiness` identify the serving host with an uncached process marker. The private `/internal/diagnostics/observability` probe requires the original connection peer to be loopback and exactly one valid nonce; forwarded headers cannot grant access. This source draft requires hosted consumer and joined validation before acceptance.

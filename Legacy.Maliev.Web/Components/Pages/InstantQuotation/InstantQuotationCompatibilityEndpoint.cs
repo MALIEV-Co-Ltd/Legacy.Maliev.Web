@@ -17,7 +17,7 @@ public static class InstantQuotationCompatibilityEndpoint
             || string.Equals(handler, "GetOrderTotal", StringComparison.OrdinalIgnoreCase);
     }
 
-    public static Task HandleAsync(HttpContext context)
+    public static async Task HandleAsync(HttpContext context)
     {
         var query = context.Request.Query;
         var payload = string.Equals(query["handler"], "GetEstimate", StringComparison.OrdinalIgnoreCase)
@@ -39,7 +39,10 @@ public static class InstantQuotationCompatibilityEndpoint
                 query["currency"],
                 query["destinationCountry"]);
 
-        return context.Response.WriteAsJsonAsync(payload, context.RequestAborted);
+        var result = await context.RequestServices.GetRequiredService<InstantQuotationFxHandler>()
+            .ConvertAsync(context, payload, query["currency"]);
+        context.Response.StatusCode = result.StatusCode;
+        await context.Response.WriteAsJsonAsync(result.Payload, context.RequestAborted);
     }
 
     private static double ParseDouble(string? value) =>

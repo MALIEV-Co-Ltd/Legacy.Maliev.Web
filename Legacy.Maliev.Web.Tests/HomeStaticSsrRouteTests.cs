@@ -210,6 +210,43 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    public async Task HomeProcess_PreservesFourLocalizedOrderedStepsWithoutRemovedNumberSpans(string culture, bool active)
+    {
+        using var host = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Home", active ? "true" : "false"));
+        using var client = CreateClient(host);
+        using var response = await client.GetAsync($"/?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<html lang=\"{culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"home-content\"", source, StringComparison.Ordinal);
+        Assert.Equal(active, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var process = Assert.Single(Regex.Matches(source,
+            "<section(?=[^>]*id=\"landing-process\")[^>]*>[\\s\\S]*?</section>", RegexOptions.CultureInvariant).Cast<Match>()).Value;
+        var ordered = Assert.Single(Regex.Matches(process,
+            "<ol(?=[^>]*class=\"landing-process-grid\")[^>]*>[\\s\\S]*?</ol>", RegexOptions.CultureInvariant).Cast<Match>()).Value;
+        Assert.DoesNotContain("landing-step-number", process, StringComparison.Ordinal);
+        var steps = Regex.Matches(ordered, "<li>[\\s\\S]*?</li>", RegexOptions.CultureInvariant).Cast<Match>().ToArray();
+        Assert.Equal(4, steps.Length);
+        string[] headings = culture == "th"
+            ? ["อัปโหลดไฟล์ CAD", "ตรวจสอบใบเสนอราคา", "ยืนยันคำสั่งซื้อ", "รับชิ้นงาน"]
+            : ["Upload CAD files", "Review quotation", "Confirm order", "Receive parts"];
+        string[] descriptions = culture == "th"
+            ? ["ส่งไฟล์ CAD และรายละเอียดโครงการผ่านระบบที่ปลอดภัยของเรา", "รับใบเสนอราคาพร้อมราคา ระยะเวลาผลิต และคำแนะนำจากวิศวกร", "ยืนยันใบเสนอราคา แล้วเราจะเริ่มผลิตชิ้นงานของคุณ", "ชิ้นงานผ่านการตรวจสอบคุณภาพและจัดส่งถึงคุณอย่างปลอดภัย"]
+            : ["Submit your CAD files and project details through our secure portal.", "Receive a detailed quote with price, lead time, and engineering feedback.", "Approve the quote and we will start manufacturing your parts.", "Parts are quality-checked and delivered safely to your doorstep."];
+        string[] icons = ["fas fa-upload", "far fa-file-alt", "far fa-check-circle", "fas fa-box"];
+        for (var index = 0; index < steps.Length; index++)
+        {
+            Assert.Contains($"<h3>{headings[index]}</h3>", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains($"<p>{descriptions[index]}</p>", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains($"<div class=\"landing-step-icon\"><i class=\"{icons[index]}\" aria-hidden=\"true\"></i></div>", steps[index].Value, StringComparison.Ordinal);
+        }
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(
         new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 

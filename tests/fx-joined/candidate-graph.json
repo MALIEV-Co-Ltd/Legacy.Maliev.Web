@@ -1,0 +1,22 @@
+{
+  "status": "source-preparation-only; not executable admission or acceptance",
+  "webCommit": "224bcde1d1fc7e915f4d0d0de9b3863bcae4fcff",
+  "webDefaultsCommit": "3c790ba6414b2a539f24aabb6948549ffd81a86b",
+  "issuanceBaseCommit": "5a81aba3d85c2a22cf999d7f02cdcd7f7fa38198",
+  "issuanceFirstPublishedTestsCommit": "d276b946f59c31f82e78eeb73c01b1b8de014afd",
+  "issuanceTestsFirstCommit": "a0e43592b6d4e9f7c693b0023c278159e9b26676",
+  "issuanceCommit": "d82dd6f0fe4fd05f36d98c8b38c40d07cfd6f755",
+  "issuanceProtectedBaseCommit": "b27fbef06a3aa58c1f4fc0e75d7c70b32be76266",
+  "issuanceBaseDefaultsCommit": "c40a7f82cea347b949444dcd7fb730f2b8dc3c0e",
+  "issuanceDefaultsCommit": "7edcd961024868513fd5f373cab3dcb261197f77",
+  "catalogCommit": "e071c5967108fff79690c537da7fdb88365a89f4",
+  "catalogDefaultsCommit": "7edcd961024868513fd5f373cab3dcb261197f77",
+  "contractsCommit": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7",
+  "configuredWebPermissionCount": 19,
+  "sourceOwnedAdditionalPermission": "legacy-catalog.currencies.read",
+  "fixtureAssignsCurrencyRead": false,
+  "separateProducerProcesses": true,
+  "nativeValidationExecuted": false,
+  "admission": "ordered Auth137 successor over protected Auth138 main; native producer and joined proofs remain required",
+  "legacyProfileProofPinsRemainUnchanged": true
+}

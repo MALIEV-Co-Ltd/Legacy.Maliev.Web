@@ -34,9 +34,16 @@
                 </button>
             </div>
             <nav aria-label="@Localizer["Knowledge sections"]">
+                <section class="workspace-nav-group" aria-labelledby="knowledge-overview">
+                    <p id="knowledge-overview" class="workspace-nav-group__label">@Localizer["Overview"]</p>
+                    <ul class="workspace-nav-list">
+                        <li><a class="workspace-nav-link" href="/knowledges"><i class="fas fa-book-open" aria-hidden="true"></i><span>@Localizer["Knowledge center"]</span></a></li>
+                    </ul>
+                </section>
                 <section class="workspace-nav-group" aria-labelledby="knowledge-services">
                     <p id="knowledge-services" class="workspace-nav-group__label">@Localizer["Service specifications"]</p>
                     <ul class="workspace-nav-list">
+                        <li><a class="workspace-nav-link" href="/knowledges/specifications"><i class="fas fa-list" aria-hidden="true"></i><span>@Localizer["All service specifications"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/knowledges/specifications/cnc-machining"><i class="fas fa-cog" aria-hidden="true"></i><span>@Localizer["CNC manufacturing"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/knowledges/specifications/3d-printing"><i class="fas fa-cubes" aria-hidden="true"></i><span>@Localizer["3D printing"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/knowledges/specifications/3d-scanning" aria-current="page"><i class="fas fa-cube" aria-hidden="true"></i><span>@Localizer["3D scanning"]</span></a></li>

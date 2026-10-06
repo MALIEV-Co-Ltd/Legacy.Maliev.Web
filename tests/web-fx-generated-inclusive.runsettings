@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>json,cobertura</Format>
+          <Include>[Legacy.Maliev.Web]*,[Legacy.Maliev.Web.Application]*,[Legacy.Maliev.Web.Infrastructure]*</Include>
+          <Exclude></Exclude>
+          <ExcludeByAttribute></ExcludeByAttribute>
+          <ExcludeByFile></ExcludeByFile>
+          <SkipAutoProps>false</SkipAutoProps>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <ExcludeAssembliesWithoutSources>None</ExcludeAssembliesWithoutSources>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
