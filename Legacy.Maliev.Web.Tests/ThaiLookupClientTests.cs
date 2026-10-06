@@ -87,6 +87,8 @@ public sealed class ThaiLookupClientTests
         Assert.Equal(400, (await client.SearchAddressAsync(new("", new(Postcode: "1234")), default)).StatusCode);
         Assert.Equal(400, (await client.ResolveAddressAsync(new(new string('a', 2049)), default)).StatusCode);
         Assert.Equal(400, (await client.SearchCompanyAsync(new("1", "tax-id"), default)).StatusCode);
+        Assert.Equal(400, (await client.SearchAddressAsync(new("", new(ProvinceCode: "๑๒")), default)).StatusCode);
+        Assert.Equal(400, (await client.ResolveAddressAsync(new("address", new(DistrictCode: "๑๒๐๖")), default)).StatusCode);
         Assert.Equal(0, handler.Calls);
     }
 

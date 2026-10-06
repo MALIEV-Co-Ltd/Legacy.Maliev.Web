@@ -32,10 +32,12 @@ public static class ThaiLookupValidation
     public static string NormalizeDigits(string value) => string.Concat(value.Select(c => c is >= '๐' and <= '๙' ? (char)('0' + c - '๐') : c));
     private static bool Digits(string? value, int length) => value is not null && NormalizeDigits(value).Length == length
         && NormalizeDigits(value).All(c => c is >= '0' and <= '9');
+    private static bool Code(string? value, int length) => value is not null && value.Length == length
+        && value.All(c => c is >= '0' and <= '9');
     public static bool Valid(ThaiAddressConstraints? value) => value is null ||
-        ((value.ProvinceCode is null || Digits(value.ProvinceCode, 2)) &&
-         (value.DistrictCode is null || Digits(value.DistrictCode, 4)) &&
-         (value.SubdistrictCode is null || Digits(value.SubdistrictCode, 6)) &&
+        ((value.ProvinceCode is null || Code(value.ProvinceCode, 2)) &&
+         (value.DistrictCode is null || Code(value.DistrictCode, 4)) &&
+         (value.SubdistrictCode is null || Code(value.SubdistrictCode, 6)) &&
          (value.Postcode is null || Digits(value.Postcode, 5)));
     public static bool Valid(ThaiAddressQuery value) => value.Q is not null && value.Q.Length <= 128
         && value.Limit is >= 1 and <= 50 && (value.Cursor is null || value.Cursor.Length <= 512) && Valid(value.Constraints);
