@@ -386,12 +386,23 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         var html = await RenderWorkflowAsync(state);
 
         Assert.Contains("<button", html, StringComparison.Ordinal);
-        var enabledButtons = System.Text.RegularExpressions.Regex.Matches(
+        var allEnabledButtons = System.Text.RegularExpressions.Regex.Matches(
             html,
             "<button(?![^>]* disabled)[^>]*>.*?</button>",
-            System.Text.RegularExpressions.RegexOptions.Singleline);
+            System.Text.RegularExpressions.RegexOptions.Singleline)
+            .Cast<System.Text.RegularExpressions.Match>().ToList();
+        var lookupButtons = allEnabledButtons.Where(match => match.Value.Contains("data-lookup-", StringComparison.Ordinal)).ToList();
+        var enabledButtons = allEnabledButtons.Except(lookupButtons).ToList();
         if (state is InstantQuotationWorkflowState.CustomerDetails)
         {
+            // Keep the original viewer/save action gate while accounting for the separately wired lookup controls.
+            Assert.Equal(13, lookupButtons.Count);
+            Assert.All(lookupButtons, match =>
+            {
+                Assert.Contains("type=\"button\"", match.Value, StringComparison.Ordinal);
+                Assert.True(new[] { "data-lookup-resolve", "data-lookup-unconstrained", "data-lookup-more", "data-lookup-apply", "data-lookup-cancel" }
+                    .Any(action => match.Value.Contains(action, StringComparison.Ordinal)));
+            });
             Assert.Equal(5, enabledButtons.Count);
             Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
             Assert.Contains(enabledButtons, match => match.Value.Contains("Back", StringComparison.Ordinal));
@@ -399,6 +410,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             return;
         }
 
+        Assert.Empty(lookupButtons);
         if (state is InstantQuotationWorkflowState.Review)
         {
             Assert.Equal(5, enabledButtons.Count);
