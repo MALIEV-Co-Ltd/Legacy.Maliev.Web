@@ -44,3 +44,9 @@ Hosted validation is pending. The account/SEO focused group forecasts 29 rows. H
 - `e6701e75437e65f7d9ac078d5e8a176f0d363986`
 - `f5d94f2568954368c685d753e865631612db7876`
 - `42ece27bb5f7a4a57bbfda435e4303346adc4677`
+
+## First hosted candidate readback
+
+Candidate `ced0c38ffdbf5233f20946503a77c2b5d2c90528`, run `37418314944`, built the browser host successfully and passed the inherited 286 focused cases. The account/SEO group passed 27 of 29 cases; both custom-manufacturing cultures failed because the new test searched the entire document for a unique specialist URL also present in the header and footer. Scope those handoff assertions to the existing section labelled by `choose-process-title`, retaining unique links within that section, exact localized labels, redirect status/location and actual target document checks. No production behavior, test rows, filters or deadlines change.
+
+Inquiry, printable DFM, full suite, formatting and package audit were not reached. The raw coverage gate correctly failed because no full-suite coverage report existed. Required 3,452 full / 339 focused / 13 TRX remain forecasts; this causal source correction requires fresh hosted execution.

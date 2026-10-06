@@ -123,6 +123,9 @@ public sealed class LocalizedServiceSeoHttpTests(TestingWebApplicationFactory fa
         var links = Elements(RemoveScripts(html), "a");
         if (route == "/services/custom-manufacturing")
         {
+            var processChoices = Assert.Single(Elements(RemoveScripts(html), "section"), element =>
+                Attribute(element.Attributes, "aria-labelledby") == "choose-process-title");
+            links = Elements(processChoices.Body, "a");
             var handoffs = new[]
             {
                 ("/Services/CNC-Machining", "Review CNC machining", "ดูบริการ CNC"),
