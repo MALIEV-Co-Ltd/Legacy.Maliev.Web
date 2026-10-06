@@ -232,7 +232,11 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.InRange(int.Parse((await comparison.Locator("[data-comparison-handle]").GetAttributeAsync("aria-valuenow"))!), 74, 76);
         Assert.Equal(0, await page.EvaluateAsync<int>("window.scanDragStarts"));
         Assert.True(await page.EvaluateAsync<bool>("Array.from(document.querySelectorAll('#scanning-sample img')).every(image => image.draggable === false)"));
-        await comparison.Locator("[data-comparison-mode='raw']").ClickAsync(new LocatorClickOptions { Force = true });
+        ILocator rawMode = comparison.Locator("[data-comparison-mode='raw']");
+        await rawMode.ScrollIntoViewIfNeededAsync();
+        await rawMode.ClickAsync();
+        Assert.Equal("raw", await comparison.GetAttributeAsync("data-mode"));
+        Assert.Equal("true", await rawMode.GetAttributeAsync("aria-pressed"));
         await stage.ClickAsync();
         Assert.InRange(int.Parse((await comparison.Locator("[data-comparison-handle]").GetAttributeAsync("aria-valuenow"))!), 74, 76);
     }
