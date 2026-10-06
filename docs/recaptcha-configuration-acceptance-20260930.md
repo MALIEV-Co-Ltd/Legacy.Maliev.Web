@@ -1,5 +1,7 @@
 # reCAPTCHA configuration candidate — 2026-09-30
 
+A later source bundle is documented in [startup-security-migration-20261006.md](startup-security-migration-20261006.md). Its unvalidated KeyID/mounted-file adaptation supersedes the historical gap analysis only after exact-head hosted acceptance; this document preserves earlier evidence and broader Workload Identity gates.
+
 Scoped tracking: Web issue #417 (parent #148), covering required public identifiers, provider-log redaction and configuration-only test fixture alignment. Root independent acceptance and any PR remain pending; this does not close the five-SHA provenance cohort or source-owner configuration/workload-identity gates.
 
 Base: exact Web main `dcc9bb8d6a27483a839059d08ec87bcd74f0d46d`; isolated branch `codex/web-recaptcha-preflight-20260930`. No canonical/original/CNC/GitOps/ledger/configuration-secret/deployment changes, commits or pushes are authorized. Post-main CI `36702124535` is independently verified completed/success at this exact SHA; image publication `36702124902` also succeeded. Local validation is complete for the bounded candidate; root independent acceptance remains required.
