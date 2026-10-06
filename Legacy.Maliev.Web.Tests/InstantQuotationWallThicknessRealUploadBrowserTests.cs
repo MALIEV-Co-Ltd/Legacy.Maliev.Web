@@ -768,6 +768,240 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         }
     }
 
+    [Theory]
+    [InlineData(2, 1)]
+    [InlineData(10, 2)]
+    public async Task ActualUploadedParts_PreliminaryPopupExportsA4Pdf(int partCount, int minimumPages)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
+            Locale = "en-US",
+        });
+        await using var page = await context.NewPageAsync();
+        var pageErrors = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        page.PageError += (_, error) => pageErrors.Enqueue(error);
+        var paths = new List<string>();
+        try
+        {
+            var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+            Assert.NotNull(response);
+            Assert.Equal(200, response.Status);
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            for (var index = 0; index < partCount; index++)
+            {
+                paths.Add(CreatePreliminaryPdfBoxStl(index + 1));
+            }
+            await page.SetInputFilesAsync("#instant-quote-files", paths);
+            await page.WaitForFunctionAsync(
+                "count => document.querySelectorAll('[data-workflow-part]').length === count",
+                partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            Assert.Equal(partCount, upload.VerifiedUploads);
+            var parts = page.Locator("[data-workflow-part]");
+            var partIds = new HashSet<Guid>();
+            for (var index = 0; index < partCount; index++)
+            {
+                var partIdText = await parts.Nth(index).GetAttributeAsync("data-part-id");
+                Assert.True(Guid.TryParse(partIdText, out var partId));
+                Assert.True(partIds.Add(partId));
+                await parts.Nth(index).Locator("button[aria-label^='View']").ClickAsync();
+                await page.WaitForFunctionAsync(
+                    "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                    partIdText);
+                using var scope = factory.Services.CreateScope();
+                var store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
+                var beforeMaterialChange = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                Assert.NotNull(beforeMaterialChange);
+                Assert.Equal(partCount, beforeMaterialChange.Parts.Count);
+                var storedPart = Assert.Single(beforeMaterialChange.Parts, candidate => candidate.PartId == partId);
+                var physical = Assert.IsType<InstantQuotationPhysicalAnalysisUpload>(storedPart.PhysicalAnalysisUpload);
+                var expectedPath = Assert.Single(paths, path => Path.GetFileName(path) == storedPart.DisplayFileName);
+                var expectedHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(expectedPath))).ToLowerInvariant();
+                Assert.Equal(expectedHash, physical.Sha256);
+                var mesh = await new InstantQuotationAdmittedMeshService(new BrowserMultiUploadInputReader(upload, store))
+                    .ReadAsync(upload.SessionId, upload.OwnerIdentity, partId, physical.FileId, physical.Sha256, default);
+                Assert.True(mesh.IsReady);
+                Assert.Equal(expectedHash, mesh.UploadSha256);
+                Assert.Equal(12, mesh.Mesh!.Triangles.Count);
+                await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+                using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                {
+                    try
+                    {
+                        while (!SelectedPrintTimeTimeoutDiagnostics.IsMaterialChangeComplete(
+                            await store.GetAsync(upload.SessionId, upload.OwnerIdentity, completionDeadline.Token)
+                                .WaitAsync(completionDeadline.Token), beforeMaterialChange.UpdatedAt, partId))
+                        {
+                            await Task.Delay(TimeSpan.FromMilliseconds(100), completionDeadline.Token);
+                        }
+                    }
+                    catch (OperationCanceledException) when (completionDeadline.IsCancellationRequested)
+                    {
+                        throw new TimeoutException("Protected material change completion was not observed.");
+                    }
+                }
+                await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')");
+            }
+            using (var scope = factory.Services.CreateScope())
+            {
+                var state = await scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>()
+                    .GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                Assert.NotNull(state);
+                Assert.Equal(partCount, state.Parts.Select(part => part.PhysicalAnalysisUpload!.FileId).Distinct().Count());
+                Assert.NotNull(state.QuoteAuthorization);
+            }
+            await page.WaitForFunctionAsync(
+                "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
+                null, new PageWaitForFunctionOptions { Timeout = 90000 });
+            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+            await page.WaitForFunctionAsync(
+                """
+                count => {
+                    const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
+                    return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
+                }
+                """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            var reviewNames = await page.Locator("[data-workflow-review-part] h4").AllInnerTextsAsync();
+            Assert.Equal(paths.Select(Path.GetFileName).Order(StringComparer.Ordinal), reviewNames.Order(StringComparer.Ordinal));
+            var button = page.Locator("#preliminary-quotation-button");
+            Assert.True(await button.IsEnabledAsync());
+            await using var preview = await page.RunAndWaitForPopupAsync(() => button.ClickAsync());
+            preview.PageError += (_, error) => pageErrors.Enqueue(error);
+            await preview.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            Assert.Equal(reviewNames, await preview.Locator(".iq-preliminary-quotation-part h2").AllInnerTextsAsync());
+            Assert.Equal(1, await preview.Locator(".iq-preliminary-quotation-summary").CountAsync());
+            await WaitForPreliminaryPdfImagesAndFontsAsync(preview, partCount);
+            Assert.StartsWith("data:image/webp;base64,", await preview.Locator(".iq-preliminary-quotation-logo").GetAttributeAsync("src"), StringComparison.Ordinal);
+            Assert.True(await preview.Locator(".iq-preliminary-quotation-thumbnail").EvaluateAllAsync<bool>(
+                """
+                images => images.every(image => {
+                    const bounds = image.getBoundingClientRect();
+                    return image.getAttribute('src')?.startsWith('data:image/png')
+                        && bounds.width >= 150 && bounds.height >= 150 && getComputedStyle(image).objectFit === 'contain';
+                })
+                """));
+            var pdf = await preview.PdfAsync(new PagePdfOptions { Format = "A4", PrintBackground = true });
+            // Retain the exact returned bytes before assertions, including a failing page floor.
+            var rawPageCount = System.Text.RegularExpressions.Regex.Matches(
+                System.Text.Encoding.ASCII.GetString(pdf), @"/Type\s*/Page(?:\s|/|>)").Count;
+            WritePreliminaryPdfEvidence(partCount, minimumPages, pdf, rawPageCount);
+            Assert.NotEmpty(pdf);
+            Assert.True(rawPageCount >= minimumPages,
+                $"PDF page-object floor failed: parts={partCount}; pages={rawPageCount}; minimum={minimumPages}.");
+            Assert.Empty(pageErrors);
+        }
+        finally
+        {
+            foreach (var path in paths) File.Delete(path);
+        }
+    }
+
+    private static async Task WaitForPreliminaryPdfImagesAndFontsAsync(IPage preview, int partCount)
+    {
+        await preview.EvaluateAsync(
+            """
+            async count => {
+                const images = [...document.querySelectorAll('.iq-preliminary-quotation-logo, .iq-preliminary-quotation-thumbnail')];
+                if (images.length !== count + 1) throw new Error('Unexpected preliminary PDF image count');
+                let timer;
+                try {
+                    await Promise.race([
+                        (async () => {
+                            await document.fonts.ready;
+                            for (const image of images) {
+                                image.scrollIntoView({ block: 'center', behavior: 'instant' });
+                                await new Promise(resolve => requestAnimationFrame(resolve));
+                                await image.decode();
+                                if (!image.complete || image.naturalWidth <= 0) throw new Error('Undecoded preliminary PDF image');
+                            }
+                            if (document.fonts.status !== 'loaded') throw new Error('Preliminary PDF fonts unavailable');
+                            window.scrollTo(0, 0);
+                        })(),
+                        new Promise((_, reject) => {
+                            timer = setTimeout(() => reject(new Error('Preliminary PDF readiness exceeded 30s')), 30000);
+                        })
+                    ]);
+                } finally {
+                    clearTimeout(timer);
+                }
+            }
+            """, partCount);
+    }
+
+    private static void WritePreliminaryPdfEvidence(int partCount, int minimumPages, byte[] bytes, int rawPageCount)
+    {
+        var configuredDirectory = Environment.GetEnvironmentVariable("WEB_PRELIMINARY_PDF_EVIDENCE_DIRECTORY");
+        var directory = string.IsNullOrWhiteSpace(configuredDirectory)
+            ? Path.Combine(AppContext.BaseDirectory, "TestResults", "preliminary-pdf-proof")
+            : Path.GetFullPath(configuredDirectory);
+        Directory.CreateDirectory(directory);
+        var stem = $"parts-{partCount:00}";
+        var pdfPath = Path.Combine(directory, stem + ".pdf");
+        WritePreliminaryPdfEvidenceAtomically(pdfPath, bytes);
+        var manifest = new
+        {
+            schema = "preliminary-popup-pdf-v1",
+            partCount,
+            minimumPages,
+            pdfFile = stem + ".pdf",
+            byteLength = bytes.Length,
+            sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(),
+            rawPageCount,
+            format = "A4",
+            printBackground = true,
+            fixtureBoundary = "owned-program-kestrel-in-memory-upload-native-analysis-production-popup",
+        };
+        WritePreliminaryPdfEvidenceAtomically(Path.Combine(directory, stem + ".json"), System.Text.Encoding.UTF8.GetBytes(
+            System.Text.Json.JsonSerializer.Serialize(manifest, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })));
+    }
+
+    private static string CreatePreliminaryPdfBoxStl(int index)
+    {
+        var stem = $"maliev-pdf-part-{index:00}-{Guid.NewGuid():N}";
+        try
+        {
+            return CreateBoxStl(20, 20, 5, stem);
+        }
+        catch
+        {
+            // Existing helper chooses its final random suffix internally. Own the unique
+            // prefix before entering it so even a failed write can be cleaned safely.
+            foreach (var path in Directory.EnumerateFiles(Path.GetTempPath(), stem + "-*.stl")) File.Delete(path);
+            throw;
+        }
+    }
+
+    private static void WritePreliminaryPdfEvidenceAtomically(string target, byte[] bytes)
+    {
+        var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllBytes(temporary, bytes);
+            File.Move(temporary, target, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
     private static int ReserveFreePort()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);

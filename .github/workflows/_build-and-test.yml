@@ -185,6 +185,70 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~ThaiLookup|FullyQualifiedName~OnlyWiredViewerActions_RenderEnabled"
           --logger trx --results-directory ./thai-lookup-test-results
+      - name: Prepare isolated hash-pinned preliminary PDF verification runtime
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import sys; print("PDF verifier Python", sys.version.split()[0]); sys.exit(0 if sys.version_info >= (3, 11) else "Preliminary PDF proof requires Python >=3.11")'
+          proof_runner_root="$(realpath -- "$RUNNER_TEMP")"
+          proof_directory="$(mktemp -d "$proof_runner_root/maliev-web-pdf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-XXXXXX")"
+          cleanup_failed_pdf_setup() {
+            proof_setup_status="$?"
+            trap - EXIT
+            if [[ "$proof_setup_status" -eq 0 ]]; then return; fi
+            set +e
+            proof_cleanup_path="$(realpath -- "$proof_directory")"
+            if [[ "$proof_cleanup_path" != "$proof_directory" || "$(dirname -- "$proof_cleanup_path")" != "$proof_runner_root" ]]; then
+              echo 'Refusing early cleanup outside owned temporary root.' >&2
+              exit "$proof_setup_status"
+            fi
+            case "$(basename -- "$proof_cleanup_path")" in
+              "maliev-web-pdf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-"*) ;;
+              *) echo 'Refusing early cleanup for unknown temporary prefix.' >&2; exit "$proof_setup_status" ;;
+            esac
+            if [[ -f "$proof_cleanup_path/.maliev-web-pdf-owned" && ! -L "$proof_cleanup_path/.maliev-web-pdf-owned" ]] &&
+               [[ "$(cat -- "$proof_cleanup_path/.maliev-web-pdf-owned")" == "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}" ]]; then
+              rm -rf -- "$proof_cleanup_path"
+            else
+              # Exact mktemp ownership permits only empty-directory removal without a marker.
+              rmdir -- "$proof_cleanup_path" || echo 'Early cleanup refused: directory is nonempty or ownership marker is uncertain.' >&2
+            fi
+            if [[ -e "$proof_cleanup_path" || -L "$proof_cleanup_path" ]]; then
+              echo 'Owned PDF setup directory remains after cleanup attempt.' >&2
+            fi
+            exit "$proof_setup_status"
+          }
+          trap cleanup_failed_pdf_setup EXIT
+          printf '%s:%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$proof_directory/.maliev-web-pdf-owned"
+          printf 'WEB_PRELIMINARY_PDF_VENV=%s\n' "$proof_directory" >> "$GITHUB_ENV"
+          python3 -m venv "$proof_directory"
+          "$proof_directory/bin/python" -m pip install \
+            --disable-pip-version-check --no-input --require-hashes \
+            --only-binary=:all: --no-deps --timeout 30 --retries 1 \
+            --requirement tests/preliminary-pdf-requirements.txt
+      - name: Verify preliminary PDF parser rejection controls
+        timeout-minutes: 1
+        shell: bash
+        run: '"$WEB_PRELIMINARY_PDF_VENV/bin/python" tests/PreliminaryPdfProofGuardTests.py'
+      - name: Verify actual two and ten part preliminary popup PDF exports
+        timeout-minutes: 15
+        env:
+          WEB_PRELIMINARY_PDF_EVIDENCE_DIRECTORY: ${{ github.workspace }}/preliminary-pdf-test-results/pdf
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:UseLocalMalievDependencies=true
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ActualUploadedParts_PreliminaryPopupExportsA4Pdf"
+          --logger trx --results-directory ./preliminary-pdf-test-results
+      - name: Verify focused preliminary PDF structure and exact-byte manifests
+        timeout-minutes: 1
+        shell: bash
+        run: >-
+          "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
+          --root ./preliminary-pdf-test-results/pdf
+          --receipt ./preliminary-pdf-test-results/parser-receipt.json
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -196,6 +260,33 @@ jobs:
         run: |
           ./tests/WebFxRawCoverage.Tests.ps1
           ./tests/Test-WebFxRawCoverage.ps1 -ResultsRoot ./Legacy.Maliev.Web.Tests/TestResults
+      - name: Verify full-suite preliminary PDF structure and exact-byte manifests
+        timeout-minutes: 1
+        shell: bash
+        run: >-
+          "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
+          --root ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof
+          --receipt ./preliminary-pdf-full-proof/parser-receipt.json
+      - name: Remove only the owned preliminary PDF verification runtime
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${WEB_PRELIMINARY_PDF_VENV:-}" ]]; then exit 0; fi
+          if [[ ! -e "$WEB_PRELIMINARY_PDF_VENV" && ! -L "$WEB_PRELIMINARY_PDF_VENV" ]]; then exit 0; fi
+          proof_runner_root="$(realpath -- "$RUNNER_TEMP")"
+          proof_directory="$(realpath -- "$WEB_PRELIMINARY_PDF_VENV")"
+          [[ "$proof_directory" == "$WEB_PRELIMINARY_PDF_VENV" ]]
+          [[ "$(dirname -- "$proof_directory")" == "$proof_runner_root" ]]
+          case "$(basename -- "$proof_directory")" in
+            "maliev-web-pdf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-"*) ;;
+            *) echo 'Refusing cleanup outside the owned preliminary PDF runtime.' >&2; exit 1 ;;
+          esac
+          [[ -f "$proof_directory/.maliev-web-pdf-owned" && ! -L "$proof_directory/.maliev-web-pdf-owned" ]]
+          [[ "$(cat -- "$proof_directory/.maliev-web-pdf-owned")" == "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}" ]]
+          rm -rf -- "$proof_directory"
+          [[ ! -e "$proof_directory" && ! -L "$proof_directory" ]]
       - name: Preserve independent focused groups and full raw coverage evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -219,6 +310,13 @@ jobs:
             localized-account-seo-test-results/**/*.trx
             localized-inquiry-test-results/**/*.trx
             preliminary-dfm-test-results/**/*.trx
+            preliminary-pdf-test-results/**/*.trx
+            preliminary-pdf-test-results/pdf/*.pdf
+            preliminary-pdf-test-results/pdf/*.json
+            preliminary-pdf-test-results/parser-receipt.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.pdf
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.json
+            preliminary-pdf-full-proof/parser-receipt.json
             thai-lookup-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
