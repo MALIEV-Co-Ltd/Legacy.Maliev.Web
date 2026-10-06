@@ -3685,15 +3685,22 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
 
     private sealed class StubContactClient : IContactClient
     {
+        public List<ContactSubmission> Submissions { get; } = [];
+
         public Task<ContactSubmissionResult> SubmitAsync(
             ContactSubmission submission,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new ContactSubmissionResult(1, true, true));
+            CancellationToken cancellationToken)
+        {
+            Submissions.Add(submission);
+            return Task.FromResult(new ContactSubmissionResult(1, true, true));
+        }
     }
 
     private sealed class StubQuotationClient : IQuotationClient
     {
         public QuotationRequestSubmission? LastSubmission { get; set; }
+        public int CallCount { get; private set; }
+        public string? LastIdempotencyKey { get; private set; }
 
         public Task<QuotationRequestResult> CreateRequestAsync(
             QuotationRequestSubmission submission,
@@ -3701,18 +3708,32 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             CancellationToken cancellationToken)
         {
             LastSubmission = submission;
+            CallCount++;
+            LastIdempotencyKey = idempotencyKey;
             return Task.FromResult(new QuotationRequestResult(1, true, true, "request-1", submission.JourneyId));
         }
     }
 
     private sealed class StubQuotationFileClient : IQuotationFileClient
     {
+        public QuotationFileResult? ResultOverride { get; set; }
+        public int CallCount { get; private set; }
+        public int LastRequestId { get; private set; }
+        public Guid LastSubmissionId { get; private set; }
+        public IReadOnlyList<QuotationUpload> LastFiles { get; private set; } = [];
+
         public Task<QuotationFileResult> UploadAndLinkAsync(
             int requestId,
             Guid submissionId,
             IReadOnlyList<QuotationUpload> files,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new QuotationFileResult(true, true, true, false));
+            CancellationToken cancellationToken)
+        {
+            CallCount++;
+            LastRequestId = requestId;
+            LastSubmissionId = submissionId;
+            LastFiles = files;
+            return Task.FromResult(ResultOverride ?? new QuotationFileResult(true, true, true, false));
+        }
     }
 
     private sealed class StubAntiBotVerifier : IAntiBotVerifier
@@ -3726,6 +3747,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
 
     private sealed class StubNotificationClient : INotificationClient
     {
+        public NotificationResult? ResultOverride { get; set; }
         public EmailNotification? LastNotification { get; private set; }
         public List<EmailNotification> Notifications { get; } = [];
 
@@ -3742,7 +3764,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         {
             LastNotification = notification;
             Notifications.Add(notification);
-            return Task.FromResult(new NotificationResult(true, true, true));
+            return Task.FromResult(ResultOverride ?? new NotificationResult(true, true, true));
         }
     }
 
@@ -3786,6 +3808,180 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             Assert.DoesNotContain("Email address is required", result, StringComparison.Ordinal);
         }
     }
+
+    [Theory]
+    [InlineData("contact", "en", "", "Email address is required")]
+    [InlineData("contact", "th", "", "กรุณากรอกอีเมล")]
+    [InlineData("quotation", "en", "", "Email address is required")]
+    [InlineData("quotation", "th", "", "กรุณากรอกอีเมล")]
+    [InlineData("contact", "en", "invalid", "The Email field is not a valid e-mail address.")]
+    [InlineData("contact", "th", "invalid", "กรุณาระบุอีเมลที่ถูกต้อง")]
+    [InlineData("quotation", "en", "invalid", "The Email field is not a valid e-mail address.")]
+    [InlineData("quotation", "th", "invalid", "กรุณาระบุอีเมลที่ถูกต้อง")]
+    public async Task InquiryLocalization_ActualRenderedPostRejectsInvalidEmailBeforePersistence(
+        string route, string culture, string email, string expected)
+    {
+        var (action, form) = await CreateLocalizedInquiryFormAsync(route, culture);
+        form["Email"] = email;
+        using var response = await client.PostAsync(action, new FormUrlEncodedContent(form));
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<html lang=\"{culture}\">", source, StringComparison.Ordinal);
+        Assert.Contains(expected, source, StringComparison.Ordinal);
+        Assert.Empty(Assert.IsType<StubContactClient>(configuredFactory.Services.GetRequiredService<IContactClient>()).Submissions);
+        Assert.Null(Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
+        Assert.Empty(Assert.IsType<StubNotificationClient>(configuredFactory.Services.GetRequiredService<INotificationClient>()).Notifications);
+        if (culture == "th")
+        {
+            Assert.DoesNotContain("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Email address is required", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData("contact", "en", true)]
+    [InlineData("contact", "th", true)]
+    [InlineData("quotation", "en", true)]
+    [InlineData("quotation", "th", true)]
+    [InlineData("contact", "en", false)]
+    [InlineData("contact", "th", false)]
+    [InlineData("quotation", "en", false)]
+    [InlineData("quotation", "th", false)]
+    public async Task InquiryLocalization_PersistedReferenceSurvivesNotificationFailure(
+        string route, string culture, bool notificationsSent)
+    {
+        var notifications = Assert.IsType<StubNotificationClient>(configuredFactory.Services.GetRequiredService<INotificationClient>());
+        notifications.ResultOverride = new NotificationResult(notificationsSent, true, true);
+        var (action, form) = await CreateLocalizedInquiryFormAsync(route, culture);
+        using var post = await client.PostAsync(action, new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+        Assert.Contains($"culture={culture}", post.Headers.Location!.OriginalString, StringComparison.Ordinal);
+        var source = WebUtility.HtmlDecode(await ReadInquiryLandingAsync(post.Headers.Location));
+        Assert.Contains($"<html lang=\"{culture}\">", source, StringComparison.Ordinal);
+        var expected = route == "contact"
+            ? notificationsSent
+                ? culture == "th" ? "ขอบคุณที่ติดต่อเรา หมายเลขอ้างอิงของคุณคือ #1" : "Thank you for contacting us. Your reference number is #1."
+                : culture == "th" ? "ได้รับคำขอติดต่อ #1 แล้ว แต่ไม่สามารถส่งการยืนยันได้" : "Contact request #1 was received, but confirmation delivery is unavailable."
+            : notificationsSent
+                ? culture == "th" ? "ขอบคุณ หมายเลขอ้างอิงคำขอใบเสนอราคาของคุณคือ #1" : "Thank you. Your quotation request reference is #1."
+                : culture == "th" ? "ได้รับคำขอใบเสนอราคา #1 แล้ว แต่ไม่สามารถดำเนินการไฟล์แนบหรือการแจ้งเตือนให้เสร็จได้" : "Quotation request #1 was received, but an attachment or notification could not be completed.";
+        Assert.Contains(expected, source, StringComparison.Ordinal);
+        if (!notificationsSent)
+        {
+            Assert.Contains(culture == "th" ? "กรุณาอย่าส่งคำขอซ้ำ" : "Do not submit it again", source, StringComparison.Ordinal);
+        }
+        var customer = Assert.Single(notifications.Notifications, item => item.To == "inquiry-locale@example.com");
+        Assert.Equal(culture == "th"
+            ? route == "contact" ? "คำขอติดต่อ #1" : "คำขอใบเสนอราคา #1"
+            : route == "contact" ? "Contact request #1" : "Quotation request #1", customer.Subject);
+        Assert.Contains(culture == "th" ? "หมายเลขอ้างอิงของคุณคือ #1" : "Your reference number is #1", customer.Body, StringComparison.Ordinal);
+        var internalEmail = Assert.Single(notifications.Notifications, item => item.To != "inquiry-locale@example.com");
+        Assert.Contains("&lt;script&gt;inquiry-probe&lt;/script&gt;", internalEmail.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>", internalEmail.Body, StringComparison.Ordinal);
+        AssertInquiryAnalytics(source, route);
+        if (route == "contact")
+        {
+            Assert.Single(Assert.IsType<StubContactClient>(configuredFactory.Services.GetRequiredService<IContactClient>()).Submissions);
+        }
+        else
+        {
+            var quotation = Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>());
+            Assert.Equal(1, quotation.CallCount);
+            Assert.Equal($"legacy-web-quotation-{Guid.Parse(form["SubmissionId"]):N}", quotation.LastIdempotencyKey);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    public async Task InquiryLocalization_RejectedOrPartialAttachmentRetainsPersistedReference(
+        string culture, bool rejected)
+    {
+        Assert.IsType<StubQuotationFileClient>(configuredFactory.Services.GetRequiredService<IQuotationFileClient>()).ResultOverride =
+            new QuotationFileResult(false, true, true, rejected);
+        var (action, form) = await CreateLocalizedInquiryFormAsync("quotation", culture);
+        using var multipart = new MultipartFormDataContent();
+        foreach (var field in form)
+        {
+            multipart.Add(new StringContent(field.Value), field.Key);
+        }
+        multipart.Add(new ByteArrayContent([1, 2, 3]), "Files", "synthetic-part.stl");
+        using var post = await client.PostAsync(action, multipart);
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+        var source = WebUtility.HtmlDecode(await ReadInquiryLandingAsync(post.Headers.Location!));
+        Assert.Contains(culture == "th" ? "ได้รับคำขอใบเสนอราคา #1 แล้ว" : "Quotation request #1 was received", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "กรุณาอย่าส่งคำขอซ้ำ" : "Do not submit it again", source, StringComparison.Ordinal);
+        Assert.Contains(rejected
+            ? culture == "th" ? "ไฟล์แนบถูกปฏิเสธจากการตรวจสอบมัลแวร์" : "attachment was rejected by malware scanning"
+            : culture == "th" ? "ไม่สามารถดำเนินการไฟล์แนบหรือการแจ้งเตือนให้เสร็จได้" : "attachment or notification could not be completed", source, StringComparison.Ordinal);
+        Assert.Equal(1, Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>()).CallCount);
+        var uploads = Assert.IsType<StubQuotationFileClient>(configuredFactory.Services.GetRequiredService<IQuotationFileClient>());
+        Assert.Equal(1, uploads.CallCount);
+        Assert.Equal(1, uploads.LastRequestId);
+        Assert.Equal(Guid.Parse(form["SubmissionId"]), uploads.LastSubmissionId);
+        Assert.Equal("synthetic-part.stl", Assert.Single(uploads.LastFiles).FileName);
+        AssertInquiryAnalytics(source, "quotation");
+        var payload = Regex.Match(source, @"window\.malievAnalytics\.emit\((\{[^;]+\})\);", RegexOptions.CultureInvariant);
+        using var analytics = JsonDocument.Parse(payload.Groups[1].Value);
+        Assert.True(analytics.RootElement.GetProperty("has_files").GetBoolean());
+        Assert.False(analytics.RootElement.TryGetProperty("file_upload_completed", out _));
+    }
+
+    [Theory]
+    [InlineData("en", "This quotation form has expired. Please reload it.")]
+    [InlineData("th", "แบบฟอร์มขอใบเสนอราคานี้หมดอายุแล้ว กรุณาโหลดหน้าใหม่")]
+    public async Task InquiryLocalization_ExpiredFormRejectsBeforeAnyPersistence(string culture, string expected)
+    {
+        var (action, form) = await CreateLocalizedInquiryFormAsync("quotation", culture);
+        form["SubmissionId"] = Guid.Empty.ToString();
+        using var response = await client.PostAsync(action, new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(expected, WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()), StringComparison.Ordinal);
+        Assert.Null(Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
+        Assert.Equal(0, Assert.IsType<StubQuotationFileClient>(configuredFactory.Services.GetRequiredService<IQuotationFileClient>()).CallCount);
+    }
+
+    private async Task<(string Action, Dictionary<string, string> Form)> CreateLocalizedInquiryFormAsync(string route, string culture)
+    {
+        var source = await client.GetStringAsync($"/{route}?culture={culture}");
+        var id = route == "contact" ? "contact-us" : "quotation-form";
+        var formMatch = Regex.Match(source, $"<form[^>]*id=\"{id}\"[^>]*>|<form[^>]*action=\"[^\"]*\"[^>]*id=\"{id}\"[^>]*>", RegexOptions.CultureInvariant);
+        Assert.True(formMatch.Success, "The owned inquiry form must be rendered.");
+        var action = Regex.Match(formMatch.Value, "action=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(action.Success);
+        var token = Regex.Match(source, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(token.Success);
+        return (WebUtility.HtmlDecode(action.Groups[1].Value), new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            ["FirstName"] = "Mali", ["LastName"] = "Ev", ["Email"] = "inquiry-locale@example.com",
+            ["Country"] = "Thailand", ["Message"] = "<script>inquiry-probe</script>",
+            ["g-recaptcha-response"] = "browser-token", ["SubmissionId"] = Guid.NewGuid().ToString(),
+            ["ServiceContext"] = "custom_manufacturing",
+        });
+    }
+
+    private async Task<string> ReadInquiryLandingAsync(Uri location)
+    {
+        using var landing = await client.GetAsync(location);
+        return landing.StatusCode == HttpStatusCode.MovedPermanently
+            ? await client.GetStringAsync(landing.Headers.Location)
+            : await landing.Content.ReadAsStringAsync();
+    }
+
+    private static void AssertInquiryAnalytics(string source, string route)
+    {
+        var payload = Regex.Match(source, @"window\.malievAnalytics\.emit\((\{[^;]+\})\);", RegexOptions.CultureInvariant);
+        Assert.True(payload.Success, "Persisted inquiry must retain its queued analytics event.");
+        using var document = JsonDocument.Parse(payload.Groups[1].Value);
+        Assert.Equal("persisted", document.RootElement.GetProperty("lead_status").GetString());
+        Assert.Equal(route == "contact" ? "message-1" : "request-1", document.RootElement.GetProperty("transaction_id").GetString());
+        Assert.DoesNotContain("inquiry-locale@example.com", payload.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("inquiry-probe", payload.Value, StringComparison.Ordinal);
+    }
+
 
     private async Task<Dictionary<string, string>> GetAntiforgeryFormAsync(string path)
     {

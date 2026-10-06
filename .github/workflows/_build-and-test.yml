@@ -140,6 +140,14 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~AccountForm_PostsRenderedActionAndPreservesQueryOnlyCulture|FullyQualifiedName~ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken|FullyQualifiedName~Login_TemporaryPasswordRedirectsToSingleUseSetupWithoutCreatingSession|FullyQualifiedName~PublicAccountWorkflowTests|FullyQualifiedName~SignupPageTests|FullyQualifiedName~LocalizedServiceSeoHttpTests"
           --logger trx --results-directory ./localized-account-seo-test-results
+      - name: Verify localized persisted inquiry boundaries through actual HTTP
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:UseLocalMalievDependencies=true
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~InquiryLocalization_"
+          --logger trx --results-directory ./localized-inquiry-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -169,6 +177,7 @@ jobs:
             material-identity-test-results/**/*.trx
             signed-link-test-results/**/*.trx
             localized-account-seo-test-results/**/*.trx
+            localized-inquiry-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7

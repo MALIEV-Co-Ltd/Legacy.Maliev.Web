@@ -224,4 +224,16 @@
   <data name="Please enter your first name" xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
   <data name="Please enter your last name" xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
   <data name="Please enter your message" xml:space="preserve"><value>กรุณากรอกข้อความ</value></data>
+  <data name="The submitted value is invalid." xml:space="preserve"><value>ข้อมูลที่ส่งมาไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง</value></data>
+  <data name="The Email field is not a valid e-mail address." xml:space="preserve"><value>กรุณาระบุอีเมลที่ถูกต้อง</value></data>
+  <data name="Security verification failed. Please try again." xml:space="preserve"><value>การตรวจสอบความปลอดภัยไม่สำเร็จ กรุณาลองอีกครั้ง</value></data>
+  <data name="Could not retrieve countries from the server." xml:space="preserve"><value>ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้</value></data>
+  <data name="We could not save your message. Please try again." xml:space="preserve"><value>ไม่สามารถบันทึกข้อความได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="The contact service is temporarily unavailable. Please email info@maliev.com." xml:space="preserve"><value>บริการติดต่อไม่พร้อมใช้งานชั่วคราว กรุณาส่งอีเมลไปที่ info@maliev.com</value></data>
+  <data name="Could not retrieve your customer profile. Please update your profile or contact us directly." xml:space="preserve"><value>ไม่สามารถดึงข้อมูลลูกค้าของคุณได้ กรุณาอัปเดตข้อมูลหรือติดต่อเราโดยตรง</value></data>
+  <data name="Thank you for contacting us. Your reference number is #{0}." xml:space="preserve"><value>ขอบคุณที่ติดต่อเรา หมายเลขอ้างอิงของคุณคือ #{0}</value></data>
+  <data name="Contact request #{0} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference." xml:space="preserve"><value>ได้รับคำขอติดต่อ #{0} แล้ว แต่ไม่สามารถส่งการยืนยันได้ กรุณาอย่าส่งคำขอซ้ำ และติดต่อ info@maliev.com โดยแจ้งหมายเลขอ้างอิงนี้</value></data>
+  <data name="Contact request #{0}" xml:space="preserve"><value>คำขอติดต่อ #{0}</value></data>
+  <data name="Thank you for contacting MALIEV. Your reference number is #{0}." xml:space="preserve"><value>ขอบคุณที่ติดต่อ MALIEV หมายเลขอ้างอิงของคุณคือ #{0}</value></data>
+  <data name="We will reply as soon as possible." xml:space="preserve"><value>เราจะติดต่อกลับโดยเร็วที่สุด</value></data>
 </root>
