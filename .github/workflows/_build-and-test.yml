@@ -126,6 +126,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~EsdFulfillmentContractTests|FullyQualifiedName~InstantQuotationFulfillmentMappingTests"
           --logger trx --results-directory ./material-identity-test-results
+      - name: Verify signed-link whole-operation deadline and compatibility
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CncSignedLinkClientTests"
+          --logger trx --results-directory ./signed-link-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -153,6 +160,7 @@ jobs:
             knowledge-navigation-test-results/**/*.trx
             home-process-test-results/**/*.trx
             material-identity-test-results/**/*.trx
+            signed-link-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             tests/web-fx-generated-inclusive.runsettings
           retention-days: 7

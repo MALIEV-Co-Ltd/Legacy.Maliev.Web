@@ -2,13 +2,15 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
+using Microsoft.Extensions.Options;
 using Polly;
 
 namespace Legacy.Maliev.Web.Infrastructure;
 
 internal sealed class CncSignedLinkClient(
     IHttpClientFactory clients,
-    IServiceAccessTokenProvider tokens) : ICncSignedLinkClient
+    IServiceAccessTokenProvider tokens,
+    IOptions<CncSignedLinkDeadlineOptions> options) : ICncSignedLinkClient
 {
     private const string Bucket = "maliev-quotation-requests";
     private const int MaximumResponseBytes = 65_536;
@@ -41,24 +43,38 @@ internal sealed class CncSignedLinkClient(
             HttpMethod.Get,
             $"uploads/signedurl?bucket={Bucket}&objectName={Uri.EscapeDataString(objectName)}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        // Standard resilience sets HttpClient.Timeout to Infinite. Keep the
+        // complete signed-link operation budget separate from that transport policy.
+        deadline.CancelAfter(options.Value.Timeout);
+        HttpResponseMessage? response = null;
+        Task<HttpResponseMessage>? pendingResponse = null;
+        Task? pendingBuffer = null;
+        Uri? resolvedLink = null;
         try
         {
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            pendingResponse = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            response = await pendingResponse.WaitAsync(deadline.Token);
+            pendingResponse = null;
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
                 tokens.Invalidate(token);
             }
 
+            deadline.Token.ThrowIfCancellationRequested();
             if (response.StatusCode != HttpStatusCode.OK
                 || !string.Equals(response.Content.Headers.ContentType?.MediaType, "application/json", StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }
 
-            await response.Content.LoadIntoBufferAsync(MaximumResponseBytes, cancellationToken);
+            pendingBuffer = response.Content.LoadIntoBufferAsync(MaximumResponseBytes, deadline.Token);
+            await pendingBuffer.WaitAsync(deadline.Token);
+            pendingBuffer = null;
             string? value = JsonSerializer.Deserialize<string>(
-                await response.Content.ReadAsByteArrayAsync(cancellationToken));
-            return Uri.TryCreate(value, UriKind.Absolute, out var link)
+                await response.Content.ReadAsByteArrayAsync(deadline.Token));
+            deadline.Token.ThrowIfCancellationRequested();
+            resolvedLink = Uri.TryCreate(value, UriKind.Absolute, out var link)
                 && link.Scheme == Uri.UriSchemeHttps
                 && !string.IsNullOrWhiteSpace(link.Host)
                 && string.IsNullOrEmpty(link.UserInfo)
@@ -68,6 +84,66 @@ internal sealed class CncSignedLinkClient(
         catch (Exception exception) when (IsTransportFailure(exception))
         {
             return null;
+        }
+        finally
+        {
+            if (pendingBuffer is not null && response is not null)
+            {
+                // The buffer can finish after cancellation even when content ignores it.
+                // Keep response ownership until that task settles, then dispose once.
+                _ = DisposeAfterBufferAsync(pendingBuffer, response);
+                response = null;
+            }
+
+            try
+            {
+                response?.Dispose();
+            }
+            catch (Exception exception) when (IsTransportFailure(exception))
+            {
+                resolvedLink = null;
+            }
+
+            if (pendingResponse is not null)
+            {
+                _ = DisposeAfterResponseAsync(pendingResponse);
+            }
+        }
+
+        return resolvedLink;
+    }
+
+    private static async Task DisposeAfterBufferAsync(Task buffer, HttpResponseMessage response)
+    {
+        try
+        {
+            using (response)
+            {
+                try
+                {
+                    await buffer;
+                }
+                catch (Exception)
+                {
+                    // Observe the abandoned buffer fault without resuming link resolution.
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Observe cleanup faults from the abandoned response as well.
+        }
+    }
+
+    private static async Task DisposeAfterResponseAsync(Task<HttpResponseMessage> pendingResponse)
+    {
+        try
+        {
+            using var response = await pendingResponse;
+        }
+        catch (Exception)
+        {
+            // Observe a late send fault; a late response is disposed without reading it.
         }
     }
 
@@ -98,4 +174,13 @@ internal sealed class CncSignedLinkClient(
     private static bool IsTransportFailure(Exception exception) => exception is HttpRequestException
         or OperationCanceledException or InvalidOperationException or IOException or JsonException
         or ExecutionRejectedException;
+}
+
+internal sealed class CncSignedLinkDeadlineOptions
+{
+    public CncSignedLinkDeadlineOptions()
+    {
+    }
+
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 }
