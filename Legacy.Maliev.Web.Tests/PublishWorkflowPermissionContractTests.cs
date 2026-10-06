@@ -5,6 +5,21 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class PublishWorkflowPermissionContractTests
 {
     [Fact]
+    public void ReleaseAssetCoverage_PreservesNodeFailureThroughEvidencePipeline()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "release-asset-coverage.yml"));
+        var step = Regex.Match(source,
+            @"(?ms)^      - name: Collect and gate validator coverage\r?\n(?<body>.*?)(?=^      - name:|\z)");
+
+        Assert.True(step.Success, "The release validator requires its independent coverage gate.");
+        var body = step.Groups["body"].Value;
+        Assert.True(Regex.IsMatch(body, @"(?m)^        shell: bash\r?$"),
+            "Explicit bash enables pipefail so tee cannot mask a failed Node test or coverage floor.");
+        Assert.Contains("--test-coverage-lines=80", body, StringComparison.Ordinal);
+        Assert.Contains("| tee ../runner-results/validator-tests.txt", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ValidationWorkflow_UsesRedactedJwtResourceScanner()
     {
         var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));

@@ -24,6 +24,7 @@
     <div class="maliev-card-grid">
         <fieldset>
             <legend>@Localizer["Billing address"]</legend>
+            <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="member-billing-lookup" Surface="member-billing" ThaiCountryValue="@ThaiCountryValue" />
             <div class="form-group"><label for="BillingBuilding">@Localizer["Building"]</label><input id="BillingBuilding" name="BillingBuilding" value="@Model.Billing.Building" maxlength="256" aria-invalid="@AriaInvalid("BillingBuilding")" aria-describedby="@ErrorId("BillingBuilding")" /></div>
             <div class="form-group"><label for="BillingAddress1">@Localizer["Address line 1"]</label><input id="BillingAddress1" name="BillingAddress1" value="@Model.Billing.AddressLine1" maxlength="256" autocomplete="billing address-line1" aria-invalid="@AriaInvalid("BillingAddress1")" aria-describedby="@ErrorId("BillingAddress1")" required /></div>
             <div class="form-group"><label for="BillingAddress2">@Localizer["Address line 2"]</label><input id="BillingAddress2" name="BillingAddress2" value="@Model.Billing.AddressLine2" maxlength="256" autocomplete="billing address-line2" aria-invalid="@AriaInvalid("BillingAddress2")" aria-describedby="@ErrorId("BillingAddress2")" /></div>
@@ -43,6 +44,7 @@
         </fieldset>
         <fieldset>
             <legend>@Localizer["Shipping address"]</legend>
+            <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="member-shipping-lookup" Surface="member-shipping" ThaiCountryValue="@ThaiCountryValue" />
             <div class="form-group"><label for="ShippingBuilding">@Localizer["Building"]</label><input id="ShippingBuilding" name="ShippingBuilding" value="@Model.Shipping.Building" maxlength="256" aria-invalid="@AriaInvalid("ShippingBuilding")" aria-describedby="@ErrorId("ShippingBuilding")" /></div>
             <div class="form-group"><label for="ShippingAddress1">@Localizer["Address line 1"]</label><input id="ShippingAddress1" name="ShippingAddress1" value="@Model.Shipping.AddressLine1" maxlength="256" autocomplete="shipping address-line1" aria-invalid="@AriaInvalid("ShippingAddress1")" aria-describedby="@ErrorId("ShippingAddress1")" required /></div>
             <div class="form-group"><label for="ShippingAddress2">@Localizer["Address line 2"]</label><input id="ShippingAddress2" name="ShippingAddress2" value="@Model.Shipping.AddressLine2" maxlength="256" autocomplete="shipping address-line2" aria-invalid="@AriaInvalid("ShippingAddress2")" aria-describedby="@ErrorId("ShippingAddress2")" /></div>
@@ -67,6 +69,9 @@
 @code {
     [Parameter]
     public MemberAddressDisplayModel Model { get; set; } = MemberAddressDisplayModel.Empty;
+    private string ThaiCountryValue => Model.Countries.FirstOrDefault(country =>
+        string.Equals(country.Name, "Thailand", StringComparison.OrdinalIgnoreCase) || country.Name == "ประเทศไทย")
+        ?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
 
     private string? AriaInvalid(string field) => HasError(field) ? "true" : null;
 

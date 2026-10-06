@@ -1,0 +1,35 @@
+<ThaiLookup Id="@Id" Kind="@(Surface.EndsWith("company", StringComparison.Ordinal) ? "company" : "address")"
+           Fields="@FieldMap" ThaiCountryValue="@ThaiCountryValue" AntiforgeryFieldName="@AntiforgeryFieldName" />
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Surface { get; set; } = string.Empty;
+    [Parameter] public string ThaiCountryValue { get; set; } = "Thailand";
+    [Parameter] public string AntiforgeryFieldName { get; set; } = "__RequestVerificationToken";
+
+    private IReadOnlyDictionary<string, string> FieldMap => Surface switch
+    {
+        "member-company" => new Dictionary<string, string> { ["company"] = "profile-company-name", ["taxId"] = "profile-tax-number" },
+        "inquiry-company" => new Dictionary<string, string> { ["company"] = "Company" },
+        "quotation-company" => new Dictionary<string, string> { ["company"] = "Company", ["taxId"] = "TaxNumber" },
+        "instant-company" => new Dictionary<string, string> { ["company"] = "instant-quote-company", ["taxId"] = "instant-quote-taxnumber" },
+        "member-billing" => Member("Billing"),
+        "member-shipping" => Member("Shipping"),
+        "instant-billing" => Instant("billing"),
+        "instant-shipping" => Instant("shipping"),
+        _ => throw new InvalidOperationException("Unknown lookup surface."),
+    };
+    // Member AddressLine2 is free text, not a dedicated subdistrict store. Preserve it.
+    private static Dictionary<string, string> Member(string prefix) => new()
+    {
+        ["province"] = prefix + "State", ["district"] = prefix + "City", ["postcode"] = prefix + "PostalCode",
+        ["country"] = prefix + "CountryId", ["detail"] = prefix + "Address1",
+    };
+    private static Dictionary<string, string> Instant(string prefix) => new()
+    {
+        ["province"] = $"instant-quote-{prefix}-province", ["district"] = $"instant-quote-{prefix}-city",
+        ["subdistrict"] = $"instant-quote-{prefix}-street2", ["postcode"] = $"instant-quote-{prefix}-postal",
+        ["country"] = prefix == "billing" ? "instant-quote-country" : "instant-quote-shipping-country",
+        ["detail"] = $"instant-quote-{prefix}-street1",
+    };
+}

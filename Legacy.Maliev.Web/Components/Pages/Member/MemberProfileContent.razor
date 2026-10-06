@@ -38,6 +38,7 @@
         <legend>@Localizer["Company information"]</legend>
         <div class="maliev-form-field"><label for="profile-company-name">@Localizer["Company name"]</label><input id="profile-company-name" name="CompanyName" value="@Model.CompanyName" autocomplete="organization" maxlength="250" /></div>
         <div class="maliev-form-field"><label for="profile-tax-number">@Localizer["Tax number"]</label><input id="profile-tax-number" name="TaxNumber" value="@Model.TaxNumber" maxlength="250" /></div>
+        <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="member-company-lookup" Surface="member-company" />
         <div class="maliev-form-field"><label for="profile-registrar">@Localizer["Registrar"]</label><input id="profile-registrar" name="Registrar" value="@Model.Registrar" maxlength="250" /></div>
     </fieldset>
     <button type="submit" class="maliev-button">@Localizer["Save profile"]</button>

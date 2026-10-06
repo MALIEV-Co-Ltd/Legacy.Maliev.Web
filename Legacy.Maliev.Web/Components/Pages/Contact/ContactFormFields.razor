@@ -65,6 +65,7 @@
             <label for="Company" class="form-label">@Localizer["Company"]</label>
             <input class="form-control" autocomplete="organization" type="text" id="Company" maxlength="50" name="Company" value="@Model.Company" aria-invalid="@AriaInvalid("Company")" aria-describedby="Company-error" />
             <span id="Company-error" class="text-danger @(HasError("Company") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Company")</span>
+            <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="contact-company-lookup" Surface="inquiry-company" />
         </div>
         <div class="inquiry-field">
             <label for="Country" class="form-label">@Localizer["Country"]</label>

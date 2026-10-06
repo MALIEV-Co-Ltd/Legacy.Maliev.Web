@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Find company details" xml:space="preserve"><value>ค้นหาข้อมูลบริษัท</value></data>
+  <data name="Find a Thai address" xml:space="preserve"><value>ค้นหาที่อยู่ในประเทศไทย</value></data>
+  <data name="Paste an address to review" xml:space="preserve"><value>วางที่อยู่เพื่อตรวจสอบ</value></data>
+  <data name="Review address" xml:space="preserve"><value>ตรวจสอบที่อยู่</value></data>
+  <data name="Review pasted address without current filters" xml:space="preserve"><value>ตรวจสอบที่อยู่ที่วางโดยไม่ใช้เงื่อนไขปัจจุบัน</value></data>
+  <data name="More results" xml:space="preserve"><value>แสดงผลเพิ่มเติม</value></data>
+  <data name="Review the suggestion. Existing details remain editable before saving." xml:space="preserve"><value>ตรวจสอบข้อมูลที่แนะนำ คุณยังแก้ไขรายละเอียดก่อนบันทึกได้</value></data>
+  <data name="Company name" xml:space="preserve"><value>ชื่อบริษัท</value></data>
+  <data name="House, building and road details" xml:space="preserve"><value>รายละเอียดบ้าน อาคาร และถนน</value></data>
+  <data name="Tax number" xml:space="preserve"><value>เลขประจำตัวผู้เสียภาษี</value></data>
+  <data name="Apply reviewed details to editable fields" xml:space="preserve"><value>นำรายละเอียดที่ตรวจสอบแล้วไปใส่ในช่องที่แก้ไขได้</value></data>
+  <data name="Apply suggestion" xml:space="preserve"><value>ใช้ข้อมูลที่แนะนำ</value></data>
+  <data name="Cancel" xml:space="preserve"><value>ยกเลิก</value></data>
+  <data name="You can always enter or correct details manually." xml:space="preserve"><value>คุณกรอกหรือแก้ไขข้อมูลด้วยตนเองได้เสมอ</value></data>
+  <data name="Searching…" xml:space="preserve"><value>กำลังค้นหา…</value></data>
+  <data name="No matches. Continue with manual entry." xml:space="preserve"><value>ไม่พบข้อมูลที่ตรงกัน กรุณากรอกข้อมูลด้วยตนเอง</value></data>
+  <data name="Lookup is unavailable. Continue with manual entry." xml:space="preserve"><value>ระบบค้นหาไม่พร้อมใช้งาน กรุณากรอกข้อมูลด้วยตนเอง</value></data>
+  <data name="This search is not supported. Continue with manual entry." xml:space="preserve"><value>ระบบไม่รองรับการค้นหานี้ กรุณากรอกข้อมูลด้วยตนเอง</value></data>
+  <data name="Please check the search details." xml:space="preserve"><value>กรุณาตรวจสอบข้อมูลที่ใช้ค้นหา</value></data>
+  <data name="Choose a result to review. No fields have been changed." xml:space="preserve"><value>เลือกผลลัพธ์เพื่อตรวจสอบ ยังไม่มีการเปลี่ยนแปลงข้อมูลในแบบฟอร์ม</value></data>
+  <data name="More matches exist. Narrow your search before choosing." xml:space="preserve"><value>มีผลลัพธ์เพิ่มเติม กรุณาระบุข้อมูลให้ละเอียดขึ้นก่อนเลือก</value></data>
+  <data name="The address conflicts with current selections. Correct the text or filters." xml:space="preserve"><value>ที่อยู่ขัดแย้งกับข้อมูลที่เลือก กรุณาแก้ไขข้อความหรือเงื่อนไขค้นหา</value></data>
+  <data name="This suggestion conflicts with saved account fields. Edit your account first." xml:space="preserve"><value>ข้อมูลที่แนะนำขัดแย้งกับข้อมูลบัญชีที่บันทึกไว้ กรุณาแก้ไขบัญชีก่อน</value></data>
+  <data name="Suggestion applied. Review editable fields before saving." xml:space="preserve"><value>ใส่ข้อมูลที่แนะนำแล้ว กรุณาตรวจสอบช่องที่แก้ไขได้ก่อนบันทึก</value></data>
+  <data name="Thai address lookup is available when Thailand is selected." xml:space="preserve"><value>ค้นหาที่อยู่ไทยได้เมื่อเลือกประเทศไทย</value></data>
+  <data name="Lookup is temporarily rate limited. Try again later or enter details manually." xml:space="preserve"><value>การค้นหาถูกจำกัดจำนวนคำขอชั่วคราว กรุณาลองใหม่ภายหลังหรือกรอกข้อมูลด้วยตนเอง</value></data>
+</root>
