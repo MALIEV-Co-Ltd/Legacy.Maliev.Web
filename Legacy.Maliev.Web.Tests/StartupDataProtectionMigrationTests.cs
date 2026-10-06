@@ -27,6 +27,13 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
     public async Task ActualProgram_EncryptedRedisKeysSurviveRestartAndRejectOtherEnvironment(
         string environment, string discriminator, string otherEnvironment)
     {
+        Assert.True(StartupDataProtectionMigrationFixture.IsOwnedHostedLane("hosted-owned", "github-hosted", "37410020727"));
+        Assert.False(StartupDataProtectionMigrationFixture.IsOwnedHostedLane(null, "github-hosted", "37410020727"));
+        Assert.False(StartupDataProtectionMigrationFixture.IsOwnedHostedLane("hosted-owned", "self-hosted", "37410020727"));
+        Assert.False(StartupDataProtectionMigrationFixture.IsOwnedHostedLane("hosted-owned", null, "37410020727"));
+        Assert.False(StartupDataProtectionMigrationFixture.IsOwnedHostedLane("hosted-owned", "github-hosted", null));
+        Assert.False(StartupDataProtectionMigrationFixture.IsOwnedHostedLane("hosted-owned", "github-hosted", "0"));
+        Assert.False(StartupDataProtectionMigrationFixture.IsOwnedHostedLane("hosted-owned", "github-hosted", "not-a-run"));
         const string plaintext = "synthetic-startup-migration-payload";
         string protectedPayload;
         await using (var first = fixture.CreateFactory(environment))
@@ -113,7 +120,8 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        if (!string.Equals(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"), "true", StringComparison.OrdinalIgnoreCase))
+        if (!IsOwnedHostedLane(Environment.GetEnvironmentVariable("MALIEV_WEB_STARTUP_PROOF"),
+            Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT"), Environment.GetEnvironmentVariable("GITHUB_RUN_ID")))
             throw new InvalidOperationException("Startup migration proof requires the owned GitHub-hosted container lane.");
 
         using var rsa = RSA.Create(2048);
@@ -125,6 +133,13 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
     }
 
     public Task DisposeAsync() => redis.DisposeAsync().AsTask();
+
+    internal static bool IsOwnedHostedLane(string? proofLane, string? runnerEnvironment, string? runId) =>
+        string.Equals(proofLane, "hosted-owned", StringComparison.Ordinal)
+        && string.Equals(runnerEnvironment, "github-hosted", StringComparison.Ordinal)
+        && long.TryParse(runId, System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out var parsedRunId)
+        && parsedRunId > 0;
 
     public WebApplicationFactory<Program> CreateFactory(string environment) =>
         new StartupWebFactory(environment, redis.GetConnectionString(), certificatePfxBase64);
