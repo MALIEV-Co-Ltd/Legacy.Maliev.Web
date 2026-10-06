@@ -29,6 +29,39 @@ public sealed class InstantQuotationAuthenticatedPreparationTests
     }
 
     [Fact]
+    public async Task StoredShippingWithoutBilling_PostedTrueCannotReplacePersistedShippingInPreparedOperation()
+    {
+        var shipping = new CustomerAddress(12, "Stored warehouse", "Stored shipping", null, "Bang Na", "Bangkok", "10260", 66, null, null);
+        var customer = new CustomerAccountDetails(7, "Owner", "Name", "Owner Name", null, null, null, "owner@example.test",
+            null, null, null, 12, null, null, null, null, shipping);
+        var profiles = new Profiles(customer);
+        var service = new InstantQuotationAuthenticatedPreparationService(new Sessions(), new Store(), profiles, new Countries());
+        var result = await service.PrepareAsync("session", "customer:7", Posted() with
+        {
+            ShipToBillingAddress = true,
+            ShippingBuilding = "Forged warehouse",
+            ShippingStreet1 = "Forged shipping",
+            ShippingCountry = "Forged country",
+        }, "project", default);
+
+        Assert.Equal(InstantQuotationProblemCategory.None, result.ProblemCategory);
+        Assert.Null(result.TerminalResult);
+        Assert.True(result.SafeToRetry);
+        Assert.Equal(1, profiles.Reads);
+        var prepared = Assert.IsType<InstantQuotationCustomerSubmission>(result.Customer);
+        Assert.False(prepared.ShipToBillingAddress);
+        Assert.Equal("Stored shipping", prepared.ShippingAddressLine1);
+        Assert.Equal("Thailand", prepared.ShippingCountry);
+        var operation = Assert.IsType<InstantQuotationProfileCompletionOperation>(prepared.ProfileCompletion);
+        Assert.False(operation.Body.ShipToBillingAddress);
+        Assert.Equal("Stored shipping", operation.Body.Shipping?.AddressLine1);
+        Assert.Equal(66, operation.Body.Shipping?.CountryId);
+        Assert.Equal("Billing", operation.Body.Billing?.AddressLine1);
+        Assert.Contains(nameof(InstantQuotationProfileDetails.ShipToBillingAddress), result.LockedFields);
+        Assert.DoesNotContain(nameof(InstantQuotationProfileDetails.BillingStreet1), result.LockedFields);
+    }
+
+    [Fact]
     public async Task DurableRetry_DoesNotRereadGraphOrChangeFrozenBodyKeyReference()
     {
         var profiles = new Profiles();
@@ -72,7 +105,7 @@ public sealed class InstantQuotationAuthenticatedPreparationTests
         ShippingCountry = "Thailand",
     };
 
-    private sealed class Profiles : IInstantQuotationProfileCompletionClient
+    private sealed class Profiles(CustomerAccountDetails? customerOverride = null) : IInstantQuotationProfileCompletionClient
     {
         public int Reads { get; private set; }
         public bool Available { get; init; } = true;
@@ -83,7 +116,7 @@ public sealed class InstantQuotationAuthenticatedPreparationTests
             var shipping = billing with { Id = 20, AddressLine1 = "Stored shipping" };
             var customer = new CustomerAccountDetails(7, "Owner", "Name", "Owner Name", null, null, null, "owner@example.test",
                 null, null, 10, 20, null, null, billing, null, shipping);
-            return Task.FromResult(new InstantQuotationProfileGraphResult(Available ? new(customer, "\"" + new string('a', 64) + "\"") : null,
+            return Task.FromResult(new InstantQuotationProfileGraphResult(Available ? new(customerOverride ?? customer, "\"" + new string('a', 64) + "\"") : null,
                 Available ? InstantQuotationProblemCategory.None : InstantQuotationProblemCategory.DependencyUnavailable));
         }
         public Task<InstantQuotationProfileCompletionResult> CompleteAsync(string ownerIdentity, InstantQuotationProfileCompletionOperation operation, CancellationToken cancellationToken) => throw new NotSupportedException();
