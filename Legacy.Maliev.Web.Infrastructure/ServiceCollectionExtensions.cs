@@ -43,6 +43,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IValidateOptions<RecaptchaEnterpriseOptions>, RecaptchaEnterpriseOptionsValidator>();
         services.AddOptions<RecaptchaEnterpriseOptions>()
             .Bind(configuration.GetSection("Recaptcha"))
+            .PostConfigure(static options =>
+            {
+                if (string.IsNullOrWhiteSpace(options.SiteKey)) options.SiteKey = options.KeyId;
+            })
             .ValidateOnStart();
         services.AddOptions<GoogleMapsOptions>()
             .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));
@@ -95,6 +99,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IInstantQuotationAuthoritativePricingService, InstantQuotationAuthoritativePricingService>();
         services.AddScoped<ICncFileTransport, CncFileTransport>();
         services.AddScoped<ICncFileFinalizationClient, CncFileFinalizationClient>();
+        services.AddOptions<CncSignedLinkDeadlineOptions>()
+            .Validate(static options => options.Timeout == Timeout.InfiniteTimeSpan
+                || (options.Timeout > TimeSpan.Zero && options.Timeout.TotalMilliseconds <= uint.MaxValue - 1),
+                "Signed-link operation timeout must be positive and timer-compatible, or intentionally infinite.")
+            .ValidateOnStart();
         services.AddScoped<ICncSignedLinkClient, CncSignedLinkClient>();
         services.AddScoped<ICncProfilePersistenceClient, CncProfilePersistenceClient>();
         services.AddScoped<IInstantQuotationUploadClient, InstantQuotationFileServiceUploadClient>();

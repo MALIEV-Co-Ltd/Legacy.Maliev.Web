@@ -21,9 +21,11 @@ internal static class ErrorDisplayModelResolver
         }
 
         ErrorIncidentDetails? incident = null;
-        if (hasException)
+        if (hasException && ErrorIncidentHandler.TryGet(context, out incident) && incident is not null)
         {
-            ErrorIncidentHandler.TryGet(context, out incident);
+            // Exception-handler re-execution clears response headers while retaining
+            // request items. Restore the existing incident without creating or logging one.
+            incident = ErrorIncidentHandler.GetOrCreate(context, incident.OccurredAtUtc);
         }
 
         return new ErrorDisplayModel(

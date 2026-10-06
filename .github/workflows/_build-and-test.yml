@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      MALIEV_WEB_STARTUP_PROOF: hosted-owned
     steps:
       - name: Check out Web
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -21,7 +22,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: 6ea131df4bcf8d213d7d121cb8c865697bee7420
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - name: Check out Legacy.Maliev.CompatibilityContracts
@@ -126,6 +127,27 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~InstantQuotationAuthenticatedProfileTests|FullyQualifiedName~InstantQuotationAuthenticatedPreparationTests|FullyQualifiedName~InstantQuotationSubmissionEndpointTests"
           --logger trx --results-directory ./authenticated-profile-test-results
+      - name: Verify resolved material identity across Catalog and Order boundaries
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~EsdFulfillmentContractTests|FullyQualifiedName~InstantQuotationFulfillmentMappingTests"
+          --logger trx --results-directory ./material-identity-test-results
+      - name: Verify signed-link whole-operation deadline and compatibility
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CncSignedLinkClientTests"
+          --logger trx --results-directory ./signed-link-test-results
+      - name: Verify startup security migration and encrypted Redis environment isolation
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~StartupDataProtectionMigrationTests|FullyQualifiedName~RecaptchaConfigurationStartupTests|FullyQualifiedName~RecaptchaEnterpriseVerifierTests|FullyQualifiedName~AppSettingsCredentialBoundaryTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~HealthProcessIdentityContractTests|FullyQualifiedName~PrivateRequestObservationConsumerTests|FullyQualifiedName~LegacyServiceDefaultsIdentityContractTests|FullyQualifiedName~SharedDiagnosticsContractTests|FullyQualifiedName~ErrorIncidentCorrelationTests"
+          --logger trx --results-directory ./startup-security-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -153,6 +175,9 @@ jobs:
             knowledge-navigation-test-results/**/*.trx
             home-process-test-results/**/*.trx
             authenticated-profile-test-results/**/*.trx
+            material-identity-test-results/**/*.trx
+            signed-link-test-results/**/*.trx
+            startup-security-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
             tests/web-fx-generated-inclusive.runsettings

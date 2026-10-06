@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: 6ea131df4bcf8d213d7d121cb8c865697bee7420
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
