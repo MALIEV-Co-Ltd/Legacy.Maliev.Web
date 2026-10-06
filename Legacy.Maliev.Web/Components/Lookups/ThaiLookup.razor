@@ -1,0 +1,78 @@
+@using System.Text.Json
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IServiceProvider Services
+@inject IStringLocalizer<ThaiLookup> Localizer
+
+<section data-thai-lookup data-lookup-kind="@Kind" data-lookup-fields="@JsonSerializer.Serialize(Fields)"
+         data-language="@(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? "th" : "en")"
+         data-thai-country-value="@ThaiCountryValue" data-antiforgery-header="@AntiforgeryHeaderName" data-antiforgery-field="@AntiforgeryFieldName"
+         data-messages="@JsonSerializer.Serialize(Messages)" aria-label="@Localizer[Kind == "company" ? "Find company details" : "Find a Thai address"]">
+    <label for="@(Id + "-query")">@Localizer[Kind == "company" ? "Find company details" : "Find a Thai address"]</label>
+    <input id="@(Id + "-query")" type="search" maxlength="128" autocomplete="off" role="combobox"
+           aria-autocomplete="list" aria-expanded="false" aria-controls="@(Id + "-results")" data-lookup-query />
+    @if (Kind == "address")
+    {
+        <label for="@(Id + "-paste")">@Localizer["Paste an address to review"]</label>
+        <textarea id="@(Id + "-paste")" maxlength="2048" data-lookup-paste></textarea>
+        <button type="button" data-lookup-resolve>@Localizer["Review address"]</button>
+        <button type="button" data-lookup-unconstrained hidden>@Localizer["Review pasted address without current filters"]</button>
+    }
+    <p role="status" aria-live="polite" data-lookup-status></p>
+    <ul id="@(Id + "-results")" role="listbox" data-lookup-results></ul>
+    <button type="button" data-lookup-more hidden>@Localizer["More results"]</button>
+    <div data-lookup-preview hidden>
+        <p>@Localizer["Review the suggestion. Existing details remain editable before saving."]</p>
+        <label for="@(Id + "-detail")">@Localizer[Kind == "company" ? "Company name" : "House, building and road details"]</label>
+        <textarea id="@(Id + "-detail")" data-lookup-detail maxlength="2048"></textarea>
+        <p data-lookup-provenance></p>
+        @if (Kind == "company")
+        {
+            <label for="@(Id + "-tax")">@Localizer["Tax number"]</label>
+            <input id="@(Id + "-tax")" data-lookup-tax maxlength="13" />
+        }
+        <label><input type="checkbox" data-lookup-replace />@Localizer["Apply reviewed details to editable fields"]</label>
+        <button type="button" data-lookup-apply>@Localizer["Apply suggestion"]</button>
+        <button type="button" data-lookup-cancel>@Localizer["Cancel"]</button>
+    </div>
+    <p>@Localizer["You can always enter or correct details manually."]</p>
+</section>
+<script src="/src/app/js/lookups/thai-lookup.js" defer></script>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter] public string Kind { get; set; } = "address";
+    // Keys: province, district, subdistrict, postcode, detail, country, company, taxId. Values: existing input IDs.
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, string> Fields { get; set; } = new Dictionary<string, string>();
+    [Parameter] public string ThaiCountryValue { get; set; } = "Thailand";
+    [Parameter] public string AntiforgeryHeaderName { get; set; } = "RequestVerificationToken";
+    [Parameter] public string AntiforgeryFieldName { get; set; } = "__RequestVerificationToken";
+    private IJSObjectReference? module;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Services.GetService(typeof(IJSRuntime)) is IJSRuntime runtime)
+        {
+            module = await runtime.InvokeAsync<IJSObjectReference>("import", "/src/app/js/lookups/thai-lookup.js");
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        if (module is null) return;
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+    private Dictionary<string, string> Messages => new()
+    {
+        ["loading"] = Localizer["Searching…"].Value,
+        ["empty"] = Localizer["No matches. Continue with manual entry."].Value,
+        ["unavailable"] = Localizer["Lookup is unavailable. Continue with manual entry."].Value,
+        ["unsupported"] = Localizer["This search is not supported. Continue with manual entry."].Value,
+        ["invalid"] = Localizer["Please check the search details."].Value,
+        ["choose"] = Localizer["Choose a result to review. No fields have been changed."].Value,
+        ["narrow"] = Localizer["More matches exist. Narrow your search before choosing."].Value,
+        ["conflict"] = Localizer["The address conflicts with current selections. Correct the text or filters."].Value,
+        ["locked"] = Localizer["This suggestion conflicts with saved account fields. Edit your account first."].Value,
+        ["applied"] = Localizer["Suggestion applied. Review editable fields before saving."].Value,
+        ["country"] = Localizer["Thai address lookup is available when Thailand is selected."].Value,
+    };
+}
