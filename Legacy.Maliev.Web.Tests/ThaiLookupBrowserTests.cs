@@ -94,9 +94,16 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
         using var json = JsonDocument.Parse(AddressPage);
         var reply = JsonSerializer.Serialize(new
         {
-            datasetVersion = "fixture", originalText = "pasted original", normalizedText = "pasted original",
-            outcome = "ambiguous", candidates = json.RootElement.GetProperty("items"), hasMore = true,
-            uniqueFields = new { }, detailText = "different parsed house", extractedSpans = Array.Empty<object>(), conflicts = Array.Empty<object>(),
+            datasetVersion = "fixture",
+            originalText = "pasted original",
+            normalizedText = "pasted original",
+            outcome = "ambiguous",
+            candidates = json.RootElement.GetProperty("items"),
+            hasMore = true,
+            uniqueFields = new { },
+            detailText = "different parsed house",
+            extractedSpans = Array.Empty<object>(),
+            conflicts = Array.Empty<object>(),
         });
         await page.RouteAsync("**/lookups/addresses/resolve", route => route.FulfillAsync(new() { ContentType = "application/json", Body = reply }));
         await Load(page, "en");
@@ -214,10 +221,19 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
             {
                 var rendered = await renderer.RenderComponentAsync<ThaiLookup>(ParameterView.FromDictionary(new Dictionary<string, object?>
                 {
-                    ["Id"] = "test", ["Kind"] = kind,
-                    ["Fields"] = new Dictionary<string, string> { ["province"] = "province", ["district"] = "district",
-                        ["subdistrict"] = "subdistrict", ["postcode"] = "postcode", ["detail"] = "detail", ["country"] = "country",
-                        ["company"] = "company", ["taxId"] = "taxId" },
+                    ["Id"] = "test",
+                    ["Kind"] = kind,
+                    ["Fields"] = new Dictionary<string, string>
+                    {
+                        ["province"] = "province",
+                        ["district"] = "district",
+                        ["subdistrict"] = "subdistrict",
+                        ["postcode"] = "postcode",
+                        ["detail"] = "detail",
+                        ["country"] = "country",
+                        ["company"] = "company",
+                        ["taxId"] = "taxId"
+                    },
                 }));
                 return rendered.ToHtmlString();
             });

@@ -35,7 +35,9 @@ public sealed class ThaiLookupSurfaceHttpTests(TestingWebApplicationFactory fact
         }));
         using var http = configured.CreateClient(new WebApplicationFactoryClientOptions
         {
-            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false, HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false,
+            HandleCookies = true,
         });
         using var document = await http.GetAsync(route + "?culture=" + culture);
         Assert.Equal(HttpStatusCode.OK, document.StatusCode);
@@ -87,7 +89,9 @@ public sealed class ThaiLookupSurfaceHttpTests(TestingWebApplicationFactory fact
                 }
                 var instant = InstantQuotationCustomerDisplayModel.Empty with
                 {
-                    Company = "locked company", TaxNumber = "0100000000001", LockedFields = new(StringComparer.Ordinal) { "Company", "TaxNumber" },
+                    Company = "locked company",
+                    TaxNumber = "0100000000001",
+                    LockedFields = new(StringComparer.Ordinal) { "Company", "TaxNumber" },
                 };
                 return (await renderer.RenderComponentAsync<InstantQuotationCustomerForm>(ParameterView.FromDictionary(
                     new Dictionary<string, object?> { ["Model"] = instant }))).ToHtmlString();

@@ -15,9 +15,12 @@ internal sealed class ThaiLookupClient(IHttpClientFactory clients, IServiceAcces
         if (!ThaiLookupValidation.Valid(query)) return Task.FromResult(new LookupResult<ThaiAddressPage>(null, 400));
         var values = new Dictionary<string, string?>
         {
-            ["q"] = query.Q, ["limit"] = query.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ["cursor"] = query.Cursor, ["provinceCode"] = query.Constraints?.ProvinceCode,
-            ["districtCode"] = query.Constraints?.DistrictCode, ["subdistrictCode"] = query.Constraints?.SubdistrictCode,
+            ["q"] = query.Q,
+            ["limit"] = query.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["cursor"] = query.Cursor,
+            ["provinceCode"] = query.Constraints?.ProvinceCode,
+            ["districtCode"] = query.Constraints?.DistrictCode,
+            ["subdistrictCode"] = query.Constraints?.SubdistrictCode,
             ["postcode"] = query.Constraints?.Postcode is { } postcode ? ThaiLookupValidation.NormalizeDigits(postcode) : null,
         };
         return SendAsync<ThaiAddressPage>(new HttpRequestMessage(HttpMethod.Get,
@@ -38,7 +41,8 @@ internal sealed class ThaiLookupClient(IHttpClientFactory clients, IServiceAcces
         return SendAsync<CompanyLookupPage>(new HttpRequestMessage(HttpMethod.Get, "api/v1/companies/search?" + Query(new()
         {
             ["q"] = query.QueryType == "tax-id" ? ThaiLookupValidation.NormalizeDigits(query.Q) : query.Q,
-            ["queryType"] = query.QueryType, ["language"] = query.Language,
+            ["queryType"] = query.QueryType,
+            ["language"] = query.Language,
             ["limit"] = query.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture),
         })), cancellationToken);
     }
