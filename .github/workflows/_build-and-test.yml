@@ -234,7 +234,7 @@ jobs:
       - name: Verify actual two and ten part preliminary popup PDF exports
         timeout-minutes: 15
         env:
-          WEB_PRELIMINARY_PDF_EVIDENCE_DIRECTORY: ./preliminary-pdf-test-results/pdf
+          WEB_PRELIMINARY_PDF_EVIDENCE_DIRECTORY: ${{ github.workspace }}/preliminary-pdf-test-results/pdf
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
