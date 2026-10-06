@@ -141,6 +141,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~StartupDataProtectionMigrationTests|FullyQualifiedName~RecaptchaConfigurationStartupTests|FullyQualifiedName~RecaptchaEnterpriseVerifierTests|FullyQualifiedName~AppSettingsCredentialBoundaryTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~HealthProcessIdentityContractTests|FullyQualifiedName~PrivateRequestObservationConsumerTests|FullyQualifiedName~LegacyServiceDefaultsIdentityContractTests|FullyQualifiedName~SharedDiagnosticsContractTests|FullyQualifiedName~ErrorIncidentCorrelationTests"
           --logger trx --results-directory ./startup-security-test-results
+      - name: Verify Thai lookup clients, same-origin boundaries and rendered interactions
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ThaiLookup"
+          --logger trx --results-directory ./thai-lookup-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
         with:
@@ -170,6 +177,8 @@ jobs:
             material-identity-test-results/**/*.trx
             signed-link-test-results/**/*.trx
             startup-security-test-results/**/*.trx
+            thai-lookup-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
             tests/web-fx-generated-inclusive.runsettings

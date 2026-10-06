@@ -48,7 +48,7 @@
             : [name(item.subdistrict), name(item.district), name(item.province), item.postcode].filter(Boolean).join(' · ');
         const review = item => {
             selected = item; preview.hidden = false; replace.checked = company;
-            detail.value = company ? (language === 'th' ? item.nameTh : item.nameEn) || item.nameTh || item.nameEn || ''
+            detail.value = company ? (language === 'th' ? item.nameTh : item.nameEn) || item.nameTh || item.nameEn || field('company')?.value || ''
                 : field('detail')?.value || resolution?.detailText || '';
             if (company) root.querySelector('[data-lookup-tax]').value = item.taxId || '';
             root.querySelector('[data-lookup-provenance]').textContent = company
@@ -118,6 +118,11 @@
                 : { q, constraints: filters, limit: 20, cursor: append ? cursor : undefined }, append);
         };
         query.addEventListener('input', () => { stop(); close(); timer = setTimeout(() => search(), 300); });
+        if (company) field('company')?.addEventListener('input', () => {
+            if (applying) return;
+            stop(); close(); query.value = field('company').value;
+            timer = setTimeout(() => search(), 300);
+        });
         query.addEventListener('keydown', event => {
             if (event.key === 'Escape') { stop(); close(); return; }
             if (event.key === 'Enter') {
@@ -162,9 +167,16 @@
             applying = true;
             try {
                 if (key === 'country') codes = {};
-                else if (key === 'province') { codes = {}; ['district', 'subdistrict', 'postcode'].forEach(child => set(child, '')); }
-                else if (key === 'district') { delete codes.districtCode; delete codes.subdistrictCode; ['subdistrict', 'postcode'].forEach(child => set(child, '')); }
-                else if (key === 'subdistrict') { delete codes.subdistrictCode; set('postcode', ''); }
+                else if (key === 'province') {
+                    const hadSelection = Boolean(codes.provinceCode); codes = {};
+                    if (hadSelection) ['district', 'subdistrict', 'postcode'].forEach(child => set(child, ''));
+                } else if (key === 'district') {
+                    const hadSelection = Boolean(codes.districtCode); delete codes.districtCode; delete codes.subdistrictCode;
+                    if (hadSelection) ['subdistrict', 'postcode'].forEach(child => set(child, ''));
+                } else if (key === 'subdistrict') {
+                    const hadSelection = Boolean(codes.subdistrictCode); delete codes.subdistrictCode;
+                    if (hadSelection) set('postcode', '');
+                }
                 else if (key === 'postcode') { delete codes.subdistrictCode; }
             } finally { applying = false; }
             if (key !== 'country') { query.value = field(key).value; timer = setTimeout(() => search(), 300); }
@@ -180,6 +192,13 @@
     };
     const observer = new MutationObserver(start);
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.addEventListener('pagehide', () => { observer.disconnect(); live.forEach(dispose => dispose()); live.clear(); }, { once: true });
+    window.addEventListener('pagehide', event => {
+        observer.disconnect();
+        live.forEach(dispose => dispose());
+        if (!event.persisted) live.clear();
+    });
+    window.addEventListener('pageshow', () => {
+        observer.observe(document.documentElement, { childList: true, subtree: true }); start();
+    });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
 })();

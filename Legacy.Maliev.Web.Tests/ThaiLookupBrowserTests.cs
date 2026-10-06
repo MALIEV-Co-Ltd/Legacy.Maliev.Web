@@ -19,7 +19,10 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
     [InlineData("th")]
     public async Task PostcodeFirstRequiresKeyboardChoiceAndPreservesHouseText(string culture)
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.Browser.NewContextAsync(new()
+        {
+            ViewportSize = new() { Width = culture == "th" ? 375 : 1280, Height = 800 },
+        });
         await using var page = await context.NewPageAsync();
         string? body = null;
         await page.RouteAsync("**/lookups/addresses/search", async route =>
@@ -41,6 +44,10 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
         Assert.Equal(culture == "th" ? "นนทบุรี" : "Nonthaburi", await page.Locator("#province").InputValueAsync());
         Assert.Equal("11120", await page.Locator("#postcode").InputValueAsync());
         Assert.Equal("36/1 house and road", await page.Locator("#detail").InputValueAsync());
+        Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"));
+        var evidence = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestResults", "thai-lookup-browser");
+        Directory.CreateDirectory(evidence);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "postcode-review-" + culture + ".png"), FullPage = true });
         await page.Locator("#province").FillAsync("new province");
         Assert.Equal("", await page.Locator("#district").InputValueAsync());
         Assert.Equal("", await page.Locator("#subdistrict").InputValueAsync());
@@ -71,9 +78,9 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
         await using var page = await context.NewPageAsync();
         await page.RouteAsync("**/lookups/companies/search", route => route.FulfillAsync(new() { Status = 503 }));
         await Load(page, "en", "company");
-        await page.Locator("[data-lookup-query]").FillAsync("example");
+        await page.Locator("#company").FillAsync("example");
         await page.WaitForFunctionAsync("() => document.querySelector('[data-lookup-status]').textContent.includes('unavailable')");
-        Assert.Equal("manual company", await page.Locator("#company").InputValueAsync());
+        Assert.Equal("example", await page.Locator("#company").InputValueAsync());
         Assert.True(await page.Locator("#company").IsEditableAsync());
         await page.Locator("#company").FillAsync("corrected company");
         Assert.Equal("corrected company", await page.Locator("#company").InputValueAsync());
@@ -172,6 +179,24 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
             """);
         Assert.Equal(0, await page.Locator("[role=option]").CountAsync());
         Assert.Equal("manual company", await page.Locator("#company").InputValueAsync());
+    }
+
+    [Fact]
+    public async Task MissingCompanyNameDoesNotClearExistingCompanyWhenTaxIdIsAvailable()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        await using var page = await context.NewPageAsync();
+        await page.RouteAsync("**/lookups/companies/search", route => route.FulfillAsync(new()
+        {
+            ContentType = "application/json",
+            Body = """{"outcome":"matches","provider":"creden","capability":"suggestion","items":[{"taxId":"0100000000001","nameTh":null,"nameEn":null}],"hasMore":false}""",
+        }));
+        await Load(page, "en", "company");
+        await page.Locator("[data-lookup-query]").FillAsync("example");
+        await page.Locator("[role=option]").First.ClickAsync();
+        await page.Locator("[data-lookup-apply]").ClickAsync();
+        Assert.Equal("manual company", await page.Locator("#company").InputValueAsync());
+        Assert.Equal("0100000000001", await page.Locator("#taxId").InputValueAsync());
     }
 
     private async Task Load(IPage page, string culture, string kind = "address")

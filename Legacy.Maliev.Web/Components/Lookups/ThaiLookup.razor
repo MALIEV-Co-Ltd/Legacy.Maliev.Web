@@ -4,7 +4,8 @@
 @inject IServiceProvider Services
 @inject IStringLocalizer<ThaiLookup> Localizer
 
-<section data-thai-lookup data-lookup-kind="@Kind" data-lookup-fields="@JsonSerializer.Serialize(Fields)"
+<link rel="stylesheet" href="/src/app/css/thai-lookup.css" />
+<section class="thai-lookup" data-thai-lookup data-lookup-kind="@Kind" data-lookup-fields="@JsonSerializer.Serialize(Fields)"
          data-language="@(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? "th" : "en")"
          data-thai-country-value="@ThaiCountryValue" data-antiforgery-header="@AntiforgeryHeaderName" data-antiforgery-field="@AntiforgeryFieldName"
          data-messages="@JsonSerializer.Serialize(Messages)" aria-label="@Localizer[Kind == "company" ? "Find company details" : "Find a Thai address"]">
