@@ -19,10 +19,10 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class ThaiLookupSurfaceHttpTests(TestingWebApplicationFactory factory) : IClassFixture<TestingWebApplicationFactory>
 {
     [Theory]
-    [InlineData("/Contact", "contact-company-lookup", "en")]
-    [InlineData("/Contact", "contact-company-lookup", "th")]
-    [InlineData("/Quotation", "quotation-company-lookup", "en")]
-    [InlineData("/Quotation", "quotation-company-lookup", "th")]
+    [InlineData("/contact", "contact-company-lookup", "en")]
+    [InlineData("/contact", "contact-company-lookup", "th")]
+    [InlineData("/quotation", "quotation-company-lookup", "en")]
+    [InlineData("/quotation", "quotation-company-lookup", "th")]
     public async Task PublicFormContainsEditableCompanyLookupAndCsrfProtectedPost(string route, string id, string culture)
     {
         var lookup = new Lookup();
