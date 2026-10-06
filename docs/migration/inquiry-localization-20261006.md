@@ -1,5 +1,11 @@
 # Localized persisted public inquiries
 
+## Hosted hidden-submission error correction
+
+Candidate `4c49e09e15e3243388fd512c68826cefdd6ac710`, run `37420327775`, passed all 315 preceding focused cases, including the corrected 29 account/SEO cases. Inquiry passed 20 of 22; both expired-form cultures failed their visible-message assertion. The server already rejects `Guid.Empty` before persistence and maps the `SubmissionId` error through the existing typed resources. The static form rendered only unkeyed summary errors, leaving that hidden-field error invisible.
+
+The existing alert now includes localized `SubmissionId` errors alongside unkeyed errors. The same two HTTP rows require the exact localized message within that rendered alert and retain no-persistence/no-file-call assertions. Field keys, validation, submission identity, idempotency, resources, test counts, deadlines and downstream contracts are unchanged. Printable DFM/full/static gates were not reached; missing raw coverage is the downstream fail-closed result. Required 3,452 full / 339 focused / 13 TRX remain forecasts pending fresh hosted acceptance.
+
 Historical preparation base: `d1577dfa29cd292b293089e201ba97f053b1534a`. Actual integrated base: `4c502e45781e49145af903fad7d9bd8cab721a0d`. Root-reviewed prepared source tree before this metadata annotation: `70a17a65cd11864356ae355bf57cdb9f7cb9ac57`. The final metadata-annotated tree is recorded in the owner integration receipt, avoiding a self-referential tree hash in these documents. Base acceptance and feature validation remain separate evidence obligations; the counts below remain feature forecasts.
 
 Source preparation follows account/SEO source915dcc3aa34402b97cd42c6eb4a3ebafb06c3c53. Contact and manual Quotation retain their actual Razor POST handlers and typed producer DTOs. Both forms already carry culture. Existing typed ContactContent/QuotationContent resources now cover server validation and fixed service errors, persisted-reference notices and customer confirmation subjects/body. Unknown Thai model errors use the existing generic-safe fallback; English fallback keeps original messages. Internal manufacturing/contact emails remain unchanged and HTML-encode submitted fields.

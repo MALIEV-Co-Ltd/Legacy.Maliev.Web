@@ -1,12 +1,16 @@
 @using Microsoft.AspNetCore.Components
 @inject IStringLocalizer<QuotationContent> Localizer
 
+@{
+    var summaryErrors = Model.ErrorsFor(string.Empty).Concat(Model.ErrorsFor(nameof(QuotationFormDisplayModel.SubmissionId))).ToArray();
+}
+
 <div data-migration-component="quotation-form-fields" data-migration-renderer="blazor-static-ssr">
-    <div class="text-danger @(Model.ErrorsFor(string.Empty).Count > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
-        @if (Model.ErrorsFor(string.Empty).Count > 0)
+    <div class="text-danger @(summaryErrors.Length > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
+        @if (summaryErrors.Length > 0)
         {
             <ul>
-                @foreach (var error in Model.ErrorsFor(string.Empty))
+                @foreach (var error in summaryErrors)
                 {
                     <li>@error</li>
                 }

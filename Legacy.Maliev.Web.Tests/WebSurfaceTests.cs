@@ -3938,7 +3938,12 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         form["SubmissionId"] = Guid.Empty.ToString();
         using var response = await client.PostAsync(action, new FormUrlEncodedContent(form));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(expected, WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()), StringComparison.Ordinal);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        var summary = Regex.Match(source,
+            "<div class=\"text-danger validation-summary-errors\" role=\"alert\">(?<body>.*?)</div>",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        Assert.True(summary.Success, "The hidden submission error must appear in the visible form alert.");
+        Assert.Contains(expected, summary.Groups["body"].Value, StringComparison.Ordinal);
         Assert.Null(Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
         Assert.Equal(0, Assert.IsType<StubQuotationFileClient>(configuredFactory.Services.GetRequiredService<IQuotationFileClient>()).CallCount);
     }
