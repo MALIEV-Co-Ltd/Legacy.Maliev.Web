@@ -1,4 +1,6 @@
 using Legacy.Maliev.Web.Middleware;
+using Legacy.Maliev.Web.Components.Pages;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +25,35 @@ public sealed class ErrorIncidentCorrelationTests
         Assert.Equal(first.IncidentId, context.Response.Headers[ErrorIncidentHandler.HeaderName]);
         Assert.DoesNotContain('\r', first.IncidentId);
         Assert.DoesNotContain('\n', first.IncidentId);
+
+        // Match exception-handler response clearing before the shared Error renderer.
+        context.Response.Headers.Clear();
+        context.Features.Set<IExceptionHandlerFeature>(new ExceptionHandlerFeature
+        {
+            Error = new InvalidOperationException("private-original-exception"),
+        });
+        var display = Assert.IsType<ErrorDisplayModel>(ErrorDisplayModelResolver.Resolve(context, null));
+        Assert.Equal(first.IncidentId, display.IncidentId);
+        Assert.Equal(first.OccurredAtUtc, display.OccurredAtUtc);
+        Assert.Equal(first.IncidentId, context.Response.Headers[ErrorIncidentHandler.HeaderName]);
+        Assert.True(ErrorIncidentHandler.TryGet(context, out var restored));
+        Assert.Same(first, restored);
+
+        context.Response.Headers.Clear();
+        context.Features.Set<IExceptionHandlerFeature>(null);
+        var preview = Assert.IsType<ErrorDisplayModel>(ErrorDisplayModelResolver.Resolve(context, 500));
+        Assert.True(preview.IsPreview);
+        Assert.Null(preview.IncidentId);
+        Assert.False(context.Response.Headers.ContainsKey(ErrorIncidentHandler.HeaderName));
+
+        var unowned = new DefaultHttpContext();
+        unowned.Features.Set<IExceptionHandlerFeature>(new ExceptionHandlerFeature
+        {
+            Error = new InvalidOperationException("private-unobserved-exception"),
+        });
+        var unownedDisplay = Assert.IsType<ErrorDisplayModel>(ErrorDisplayModelResolver.Resolve(unowned, null));
+        Assert.Null(unownedDisplay.IncidentId);
+        Assert.False(unowned.Response.Headers.ContainsKey(ErrorIncidentHandler.HeaderName));
     }
 
     [Fact]

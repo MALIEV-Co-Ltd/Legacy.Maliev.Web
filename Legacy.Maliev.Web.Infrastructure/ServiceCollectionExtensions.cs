@@ -43,6 +43,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IValidateOptions<RecaptchaEnterpriseOptions>, RecaptchaEnterpriseOptionsValidator>();
         services.AddOptions<RecaptchaEnterpriseOptions>()
             .Bind(configuration.GetSection("Recaptcha"))
+            .PostConfigure(static options =>
+            {
+                if (string.IsNullOrWhiteSpace(options.SiteKey)) options.SiteKey = options.KeyId;
+            })
             .ValidateOnStart();
         services.AddOptions<GoogleMapsOptions>()
             .Bind(configuration.GetSection(GoogleMapsOptions.SectionName));

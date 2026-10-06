@@ -1,6 +1,8 @@
 # Localized account workflows and rendered service SEO
 
-Base: `d1577dfa29cd292b293089e201ba97f053b1534a`.
+Historical preparation base: `d1577dfa29cd292b293089e201ba97f053b1534a`.
+
+Actual integrated base: `4c502e45781e49145af903fad7d9bd8cab721a0d`. Root-reviewed prepared source tree before this metadata annotation: `70a17a65cd11864356ae355bf57cdb9f7cb9ac57`. The final metadata-annotated tree is recorded in the owner integration receipt, avoiding a self-referential tree hash in these documents. Base acceptance and feature validation remain separate evidence obligations; the counts below remain feature forecasts.
 
 The active server account handlers previously projected English validation keys to Thai component forms. Reset, Forgot, Signup and Login now use their existing typed component resources for server errors. Unknown messages keep English compatibility and use the existing generic-error pattern for Thai. English keys remain the default resource fallback. Required fields, maximum lengths and token/password bounds retain their prior semantics.
 
@@ -8,9 +10,9 @@ Reset/Forgot/Signup rendered actions now carry the resolved supported culture, f
 
 Eight actual Program service-document rows couple parsed localized breadcrumbs and LocalBusiness schema with visible workshop details and guide links. The existing public CNC page is observed as part of the retained source contract; no CNC quotation or manufacturing behavior is added. Shopify guide URLs are inspected in rendered markup without external calls. Existing Facebook exclusion, unified sales phone, nationwide printing title, immutable sitemap and private-route exclusions remain explicit modern adaptations.
 
-Source provenance covers 28 complete original SHAs, including every parent and 183 all-parent path entries in retained owner review packets. This source preparation addresses account localization and adds rendered SEO proof. Existing consent gating and queue containment remain unchanged. GA4 User-ID, inquiry localization, cross-service acceptance attribution, edge HTTPS/HSTS and mixed-owner source disposition remain separate open obligations; this is not whole-source closure.
+Source provenance covers 28 complete original SHAs, including every parent and 183 all-parent path entries in retained owner review packets. This source preparation addresses account localization and adds rendered SEO proof. Existing consent gating and queue containment remain unchanged. Inquiry localization is included in the combined source bundle described in inquiry-localization-20261006.md; its controlled tests do not prove live producer persistence or notification delivery. GA4 User-ID, cross-service acceptance attribution, edge HTTPS/HSTS and mixed-owner source disposition remain separate open obligations; this is not whole-source closure.
 
-Hosted validation is pending. The independent focused group forecasts 29 rows. Against this exact base, full-suite forecast is 3383 and combined focused forecast is 232 across ten TRX files. These are predictions, not passed evidence. If startup is accepted first, integrate its actual accepted main and recalculate before publication. Required gates: all affected builds zero warnings/errors, focused and full tests zero failures/skips, formatting/audit/assets/manifest, raw generated-inclusive coverage, existing negative pricing controls, and retained browser evidence. Local SDK/browser/container execution is prohibited for this lane.
+Hosted validation is pending. The account/SEO focused group forecasts 29 rows. Historical account-only preparation against the stated base forecast 3383 full and 232 focused rows across ten TRX files. The combined account/SEO, inquiry and printable DFM bundle after corrected startup integration forecasts 3452 full and 339 focused rows across thirteen TRX files. These are predictions, not passed evidence. Integrate actual accepted corrected startup/main and recalculate the final base/tree before publication. Required gates: all affected builds zero warnings/errors, focused and full tests zero failures/skips, formatting/audit/assets/manifest, raw generated-inclusive coverage, existing negative pricing controls, and retained browser evidence. Local SDK/browser/container execution is prohibited for this lane.
 
 ## Original source objects
 
