@@ -3164,11 +3164,11 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     [Fact]
     public async Task ForgotPassword_UsesSamePublicResponseForUnknownEmail()
     {
-        var form = await GetAntiforgeryFormAsync("/account/forgotpassword");
+        var form = await GetAntiforgeryFormAsync("/account/forgotpassword?culture=en");
         form["Email"] = "unknown@example.com";
 
         using var response = await client.PostAsync(
-            "/account/forgotpassword?handler=PasswordReset",
+            "/account/forgotpassword?handler=PasswordReset&culture=en",
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);

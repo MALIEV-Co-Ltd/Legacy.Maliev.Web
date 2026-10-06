@@ -50,3 +50,9 @@ Hosted validation is pending. The account/SEO focused group forecasts 29 rows. H
 Candidate `ced0c38ffdbf5233f20946503a77c2b5d2c90528`, run `37418314944`, built the browser host successfully and passed the inherited 286 focused cases. The account/SEO group passed 27 of 29 cases; both custom-manufacturing cultures failed because the new test searched the entire document for a unique specialist URL also present in the header and footer. Scope those handoff assertions to the existing section labelled by `choose-process-title`, retaining unique links within that section, exact localized labels, redirect status/location and actual target document checks. No production behavior, test rows, filters or deadlines change.
 
 Inquiry, printable DFM, full suite, formatting and package audit were not reached. The raw coverage gate correctly failed because no full-suite coverage report existed. Required 3,452 full / 339 focused / 13 TRX remain forecasts; this causal source correction requires fresh hosted execution.
+
+## Full-suite localized notification readback
+
+Candidate `32b6a6b87372877e2c94671b755a8d476ddf0430`, run `37425592300`, passed all 339 focused cases, including both corrected printable DFM cases. The full suite passed 3,451 of 3,452 cases with zero skips. Its inherited unknown-email password-reset test requested no culture but asserted the English notification; the configured default is Thai and the handler now correctly localizes that notification. Make the test's form GET and password-reset POST explicitly English, retaining its redirect, exact public-response and negative account-disclosure assertions. No production behavior, rows, filters or deadlines change.
+
+The raw generated-inclusive coverage gate passed. Formatting and package audit were skipped after the full-suite failure. This test-only correction requires a fresh changed-head hosted run; the candidate is not accepted.
