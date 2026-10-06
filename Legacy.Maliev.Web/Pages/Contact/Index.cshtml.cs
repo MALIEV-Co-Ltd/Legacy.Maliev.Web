@@ -6,6 +6,7 @@ using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Pages.Contact;
@@ -18,6 +19,7 @@ public sealed class Index(
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
     IOptions<GoogleMapsOptions> googleMapsOptions,
     IContactTrustedCustomerLoader trustedCustomerLoader,
+    IStringLocalizer<ContactContent> localizer,
     ILogger<Index> logger) : PageModel
 {
     private const string RecaptchaAction = "submit";
@@ -89,14 +91,21 @@ public sealed class Index(
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? "The submitted value is invalid."
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal));
 
     [TempData]
     public string? Notification { get; set; }
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var localized = localizer[key];
+        return localized.ResourceNotFound && System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th"
+            ? localizer["The submitted value is invalid."].Value
+            : localized.Value;
+    }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -150,8 +159,8 @@ public sealed class Index(
 
         var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
         Notification = notificationsSent
-            ? $"Thank you for contacting us. Your reference number is #{referenceNumber}."
-            : $"Contact request #{referenceNumber} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference.";
+            ? localizer["Thank you for contacting us. Your reference number is #{0}.", referenceNumber].Value
+            : localizer["Contact request #{0} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference.", referenceNumber].Value;
         return RedirectToPage("Index", new { culture = Culture });
     }
 
@@ -163,8 +172,9 @@ public sealed class Index(
             NotificationChannel.Info,
             new EmailNotification(
                 Email.Trim(),
-                $"Contact request #{referenceNumber}",
-                $"<p>Thank you for contacting MALIEV. Your reference number is <strong>#{referenceNumber}</strong>.</p><p>We will reply as soon as possible.</p>",
+                localizer["Contact request #{0}", referenceNumber].Value,
+                "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
+                    + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
                 null,
                 null,
                 null),

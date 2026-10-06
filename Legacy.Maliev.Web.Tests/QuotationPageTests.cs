@@ -1,3 +1,5 @@
+using Legacy.Maliev.Web.Components.Pages.Quotation;
+using Microsoft.Extensions.Localization;
 using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -175,6 +177,8 @@ public sealed class QuotationPageTests
                     SiteKey = "test-site-key",
                     ProjectId = "test-project"
                 }),
+            new StringLocalizer<QuotationContent>(new ResourceManagerStringLocalizerFactory(
+                Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }), NullLoggerFactory.Instance)),
             NullLogger<QuotationPage>.Instance)
         {
             PageContext = new PageContext { HttpContext = httpContext },

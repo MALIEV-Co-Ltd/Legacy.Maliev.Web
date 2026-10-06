@@ -7,6 +7,7 @@ using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Pages.Quotation;
@@ -20,6 +21,7 @@ public sealed class Index(
     INotificationClient notificationClient,
     IAntiBotVerifier antiBotVerifier,
     IOptions<RecaptchaEnterpriseOptions> recaptchaOptions,
+    IStringLocalizer<QuotationContent> localizer,
     ILogger<Index> logger) : PageModel
 {
     private const long MaximumUploadBytes = 100L * 1024L * 1024L;
@@ -146,9 +148,7 @@ public sealed class Index(
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? "The submitted value is invalid."
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal),
         FinderFiles,
@@ -160,6 +160,15 @@ public sealed class Index(
         FinderEnvironment,
         FinderRecommendations,
         FinderPath);
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var localized = localizer[key];
+        return localized.ResourceNotFound && System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th"
+            ? localizer["The submitted value is invalid."].Value
+            : localized.Value;
+    }
 
     public async Task<IActionResult> OnGetAsync(
         string? culture,
@@ -323,10 +332,10 @@ public sealed class Index(
 
         var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
         Notification = fileResult.Completed && notificationsSent
-            ? $"Thank you. Your quotation request reference is #{referenceNumber}."
+            ? localizer["Thank you. Your quotation request reference is #{0}.", referenceNumber].Value
             : fileResult.Rejected
-                ? $"Quotation request #{referenceNumber} was received, but an attachment was rejected by malware scanning. Do not submit it again; contact info@maliev.com with this reference."
-                : $"Quotation request #{referenceNumber} was received, but an attachment or notification could not be completed. Do not submit it again; contact info@maliev.com with this reference.";
+                ? localizer["Quotation request #{0} was received, but an attachment was rejected by malware scanning. Do not submit it again; contact info@maliev.com with this reference.", referenceNumber].Value
+                : localizer["Quotation request #{0} was received, but an attachment or notification could not be completed. Do not submit it again; contact info@maliev.com with this reference.", referenceNumber].Value;
         return RedirectToPage("Index", new { culture = CurrentCulture });
     }
 
@@ -338,8 +347,9 @@ public sealed class Index(
             NotificationChannel.Manufacturing,
             new EmailNotification(
                 Email.Trim(),
-                $"Quotation request #{referenceNumber}",
-                $"<p>Thank you for requesting a quotation from MALIEV. Your reference number is <strong>#{referenceNumber}</strong>.</p><p>Our manufacturing team will review the request and reply directly.</p>",
+                localizer["Quotation request #{0}", referenceNumber].Value,
+                "<p>" + Encode(localizer["Thank you for requesting a quotation from MALIEV. Your reference number is #{0}.", referenceNumber].Value)
+                    + "</p><p>" + Encode(localizer["Our manufacturing team will review the request and reply directly."].Value) + "</p>",
                 null,
                 null,
                 null),

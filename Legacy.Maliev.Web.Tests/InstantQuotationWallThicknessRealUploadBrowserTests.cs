@@ -584,17 +584,96 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(1, upload.VerifiedUploads);
             Assert.Empty(pageErrors);
 
+            await review.ClickAsync();
+            await page.Locator("[data-workflow-review-content]").WaitForAsync();
+            var reviewTotal = page.Locator("[data-workflow-review-total] > div")
+                .Filter(new LocatorFilterOptions
+                {
+                    Has = page.GetByText(culture == "th" ? "รวมทั้งหมด" : "Total", new PageGetByTextOptions { Exact = true }),
+                }).Locator("dd");
+            Assert.Equal(1, await reviewTotal.CountAsync());
+            Assert.Equal(before, await reviewTotal.InnerTextAsync());
+            await page.Locator("[data-review-part-details] > summary").ClickAsync();
+            var reviewedWarnings = await page.Locator("[data-review-dfm-warnings] li").AllInnerTextsAsync();
+            Assert.Contains(reviewedWarnings, item => item.Contains(warningTitle, StringComparison.Ordinal)
+                && item.Contains(fdmLimit, StringComparison.Ordinal));
+            await AssertPrintableDfmMatchesReviewAsync(page, reviewedWarnings);
+            Assert.Equal(before, await reviewTotal.InnerTextAsync());
+            Assert.Equal(pricingCalls, pricing.CallCount);
+            await page.Locator("[data-review-back]").ClickAsync();
+
             await material.SelectOptionAsync("M68");
-            await page.WaitForFunctionAsync("() => !document.querySelector('[data-dfm-code=thin-wall]')");
+            try
+            {
+                await page.WaitForFunctionAsync("() => !document.querySelector('[data-dfm-code=thin-wall]')");
+            }
+            catch (TimeoutException)
+            {
+                // One shared secondary deadline; diagnostics must not replace the original timeout.
+                using var diagnosticDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                try
+                {
+                    using var resinScope = factory.Services.CreateScope();
+                    var resinStore = resinScope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
+                    var observed = await resinStore.GetAsync(upload.SessionId, upload.OwnerIdentity, diagnosticDeadline.Token)
+                        .WaitAsync(diagnosticDeadline.Token);
+                    var observedPart = observed is not null && observed.Parts.Count == 1 ? observed.Parts[0] : null;
+                    output.WriteLine($"[dfm-resin-authority] authorizationPresent={observed?.QuoteAuthorization is not null}; singlePartPresent={observedPart is not null}; materialMatched={observedPart?.Configuration.MaterialKey == "M68"}; uploadCount={Math.Min(upload.VerifiedUploads, 2)}; pageErrorCount={Math.Min(pageErrors.Count, 10)}");
+                    var rendered = await page.EvaluateAsync<string>("""
+                        limits => JSON.stringify({
+                            materialMatched: document.querySelector('[data-workflow-configuration] [data-workflow-material-picker] select[name="material"]')?.value === 'M68',
+                            reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
+                            pricingLoading: !!document.querySelector('[data-pricing-loading-status]'),
+                            thinWallPresent: !!document.querySelector('[data-dfm-code=thin-wall]'),
+                            thicknessAvailable: !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)'),
+                            warningUsesResinLimit: !!document.querySelector('[data-dfm-code=thin-wall]')?.textContent?.includes(limits.resinLimit),
+                            warningUsesFdmLimit: !!document.querySelector('[data-dfm-code=thin-wall]')?.textContent?.includes(limits.fdmLimit)
+                        })
+                        """, new { resinLimit, fdmLimit }).WaitAsync(diagnosticDeadline.Token);
+                    output.WriteLine($"[dfm-resin-render] {rendered}");
+                }
+                catch
+                {
+                    // Secondary observation or output failure must not mask the primary timeout.
+                }
+                throw;
+            }
             await toggle.ClickAsync();
             await page.WaitForFunctionAsync("limit => document.querySelector('.instant-quote__thickness-legend')?.textContent?.includes(limit)", resinLimit);
             Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
             Assert.Equal(1, upload.VerifiedUploads);
+
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+            var resinPrice = await total.InnerTextAsync();
+            await review.ClickAsync();
+            await page.Locator("[data-workflow-review-content]").WaitForAsync();
+            var resinWarnings = await page.Locator("[data-review-dfm-warnings] li").AllInnerTextsAsync();
+            Assert.DoesNotContain(resinWarnings, item => item.Contains(warningTitle, StringComparison.Ordinal));
+            Assert.Equal(resinPrice, await reviewTotal.InnerTextAsync());
+            var resinPricingCalls = pricing.CallCount;
+            await AssertPrintableDfmMatchesReviewAsync(page, resinWarnings);
+            Assert.Equal(resinPrice, await reviewTotal.InnerTextAsync());
+            Assert.Equal(resinPricingCalls, pricing.CallCount);
+            Assert.Equal(1, upload.VerifiedUploads);
+            Assert.Empty(pageErrors);
         }
         finally
         {
             File.Delete(path);
         }
+    }
+
+    private static async Task AssertPrintableDfmMatchesReviewAsync(IPage page, IReadOnlyList<string> reviewedWarnings)
+    {
+        var preliminary = page.Locator("#preliminary-quotation-button");
+        Assert.True(await preliminary.IsEnabledAsync());
+        await using var preview = await page.RunAndWaitForPopupAsync(() => preliminary.ClickAsync());
+        await preview.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+        Assert.Equal(1, await preview.Locator(".iq-preliminary-quotation-part").CountAsync());
+        var printableWarnings = await preview.Locator(".iq-preliminary-quotation-part .iq-preliminary-quotation-warnings li").AllInnerTextsAsync();
+        Assert.Equal(reviewedWarnings, printableWarnings);
+        Assert.Equal(reviewedWarnings.Count == 0 ? 1 : 0,
+            await preview.Locator(".iq-preliminary-quotation-part .iq-preliminary-quotation-dfm-ok").CountAsync());
     }
 
     [Fact]

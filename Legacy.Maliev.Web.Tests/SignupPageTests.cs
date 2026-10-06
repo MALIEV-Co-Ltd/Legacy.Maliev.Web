@@ -1,4 +1,7 @@
+using System.Globalization;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.Account;
+using Microsoft.Extensions.Localization;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Pages.Account;
 using Microsoft.AspNetCore.Http;
@@ -11,40 +14,57 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class SignupPageTests
 {
-    [Fact]
-    public async Task SuccessfulSignupRedirectsToLoginAndUsesCanonicalConfirmationOrigin()
+    [Theory]
+    [InlineData("en", "Confirm your MALIEV account")]
+    [InlineData("th", "ยืนยันบัญชี MALIEV ของคุณ")]
+    public async Task SuccessfulSignupRedirectsToLoginAndUsesCanonicalConfirmationOrigin(string culture, string expectedSubject)
     {
-        var notification = new RecordingNotificationClient();
-        var model = new Signup(
-            new SuccessfulCustomerClient(),
-            new SuccessfulAuthenticationClient(),
-            notification,
-            new PassingAntiBotVerifier(),
-            Options.Create(new RecaptchaEnterpriseOptions { SiteKey = "test" }),
-            NullLogger<Signup>.Instance)
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        try
         {
-            PageContext = new PageContext
+            var notification = new RecordingNotificationClient();
+            var model = new Signup(
+                new SuccessfulCustomerClient(),
+                new SuccessfulAuthenticationClient(),
+                notification,
+                new PassingAntiBotVerifier(),
+                Options.Create(new RecaptchaEnterpriseOptions { SiteKey = "test" }),
+                new StringLocalizer<SignupContent>(new ResourceManagerStringLocalizerFactory(
+                    Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                    NullLoggerFactory.Instance)),
+                NullLogger<Signup>.Instance)
             {
-                HttpContext = new DefaultHttpContext
+                PageContext = new PageContext
                 {
-                    Request = { Scheme = "https", Host = new HostString("attacker.example") },
+                    HttpContext = new DefaultHttpContext
+                    {
+                        Request = { Scheme = "https", Host = new HostString("attacker.example") },
+                    },
                 },
-            },
-            FirstName = "Customer",
-            LastName = "Example",
-            Email = "customer@example.com",
-            Password = "correct-password",
-            ConfirmPassword = "correct-password",
-            RecaptchaToken = "valid-token",
-        };
+                FirstName = "Customer",
+                LastName = "Example",
+                Email = "customer@example.com",
+                Password = "correct-password",
+                ConfirmPassword = "correct-password",
+                RecaptchaToken = "valid-token",
+            };
 
-        var result = Assert.IsType<RedirectToPageResult>(await model.OnPostSignUpAsync(default));
+            var result = Assert.IsType<RedirectToPageResult>(await model.OnPostSignUpAsync(default));
 
-        Assert.Equal("/Account/Login", result.PageName);
-        Assert.Equal("customer@example.com", result.RouteValues?["email"]);
-        Assert.Equal(true, result.RouteValues?["accountCreated"]);
-        Assert.Contains("https://www.maliev.com/Account/EmailConfirmation", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("/Account/Login", result.PageName);
+            Assert.Equal("customer@example.com", result.RouteValues?["email"]);
+            Assert.Equal(true, result.RouteValues?["accountCreated"]);
+            Assert.Contains("https://www.maliev.com/Account/EmailConfirmation", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(expectedSubject, notification.Notification?.Subject);
+            Assert.Contains($"culture={culture}", notification.Notification?.Body, StringComparison.Ordinal);
+            Assert.Equal(culture, result.RouteValues?["culture"]);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     [Fact]
@@ -57,6 +77,9 @@ public sealed class SignupPageTests
             new NoopNotificationClient(),
             new PassingAntiBotVerifier(),
             Options.Create(new RecaptchaEnterpriseOptions { SiteKey = "test" }),
+            new StringLocalizer<SignupContent>(new ResourceManagerStringLocalizerFactory(
+                Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                NullLoggerFactory.Instance)),
             NullLogger<Signup>.Instance)
         {
             PageContext = new PageContext { HttpContext = new DefaultHttpContext() },

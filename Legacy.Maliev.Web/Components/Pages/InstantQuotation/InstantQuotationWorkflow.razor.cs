@@ -832,9 +832,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var color = colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
             ? part.Configuration.Color
             : colors.First();
-        await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity);
-        await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), material);
-        await UpdatePartAppearanceAsync(partId, color);
+        await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async () =>
+        {
+            await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), material);
+            await UpdatePartAppearanceAsync(partId, color);
+        });
     }
 
     private async Task ChangeColorAsync(Guid partId, ChangeEventArgs args)
@@ -931,17 +933,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         InstantQuotationWorkflowPartViewModel part,
         string material,
         string color,
-        int quantity)
+        int quantity,
+        Func<Task>? afterUpdate = null)
     {
         displayIntents[part.PartId] = part.Configuration with { MaterialKey = material, Color = color, Quantity = quantity };
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
-            ?? Task.CompletedTask);
+            ?? Task.CompletedTask, afterUpdate);
     }
 
-    private async Task RepriceAsync(Func<Task> update)
+    private async Task RepriceAsync(Func<Task> update, Func<Task>? afterUpdate = null)
     {
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
-        try { await repricing.RunAsync(update, () => InvokeAsync(StateHasChanged)); }
+        try { await repricing.RunAsync(update, () => InvokeAsync(StateHasChanged), afterUpdate); }
         finally
         {
             if (!repricing.IsActive) displayIntents.Clear();

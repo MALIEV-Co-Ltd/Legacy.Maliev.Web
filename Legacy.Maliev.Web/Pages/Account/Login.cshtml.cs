@@ -21,13 +21,13 @@ public sealed class Login(
     ILogger<Login> logger) : PageModel
 {
     [BindProperty]
-    [Required]
-    [EmailAddress]
-    [StringLength(320)]
+    [Required(ErrorMessage = "Email address is required")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+    [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Password is required")]
     [DataType(DataType.Password)]
     [StringLength(1024)]
     public string Password { get; set; } = string.Empty;
@@ -56,11 +56,20 @@ public sealed class Login(
             .ToDictionary(
                 entry => entry.Key,
                 entry => (IReadOnlyList<string>)entry.Value!.Errors
-                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
-                        ? "The submitted value is invalid."
-                        : error.ErrorMessage)
+                    .Select(error => LocalizeModelError(error.ErrorMessage))
                     .ToArray(),
                 StringComparer.Ordinal));
+
+    private string LocalizeModelError(string? errorMessage)
+    {
+        var key = string.IsNullOrEmpty(errorMessage) ? "The submitted value is invalid." : errorMessage;
+        var result = localizer[key];
+        return !result.ResourceNotFound
+            ? result.Value
+            : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                ? key
+                : localizer["The submitted value is invalid."].Value;
+    }
 
     public IActionResult OnGet(string? email, string? returnUrl, bool accountCreated = false)
     {
@@ -109,13 +118,14 @@ public sealed class Login(
                     token = action.Token,
                     returnUrl = Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : null,
                     rememberMe = RememberMe,
+                    culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
                 });
         }
 
         if (status == AccountSignInStatus.EmailConfirmationRequired && action is not null)
         {
             EmailConfirmationRecoveryToken = action.Token;
-            ModelState.AddModelError(string.Empty, localizer["Please verify your email before signing in."]);
+            ModelState.AddModelError(string.Empty, "Please verify your email before signing in.");
             return Page();
         }
 
@@ -132,7 +142,7 @@ public sealed class Login(
         ModelState.Remove(nameof(Password));
         if (!ModelState.IsValid || string.IsNullOrWhiteSpace(EmailConfirmationRecoveryToken))
         {
-            ModelState.AddModelError(string.Empty, localizer["Login failed"]);
+            ModelState.AddModelError(string.Empty, "Login failed");
             return Page();
         }
 
@@ -148,19 +158,20 @@ public sealed class Login(
                 {
                     ["email"] = Email.Trim(),
                     ["token"] = challenge.Token,
+                    ["culture"] = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
                 });
             if (!await SendEmailConfirmationAsync(callback, cancellationToken))
             {
                 EmailConfirmationRecoveryToken = null;
                 ModelState.AddModelError(
                     string.Empty,
-                    localizer["We could not send the verification email. Please try again later."]);
+                    "We could not send the verification email. Please try again later.");
                 return Page();
             }
         }
 
         Notification = localizer["If the account requires verification, a new verification link has been sent."];
-        return RedirectToPage(new { email = Email.Trim(), returnUrl = Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : null });
+        return RedirectToPage(new { email = Email.Trim(), returnUrl = Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : null, culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName });
     }
 
     private async Task<bool> SendEmailConfirmationAsync(string callback, CancellationToken cancellationToken)

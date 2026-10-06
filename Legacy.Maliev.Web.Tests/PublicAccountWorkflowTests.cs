@@ -1,3 +1,4 @@
+using System.Globalization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Account;
 using Legacy.Maliev.Web.Infrastructure;
@@ -10,51 +11,88 @@ using Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class PublicAccountWorkflowTests
 {
-    [Fact]
-    public async Task ForgotPassword_EmailUsesCanonicalOriginInsteadOfRequestHost()
+    [Theory]
+    [InlineData("en", "Reset your MALIEV password")]
+    [InlineData("th", "รีเซ็ตรหัสผ่าน MALIEV ของคุณ")]
+    public async Task ForgotPassword_EmailUsesCanonicalOriginInsteadOfRequestHost(string culture, string expectedSubject)
     {
-        var notification = new RecordingNotificationClient();
-        var page = new ForgotPassword(
-            new AccountClientStub(),
-            notification,
-            NullLogger<ForgotPassword>.Instance)
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        try
         {
-            Email = "customer@example.com",
-        };
-        Configure(page, "attacker.example");
+            var notification = new RecordingNotificationClient();
+            var page = new ForgotPassword(
+                new AccountClientStub(),
+                notification,
+                new StringLocalizer<ForgotPasswordContent>(new ResourceManagerStringLocalizerFactory(
+                    Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                    NullLoggerFactory.Instance)),
+                NullLogger<ForgotPassword>.Instance)
+            {
+                Email = "customer@example.com",
+            };
+            Configure(page, "attacker.example");
 
-        await page.OnPostPasswordResetAsync(CancellationToken.None);
+            var result = Assert.IsType<RedirectToPageResult>(await page.OnPostPasswordResetAsync(CancellationToken.None));
 
-        Assert.Contains("https://www.maliev.com/Account/ResetPassword", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("https://www.maliev.com/Account/ResetPassword", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(expectedSubject, notification.Notification?.Subject);
+            Assert.Equal(culture, result.RouteValues?["culture"]);
+            Assert.Contains($"culture={culture}", notification.Notification?.Body, StringComparison.Ordinal);
+            Assert.Equal(culture == "th"
+                ? "หากพบบัญชีที่เข้าเงื่อนไข ระบบได้ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว"
+                : "If an eligible account exists, a password reset link has been sent.", page.Notification);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
-    [Fact]
-    public async Task LoginResend_EmailUsesCanonicalOriginInsteadOfRequestHost()
+    [Theory]
+    [InlineData("en", "Email Confirmation")]
+    [InlineData("th", "ยืนยันอีเมล")]
+    public async Task LoginResend_EmailUsesCanonicalOriginInsteadOfRequestHost(string culture, string subject)
     {
-        var notification = new RecordingNotificationClient();
-        var page = new Login(
-            new SessionManagerStub(),
-            new AccountClientStub(),
-            notification,
-            new EchoLocalizer<LoginContent>(),
-            NullLogger<Login>.Instance)
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        try
         {
-            Email = "customer@example.com",
-            EmailConfirmationRecoveryToken = "opaque-recovery-token-12345678901234567890",
-        };
-        Configure(page, "attacker.example");
+            var notification = new RecordingNotificationClient();
+            var page = new Login(
+                new SessionManagerStub(),
+                new AccountClientStub(),
+                notification,
+                new StringLocalizer<LoginContent>(new ResourceManagerStringLocalizerFactory(
+                    Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                    NullLoggerFactory.Instance)),
+                NullLogger<Login>.Instance)
+            {
+                Email = "customer@example.com",
+                EmailConfirmationRecoveryToken = "opaque-recovery-token-12345678901234567890",
+            };
+            Configure(page, "attacker.example");
 
-        await page.OnPostResendEmailConfirmationAsync(CancellationToken.None);
+            var result = Assert.IsType<RedirectToPageResult>(await page.OnPostResendEmailConfirmationAsync(CancellationToken.None));
 
-        Assert.Contains("https://www.maliev.com/Account/EmailConfirmation", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("https://www.maliev.com/Account/EmailConfirmation", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("attacker.example", notification.Notification?.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(subject, notification.Notification?.Subject);
+            Assert.Equal(culture, result.RouteValues?["culture"]);
+            Assert.Contains($"culture={culture}", notification.Notification?.Body, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     [Fact]
@@ -74,6 +112,34 @@ public sealed class PublicAccountWorkflowTests
         Assert.Equal(
             "Account created. Check your email and follow the link to confirm your address before signing in.",
             page.Notification);
+    }
+
+    [Theory]
+    [InlineData("en", "Unrecognized server validation message.")]
+    [InlineData("th", "ข้อมูลที่ส่งมาไม่ถูกต้อง")]
+    public void UnknownServerValidation_UsesSafeThaiFallbackAndRetainsEnglishCompatibility(
+        string culture, string expected)
+    {
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        try
+        {
+            var page = new ForgotPassword(
+                new AccountClientStub(),
+                new RecordingNotificationClient(),
+                new StringLocalizer<ForgotPasswordContent>(new ResourceManagerStringLocalizerFactory(
+                    Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                    NullLoggerFactory.Instance)),
+                NullLogger<ForgotPassword>.Instance);
+            Configure(page, "attacker.example");
+            page.ModelState.AddModelError("Email", "Unrecognized server validation message.");
+
+            Assert.Equal(expected, page.DisplayModel.FirstErrorFor("Email"));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     private static void Configure(PageModel page, string host)
