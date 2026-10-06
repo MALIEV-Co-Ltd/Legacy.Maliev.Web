@@ -109,6 +109,7 @@ var useBlazorRouteHost = useBlazorHomeRoute
     && useBlazorKnowledgesSpecifications3DScanningRoute
     && useBlazorKnowledgesSpecificationsCncMachiningRoute;
 builder.AddServiceDefaults();
+builder.AddPrivateRequestObservation("web");
 builder.AddStandardCors();
 builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
 builder.AddStandardOpenApi(
@@ -431,7 +432,9 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var dataProtection = builder.Services.AddDataProtection()
-    .SetApplicationName("Legacy.Maliev.Web");
+    .SetApplicationName(builder.Environment.IsDevelopment()
+        ? "Legacy.Maliev.Web.Development"
+        : "Legacy.Maliev.Web");
 if (builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddDistributedMemoryCache();

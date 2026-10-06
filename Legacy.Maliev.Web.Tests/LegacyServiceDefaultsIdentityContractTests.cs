@@ -2,7 +2,7 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
-    private const string ServiceDefaultsCommit = "6ea131df4bcf8d213d7d121cb8c865697bee7420";
+    private const string ServiceDefaultsCommit = "3c790ba6414b2a539f24aabb6948549ffd81a86b";
 
     private const string DotNetPatchVersion = "10.0.12";
 
@@ -70,6 +70,20 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
 
         Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
         Assert.DoesNotMatch("Microsoft\\.[^\"]+\" Version=\"10\\.0\\.(?:[0-9]|1[01])\"", webProject + testProject);
+    }
+
+    [Fact]
+    public void JoinedWebGraph_UsesTheSameSelectedDefaultsWithoutChangingContracts()
+    {
+        var root = FindRepositoryRoot();
+        using var graph = System.Text.Json.JsonDocument.Parse(File.ReadAllText(
+            Path.Combine(root, "tests", "fx-joined", "candidate-graph.json")));
+        Assert.Equal(ServiceDefaultsCommit, graph.RootElement.GetProperty("webDefaultsCommit").GetString());
+        Assert.Equal("78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7",
+            graph.RootElement.GetProperty("contractsCommit").GetString());
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "fx-joined.yml"));
+        Assert.Contains($"ref: {ServiceDefaultsCommit}\n          path: .dependencies/Legacy.Maliev.ServiceDefaults",
+            workflow.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
