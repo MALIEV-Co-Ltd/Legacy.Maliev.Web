@@ -223,14 +223,14 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
             });
         }
         finally { CultureInfo.CurrentUICulture = previous; }
-        var html = "<form><input type='hidden' name='__RequestVerificationToken' value='fixture-csrf' />"
+        var html = "<!doctype html><meta charset='utf-8'/><form><input type='hidden' name='__RequestVerificationToken' value='fixture-csrf' />"
             + "<input id='province'/><input id='district'/><input id='subdistrict'/><input id='postcode'/>"
             + "<input id='detail' value='36/1 house and road'/><input id='country' value='Thailand'/>"
             + "<input id='company' value='manual company'/><input id='taxId'/>" + component + "</form>";
-        await page.RouteAsync("**/fixture-lookup", route => route.FulfillAsync(new() { ContentType = "text/html", Body = html }));
+        await page.RouteAsync("**/fixture-lookup", route => route.FulfillAsync(new() { ContentType = "text/html; charset=utf-8", Body = html }));
         await page.RouteAsync("**/src/app/js/lookups/thai-lookup.js", route => route.FulfillAsync(new()
         {
-            ContentType = "application/javascript",
+            ContentType = "application/javascript; charset=utf-8",
             Body = File.ReadAllText(Path.Combine(BrowserHostIdentityVerifier.SourceProjectDirectory(), "wwwroot", "src", "app", "js", "lookups", "thai-lookup.js")),
         }));
         await page.GotoAsync(new Uri(new Uri(fixture.CncQuotationUrl), "/fixture-lookup").ToString());

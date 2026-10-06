@@ -43,7 +43,7 @@
             query.setAttribute('aria-expanded', 'false'); query.removeAttribute('aria-activedescendant');
         };
         const constraints = () => ({ ...codes,
-            postcode: /^[0-9๐-๙]{5}$/.test(field('postcode')?.value || '') ? field('postcode').value : undefined });
+            postcode: /^[0-9\u0E50-\u0E59]{5}$/.test(field('postcode')?.value || '') ? field('postcode').value : undefined });
         const label = item => company ? [item.nameTh, item.nameEn, item.taxId].filter(Boolean).join(' · ')
             : [name(item.subdistrict), name(item.district), name(item.province), item.postcode].filter(Boolean).join(' · ');
         const review = item => {
@@ -108,7 +108,7 @@
         const search = (append = false) => {
             if (!company && !isThai()) { stop(); close(); say('country'); return; }
             const raw = query.value.trim();
-            const postcodeFirst = !company && /^[0-9๐-๙]{5}$/.test(raw);
+            const postcodeFirst = !company && /^[0-9\u0E50-\u0E59]{5}$/.test(raw);
             const q = postcodeFirst ? '' : raw;
             const filters = { ...constraints(), ...(postcodeFirst ? { postcode: raw } : {}) };
             if (company && q.length < 2 || !company && !q && !Object.values(filters).some(Boolean)) { stop(); close(); say(''); return; }
