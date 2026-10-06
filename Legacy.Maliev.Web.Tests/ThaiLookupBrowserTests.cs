@@ -86,6 +86,24 @@ public sealed class ThaiLookupBrowserTests(CncNativeBrowserFixture fixture)
         Assert.Equal("corrected company", await page.Locator("#company").InputValueAsync());
     }
 
+    [Theory]
+    [InlineData("en", "rate limited")]
+    [InlineData("th", "ถูกจำกัดจำนวนคำขอ")]
+    public async Task CompanyRateLimitExplainsThrottleWithoutChangingManualFields(string culture, string expected)
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        await using var page = await context.NewPageAsync();
+        await page.RouteAsync("**/lookups/companies/search", route => route.FulfillAsync(new() { Status = 429 }));
+        await Load(page, culture, "company");
+        await page.Locator("#company").FillAsync("example");
+        await page.WaitForFunctionAsync("expected => document.querySelector('[data-lookup-status]').textContent.includes(expected)", expected);
+        Assert.Equal("example", await page.Locator("#company").InputValueAsync());
+        Assert.True(await page.Locator("#company").IsEditableAsync());
+        Assert.False(await page.Locator("[data-lookup-preview]").IsVisibleAsync());
+        await page.Locator("#company").FillAsync("corrected company");
+        Assert.Equal("corrected company", await page.Locator("#company").InputValueAsync());
+    }
+
     [Fact]
     public async Task AmbiguousPasteNeverGuessesAndKeepsExistingDetailUntilOptIn()
     {

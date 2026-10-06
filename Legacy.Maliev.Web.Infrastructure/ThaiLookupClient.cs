@@ -71,7 +71,7 @@ internal sealed class ThaiLookupClient(IHttpClientFactory clients, IServiceAcces
                     return new(default, 503);
                 }
                 if (!response.IsSuccessStatusCode) return new(default, response.StatusCode is HttpStatusCode.BadRequest
-                    or HttpStatusCode.UnprocessableEntity ? (int)response.StatusCode : 503);
+                    or HttpStatusCode.UnprocessableEntity or HttpStatusCode.TooManyRequests ? (int)response.StatusCode : 503);
                 // Bound even chunked content before deserialization; never log the address or company query.
                 await using var stream = await response.Content.ReadAsStreamAsync(operationToken);
                 using var buffer = new MemoryStream();

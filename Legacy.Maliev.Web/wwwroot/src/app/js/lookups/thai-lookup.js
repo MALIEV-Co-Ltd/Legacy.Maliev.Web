@@ -80,7 +80,7 @@
                     headers: { 'Content-Type': 'application/json', [root.dataset.antiforgeryHeader]: token },
                     body: JSON.stringify(body), signal: controller.signal, cache: 'no-store' });
                 if (version !== generation) return;
-                if (!response.ok) { close(); say(response.status === 422 ? 'unsupported' : response.status === 400 ? 'invalid' : 'unavailable'); return; }
+                if (!response.ok) { close(); say(response.status === 429 ? 'rate-limited' : response.status === 422 ? 'unsupported' : response.status === 400 ? 'invalid' : 'unavailable'); return; }
                 const data = await response.json();
                 if (version !== generation) return;
                 if (path.endsWith('/resolve')) {
@@ -94,7 +94,7 @@
                     say(data.hasMore ? 'narrow' : rows.length ? 'choose' : 'empty');
                 } else {
                     resolution = null;
-                    if (company && ['unavailable', 'unsupported'].includes(data.outcome)) { close(); say(data.outcome); return; }
+                    if (company && ['unavailable', 'unsupported', 'rate-limited'].includes(data.outcome)) { close(); say(data.outcome); return; }
                     render(append ? rows.concat(data.items || []) : data.items || []);
                     cursor = data.nextCursor; more.hidden = company || !data.hasMore || !cursor;
                     say(data.hasMore ? 'narrow' : rows.length ? 'choose' : 'empty');

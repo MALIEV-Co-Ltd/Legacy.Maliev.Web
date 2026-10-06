@@ -45,7 +45,8 @@ public static class ThaiLookupEndpoints
             if (request is null) return Results.BadRequest();
             var result = await send(request, context.RequestAborted);
             return result.StatusCode == 200 ? Results.Json(result.Value) : Results.Problem(statusCode: result.StatusCode,
-                title: result.StatusCode == 422 ? "Lookup capability is unsupported." : result.StatusCode == 400
+                title: result.StatusCode == 429 ? "Lookup is rate limited. Try again later or enter details manually."
+                    : result.StatusCode == 422 ? "Lookup capability is unsupported." : result.StatusCode == 400
                     ? "Invalid lookup request." : "Lookup is temporarily unavailable. Manual entry remains available.");
         }
         catch (Exception exception) when (exception is AntiforgeryValidationException or System.Text.Json.JsonException

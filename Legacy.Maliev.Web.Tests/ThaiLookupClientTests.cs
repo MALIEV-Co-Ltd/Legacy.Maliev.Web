@@ -32,6 +32,7 @@ public sealed class ThaiLookupClientTests
     [Theory]
     [InlineData(400, 400)]
     [InlineData(422, 422)]
+    [InlineData(429, 429)]
     [InlineData(401, 503)]
     [InlineData(403, 503)]
     [InlineData(500, 503)]

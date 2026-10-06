@@ -30,6 +30,7 @@ public sealed class ThaiLookupBoundaryTests
     [Theory]
     [InlineData(200)]
     [InlineData(422)]
+    [InlineData(429)]
     [InlineData(503)]
     public async Task AnonymousLookupUsesServerBoundaryAndRetainsFailureCategory(int resultStatus)
     {
