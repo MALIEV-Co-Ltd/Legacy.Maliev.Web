@@ -185,6 +185,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~ThaiLookup|FullyQualifiedName~OnlyWiredViewerActions_RenderEnabled"
           --logger trx --results-directory ./thai-lookup-test-results
+      - name: Verify retained scanning comparison pointer touch and no-JavaScript browser contracts
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ScanningComparisonBrowserTests"
+          --logger trx --results-directory ./scanning-comparison-test-results
       - name: Prepare isolated hash-pinned preliminary PDF verification runtime
         timeout-minutes: 5
         shell: bash
@@ -307,6 +314,8 @@ jobs:
             material-identity-test-results/**/*.trx
             signed-link-test-results/**/*.trx
             startup-security-test-results/**/*.trx
+            scanning-comparison-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/scanning-comparison-screenshots/*.png
             localized-account-seo-test-results/**/*.trx
             localized-inquiry-test-results/**/*.trx
             preliminary-dfm-test-results/**/*.trx
