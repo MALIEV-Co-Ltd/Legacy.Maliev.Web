@@ -37,6 +37,8 @@ Default browser deadlines remain unchanged. Existing historical selectors, value
 
 ## Validation boundary and forecasts
 
+The buildable witness at `d0218f5ec0d742bea32e857bfcbbd790eca0849b`, hosted run `37480906812`, executed all15 scanning cases:14passed and1failed. `Comparison_PointerDragChangesDividerOnlyInCompareMode` failed at line234, the unchanged all-seven-images `draggable === false` assertion. The active SSR report's three images and color comparison's two images omitted the attribute; the two CAD images already specified it. The correction adds only those five `draggable="false"` attributes, after actual retained TRX confirmation. Assertions, deadlines, scripts, styles and image bytes remain unchanged. Corrected-head native acceptance is pending.
+
 The first hosted witness at `386a1650101a8c77b0808e9095e3f489ce6df859`, run `37479867918`, stopped at build with CS8604 on the nullable image alt attribute passed to `Assert.NotEmpty`. An explicit non-null assertion preserves the existing non-empty oracle and permits build validation. No scanning browser case ran, so the anticipated native image-dragging failure remains unconfirmed and production markup is unchanged.
 
 Source authoring only: no SDK build, native tests, Chromium, Node, containers or providers were executed. Static readbacks, pinned Playwright1.61 API XML, method/row enumeration, asset/source identities, UTF8/LF and diff checks are preparation evidence. Parent must independently review and run fresh exact-head build with zero warnings/errors, focused15, relevant full suite, formatting/static checks and artifacts before accepting the slice as runtime-validated; an owner-approved hosted-first source-preparation commit is not runtime acceptance.
