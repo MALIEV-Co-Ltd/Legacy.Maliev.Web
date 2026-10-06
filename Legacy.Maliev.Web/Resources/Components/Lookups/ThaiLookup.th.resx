@@ -29,5 +29,5 @@
   <data name="This suggestion conflicts with saved account fields. Edit your account first." xml:space="preserve"><value>ข้อมูลที่แนะนำขัดแย้งกับข้อมูลบัญชีที่บันทึกไว้ กรุณาแก้ไขบัญชีก่อน</value></data>
   <data name="Suggestion applied. Review editable fields before saving." xml:space="preserve"><value>ใส่ข้อมูลที่แนะนำแล้ว กรุณาตรวจสอบช่องที่แก้ไขได้ก่อนบันทึก</value></data>
   <data name="Thai address lookup is available when Thailand is selected." xml:space="preserve"><value>ค้นหาที่อยู่ไทยได้เมื่อเลือกประเทศไทย</value></data>
-  <data name="Company lookup is temporarily rate limited. Try again later or enter details manually." xml:space="preserve"><value>การค้นหาบริษัทถูกจำกัดจำนวนคำขอชั่วคราว กรุณาลองใหม่ภายหลังหรือกรอกข้อมูลด้วยตนเอง</value></data>
+  <data name="Lookup is temporarily rate limited. Try again later or enter details manually." xml:space="preserve"><value>การค้นหาถูกจำกัดจำนวนคำขอชั่วคราว กรุณาลองใหม่ภายหลังหรือกรอกข้อมูลด้วยตนเอง</value></data>
 </root>
