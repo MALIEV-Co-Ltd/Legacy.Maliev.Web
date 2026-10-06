@@ -162,7 +162,7 @@ jobs:
           --configuration Release --no-build --no-restore
           -p:UseLocalMalievDependencies=true
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview|FullyQualifiedName~RepricingActivityTests"
+          --filter "FullyQualifiedName~ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview|FullyQualifiedName~RepricingActivityTests|FullyQualifiedName~InstantQuotationReviewCustomerTests.RepricingStatus_IsLocalizedAndDoesNotReplacePreviousTotals"
           --logger trx --results-directory ./preliminary-dfm-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
