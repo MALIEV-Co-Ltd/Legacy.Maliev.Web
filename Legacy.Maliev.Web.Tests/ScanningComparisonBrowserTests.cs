@@ -192,7 +192,9 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         {
             Assert.True(await figure.IsVisibleAsync());
             Assert.NotEmpty(await figure.Locator("figcaption").InnerTextAsync());
-            Assert.NotEmpty(await figure.Locator("img").GetAttributeAsync("alt"));
+            string? alt = await figure.Locator("img").GetAttributeAsync("alt");
+            Assert.NotNull(alt);
+            Assert.NotEmpty(alt);
         }
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
     }
