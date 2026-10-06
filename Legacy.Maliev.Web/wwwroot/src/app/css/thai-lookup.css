@@ -1,0 +1,82 @@
+.thai-lookup {
+    display: grid;
+    gap: .65rem;
+    min-width: 0;
+    max-width: 100%;
+    margin-block: 1rem;
+    padding: 1rem;
+    border: 1px solid #d8dee5;
+    border-radius: .75rem;
+    background: #f8fafc;
+    color: #17212b;
+}
+
+.thai-lookup input:not([type="checkbox"]),
+.thai-lookup textarea,
+.thai-lookup button {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 44px;
+    font: inherit;
+}
+
+.thai-lookup input:not([type="checkbox"]),
+.thai-lookup textarea {
+    width: 100%;
+    padding: .65rem;
+    border: 1px solid #64748b;
+    border-radius: .4rem;
+    background: #fff;
+    color: inherit;
+}
+
+.thai-lookup textarea {
+    resize: vertical;
+}
+
+.thai-lookup button {
+    padding: .6rem .8rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border: 1px solid #64748b;
+    border-radius: .4rem;
+    background: #fff;
+    color: inherit;
+}
+
+.thai-lookup :focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+}
+
+.thai-lookup [role="listbox"] {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.thai-lookup [role="option"] {
+    width: 100%;
+    margin-block: .2rem;
+    text-align: start;
+}
+
+.thai-lookup [aria-selected="true"] {
+    border-color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.thai-lookup [data-lookup-preview] {
+    display: grid;
+    gap: .65rem;
+    min-width: 0;
+}
+
+.thai-lookup p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.thai-lookup [hidden] {
+    display: none !important;
+}

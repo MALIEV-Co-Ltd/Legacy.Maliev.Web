@@ -416,6 +416,8 @@ builder.Services.Configure<CookieTempDataProviderOptions>(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 builder.Services.AddLegacyServiceClients(builder.Configuration);
+builder.Services.AddThaiLookupClient();
+builder.Services.AddThaiLookupBoundary();
 builder.Services.AddLegacyAccountAuthentication();
 builder.Services.AddRateLimiter(options =>
 {
@@ -563,6 +565,7 @@ app.MapGet("/instant-quotation/fdm-profiles.v1.json", (FdmRuntimeProfileCatalog 
     return Results.Text(profiles.BrowserManifestJson, "application/json; charset=utf-8");
 });
 app.MapMemberCompatibilityEndpoints();
+app.MapThaiLookupEndpoints();
 app.MapPost("/InstantQuotation/CNC-Machining", async (
     HttpContext context,
     CncUploadHandler uploadHandler,

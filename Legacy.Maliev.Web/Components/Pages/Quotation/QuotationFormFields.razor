@@ -85,6 +85,7 @@
                     <label for="TaxNumber" class="form-label">@Localizer["Tax identification (optional)"]</label>
                     <input class="form-control" type="text" id="TaxNumber" maxlength="50" name="TaxNumber" value="@Model.TaxNumber" aria-invalid="@AriaInvalid("TaxNumber")" aria-describedby="TaxNumber-error" />
                     <span id="TaxNumber-error" class="text-danger @(HasError("TaxNumber") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("TaxNumber")</span>
+                    <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="quotation-company-lookup" Surface="quotation-company" />
                 </div>
                 <div class="col-md-6">
                     <label for="Country" class="form-label">@Localizer["Country"]</label>

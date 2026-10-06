@@ -117,7 +117,7 @@ public sealed class InstantQuotationAuthenticatedProfile
             result.locked.Add(nameof(InstantQuotationProfileDetails.TaxBranch));
             result.locked.Add(nameof(InstantQuotationProfileDetails.TaxBranchCode));
         }
-        if (customer.BillingAddressId is not null && customer.ShippingAddressId is not null)
+        if (customer.ShippingAddressId is not null)
             result.locked.Add(nameof(InstantQuotationProfileDetails.ShipToBillingAddress));
 
         var billing = customer.BillingAddress;
