@@ -6,13 +6,14 @@ internal sealed class RepricingActivity
 
     public bool IsActive => active > 0;
 
-    public async Task RunAsync(Func<Task> update, Func<Task> notify)
+    public async Task RunAsync(Func<Task> update, Func<Task> notify, Func<Task>? afterUpdate = null)
     {
         active++;
         try
         {
             await notify();
             await update();
+            if (afterUpdate is not null) await afterUpdate();
         }
         finally
         {

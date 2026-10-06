@@ -1,3 +1,5 @@
+using Legacy.Maliev.Web.Components.Pages.Contact;
+using Microsoft.Extensions.Localization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using System.Text.Json;
@@ -142,6 +144,8 @@ public sealed class ContactPageTests
                 }),
             Options.Create(new GoogleMapsOptions()),
             trustedCustomerLoader ?? new StubTrustedCustomerLoader(new(null, false, true)),
+            new StringLocalizer<ContactContent>(new ResourceManagerStringLocalizerFactory(
+                Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }), NullLoggerFactory.Instance)),
             NullLogger<ContactPage>.Instance)
         {
             PageContext = new PageContext { HttpContext = httpContext },

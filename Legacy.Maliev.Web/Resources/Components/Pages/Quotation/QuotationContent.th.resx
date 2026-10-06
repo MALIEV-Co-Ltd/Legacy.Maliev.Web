@@ -276,4 +276,20 @@
   <data name="Please enter your first name" xml:space="preserve"><value>กรุณากรอกชื่อ</value></data>
   <data name="Please enter your last name" xml:space="preserve"><value>กรุณากรอกนามสกุล</value></data>
   <data name="Please enter your message" xml:space="preserve"><value>กรุณากรอกข้อความ</value></data>
+  <data name="The submitted value is invalid." xml:space="preserve"><value>ข้อมูลที่ส่งมาไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง</value></data>
+  <data name="The Email field is not a valid e-mail address." xml:space="preserve"><value>กรุณาระบุอีเมลที่ถูกต้อง</value></data>
+  <data name="Security verification failed. Please try again." xml:space="preserve"><value>การตรวจสอบความปลอดภัยไม่สำเร็จ กรุณาลองอีกครั้ง</value></data>
+  <data name="Could not retrieve countries from the server." xml:space="preserve"><value>ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้</value></data>
+  <data name="Please describe what you need" xml:space="preserve"><value>กรุณาอธิบายสิ่งที่คุณต้องการ</value></data>
+  <data name="We could not save your quotation request. Please try again." xml:space="preserve"><value>ไม่สามารถบันทึกคำขอใบเสนอราคาได้ กรุณาลองอีกครั้ง</value></data>
+  <data name="The quotation service is temporarily unavailable. Please email info@maliev.com." xml:space="preserve"><value>บริการขอใบเสนอราคาไม่พร้อมใช้งานชั่วคราว กรุณาส่งอีเมลไปที่ info@maliev.com</value></data>
+  <data name="This quotation form has expired. Please reload it." xml:space="preserve"><value>แบบฟอร์มขอใบเสนอราคานี้หมดอายุแล้ว กรุณาโหลดหน้าใหม่</value></data>
+  <data name="Empty files cannot be uploaded." xml:space="preserve"><value>ไม่สามารถอัปโหลดไฟล์ว่างได้</value></data>
+  <data name="Combined file size cannot exceed 100 MB." xml:space="preserve"><value>ขนาดไฟล์รวมต้องไม่เกิน 100 MB</value></data>
+  <data name="Thank you. Your quotation request reference is #{0}." xml:space="preserve"><value>ขอบคุณ หมายเลขอ้างอิงคำขอใบเสนอราคาของคุณคือ #{0}</value></data>
+  <data name="Quotation request #{0} was received, but an attachment was rejected by malware scanning. Do not submit it again; contact info@maliev.com with this reference." xml:space="preserve"><value>ได้รับคำขอใบเสนอราคา #{0} แล้ว แต่ไฟล์แนบถูกปฏิเสธจากการตรวจสอบมัลแวร์ กรุณาอย่าส่งคำขอซ้ำ และติดต่อ info@maliev.com โดยแจ้งหมายเลขอ้างอิงนี้</value></data>
+  <data name="Quotation request #{0} was received, but an attachment or notification could not be completed. Do not submit it again; contact info@maliev.com with this reference." xml:space="preserve"><value>ได้รับคำขอใบเสนอราคา #{0} แล้ว แต่ไม่สามารถดำเนินการไฟล์แนบหรือการแจ้งเตือนให้เสร็จได้ กรุณาอย่าส่งคำขอซ้ำ และติดต่อ info@maliev.com โดยแจ้งหมายเลขอ้างอิงนี้</value></data>
+  <data name="Quotation request #{0}" xml:space="preserve"><value>คำขอใบเสนอราคา #{0}</value></data>
+  <data name="Thank you for requesting a quotation from MALIEV. Your reference number is #{0}." xml:space="preserve"><value>ขอบคุณที่ขอใบเสนอราคาจาก MALIEV หมายเลขอ้างอิงของคุณคือ #{0}</value></data>
+  <data name="Our manufacturing team will review the request and reply directly." xml:space="preserve"><value>ทีมงานฝ่ายผลิตจะตรวจสอบคำขอและติดต่อกลับโดยตรง</value></data>
 </root>
