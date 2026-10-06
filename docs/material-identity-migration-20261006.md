@@ -1,0 +1,15 @@
+# Recognized material identity at fulfillment
+
+Source cohorts `1c611bb96d3a077090a8c65587cb7c4270af0aa4` and `7b4703576cf183abc09cf558148b5c8afb97d20c` share the original catalog helper contract: recognized keys are trimmed and resolved ignoring case; null/blank/unknown keys have no offer. Current `PricingCatalog.ResolveMaterial` preserves that contract.
+
+Normal configuration writes persist the resolved canonical key after supported-color validation. The coordinator audit establishes the admitted input contract; no demonstrated runtime gap in this path requires a fulfillment change. Restored/synthetic direct malformed calls do not establish a failure of the admitted workflow. Production files remain byte-identical to accepted main. This bundle proposes missing admission regressions only.
+
+Five new cases invoke the actual coordinator configuration method with padded/lowercase PA612-ESD, ABS-ESD, TPU, PC, and M68 keys, assert persisted/view canonical identities, and pass that persisted state into the actual Catalog client/Order transport with database aliases. Three null/blank-color cases assert rejection before persistence, repricing, catalog or order calls. Accepted existing cases cover supported keys and an unsupported named color; they do not cover these exact admission inputs. The store and physical pricing are controlled test boundaries. These proposed regressions have not run locally and do not prove deployed producer state or manufacturing calibration.
+
+The old color helper's null/blank→Random fallback is deliberately replaced by admitted-color validation. Session storage rejects blank colors, and coordinator/pricing reject unsupported colors before fulfillment. Existing Any→Random, hex→Other, Natural→Raw, Clear/Translucent→Transparent mappings remain unchanged. No reachable null/blank color defect was established.
+
+Related source `487d06df2f4614c53bead4b19d53d2613a46fd64` attributed invoices while legacy Web constructed them. Current Web sends authenticated quotation ID and editable invoice options; Accounting reads authoritative quotation source keys and maps them into invoice creation. This server-owned adaptation does not need browser-authoritative source fields. Separate accepted Web and Accounting source/native evidence exists; no joined live provider witness is claimed.
+
+Base is protected main `dc3b629bdb28e8e124bb99db064fb8227be6a9bb`. All 58 historical path objects were independently reconciled: 36 Web entries (4/30/2), two Workflows entries, and one SQL data-migration counterpart remain subject to owner dispositions. This admission contract does not claim unrestricted legacy-helper parity and closes no whole mixed-owner SHA or ledger.
+
+Hosted validation is mandatory: zero-warning/error build, focused material group 54 and full 3,342 cases (predictions: baseline 3,334 plus eight), formatting/static/audit, raw generated-inclusive coverage, individual TRX readback and secret scan. Producer pins and existing pricing negative controls stay unchanged. No local SDK/build/test/browser/provider/container execution, deployment, producer mutation, or data migration is included.
