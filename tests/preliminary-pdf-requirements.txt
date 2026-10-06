@@ -1,0 +1,4 @@
+# ROOT-SELECTED TEST-ONLY PIN; INTEGRATE ONLY AFTER CORE PROTECTED-MAIN ACCEPTANCE.
+# Official wheel: pypdf-6.19.0-py3-none-any.whl; Python>=3.11; no extras/dependencies.
+# Source: https://pypi.org/pypi/pypdf/6.19.0/json
+pypdf==6.19.0 --hash=sha256:7e5d6e730e7dae87d560a2cee218b852f6498c8be61966f3cd02ead971e48d14
