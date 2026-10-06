@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -122,9 +123,14 @@ public sealed class PrivateRequestObservationConsumerTests
     public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident()
     {
         using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true);
-        using var client = factory.CreateClient();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
         factory.Records.Clear();
         using var response = await client.GetAsync("/contact?token=" + Sensitive + "&culture=en");
+        Assert.Equal(1, factory.PageFilter.Throws);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         var incident = Assert.Single(response.Headers.GetValues("X-Incident-Id"));
         Assert.Matches("^[a-f0-9]{32}$", incident);
@@ -153,9 +159,14 @@ public sealed class PrivateRequestObservationConsumerTests
     {
         using var factory = new ObservationFactory("127.0.0.1", handledFailure: true,
             forgedIncidentHeader: forgedIncidentHeader);
-        using var client = factory.CreateClient();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
         factory.Records.Clear();
         using var response = await client.GetAsync("/contact?culture=en");
+        Assert.Equal(1, factory.PageFilter.HandledExecutions);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         if (forgedIncidentHeader)
             Assert.Equal(ForgedIncident, Assert.Single(response.Headers.GetValues("X-Incident-Id")));
@@ -257,15 +268,16 @@ public sealed class PrivateRequestObservationConsumerTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
+            // Program snapshots route switches during builder creation. Use the
+            // same host-setting boundary as the retained Razor route regressions.
+            builder.UseSetting("BlazorRouting:Contact", ordinaryFailure || handledFailure ? "false" : "true");
+            builder.UseSetting("BlazorRouting:Error", ordinaryFailure || handledFailure ? "false" : "true");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["Logging:LogLevel:Default"] = "Information",
                     ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
                     ["ForwardedHeaders:KnownProxies:0"] = "203.0.113.7",
-                    // Ordinary controls use the actual retained Razor handler and Error reexecution.
-                    ["BlazorRouting:Contact"] = ordinaryFailure || handledFailure ? "false" : "true",
-                    ["BlazorRouting:Error"] = ordinaryFailure || handledFailure ? "false" : "true",
                 }));
             builder.ConfigureServices(services =>
             {
@@ -331,6 +343,7 @@ public sealed class PrivateRequestObservationConsumerTests
     private sealed class FailurePageFilter(bool enabled, bool handled, bool forgedIncidentHeader) : IAsyncPageFilter
     {
         public int Throws;
+        public int HandledExecutions;
         public int ErrorExecutions;
         public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context) => Task.CompletedTask;
         public async Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next)
@@ -342,6 +355,7 @@ public sealed class PrivateRequestObservationConsumerTests
             }
             if (handled && context.HttpContext.Request.Path.Equals(new PathString("/contact")))
             {
+                Interlocked.Increment(ref HandledExecutions);
                 // A fixture response header is not server-owned exception provenance.
                 if (forgedIncidentHeader) context.HttpContext.Response.Headers["X-Incident-Id"] = ForgedIncident;
                 context.Result = new StatusCodeResult(StatusCodes.Status500InternalServerError);
