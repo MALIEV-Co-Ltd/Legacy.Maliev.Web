@@ -88,6 +88,10 @@ def main():
     grant=admission.validate(policy,raw);admission.census();duration=remaining_seconds(grant)
     if not args.command or args.phase not in grant["allowedPhases"]:raise ValueError("Unadmitted phase/command")
     command=args.command[1:] if args.command[0]=="--" else args.command
+    if policy.get("sliceKind")=="country-operation-v1":
+        phase=grant["phase"]
+        if args.id!=phase["id"] or args.phase!=phase["name"] or command!=phase["argv"]:
+            raise ValueError("Exact country BUILD argv and phase identity required")
     executable=shutil.which(command[0])
     if not executable:raise ValueError("Executable unavailable")
     if not hasattr(os,"pidfd_open"):raise ValueError("Actual Linux pidfd support required")

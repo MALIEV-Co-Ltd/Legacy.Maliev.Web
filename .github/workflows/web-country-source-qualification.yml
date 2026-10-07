@@ -1,0 +1,86 @@
+name: Web country source BUILD qualification
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_blob:
+        required: true
+        type: string
+      capsule_blob:
+        required: true
+        type: string
+      admission_blob:
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: web-sealed-source-qualification
+  cancel-in-progress: false
+jobs:
+  country-build:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      MSBUILDDISABLENODEREUSE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Retain reviewed transport outside candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          transport_root="$RUNNER_TEMP/web-country-transport-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir "$transport_root"
+          cp scripts/materialize_web_candidate.py scripts/check_web_candidate_admission.py scripts/run_web_candidate_phase.py scripts/sealed_source_capsule.py scripts/web-country-policy.json "$transport_root/"
+          printf 'WEB_TRANSPORT_ROOT=%s\n' "$transport_root" >> "$GITHUB_ENV"
+          printf 'WEB_REVIEWED_TRANSPORT_SHA=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Check out exact country candidate base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 5faedcf470b65edd2b3fcefe5e296da0007bcb22
+          persist-credentials: false
+      - name: Verify Root permit before capsule or SDK allocation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MANIFEST_BLOB: ${{ inputs.manifest_blob }}
+          CAPSULE_BLOB: ${{ inputs.capsule_blob }}
+          ADMISSION_BLOB: ${{ inputs.admission_blob }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/web-country-evidence"
+          python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-country-policy.json" --blob "$ADMISSION_BLOB" --permit "$RUNNER_TEMP/web-country-evidence/root-permit.json"
+          python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-country-policy.json" --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$RUNNER_TEMP/web-country-evidence/intake.json"
+      - name: Check out pinned Defaults
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          path: .dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - name: Check out pinned compatibility contracts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - name: Execute the single exact BUILD phase
+        timeout-minutes: 22
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-country-policy.json" --candidate . --verify-only
+          python3 -B "$WEB_TRANSPORT_ROOT/run_web_candidate_phase.py" --policy "$WEB_TRANSPORT_ROOT/web-country-policy.json" --permit "$RUNNER_TEMP/web-country-evidence/root-permit.json" --evidence "$RUNNER_TEMP/web-country-evidence" --phase build --id country-build-1 -- dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release -warnaserror -p:UseLocalMalievDependencies=true -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= -nr:false -p:UseSharedCompilation=false
+          python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-country-policy.json" --candidate . --verify-only
+      - name: Retain build and exact ownership evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: country-build-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/web-country-evidence/

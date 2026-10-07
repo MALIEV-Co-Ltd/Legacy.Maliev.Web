@@ -10,6 +10,8 @@ OWNER = "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5"
 
 def validate(policy, raw, now=None):
     digest = policy.get("nativeAdmissionSha256")
+    if policy.get("sliceKind") == "country-operation-v1":
+        return validate_country(policy, raw, now)
     producer = policy.get("customerLiteralProducerSha")
     if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
         raise ValueError("No independently reviewed Root hosted permit is pinned")
@@ -31,6 +33,29 @@ def validate(policy, raw, now=None):
     if os.name != "posix": raise ValueError("Actual Linux runner is required")
     return grant
 
+def validate_country(policy, raw, now=None):
+    digest = policy.get("nativeAdmissionSha256")
+    if not isinstance(digest,str) or not re.fullmatch(r"[0-9a-f]{64}",digest):
+        raise ValueError("Root country BUILD permit remains unpinned")
+    if intake.sha256(raw) != digest: raise ValueError("Country permit raw bytes changed")
+    grant=intake.parse_json(raw)
+    exact={"owner":OWNER,"issuedBy":"019fc21e-50f0-7112-834f-9fb3b35b9dfe",
+           "environment":"github-hosted-linux","sliceKind":"country-operation-v1",
+           "sourceBindingSha256":policy["sourceBindingSha256"],"manifestSha256":policy["manifestSha256"],
+           "acceptedBase":policy["acceptedBase"],"sourcePins":policy["sourcePins"],
+           "allowedPhases":["build"],"phase":policy["phase"]}
+    if set(grant)!=set(exact)|{"startsUtc","expiresUtc"} or any(grant[k]!=v for k,v in exact.items()):
+        raise ValueError("Exact independent country BUILD context required")
+    start=dt.datetime.fromisoformat(grant["startsUtc"].replace("Z","+00:00"))
+    end=dt.datetime.fromisoformat(grant["expiresUtc"].replace("Z","+00:00"))
+    now=now or dt.datetime.now(dt.timezone.utc)
+    if start.utcoffset()!=dt.timedelta(0) or end.utcoffset()!=dt.timedelta(0):
+        raise ValueError("UTC country permit required")
+    if not start<=now<end or not 0<(end-start).total_seconds()<=1200:
+        raise ValueError("Fresh finite single BUILD permit required")
+    if os.name!="posix":raise ValueError("Actual Linux runner required")
+    return grant
+
 def census(proc_root=Path("/proc")):
     values = dict(re.findall(r"^(MemAvailable):\s+(\d+)", (proc_root / "meminfo").read_text(), re.M))
     if int(values.get("MemAvailable", "0")) < 4194304: raise ValueError("4096 MiB memory guard failed")
@@ -49,7 +74,7 @@ def main():
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
     # Missing prerequisites reject before fetching or writing any permit.
-    if not policy.get("nativeAdmissionSha256") or not policy.get("customerLiteralProducerSha"):
+    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") != "country-operation-v1" and not policy.get("customerLiteralProducerSha")):
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
     census()
     raw = intake.fetch_blob(args.blob) if args.blob else args.permit.read_bytes()
