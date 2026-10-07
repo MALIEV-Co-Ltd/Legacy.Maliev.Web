@@ -533,7 +533,7 @@ internal sealed class BillingDockerBackend : IBillingBackend
         if (!Regex.IsMatch(database, "\\Aprofile_contract_[a-f0-9]{32}\\z")) throw new InvalidOperationException("Synthetic disposable billing database required.");
         Database = database; Run = run; Name = "billing-proof-" + run + "-postgres";
         var endpoint = new Uri("unix:///var/run/docker.sock");
-        docker = new DockerClientConfiguration(endpoint).CreateClient();
+        docker = new DockerClientBuilder().WithEndpoint(endpoint).WithTimeout(TimeSpan.FromSeconds(15)).Build();
         try
         {
             Postgres = new PostgreSqlBuilder("postgres:18-alpine").WithDatabase(database).WithDockerEndpoint(endpoint)
@@ -542,10 +542,20 @@ internal sealed class BillingDockerBackend : IBillingBackend
                 .WithCreateParameterModifier(parameters =>
                 {
                     parameters.Entrypoint = ["sh", "-c"]; parameters.Cmd = [Command];
-                    parameters.HostConfig.Memory = 536870912; parameters.HostConfig.MemorySwap = 536870912;
-                    parameters.HostConfig.NanoCPUs = 1000000000;
-                    parameters.HostConfig.Tmpfs = new Dictionary<string, string> { ["/var/lib/postgresql"] = "rw,size=268435456" };
-                    foreach (var binding in parameters.HostConfig.PortBindings.Values.SelectMany(value => value)) binding.HostIP = "127.0.0.1";
+                    var host = parameters.HostConfig ?? throw new InvalidOperationException("Billing create host configuration unavailable.");
+                    var ports = host.PortBindings ?? throw new InvalidOperationException("Billing create port bindings unavailable.");
+                    host.Memory = 536870912; host.MemorySwap = 536870912;
+                    host.NanoCPUs = 1000000000;
+                    host.Tmpfs = new Dictionary<string, string> { ["/var/lib/postgresql"] = "rw,size=268435456" };
+                    foreach (var bindings in ports.Values)
+                    {
+                        if (bindings is null) throw new InvalidOperationException("Billing create port binding list unavailable.");
+                        foreach (var binding in bindings)
+                        {
+                            if (binding is null) throw new InvalidOperationException("Billing create port binding unavailable.");
+                            binding.HostIP = "127.0.0.1";
+                        }
+                    }
                 }).Build();
         }
         catch { docker.Dispose(); throw; }
@@ -557,14 +567,23 @@ internal sealed class BillingDockerBackend : IBillingBackend
         ContainerInspectResponse actual;
         try { actual = await docker.Containers.InspectContainerAsync(identity, token); }
         catch (DockerApiException failure) when (failure.StatusCode == HttpStatusCode.NotFound) { return null; }
-        var config = actual.Config; var host = actual.HostConfig;
-        string Label(string key) => config.Labels.TryGetValue(key, out var value) ? value : "";
+        var config = actual.Config ?? throw new InvalidOperationException("Original backend configuration unavailable.");
+        var host = actual.HostConfig ?? throw new InvalidOperationException("Original backend host configuration unavailable.");
+        var labels = config.Labels ?? throw new InvalidOperationException("Original backend labels unavailable.");
+        var entrypoint = config.Entrypoint ?? throw new InvalidOperationException("Original backend entrypoint unavailable.");
+        var command = config.Cmd ?? throw new InvalidOperationException("Original backend command unavailable.");
+        var tmpfs = host.Tmpfs ?? throw new InvalidOperationException("Original backend tmpfs configuration unavailable.");
+        var ports = host.PortBindings ?? throw new InvalidOperationException("Original backend port bindings unavailable.");
+        var mounts = actual.Mounts ?? throw new InvalidOperationException("Original backend mounts unavailable.");
+        if (ports.Values.Any(value => value is null || value.Any(binding => binding is null)) || mounts.Any(value => value is null))
+            throw new InvalidOperationException("Original backend envelope contains unavailable binding or mount entries.");
+        string Label(string key) => labels.TryGetValue(key, out var value) ? value : "";
         var valid = host.Memory == 536870912 && host.MemorySwap == 536870912 && host.NanoCPUs == 1000000000
-            && config.Entrypoint.SequenceEqual(new[] { "sh", "-c" }) && config.Cmd.SequenceEqual(new[] { Command })
-            && host.Tmpfs.Count == 1 && host.Tmpfs.TryGetValue("/var/lib/postgresql", out var mount) && mount == "rw,size=268435456"
+            && entrypoint.SequenceEqual(new[] { "sh", "-c" }) && command.SequenceEqual(new[] { Command })
+            && tmpfs.Count == 1 && tmpfs.TryGetValue("/var/lib/postgresql", out var mount) && mount == "rw,size=268435456"
             && host.Binds is not { Count: > 0 } && host.Mounts is not { Count: > 0 }
-            && actual.Mounts.All(value => value.Type == "tmpfs" && value.Destination == "/var/lib/postgresql" && value.RW)
-            && host.PortBindings.Count > 0 && host.PortBindings.Values.SelectMany(value => value).All(value => value.HostIP == "127.0.0.1")
+            && mounts.All(value => value.Type == "tmpfs" && value.Destination == "/var/lib/postgresql" && value.RW)
+            && ports.Count > 0 && ports.Values.SelectMany(value => value).All(value => value.HostIP == "127.0.0.1")
             && Label("maliev.codex.persistent-data") == "false";
         var signature = JsonSerializer.Serialize(new
         {
@@ -581,11 +600,11 @@ internal sealed class BillingDockerBackend : IBillingBackend
             host.MemorySwap,
             host.NanoCPUs,
             host.NetworkMode,
-            config.Cmd,
-            config.Entrypoint,
-            tmpfs = host.Tmpfs.OrderBy(value => value.Key).ToArray(),
-            ports = host.PortBindings.OrderBy(value => value.Key).ToArray(),
-            mounts = actual.Mounts.Select(value => new { value.Type, value.Source, value.Destination, value.RW }).OrderBy(value => value.Destination).ToArray(),
+            cmd = command,
+            entrypoint,
+            tmpfs = tmpfs.OrderBy(value => value.Key).ToArray(),
+            ports = ports.OrderBy(value => value.Key).ToArray(),
+            mounts = mounts.Select(value => new { value.Type, value.Source, value.Destination, value.RW }).OrderBy(value => value.Destination).ToArray(),
         });
         return new(actual.ID, actual.Created, actual.Image, actual.Name, Label("maliev.codex.owner"), Label("maliev.codex.run"),
             Label("maliev.codex.expires-utc"), config.Image, valid, signature);
@@ -597,7 +616,8 @@ internal sealed class BillingDockerBackend : IBillingBackend
     public async Task RemoveAsync(string originalId, CancellationToken token)
     {
         var stopped = await docker.Containers.InspectContainerAsync(originalId, token);
-        if (stopped.ID != originalId || stopped.State.Running) throw new InvalidOperationException("Original backend did not stop; removal refused.");
+        var state = stopped.State ?? throw new InvalidOperationException("Original backend stop state unavailable; removal refused.");
+        if (stopped.ID != originalId || state.Running) throw new InvalidOperationException("Original backend did not stop; removal refused.");
         await docker.Containers.RemoveContainerAsync(originalId, new ContainerRemoveParameters { Force = false, RemoveVolumes = false }, token);
     }
     public ValueTask DisposeSdkAsync() => Postgres.DisposeAsync();
