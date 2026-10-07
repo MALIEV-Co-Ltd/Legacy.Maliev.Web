@@ -45,7 +45,7 @@ jobs:
           node --experimental-test-coverage --test --test-concurrency=1 --test-coverage-include=**/verify-release-assets.mjs --test-coverage-lines=80 tests/release-asset-validator.test.mjs tests/shared-public-modules.test.mjs | tee ../runner-results/validator-tests.txt
       - name: Preserve synthetic validator evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-validator-${{ github.sha }}
           path: runner-results
