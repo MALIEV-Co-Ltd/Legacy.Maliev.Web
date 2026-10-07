@@ -119,7 +119,8 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             var route = "/Member/Account/Manage/Address?culture=" + culture;
             await page.GotoAsync(new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)).ToString());
             await page.Locator("#Email").FillAsync("member-crawl@example.test");
-            await page.Locator("#Password").FillAsync(authority.Password);
+            try { await page.Locator("#Password").FillAsync(authority.Password); }
+            catch (PlaywrightException) { throw new InvalidOperationException("Synthetic login credential entry failed; credential-bearing browser diagnostics suppressed."); }
             await page.Locator("button[type=submit]").First.ClickAsync();
             await page.Locator("#BillingAddress1").WaitForAsync();
             Assert.Equal("Stored billing", await page.Locator("#BillingAddress1").InputValueAsync());
@@ -185,11 +186,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
         }
         finally
         {
-            foreach (var process in new[] { catalog, customer })
-            {
-                if (!process.HasExited) process.Kill();
-                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
-            }
+            foreach (var process in new[] { catalog, customer }) process.Dispose();
         }
     }
 
@@ -236,12 +233,14 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     // Lease acquired immediately at start; disposal also covers seed timeout and partial service startup.
     private sealed class OwnedChild(Process process) : IDisposable
     {
+        private bool disposed;
         public bool HasExited => process.HasExited;
         public int ExitCode => process.ExitCode;
         public Task WaitForExitAsync() => process.WaitForExitAsync();
-        public void Kill() => process.Kill();
         public void Dispose()
         {
+            if (disposed) return;
+            disposed = true;
             try
             {
                 if (!process.HasExited)
