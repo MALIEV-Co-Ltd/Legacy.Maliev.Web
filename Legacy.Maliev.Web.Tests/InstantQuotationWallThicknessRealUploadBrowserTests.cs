@@ -376,7 +376,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 Assert.NotNull(beforeMaterialChange);
                 observation.BeginEdit();
                 await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
-                using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                // Completion includes optional comparison callbacks under the pricing owner's
+                // existing 33-second absolute budget, not merely its 30-second selected phase.
+                using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(33)))
                 {
                     try
                     {

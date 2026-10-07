@@ -223,6 +223,57 @@ public sealed class InstantQuotationMaterialPricingProgressTests
     }
 
     [Fact]
+    public async Task ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget()
+    {
+        var clock = new ManualClock();
+        await using var fixture = new Fixture(clock: clock);
+        var session = await fixture.CreateAsync();
+        var selectedEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var selectedRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var comparisonEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var comparisonRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var caller = new CancellationTokenSource();
+        CancellationToken comparisonCallbackToken = default;
+        int heldComparison = 0;
+        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
+        {
+            if (frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
+            {
+                selectedEntered.TrySetResult();
+                return new ValueTask(selectedRelease.Task);
+            }
+            if (frame.MaterialKey != "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Pending
+                && Interlocked.Exchange(ref heldComparison, 1) == 0)
+            {
+                comparisonCallbackToken = token;
+                comparisonEntered.TrySetResult();
+                return new ValueTask(comparisonRelease.Task);
+            }
+            return ValueTask.CompletedTask;
+        }, caller.Token);
+        try
+        {
+            await selectedEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            clock.Advance(TimeSpan.FromSeconds(29));
+            selectedRelease.TrySetResult();
+            await comparisonEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            clock.Advance(TimeSpan.FromSeconds(2));
+            Assert.False(run.IsCompleted);
+            Assert.False(comparisonCallbackToken.IsCancellationRequested);
+            Assert.False(caller.IsCancellationRequested);
+            comparisonRelease.TrySetResult();
+            Assert.NotNull(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+        }
+        finally
+        {
+            caller.Cancel();
+            selectedRelease.TrySetResult();
+            comparisonRelease.TrySetResult();
+            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task NoncooperativeObserver_CallerAbortStopsWaitAndLateCompletionCannotContinueAnalysis()
     {
         await using var fixture = new Fixture();
