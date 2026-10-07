@@ -32,8 +32,8 @@
                 {
                     @if (Model.IsAuthenticated)
                     {
-                        <li class="nav-item">
-                            <a class="nav-link maliev-account-link" href="/Member">
+                        <li class="nav-item landing-account-name">
+                            <a class="nav-link maliev-account-link" href="/Member" title="@Model.DisplayName">
                                 <i class="far fa-user" aria-hidden="true"></i>
                                 <span>@(Model.DisplayName ?? Localizer["Account"].Value)</span>
                             </a>

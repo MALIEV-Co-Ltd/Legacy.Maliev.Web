@@ -7,6 +7,9 @@ on:
       - 'scripts/prepare-billing-catalog-proof.ps1'
       - 'scripts/verify-billing-persistence-proof.py'
       - '.github/workflows/billing-persistence.yml'
+      - 'Legacy.Maliev.Web/Components/Layout/PublicNavigation.razor'
+      - 'Legacy.Maliev.Web/wwwroot/src/app/css/public-navigation.css'
+      - 'Legacy.Maliev.Web/wwwroot/dist/site.min.css'
 
 permissions:
   contents: read
@@ -43,6 +46,21 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Legacy.Maliev.Web/package-lock.json
+      - name: Build deterministic browser assets
+        working-directory: Legacy.Maliev.Web
+        run: npm run ci
+      - name: Preserve generated shared stylesheet
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: billing-stylesheet-${{ github.event.pull_request.head.sha }}
+          path: Legacy.Maliev.Web/wwwroot/dist/site.min.css
+          if-no-files-found: error
+          retention-days: 7
       - name: Build pinned CustomerService and disposable seed
         shell: pwsh
         run: ./scripts/prepare-profile-producer-boundary.ps1
