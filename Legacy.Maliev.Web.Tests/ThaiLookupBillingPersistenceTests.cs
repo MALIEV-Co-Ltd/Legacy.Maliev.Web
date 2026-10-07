@@ -176,7 +176,8 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, culture + ".png"), FullPage = true });
             await File.WriteAllTextAsync(Path.Combine(evidence, culture + ".json"), JsonSerializer.Serialize(new
             {
-                surface = "member-billing", culture, width, datasetVersion = tuplePage.RootElement.GetProperty("datasetVersion").GetString(),
+                surface = "member-billing", culture, width, candidateHead = Environment.GetEnvironmentVariable("MALIEV_BILLING_CANDIDATE_HEAD"),
+                datasetVersion = tuplePage.RootElement.GetProperty("datasetVersion").GetString(),
                 catalogStatus = (int)lookup.StatusCode, saveStatus = 302, readbackStatus = (int)readback.StatusCode,
                 reloadVerified = true, shippingPreserved = true, manualDetailPreserved = true,
                 auth = "Pinned Auth normal login, encrypted cookie, Redis session; synthetic scoped service JWT",

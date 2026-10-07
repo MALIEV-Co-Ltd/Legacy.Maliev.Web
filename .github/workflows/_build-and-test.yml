@@ -13,6 +13,7 @@ jobs:
     env:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
+      MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out Web
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -195,6 +196,8 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~ThaiLookupBillingPersistenceTests"
           --logger trx --results-directory ./billing-persistence-test-results
+      - name: Verify exact billing proof rows and candidate lineage
+        run: python3 -B scripts/verify-billing-persistence-proof.py
       - name: Verify retained scanning comparison pointer touch and no-JavaScript browser contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
