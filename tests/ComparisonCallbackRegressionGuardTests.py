@@ -37,6 +37,35 @@ class Guards(unittest.TestCase):
     def test_accepts_exact_expected_failure_corpus(self):
         self.assertEqual(4, self.verify(self.fixture())["expectedFailures"])
 
+    def test_filter_keeps_original_four_rows_without_new_positive_or_similar_names(self):
+        predicates = control.negative_filter().split("|")
+        self.assertEqual(2, len(predicates))
+        for predicate in predicates:
+            self.assertTrue(predicate.startswith("FullyQualifiedName="))
+            self.assertNotIn("~", predicate)
+        selected_methods = {predicate.split("=", 1)[1] for predicate in predicates}
+        unrelated = {
+            f"{control.TEST_CLASS}.ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget",
+            f"{control.TEST_CLASS}.{control.METHODS[0]}Extra",
+            f"OtherClass.{control.METHODS[1]}",
+        }
+        names = set(control.EXPECTED_CASES) | unrelated
+        selected = {name for name in names if name.split("(", 1)[0] in selected_methods}
+        self.assertEqual(set(control.EXPECTED_CASES), selected)
+        self.assertTrue(selected.isdisjoint(unrelated))
+
+    def test_rejects_original_four_failures_plus_new_passing_positive(self):
+        def extra_positive(root):
+            counters = root.find("ResultSummary/Counters")
+            counters.set("total", "5")
+            counters.set("executed", "5")
+            counters.set("passed", "1")
+            ET.SubElement(root.find("Results"), "UnitTestResult",
+                          testName=f"{control.TEST_CLASS}.ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget",
+                          outcome="Passed")
+        with self.assertRaises(RuntimeError):
+            self.verify(self.fixture(extra_positive))
+
     def test_rejects_skipped_control(self):
         with self.assertRaises(RuntimeError):
             self.verify(self.fixture(lambda root: root.find("ResultSummary/Counters").set("notExecuted", "1")))

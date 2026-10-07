@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Sockets;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Playwright;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -80,6 +82,11 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
 
     public IBrowser Browser { get; private set; } = null!;
     public Uri Origin { get; private set; } = null!;
+
+    /// <summary>Resolves the production typed localizer from this collection's owned host.</summary>
+    public IStringLocalizer<ThreeDimensionalPrintingEstimateContent> PreliminaryQuotationLocalizer =>
+        (factory ?? throw new InvalidOperationException("The owned host must be initialized."))
+            .Services.GetRequiredService<IStringLocalizer<ThreeDimensionalPrintingEstimateContent>>();
 
     public async Task InitializeAsync()
     {
