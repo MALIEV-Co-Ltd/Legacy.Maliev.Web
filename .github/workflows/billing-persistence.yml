@@ -1,0 +1,78 @@
+name: Member billing persistence
+
+on:
+  pull_request:
+    paths:
+      - 'Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs'
+      - 'scripts/prepare-billing-catalog-proof.ps1'
+      - 'scripts/verify-billing-persistence-proof.py'
+      - '.github/workflows/billing-persistence.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: billing-persistence-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  billing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          path: .dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build pinned CustomerService and disposable seed
+        shell: pwsh
+        run: ./scripts/prepare-profile-producer-boundary.ps1
+      - name: Build pinned normal Auth authority
+        shell: pwsh
+        run: ./scripts/prepare-member-auth-indexing-proof.ps1
+      - name: Build pinned real Catalog geography
+        shell: pwsh
+        run: ./scripts/prepare-billing-catalog-proof.ps1
+      - name: Build exact candidate Web test host
+        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --nologo
+      - name: Install pinned Chromium
+        shell: pwsh
+        run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Execute genuine billing selection save readback and reload
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ThaiLookupBillingPersistenceTests"
+          --logger trx --results-directory ./billing-persistence-test-results
+      - name: Verify exact billing rows receipts and candidate relation
+        run: python3 -B scripts/verify-billing-persistence-proof.py
+      - name: Preserve bounded synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: member-billing-${{ github.event.pull_request.head.sha }}
+          path: |
+            billing-persistence-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
+          if-no-files-found: error
+          retention-days: 7
