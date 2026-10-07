@@ -353,8 +353,13 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 {
                     output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
                     {
-                        phase, elapsedMilliseconds = timer.ElapsedMilliseconds, documentStatus,
-                        started, finished, failed, omitted,
+                        phase,
+                        elapsedMilliseconds = timer.ElapsedMilliseconds,
+                        documentStatus,
+                        started,
+                        finished,
+                        failed,
+                        omitted,
                         pendingCategories = pending.Values.GroupBy(value => value)
                             .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
                     }));

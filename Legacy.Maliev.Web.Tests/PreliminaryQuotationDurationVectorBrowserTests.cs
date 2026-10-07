@@ -24,18 +24,43 @@ public sealed class PreliminaryQuotationDurationVectorBrowserTests(PublicContact
         var text = SnapshotLabels(culture);
         var snapshot = new
         {
-            locale = culture, currency = culture == "th" ? "บาท" : "THB", logoDataUri = "", text,
+            locale = culture,
+            currency = culture == "th" ? "บาท" : "THB",
+            logoDataUri = "",
+            text,
             parts = minutes.Select((value, index) => new
             {
-                partId = $"synthetic-duration-{index + 1}", partNumber = index + 1,
-                fileName = $"duration-vector-{index + 1:00}.stl", material = "PLA", color = "White",
-                buildPreference = "Standard", quantity = 1, unitPrice = 600, subtotal = 600,
-                technicalFilamentMinimumApplied = false, technicalFilamentMinimumAdjustment = 0,
-                printTimeMinutes = value, dimensionXmm = 10, dimensionYmm = 10, dimensionZmm = 10,
-                volumeCm3 = 1, surfaceAreaCm2 = 6, minThicknessMm = 1, dfmWarnings = Array.Empty<string>(),
+                partId = $"synthetic-duration-{index + 1}",
+                partNumber = index + 1,
+                fileName = $"duration-vector-{index + 1:00}.stl",
+                material = "PLA",
+                color = "White",
+                buildPreference = "Standard",
+                quantity = 1,
+                unitPrice = 600,
+                subtotal = 600,
+                technicalFilamentMinimumApplied = false,
+                technicalFilamentMinimumAdjustment = 0,
+                printTimeMinutes = value,
+                dimensionXmm = 10,
+                dimensionYmm = 10,
+                dimensionZmm = 10,
+                volumeCm3 = 1,
+                surfaceAreaCm2 = 6,
+                minThicknessMm = 1,
+                dfmWarnings = Array.Empty<string>(),
             }).ToArray(),
-            totals = new { subtotal = 2400, minimumOrderPrice = 600, minimumOrderSurcharge = 0,
-                shipping = 100, vat = 175, total = 2675, leadTimeMinimumDays = 1, leadTimeMaximumDays = 3 },
+            totals = new
+            {
+                subtotal = 2400,
+                minimumOrderPrice = 600,
+                minimumOrderSurcharge = 0,
+                shipping = 100,
+                vat = 175,
+                total = 2675,
+                leadTimeMinimumDays = 1,
+                leadTimeMaximumDays = 3
+            },
         };
         await using IBrowserContext context = await fixture.Browser.NewContextAsync(new()
         { ViewportSize = new() { Width = 1280, Height = 900 }, Locale = culture });
