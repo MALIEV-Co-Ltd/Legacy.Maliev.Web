@@ -132,6 +132,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             await using var page = await context.NewPageAsync();
             var route = "/Member/Account/Manage/Address?culture=" + culture;
             await page.GotoAsync(new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)).ToString());
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
             await page.Locator("#Email").FillAsync("member-crawl@example.test");
             try { await page.Locator("#Password").FillAsync(authority.Password); }
             catch (PlaywrightException) { throw new InvalidOperationException("Synthetic login credential entry failed; credential-bearing browser diagnostics suppressed."); }
