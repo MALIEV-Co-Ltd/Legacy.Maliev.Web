@@ -13,10 +13,12 @@ jobs:
     env:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
+      MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out Web
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 2
           persist-credentials: false
       - name: Check out Legacy.Maliev.ServiceDefaults
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -55,6 +57,9 @@ jobs:
       - name: Build exact-pinned disposable member authentication proof
         shell: pwsh
         run: ./scripts/prepare-member-auth-indexing-proof.ps1
+      - name: Build exact-pinned Catalog for member billing persistence proof
+        shell: pwsh
+        run: ./scripts/prepare-billing-catalog-proof.ps1
       - name: Build exact-pinned disposable SCB payment boundary service
         shell: pwsh
         run: ./scripts/prepare-scb-payment-boundary.ps1
@@ -68,8 +73,14 @@ jobs:
           --filter "FullyQualifiedName~ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected|FullyQualifiedName~IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid"
           --logger trx --results-directory ./ticket-test-results
       - name: Install pinned Chromium browser
-        shell: pwsh
-        run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          # Use the signed official HTTPS archive after the hosted Azure mirror stalled.
+          test -s /etc/apt/apt-mirrors.txt
+          python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Verify regressions reject exact pre-fix pricing source and restore patched HEAD
         env:
           GH_TOKEN: ${{ github.token }}
@@ -185,6 +196,15 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~ThaiLookup|FullyQualifiedName~OnlyWiredViewerActions_RenderEnabled"
           --logger trx --results-directory ./thai-lookup-test-results
+      - name: Verify real Catalog billing selection save readback and reload
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ThaiLookupBillingPersistenceTests"
+          --logger trx --results-directory ./billing-persistence-test-results
+      - name: Verify exact billing proof rows and candidate lineage
+        run: python3 -B scripts/verify-billing-persistence-proof.py
       - name: Verify retained scanning comparison pointer touch and no-JavaScript browser contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -335,6 +355,9 @@ jobs:
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.json
             preliminary-pdf-full-proof/parser-receipt.json
             thai-lookup-test-results/**/*.trx
+            billing-persistence-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
             Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json

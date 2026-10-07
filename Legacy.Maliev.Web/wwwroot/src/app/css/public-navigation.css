@@ -17,10 +17,14 @@
 
 @media (min-width: 68rem) {
     .landing-nav-toggle { display: none; }
-    .landing-nav-content { display: flex !important; align-items: center; }
+    .landing-nav-content { display: flex !important; flex: 1 1 auto; min-width: 0; align-items: center; gap: 1rem; }
     .landing-nav-links, .landing-nav-account { display: flex; align-items: center; }
-    .landing-nav-links { gap: clamp(1.4rem, 2.2vw, 2.8rem); }
-    .landing-nav-account { gap: clamp(.8rem, 1.5vw, 1.7rem); margin-left: auto; }
+    .landing-nav-links { flex: 0 0 auto; gap: clamp(1.4rem, 2.2vw, 2.8rem); }
+    .landing-nav-account { min-width: 0; gap: clamp(.8rem, 1.5vw, 1.7rem); margin-left: auto; }
+    .landing-nav-account > li { flex: 0 0 auto; }
+    .landing-nav-account > .landing-account-name { flex: 0 1 auto; min-width: 0; }
+    .landing-account-name .maliev-account-link { max-width: 100%; }
+    .landing-account-name .maliev-account-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .landing-nav-links a, .landing-nav-account a, .landing-nav-account button { white-space: nowrap; }
 }
 
