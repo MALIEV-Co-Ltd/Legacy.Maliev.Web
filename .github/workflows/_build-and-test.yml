@@ -73,8 +73,14 @@ jobs:
           --filter "FullyQualifiedName~ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected|FullyQualifiedName~IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid"
           --logger trx --results-directory ./ticket-test-results
       - name: Install pinned Chromium browser
-        shell: pwsh
-        run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          # Use the signed official HTTPS archive after the hosted Azure mirror stalled.
+          test -s /etc/apt/apt-mirrors.txt
+          python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Verify regressions reject exact pre-fix pricing source and restore patched HEAD
         env:
           GH_TOKEN: ${{ github.token }}
