@@ -13,6 +13,8 @@ head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
 parents = subprocess.check_output(["git", "show", "-s", "--format=%P", "HEAD"], text=True).split()
 if head != candidate and (len(parents) != 2 or parents[1] != candidate):
     raise SystemExit("Billing checkout must be candidate or its PR merge second parent")
+if subprocess.run(["git", "diff", "--quiet", "HEAD", "--"]).returncode != 0:
+    raise SystemExit("Billing proof requires unchanged tracked candidate source and generated assets")
 files = list(Path("billing-persistence-test-results").glob("*.trx"))
 if len(files) != 1:
     raise SystemExit("Exactly one focused billing TRX required")

@@ -61,6 +61,8 @@ jobs:
           path: Legacy.Maliev.Web/wwwroot/dist/site.min.css
           if-no-files-found: error
           retention-days: 7
+      - name: Verify committed browser assets before proof
+        run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
       - name: Build pinned CustomerService and disposable seed
         shell: pwsh
         run: ./scripts/prepare-profile-producer-boundary.ps1
