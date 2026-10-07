@@ -66,8 +66,8 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
         });
         try
         {
-            using var customerHttp = new HttpClient { BaseAddress = customerOrigin };
-            using var catalogHttp = new HttpClient { BaseAddress = catalogOrigin };
+            using var customerHttp = new HttpClient { BaseAddress = customerOrigin, Timeout = TimeSpan.FromSeconds(15) };
+            using var catalogHttp = new HttpClient { BaseAddress = catalogOrigin, Timeout = TimeSpan.FromSeconds(15) };
             await Ready(customerHttp, customer, "customers/1");
             await Ready(catalogHttp, catalog, "api/v1/thai-addresses/autocomplete?postcode=11120");
             var permissions = new[] { "legacy-customer.customers.read", "legacy-customer.addresses.update", "legacy-catalog.locations.read" };
@@ -169,7 +169,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             Assert.Equal("Distinct shipping", await page.Locator("#ShippingAddress1").InputValueAsync());
             Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"));
             var html = await page.ContentAsync();
-            Assert.DoesNotContain(serviceToken, html, StringComparison.Ordinal);
+            Assert.False(html.Contains(serviceToken, StringComparison.Ordinal), "Member HTML must not disclose the fixture workload credential.");
             var evidence = Path.Combine(AppContext.BaseDirectory, "TestResults", "billing-persistence");
             Directory.CreateDirectory(evidence);
             // No traces, cookies, request headers, raw HTML or credentials are retained.
@@ -186,7 +186,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
         {
             foreach (var process in new[] { catalog, customer })
             {
-                if (!process.HasExited) process.Kill(entireProcessTree: true);
+                if (!process.HasExited) process.Kill();
                 await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
             }
         }
@@ -203,7 +203,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     private static string Token(RSA rsa, string[] permissions) => new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
         "https://billing-proof.example.test", "billing-proof-services", [new Claim("sub", "billing-disposable-workload"), .. permissions.Select(value => new Claim("permissions", value))],
         DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddMinutes(20), new SigningCredentials(new RsaSecurityKey(rsa), SecurityAlgorithms.RsaSha256)));
-    private static Process Child(string dll, Dictionary<string, string> environment)
+    private static OwnedChild Child(string dll, Dictionary<string, string> environment)
     {
         var start = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(dll)!, UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         start.ArgumentList.Add(dll);
@@ -218,9 +218,9 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
         child.ErrorDataReceived += (_, _) => { };
         child.BeginOutputReadLine();
         child.BeginErrorReadLine();
-        return child;
+        return new OwnedChild(child);
     }
-    private static async Task Ready(HttpClient http, Process child, string path)
+    private static async Task Ready(HttpClient http, OwnedChild child, string path)
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
         using var ticks = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
@@ -231,6 +231,27 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             catch (HttpRequestException) { }
         } while (await ticks.WaitForNextTickAsync(deadline.Token));
         throw new TimeoutException("Owned service readiness timed out.");
+    }
+    // Lease acquired immediately at start; disposal also covers seed timeout and partial service startup.
+    private sealed class OwnedChild(Process process) : IDisposable
+    {
+        public bool HasExited => process.HasExited;
+        public int ExitCode => process.ExitCode;
+        public Task WaitForExitAsync() => process.WaitForExitAsync();
+        public void Kill() => process.Kill();
+        public void Dispose()
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    // Windowless dotnet children have no main window; try graceful close before exact PID termination.
+                    if (!process.CloseMainWindow() || !process.WaitForExit(2000)) process.Kill();
+                    if (!process.WaitForExit(10000)) throw new TimeoutException("Owned child cleanup timed out.");
+                }
+            }
+            finally { process.Dispose(); }
+        }
     }
     private sealed class Tokens(string token) : IServiceAccessTokenProvider
     {
