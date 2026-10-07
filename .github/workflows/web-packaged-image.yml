@@ -35,7 +35,7 @@ jobs:
         run: python3 scripts/run-web-packaged-hosted.py
       - name: Retain exact actual image proof and failures
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: web-packaged-${{ github.event.pull_request.head.sha }}
           path: ${{ runner.temp }}/web-packaged-proof
