@@ -23,6 +23,10 @@ EXPECTED_CASES = {
 }
 
 
+def negative_filter() -> str:
+    return "|".join(f"FullyQualifiedName={TEST_CLASS}.{method}" for method in METHODS)
+
+
 def verify_negative_trx(path: Path) -> dict:
     root = ET.parse(path).getroot()
     counters = next(node for node in root.iter() if node.tag.endswith("}Counters"))
@@ -95,7 +99,7 @@ def main() -> None:
         test_exit = run(root, directory, "parent-test", [
             "dotnet", "test", project, "--configuration", "Release", "--no-build", "--no-restore",
             "-p:CI=false", "-p:VSTestCollect=", "-p:RunSettingsFilePath=", "--filter",
-            "FullyQualifiedName~ComparisonCallback", "--logger", "trx",
+            negative_filter(), "--logger", "trx",
             "--results-directory", str(directory / "trx"),
         ])
         if test_exit == 0:
