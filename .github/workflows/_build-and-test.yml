@@ -55,6 +55,9 @@ jobs:
       - name: Build exact-pinned disposable member authentication proof
         shell: pwsh
         run: ./scripts/prepare-member-auth-indexing-proof.ps1
+      - name: Build exact-pinned Catalog for member billing persistence proof
+        shell: pwsh
+        run: ./scripts/prepare-billing-catalog-proof.ps1
       - name: Build exact-pinned disposable SCB payment boundary service
         shell: pwsh
         run: ./scripts/prepare-scb-payment-boundary.ps1
@@ -185,6 +188,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~ThaiLookup|FullyQualifiedName~OnlyWiredViewerActions_RenderEnabled"
           --logger trx --results-directory ./thai-lookup-test-results
+      - name: Verify real Catalog billing selection save readback and reload
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ThaiLookupBillingPersistenceTests"
+          --logger trx --results-directory ./billing-persistence-test-results
       - name: Verify retained scanning comparison pointer touch and no-JavaScript browser contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -335,6 +345,9 @@ jobs:
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.json
             preliminary-pdf-full-proof/parser-receipt.json
             thai-lookup-test-results/**/*.trx
+            billing-persistence-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
             Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
