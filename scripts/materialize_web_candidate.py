@@ -8,6 +8,7 @@ import re
 import subprocess
 
 REPOSITORY = "MALIEV-Co-Ltd/Legacy.Maliev.Web"
+EXPECTED_POLICY_SHA256 = "100ae2ae0a4a8c25cbf47ae3f4a0e0039e93f211d091ec48b192852e176ba43b"
 
 
 import sealed_source_capsule as shared
@@ -17,6 +18,12 @@ parse_json = shared.parse_json
 canonical_path = shared.canonical_path
 decode_blob = shared.decode_git_blob
 NoRedirect = shared.NoRedirect
+
+def load_policy(path):
+    raw = Path(path).read_bytes()
+    if sha256(raw) != EXPECTED_POLICY_SHA256:
+        raise ValueError("Reviewed policy raw-byte identity changed")
+    return parse_json(raw)
 
 def fetch_blob(oid):
     return shared.fetch_git_blob(REPOSITORY, oid)
@@ -107,7 +114,7 @@ def main():
     parser.add_argument("--receipt", type=Path)
     parser.add_argument("--dist-postimage", type=Path)
     args = parser.parse_args()
-    policy = parse_json(args.policy.read_bytes())
+    policy = load_policy(args.policy)
     if sha256(Path(shared.__file__).read_bytes()) != policy["sharedExtractorSha256"]:
         raise ValueError("Shared File extractor source changed")
     root = args.candidate.resolve(strict=True)

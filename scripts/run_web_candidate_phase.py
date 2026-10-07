@@ -84,7 +84,7 @@ def shutdown(proc,pidfd,record):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--policy",type=Path,required=True);parser.add_argument("--permit",type=Path,required=True)
     parser.add_argument("--evidence",type=Path,required=True);parser.add_argument("--phase",required=True);parser.add_argument("--id",required=True);parser.add_argument("command",nargs=argparse.REMAINDER)
-    args=parser.parse_args();policy=admission.intake.parse_json(args.policy.read_bytes());raw=args.permit.read_bytes()
+    args=parser.parse_args();policy=admission.intake.load_policy(args.policy);raw=args.permit.read_bytes()
     grant=admission.validate(policy,raw);admission.census();duration=remaining_seconds(grant)
     if not args.command or args.phase not in grant["allowedPhases"]:raise ValueError("Unadmitted phase/command")
     command=args.command[1:] if args.command[0]=="--" else args.command

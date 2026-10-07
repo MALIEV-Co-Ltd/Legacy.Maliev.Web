@@ -52,6 +52,19 @@ class CapsuleControls(unittest.TestCase):
         policy["manifestSha256"] = m.sha256(data)
         return data, raw, policy
 
+    def test_sealed_policy_exact_bytes(self):
+        path = Path(m.__file__).with_name("web-candidate-policy.json")
+        self.assertEqual(m.EXPECTED_POLICY_SHA256, m.sha256(path.read_bytes()))
+        self.assertEqual("SourceClearNativeUnverified", m.load_policy(path)["sharedExtractorReviewStatus"])
+
+    def test_policy_drift_rejected_before_parsing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "policy.json"
+            path.write_bytes(b"invalid changed bytes")
+            with patch.object(m, "parse_json") as parser:
+                with self.assertRaises(ValueError): m.load_policy(path)
+                parser.assert_not_called()
+
     def test_exact_utf8_crlf_roundtrip(self):
         manifest, raw, policy = self.fixture()
         _, actual = m.validate_capsule(manifest, raw, policy)

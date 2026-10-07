@@ -47,10 +47,11 @@ def main():
     parser.add_argument("--blob")
     parser.add_argument("--permit", type=Path, required=True)
     args = parser.parse_args()
-    policy = intake.parse_json(args.policy.read_bytes())
+    policy = intake.load_policy(args.policy)
     # Missing prerequisites reject before fetching or writing any permit.
     if not policy.get("nativeAdmissionSha256") or not policy.get("customerLiteralProducerSha"):
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
+    census()
     raw = intake.fetch_blob(args.blob) if args.blob else args.permit.read_bytes()
     validate(policy, raw); census()
     if args.blob:

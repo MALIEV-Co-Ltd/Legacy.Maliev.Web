@@ -1,5 +1,7 @@
 import base64
 import hashlib
+import http.client
+import socket
 import io
 import json
 from pathlib import Path
@@ -9,6 +11,8 @@ import sys
 import tempfile
 import unittest
 import warnings
+from types import SimpleNamespace
+from unittest.mock import patch
 import zipfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import sealed_source_capsule as s
@@ -71,6 +75,144 @@ class RawCapsuleTests(unittest.TestCase):
     def test_path_rejections(self):
         for name in ['../x','/x','a//b','a/./b','C:/x','a\\b','.git/config','a/CON.txt','a/end.','a/end ','a/e\u0301']:
             with self.subTest(name=name),self.assertRaises(ValueError):s.canonical_path(name)
+    def test_windows_reserved_superscripts_and_illegal_characters(self):
+        for name in ['COM\u00b9.txt', 'LPT\u00b2', 'nested/com\u00b3.ext', 'lpt\u00b9.txt', *('a'+c+'b' for c in '<>"|?*')]:
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                s.canonical_path(name)
+    def test_total_fetch_timeout_terminates_exact_owned_worker(self):
+        events = []
+        class Worker:
+            def __enter__(self): return self
+            def __exit__(self, *args): events.append('handles-closed')
+            def communicate(self, timeout):
+                self.timeout = timeout
+                raise s.subprocess.TimeoutExpired('owned', timeout)
+            def poll(self): return None
+            def kill(self): events.append('exact-handle-kill')
+            def wait(self, timeout): events.append('exit-verified'); return 1
+        with patch.object(s.subprocess, 'Popen', return_value=Worker()), self.assertRaises(TimeoutError):
+            s.fetch_git_blob('owner/repository', 'a'*40)
+        self.assertEqual(events, ['exact-handle-kill', 'exit-verified'])
+    def test_fetch_worker_failure_never_decodes_provider_output(self):
+        class Worker:
+            returncode = 1
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def communicate(self, timeout): return b'provider failure', b'sensitive synthetic header'
+            def poll(self): return 1
+            def wait(self, timeout): return 1
+        with patch.object(s.subprocess, 'Popen', return_value=Worker()), self.assertRaisesRegex(ValueError, '^Git blob fetch worker failed$'):
+            s.fetch_git_blob('owner/repository', 'a'*40)
+    def test_actual_http_response_fixed_chunked_and_connection_eof(self):
+        cases = [
+            b'HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nonetwo',
+            b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n3\r\none\r\n3\r\ntwo\r\n0\r\n\r\n',
+            b'HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nonetwo',
+        ]
+        for wire in cases:
+            with self.subTest(wire=wire):
+                reader, writer = socket.socketpair()
+                try:
+                    writer.sendall(wire); writer.shutdown(socket.SHUT_WR)
+                    with http.client.HTTPResponse(reader) as response:
+                        response.begin()
+                        self.assertEqual(s.read_deadline(response, s.time.monotonic()+2), b'onetwo')
+                        self.assertTrue(response.isclosed())
+                finally:
+                    reader.close(); writer.close()
+    def test_actual_fetch_function_recovers_kill_wait_reader_and_pipe_faults(self):
+        events = []; faults = {'kill':1, 'wait':1, 'join':1, 'close':1}
+        class Pipe:
+            closed = False
+            def close(self):
+                events.append('close')
+                if faults['close']:
+                    faults['close'] -= 1; raise OSError('close fault')
+                self.closed = True
+        class Reader:
+            def join(self, timeout):
+                events.append('join')
+                if faults['join']:
+                    faults['join'] -= 1; raise OSError('reader fault')
+            def is_alive(self): return False
+        class Worker:
+            stdout = Pipe(); stderr = Pipe(); _stdout_thread = Reader()
+            def communicate(self, timeout): raise s.subprocess.TimeoutExpired('owned', timeout)
+            def poll(self): return None
+            def kill(self):
+                events.append('kill')
+                if faults['kill']:
+                    faults['kill'] -= 1; raise OSError('kill fault')
+            def wait(self, timeout):
+                self.assert_timeout = timeout; events.append('wait')
+                if faults['wait']:
+                    faults['wait'] -= 1; raise OSError('wait fault')
+                return 1
+        worker = Worker()
+        with patch.object(s.subprocess, 'Popen', return_value=worker), patch.object(s.time, 'sleep'), self.assertRaises(TimeoutError):
+            s.fetch_git_blob('owner/repository', 'a'*40)
+        self.assertEqual(events[:2], ['kill', 'wait'])
+        self.assertEqual(worker.assert_timeout, 1)
+        self.assertGreaterEqual(events.count('wait'), 2)
+        self.assertGreaterEqual(events.count('join'), 2)
+        self.assertTrue(worker.stdout.closed and worker.stderr.closed)
+        self.assertGreater(events.index('close'), events.index('wait'))
+    def test_actual_fetch_cancellation_and_reporting_faults_retain_owner(self):
+        for fault in ('kill', 'wait', 'join', 'close', 'report', 'sleep'):
+            with self.subTest(fault=fault):
+                events = []; injected = [False]
+                def inject(where):
+                    if fault == where and not injected[0]:
+                        injected[0] = True
+                        if where == 'report': raise OSError('report IO fault')
+                        if where == 'kill': raise SystemExit('cancelled')
+                        raise KeyboardInterrupt('cancelled')
+                class Pipe:
+                    closed = False
+                    def close(self): inject('close'); self.closed = True
+                class Reader:
+                    def join(self, timeout): inject('join')
+                    def is_alive(self): return False
+                class Worker:
+                    stdout = Pipe(); stderr = Pipe(); _stdout_thread = Reader()
+                    def communicate(self, timeout): raise s.subprocess.TimeoutExpired('owned', timeout)
+                    def poll(self): return None
+                    def kill(self): events.append('kill'); inject('kill')
+                    def wait(self, timeout):
+                        events.append('wait'); inject('wait')
+                        if fault in ('report', 'sleep') and len(events) < 4: raise OSError('retry')
+                        return 1
+                worker = Worker(); clock = iter([0,0,0,100,100,100,100,100,100])
+                expected = TimeoutError if fault == 'report' else (SystemExit if fault == 'kill' else KeyboardInterrupt)
+                with patch.object(s.subprocess, 'Popen', return_value=worker), patch.object(s.time, 'monotonic', side_effect=lambda: next(clock,100)), patch.object(s.time, 'sleep', side_effect=lambda _: inject('sleep')), patch.object(s.sys.stderr, 'write', side_effect=lambda _: inject('report')), self.assertRaises(expected):
+                    s.fetch_git_blob('owner/repository', 'a'*40)
+                self.assertTrue(injected[0])
+                self.assertTrue(worker.stdout.closed and worker.stderr.closed)
+                self.assertIn('wait',events)
+    def test_fetch_trickle_cannot_extend_total_deadline(self):
+        now = [0.0]; timeouts = []
+        class Response:
+            def isclosed(self): return False
+            fp = SimpleNamespace(raw=SimpleNamespace(_sock=SimpleNamespace(settimeout=timeouts.append)))
+            def read1(self, size):
+                now[0] += 3.0
+                return b'x'
+        with self.assertRaises(TimeoutError):
+            s.read_deadline(Response(), 5.0, lambda: now[0])
+        self.assertEqual(timeouts, [5.0, 2.0])
+    def test_fetch_budget_includes_open_elapsed_time(self):
+        class Response:
+            def read1(self, size):
+                self.fail('must not read after deadline')
+        with self.assertRaises(TimeoutError):
+            s.read_deadline(Response(), 5.0, lambda: 5.1)
+    def test_fetch_eof_returns_exact_bytes(self):
+        parts = iter([b'one', b'two', b''])
+        class Response:
+            def isclosed(self): return False
+            fp = SimpleNamespace(raw=SimpleNamespace(_sock=SimpleNamespace(settimeout=lambda _: None)))
+            def read1(self, size): return next(parts)
+        self.assertEqual(s.read_deadline(Response(), 5.0, lambda: 0.0), b'onetwo')
     def test_json_duplicates(self):
         with self.assertRaises(ValueError):s.parse_json(b'{"a":1,"a":2}')
     def test_json_nonfinite(self):

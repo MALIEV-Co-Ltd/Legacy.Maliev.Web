@@ -20,7 +20,7 @@ def prepare_bytes(policy, raw, root):
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument("--policy",type=Path,required=True); parser.add_argument("--candidate",type=Path,required=True)
-    args=parser.parse_args();policy=intake.parse_json(args.policy.read_bytes());root=args.candidate.resolve(strict=True)
+    args=parser.parse_args();policy=intake.load_policy(args.policy);root=args.candidate.resolve(strict=True)
     raw=(root/"scripts/prepare-profile-producer-boundary.ps1").read_bytes()
     adapted=prepare_bytes(policy,raw,root)
     with tempfile.TemporaryDirectory(prefix="web-profile-pin-") as directory:

@@ -93,11 +93,11 @@ jobs:
 
         mkdir -p "$RUNNER_TEMP/web-candidate-evidence"
 
-        python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-candidate-policy.json"
-        --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$RUNNER_TEMP/web-candidate-evidence/intake.json"
-
         python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-candidate-policy.json"
-        --blob "$ADMISSION_BLOB" --permit "$RUNNER_TEMP/web-candidate-evidence/root-permit.json"'
+        --blob "$ADMISSION_BLOB" --permit "$RUNNER_TEMP/web-candidate-evidence/root-permit.json"
+
+        python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-candidate-policy.json"
+        --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$RUNNER_TEMP/web-candidate-evidence/intake.json"'
     - name: Check out Legacy.Maliev.ServiceDefaults
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:

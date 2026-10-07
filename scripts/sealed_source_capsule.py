@@ -7,6 +7,9 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
+import subprocess
+import sys
+import time
 import unicodedata
 import urllib.request
 import zipfile
@@ -38,12 +41,12 @@ def parse_json(data):
 
 
 def canonical_path(value):
-    if not isinstance(value, str) or not value or len(value) > 512 or '\\' in value or ':' in value:
+    if not isinstance(value, str) or not value or len(value) > 512 or '\\' in value or any(c in value for c in ':<>"|?*'):
         raise ValueError('invalid canonical source path')
     if unicodedata.normalize('NFC', value) != value:
         raise ValueError('noncanonical Unicode path')
     parts = value.split('/')
-    reserved = {'con', 'prn', 'aux', 'nul', *('com'+str(i) for i in range(1,10)), *('lpt'+str(i) for i in range(1,10))}
+    reserved = {'con', 'prn', 'aux', 'nul', *('com'+str(i) for i in range(1,10)), *('lpt'+str(i) for i in range(1,10)), *('com'+i for i in '\u00b9\u00b2\u00b3'), *('lpt'+i for i in '\u00b9\u00b2\u00b3')}
     if any(p in ('', '.', '..') or p.casefold() == '.git' or p.endswith((' ', '.')) or
            p.split('.')[0].casefold() in reserved or any(ord(c) < 32 for c in p) for p in parts):
         raise ValueError('noncanonical source path')
@@ -73,7 +76,30 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('Git blob redirects prohibited')
 
 
-def fetch_git_blob(repository, oid, maximum=MAX_ARCHIVE_BYTES):
+def read_deadline(response, deadline, clock=time.monotonic):
+    chunks = []; size = 0
+    while True:
+        remaining = deadline - clock()
+        if remaining <= 0:
+            raise TimeoutError('Git blob total deadline exceeded')
+        if response.isclosed():
+            if response.length not in (None, 0):
+                raise ValueError('Git blob HTTP body truncated')
+            return b''.join(chunks)
+        # urllib HTTPSResponse exposes its connected socket through this chain.
+        # Fail closed if the runtime cannot enforce the remaining blocking budget.
+        response.fp.raw._sock.settimeout(remaining)
+        chunk = response.read1(min(65536, MAX_API_BYTES + 1 - size))
+        if clock() >= deadline:
+            raise TimeoutError('Git blob total deadline exceeded')
+        if not chunk:
+            return b''.join(chunks)
+        chunks.append(chunk); size += len(chunk)
+        if size > MAX_API_BYTES:
+            raise ValueError('Git blob response exceeds bound')
+
+
+def _fetch_response(repository, oid):
     # Repository authority is fixed by the reviewed caller, never taken from a URL.
     if not re.fullmatch('[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or not re.fullmatch('[0-9a-f]{40}', oid):
         raise ValueError('invalid Git blob address')
@@ -82,9 +108,99 @@ def fetch_git_blob(repository, oid, maximum=MAX_ARCHIVE_BYTES):
     if token:
         headers['Authorization'] = 'Bearer '+token
     req = urllib.request.Request(f'https://api.github.com/repos/{repository}/git/blobs/{oid}', headers=headers)
+    deadline = time.monotonic() + 20
     with urllib.request.build_opener(NoRedirect()).open(req, timeout=20) as response:
-        data = response.read(MAX_API_BYTES+1)
-    return decode_git_blob(data, oid, maximum)
+        data = read_deadline(response, deadline)
+    return data
+
+
+def recover_fetch_owner(owned):
+    """Retain exact child and pipes until reap/readers/close are proven.
+
+    Each settlement attempt is bounded. After 60 seconds this function remains
+    cleanup-only containment; it cannot release an unknown-live child. Thus the
+    20-second fetch phase budget never claims to bound failure recovery.
+    """
+    recovery_deadline = time.monotonic() + 60
+    cancellation = None
+    def retain_interruption(error):
+        nonlocal cancellation
+        if not isinstance(error, Exception) and cancellation is None:
+            cancellation = error
+    reaped = False; readers_settled = False; closed = set(); announced = False
+    while True:
+        if not reaped:
+            try:
+                if owned.poll() is None:
+                    owned.kill()
+            except BaseException as error:
+                retain_interruption(error)
+                pass  # A kill fault never skips the independent reap attempt.
+            try:
+                owned.wait(timeout=1)
+                reaped = True
+            except BaseException as error:
+                retain_interruption(error)
+                pass
+        if reaped and not readers_settled:
+            readers_settled = True
+            for name in ('_stdout_thread', '_stderr_thread'):
+                reader = getattr(owned, name, None)
+                if reader is not None:
+                    try:
+                        reader.join(timeout=1)
+                        if reader.is_alive(): readers_settled = False
+                    except BaseException as error:
+                        retain_interruption(error)
+                        readers_settled = False
+        if reaped and readers_settled:
+            for name in ('stdout', 'stderr'):
+                if name in closed: continue
+                stream = getattr(owned, name, None)
+                if stream is None:
+                    closed.add(name); continue
+                try:
+                    stream.close()
+                    if stream.closed: closed.add(name)
+                except BaseException as error:
+                    retain_interruption(error)
+                    pass
+            if closed == {'stdout', 'stderr'}:
+                return cancellation
+        expired = time.monotonic() >= recovery_deadline
+        if expired and not announced:
+            try:
+                sys.stderr.write('Fetch phase ended; exact owned worker remains in cleanup-only containment.\n')
+                announced = True
+            except BaseException as error:
+                retain_interruption(error)
+        try:
+            time.sleep(1 if expired else 0.05)
+        except BaseException as error:
+            retain_interruption(error)
+
+
+def fetch_git_blob(repository, oid, maximum=MAX_ARCHIVE_BYTES):
+    if not re.fullmatch('[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or not re.fullmatch('[0-9a-f]{40}', oid):
+        raise ValueError('invalid Git blob address')
+    deadline = time.monotonic() + 20
+    # No Popen context manager: its implicit unbounded wait cannot own recovery.
+    owned = subprocess.Popen([sys.executable, '-B', str(Path(__file__).resolve()),
+                              '--fetch-response', repository, oid],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        response, _ = owned.communicate(timeout=max(0.001, deadline-time.monotonic()))
+        if time.monotonic() >= deadline:
+            raise TimeoutError('Git blob total deadline exceeded')
+        if owned.returncode != 0:
+            raise ValueError('Git blob fetch worker failed')
+        return decode_git_blob(response, oid, maximum)
+    except subprocess.TimeoutExpired:
+        raise TimeoutError('Git blob total deadline exceeded') from None
+    finally:
+        cancellation = recover_fetch_owner(owned)
+        if cancellation is not None:
+            raise cancellation
 
 
 def validate_zip(data, expected_sha256, expected_bytes, rows):
@@ -145,3 +261,13 @@ def write_new(root, relative, raw):
     if digest(target.read_bytes()) != digest(raw):
         raise ValueError('raw write/readback mismatch')
     return target
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 4 or sys.argv[1] != '--fetch-response':
+        raise SystemExit('Only bounded fetch worker mode is supported')
+    try:
+        sys.stdout.buffer.write(_fetch_response(sys.argv[2], sys.argv[3]))
+    except Exception:
+        # Provider errors may contain sensitive headers; never emit them.
+        raise SystemExit('Bounded Git blob fetch failed') from None
