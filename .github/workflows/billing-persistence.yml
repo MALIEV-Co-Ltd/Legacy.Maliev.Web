@@ -120,7 +120,7 @@ jobs:
                   or labels.get('maliev.codex.run') != run or host['NetworkMode'] != 'none'
                   or host['Memory'] != 536870912 or host['MemorySwap'] != 536870912
                   or host['NanoCpus'] != 1000000000 or host.get('Tmpfs') != {'/var/lib/postgresql': 'rw,size=268435456'}
-                  or not host['AutoRemove'] or config['Entrypoint'] != ['sh'] or config['Cmd'] != command
+                  or not host['AutoRemove'] or host.get('Init') is not True or config['Entrypoint'] != ['sh'] or config['Cmd'] != command
                   or any(mount.get('Type') in ('volume', 'bind') for mount in entry.get('Mounts', []))):
                   raise RuntimeError('Original container identity or resource-policy mismatch; refusing destructive cleanup')
           try:
@@ -130,14 +130,14 @@ jobs:
               image_id = json.loads(docker('image', 'inspect', image).stdout)[0]['Id']
               command = ['-c', 'exec timeout -k 1 2 sh -c \'trap "echo watchdog-term-received" TERM; while :; do sleep 1; done\'']
               # The returned full ID is registered before start; neither cleanup nor start adopts a name.
-              created = docker('create', '--rm', '--name', name, '--label', 'maliev.codex.owner=billing-watchdog-control',
+              created = docker('create', '--rm', '--init', '--name', name, '--label', 'maliev.codex.owner=billing-watchdog-control',
                   '--label', 'maliev.codex.run=' + run, '--network', 'none', '--memory', '512m', '--memory-swap', '512m',
                   '--cpus', '1', '--tmpfs', '/var/lib/postgresql:rw,size=268435456', '--entrypoint', 'sh', image_id, *command)
               candidate = created.stdout.strip()
               if not re.fullmatch('[0-9a-f]{64}', candidate):
                   raise RuntimeError('Original allocation ID unavailable; refusing name-based recovery')
               cid = candidate; receipt['containerId'] = cid
-              validate_original(); receipt['identityPolicyVerified'] = True
+              validate_original(); receipt['identityPolicyVerified'] = True; receipt['initEnabled'] = True
               started = time.monotonic()
               # Attach is bounded; docker start returns the actual container exit code.
               result = subprocess.run(['docker', '--host', 'unix:///var/run/docker.sock', 'start', '--attach', cid],
@@ -181,14 +181,13 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~BillingProofLifetimeTests"
           --logger trx --results-directory ./billing-lifetime-test-results
-      - name: Require all thirty exact unique passed lifecycle control rows
+      - name: Require all thirty-one exact unique passed lifecycle control rows
         run: |
           python3 -B - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
           ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
           expected = {
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: false)',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: true)',
@@ -214,9 +213,11 @@ jobs:
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "created")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "owner")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "envelope")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "init")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "signature")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease',
           }
           files = list(Path('billing-lifetime-test-results').glob('*.trx'))
@@ -225,15 +226,15 @@ jobs:
           root = ET.parse(files[0]).getroot()
           rows = root.findall('.//t:UnitTestResult', ns)
           names = [row.get('testName') for row in rows]
-          if len(rows) != 30 or len(set(names)) != 30 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
+          if len(rows) != 31 or len(set(names)) != 31 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
               raise SystemExit('Missing, duplicate, foreign or unsuccessful lifecycle control row')
           counters = root.find('.//t:Counters', ns)
-          required = {'total': '30', 'executed': '30', 'passed': '30', 'failed': '0', 'error': '0', 'timeout': '0',
+          required = {'total': '31', 'executed': '31', 'passed': '31', 'failed': '0', 'error': '0', 'timeout': '0',
               'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',
               'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0'}
           if counters is None or any(counters.get(key) != value for key, value in required.items()):
-              raise SystemExit('Lifecycle TRX counters do not match thirty completed Passed rows')
-          print('Verified thirty exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
+              raise SystemExit('Lifecycle TRX counters do not match thirty-one completed Passed rows')
+          print('Verified thirty-one exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
           PY
       - name: Verify exact billing rows receipts and candidate relation
         run: python3 -B scripts/verify-billing-persistence-proof.py
@@ -246,6 +247,12 @@ jobs:
           if not re.fullmatch('[0-9a-f]{40}', candidate):
               raise SystemExit('Exact billing candidate required')
           directory = Path('Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence')
+          watchdog = json.loads(Path('billing-watchdog-results/watchdog.json').read_text())
+          if watchdog.get('initEnabled') is not True or any(watchdog.get(key) != value for key, value in {'image': 'postgres:18-alpine', 'identityPolicyVerified': True,
+              'initEnabled': True, 'forcedKillVerified': True, 'absenceVerified': True, 'termObserved': True, 'exitCode': 137}.items()):
+              raise SystemExit('Original watchdog init/signal/absence proof incomplete')
+          if not re.fullmatch('[0-9a-f]{64}', watchdog.get('containerId', '')) or not 3 <= watchdog.get('elapsedSeconds', 0) <= 25:
+              raise SystemExit('Original watchdog CID or unchanged timing bound missing')
           runs, ids, databases = set(), set(), set()
           for culture in ('en', 'th'):
               business = json.loads((directory / (culture + '.json')).read_text())
@@ -276,10 +283,10 @@ jobs:
               ids.add(cid); databases.add(database)
               original = backend.get('original', {})
               required = {'id': cid, 'name': '/' + backend['name'], 'owner': 'web-billing-proof', 'run': run,
-                  'expiresUtc': backend.get('expiresUtc'), 'configuredImage': 'postgres:18-alpine', 'envelopeValid': True,
+                  'expiresUtc': backend.get('expiresUtc'), 'configuredImage': 'postgres:18-alpine', 'envelopeValid': True, 'initEnabled': True,
                   'memoryBytes': 536870912, 'swapBytes': 536870912, 'nanoCpus': 1000000000,
                   'tmpfs': '/var/lib/postgresql:rw,size=268435456', 'loopbackPorts': True, 'persistentData': False}
-              if any(original.get(key) != value for key, value in required.items()) or not re.fullmatch('sha256:[0-9a-f]{64}', original.get('imageId', '')) or not re.fullmatch('[0-9a-f]{64}', original.get('envelopeSignatureSha256', '')):
+              if original.get('initEnabled') is not True or any(original.get(key) != value for key, value in required.items()) or not re.fullmatch('sha256:[0-9a-f]{64}', original.get('imageId', '')) or not re.fullmatch('[0-9a-f]{64}', original.get('envelopeSignatureSha256', '')):
                   raise SystemExit('Original journey creation/envelope receipt mismatch')
               try:
                   created = datetime.datetime.fromisoformat(original['createdUtc'].replace('Z', '+00:00'))

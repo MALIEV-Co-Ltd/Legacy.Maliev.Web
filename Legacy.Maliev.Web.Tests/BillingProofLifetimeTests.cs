@@ -298,6 +298,7 @@ public sealed class BillingProofLifetimeTests
     [InlineData("created")]
     [InlineData("owner")]
     [InlineData("envelope")]
+    [InlineData("init")]
     [InlineData("signature")]
     public async Task BackendGenerationChange_RefusesMutationAndAbsenceReceipt(string stage)
     {
@@ -312,6 +313,7 @@ public sealed class BillingProofLifetimeTests
             case "created": backend.Current = original with { CreatedUtc = original.CreatedUtc.AddTicks(1) }; break;
             case "owner": backend.Current = original with { Owner = "foreign-owner" }; break;
             case "envelope": backend.Current = original with { EnvelopeValid = false }; break;
+            case "init": backend.Current = original with { InitEnabled = false }; break;
             case "signature": backend.Current = original with { Signature = "changed-envelope" }; break;
         }
         await Assert.ThrowsAsync<InvalidOperationException>(() => lease.CloseAsync().AsTask());
@@ -408,7 +410,7 @@ public sealed class BillingProofLifetimeTests
         internal ControlledBackend()
         {
             Current = new(new string('a', 64), DateTime.UtcNow, "sha256:" + new string('b', 64), "/" + Name,
-                "web-billing-proof", Run, ExpiresUtc, "postgres:18-alpine", true, "original-envelope");
+                "web-billing-proof", Run, ExpiresUtc, "postgres:18-alpine", true, "original-envelope", true);
         }
         public Task<string> DaemonAsync(CancellationToken _) => Task.FromResult(Daemon);
         public Task<BillingBackendIdentity?> InspectAsync(string _, CancellationToken token)

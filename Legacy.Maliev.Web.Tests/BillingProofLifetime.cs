@@ -355,7 +355,7 @@ internal sealed class BillingProofQuarantineException(IEnumerable<string> stages
 
 // Only synthetic identity/envelope metadata is captured; database credentials and inspect Env never leave the adapter.
 internal sealed record BillingBackendIdentity(string Id, DateTime CreatedUtc, string ImageId, string Name,
-    string Owner, string Run, string ExpiresUtc, string ConfiguredImage, bool EnvelopeValid, string Signature);
+    string Owner, string Run, string ExpiresUtc, string ConfiguredImage, bool EnvelopeValid, string Signature, bool InitEnabled);
 
 internal interface IBillingBackend : IDisposable
 {
@@ -416,6 +416,7 @@ internal sealed class BillingBackendLease(IBillingBackend backend)
             expiresUtc = original.ExpiresUtc,
             configuredImage = original.ConfiguredImage,
             envelopeValid = original.EnvelopeValid,
+            initEnabled = original.InitEnabled,
             envelopeSignatureSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(original.Signature))).ToLowerInvariant(),
             memoryBytes = 536870912,
             swapBytes = 536870912,
@@ -465,7 +466,7 @@ internal sealed class BillingBackendLease(IBillingBackend backend)
             || observed.CreatedUtc.Kind != DateTimeKind.Utc || observed.CreatedUtc < backend.IntentUtc || observed.CreatedUtc > DateTime.UtcNow
             || !Regex.IsMatch(observed.ImageId, "\\Asha256:[a-f0-9]{64}\\z") || observed.ConfiguredImage != "postgres:18-alpine"
             || observed.Owner != "web-billing-proof" || observed.Run != backend.Run || observed.ExpiresUtc != backend.ExpiresUtc
-            || !observed.EnvelopeValid || string.IsNullOrEmpty(observed.Signature) || observed.Signature.Length > 8192)
+            || !observed.EnvelopeValid || !observed.InitEnabled || string.IsNullOrEmpty(observed.Signature) || observed.Signature.Length > 8192)
             throw new InvalidOperationException("Original billing backend generation/envelope mismatch; cleanup refused.");
     }
 
@@ -546,6 +547,7 @@ internal sealed class BillingDockerBackend : IBillingBackend
                     var ports = host.PortBindings ?? throw new InvalidOperationException("Billing create port bindings unavailable.");
                     host.Memory = 536870912; host.MemorySwap = 536870912;
                     host.NanoCPUs = 1000000000;
+                    host.Init = true;
                     host.Tmpfs = new Dictionary<string, string> { ["/var/lib/postgresql"] = "rw,size=268435456" };
                     foreach (var bindings in ports.Values)
                     {
@@ -578,7 +580,7 @@ internal sealed class BillingDockerBackend : IBillingBackend
         if (ports.Values.Any(value => value is null || value.Any(binding => binding is null)) || mounts.Any(value => value is null))
             throw new InvalidOperationException("Original backend envelope contains unavailable binding or mount entries.");
         string Label(string key) => labels.TryGetValue(key, out var value) ? value : "";
-        var valid = host.Memory == 536870912 && host.MemorySwap == 536870912 && host.NanoCPUs == 1000000000
+        var valid = host.Init is true && host.Memory == 536870912 && host.MemorySwap == 536870912 && host.NanoCPUs == 1000000000
             && entrypoint.SequenceEqual(new[] { "sh", "-c" }) && command.SequenceEqual(new[] { Command })
             && tmpfs.Count == 1 && tmpfs.TryGetValue("/var/lib/postgresql", out var mount) && mount == "rw,size=268435456"
             && host.Binds is not { Count: > 0 } && host.Mounts is not { Count: > 0 }
@@ -600,6 +602,7 @@ internal sealed class BillingDockerBackend : IBillingBackend
             host.MemorySwap,
             host.NanoCPUs,
             host.NetworkMode,
+            host.Init,
             cmd = command,
             entrypoint,
             tmpfs = tmpfs.OrderBy(value => value.Key).ToArray(),
@@ -607,7 +610,7 @@ internal sealed class BillingDockerBackend : IBillingBackend
             mounts = mounts.Select(value => new { value.Type, value.Source, value.Destination, value.RW }).OrderBy(value => value.Destination).ToArray(),
         });
         return new(actual.ID, actual.Created, actual.Image, actual.Name, Label("maliev.codex.owner"), Label("maliev.codex.run"),
-            Label("maliev.codex.expires-utc"), config.Image, valid, signature);
+            Label("maliev.codex.expires-utc"), config.Image, valid, signature, host.Init is true);
     }
     public async Task StopAsync(string originalId, CancellationToken token)
     {
