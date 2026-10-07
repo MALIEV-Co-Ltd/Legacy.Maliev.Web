@@ -3,6 +3,7 @@ name: Member billing persistence
 on:
   pull_request:
     paths:
+      - 'Legacy.Maliev.Web.Tests/MaterialPricingDisplayBrowserTests.cs'
       - 'Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
@@ -16,6 +17,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'Legacy.Maliev.Web.Tests/MaterialPricingDisplayBrowserTests.cs'
       - 'Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
