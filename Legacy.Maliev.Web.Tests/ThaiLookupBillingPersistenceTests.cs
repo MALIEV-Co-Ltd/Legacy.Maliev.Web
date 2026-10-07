@@ -87,7 +87,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             using var initial = await customerHttp.GetAsync("customers/1");
             Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
             using var before = JsonDocument.Parse(await initial.Content.ReadAsStringAsync());
-            var shippingBefore = before.RootElement.GetProperty("ShippingAddress").GetRawText();
+            var shippingBefore = AddressContent(before.RootElement.GetProperty("ShippingAddress"));
             var billingId = before.RootElement.GetProperty("BillingAddressId").GetInt32();
             using var lookup = await catalogHttp.GetAsync("api/v1/thai-addresses/autocomplete?postcode=11120&limit=8&q=");
             Assert.Equal(HttpStatusCode.OK, lookup.StatusCode);
@@ -158,7 +158,8 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             Assert.Equal("36/1 synthetic road", billing.GetProperty("AddressLine1").GetString());
             Assert.Equal("Manual district detail retained", billing.GetProperty("AddressLine2").GetString());
             Assert.Equal(66, billing.GetProperty("CountryId").GetInt32());
-            Assert.Equal(shippingBefore, after.RootElement.GetProperty("ShippingAddress").GetRawText());
+            // Normal save also PUTs shipping and advances its modification timestamp; compare identity and editable content.
+            Assert.Equal(shippingBefore, AddressContent(after.RootElement.GetProperty("ShippingAddress")));
             await page.GotoAsync(new Uri(webOrigin, route).ToString());
             await page.ReloadAsync();
             Assert.Equal(expectedState, await page.Locator("#BillingState").InputValueAsync());
@@ -192,6 +193,9 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
 
     private static string Required(string name) => Environment.GetEnvironmentVariable(name) is { } value && File.Exists(value)
         ? value : throw new InvalidOperationException("Pinned hosted binary required: " + name);
+    private static string AddressContent(JsonElement address) => JsonSerializer.Serialize(address.EnumerateObject()
+        .Where(property => property.Name is "Id" or "Building" or "AddressLine1" or "AddressLine2" or "City" or "State" or "PostalCode" or "CountryId")
+        .OrderBy(property => property.Name, StringComparer.Ordinal).ToDictionary(property => property.Name, property => property.Value.Clone()));
     private static Uri Origin()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
