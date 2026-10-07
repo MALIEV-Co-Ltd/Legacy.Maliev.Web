@@ -110,8 +110,12 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                 services.AddSingleton<ICountryClient, Countries>();
             }));
             var webOrigin = Origin();
-            web.UseKestrel(webOrigin.Port);
-            using var host = web.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = webOrigin, AllowAutoRedirect = false });
+            web.UseKestrel(options => options.Listen(IPAddress.Loopback, webOrigin.Port));
+            web.StartServer();
+            // Probe an actual socket rather than CreateClient's factory transport before giving the origin to Chromium.
+            using var host = new HttpClient { BaseAddress = webOrigin, Timeout = TimeSpan.FromSeconds(15) };
+            using var loginReady = await host.GetAsync("/Account/Login?culture=en");
+            Assert.Equal(HttpStatusCode.OK, loginReady.StatusCode);
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
             await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 850 } });
