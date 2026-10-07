@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
@@ -9,11 +10,12 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Actual circuit/DOM summary transitions over historical synthetic input, not FileService admission.</summary>
-public sealed class InstantQuotationSummaryTransitionBrowserTests
+public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData("en", 375)]
@@ -22,7 +24,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
     [InlineData("th", 1280)]
     public async Task ActualSummaryDisclosureKeepsLegalChoicesAndKeyboardBreakdownOperable(string culture, int width)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width);
+        await using var fixture = await Fixture.CreateAsync(culture, width, output);
         await fixture.AssertFinalAsync(2);
         var dock = fixture.Summary;
         var disclosure = dock.Locator("summary");
@@ -69,7 +71,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
     [InlineData("th", 320)]
     public async Task AcceptedRepriceHidesPriorSummaryAndDurationUntilCurrentFinalQuote(string culture, int width)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width);
+        await using var fixture = await Fixture.CreateAsync(culture, width, output);
         await fixture.AssertFinalAsync(2);
         fixture.Control.Armed = true;
         try
@@ -96,7 +98,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
     [InlineData("th", 320)]
     public async Task ActualRecalculationSpinnerHonorsReducedMotionWithoutHidingStatus(string culture, int width)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, ReducedMotion.Reduce);
+        await using var fixture = await Fixture.CreateAsync(culture, width, output, ReducedMotion.Reduce);
         fixture.Control.Armed = true;
         try
         {
@@ -120,7 +122,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
     [InlineData("th", 320)]
     public async Task InputOnlyDraftDoesNotPresentUnqualifiedPriorMoneyAndTimeAsCurrent(string culture, int width)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width);
+        await using var fixture = await Fixture.CreateAsync(culture, width, output);
         await fixture.AssertFinalAsync(2);
         var before = (await fixture.StoredAsync()).QuoteAuthorization!;
         await fixture.Quantity.FillAsync("4"); // Real input, deliberately no blur/accepted mutation.
@@ -259,7 +261,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
         private Fixture() => Factory = new(Control);
 
-        public static async Task<Fixture> CreateAsync(string culture, int width, ReducedMotion motion = ReducedMotion.NoPreference)
+        public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference)
         {
             var fixture = new Fixture { culture = culture };
             try
@@ -277,7 +279,8 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrors);
                 fixture.Page.Console += (_, message) => { if (message.Type == "error") Interlocked.Increment(ref fixture.consoleErrors); };
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                await fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle });
+                await fixture.ObserveNavigationAsync("initial", origin, output,
+                    () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }));
                 var consent = fixture.Page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await consent.IsVisibleAsync()) await consent.ClickAsync();
                 var cookie = Assert.Single(await fixture.context.CookiesAsync(), candidate => candidate.Name == InstantQuotationSessionIdentityCookie.CookieName);
@@ -294,7 +297,8 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
                 var part = new InstantQuotationPart(Guid.NewGuid(), "historical-summary.stl", reference, geometry, new("M68", "White", 2));
                 Assert.True(await store.PutAsync(stored with { RequestState = new([part]) }, null, default));
-                await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
+                await fixture.ObserveNavigationAsync("reload", origin, output,
+                    () => fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle }));
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
                 fixture.Control.Initial = await fixture.StoredAsync();
                 await fixture.Summary.Locator(":scope > summary").ClickAsync();
@@ -304,6 +308,59 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests
                 return fixture;
             }
             catch { await fixture.DisposeAsync(); throw; }
+        }
+
+        private async Task ObserveNavigationAsync(string phase, Uri origin, ITestOutputHelper output, Func<Task<IResponse?>> navigate)
+        {
+            var gate = new object();
+            var pending = new Dictionary<IRequest, string>();
+            int started = 0, finished = 0, failed = 0, omitted = 0;
+            int? documentStatus = null;
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            EventHandler<IRequest> onRequest = (_, request) =>
+            {
+                var category = request.IsNavigationRequest ? "document"
+                    : !Uri.TryCreate(request.Url, UriKind.Absolute, out var address) || address.Authority != origin.Authority ? "external"
+                    : address.AbsolutePath.StartsWith("/_blazor", StringComparison.Ordinal) ? "interactive-transport"
+                    : address.AbsolutePath.StartsWith("/_framework/", StringComparison.Ordinal) ? "framework"
+                    : address.AbsolutePath.StartsWith("/dist/", StringComparison.Ordinal) ? "bundled-asset" : "same-origin-other";
+                lock (gate)
+                {
+                    started++;
+                    if (pending.Count < 64) pending[request] = category;
+                    else omitted++;
+                }
+            };
+            EventHandler<IRequest> onFinished = (_, request) => { lock (gate) { finished++; pending.Remove(request); } };
+            EventHandler<IRequest> onFailed = (_, request) => { lock (gate) { failed++; pending.Remove(request); } };
+            EventHandler<IResponse> onResponse = (_, response) =>
+            {
+                if (response.Request.IsNavigationRequest) lock (gate) documentStatus = response.Status;
+            };
+            Page.Request += onRequest;
+            Page.RequestFinished += onFinished;
+            Page.RequestFailed += onFailed;
+            Page.Response += onResponse;
+            try { await navigate(); }
+            finally
+            {
+                Page.Request -= onRequest;
+                Page.RequestFinished -= onFinished;
+                Page.RequestFailed -= onFailed;
+                Page.Response -= onResponse;
+                timer.Stop();
+                lock (gate)
+                {
+                    output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
+                    {
+                        phase, elapsedMilliseconds = timer.ElapsedMilliseconds, documentStatus,
+                        started, finished, failed, omitted,
+                        pendingCategories = pending.Values.GroupBy(value => value)
+                            .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
+                    }));
+                    pending.Clear();
+                }
+            }
         }
 
         public async Task<InstantQuotationSessionState> StoredAsync() =>
