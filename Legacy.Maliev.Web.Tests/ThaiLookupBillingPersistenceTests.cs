@@ -5,11 +5,11 @@ using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -109,16 +109,26 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                 services.RemoveAll<ICountryClient>();
                 services.AddSingleton<ICountryClient, Countries>();
             }));
-            var webOrigin = Origin();
-            web.UseKestrel(options => options.Listen(IPAddress.Loopback, webOrigin.Port));
+            var webOrigin = Origin(https: true);
+            var certificateRequest = new CertificateRequest("CN=billing-loopback", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var alternativeNames = new SubjectAlternativeNameBuilder();
+            alternativeNames.AddIpAddress(IPAddress.Loopback);
+            certificateRequest.CertificateExtensions.Add(alternativeNames.Build());
+            using var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            web.UseKestrel(options => options.Listen(IPAddress.Loopback, webOrigin.Port, listener => listener.UseHttps(certificate)));
             web.StartServer();
             // Probe an actual socket rather than CreateClient's factory transport before giving the origin to Chromium.
-            using var host = new HttpClient { BaseAddress = webOrigin, Timeout = TimeSpan.FromSeconds(15) };
+            using var transport = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (request, peer, _, _) => request.RequestUri?.Host == "127.0.0.1"
+                    && peer is not null && CryptographicOperations.FixedTimeEquals(peer.GetCertHash(), certificate.GetCertHash()),
+            };
+            using var host = new HttpClient(transport) { BaseAddress = webOrigin, Timeout = TimeSpan.FromSeconds(15) };
             using var loginReady = await host.GetAsync("/Account/Login?culture=en");
             Assert.Equal(HttpStatusCode.OK, loginReady.StatusCode);
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
-            await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 850 } });
+            await using var context = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = width, Height = 850 } });
             await using var page = await context.NewPageAsync();
             var route = "/Member/Account/Manage/Address?culture=" + culture;
             await page.GotoAsync(new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)).ToString());
@@ -200,11 +210,11 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     private static string AddressContent(JsonElement address) => JsonSerializer.Serialize(address.EnumerateObject()
         .Where(property => property.Name is "Id" or "Building" or "AddressLine1" or "AddressLine2" or "City" or "State" or "PostalCode" or "CountryId")
         .OrderBy(property => property.Name, StringComparer.Ordinal).ToDictionary(property => property.Name, property => property.Value.Clone()));
-    private static Uri Origin()
+    private static Uri Origin(bool https = false)
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
-        return new Uri($"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}");
+        return new Uri($"{(https ? "https" : "http")}://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}");
     }
     private static string Token(RSA rsa, string[] permissions) => new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
         "https://billing-proof.example.test", "billing-proof-services", [new Claim("sub", "billing-disposable-workload"), .. permissions.Select(value => new Claim("permissions", value))],
