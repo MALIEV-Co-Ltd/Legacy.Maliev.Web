@@ -184,13 +184,21 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
             Assert.Equal("36/1 synthetic road", await page.Locator("#BillingAddress1").InputValueAsync());
             Assert.Equal("Manual district detail retained", await page.Locator("#BillingAddress2").InputValueAsync());
             Assert.Equal("Distinct shipping", await page.Locator("#ShippingAddress1").InputValueAsync());
-            Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"));
             var html = await page.ContentAsync();
             Assert.False(html.Contains(serviceToken, StringComparison.Ordinal), "Member HTML must not disclose the fixture workload credential.");
             var evidence = Path.Combine(AppContext.BaseDirectory, "TestResults", "billing-persistence");
             Directory.CreateDirectory(evidence);
             // No traces, cookies, request headers, raw HTML or credentials are retained.
             await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, culture + ".png"), FullPage = true });
+            var overflow = await page.EvaluateAsync<string>("""
+                () => JSON.stringify({ viewport: innerWidth, document: document.documentElement.scrollWidth,
+                    elements: Array.from(document.querySelectorAll('body *')).map(element => ({ element, rect: element.getBoundingClientRect() }))
+                        .filter(item => item.rect.right > innerWidth + 1 && item.rect.width > 0).slice(0, 20)
+                        .map(item => ({ tag: item.element.tagName, id: item.element.id, classes: item.element.className,
+                            width: Math.round(item.rect.width), right: Math.round(item.rect.right) })) })
+                """);
+            Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"),
+                "Synthetic address layout dimensions only: " + overflow);
             await File.WriteAllTextAsync(Path.Combine(evidence, culture + ".json"), JsonSerializer.Serialize(new
             {
                 surface = "member-billing", culture, width, candidateHead = Environment.GetEnvironmentVariable("MALIEV_BILLING_CANDIDATE_HEAD"),
