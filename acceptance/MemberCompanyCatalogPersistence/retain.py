@@ -10,10 +10,22 @@ import xml.etree.ElementTree as ET
 
 NS = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
 PREFIX = 'Legacy.Maliev.Web.Tests.MemberCompanyCatalogPersistenceTests.CompanyUpdate_RealAdapter_NormalSave_ApiReadbackAndReload'
+HELPER_SHA256 = '6f1d1b394bf50b91f6454636e8ec231b68c4250538c8218aa185ad24ad606616'
 
 def require(value, message):
     if not value:
         raise ValueError(message)
+
+def original_run(value):
+    # Guid serializes as D; original backend labels and names use Guid.ToString("N").
+    # Normalize only this exact comparison, never rewrite the original receipt.
+    require(isinstance(value,str) and re.fullmatch(r'(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})',value), 'Canonical original run UUID required')
+    return value.replace('-','')
+
+def helper_source(path):
+    data = path.read_bytes()
+    require(hashlib.sha256(data).hexdigest() == HELPER_SHA256, 'Exact unchanged lifetime receipt source required')
+    return HELPER_SHA256
 
 def rows(path):
     root = ET.parse(path).getroot()
@@ -76,12 +88,24 @@ def timestamp(value):
 def cleanup(value):
     require(set(value) == {'owner','run','expiresUtc','released','readerFailureRejected','retained','expired','expiryFailure','policy','hosts','children','backends'}, 'Exact owner receipt schema required')
     require(value.get('owner') == 'web-billing-proof' and value.get('released') is True and value.get('retained') is False and value.get('readerFailureRejected') is False and value.get('expired') is False and value.get('expiryFailure') is None, 'Original joined owner did not release')
-    require(re.fullmatch('[0-9a-f]{32}', value.get('run','')), 'Original run required')
+    run = original_run(value.get('run'))
     owner_expiry = timestamp(value['expiresUtc'])
     require(value['policy'] == 'Same-owner 1800-second expiry task closes admission, frontends and actual case work before dependent cleanup; unresolved ownership is quarantined, never accepted as release.', 'Original lifetime policy required')
     require(len(value.get('hosts',[])) == 11 and all(set(row) == {'startupComplete','disposal'} and row['startupComplete'] is True and row['disposal'] == 'RanToCompletion' for row in value['hosts']), 'Exactly all eleven admitted provider/Web/browser/HTTP hosts must settle')
     child_keys = {'dispatched','identityCaptured','exitVerified','noChildVerified','readersClosed','released','process'}
     require(len(value.get('children',[])) == 3 and all(set(row) == child_keys and all(row.get(flag) is True for flag in ['dispatched','identityCaptured','exitVerified','readersClosed','released']) and row['noChildVerified'] is False for row in value['children']), 'Exactly three dispatched original seed/Customer/Catalog children must settle')
+    seen_children = set()
+    for child in value['children']:
+        process = child['process']
+        require(isinstance(process,dict) and set(process) == {'pid','birth','executable','startRefused','ExpiresUtc','stdout','stderr','stdoutClosed','stderrClosed'}, 'Exact original child process schema required')
+        require(type(process['pid']) is int and process['pid'] > 0, 'Original child PID required')
+        executable = process['executable']
+        require(isinstance(executable,str) and len(executable) <= 4096 and re.fullmatch(r'/(?:[A-Za-z0-9_.+-]+/)*dotnet', executable) and '..' not in executable.split('/'), 'Original absolute dotnet executable required')
+        identity = (process['pid'],timestamp(process['birth']),executable)
+        require(identity not in seen_children, 'Distinct original child generation required')
+        seen_children.add(identity)
+        require(process['startRefused'] is False and process['stdout'] == 'RanToCompletion' and process['stderr'] == 'RanToCompletion' and process['stdoutClosed'] is True and process['stderrClosed'] is True, 'Original child reader settlement required')
+        require(timestamp(process['birth']) < timestamp(process['ExpiresUtc']) and timestamp(process['birth']) < owner_expiry, 'Original child generation and expiry required')
     require(len(value.get('backends',[])) == 1, 'One original PG journey backend required')
     backend = value['backends'][0]
     backend_keys = {'backend','localEndpoint','databaseSynthetic','name','database','owner','run','expiresUtc','daemon','originalId','baselineAbsent','startDispatched','startupSettled','captureVerified','absenceVerified','sdkReleased','original'}
@@ -91,11 +115,12 @@ def cleanup(value):
     require(set(original) == original_keys, 'No unapproved original envelope field permitted')
     require(re.fullmatch('[0-9a-f]{64}', cid or '') and original['id'] == cid, 'Original PG ID join required')
     require(all(backend.get(flag) is True for flag in ['databaseSynthetic','baselineAbsent','startDispatched','startupSettled','captureVerified','absenceVerified','sdkReleased']), 'Actual PG identity/start/removal required')
-    require(backend['backend'] == 'postgres' and backend['owner'] == value['owner'] and backend['run'] == value['run'] and backend['name'] == 'billing-proof-'+value['run']+'-postgres' and backend['localEndpoint'] == 'unix:///var/run/docker.sock' and re.fullmatch('profile_contract_[0-9a-f]{32}', backend['database']), 'Original owner/run/name/database/local daemon join required')
+    require(backend['backend'] == 'postgres' and backend['owner'] == value['owner'] and backend['run'] == run and backend['name'] == 'billing-proof-'+run+'-postgres' and backend['localEndpoint'] == 'unix:///var/run/docker.sock' and re.fullmatch('profile_contract_[0-9a-f]{32}', backend['database']), 'Original owner/run/name/database/local daemon join required')
     require(isinstance(backend['daemon'],str) and re.fullmatch('[A-Za-z0-9:_-]{1,256}',backend['daemon']), 'Bounded original daemon identity required')
-    require(original['name'] == '/'+backend['name'] and original['owner'] == value['owner'] and original['run'] == value['run'] and original['expiresUtc'] == backend['expiresUtc'], 'Original resource ownership and expiry join required')
+    require(original['name'] == '/'+backend['name'] and original['owner'] == value['owner'] and original['run'] == run and original['expiresUtc'] == backend['expiresUtc'], 'Original resource ownership and expiry join required')
     require(re.fullmatch('sha256:[0-9a-f]{64}',original['imageId']) and re.fullmatch('[0-9a-f]{64}',original['envelopeSignatureSha256']), 'Original image/signature hashes required')
     require(timestamp(original['createdUtc']) < owner_expiry < timestamp(original['expiresUtc']), 'Original allocation and distinct owner/backend expiry ordering required')
+    require(all(timestamp(original['createdUtc']) < timestamp(child['process']['birth']) for child in value['children']), 'Original backend birth must precede dependent child generations')
     require(all(original.get(k) == v for k,v in {'configuredImage':'postgres:18-alpine','envelopeValid':True,'initEnabled':True,'memoryBytes':536870912,'swapBytes':536870912,'nanoCpus':1000000000,'tmpfs':'/var/lib/postgresql:rw,size=268435456','loopbackPorts':True,'persistentData':False}.items()), 'Original PG resource envelope required')
     return {key:value[key] for key in ['owner','run','expiresUtc','released','retained','readerFailureRejected','expired','expiryFailure','hosts']} | {'children':[ {key:row[key] for key in ['dispatched','identityCaptured','exitVerified','readersClosed','released']} for row in value['children']], 'backends':[{key:backend[key] for key in sorted(backend_keys)}]}
 
@@ -103,18 +128,22 @@ def main():
     candidate = os.environ.get('MALIEV_COMPANY_CANDIDATE_HEAD','')
     require(re.fullmatch('[0-9a-f]{40}',candidate), 'Exact candidate required')
     require(subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() == candidate, 'Executed checkout must equal candidate')
+    helper_digest = helper_source(Path('Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'))
     source = Path('acceptance/MemberCompanyCatalogPersistence/Tests/bin/Release/net10.0/TestResults/member-company')
     output = Path('member-company-retained'); output.mkdir(exist_ok=True)
     native = list(Path('member-company-test-results').glob('*.trx'))
     require(len(native) == 1, 'One native company TRX required')
     native_rows = rows(native[0])
-    seen_ids = set(); seen_runs = set()
+    seen_ids = set(); seen_runs = set(); raw_cleanup_hashes = {}
     for culture in ['en','th']:
         case = receipt(json.loads((source/(culture+'.json')).read_text()), culture, candidate)
-        released = cleanup(json.loads((source/(culture+'-cleanup.json')).read_text()))
+        raw_cleanup = (source/(culture+'-cleanup.json')).read_bytes()
+        raw_cleanup_hashes[culture] = hashlib.sha256(raw_cleanup).hexdigest()
+        released = cleanup(json.loads(raw_cleanup))
         cid = released['backends'][0]['originalId']
-        require(cid not in seen_ids and released['run'] not in seen_runs, 'Distinct actual journey ownership required')
-        seen_ids.add(cid); seen_runs.add(released['run'])
+        normalized_run = original_run(released['run'])
+        require(cid not in seen_ids and normalized_run not in seen_runs, 'Distinct actual journey ownership required')
+        seen_ids.add(cid); seen_runs.add(normalized_run)
         for name, data in [(culture+'.json',case),(culture+'-cleanup.json',released)]:
             (output/name).write_text(json.dumps(data,indent=2,ensure_ascii=True)+'\n')
         png = (source/(culture+'.png')).read_bytes()
@@ -131,6 +160,7 @@ def main():
     (output/'transport-controls.json').write_text(json.dumps(controls,indent=2)+'\n')
     sources = {str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in Path('acceptance/MemberCompanyCatalogPersistence').rglob('*') if p.is_file() and not any(x in p.parts for x in ['bin','obj','__pycache__'])}
     sources['.github/workflows/member-company-catalog-persistence.yml'] = hashlib.sha256(Path('.github/workflows/member-company-catalog-persistence.yml').read_bytes()).hexdigest()
+    sources['Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'] = helper_digest
     # Public immutable source revisions; these are repository identities, never credential material.
     service_git_revisions = [
         {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.CatalogService',
@@ -142,7 +172,7 @@ def main():
         {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults',
          'revision':'7edcd961024868513fd5f373cab3dcb261197f77'},
     ]
-    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
+    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
     print('Accepted exactly two isolated company UPDATE native cases, original PG cleanup and bounded synthetic upstream observations')
 
 if __name__ == '__main__':
