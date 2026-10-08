@@ -206,7 +206,14 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                     {
                         var failure = resources.OwnOperation(() => page.WaitForResponseAsync(response => response.Url.Contains("/lookups/companies/search", StringComparison.Ordinal)));
                         await widget.Locator("[data-lookup-query]").FillAsync(scenario.Item1);
-                        Assert.Equal(scenario.Item2, (await failure).Status);
+                        try { Assert.Equal(scenario.Item2, (await failure).Status); }
+                        catch (TimeoutException)
+                        {
+                            var bound = await widget.EvaluateAsync<bool>("root => root.dataset.lookupBound === 'true'");
+                            var tokenPresent = await widget.EvaluateAsync<bool>("root => Array.from(root.closest('form')?.querySelectorAll('input') || []).some(input => input.name === root.dataset.antiforgeryField && Boolean(input.value))");
+                            var attempted = JsonSerializer.SerializeToElement(upstream.Observations.ToArray()).EnumerateArray().Count(value => value.GetProperty("status").GetInt32() == scenario.Item2);
+                            throw new InvalidOperationException($"Synthetic fallback response absent: widgetBound={bound}; antiforgeryPresent={tokenPresent}; expectedUpstreamStatus={scenario.Item2}; matchingUpstreamAttempts={attempted}.");
+                        }
                         Assert.Equal(expectedCompany, await page.Locator("#profile-company-name").InputValueAsync());
                         Assert.True(await page.Locator("#profile-company-name").IsEditableAsync());
                     }
