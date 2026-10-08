@@ -2,6 +2,8 @@ name: Web sealed source qualification
 'on':
   pull_request:
     paths:
+    - .gitleaks.toml
+    - scripts/tests/test_web_candidate_secret_scan.py
     - scripts/run_web_account_candidate.py
     - scripts/web-account-failure-policy.json
     - scripts/tests/test_web_candidate_account.py

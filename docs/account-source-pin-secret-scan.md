@@ -1,0 +1,11 @@
+# Verified account source-pin scanner finding
+
+PR #508 head 5a7805fae5e1ca6e7a50784e3b11584c448f954a, run 37734271380, stopped at Gitleaks generic-api-key on scripts/web-account-failure-policy.json:9952. The full solution restore/build/test/format were skipped and coverage.json was absent. This was not a passing full validation.
+
+The matched value is SHA256 fa7f185ad1cc070e963a7dd2731ca20523856e93cfda663274b7ab1f128594e1 of committed Web source at base 901bf3ac6136c3d3e950de1cfd848f0eba0a215a, path Legacy.Maliev.Web.Infrastructure/CustomerAuthenticationClient.cs. Compute SHA256 over raw git-show bytes, not decoded/re-encoded text. The same digest is present in the sealed source inventory and producerPrerequisites.contractFiles. It is a content digest, not a credential; source custody does not establish remote runtime acceptance.
+
+The repository previously had no scanner configuration. .gitleaks.toml extends the complete default rules and adds one targetRules=generic-api-key allowlist with AND: exact policy path and exact full historical key/value line, including its comma. One optional preceding line terminator accommodates Gitleaks Git-fragment line extraction; no additional content is matched. A changed value, different source key, different policy path, or another credential line is outside the exception. There is no commit exclusion, directory exclusion, blanket hash allowance or ignore marker. The map representation and raw policy identity remain unchanged because the original line is also present in Git history.
+
+Pure regression tests check default inheritance, exact rule/path/line conjunction, source inventory agreement and altered-path/value/line rejection. Actual local scanner controls must also exercise the exact historical line, changed digest, wrong path and unrelated credential line, followed by normal full Git-history scan. Raw original finding and failed hosted logs remain in the owner review packet; they are not committed as source.
+
+Reference: https://github.com/gitleaks/gitleaks/blob/v8.30.0/README.md#configuration (AND, line regexTarget, targetRules and default extension). This exact exception does not grant SDK admission, merge authority, business acceptance or Tracking closure. Current-head protected CI must run fully after the correction.
