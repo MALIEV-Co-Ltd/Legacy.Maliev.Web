@@ -1,6 +1,7 @@
 name: Member company Catalog persistence
 
 on:
+  workflow_dispatch:
   pull_request:
     paths: ['acceptance/MemberCompanyCatalogPersistence/**', '.github/workflows/member-company-catalog-persistence.yml']
   push:
