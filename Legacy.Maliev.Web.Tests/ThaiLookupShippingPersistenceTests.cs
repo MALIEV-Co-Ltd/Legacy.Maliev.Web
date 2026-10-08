@@ -251,8 +251,8 @@ public sealed class ThaiLookupShippingPersistenceTests(MemberAuthorityFixture au
             resources = backends.Clone(),
             graph = graph.RootElement.Clone(),
         };
-        var evidence = Path.Combine(AppContext.BaseDirectory, "TestResults", "shipping-persistence");
-        var file = Path.Combine(evidence, culture + ".json");
+        var cleanupDirectory = Path.Combine(AppContext.BaseDirectory, "TestResults", "shipping-persistence");
+        var file = Path.Combine(cleanupDirectory, culture + ".json");
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var business = JsonNode.Parse(await File.ReadAllTextAsync(file, deadline.Token))!.AsObject();
         business["shippingBackendCleanup"] = JsonSerializer.SerializeToNode(proof);
