@@ -36,10 +36,14 @@ internal sealed class MaterialCompletionObservation
         private DateTimeOffset? revision;
         private int entered, running, returnedNull, returnedQuote, canceled, faulted;
         private int pending, completed, unavailable, ticketEntered, ticketIssued, authorizedWrite, authorizedStored;
+        private int selectedCallbackReturned, selectedCallbackCanceled, selectedCallbackFaulted;
+        private int comparisonCallbackEntered, comparisonCallbackReturned, comparisonCallbackCanceled, comparisonCallbackFaulted;
+        private string pricingFinishBucket = "notReturned";
+        private readonly Stopwatch pricingElapsed = new();
 
         public void Enter(DateTimeOffset value)
         {
-            lock (gate) { revision = value; entered++; running++; }
+            lock (gate) { if (entered == 0) pricingElapsed.Start(); revision = value; entered++; running++; }
         }
 
         public void Frame(InstantQuotationMaterialPricingStatus status)
@@ -57,10 +61,33 @@ internal sealed class MaterialCompletionObservation
             lock (gate)
             {
                 running--;
+                var seconds = pricingElapsed.Elapsed.TotalSeconds;
+                pricingFinishBucket = seconds < 5 ? "under5" : seconds < 15 ? "5to15"
+                    : seconds < 30 ? "15to30" : seconds < 33 ? "30to33" : "33plus";
                 if (outcome == "null") returnedNull++;
                 else if (outcome == "quote") returnedQuote++;
                 else if (outcome == "canceled") canceled++;
                 else faulted++;
+            }
+        }
+
+        public void Callback(bool selected, string outcome)
+        {
+            lock (gate)
+            {
+                if (selected)
+                {
+                    if (outcome == "returned") selectedCallbackReturned++;
+                    else if (outcome == "canceled") selectedCallbackCanceled++;
+                    else if (outcome == "faulted") selectedCallbackFaulted++;
+                }
+                else
+                {
+                    if (outcome == "entered") comparisonCallbackEntered++;
+                    else if (outcome == "returned") comparisonCallbackReturned++;
+                    else if (outcome == "canceled") comparisonCallbackCanceled++;
+                    else if (outcome == "faulted") comparisonCallbackFaulted++;
+                }
             }
         }
 
@@ -90,7 +117,7 @@ internal sealed class MaterialCompletionObservation
             {
                 var seconds = elapsed.Elapsed.TotalSeconds;
                 var bucket = seconds < 5 ? "under5" : seconds < 15 ? "5to15" : seconds < 30 ? "15to30" : "30plus";
-                return $"pricingEntered={Math.Min(entered, 9)}; pricingRunning={Math.Min(running, 9)}; returnedNull={Math.Min(returnedNull, 9)}; returnedQuote={Math.Min(returnedQuote, 9)}; canceled={Math.Min(canceled, 9)}; faulted={Math.Min(faulted, 9)}; selectedPending={Math.Min(pending, 9)}; selectedCompleted={Math.Min(completed, 9)}; selectedUnavailable={Math.Min(unavailable, 9)}; ticketEntered={Math.Min(ticketEntered, 9)}; ticketIssued={Math.Min(ticketIssued, 9)}; authorizedWriteAttempted={Math.Min(authorizedWrite, 9)}; authorizedWriteSucceeded={Math.Min(authorizedStored, 9)}; elapsedBucket={bucket}";
+                return $"pricingEntered={Math.Min(entered, 9)}; pricingRunning={Math.Min(running, 9)}; returnedNull={Math.Min(returnedNull, 9)}; returnedQuote={Math.Min(returnedQuote, 9)}; canceled={Math.Min(canceled, 9)}; faulted={Math.Min(faulted, 9)}; selectedPending={Math.Min(pending, 9)}; selectedCompleted={Math.Min(completed, 9)}; selectedUnavailable={Math.Min(unavailable, 9)}; ticketEntered={Math.Min(ticketEntered, 9)}; ticketIssued={Math.Min(ticketIssued, 9)}; authorizedWriteAttempted={Math.Min(authorizedWrite, 9)}; authorizedWriteSucceeded={Math.Min(authorizedStored, 9)}; elapsedBucket={bucket}; pricingFinishBucket={pricingFinishBucket}; selectedCallbackReturned={Math.Min(selectedCallbackReturned, 18)}; selectedCallbackCanceled={Math.Min(selectedCallbackCanceled, 18)}; selectedCallbackFaulted={Math.Min(selectedCallbackFaulted, 18)}; comparisonCallbackEntered={Math.Min(comparisonCallbackEntered, 128)}; comparisonCallbackReturned={Math.Min(comparisonCallbackReturned, 128)}; comparisonCallbackCanceled={Math.Min(comparisonCallbackCanceled, 128)}; comparisonCallbackFaulted={Math.Min(comparisonCallbackFaulted, 128)}";
             }
         }
     }
@@ -108,11 +135,19 @@ internal sealed class MaterialCompletionObservation
         {
             var operation = Volatile.Read(ref observation.current);
             var selected = session.Parts.ToDictionary(part => part.PartId, part => part.Configuration.MaterialKey);
-            return Observe(session, () => inner.QuoteAsync(session, ownerIdentity, includeComparisons, (frame, token) =>
+            return Observe(session, () => inner.QuoteAsync(session, ownerIdentity, includeComparisons, async (frame, token) =>
             {
-                if (selected.TryGetValue(frame.PartId, out var key) && string.Equals(key, frame.MaterialKey, StringComparison.Ordinal))
-                    operation.Frame(frame.Status);
-                return observer(frame, token);
+                var isSelected = selected.TryGetValue(frame.PartId, out var key)
+                    && string.Equals(key, frame.MaterialKey, StringComparison.Ordinal);
+                if (isSelected) operation.Frame(frame.Status);
+                operation.Callback(isSelected, "entered");
+                try
+                {
+                    await observer(frame, token);
+                    operation.Callback(isSelected, "returned");
+                }
+                catch (OperationCanceledException) { operation.Callback(isSelected, "canceled"); throw; }
+                catch { operation.Callback(isSelected, "faulted"); throw; }
             }, cancellationToken), operation);
         }
 
