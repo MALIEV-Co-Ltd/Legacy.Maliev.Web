@@ -30,13 +30,13 @@ def rows(path):
     return [{'testName': r.get('testName'), 'outcome': 'Passed', 'testId': r.get('testId'), 'executionId': r.get('executionId')} for r in results]
 
 def receipt(value, culture, candidate):
-    fields = {'surface','culture','width','candidateHead','companyId','selectedCompany','selectedTaxId','catalogStatus','saveStatus','readbackStatus','companyReadbackStatus','reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedLookupStatus','deniedWriteStatus','deniedWriteUnchanged','unavailableStatus','rateLimitedStatus','manualFallbackEditable','syntheticUpstreamOnly','observations'}
+    fields = {'surface','culture','width','candidateHead','companyId','selectedCompany','selectedTaxId','catalogStatus','saveStatus','readbackStatus','companyReadbackStatus','reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedLookupStatus','deniedWriteStatus','deniedWriteUnchanged','unavailableStatus','rateLimitedStatus','manualFallbackEditable','syntheticUpstreamOnly','observations','fixtureNullEmailRejectedStatus','fixturePreparedStatus','preparedFixtureEmailPreserved'}
     require(set(value) == fields, 'Only exact bounded receipt fields retained')
-    expected = {'surface':'member-company-update','culture':culture,'width':1280 if culture == 'en' else 375,'candidateHead':candidate,'selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'deniedLookupStatus':403,'deniedWriteStatus':403,'unavailableStatus':503,'rateLimitedStatus':429}
+    expected = {'surface':'member-company-update','culture':culture,'width':1280 if culture == 'en' else 375,'candidateHead':candidate,'selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'deniedLookupStatus':403,'deniedWriteStatus':403,'unavailableStatus':503,'rateLimitedStatus':429,'fixtureNullEmailRejectedStatus':400,'fixturePreparedStatus':204}
     require(all(value.get(k) == v for k,v in expected.items()), 'Business receipt contract mismatch')
     require(isinstance(value['companyId'], int) and value['companyId'] > 0, 'Original company ID required')
     require(value['selectedCompany'] == ('Synthetic Company Limited' if culture == 'en' else '\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17\u0e2a\u0e31\u0e07\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c \u0e08\u0e33\u0e01\u0e31\u0e14'), 'Synthetic selected name required')
-    for flag in ['reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedWriteUnchanged','manualFallbackEditable','syntheticUpstreamOnly']:
+    for flag in ['reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedWriteUnchanged','manualFallbackEditable','syntheticUpstreamOnly','preparedFixtureEmailPreserved']:
         require(value[flag] is True, 'Actual proof flag missing: '+flag)
     observed = value['observations']
     require(len(observed) == 3, 'One actual upstream HTTP attempt per scenario required')

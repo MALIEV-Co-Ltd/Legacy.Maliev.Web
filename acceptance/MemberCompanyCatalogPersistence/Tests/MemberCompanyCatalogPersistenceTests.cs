@@ -84,9 +84,27 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                     Assert.Empty(upstream.Observations);
                     customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", serviceToken);
                     catalogHttp.DefaultRequestHeaders.Authorization = new("Bearer", serviceToken);
+                    // The unchanged address-only seed has no customer email; ordinary profile PUT requires one.
+                    using var seededRead = await customerHttp.GetAsync("customers/1");
+                    Assert.Equal(HttpStatusCode.OK, seededRead.StatusCode);
+                    var seededJson = await seededRead.Content.ReadAsStringAsync();
+                    using var seeded = JsonDocument.Parse(seededJson);
+                    var preparation = ProfileInput(seeded.RootElement);
+                    Assert.Null(preparation["Email"]);
+                    using var invalidSeed = await customerHttp.PutAsJsonAsync("customers/1", preparation);
+                    Assert.Equal(HttpStatusCode.BadRequest, invalidSeed.StatusCode);
+                    using var unmodifiedSeed = await customerHttp.GetAsync("customers/1");
+                    Assert.Equal(HttpStatusCode.OK, unmodifiedSeed.StatusCode);
+                    Assert.Equal(seededJson, await unmodifiedSeed.Content.ReadAsStringAsync());
+                    preparation["Email"] = "member-crawl@example.test";
+                    using var preparedSeed = await customerHttp.PutAsJsonAsync("customers/1", preparation);
+                    Assert.Equal(HttpStatusCode.NoContent, preparedSeed.StatusCode);
                     using var initial = await customerHttp.GetAsync("customers/1");
                     Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
                     using var before = JsonDocument.Parse(await initial.Content.ReadAsStringAsync());
+                    Assert.Equal("member-crawl@example.test", before.RootElement.GetProperty("Email").GetString());
+                    Assert.Equal(Preserved(seeded.RootElement, includeEmail: false), Preserved(before.RootElement, includeEmail: false));
+                    Assert.Equal(seeded.RootElement.GetProperty("CompanyId").GetInt32(), before.RootElement.GetProperty("CompanyId").GetInt32());
                     var companyId = before.RootElement.GetProperty("CompanyId").GetInt32();
                     var preserved = Preserved(before.RootElement);
                     using var originalCompanyRead = await customerHttp.GetAsync($"customers/companies/{companyId}");
@@ -205,6 +223,8 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                         catalogStatus = 200, saveStatus = 302, readbackStatus = 200, companyReadbackStatus = 200,
                         reloadVerified = true, contactsAndAddressIdentitiesPreserved = true, manualRegistrarPreserved = true,
                         deniedLookupStatus = 403, deniedWriteStatus = 403, deniedWriteUnchanged = true,
+                        fixtureNullEmailRejectedStatus = (int)invalidSeed.StatusCode, fixturePreparedStatus = (int)preparedSeed.StatusCode,
+                        preparedFixtureEmailPreserved = true,
                         unavailableStatus = 503, rateLimitedStatus = 429, manualFallbackEditable = true,
                         syntheticUpstreamOnly = true, observations = upstream.Observations.ToArray(),
                     }));
@@ -222,8 +242,14 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
 
     private static string Required(string name) => Environment.GetEnvironmentVariable(name) is { } value && File.Exists(value)
         ? value : throw new InvalidOperationException("Pinned hosted binary required: " + name);
-    private static string Preserved(JsonElement value) => JsonSerializer.Serialize(value.EnumerateObject()
+    private static Dictionary<string, object?> ProfileInput(JsonElement value)
+    {
+        var fields = new[] { "FirstName", "LastName", "Telephone", "Mobile", "Fax", "Email", "DateOfBirth", "CompanyId", "BillingAddressId", "ShippingAddressId" };
+        return fields.ToDictionary(field => field, field => value.TryGetProperty(field, out var property) && property.ValueKind != JsonValueKind.Null ? (object?)property.Clone() : null);
+    }
+    private static string Preserved(JsonElement value, bool includeEmail = true) => JsonSerializer.Serialize(value.EnumerateObject()
         .Where(p => p.Name is "FirstName" or "LastName" or "Telephone" or "Mobile" or "Fax" or "Email" or "DateOfBirth" or "BillingAddressId" or "ShippingAddressId")
+        .Where(p => includeEmail || p.Name != "Email")
         .OrderBy(p => p.Name, StringComparer.Ordinal).ToDictionary(p => p.Name, p => p.Value.ValueKind == JsonValueKind.Null ? (object)string.Empty : p.Value.Clone()));
     private static Uri Origin(bool https = false)
     {

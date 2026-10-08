@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 class RejectionControls(unittest.TestCase):
     def valid(self):
-        return {'surface':'member-company-update','culture':'en','width':1280,'candidateHead':'a'*40,'companyId':1,'selectedCompany':'Synthetic Company Limited','selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'reloadVerified':True,'contactsAndAddressIdentitiesPreserved':True,'manualRegistrarPreserved':True,'deniedLookupStatus':403,'deniedWriteStatus':403,'deniedWriteUnchanged':True,'unavailableStatus':503,'rateLimitedStatus':429,'manualFallbackEditable':True,'syntheticUpstreamOnly':True,'observations':[{'logicalUri':'https://data.creden.co/sapi/search/get_suggestion','physicalLoopback':True,'method':'POST','typeSearch':'prefix','query':prefix+' en','language':'en','status':status} for prefix,status in [('Synthetic',200),('Unavailable',503),('RateLimited',429)]]}
+        return {'surface':'member-company-update','culture':'en','width':1280,'candidateHead':'a'*40,'companyId':1,'selectedCompany':'Synthetic Company Limited','selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'reloadVerified':True,'contactsAndAddressIdentitiesPreserved':True,'manualRegistrarPreserved':True,'deniedLookupStatus':403,'deniedWriteStatus':403,'deniedWriteUnchanged':True,'unavailableStatus':503,'rateLimitedStatus':429,'manualFallbackEditable':True,'syntheticUpstreamOnly':True,'fixtureNullEmailRejectedStatus':400,'fixturePreparedStatus':204,'preparedFixtureEmailPreserved':True,'observations':[{'logicalUri':'https://data.creden.co/sapi/search/get_suggestion','physicalLoopback':True,'method':'POST','typeSearch':'prefix','query':prefix+' en','language':'en','status':status} for prefix,status in [('Synthetic',200),('Unavailable',503),('RateLimited',429)]]}
     def test_accept_control_metadata_only(self):
         self.assertEqual(receipt(self.valid(),'en','a'*40)['companyId'],1)
     def test_reject_foreign_candidate(self):
@@ -32,6 +32,9 @@ class RejectionControls(unittest.TestCase):
                 ET.SubElement(results,'{'+NS['t']+'}UnitTestResult', testName=PREFIX+f'(culture: "{culture}", width: {width})',outcome=outcome)
             path=Path(directory)/'control.trx'; ET.ElementTree(root).write(path)
             with self.assertRaises(ValueError): rows(path)
+    def test_reject_unqualified_fixture_preparation(self):
+        value=self.valid(); value['fixturePreparedStatus']=200
+        with self.assertRaises(ValueError): receipt(value,'en','a'*40)
     def test_reject_unproven_fallback(self):
         value=self.valid(); value['manualFallbackEditable']=False
         with self.assertRaises(ValueError): receipt(value,'en','a'*40)
