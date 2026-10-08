@@ -600,7 +600,7 @@ if (useBlazorRouteHost)
     });
     app.MapPost(
             "/",
-            ([FromForm] string culture, [FromQuery] string? returnUrl, HttpContext context) =>
+            ([FromForm] string? culture, [FromQuery] string? returnUrl, HttpContext context) =>
             {
                 culture = CanonicalUrlPolicy.NormalizeSupportedCulture(culture);
 

@@ -171,7 +171,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~AccountForm_PostsRenderedActionAndPreservesQueryOnlyCulture|FullyQualifiedName~ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken|FullyQualifiedName~Login_TemporaryPasswordRedirectsToSingleUseSetupWithoutCreatingSession|FullyQualifiedName~PublicAccountWorkflowTests|FullyQualifiedName~SignupPageTests|FullyQualifiedName~LocalizedServiceSeoHttpTests"
+          --filter "FullyQualifiedName~AccountForm_PostsRenderedActionAndPreservesQueryOnlyCulture|FullyQualifiedName~ResetPassword_ValidChallengeRedirectsToLoginWithoutLeakingToken|FullyQualifiedName~Login_TemporaryPasswordRedirectsToSingleUseSetupWithoutCreatingSession|FullyQualifiedName~PublicAccountWorkflowTests|FullyQualifiedName~SignupPageTests|FullyQualifiedName~LocalizedServiceSeoHttpTests|FullyQualifiedName~LocalizedCanonicalCookieHttpTests|FullyQualifiedName~PublicDocumentLinksMigrationTests|FullyQualifiedName~PublicBusinessStructuredDataMigrationTests|FullyQualifiedName~LanguageSwitchInputTests|FullyQualifiedName~SharedNavigationMigrationTests|FullyQualifiedName~PublicDocumentVerifierQuotationHttpTests"
           --logger trx --results-directory ./localized-account-seo-test-results
       - name: Verify localized persisted inquiry boundaries through actual HTTP
         run: >-

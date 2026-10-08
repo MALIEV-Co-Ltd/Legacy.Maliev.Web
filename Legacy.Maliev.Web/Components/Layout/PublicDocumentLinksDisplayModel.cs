@@ -12,7 +12,11 @@ public sealed record PublicDocumentLinksDisplayModel(
         ArgumentNullException.ThrowIfNull(context);
 
         var path = context.Request.Path;
-        var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        var isPrivateAccount = path.StartsWithSegments("/account", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWithSegments("/member", StringComparison.OrdinalIgnoreCase);
+        var culture = isPrivateAccount
+            ? context.Request.Query["culture"].ToString()
+            : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
         return new PublicDocumentLinksDisplayModel(
             CanonicalUrlPolicy.GetLocalizedUrl(path, culture),

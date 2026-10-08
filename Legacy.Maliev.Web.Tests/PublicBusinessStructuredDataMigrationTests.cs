@@ -124,6 +124,9 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         Assert.Equal("+66898950690", localBusiness.GetProperty("telephone").GetString());
         Assert.Equal("$$", localBusiness.GetProperty("priceRange").GetString());
         Assert.StartsWith(localBusinessDescriptionPrefix, localBusiness.GetProperty("description").GetString(), StringComparison.Ordinal);
+        var description = localBusiness.GetProperty("description").GetString()!;
+        Assert.Matches("(?i)reverse[- ]engineering", description);
+        Assert.DoesNotMatch("(?i)no minimum|ไม่มี(?:จำนวน)?ขั้นต่ำ", description);
         Assert.Equal("info@maliev.com", localBusiness.GetProperty("email").GetString());
         Assert.Equal("Cash, Credit Card, Bank Transfer", localBusiness.GetProperty("paymentAccepted").GetString());
         Assert.Equal("THB", localBusiness.GetProperty("currenciesAccepted").GetString());
