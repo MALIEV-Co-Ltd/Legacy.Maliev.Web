@@ -8,12 +8,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 // fad52019c898ebe63c39eb0f30e65b0fb59126ca: strengthen already ported behavior at
 // the admitted Blazor page boundary. No replacement worker, pricing or receipt.
-public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests
+public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData(0.7f, "en", 1280, true, "0.80 mm", "0.60 mm")]
@@ -78,7 +79,26 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests
             if (message.Type == "error") consoleErrors.Add(message.Text);
             if (message.Type == "warning") consoleWarnings.Add(message.Text);
         };
-        var response = await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        IResponse? response;
+        using (var navigation = new InstantQuotationNavigationFailureDiagnostics(page, origin))
+        {
+            response = await InstantQuotationNavigationFailureDiagnostics.PreserveFailureAsync(
+                () => page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle }),
+                () => navigation.WriteFailureAsync(output, new
+                {
+                    culture,
+                    width,
+                    height,
+                    thin,
+                    browserConnected = browser.IsConnected,
+                    pageClosed = page.IsClosed,
+                    pageErrorCount = pageErrors.Count,
+                    consoleErrorCount = consoleErrors.Count,
+                    consoleWarningCount = consoleWarnings.Count,
+                    transport.UploadCount,
+                    transport.ReadCount,
+                }));
+        }
         Assert.Equal(200, response?.Status);
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "ประเมินราคาพิมพ์ 3 มิติทันที" : "Instant 3D Printing Estimate",
