@@ -212,10 +212,12 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
     }
 
     [Theory]
+    [InlineData(null, "/about?culture=en", "/about", "c%3Dth%7Cuic%3Dth")]
+    [InlineData("", "/about?culture=en", "/about", "c%3Dth%7Cuic%3Dth")]
     [InlineData("not-a-culture", "https://attacker.example/", "/", "c%3Dth%7Cuic%3Dth")]
     [InlineData("EN", "/about?tracking=excluded", "/about?culture=en", "c%3Den%7Cuic%3Den")]
     public async Task ActualLanguagePost_PreservesSafeLocalReturnAndNormalizedCookie(
-        string culture, string returnUrl, string location, string cookieValue)
+        string? culture, string returnUrl, string location, string cookieValue)
     {
         using var client = Client("https://localhost");
         var initial = WebUtility.HtmlDecode(await client.GetStringAsync("/?culture=th"));
@@ -223,12 +225,13 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
         Assert.True(form.Success);
         var token = Regex.Match(form.Value, "name=\"__RequestVerificationToken\"[^>]*value=\"(?<value>[^\"]+)\"");
         Assert.True(token.Success);
+        var fields = new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token.Groups["value"].Value
+        };
+        if (culture is not null) fields["culture"] = culture;
         using var response = await client.PostAsync("/?handler=SetLanguage&returnUrl=" + Uri.EscapeDataString(returnUrl),
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["culture"] = culture,
-                ["__RequestVerificationToken"] = token.Groups["value"].Value
-            }));
+            new FormUrlEncodedContent(fields));
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal(location, response.Headers.Location?.OriginalString);
         var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie")
