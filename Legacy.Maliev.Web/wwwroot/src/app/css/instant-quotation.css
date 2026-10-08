@@ -446,6 +446,25 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     margin-top: 0;
 }
 
+/* Below the split-pane desktop shell, keep names and actions in the page's
+   scroll path instead of clipping them behind the horizontal parts rail. */
+@media (max-width: 61.999rem) {
+    .instant-quote__workflow > [data-workflow-parts] {
+        flex-wrap: wrap;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > h3 {
+        flex-basis: 100%;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone,
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-upload-item],
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
 .instant-quote__workflow > [data-workflow-viewer] {
     position: relative;
     height: 260px;
