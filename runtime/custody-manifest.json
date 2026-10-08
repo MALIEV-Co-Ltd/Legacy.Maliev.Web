@@ -1,0 +1,457 @@
+{
+  "status": "FROZEN_EXACT_MAIN_CUSTODY_ROUTE_AUTHORITY_MISSING",
+  "owner": "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5",
+  "base": "66d220af825a6d4829d1b97512e21b6486a08c87",
+  "baseTree": "d228cb9ea0f03d8ab2e93be4fb42bd52d7ca5cdb",
+  "baseParents": [
+    "a6c9afc814acc79aad4450471004414bddff815a"
+  ],
+  "observedCurrentMain": "66d220af825a6d4829d1b97512e21b6486a08c87",
+  "correctionPatchSha256": "854464bef9731d68e0d734d60a33800ec3d4a882b1569c90161004507fb53e76",
+  "changedPath": "Legacy.Maliev.Web.Tests/InstantQuotationWallThicknessRealUploadBrowserTests.cs",
+  "preimageSha256": "d8c9ff386e22b9f5f6adfa1bf56908f5809ed56ad0c0bedac35ded5385431df2",
+  "postimageSha256": "25ce65c35406c489f63e64d3324b6287fdc1a9db2d357381d5b556f937edd2ca",
+  "sourcePins": [
+    {
+      "path": ".github/workflows/_build-and-test.yml",
+      "gitBlob": "02cf2beff126fac7520648da1aab668f80b45f42",
+      "sha256": "25ee4280317adff8d5b48137bb81f2f1e0675dc22819eb9eed114567f7e0009f",
+      "bytes": 22948
+    },
+    {
+      "path": "Directory.Build.props",
+      "gitBlob": "5e514ea0a0e4e8db3184020c136fe05145a46c9e",
+      "sha256": "c10bdc142ea93708604db54c4870c1057e764b2f9644a12ac1dfed07fa474a8f",
+      "bytes": 275
+    },
+    {
+      "path": "Legacy.Maliev.Web/package.json",
+      "gitBlob": "0a19f31b4662794e3d363a5dcc92ea696fd8fc12",
+      "sha256": "ae2068bc883ab53f0958d860b998c6e30ad869a5b6a7b2f30f2f72ad7e277209",
+      "bytes": 1749
+    },
+    {
+      "path": "Legacy.Maliev.Web/package-lock.json",
+      "gitBlob": "8c392b351e1c1da0e11807ad7fb9ef79514d0c86",
+      "sha256": "f0084f038c14d38dbaf0d56a1f83e5b8c5935c3d2e63f05d5fa2bce56b9cb62d",
+      "bytes": 17545
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj",
+      "gitBlob": "652c990f6bf13bdcecede7c8e34b922718e002e6",
+      "sha256": "e06680a3d1895b6176f5018b78839f76f33779a1ed317145c11f4fdbbf22aa75",
+      "bytes": 1899
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/MaterialCompletionObservation.cs",
+      "gitBlob": "a825ffef5e25885e8b840dd2eae39077ad24b614",
+      "sha256": "b8b3bbf31b8d050349245f022f0dcc5dfa847d6cb629332d8c92dda551f9ec4e",
+      "bytes": 10859
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SelectedPrintTimeTimeoutDiagnostics.cs",
+      "gitBlob": "234b3730c72e79a7cbd438b5ca96598bb4538a1d",
+      "sha256": "963f76a45e47ac0ab431f816650d5b7e8f65cc8c1892b4032e8cb5fe646bfbeb",
+      "bytes": 5316
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/MaterialCompletionObservationForwardingTests.cs",
+      "gitBlob": "c2ae1bff5fa2fb8f457f4a9f87e4f12464d78a5f",
+      "sha256": "dc58ee3f07e2976c00f3ff53f0bdd4fe22c8d3c35c8cba5a4e4939345d679142",
+      "bytes": 12132
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SelectedPrintTimeTimeoutDiagnosticsTests.cs",
+      "gitBlob": "4baae5cd4835baa03656d4b38bd6cd41308852ab",
+      "sha256": "a8236f4ce43742a461b896da5803eab7b31036e338339f854febd1a359871bf0",
+      "bytes": 8193
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/InstantQuotationMaterialPricingProgressTests.cs",
+      "gitBlob": "f8a2ae81f6e8d7e135f223fbd1730e44bf05de53",
+      "sha256": "3e7c89f82c9b22731dcdd4ed604139b675a8860d47a6b70800e943b1258af753",
+      "bytes": 34781
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/InstantQuotationWallThicknessRealUploadBrowserTests.cs",
+      "gitBlob": "dedbbf0de731bda2054de35481b784c29e279530",
+      "sha256": "d8c9ff386e22b9f5f6adfa1bf56908f5809ed56ad0c0bedac35ded5385431df2",
+      "bytes": 71373
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json",
+      "gitBlob": "d4c20e901d37dde0dca69e918724f61bd0d03638",
+      "sha256": "06d905a7339e736fe69ff2ac2fe13cce06b5d1514b0559a1e614811990d81646",
+      "bytes": 786
+    },
+    {
+      "path": "scripts/check_web_candidate_admission.py",
+      "gitBlob": "f78b2d55ffc3a4f51428233b6d70e5689e8ed214",
+      "sha256": "4cf0543681448b2b9ae393a5354a0a69148f80b8ede403af5e4de8a109a3a70f",
+      "bytes": 9108
+    },
+    {
+      "path": "scripts/run_web_candidate_phase.py",
+      "gitBlob": "273de9458430ddd78a507f024850250ba307043b",
+      "sha256": "df8c91563b25231f67bcd3be8b2d4e84bbe3b7045da6ed3e435d55d8fb309fa4",
+      "bytes": 17713
+    }
+  ],
+  "assetGitPins": [
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/app.min.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3cb82c89550198dbb15f0b834309abffd7ab1a12",
+      "size": 14279,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/3cb82c89550198dbb15f0b834309abffd7ab1a12"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d4c20e901d37dde0dca69e918724f61bd0d03638",
+      "size": 786,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/d4c20e901d37dde0dca69e918724f61bd0d03638"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-brands-400-LA6RBN2H.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e5b3ce081207a202aac7407af74696f458887c2a",
+      "size": 115420,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/e5b3ce081207a202aac7407af74696f458887c2a"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-regular-400-NCGHE5NP.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d470bd17584b271e1069a6435db5128a8a69f2b7",
+      "size": 19512,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/d470bd17584b271e1069a6435db5128a8a69f2b7"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-solid-900-EFITDVWS.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3ffbb19eb1453bc16ad20e7d57febed054e30ff5",
+      "size": 119488,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/3ffbb19eb1453bc16ad20e7d57febed054e30ff5"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-v4compatibility-4GXT74DT.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "971a2b327340c891949b29e53cb519c67173e30b",
+      "size": 4168,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/971a2b327340c891949b29e53cb519c67173e30b"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-BXXLFHTJ.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b7386c8164a953547cb960712276918674fa219c",
+      "size": 9112,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/b7386c8164a953547cb960712276918674fa219c"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-HJOYPAAW.woff",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4933fe4bf093ae4f1defe0907372bfc7561f79dc",
+      "size": 11316,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/4933fe4bf093ae4f1defe0907372bfc7561f79dc"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-DA26WOS3.woff",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3e79dec4e3c5c3c021b508e9c473c96a618e7dd",
+      "size": 11460,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/a3e79dec4e3c5c3c021b508e9c473c96a618e7dd"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-NLQVN6TL.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "09fdeab3f7f3f7d0d5ba243f1459f8b9b1df9abe",
+      "size": 9224,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/09fdeab3f7f3f7d0d5ba243f1459f8b9b1df9abe"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-FTSWGG55.woff",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e61b50c40b5c06e3d12e4936f4cd7df8f7ad5a28",
+      "size": 11444,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/e61b50c40b5c06e3d12e4936f4cd7df8f7ad5a28"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-Q4NFZHYH.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "32a6baa3bd52eb6184b4f79b6f72a2e8a1c5ad79",
+      "size": 9220,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/32a6baa3bd52eb6184b4f79b6f72a2e8a1c5ad79"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-MJX636HN.woff",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eb2dc3005e3ddc5c4904f4fe47e044bfbbd9ccc6",
+      "size": 18232,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/eb2dc3005e3ddc5c4904f4fe47e044bfbbd9ccc6"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-WPZHQ72E.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2c401f59f92b53a2d43643a81a4dcb6a35c6947b",
+      "size": 14032,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/2c401f59f92b53a2d43643a81a4dcb6a35c6947b"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-5NAIAZI7.woff",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a072aa2329b707f5600098a7983c586843699ce",
+      "size": 17688,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/4a072aa2329b707f5600098a7983c586843699ce"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-PXR3PSSK.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "264ce74280afa9bce3b16dbdd77a42754ba52986",
+      "size": 13528,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/264ce74280afa9bce3b16dbdd77a42754ba52986"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-7I4OGWZG.woff2",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aa32da2408ba303cef78ff1c3dc36cbf88983ef1",
+      "size": 14140,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/aa32da2408ba303cef78ff1c3dc36cbf88983ef1"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-SAVBCENJ.woff",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "87b8e187f0431a4c523be6191b66e31c50e0359b",
+      "size": 18412,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/87b8e187f0431a4c523be6191b66e31c50e0359b"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/cnc-quotation.min.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c83def5963192f411fd82783b5e303e4c20ce8a",
+      "size": 122674,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/9c83def5963192f411fd82783b5e303e4c20ce8a"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-viewer.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "58726b50c904bcb525a42df092b5fbae9e6c981b",
+      "size": 695800,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/58726b50c904bcb525a42df092b5fbae9e6c981b"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b9e39e8f4e3d0d920068d93eeffecf8b868f3e36",
+      "size": 21055,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/b9e39e8f4e3d0d920068d93eeffecf8b868f3e36"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-about.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "42d0d14d6eba0c0ad1d929252f5c42f2be2ca430",
+      "size": 8220,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/42d0d14d6eba0c0ad1d929252f5c42f2be2ca430"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-error.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3f908a270bfa026757822f1a16e7b3f28700715",
+      "size": 3737,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/a3f908a270bfa026757822f1a16e7b3f28700715"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-error.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "074f8749bae9309d53ac7cd7922eb1f61d7c53b8",
+      "size": 5634,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/074f8749bae9309d53ac7cd7922eb1f61d7c53b8"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "545b668011b43eb049de1d17ea04fa75328b2115",
+      "size": 17566,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/545b668011b43eb049de1d17ea04fa75328b2115"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "345f27e33b6fa13a1d479abcfe422f6af160f712",
+      "size": 13642,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/345f27e33b6fa13a1d479abcfe422f6af160f712"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e00d8b24e91a3ff50d61bebd310bf967149923fc",
+      "size": 5081,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/e00d8b24e91a3ff50d61bebd310bf967149923fc"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2295704db8f9ca14d5f4bc8fc2e3a72af8030209",
+      "size": 31934,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/2295704db8f9ca14d5f4bc8fc2e3a72af8030209"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "007a3eb32db02ff56d13937a45472c50ea662b70",
+      "size": 26527,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/007a3eb32db02ff56d13937a45472c50ea662b70"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-member-order.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfaf2f9efd3f1eebe97820cfb2b92736e4609926",
+      "size": 1115,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/cfaf2f9efd3f1eebe97820cfb2b92736e4609926"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-cnc.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9ae53d446541d609b37a2831acafbccdfef62247",
+      "size": 4026,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/9ae53d446541d609b37a2831acafbccdfef62247"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-finder.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f67c173bb30d6d6a4b2575f1b0eb310e8c537f61",
+      "size": 24690,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/f67c173bb30d6d6a4b2575f1b0eb310e8c537f61"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-finishing.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e1f06cb141700e92b248ca4d54e42157e2183024",
+      "size": 851773,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/e1f06cb141700e92b248ca4d54e42157e2183024"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2344c3cd2b96c3f5d34f16dfc0c220f56022e51d",
+      "size": 16226,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/2344c3cd2b96c3f5d34f16dfc0c220f56022e51d"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-scanning.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60672f0b3c42d97e6ac7710501cac5cb646c176b",
+      "size": 7517,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/60672f0b3c42d97e6ac7710501cac5cb646c176b"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6956a4a4636d8d0c43ab3cd90216320f8f1e283c",
+      "size": 3258,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/6956a4a4636d8d0c43ab3cd90216320f8f1e283c"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-services-index.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ac6142e3f5c5f7bf369ef007dc5737d350597eb",
+      "size": 99231,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/4ac6142e3f5c5f7bf369ef007dc5737d350597eb"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-services.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2742d0a7fc1ee9d4690961b1958c579fa12d8aa5",
+      "size": 89150,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/2742d0a7fc1ee9d4690961b1958c579fa12d8aa5"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/site.min.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2a5e800062834c8874fa1622df740126de21a35b",
+      "size": 377646,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/2a5e800062834c8874fa1622df740126de21a35b"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/vendor.min.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "13743ebb61b209f28e1c5805c9a09b33e92055b3",
+      "size": 81462,
+      "url": "https://api.github.com/repos/MALIEV-Co-Ltd/Legacy.Maliev.Web/git/blobs/13743ebb61b209f28e1c5805c9a09b33e92055b3"
+    }
+  ],
+  "dependencyPins": {
+    "ServiceDefaults": "3c790ba6414b2a539f24aabb6948549ffd81a86b",
+    "CompatibilityContracts": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7"
+  },
+  "playwrightPackage": "1.61.0",
+  "focusedFilter": "FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationWallThicknessRealUploadBrowserTests.UploadedPartShowsOnlyPhysicallyVerifiedQuantityAndReviewActionsReachable|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationWallThicknessRealUploadBrowserTests.SelectingUploadedPartsShowsOnlyTheirOwnPrintTime",
+  "controlsFilter": "FullyQualifiedName~Legacy.Maliev.Web.Tests.InstantQuotationMaterialPricingProgressTests|FullyQualifiedName~Legacy.Maliev.Web.Tests.SelectedPrintTimeTimeoutDiagnosticsTests|FullyQualifiedName~Legacy.Maliev.Web.Tests.MaterialCompletionObservationForwardingTests",
+  "expectedExecutions": {
+    "failed-boundaries": 3,
+    "preservation-controls": 56
+  },
+  "expectedCasesSha256": "836cc9e281055cda49bffad2e449c0a86b04232de539a9f52bdcb7d3b38116b0",
+  "localObservationHelperUsed": false,
+  "source4338Closed": false,
+  "nativeExecuted": false,
+  "authorityIssued": false,
+  "resources": 0,
+  "runtimePins": {
+    "dotnetSdk": "10.0.401",
+    "node": "24.21.0",
+    "npm": "11.19.0",
+    "playwrightPackage": "1.61.0",
+    "chromiumVersion": "149.0.7827.55",
+    "chromiumRevision": "1228",
+    "setupDotnetAction": "a98b56852c35b8e3190ac28c8c2271da59106c68",
+    "setupNodeAction": "820762786026740c76f36085b0efc47a31fe5020"
+  },
+  "runtimePinEvidence": {
+    "run": 37783729129,
+    "logSha256": "b115831ba43c7f14b456910cf2da2d03459b59928c85a144a87752f3cb018e79",
+    "sdkLine": 2483,
+    "nodeLine": 458,
+    "npmLine": 459,
+    "chromiumLine": 1846
+  }
+}
