@@ -112,7 +112,18 @@ def main():
     (output/'transport-controls.json').write_text(json.dumps(controls,indent=2)+'\n')
     sources = {str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in Path('acceptance/MemberCompanyCatalogPersistence').rglob('*') if p.is_file() and not any(x in p.parts for x in ['bin','obj','__pycache__'])}
     sources['.github/workflows/member-company-catalog-persistence.yml'] = hashlib.sha256(Path('.github/workflows/member-company-catalog-persistence.yml').read_bytes()).hexdigest()
-    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'Catalog':'3f426723743570a6c20d2c014499445abb0774e1','Customer':'dc090542c02d675f54c3be59e33654dc24ecca9e','Auth':'51afbbd6e2829382a3431338abedccf339de33b1','CatalogRuntimeDefaults':'7edcd961024868513fd5f373cab3dcb261197f77','sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
+    # Public immutable source revisions; these are repository identities, never credential material.
+    service_git_revisions = [
+        {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.CatalogService',
+         'revision':'3f426723743570a6c20d2c014499445abb0774e1'},
+        {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.CustomerService',
+         'revision':'dc090542c02d675f54c3be59e33654dc24ecca9e'},
+        {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.AuthService',
+         'revision':'51afbbd6e2829382a3431338abedccf339de33b1'},
+        {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults',
+         'revision':'7edcd961024868513fd5f373cab3dcb261197f77'},
+    ]
+    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
     print('Accepted exactly two isolated company UPDATE native cases, original PG cleanup and bounded synthetic upstream observations')
 
 if __name__ == '__main__':
