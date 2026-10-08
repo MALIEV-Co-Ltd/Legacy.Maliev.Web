@@ -192,6 +192,10 @@ def main():
         phase=grant["phase"]
         if args.id!=phase["id"] or args.phase!=phase["name"] or command!=phase["argv"]:
             raise ValueError("Exact country BUILD argv and phase identity required")
+    if policy.get("sliceKind")=="account-failure-v1":
+        matched=[row for row in grant["phases"] if row["id"]==args.id]
+        if len(matched)!=1 or matched[0]["name"]!=args.phase or matched[0]["argv"]!=command:
+            raise ValueError("Exact account phase identity and argv required")
     owner_context=verify_capped_owner(policy,args.sdk_owner_context)
     executable=shutil.which(command[0])
     if not executable:raise ValueError("Executable unavailable")
