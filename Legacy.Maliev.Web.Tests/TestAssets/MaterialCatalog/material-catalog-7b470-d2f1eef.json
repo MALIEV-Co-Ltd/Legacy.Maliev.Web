@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "browserSource": {
+    "commit": "7b4703576cf183abc09cf558148b5c8afb97d20c",
+    "path": "Maliev.Web/wwwroot/src/app/js/model-viewer/model-viewer.js",
+    "sha256": "dc08124d25d7ec73aaf43043b05ae667bcc800a1f4ff0245d8336e1eb8408b4d"
+  },
+  "catalogSource": {
+    "commit": "d2f1eef4738b7a99cb4bed25113ab25447f0c414",
+    "path": "Legacy.Maliev.CatalogService.Domain/InstantQuotationMaterialCatalog.cs",
+    "gitBlob": "a9f9e8b5906afababd1fa90f0192c778a169f82b",
+    "sha256": "2d4f2ff7df35bfcb9087f5a99bfddfefe68b7af049fafb7540e4789f7e933222",
+    "textBase64": "bmFtZXNwYWNlIExlZ2FjeS5NYWxpZXYuQ2F0YWxvZ1NlcnZpY2UuRG9tYWluOwoKLy8vIDxzdW1tYXJ5PlJldmlld2VkIGFkZGl0aXZlIG1hdGVyaWFsIGRlZmluaXRpb25zIGZyb20gc291cmNlIDdiNDcwMzU3Ljwvc3VtbWFyeT4KcHVibGljIHN0YXRpYyBjbGFzcyBJbnN0YW50UXVvdGF0aW9uTWF0ZXJpYWxDYXRhbG9nCnsKICAgIC8vLyA8c3VtbWFyeT5HZXRzIHRoZSBvZmZlcmVkIG1hdGVyaWFsczsgaGlzdG9yaWNhbCBQQy1FU0QgaXMgaW50ZW50aW9uYWxseSBub3QgYW4gb2ZmZXIuPC9zdW1tYXJ5PgogICAgcHVibGljIHN0YXRpYyBJUmVhZE9ubHlMaXN0PEFkZGl0aXZlTWF0ZXJpYWxEZWZpbml0aW9uPiBNYXRlcmlhbHMgeyBnZXQ7IH0gPSBBcnJheS5Bc1JlYWRPbmx5PEFkZGl0aXZlTWF0ZXJpYWxEZWZpbml0aW9uPihbCiAgICAgICAgRGVmaW5lKCJQTEEiLCAiUExBIiwgMTI0MG0sICJSYW5kb20gY29sb3IiLCAiQmxhY2siLCAiV2hpdGUiLCAiR3JheSIsICJTaWx2ZXIiLCAiUmVkIiwgIk9yYW5nZSIsICJZZWxsb3ciLCAiR3JlZW4iLCAiQmx1ZSIsICJQdXJwbGUiLCAiUGluayIsICJPdGhlciIpLAogICAgICAgIERlZmluZSgiUEVURyIsICJQRVRHIiwgMTI3MG0sICJSYW5kb20gY29sb3IiLCAiQmxhY2siLCAiV2hpdGUiLCAiR3JheSIsICJUcmFuc3BhcmVudCIsICJSZWQiLCAiT3JhbmdlIiwgIlllbGxvdyIsICJHcmVlbiIsICJCbHVlIiksCiAgICAgICAgRGVmaW5lKCJISVBTIiwgIkhJUFMiLCAxMDQwbSwgIldoaXRlIiksCiAgICAgICAgRGVmaW5lKCJBQlMiLCAiQUJTIiwgMTA0MG0sICJSYW5kb20gY29sb3IiLCAiQmxhY2siLCAiV2hpdGUiLCAiR3JheSIsICJSZWQiLCAiWWVsbG93IiwgIkdyZWVuIiwgIkJsdWUiKSwKICAgICAgICBEZWZpbmUoIkFTQSIsICJBU0EiLCAxMDcwbSwgIlJhbmRvbSBjb2xvciIsICJCbGFjayIsICJXaGl0ZSIsICJHcmF5IiwgIlJhdyIpLAogICAgICAgIERlZmluZSgiVFBVIiwgIlRQVSAoU2hvcmUgOTVBKSIsIDEyMTBtLCAiQmxhY2siLCAiV2hpdGUiKSwKICAgICAgICBEZWZpbmUoIlBDIiwgIlBvbHljYXJib25hdGUgKFBDKSIsIDEyMDBtLCAiQmxhY2siLCAiVHJhbnNwYXJlbnQiKSwKICAgICAgICBEZWZpbmUoIlBBNiIsICJQQTYiLCAxMTQwbSwgIlJhdyIsICJCbGFjayIpLAogICAgICAgIERlZmluZSgiUEExMiIsICJQQTEyIiwgMTAxMG0sICJSYXciLCAiQmxhY2siKSwKICAgICAgICBEZWZpbmUoIlBMQS1DRiIsICJQTEEtQ0YiLCAxMjkwbSwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJQRVRHLUNGIiwgIlBFVEctQ0YiLCAxMjkwbSwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJQRVQtQ0YiLCAiUEVULUNGIiwgMTMwMG0sICJCbGFjayIpLAogICAgICAgIERlZmluZSgiUEEtQ0YiLCAiUEEtQ0YiLCAxMTYwbSwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJBU0EtQ0YiLCAiQVNBLUNGIiwgMTExMG0sICJCbGFjayIpLAogICAgICAgIERlZmluZSgiUEVURy1FU0QiLCAiUEVURy1FU0QiLCAxMzEwbSwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJQQTYxMi1FU0QiLCAiUEE2MTItRVNEIiwgMTEwMG0sICJCbGFjayIpLAogICAgICAgIERlZmluZSgiQUJTLUVTRCIsICJBQlMtRVNEIiwgOTcwbSwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJBQlMtRlIiLCAiQUJTLUZSIiwgMTE1MG0sICJCbGFjayIpLAogICAgICAgIERlZmluZSgiUEMtRlIiLCAiUEMtRlIiLCAxMjUwbSwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJNNjgiLCAiUmVzaW4gU3RhbmRhcmQiLCBudWxsLCAiR3JheSIsICJCbGFjayIsICJXaGl0ZSIpLAogICAgICAgIERlZmluZSgiSyIsICJSZXNpbiBUb3VnaCIsIG51bGwsICJHcmF5IiwgIkJsYWNrIiksCiAgICAgICAgRGVmaW5lKCJHMjE3IiwgIlJlc2luIENsZWFyIiwgbnVsbCwgIlRyYW5zcGFyZW50IiksCiAgICAgICAgRGVmaW5lKCJGODAiLCAiRWxhc3RpYyBSZXNpbiIsIG51bGwsICJCbGFjayIsICJUcmFuc3BhcmVudCIpLAogICAgICAgIERlZmluZSgiQ0FTVFdBWCIsICJDYXN0YWJsZSBXYXggUmVzaW4iLCBudWxsLCAiR3JlZW4iKSwKICAgICAgICBEZWZpbmUoIlBWQSIsICJQVkEiLCAxMjMwbSwgIlJhdyIpLAogICAgXSk7CgogICAgcHJpdmF0ZSBzdGF0aWMgQWRkaXRpdmVNYXRlcmlhbERlZmluaXRpb24gRGVmaW5lKHN0cmluZyBrZXksIHN0cmluZyBuYW1lLCBkZWNpbWFsPyBkZW5zaXR5LCBwYXJhbXMgc3RyaW5nW10gY29sb3JzKSA9PgogICAgICAgIG5ldyhrZXksIG5hbWUsIGRlbnNpdHksIEFycmF5LkFzUmVhZE9ubHkoY29sb3JzKSk7Cn0KCi8vLyA8c3VtbWFyeT5BIHNvdXJjZS1yZXZpZXdlZCBtYXRlcmlhbCBhbmQgaXRzIHJlcXVpcmVkIHJlbGF0aW9uc2hpcHMuPC9zdW1tYXJ5PgovLy8gPHBhcmFtIG5hbWU9IktleSI+U291cmNlIHF1b3RhdGlvbiBrZXkuPC9wYXJhbT4KLy8vIDxwYXJhbSBuYW1lPSJOYW1lIj5FeGlzdGluZyBjYXRhbG9nIGlkZW50aXR5IG5hbWUuPC9wYXJhbT4KLy8vIDxwYXJhbSBuYW1lPSJEZW5zaXR5Ij5EZWZhdWx0IGRlbnNpdHkgaW4ga2cvbTMsIHdoZXJlIGtub3duLjwvcGFyYW0+Ci8vLyA8cGFyYW0gbmFtZT0iQ29sb3JzIj5SZXF1aXJlZCBjYW5vbmljYWwgY29sb3IgbmFtZXMuPC9wYXJhbT4KcHVibGljIHNlYWxlZCByZWNvcmQgQWRkaXRpdmVNYXRlcmlhbERlZmluaXRpb24oc3RyaW5nIEtleSwgc3RyaW5nIE5hbWUsIGRlY2ltYWw/IERlbnNpdHksIElSZWFkT25seUxpc3Q8c3RyaW5nPiBDb2xvcnMpOwo="
+  },
+  "materials": [
+    {
+      "key": "ABS",
+      "browserColors": [
+        "Any",
+        "Black",
+        "White",
+        "Gray",
+        "Red",
+        "Yellow",
+        "Green",
+        "Blue"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Blue",
+        "Gray",
+        "Green",
+        "Random color",
+        "Red",
+        "White",
+        "Yellow"
+      ]
+    },
+    {
+      "key": "ABS-ESD",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "ABS-FR",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "ASA",
+      "browserColors": [
+        "Any",
+        "Black",
+        "White",
+        "Gray",
+        "Natural"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Gray",
+        "Random color",
+        "Raw",
+        "White"
+      ]
+    },
+    {
+      "key": "ASA-CF",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "CASTWAX",
+      "browserColors": [
+        "Green"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Green"
+      ]
+    },
+    {
+      "key": "F80",
+      "browserColors": [
+        "Black",
+        "Translucent"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Transparent"
+      ]
+    },
+    {
+      "key": "G217",
+      "browserColors": [
+        "Clear"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Transparent"
+      ]
+    },
+    {
+      "key": "HIPS",
+      "browserColors": [
+        "White"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "White"
+      ]
+    },
+    {
+      "key": "K",
+      "browserColors": [
+        "Gray",
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Gray"
+      ]
+    },
+    {
+      "key": "M68",
+      "browserColors": [
+        "Gray",
+        "Black",
+        "White"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Gray",
+        "White"
+      ]
+    },
+    {
+      "key": "PA-CF",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PA12",
+      "browserColors": [
+        "Natural",
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Raw"
+      ]
+    },
+    {
+      "key": "PA6",
+      "browserColors": [
+        "Natural",
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Raw"
+      ]
+    },
+    {
+      "key": "PA612-ESD",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PC",
+      "browserColors": [
+        "Black",
+        "Translucent"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Transparent"
+      ]
+    },
+    {
+      "key": "PC-FR",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PET-CF",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PETG",
+      "browserColors": [
+        "Any",
+        "Black",
+        "White",
+        "Gray",
+        "Clear",
+        "Red",
+        "Orange",
+        "Yellow",
+        "Green",
+        "Blue"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "Blue",
+        "Gray",
+        "Green",
+        "Orange",
+        "Random color",
+        "Red",
+        "Transparent",
+        "White",
+        "Yellow"
+      ]
+    },
+    {
+      "key": "PETG-CF",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PETG-ESD",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PLA",
+      "browserColors": [
+        "Any",
+        "Black",
+        "White",
+        "Gray",
+        "Silver",
+        "Red",
+        "Orange",
+        "Yellow",
+        "Green",
+        "Blue",
+        "Purple",
+        "Pink"
+      ],
+      "custom": true,
+      "canonicalColors": [
+        "Black",
+        "Blue",
+        "Gray",
+        "Green",
+        "Orange",
+        "Other",
+        "Pink",
+        "Purple",
+        "Random color",
+        "Red",
+        "Silver",
+        "White",
+        "Yellow"
+      ]
+    },
+    {
+      "key": "PLA-CF",
+      "browserColors": [
+        "Black"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black"
+      ]
+    },
+    {
+      "key": "PVA",
+      "browserColors": [
+        "Natural"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Raw"
+      ]
+    },
+    {
+      "key": "TPU",
+      "browserColors": [
+        "Black",
+        "White"
+      ],
+      "custom": false,
+      "canonicalColors": [
+        "Black",
+        "White"
+      ]
+    }
+  ]
+}
