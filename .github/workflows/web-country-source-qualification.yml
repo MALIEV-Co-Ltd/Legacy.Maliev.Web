@@ -1,5 +1,9 @@
 name: Web country source BUILD qualification
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/web-country-source-qualification.yml'
+      - 'scripts/**'
   workflow_dispatch:
     inputs:
       manifest_blob:
@@ -17,6 +21,24 @@ concurrency:
   group: web-sealed-source-qualification
   cancel-in-progress: false
 jobs:
+  kernel-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Prove actual capped unit and finite stub cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B scripts/launch_web_capped_kernel_proof.py --evidence "$RUNNER_TEMP/web-kernel-evidence"
+      - name: Retain actual kernel and cleanup receipts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-kernel-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/web-kernel-evidence/
   country-build:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
