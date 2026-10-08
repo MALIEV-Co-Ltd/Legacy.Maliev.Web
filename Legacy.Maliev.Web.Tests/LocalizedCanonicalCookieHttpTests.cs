@@ -171,6 +171,35 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
         Assert.Contains("noindex", await response.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("", "en", "https://www.maliev.com/account/login")]
+    [InlineData("?culture=invalid", "en", "https://www.maliev.com/account/login")]
+    [InlineData("?culture=fr", "en", "https://www.maliev.com/account/login")]
+    [InlineData("?culture=th", "th", "https://www.maliev.com/account/login")]
+    [InlineData("?culture=TH", "th", "https://www.maliev.com/account/login")]
+    [InlineData("?culture=en", "en", "https://www.maliev.com/account/login?culture=en")]
+    [InlineData("?culture=EN", "en", "https://www.maliev.com/account/login?culture=en")]
+    public async Task EnglishCookie_PrivateRazorDocument_CanonicalUsesExplicitQueryRatherThanUiCulture(
+        string query, string language, string canonical)
+    {
+        await using var configured = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Login", "false"));
+        using var client = configured.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false,
+            HandleCookies = true
+        });
+        using var request = Request("GET", "/account/login" + query, EnglishCookie);
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+        var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Contains($"<html lang=\"{language}\"", document, StringComparison.Ordinal);
+        Assert.Contains("noindex", document, StringComparison.OrdinalIgnoreCase);
+        AssertDocumentLinks(document, canonical, "/account/login");
+    }
+
     [Fact]
     public async Task EnglishCookie_MutationWithoutAntiforgery_IsRejectedRatherThanRedirected()
     {
@@ -231,15 +260,15 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
         return request;
     }
 
-    private static void AssertDocumentLinks(string document, string canonical)
+    private static void AssertDocumentLinks(string document, string canonical, string path = "/about")
     {
         Assert.Single(Regex.Matches(document, "<link(?=[^>]*rel=\"canonical\")(?=[^>]*href=\""
             + Regex.Escape(canonical) + "\")[^>]*>"));
         foreach (var (language, url) in new[]
         {
-            ("en", "https://www.maliev.com/about?culture=en"),
-            ("th", "https://www.maliev.com/about"),
-            ("x-default", "https://www.maliev.com/about")
+            ("en", "https://www.maliev.com" + path + "?culture=en"),
+            ("th", "https://www.maliev.com" + path),
+            ("x-default", "https://www.maliev.com" + path)
         })
         {
             Assert.Single(Regex.Matches(document, "<link(?=[^>]*rel=\"alternate\")(?=[^>]*hreflang=\""

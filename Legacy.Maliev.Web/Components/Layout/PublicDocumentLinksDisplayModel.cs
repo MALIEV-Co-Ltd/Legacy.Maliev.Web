@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Legacy.Maliev.Web.Components.Layout;
 
 public sealed record PublicDocumentLinksDisplayModel(
@@ -12,7 +10,7 @@ public sealed record PublicDocumentLinksDisplayModel(
         ArgumentNullException.ThrowIfNull(context);
 
         var path = context.Request.Path;
-        var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        var culture = context.Request.Query["culture"].ToString();
 
         return new PublicDocumentLinksDisplayModel(
             CanonicalUrlPolicy.GetLocalizedUrl(path, culture),
