@@ -1,3 +1,4 @@
+using System.Net;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Configuration;
@@ -127,6 +128,16 @@ public static class ServiceCollectionExtensions
             client.BaseAddress = resolveBaseAddress(provider.GetRequiredService<IOptions<ServiceEndpoints>>().Value);
             client.Timeout = TimeSpan.FromSeconds(10);
         }).AddStandardResilienceHandler(options =>
-            options.Retry.DisableForUnsafeHttpMethods());
+        {
+            options.Retry.DisableForUnsafeHttpMethods();
+            if (name == "catalog" && options.Retry.ShouldHandle is { } original)
+            {
+                // Preserve the original predicate for every outcome except explicitly tagged interactive429.
+                options.Retry.ShouldHandle = arguments => arguments.Outcome.Result is
+                { StatusCode: HttpStatusCode.TooManyRequests, RequestMessage: { } responseRequest }
+                    && responseRequest.Options.TryGetValue(ThaiLookupClient.InteractiveRetryKey, out var interactive) && interactive
+                        ? ValueTask.FromResult(false) : original(arguments);
+            }
+        });
     }
 }

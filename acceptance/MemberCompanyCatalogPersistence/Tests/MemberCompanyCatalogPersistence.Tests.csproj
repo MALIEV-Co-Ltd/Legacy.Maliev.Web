@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj" />
+    <Compile Include="../../../Legacy.Maliev.Web.Tests/BillingProofLifetime.cs" Link="BillingProofLifetime.cs" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

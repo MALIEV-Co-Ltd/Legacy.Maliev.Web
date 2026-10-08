@@ -10,6 +10,8 @@ namespace Legacy.Maliev.Web.Infrastructure;
 
 internal sealed class ThaiLookupClient(IHttpClientFactory clients, IServiceAccessTokenProvider tokens) : IThaiLookupClient
 {
+    internal static readonly HttpRequestOptionsKey<bool> InteractiveRetryKey = new("maliev-thai-lookup-interactive");
+
     public Task<LookupResult<ThaiAddressPage>> SearchAddressAsync(ThaiAddressQuery query, CancellationToken cancellationToken)
     {
         if (!ThaiLookupValidation.Valid(query)) return Task.FromResult(new LookupResult<ThaiAddressPage>(null, 400));
@@ -56,8 +58,9 @@ internal sealed class ThaiLookupClient(IHttpClientFactory clients, IServiceAcces
     {
         using (request)
         {
+            request.Options.Set(InteractiveRetryKey, true);
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            deadline.CancelAfter(TimeSpan.FromSeconds(10));
+            deadline.CancelAfter(TimeSpan.FromSeconds(8));
             var operationToken = deadline.Token;
             try
             {
