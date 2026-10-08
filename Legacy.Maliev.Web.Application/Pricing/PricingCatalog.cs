@@ -106,7 +106,7 @@ public static class PricingCatalog
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> MaterialColors = BuildMaterialColors();
 
     private static readonly IReadOnlySet<string> CustomColorMaterials = new HashSet<string>(
-        ["PLA", "PETG", "ABS", "ASA", "TPU", "PC", "PC-FR", "PA6", "PA12", "ABS-FR"],
+        ["PLA"],
         StringComparer.OrdinalIgnoreCase);
 
     public static double AvailablePrinterMinutes => PrinterCount * UtilizationRate * CalendarMinutesPerMonth;
@@ -201,28 +201,26 @@ public static class PricingCatalog
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildMaterialColors()
     {
         string[] full = ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"];
-        string[] neutral = ["Any", "Natural", "Black", "White", "Gray"];
-        string[] carbon = ["Black", "Natural"];
 
         return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["PLA"] = new FrozenList<string>(full),
-            ["PETG"] = new FrozenList<string>(full),
-            ["ABS"] = new FrozenList<string>(full),
-            ["ASA"] = new FrozenList<string>(full),
-            ["HIPS"] = new FrozenList<string>(["Black", "White"]),
-            ["TPU"] = new FrozenList<string>(["Any", "Black", "White", "Clear", "Red", "Blue"]),
-            ["PC"] = new FrozenList<string>(neutral),
-            ["PC-FR"] = new FrozenList<string>(neutral),
-            ["PA6"] = new FrozenList<string>(neutral),
-            ["PA12"] = new FrozenList<string>(neutral),
-            ["ABS-FR"] = new FrozenList<string>(neutral),
-            ["PLA-CF"] = new FrozenList<string>(carbon),
-            ["PETG-CF"] = new FrozenList<string>(carbon),
-            ["PET-CF"] = new FrozenList<string>(carbon),
-            ["PA-CF"] = new FrozenList<string>(carbon),
-            ["ASA-CF"] = new FrozenList<string>(carbon),
-            ["PETG-ESD"] = new FrozenList<string>(carbon),
+            ["PETG"] = new FrozenList<string>(["Any", "Black", "White", "Gray", "Clear", "Red", "Orange", "Yellow", "Green", "Blue"]),
+            ["ABS"] = new FrozenList<string>(["Any", "Black", "White", "Gray", "Red", "Yellow", "Green", "Blue"]),
+            ["ASA"] = new FrozenList<string>(["Any", "Black", "White", "Gray", "Natural"]),
+            ["HIPS"] = new FrozenList<string>(["White"]),
+            ["TPU"] = new FrozenList<string>(["Black", "White"]),
+            ["PC"] = new FrozenList<string>(["Black", "Translucent"]),
+            ["PC-FR"] = new FrozenList<string>(["Black"]),
+            ["PA6"] = new FrozenList<string>(["Natural", "Black"]),
+            ["PA12"] = new FrozenList<string>(["Natural", "Black"]),
+            ["ABS-FR"] = new FrozenList<string>(["Black"]),
+            ["PLA-CF"] = new FrozenList<string>(["Black"]),
+            ["PETG-CF"] = new FrozenList<string>(["Black"]),
+            ["PET-CF"] = new FrozenList<string>(["Black"]),
+            ["PA-CF"] = new FrozenList<string>(["Black"]),
+            ["ASA-CF"] = new FrozenList<string>(["Black"]),
+            ["PETG-ESD"] = new FrozenList<string>(["Black"]),
             ["PA612-ESD"] = new FrozenList<string>(["Black"]),
             ["ABS-ESD"] = new FrozenList<string>(["Black"]),
             ["PVA"] = new FrozenList<string>(["Natural"]),

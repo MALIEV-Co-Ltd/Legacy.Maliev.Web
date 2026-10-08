@@ -14,6 +14,186 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Theory]
+    [MemberData(nameof(MaterialCatalogCrossLayerContractTests.OfferedMaterials), MemberType = typeof(MaterialCatalogCrossLayerContractTests))]
+    public async Task RenderedEveryOfferColorInventoryMatchesOriginalCatalog(string materialKey)
+    {
+        await WithOriginalCatalogMeshBrowserAsync(async (factory, upload, page, partId, _) =>
+        {
+            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync(materialKey);
+            await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey, null, requirePhysical: false);
+            var serverColors = Legacy.Maliev.Web.Application.Pricing.PricingCatalog.MaterialColors[materialKey].ToArray();
+            await page.WaitForFunctionAsync(
+                """
+                expected => {
+                  const picker = document.querySelector('[data-workflow-material-picker] select[name="color"]');
+                  return !!picker && JSON.stringify([...picker.options].map(option => option.value)) === JSON.stringify(expected);
+                }
+                """, serverColors, new PageWaitForFunctionOptions { Timeout = 30000 });
+            var actual = await page.Locator("[data-workflow-material-picker] select[name='color'] option")
+                .EvaluateAllAsync<string[]>("options => options.map(option => option.value)");
+            Assert.Equal(MaterialCatalogCrossLayerContractTests.ExpectedBrowserColors(materialKey), actual);
+        });
+    }
+
+    [Theory]
+    [InlineData("PA612-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard)]
+    [InlineData("PA612-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality)]
+    [InlineData("PA612-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength)]
+    [InlineData("ABS-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard)]
+    [InlineData("ABS-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality)]
+    [InlineData("ABS-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength)]
+    public async Task OriginalEsdMaterials_AllBuildsReachRealMeshAutomaticPhysicalPrice(
+        string materialKey, Legacy.Maliev.Web.Application.Pricing.BuildPreference build)
+    {
+        await WithOriginalCatalogMeshBrowserAsync(async (factory, upload, page, partId, digest) =>
+        {
+            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync(materialKey);
+            await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey,
+                Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard, requirePhysical: true);
+            var buildValue = build.ToString().ToLowerInvariant();
+            await page.Locator($"[data-workflow-build-preference] input[value='{buildValue}']").CheckAsync();
+            var state = await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey, build, requirePhysical: true);
+            await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')",
+                null, new PageWaitForFunctionOptions { Timeout = 30000 });
+            Assert.Equal(materialKey, await page.Locator("[data-workflow-material-picker] select[name='material']").InputValueAsync());
+            Assert.True(await page.Locator($"[data-workflow-build-preference] input[value='{buildValue}']").IsCheckedAsync());
+            Assert.Equal(new[] { "Black" }, await page.Locator("[data-workflow-material-picker] select[name='color'] option")
+                .EvaluateAllAsync<string[]>("options => options.map(option => option.value)"));
+            Assert.Equal(0, await page.Locator("[data-workflow-price-unavailable]").CountAsync());
+            await page.Locator("[data-workflow-selected-print-time] dd").WaitForAsync();
+
+            var part = Assert.Single(state.Parts);
+            Assert.Equal(partId, part.PartId);
+            Assert.Equal(materialKey, part.Configuration.MaterialKey);
+            Assert.Equal(build, part.Configuration.BuildPreference);
+            Assert.Equal(1, part.Configuration.Quantity);
+            var physicalUpload = Assert.IsType<InstantQuotationPhysicalAnalysisUpload>(part.PhysicalAnalysisUpload);
+            Assert.Equal(digest, physicalUpload.Sha256);
+            Assert.Equal(digest, part.Geometry.Sha256);
+            var receipt = Assert.Single(state.PhysicalReceipts!, value => value.PartId == partId
+                && value.MaterialKey == materialKey && value.BuildPreference == build);
+            Assert.Equal(state.SessionId, receipt.SessionId);
+            Assert.Equal(upload.OwnerIdentity, receipt.OwnerIdentity);
+            Assert.Equal(physicalUpload.FileId, receipt.FileId);
+            Assert.Equal(digest, receipt.UploadSha256);
+            Assert.Equal(materialKey, receipt.ConfiguredMaterialKey);
+            Assert.Equal(1, receipt.Quantity);
+            Assert.True(double.IsFinite(receipt.MotionSeconds) && receipt.MotionSeconds > 0);
+
+            using var scope = factory.Services.CreateScope();
+            var profiles = scope.ServiceProvider.GetRequiredService<Legacy.Maliev.Web.Application.Pricing.FdmRuntimeProfileCatalog>();
+            Assert.True(profiles.TryResolveTrustedProfile(materialKey, build, out var profile));
+            Assert.NotNull(profile);
+            Assert.Equal(materialKey == "PA612-ESD" ? 12d : 22d, profile.MaximumVolumetricFlowMm3PerSecond!.Value);
+            if (materialKey == "ABS-ESD") Assert.Equal(200d, profile.Motion.TravelSpeedMmPerSecond);
+            Assert.Equal(profiles.ProfileVersion, receipt.ProfileVersion);
+            Assert.Equal(profile.ResolvedProfileSha256, receipt.ProfileSha256);
+            Assert.Null(Legacy.Maliev.Web.Application.Pricing.PricingCatalog.ResolveMaterial("PC-ESD"));
+            Assert.False(profiles.TryResolveTrustedProfile("PC-ESD", build, out _));
+
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var mesh = await new InstantQuotationAdmittedMeshService(new BrowserMultiUploadInputReader(upload,
+                scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>()))
+                .ReadAsync(state.SessionId, upload.OwnerIdentity, partId, physicalUpload.FileId, digest, deadline.Token);
+            Assert.True(mesh.IsReady);
+            Assert.Equal(digest, mesh.UploadSha256);
+            Assert.Equal(12, mesh.Mesh!.Triangles.Count);
+            var binding = new InstantQuotationPhysicalAnalysisBinding(state.SessionId, upload.OwnerIdentity,
+                partId, physicalUpload.FileId, digest, materialKey, build, 1, profiles.ProfileVersion);
+            var analyzed = await scope.ServiceProvider.GetRequiredService<InstantQuotationBoundPhysicalAnalysisService>()
+                .AnalyzeAsync(binding, deadline.Token);
+            Assert.True(analyzed.IsReady, analyzed.Failure.ToString());
+            Assert.Equal(binding, analyzed.Binding);
+            Assert.Equal(receipt.ProfileSha256, analyzed.Physical!.ProfileSha256);
+            Assert.Equal(receipt.MotionSeconds, analyzed.Physical.Motion.TotalSeconds, 6);
+
+            var quote = await scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>()
+                .QuoteAsync(state, upload.OwnerIdentity, includeComparisons: false, deadline.Token);
+            Assert.NotNull(quote);
+            var line = Assert.Single(quote.Parts);
+            Assert.Equal(partId, line.PartId);
+            Assert.Equal(materialKey, line.MaterialKey);
+            Assert.Equal(build, line.BuildPreference);
+            Assert.Equal(receipt, line.PhysicalReceipt);
+            Assert.True(double.IsFinite(line.PrintTimeMinutesPerUnit) && line.PrintTimeMinutesPerUnit > 0);
+            Assert.Equal(receipt.MotionSeconds / 60, line.PrintTimeMinutesPerUnit, 6);
+            Assert.True(double.IsFinite(line.Subtotal) && line.Subtotal > 0);
+            Assert.True(scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>()
+                .Validate(state, quote, state.QuoteAuthorization!, DateTimeOffset.UtcNow));
+            var subtotal = page.Locator("[data-workflow-part-price] dt")
+                .Filter(new LocatorFilterOptions { HasText = "Subtotal" }).Locator("..").Locator("dd");
+            var renderedSubtotal = await subtotal.EvaluateAsync<double>(
+                "element => Number(element.textContent.replace(/[^0-9.-]/g, ''))");
+            Assert.True(double.IsFinite(renderedSubtotal) && renderedSubtotal > 0);
+            Assert.Equal(line.Subtotal, renderedSubtotal, 2);
+            output.WriteLine($"[original-esd-proof] material={materialKey}; build={build}; part={partId:D}; uploadSha256={digest}; profileSha256={receipt.ProfileSha256}; physicalSha256={receipt.PhysicalSha256}; positiveMinutes={line.PrintTimeMinutesPerUnit > 0}; positiveSubtotal={line.Subtotal > 0}");
+        });
+    }
+
+    private static async Task<InstantQuotationSessionState> WaitForCatalogConfigurationAsync(
+        RealUploadTestingWebApplicationFactory factory, HashCheckingUploadClient upload, Guid partId,
+        string materialKey, Legacy.Maliev.Web.Application.Pricing.BuildPreference? build, bool requirePhysical)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+        while (true)
+        {
+            var state = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, deadline.Token).WaitAsync(deadline.Token);
+            var part = state?.Parts.SingleOrDefault(value => value.PartId == partId);
+            if (part is not null && part.Configuration.MaterialKey == materialKey
+                && (build is null || part.Configuration.BuildPreference == build)
+                && (!requirePhysical || (state!.QuoteAuthorization is not null
+                    && state.PhysicalReceipts?.Any(receipt => receipt.PartId == partId
+                        && receipt.MaterialKey == materialKey && receipt.BuildPreference == build) is true)))
+                return state!;
+            await Task.Delay(TimeSpan.FromMilliseconds(100), deadline.Token);
+        }
+    }
+
+    private static async Task WithOriginalCatalogMeshBrowserAsync(
+        Func<RealUploadTestingWebApplicationFactory, HashCheckingUploadClient, IPage, Guid, string, Task> examine)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync("/instantquotation/3d-printing?culture=en");
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync();
+        await page.GotoAsync(new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+        var path = CreateBoxStl(20, 20, 5, "original-material-contract");
+        try
+        {
+            var digest = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
+            await page.SetInputFilesAsync("#instant-quote-files", path);
+            await page.Locator("[data-workflow-price-tier]").First.WaitForAsync();
+            var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+            await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+            var keys = await page.Locator("[data-workflow-material-picker] select[name='material'] option")
+                .EvaluateAllAsync<string[]>("options => options.map(option => option.value)");
+            Assert.Equal(MaterialCatalogCrossLayerContractTests.ExpectedMaterialKeys, keys.Order(StringComparer.Ordinal));
+            Assert.DoesNotContain("PC-ESD", keys);
+            await examine(factory, upload, page, partId, digest);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
     [InlineData(320, "th")]
     [InlineData(375, "en")]
     public async Task UploadedPartShowsOnlyPhysicallyVerifiedQuantityAndReviewActionsReachable(int width, string culture)
