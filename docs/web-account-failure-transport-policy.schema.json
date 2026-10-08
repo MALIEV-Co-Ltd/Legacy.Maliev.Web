@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Account failure transport policy proposal (not an SDK grant)",
+  "type": "object",
+  "required": [
+    "sliceKind",
+    "acceptedBase",
+    "sourceFiles",
+    "sourceCount",
+    "baseSourceCount",
+    "producerPrerequisites",
+    "nativeAdmissionSha256",
+    "sdkOwnerContextSha256",
+    "allowedPhases",
+    "phases",
+    "baselineRedRequired"
+  ],
+  "properties": {
+    "sliceKind": {
+      "const": "account-failure-v1"
+    },
+    "acceptedBase": {
+      "const": "901bf3ac6136c3d3e950de1cfd848f0eba0a215a"
+    },
+    "sourceCount": {
+      "const": 1963
+    },
+    "baseSourceCount": {
+      "const": 1962
+    },
+    "sourceFiles": {
+      "type": "array",
+      "minItems": 1963,
+      "maxItems": 1963
+    },
+    "capsuleRows": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "nativeAdmissionSha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sdkOwnerContextSha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "producerPrerequisites": {
+      "type": "object",
+      "required": [
+        "mode",
+        "remoteServiceQualification",
+        "contractFiles",
+        "authEndpoint",
+        "notificationEndpoint",
+        "testPath",
+        "testSha256"
+      ],
+      "properties": {
+        "mode": {
+          "const": "controlled-auth-mail-wire-contracts"
+        },
+        "remoteServiceQualification": {
+          "const": false
+        }
+      }
+    },
+    "allowedPhases": {
+      "const": [
+        "build",
+        "focused",
+        "suite",
+        "coverage",
+        "static"
+      ]
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "baselineRedRequired": {
+      "const": true
+    }
+  },
+  "not": {
+    "required": [
+      "customerLiteralProducerSha"
+    ]
+  }
+}

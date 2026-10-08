@@ -2,6 +2,12 @@ name: Web sealed source qualification
 'on':
   pull_request:
     paths:
+    - .gitleaks.toml
+    - scripts/tests/test_web_candidate_secret_scan.py
+    - scripts/run_web_account_candidate.py
+    - scripts/web-account-failure-policy.json
+    - scripts/tests/test_web_candidate_account.py
+    - docs/web-account-failure-transport-policy.schema.json
     - scripts/materialize_web_candidate.py
     - scripts/check_web_candidate_admission.py
     - scripts/tests/test_materialize_web_candidate.py
@@ -45,6 +51,10 @@ jobs:
       run: python3 -B -c 'import hashlib,json; from pathlib import Path; p=json.loads(Path("scripts/web-candidate-policy.json").read_bytes());
         assert hashlib.sha256(Path("scripts/sealed_source_capsule.py").read_bytes()).hexdigest()==p["sharedExtractorSha256"],
         "Shared extractor bytes changed"'
+    - name: Verify distinct account policy raw-byte seal
+      run: python3 -B -c 'import materialize_web_candidate as m; m.load_policy("scripts/web-account-failure-policy.json")'
+      env:
+        PYTHONPATH: scripts
     - name: Run capsule and native admission rejection controls
       run: 'python3 -B -m unittest discover -s scripts/tests -p ''test_*web_candidate*.py''
 

@@ -9,6 +9,8 @@ import subprocess
 
 REPOSITORY = "MALIEV-Co-Ltd/Legacy.Maliev.Web"
 COUNTRY_POLICY_SHA256 = "c920c1a0aef5782020f0c2621d59dfed500804d0ed4ba38c79d529bfeb251c2d"
+ACCOUNT_POLICY_SHA256 = "411c09afea2ca4181c15c2c5ba88239ac9f39c2ce7db1537a1cbf17ab4432f3a"
+ACCOUNT_SOURCE_COUNT = 1963
 EXPECTED_POLICY_SHA256 = "100ae2ae0a4a8c25cbf47ae3f4a0e0039e93f211d091ec48b192852e176ba43b"
 
 
@@ -22,7 +24,7 @@ NoRedirect = shared.NoRedirect
 
 def load_policy(path):
     raw = Path(path).read_bytes()
-    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256}:
+    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256}:
         raise ValueError("Reviewed policy raw-byte identity changed")
     return parse_json(raw)
 
@@ -35,7 +37,12 @@ def validate_capsule(manifest_bytes, capsule_bytes, policy):
     manifest = parse_json(manifest_bytes)
     for key in ("owner", "acceptedBase", "sourcePins", "sourceBindingSha256", "sourceFiles", "capsuleRows"):
         if manifest.get(key) != policy[key]: raise ValueError("Reviewed manifest association changed: " + key)
-    count = 1952 if policy.get("sliceKind") == "country-operation-v1" else 1983
+    if policy.get("sliceKind") == "account-failure-v1":
+        if policy.get("sourceCount") != ACCOUNT_SOURCE_COUNT:
+            raise ValueError("Exact account inventory count required")
+        count = ACCOUNT_SOURCE_COUNT
+    else:
+        count = 1952 if policy.get("sliceKind") == "country-operation-v1" else 1983
     if manifest.get("schemaVersion") != 1 or len(manifest["sourceFiles"]) != count:
         raise ValueError("Frozen source inventory changed")
     expected = {}
@@ -106,6 +113,13 @@ def materialize(root, policy, files):
     verify_source(root, policy)
 
 
+def source_status(policy, materialized=False):
+    count = len(policy["sourceFiles"]) if policy.get("sliceKind") == "account-failure-v1" else 1983
+    if materialized:
+        return f"Reviewed raw candidate materialized ({count} files); native validation pending."
+    return f"Reviewed raw candidate source remains unchanged ({count} files)."
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--policy", type=Path, required=True)
@@ -127,7 +141,7 @@ def main():
             raise ValueError("transport checkout differs from workflow commit")
     if args.verify_only:
         verify_source(root, policy, parse_json(args.dist_postimage.read_bytes()) if args.dist_postimage else None)
-        print("Reviewed raw candidate source remains unchanged (1983 files).")
+        print(source_status(policy))
         return
     if args.receipt is None or args.receipt.exists():
         raise ValueError("fresh evidence receipt path required")
@@ -140,7 +154,7 @@ def main():
                                       "capsuleBlob": args.capsule_blob, "acceptedBase": policy["acceptedBase"],
                                       "sourcePins": policy["sourcePins"], "sourceFiles": policy["sourceFiles"],
                                       "transportCommit": transport_commit, "nativeValidated": False}, indent=2) + "\n")
-    print("Reviewed raw candidate materialized (1983 files); native validation pending.")
+    print(source_status(policy, materialized=True))
 
 
 if __name__ == "__main__":
