@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 class RejectionControls(unittest.TestCase):
     def valid(self):
-        return {'surface':'member-company-update','culture':'en','width':1280,'candidateHead':'a'*40,'companyId':1,'selectedCompany':'Synthetic Company Limited','selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'reloadVerified':True,'contactsAndAddressIdentitiesPreserved':True,'manualRegistrarPreserved':True,'deniedLookupStatus':403,'deniedWriteStatus':403,'deniedWriteUnchanged':True,'unavailableStatus':503,'rateLimitedStatus':429,'manualFallbackEditable':True,'syntheticUpstreamOnly':True,'fixtureNullEmailRejectedStatus':400,'fixturePreparedStatus':204,'preparedFixtureEmailPreserved':True,'runtimeRetryPolicy':{'clientName':'catalog','runtimeDefaultsRevision':'3c790ba6414b2a539f24aabb6948549ffd81a86b','handlerCount':2,'standardOptionsKey':'catalog-standard','sharedMaxRetryAttempts':3,'runtimePackageSourceRevision':'02107c65bab30aad9e35b5133ed643eaa77bccd8','confirmedFromActualHandlerChain':True},'browserRequests':[{'query':prefix+' en','language':'en','count':1} for prefix in ['Synthetic','Unavailable','RateLimited']],'observations':[{'logicalUri':'https://data.creden.co/sapi/search/get_suggestion','physicalLoopback':True,'method':'POST','typeSearch':'prefix','query':prefix+' en','language':'en','status':status} for prefix,status in [('Synthetic',200),('Unavailable',503),('RateLimited',429)]]}
+        return {'surface':'member-company-update','culture':'en','width':1280,'candidateHead':'a'*40,'companyId':1,'selectedCompany':'Synthetic Company Limited','selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'reloadVerified':True,'contactsAndAddressIdentitiesPreserved':True,'manualRegistrarPreserved':True,'deniedLookupStatus':403,'deniedWriteStatus':403,'deniedWriteUnchanged':True,'unavailableStatus':503,'rateLimitedStatus':429,'manualFallbackEditable':True,'syntheticUpstreamOnly':True,'fixtureNullEmailRejectedStatus':400,'fixturePreparedStatus':204,'preparedFixtureEmailPreserved':True,'runtimeRetryPolicy':{'clientName':'catalog','runtimeDefaultsRevision':'3c790ba6414b2a539f24aabb6948549ffd81a86b','handlerCount':2,'pipelineOptions':[{'optionsKey':'-standard','maxRetryAttempts':3},{'optionsKey':'catalog-standard','maxRetryAttempts':3}],'pipelineOrderFromPinnedSource':['-standard','catalog-standard'],'runtimePackageSourceRevision':'02107c65bab30aad9e35b5133ed643eaa77bccd8','confirmedFromActualHandlerChain':True},'browserRequests':[{'query':prefix+' en','language':'en','count':1} for prefix in ['Synthetic','Unavailable','RateLimited']],'observations':[{'logicalUri':'https://data.creden.co/sapi/search/get_suggestion','physicalLoopback':True,'method':'POST','typeSearch':'prefix','query':prefix+' en','language':'en','status':status} for prefix,status in [('Synthetic',200),('Unavailable',503),('RateLimited',429)]]}
     def test_accept_control_metadata_only(self):
         self.assertEqual(receipt(self.valid(),'en','a'*40)['companyId'],1)
     def test_reject_foreign_candidate(self):
@@ -79,7 +79,7 @@ class RejectionControls(unittest.TestCase):
         value=self.valid();value['runtimeRetryPolicy']['handlerCount']=1
         with self.assertRaises(ValueError):receipt(value,'en','a'*40)
     def test_reject_unproven_retry_count(self):
-        value=self.valid();value['runtimeRetryPolicy']['sharedMaxRetryAttempts']=4
+        value=self.valid();value['runtimeRetryPolicy']['pipelineOptions'][1]['maxRetryAttempts']=4
         with self.assertRaises(ValueError):receipt(value,'en','a'*40)
     def test_reject_multiple_browser_requests_per_phase(self):
         value=self.valid();value['browserRequests'][1]['count']=2
@@ -92,6 +92,30 @@ class RejectionControls(unittest.TestCase):
         with self.assertRaises(ValueError):receipt(value,'en','a'*40)
     def test_reject_unknown_runtime_metadata(self):
         value=self.valid();value['runtimeRetryPolicy']['unapproved']='anything'
+        with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+
+    def test_reject_missing_outer_pipeline_options(self):
+        value=self.valid();value['runtimeRetryPolicy']['pipelineOptions'].pop(0)
+        with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+    def test_reject_duplicate_inner_options_as_outer(self):
+        value=self.valid();options=value['runtimeRetryPolicy']['pipelineOptions'];options[0]=copy.deepcopy(options[1])
+        with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+    def test_reject_reversed_pipeline_option_entries(self):
+        value=self.valid();value['runtimeRetryPolicy']['pipelineOptions'].reverse()
+        with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+    def test_reject_unknown_options_metadata(self):
+        value=self.valid();value['runtimeRetryPolicy']['pipelineOptions'][0]['privateTrace']='unapproved'
+        with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+    def test_reject_unproven_outer_retry_limit(self):
+        for limit in [True,3.0,2,4]:
+            with self.subTest(limit=limit):
+                value=self.valid();value['runtimeRetryPolicy']['pipelineOptions'][0]['maxRetryAttempts']=limit
+                with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+    def test_reject_falsely_shared_options_claim(self):
+        value=self.valid();value['runtimeRetryPolicy']['sharedMaxRetryAttempts']=3
+        with self.assertRaises(ValueError):receipt(value,'en','a'*40)
+    def test_reject_reversed_pinned_source_order(self):
+        value=self.valid();value['runtimeRetryPolicy']['pipelineOrderFromPinnedSource'].reverse()
         with self.assertRaises(ValueError):receipt(value,'en','a'*40)
 
 class CleanupRejectionControls(unittest.TestCase):

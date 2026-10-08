@@ -123,6 +123,23 @@ public static class ServiceCollectionExtensions
         string name,
         Func<ServiceEndpoints, Uri> resolveBaseAddress)
     {
+        // Local capability proves that the named Catalog predicate refused this actual tagged429.
+        var refusalKey = new HttpRequestOptionsKey<(object Token, HttpRequestMessage Request)>("maliev-catalog-interactive429-refusal");
+        var refusalToken = new object();
+        if (name == "catalog")
+        {
+            services.PostConfigure<HttpStandardResilienceOptions>("-standard", options =>
+            {
+                if (options.Retry.ShouldHandle is not { } original)
+                    throw new InvalidOperationException("Original default retry predicate is required.");
+                options.Retry.ShouldHandle = arguments => arguments.Outcome.Result is
+                { StatusCode: HttpStatusCode.TooManyRequests, RequestMessage: { } responseRequest }
+                    && responseRequest.Options.TryGetValue(ThaiLookupClient.InteractiveRetryKey, out var interactive) && interactive
+                    && responseRequest.Options.TryGetValue(refusalKey, out var refusal)
+                    && ReferenceEquals(refusal.Token, refusalToken) && ReferenceEquals(refusal.Request, responseRequest)
+                        ? ValueTask.FromResult(false) : original(arguments);
+            });
+        }
         services.AddHttpClient(name, (provider, client) =>
         {
             client.BaseAddress = resolveBaseAddress(provider.GetRequiredService<IOptions<ServiceEndpoints>>().Value);
@@ -133,10 +150,17 @@ public static class ServiceCollectionExtensions
             if (name == "catalog" && options.Retry.ShouldHandle is { } original)
             {
                 // Preserve the original predicate for every outcome except explicitly tagged interactive429.
-                options.Retry.ShouldHandle = arguments => arguments.Outcome.Result is
-                { StatusCode: HttpStatusCode.TooManyRequests, RequestMessage: { } responseRequest }
-                    && responseRequest.Options.TryGetValue(ThaiLookupClient.InteractiveRetryKey, out var interactive) && interactive
-                        ? ValueTask.FromResult(false) : original(arguments);
+                options.Retry.ShouldHandle = arguments =>
+                {
+                    if (arguments.Outcome.Result is
+                        { StatusCode: HttpStatusCode.TooManyRequests, RequestMessage: { } responseRequest }
+                        && responseRequest.Options.TryGetValue(ThaiLookupClient.InteractiveRetryKey, out var interactive) && interactive)
+                    {
+                        responseRequest.Options.Set(refusalKey, (refusalToken, responseRequest));
+                        return ValueTask.FromResult(false);
+                    }
+                    return original(arguments);
+                };
             }
         });
     }

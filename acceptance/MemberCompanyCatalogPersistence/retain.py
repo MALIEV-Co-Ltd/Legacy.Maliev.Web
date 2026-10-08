@@ -51,9 +51,14 @@ def receipt(value, culture, candidate):
     for flag in ['reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedWriteUnchanged','manualFallbackEditable','syntheticUpstreamOnly','preparedFixtureEmailPreserved']:
         require(value[flag] is True, 'Actual proof flag missing: '+flag)
     policy = value['runtimeRetryPolicy']
-    require(isinstance(policy,dict) and set(policy) == {'clientName','runtimeDefaultsRevision','handlerCount','standardOptionsKey','sharedMaxRetryAttempts','runtimePackageSourceRevision','confirmedFromActualHandlerChain'}, 'Exact runtime retry evidence required')
+    require(isinstance(policy,dict) and set(policy) == {'clientName','runtimeDefaultsRevision','handlerCount','pipelineOptions','pipelineOrderFromPinnedSource','runtimePackageSourceRevision','confirmedFromActualHandlerChain'}, 'Exact runtime retry evidence required')
     require(policy['clientName'] == 'catalog' and policy['runtimeDefaultsRevision'] == '3c790ba6414b2a539f24aabb6948549ffd81a86b', 'Original named client/runtime source required')
-    require(type(policy['handlerCount']) is int and policy['handlerCount'] == 2 and policy['standardOptionsKey'] == 'catalog-standard' and type(policy['sharedMaxRetryAttempts']) is int and policy['sharedMaxRetryAttempts'] == 3 and policy['runtimePackageSourceRevision'] == '02107c65bab30aad9e35b5133ed643eaa77bccd8', 'Two actual max-three retry handlers required before sixteen-attempt bound')
+    require(type(policy['handlerCount']) is int and policy['handlerCount'] == 2 and policy['runtimePackageSourceRevision'] == '02107c65bab30aad9e35b5133ed643eaa77bccd8', 'Two actual retry handlers and original package source required')
+    require(policy['pipelineOrderFromPinnedSource'] == ['-standard','catalog-standard'], 'Explicit pinned-source pipeline order required')
+    pipeline_options = policy['pipelineOptions']
+    require(isinstance(pipeline_options,list) and len(pipeline_options) == 2, 'Two separate actual pipeline option entries required')
+    for entry,key in zip(pipeline_options,['-standard','catalog-standard']):
+        require(isinstance(entry,dict) and set(entry) == {'optionsKey','maxRetryAttempts'} and entry['optionsKey'] == key and type(entry['maxRetryAttempts']) is int and entry['maxRetryAttempts'] == 3, 'Exact separately read original max-three options required')
     require(policy['confirmedFromActualHandlerChain'] is True, 'Unconfirmed source-only retry policy cannot qualify')
     phases = [('Synthetic',200),('Unavailable',503),('RateLimited',429)]
     requests = value['browserRequests']
@@ -61,7 +66,7 @@ def receipt(value, culture, candidate):
     for request,(prefix,status) in zip(requests,phases):
         require(isinstance(request,dict) and set(request) == {'query','language','count'}, 'Exact browser request metadata required')
         require(request['query'] == prefix+' '+culture and request['language'] == culture and type(request['count']) is int and request['count'] == 1, 'Exactly one actual browser request per distinct phase required')
-    maximum = (1+policy['sharedMaxRetryAttempts'])**policy['handlerCount']
+    maximum = (1+pipeline_options[0]['maxRetryAttempts'])*(1+pipeline_options[1]['maxRetryAttempts'])
     observed = value['observations']
     require(isinstance(observed,list) and 3 <= len(observed) <= 1+2*maximum, 'Bounded actual physical provider attempts required')
     counts = [0,0,0]; phase = 0

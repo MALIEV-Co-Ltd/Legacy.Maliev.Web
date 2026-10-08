@@ -333,18 +333,20 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
 internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
 {
     private readonly object gate = new();
-    private readonly List<(string Name, string OptionsKey, int Count, int SharedMaxRetries, string PackageRevision)> samples = [];
+    private readonly List<(string Name, int Count, int OuterMaxRetries, int InnerMaxRetries, string PackageRevision)> samples = [];
     public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next) => builder =>
     {
         next(builder);
         if (builder.Name != "catalog") return;
         var count = builder.AdditionalHandlers.Count(handler => handler is ResilienceHandler);
-        // Exact pinned10.10 PipelineNameHelper: clientName + '-' + 'standard'. Both source registrations use this shared key.
-        var key = builder.Name + "-standard";
-        var maxRetries = builder.Services.GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>().Get(key).Retry.MaxRetryAttempts;
+        // Pinned runtime default builder.Name=null derives -standard; named Catalog derives catalog-standard.
+        // These are separate actual options reads, not a private handler-to-options inspection.
+        var options = builder.Services.GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>();
+        var outerMaxRetries = options.Get("-standard").Retry.MaxRetryAttempts;
+        var innerMaxRetries = options.Get("catalog-standard").Retry.MaxRetryAttempts;
         var version = typeof(ResilienceHandler).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         var packageRevision = version?.Split('+').ElementAtOrDefault(1) ?? string.Empty;
-        lock (gate) samples.Add((builder.Name, key, count, maxRetries, packageRevision));
+        lock (gate) samples.Add((builder.Name, count, outerMaxRetries, innerMaxRetries, packageRevision));
     };
     internal object Receipt()
     {
@@ -353,16 +355,20 @@ internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
             Assert.NotEmpty(samples);
             var first = samples[0];
             Assert.All(samples, sample => Assert.Equal(first, sample));
-            var confirmed = first.Name == "catalog" && first.OptionsKey == "catalog-standard" && first.Count == 2 && first.SharedMaxRetries == 3
+            var confirmed = first.Name == "catalog" && first.Count == 2 && first.OuterMaxRetries == 3 && first.InnerMaxRetries == 3
                 && first.PackageRevision == "02107c65bab30aad9e35b5133ed643eaa77bccd8";
             Assert.True(confirmed, "Actual named retry chain/options/source differ from reviewed bound; no receipt accepted.");
             return new
             {
                 clientName = first.Name,
                 runtimeDefaultsRevision = "3c790ba6414b2a539f24aabb6948549ffd81a86b",
-                standardOptionsKey = first.OptionsKey,
                 handlerCount = first.Count,
-                sharedMaxRetryAttempts = first.SharedMaxRetries,
+                pipelineOptions = new[]
+                {
+                    new { optionsKey = "-standard", maxRetryAttempts = first.OuterMaxRetries },
+                    new { optionsKey = "catalog-standard", maxRetryAttempts = first.InnerMaxRetries },
+                },
+                pipelineOrderFromPinnedSource = new[] { "-standard", "catalog-standard" },
                 runtimePackageSourceRevision = first.PackageRevision,
                 confirmedFromActualHandlerChain = confirmed,
             };

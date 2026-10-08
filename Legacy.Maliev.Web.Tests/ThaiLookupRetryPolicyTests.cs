@@ -4,6 +4,9 @@ using Legacy.Maliev.Web.Infrastructure;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -44,6 +47,102 @@ public sealed class ThaiLookupRetryPolicyTests
         using var response = await client.SendAsync(request, deadline.Token);
         Assert.Equal(expectedRetry ? 2 : 1, primary.Attempts);
         Assert.Equal(expectedRetry ? HttpStatusCode.OK : (HttpStatusCode)firstStatus, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("object")]
+    [InlineData("string")]
+    [InlineData("tuple")]
+    public async Task ForeignMarkerCannotSuppressOriginalOuterRetry(string markerType)
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] = null;
+        builder.AddServiceDefaults();
+        builder.Services.AddLegacyServiceClients(builder.Configuration);
+        using var primary = new CountingPrimary(429, true, false);
+        builder.Services.AddHttpClient("foreign-marker-control").ConfigurePrimaryHttpMessageHandler(() => primary);
+        using var host = builder.Build();
+        using var client = host.Services.GetRequiredService<IHttpClientFactory>().CreateClient("foreign-marker-control");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://marker-control.example.test/retry-unit-control");
+        request.Options.Set(new HttpRequestOptionsKey<bool>("maliev-thai-lookup-interactive"), true);
+        const string markerKey = "maliev-catalog-interactive429-refusal";
+        if (markerType == "object") request.Options.Set(new HttpRequestOptionsKey<object>(markerKey), new object());
+        else if (markerType == "string") request.Options.Set(new HttpRequestOptionsKey<string>(markerKey), "foreign");
+        else request.Options.Set(new HttpRequestOptionsKey<(object Token, HttpRequestMessage Request)>(markerKey), (new object(), request));
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var response = await client.SendAsync(request, deadline.Token);
+        Assert.Equal(2, primary.Attempts);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CopiedActualRefusalCapabilityCannotSuppressAnotherRequest()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] = null;
+        builder.AddServiceDefaults();
+        builder.Services.AddLegacyServiceClients(builder.Configuration);
+        using var catalogPrimary = new CountingPrimary(429, true, false);
+        using var foreignPrimary = new CountingPrimary(429, true, false);
+        builder.Services.AddHttpClient("catalog").ConfigurePrimaryHttpMessageHandler(() => catalogPrimary);
+        // Only the existing global Defaults handler applies here, so the outer decision is directly exercised.
+        builder.Services.AddHttpClient("copied-marker-control").ConfigurePrimaryHttpMessageHandler(() => foreignPrimary);
+        using var host = builder.Build();
+        using var catalog = host.Services.GetRequiredService<IHttpClientFactory>().CreateClient("catalog");
+        using var other = host.Services.GetRequiredService<IHttpClientFactory>().CreateClient("copied-marker-control");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/retry-unit-control");
+        request.Options.Set(new HttpRequestOptionsKey<bool>("maliev-thai-lookup-interactive"), true);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var refused = await catalog.SendAsync(request, deadline.Token);
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal(1, catalogPrimary.Attempts);
+        var key = new HttpRequestOptionsKey<(object Token, HttpRequestMessage Request)>("maliev-catalog-interactive429-refusal");
+        Assert.NotNull(refused.RequestMessage);
+        Assert.True(refused.RequestMessage.Options.TryGetValue(key, out var actual));
+        using var copied = new HttpRequestMessage(HttpMethod.Get, "https://marker-control.example.test/retry-unit-control");
+        copied.Options.Set(new HttpRequestOptionsKey<bool>("maliev-thai-lookup-interactive"), true);
+        copied.Options.Set(key, actual);
+        using var response = await other.SendAsync(copied, deadline.Token);
+        Assert.Equal(2, foreignPrimary.Attempts);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ActualFactoryPipelineNamesAndRepeatedRegistrationPreserveRefusal(bool repeatRegistration)
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] = null;
+        builder.AddServiceDefaults();
+        builder.Services.AddLegacyServiceClients(builder.Configuration);
+        if (repeatRegistration) builder.Services.AddLegacyServiceClients(builder.Configuration);
+        var observed = new PipelineCount();
+        builder.Services.AddSingleton<IHttpMessageHandlerBuilderFilter>(observed);
+        using var primary = new CountingPrimary(429, true, false);
+        builder.Services.AddHttpClient("catalog").ConfigurePrimaryHttpMessageHandler(() => primary);
+        using var host = builder.Build();
+        using var client = host.Services.GetRequiredService<IHttpClientFactory>().CreateClient("catalog");
+        Assert.Equal(repeatRegistration ? 3 : 2, observed.Count);
+        var options = host.Services.GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>();
+        Assert.Equal(3, options.Get("-standard").Retry.MaxRetryAttempts);
+        Assert.Equal(3, options.Get("catalog-standard").Retry.MaxRetryAttempts);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/retry-unit-control");
+        request.Options.Set(new HttpRequestOptionsKey<bool>("maliev-thai-lookup-interactive"), true);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var response = await client.SendAsync(request, deadline.Token);
+        Assert.Equal(1, primary.Attempts);
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    private sealed class PipelineCount : IHttpMessageHandlerBuilderFilter
+    {
+        internal int Count { get; private set; }
+        public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next) => builder =>
+        {
+            next(builder);
+            if (builder.Name == "catalog") Count = builder.AdditionalHandlers.Count(handler => handler is ResilienceHandler);
+        };
     }
 
     private sealed class CountingPrimary(int firstStatus, bool attachRequest, bool firstThrows) : HttpMessageHandler
