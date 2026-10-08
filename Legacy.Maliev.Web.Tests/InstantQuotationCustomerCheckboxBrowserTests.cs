@@ -35,6 +35,8 @@ public sealed class InstantQuotationCustomerCheckboxBrowserTests(CncNativeBrowse
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
 
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined");
         await page.EvaluateAsync("""
             labelText => {
               const field = document.createElement('div');
