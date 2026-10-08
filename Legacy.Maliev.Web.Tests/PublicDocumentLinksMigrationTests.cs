@@ -57,7 +57,9 @@ public sealed class PublicDocumentLinksMigrationTests : IClassFixture<TestingWeb
         var model = File.ReadAllText(modelPath);
         Assert.Contains("CanonicalUrlPolicy.GetLocalizedUrl", model, StringComparison.Ordinal);
         Assert.Contains("context.Request.Query[\"culture\"]", model, StringComparison.Ordinal);
-        Assert.DoesNotContain("CurrentUICulture", model, StringComparison.Ordinal);
+        Assert.Contains("CultureInfo.CurrentUICulture", model, StringComparison.Ordinal);
+        Assert.Contains("path.StartsWithSegments(\"/account\", StringComparison.OrdinalIgnoreCase)", model, StringComparison.Ordinal);
+        Assert.Contains("path.StartsWithSegments(\"/member\", StringComparison.OrdinalIgnoreCase)", model, StringComparison.Ordinal);
         Assert.DoesNotContain("AccessToken", model, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RefreshToken", model, StringComparison.OrdinalIgnoreCase);
     }
