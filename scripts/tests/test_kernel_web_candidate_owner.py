@@ -1,4 +1,5 @@
 """Dispatch ambiguity must settle only the preregistered exact stub owner."""
+from contextlib import ExitStack
 import json
 import io
 import os
@@ -16,7 +17,7 @@ import launch_web_capped_kernel_proof as owner
 
 
 class KernelOwnerControls(unittest.TestCase):
-    def run_ambiguous(self, foreign=False, transient=False, final_write_failure=False):
+    def run_ambiguous(self, foreign=False, transient=False, final_write_failure=False, empty_group=False):
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory) / 'evidence'
             calls = []; observations = 0
@@ -26,7 +27,7 @@ class KernelOwnerControls(unittest.TestCase):
                 ledger = json.loads((evidence / 'launcher.json').read_text())
                 return {'Id':unit,'LoadState':'not-found' if observations == 1 or observations >= 4 else 'loaded',
                         'Description':'foreign' if foreign else ledger['description'],
-                        'InvocationID':'actual-generation','ControlGroup':'/system.slice/'+unit,
+                        'InvocationID':'actual-generation','ControlGroup':'' if empty_group else '/system.slice/'+unit,
                         'ActiveState':'inactive' if observations >= 4 else 'active'}
             stopped = 0
             dispatch_error = owner.subprocess.TimeoutExpired('actual dispatch', 10)
@@ -34,6 +35,9 @@ class KernelOwnerControls(unittest.TestCase):
                 nonlocal stopped
                 calls.append(argv)
                 if 'systemd-run' in argv:
+                    if empty_group:
+                        ledger=json.loads((evidence/'launcher.json').read_text())
+                        (evidence/'kernel-proof.json').write_text(json.dumps({'context':{'unit':ledger['unit'],'invocationId':'actual-generation','cgroup':'/system.slice/'+ledger['unit']}}))
                     raise dispatch_error
                 if 'stop' in argv:
                     stopped += 1
@@ -78,6 +82,11 @@ class KernelOwnerControls(unittest.TestCase):
 
     def test_final_receipt_write_fault_preserves_actual_dispatch_error(self):
         self.run_ambiguous(final_write_failure=True)
+
+    def test_exited_manager_empty_group_uses_exact_actual_receipt(self):
+        ledger,_=self.run_ambiguous(empty_group=True)
+        self.assertTrue(ledger['cleanupVerified'])
+        self.assertTrue(ledger['managerUnitAbsent'])
 
 
 if __name__ == '__main__': unittest.main()

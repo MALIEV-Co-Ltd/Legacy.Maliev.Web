@@ -65,6 +65,16 @@ def main():
     def save():
         (evidence / 'launcher.json').write_text(json.dumps(ledger, indent=2) + '\n')
     save()
+    def owned_group(state):
+        group = state['ControlGroup'] or ledger.get('cgroup')
+        if not group and receipt.exists():
+            context = json.loads(receipt.read_text())['context']
+            if context['unit'] != unit or context['invocationId'] != state['InvocationID']:
+                raise ValueError('Retained actual kernel receipt identity changed')
+            group = context['cgroup']
+        if group != '/system.slice/' + unit:
+            raise ValueError('Retained exact manager cgroup required')
+        return group
     if observe(unit)['LoadState'] != 'not-found':
         raise ValueError('Refuse an existing manager owner')
     failure = None; invocation = None
@@ -85,6 +95,8 @@ def main():
             state = observe(unit)
             if state['Description'] != description:
                 raise ValueError('Manager ownership nonce changed')
+            if state['ControlGroup']:
+                ledger['cgroup'] = owned_group(state)
             if state['InvocationID']:
                 if invocation and invocation != state['InvocationID']:
                     raise ValueError('Manager invocation changed')
@@ -99,7 +111,7 @@ def main():
                 save()
             if state['SubState'] == 'exited' or state['ActiveState'] in {'failed', 'inactive'}:
                 ledger['terminal'] = state; save()
-                if not invocation or int(state['ExecMainStartTimestampMonotonic']) <= 0 or int(state['ExecMainExitTimestampMonotonic']) < int(state['ExecMainStartTimestampMonotonic']) or members(state['ControlGroup']):
+                if not invocation or int(state['ExecMainStartTimestampMonotonic']) <= 0 or int(state['ExecMainExitTimestampMonotonic']) < int(state['ExecMainStartTimestampMonotonic']) or members(owned_group(state)):
                     raise ValueError('Actual terminal process evidence missing')
                 if state['Result'] != 'success' or state['ExecMainStatus'] != '0':
                     raise ValueError('Actual kernel proof failed')
@@ -139,7 +151,7 @@ def main():
                     except (subprocess.SubprocessError, OSError):
                         if time.monotonic() >= deadline: raise
                         time.sleep(.25)
-                group = state['ControlGroup']
+                group = owned_group(state)
                 if after['ActiveState'] not in {'inactive', 'failed'} or members(group):
                     raise ValueError('Actual owned unit remains live')
                 if after['ActiveState'] == 'failed':

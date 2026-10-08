@@ -281,14 +281,20 @@ def main():
                     if cleanup_failure is None:cleanup_failure=error
                 except BaseException as error:
                     if cleanup_failure is None:cleanup_failure=error
-        record["phaseSucceeded"]=record.get("exitCode")==0 and record.get("cleanupVerified",False) and first_failure is None and cleanup_failure is None
-        try:receipt.write_text(json.dumps(record,indent=2)+"\n",encoding="utf-8")
-        except BaseException as error:
-            if cleanup_failure is None:cleanup_failure=error
         for sig,handler in previous.items():
             try:signal.signal(sig,handler)
             except BaseException as error:
                 if cleanup_failure is None:cleanup_failure=error
+        # A stop received during shutdown is deferred until exact settlement,
+        # then delivered. It cannot become a successful phase or replace an
+        # earlier phase/cleanup exception object.
+        record["cancellationRequested"]=stop_requested
+        if stop_requested and first_failure is None and cleanup_failure is None:
+            cleanup_failure=InterruptedError("Deferred phase cancellation after owned cleanup")
+        record["phaseSucceeded"]=record.get("exitCode")==0 and record.get("cleanupVerified",False) and first_failure is None and cleanup_failure is None and not stop_requested
+        try:receipt.write_text(json.dumps(record,indent=2)+"\n",encoding="utf-8")
+        except BaseException as error:
+            if cleanup_failure is None:cleanup_failure=error
         # The phase's original failure wins over every cleanup interruption.
         if first_failure is None and cleanup_failure is not None:raise cleanup_failure
     if record.get("exitCode")!=0:raise SystemExit("Phase failed; exact output and ownership receipt retained")
