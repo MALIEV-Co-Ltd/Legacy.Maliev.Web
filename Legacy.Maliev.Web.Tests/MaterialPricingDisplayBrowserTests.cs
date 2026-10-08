@@ -134,7 +134,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     public async Task OlderAcceptedCompletionCannotEraseNewerInputOnlyDraft(string culture, int width, ColorScheme scheme)
     {
         await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
-        var three = fixture.Control.Arm(3, InstantQuotationMaterialPricingStatus.Completed);
+        var three = fixture.Control.Arm(3, InstantQuotationMaterialPricingStatus.Completed, holdAuthorization: true);
         var four = fixture.Control.Arm(4, InstantQuotationMaterialPricingStatus.Completed);
         try
         {
@@ -145,8 +145,16 @@ public sealed class MaterialPricingDisplayBrowserTests
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price] strong")).ToHaveCountAsync(0);
             three.Release.TrySetResult();
             await three.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await three.AuthorizationEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             await Assertions.Expect(fixture.Quantity).ToHaveValueAsync("4");
             await Assertions.Expect(fixture.Review).ToBeDisabledAsync();
+            var awaitingAuthorization = await fixture.StoredAsync();
+            Assert.Equal(3, Assert.Single(awaitingAuthorization.Parts).Configuration.Quantity);
+            Assert.Null(awaitingAuthorization.QuoteAuthorization);
+            Assert.False(three.AuthorizationStored.Task.IsCompleted,
+                "Pricing return must not stand in for the protected store commit.");
+            three.AuthorizationRelease.TrySetResult();
+            await three.AuthorizationStored.Task.WaitAsync(TimeSpan.FromSeconds(10));
             var prior = await fixture.StoredAsync();
             Assert.Equal(3, Assert.Single(prior.Parts).Configuration.Quantity);
             Assert.NotNull(prior.QuoteAuthorization);
@@ -156,7 +164,11 @@ public sealed class MaterialPricingDisplayBrowserTests
             Assert.Equal(4, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
             await Assertions.Expect(fixture.Review).ToBeDisabledAsync();
         }
-        finally { three.Release.TrySetResult(); four.Release.TrySetResult(); }
+        finally
+        {
+            three.Release.TrySetResult(); four.Release.TrySetResult();
+            three.AuthorizationRelease.TrySetResult();
+        }
         await Assertions.Expect(fixture.Quantity).ToHaveValueAsync("4");
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         var accepted = await fixture.StoredAsync();
@@ -166,14 +178,20 @@ public sealed class MaterialPricingDisplayBrowserTests
                 accepted.QuoteAuthorization, DateTimeOffset.UtcNow));
     }
 
-    private sealed class Gate(int quantity, InstantQuotationMaterialPricingStatus status)
+    private sealed class Gate(int quantity, InstantQuotationMaterialPricingStatus status, bool holdAuthorization)
     {
         public int Quantity { get; } = quantity;
         public InstantQuotationMaterialPricingStatus Status { get; } = status;
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool HoldAuthorization { get; } = holdAuthorization;
+        public TaskCompletionSource AuthorizationEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource AuthorizationRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource AuthorizationStored { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource AuthorizationFinished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int Claimed;
+        public int AuthorizationClaimed;
     }
 
     private sealed class Control
@@ -182,9 +200,48 @@ public sealed class MaterialPricingDisplayBrowserTests
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
         public ConcurrentQueue<(string Stage, int Quantity, bool Canceled)> Timeline { get; } = new();
         public InstantQuotationOrderQuote? FinalQuote { get; set; }
-        public Gate Arm(int quantity, InstantQuotationMaterialPricingStatus status)
-        { var gate = new Gate(quantity, status); Gates.Enqueue(gate); return gate; }
-        public void ReleaseAll() { foreach (var gate in Gates) gate.Release.TrySetResult(); }
+        public Gate Arm(int quantity, InstantQuotationMaterialPricingStatus status, bool holdAuthorization = false)
+        { var gate = new Gate(quantity, status, holdAuthorization); Gates.Enqueue(gate); return gate; }
+        public void ReleaseAll()
+        {
+            foreach (var gate in Gates)
+            {
+                gate.Release.TrySetResult();
+                gate.AuthorizationRelease.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class AuthorizationStore(IInstantQuotationSessionStore inner, Control control)
+        : IInstantQuotationSessionStore
+    {
+        public Task<InstantQuotationSessionState> CreateAsync(string? owner, InstantQuotationOrderState request,
+            CancellationToken token) => inner.CreateAsync(owner, request, token);
+        public Task<InstantQuotationSessionState?> GetAsync(string id, string? owner, CancellationToken token) =>
+            inner.GetAsync(id, owner, token);
+        public Task<bool> RemoveAsync(string id, string? owner, CancellationToken token) => inner.RemoveAsync(id, owner, token);
+        public async Task<bool> PutAsync(InstantQuotationSessionState session, string? owner, CancellationToken token)
+        {
+            var gate = session.QuoteAuthorization is null || session.Parts.Count != 1 ? null :
+                control.Gates.FirstOrDefault(candidate => candidate.HoldAuthorization
+                    && candidate.Quantity == session.Parts[0].Configuration.Quantity);
+            if (gate is null || Interlocked.Exchange(ref gate.AuthorizationClaimed, 1) != 0)
+                return await inner.PutAsync(session, owner, token);
+            try
+            {
+                control.Timeline.Enqueue(("authorization-held", gate.Quantity, token.IsCancellationRequested));
+                gate.AuthorizationEntered.TrySetResult();
+                await gate.AuthorizationRelease.Task.WaitAsync(token);
+                var stored = await inner.PutAsync(session, owner, token);
+                if (stored)
+                {
+                    control.Timeline.Enqueue(("authorization-stored", gate.Quantity, token.IsCancellationRequested));
+                    gate.AuthorizationStored.TrySetResult();
+                }
+                return stored;
+            }
+            finally { gate.AuthorizationFinished.TrySetResult(); }
+        }
     }
 
     private sealed class Boundary(IInstantQuotationAuthoritativePricingService inner, Control control)
@@ -236,6 +293,12 @@ public sealed class MaterialPricingDisplayBrowserTests
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
                     new Boundary((IInstantQuotationAuthoritativePricingService)ActivatorUtilities.CreateInstance(provider,
                         original.ImplementationType!), control));
+                var store = services.Single(item => item.ServiceType == typeof(IInstantQuotationSessionStore));
+                services.RemoveAll<IInstantQuotationSessionStore>();
+                services.Add(new ServiceDescriptor(typeof(IInstantQuotationSessionStore), provider =>
+                    new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
+                        ?? store.ImplementationFactory?.Invoke(provider)
+                        ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), store.Lifetime));
             });
         }
     }
@@ -351,6 +414,8 @@ public sealed class MaterialPricingDisplayBrowserTests
             Control.ReleaseAll();
             foreach (var gate in Control.Gates.Where(candidate => candidate.Claimed != 0))
                 await gate.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            foreach (var gate in Control.Gates.Where(candidate => Volatile.Read(ref candidate.AuthorizationClaimed) != 0))
+                await gate.AuthorizationFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
             if (context is not null) await context.DisposeAsync();
             if (browser is not null) await browser.DisposeAsync();
             playwright?.Dispose();
