@@ -8,6 +8,7 @@ import re
 import subprocess
 
 REPOSITORY = "MALIEV-Co-Ltd/Legacy.Maliev.Web"
+COUNTRY_POLICY_SHA256 = "c920c1a0aef5782020f0c2621d59dfed500804d0ed4ba38c79d529bfeb251c2d"
 EXPECTED_POLICY_SHA256 = "100ae2ae0a4a8c25cbf47ae3f4a0e0039e93f211d091ec48b192852e176ba43b"
 
 
@@ -21,7 +22,7 @@ NoRedirect = shared.NoRedirect
 
 def load_policy(path):
     raw = Path(path).read_bytes()
-    if sha256(raw) != EXPECTED_POLICY_SHA256:
+    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256}:
         raise ValueError("Reviewed policy raw-byte identity changed")
     return parse_json(raw)
 
@@ -34,7 +35,8 @@ def validate_capsule(manifest_bytes, capsule_bytes, policy):
     manifest = parse_json(manifest_bytes)
     for key in ("owner", "acceptedBase", "sourcePins", "sourceBindingSha256", "sourceFiles", "capsuleRows"):
         if manifest.get(key) != policy[key]: raise ValueError("Reviewed manifest association changed: " + key)
-    if manifest.get("schemaVersion") != 1 or len(manifest["sourceFiles"]) != 1983:
+    count = 1952 if policy.get("sliceKind") == "country-operation-v1" else 1983
+    if manifest.get("schemaVersion") != 1 or len(manifest["sourceFiles"]) != count:
         raise ValueError("Frozen source inventory changed")
     expected = {}
     aliases = set()
