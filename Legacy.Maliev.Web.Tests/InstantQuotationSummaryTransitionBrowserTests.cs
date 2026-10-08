@@ -404,7 +404,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
                 // SSR markup alone cannot set this binding; global network quiet is not session readiness.
                 await Page.WaitForFunctionAsync(
-                    "() => !!document.querySelector('#instant-quote-files')?._blazorFilesById",
+                    "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
                     options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
             }
             finally
