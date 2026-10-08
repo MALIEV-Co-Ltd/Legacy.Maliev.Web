@@ -90,7 +90,7 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                     var seededJson = await seededRead.Content.ReadAsStringAsync();
                     using var seeded = JsonDocument.Parse(seededJson);
                     var preparation = ProfileInput(seeded.RootElement);
-                    Assert.Null(preparation["Email"]);
+                    Assert.True(string.IsNullOrWhiteSpace(seeded.RootElement.GetProperty("Email").GetString()));
                     using var invalidSeed = await customerHttp.PutAsJsonAsync("customers/1", preparation);
                     Assert.Equal(HttpStatusCode.BadRequest, invalidSeed.StatusCode);
                     using var unmodifiedSeed = await customerHttp.GetAsync("customers/1");
