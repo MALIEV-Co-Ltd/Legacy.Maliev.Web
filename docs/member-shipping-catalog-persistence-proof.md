@@ -1,0 +1,13 @@
+# Member shipping Catalog persistence proof
+
+The new shipping test and workflow reuse the reviewed billing bootstrap from main `25c33e207ba80305f1a3b29e408cfafdfddedd73`, with explicit shipping selectors and shipping CustomerService projection. Accepted billing/supplier sources and application behavior are unchanged.
+
+The two synthetic cases use English desktop 1280 and Thai mobile 375. Each starts real pinned Catalog and CustomerService, logs in through the pinned Auth authority, obtains the normal encrypted cookie and Redis session, selects a real shipping address tuple, submits the existing UpdateAddress form, reads CustomerService, and reloads the page. Shipping house/road/building/manual AddressLine2 survive selection; billing identity and editable fields remain unchanged. Existing service read/write/lookup denials remain asserted. Subdistrict codes are transient; seeded Thailand CountryId66 is fixed and does not prove Country API selection.
+
+`BillingProofLifetime` remains unchanged. Shipping uses its default proofCulture:null to prevent competing writes to billing receipt files in parallel full-suite execution. After successful case completion, shipping explicitly joins disposal and expiry, rejects retained/expired/reader-failed graphs, and retains its own ownership graph and original PostgreSQL identity/init/resource-envelope/SDK-release/exact-absence evidence. The physical owner and container names remain truthfully `web-billing-proof` and `billing-proof-*`; wrapper surface is `member-shipping`. Shared MemberAuthority lifecycle remains excluded.
+
+The focused standard GitHub Ubuntu workflow runs the same thirty-one exact lifecycle controls and PostgreSQL18 Alpine forced-watchdog control, then two shipping cases. The strict verifier rejects missing/duplicate/foreign/unsuccessful rows, incorrect counters, foreign candidate lineage, incomplete business receipts, incomplete original backend cleanup and mutated generated assets. Its pure metadata causal negative controls run without native allocation. Required full CI independently covers all native cases and unexcluded owned coverage floors; no focused pass substitutes for full acceptance.
+
+Retained artifacts contain synthetic screenshots, bounded receipts and TRX. No HTML, cookies, request headers, credentials, native child output or traces are retained. No production mutation, database migration, deployment, permission/grant changes or paid runner is authorized by this proof. Whole-AppHost, company/Creden selection, supplier EDIT, PO/quotation/CRM forms remain separate owner-held acceptance surfaces.
+
+Exact candidate and main run links must be recorded after actual hosted qualification; this document does not forecast a pass.

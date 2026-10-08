@@ -1,0 +1,307 @@
+name: Member shipping persistence
+
+on:
+  pull_request:
+    paths:
+      - 'Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs'
+      - 'scripts/verify-shipping-persistence-proof.py'
+      - '.github/workflows/shipping-persistence.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs'
+      - 'scripts/verify-shipping-persistence-proof.py'
+      - '.github/workflows/shipping-persistence.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shipping-persistence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shipping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      MALIEV_SHIPPING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          path: .dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Legacy.Maliev.Web/package-lock.json
+      - name: Build deterministic browser assets
+        working-directory: Legacy.Maliev.Web
+        run: npm run ci
+      - name: Preserve generated shared stylesheet
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: shipping-stylesheet-${{ github.event.pull_request.head.sha || github.sha }}
+          path: Legacy.Maliev.Web/wwwroot/dist/site.min.css
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify committed browser assets before proof
+        run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
+      - name: Build pinned CustomerService and disposable seed
+        shell: pwsh
+        run: ./scripts/prepare-profile-producer-boundary.ps1
+      - name: Build pinned normal Auth authority
+        shell: pwsh
+        run: ./scripts/prepare-member-auth-indexing-proof.ps1
+      - name: Build pinned real Catalog geography
+        shell: pwsh
+        run: ./scripts/prepare-billing-catalog-proof.ps1
+      - name: Build exact candidate Web test host
+        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --nologo
+      - name: Install pinned Chromium browser
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          # Use the signed official HTTPS archive after the hosted Azure mirror stalled.
+          test -s /etc/apt/apt-mirrors.txt
+          python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Qualify PostgreSQL18 Alpine forced watchdog on disposable owned container
+        run: |
+          python3 -B - <<'PY'
+          import json, os, re, subprocess, time, uuid
+          from pathlib import Path
+          run = uuid.uuid4().hex
+          name = 'shipping-watchdog-' + run
+          image = 'postgres:18-alpine'
+          cid = None
+          receipt = {'image': image, 'container': name, 'run': run, 'forcedKillVerified': False, 'absenceVerified': False}
+          directory = Path('shipping-watchdog-results'); directory.mkdir(exist_ok=True)
+          environment = {key: value for key, value in os.environ.items() if not key.startswith('DOCKER_')}
+          def docker(*args, timeout=10):
+              return subprocess.run(['docker', '--host', 'unix:///var/run/docker.sock', *args],
+                  env=environment, capture_output=True, text=True, timeout=timeout, check=True)
+          def ids():
+              return docker('container', 'ls', '-aq', '--no-trunc', '--filter', 'name=^/' + name + '$').stdout.split()
+          def validate_original():
+              data = json.loads(docker('container', 'inspect', cid).stdout)
+              if len(data) != 1:
+                  raise RuntimeError('Ambiguous original container inspect')
+              entry = data[0]; config = entry['Config']; host = entry['HostConfig']
+              labels = config.get('Labels', {})
+              if (entry['Id'] != cid or entry['Name'] != '/' + name or entry['Image'] != image_id
+                  or labels.get('maliev.codex.owner') != 'shipping-watchdog-control'
+                  or labels.get('maliev.codex.run') != run or host['NetworkMode'] != 'none'
+                  or host['Memory'] != 536870912 or host['MemorySwap'] != 536870912
+                  or host['NanoCpus'] != 1000000000 or host.get('Tmpfs') != {'/var/lib/postgresql': 'rw,size=268435456'}
+                  or not host['AutoRemove'] or host.get('Init') is not True or config['Entrypoint'] != ['sh'] or config['Cmd'] != command
+                  or any(mount.get('Type') in ('volume', 'bind') for mount in entry.get('Mounts', []))):
+                  raise RuntimeError('Original container identity or resource-policy mismatch; refusing destructive cleanup')
+          try:
+              if ids():
+                  raise RuntimeError('UUID name already exists; refusing adoption')
+              docker('pull', image, timeout=120)
+              image_id = json.loads(docker('image', 'inspect', image).stdout)[0]['Id']
+              command = ['-c', 'exec timeout -k 1 2 sh -c \'trap "echo watchdog-term-received" TERM; while :; do sleep 1; done\'']
+              # The returned full ID is registered before start; neither cleanup nor start adopts a name.
+              created = docker('create', '--rm', '--init', '--name', name, '--label', 'maliev.codex.owner=shipping-watchdog-control',
+                  '--label', 'maliev.codex.run=' + run, '--network', 'none', '--memory', '512m', '--memory-swap', '512m',
+                  '--cpus', '1', '--tmpfs', '/var/lib/postgresql:rw,size=268435456', '--entrypoint', 'sh', image_id, *command)
+              candidate = created.stdout.strip()
+              if not re.fullmatch('[0-9a-f]{64}', candidate):
+                  raise RuntimeError('Original allocation ID unavailable; refusing name-based recovery')
+              cid = candidate; receipt['containerId'] = cid
+              validate_original(); receipt['identityPolicyVerified'] = True; receipt['initEnabled'] = True
+              started = time.monotonic()
+              # Attach is bounded; docker start returns the actual container exit code.
+              result = subprocess.run(['docker', '--host', 'unix:///var/run/docker.sock', 'start', '--attach', cid],
+                  env=environment, capture_output=True, text=True, timeout=35)
+              elapsed = time.monotonic() - started
+              receipt.update(exitCode=result.returncode, elapsedSeconds=round(elapsed, 3),
+                  termObserved='watchdog-term-received' in result.stdout)
+              if result.returncode != 137 or not receipt['termObserved'] or not 3 <= elapsed <= 25:
+                  raise RuntimeError('Image-specific TERM/forced-KILL watchdog control failed')
+              receipt['forcedKillVerified'] = True
+          finally:
+              try:
+                  if cid is not None:
+                      all_ids = docker('container', 'ls', '-aq', '--no-trunc').stdout.split()
+                      if cid in all_ids:
+                          validate_original()
+                          docker('rm', '-f', cid, timeout=15)
+                      # A successful daemon inventory, never an inspect error, establishes exact ID absence.
+                      remaining = docker('container', 'ls', '-aq', '--no-trunc').stdout.split()
+                      receipt['absenceVerified'] = cid not in remaining
+                      if not receipt['absenceVerified']:
+                          raise RuntimeError('Exact original watchdog container remains present')
+                  else:
+                      receipt['allocationUnconfirmed'] = True
+              except Exception as failure:
+                  receipt['cleanupFailure'] = type(failure).__name__
+                  raise
+              finally:
+                  # Only bounded synthetic metadata is retained, never daemon output or host environment.
+                  (directory / 'watchdog.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PY
+      - name: Execute genuine shipping selection save readback and reload
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~ThaiLookupShippingPersistenceTests"
+          --logger trx --results-directory ./shipping-persistence-test-results
+      - name: Verify billing ownership fault controls without native child allocation
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~BillingProofLifetimeTests"
+          --logger trx --results-directory ./billing-lifetime-test-results
+      - name: Require all thirty-one exact unique passed lifecycle control rows
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          expected = {
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: "exited")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: "refused")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: "start")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: "identity")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: "readers")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "kill")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "reap")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "readers")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "reader-close")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "handle-close")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "daemon")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "id")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "created")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "owner")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "envelope")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "init")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "signature")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease',
+          }
+          files = list(Path('billing-lifetime-test-results').glob('*.trx'))
+          if len(files) != 1:
+              raise SystemExit('Exactly one lifecycle TRX required')
+          root = ET.parse(files[0]).getroot()
+          rows = root.findall('.//t:UnitTestResult', ns)
+          names = [row.get('testName') for row in rows]
+          if len(rows) != 31 or len(set(names)) != 31 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
+              raise SystemExit('Missing, duplicate, foreign or unsuccessful lifecycle control row')
+          counters = root.find('.//t:Counters', ns)
+          required = {'total': '31', 'executed': '31', 'passed': '31', 'failed': '0', 'error': '0', 'timeout': '0',
+              'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',
+              'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0'}
+          if counters is None or any(counters.get(key) != value for key, value in required.items()):
+              raise SystemExit('Lifecycle TRX counters do not match thirty-one completed Passed rows')
+          print('Verified thirty-one exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
+          PY
+      - name: Exercise shipping receipt verifier causal negative controls
+        run: python3 -B scripts/verify-shipping-persistence-proof.py --self-test
+      - name: Verify exact shipping rows receipts and candidate relation
+        run: python3 -B scripts/verify-shipping-persistence-proof.py
+      - name: Require actual English and Thai PostgreSQL original identity and verified absence
+        run: |
+          python3 -B - <<'PY'
+          import datetime, json, os, re
+          from pathlib import Path
+          candidate = os.environ['MALIEV_SHIPPING_CANDIDATE_HEAD']
+          if not re.fullmatch('[0-9a-f]{40}', candidate):
+              raise SystemExit('Exact shipping candidate required')
+          directory = Path('Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/shipping-persistence')
+          watchdog = json.loads(Path('shipping-watchdog-results/watchdog.json').read_text())
+          if watchdog.get('initEnabled') is not True or any(watchdog.get(key) != value for key, value in {'image': 'postgres:18-alpine', 'identityPolicyVerified': True,
+              'initEnabled': True, 'forcedKillVerified': True, 'absenceVerified': True, 'termObserved': True, 'exitCode': 137}.items()):
+              raise SystemExit('Original watchdog init/signal/absence proof incomplete')
+          if not re.fullmatch('[0-9a-f]{64}', watchdog.get('containerId', '')) or not 3 <= watchdog.get('elapsedSeconds', 0) <= 25:
+              raise SystemExit('Original watchdog CID or unchanged timing bound missing')
+          runs, ids, databases = set(), set(), set()
+          for culture in ('en', 'th'):
+              business = json.loads((directory / (culture + '.json')).read_text())
+              proof = business.get('shippingBackendCleanup', {})
+              required = {'schema': 1, 'surface': 'member-shipping', 'culture': culture, 'candidateHead': candidate,
+                  'owner': 'web-billing-proof', 'complete': True, 'graphReleased': True, 'expired': False,
+                  'readerFailureRejected': False, 'expiryJoined': True, 'sharedAuthorityExcluded': True}
+              if any(proof.get(key) != value for key, value in required.items()):
+                  raise SystemExit('Actual journey backend graph receipt incomplete or foreign')
+              run = proof.get('run', '')
+              if not re.fullmatch('[0-9a-f]{32}', run) or run in runs:
+                  raise SystemExit('Actual journey backend run identity missing or duplicated')
+              runs.add(run)
+              resources = proof.get('resources', [])
+              if len(resources) != 1:
+                  raise SystemExit('Exactly one original journey PostgreSQL receipt required')
+              backend = resources[0]
+              required = {'backend': 'postgres', 'localEndpoint': 'unix:///var/run/docker.sock', 'databaseSynthetic': True,
+                  'name': 'billing-proof-' + run + '-postgres', 'owner': 'web-billing-proof', 'run': run,
+                  'baselineAbsent': True, 'startDispatched': True, 'startupSettled': True, 'captureVerified': True,
+                  'absenceVerified': True, 'sdkReleased': True}
+              if any(backend.get(key) != value for key, value in required.items()) or not backend.get('daemon'):
+                  raise SystemExit('Original journey backend ownership/release receipt incomplete')
+              cid = backend.get('originalId', '')
+              database = backend.get('database', '')
+              if not re.fullmatch('[0-9a-f]{64}', cid) or cid in ids or not re.fullmatch('profile_contract_[0-9a-f]{32}', database) or database in databases:
+                  raise SystemExit('Journey original CID/database missing or duplicated')
+              ids.add(cid); databases.add(database)
+              original = backend.get('original', {})
+              required = {'id': cid, 'name': '/' + backend['name'], 'owner': 'web-billing-proof', 'run': run,
+                  'expiresUtc': backend.get('expiresUtc'), 'configuredImage': 'postgres:18-alpine', 'envelopeValid': True, 'initEnabled': True,
+                  'memoryBytes': 536870912, 'swapBytes': 536870912, 'nanoCpus': 1000000000,
+                  'tmpfs': '/var/lib/postgresql:rw,size=268435456', 'loopbackPorts': True, 'persistentData': False}
+              if original.get('initEnabled') is not True or any(original.get(key) != value for key, value in required.items()) or not re.fullmatch('sha256:[0-9a-f]{64}', original.get('imageId', '')) or not re.fullmatch('[0-9a-f]{64}', original.get('envelopeSignatureSha256', '')):
+                  raise SystemExit('Original journey creation/envelope receipt mismatch')
+              try:
+                  created = datetime.datetime.fromisoformat(original['createdUtc'].replace('Z', '+00:00'))
+                  expires = datetime.datetime.fromisoformat(original['expiresUtc'].replace('Z', '+00:00'))
+                  if created.utcoffset() != datetime.timedelta(0) or expires.utcoffset() != datetime.timedelta(0) or not created < expires:
+                      raise ValueError('Invalid original creation/expiry ordering')
+              except (KeyError, ValueError, TypeError):
+                  raise SystemExit('Original journey creation/expiry timestamps required')
+          print('Verified actual English and Thai PostgreSQL original identity and exact cleanup; shared authority excluded')
+          PY
+      - name: Preserve bounded synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: member-shipping-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            shipping-persistence-test-results/**/*.trx
+            billing-lifetime-test-results/**/*.trx
+            shipping-watchdog-results/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/shipping-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/shipping-persistence/*.json
+          if-no-files-found: error
+          retention-days: 7
