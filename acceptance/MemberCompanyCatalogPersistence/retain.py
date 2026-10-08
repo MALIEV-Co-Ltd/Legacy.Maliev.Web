@@ -1,0 +1,119 @@
+"""Strict, fail-closed outcome-only retention for the isolated synthetic company lane."""
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import xml.etree.ElementTree as ET
+
+NS = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+PREFIX = 'Legacy.Maliev.Web.Tests.MemberCompanyCatalogPersistenceTests.CompanyUpdate_RealAdapter_NormalSave_ApiReadbackAndReload'
+
+def require(value, message):
+    if not value:
+        raise ValueError(message)
+
+def rows(path):
+    root = ET.parse(path).getroot()
+    results = root.findall('.//t:UnitTestResult', NS)
+    require(len(results) == 2, 'Exactly two company native rows required')
+    expected = {PREFIX + '(culture: "en", width: 1280)', PREFIX + '(culture: "th", width: 375)'}
+    require({r.get('testName') for r in results} == expected, 'Exact company case names required')
+    require(all(r.get('outcome') == 'Passed' for r in results), 'Both actual native company cases must pass')
+    counters = root.find('.//t:Counters', NS)
+    require(counters is not None and all(counters.get(k) == v for k,v in {'total':'2','executed':'2','passed':'2','failed':'0','error':'0','timeout':'0','aborted':'0','inconclusive':'0','passedButRunAborted':'0','notRunnable':'0','notExecuted':'0','disconnected':'0','warning':'0','completed':'0','inProgress':'0','pending':'0'}.items()), 'Strict native counters required')
+    for field in ['testId','executionId']:
+        values = [r.get(field,'') for r in results]
+        require(len(set(values)) == 2 and all(re.fullmatch('[0-9a-fA-F-]{36}',v) for v in values), 'Nonempty unique native row identity required')
+    return [{'testName': r.get('testName'), 'outcome': 'Passed', 'testId': r.get('testId'), 'executionId': r.get('executionId')} for r in results]
+
+def receipt(value, culture, candidate):
+    fields = {'surface','culture','width','candidateHead','companyId','selectedCompany','selectedTaxId','catalogStatus','saveStatus','readbackStatus','companyReadbackStatus','reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedLookupStatus','deniedWriteStatus','deniedWriteUnchanged','unavailableStatus','rateLimitedStatus','manualFallbackEditable','syntheticUpstreamOnly','observations'}
+    require(set(value) == fields, 'Only exact bounded receipt fields retained')
+    expected = {'surface':'member-company-update','culture':culture,'width':1280 if culture == 'en' else 375,'candidateHead':candidate,'selectedTaxId':'0123456789012','catalogStatus':200,'saveStatus':302,'readbackStatus':200,'companyReadbackStatus':200,'deniedLookupStatus':403,'deniedWriteStatus':403,'unavailableStatus':503,'rateLimitedStatus':429}
+    require(all(value.get(k) == v for k,v in expected.items()), 'Business receipt contract mismatch')
+    require(isinstance(value['companyId'], int) and value['companyId'] > 0, 'Original company ID required')
+    require(value['selectedCompany'] == ('Synthetic Company Limited' if culture == 'en' else '\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17\u0e2a\u0e31\u0e07\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c \u0e08\u0e33\u0e01\u0e31\u0e14'), 'Synthetic selected name required')
+    for flag in ['reloadVerified','contactsAndAddressIdentitiesPreserved','manualRegistrarPreserved','deniedWriteUnchanged','manualFallbackEditable','syntheticUpstreamOnly']:
+        require(value[flag] is True, 'Actual proof flag missing: '+flag)
+    observed = value['observations']
+    require(len(observed) == 3, 'One actual upstream HTTP attempt per scenario required')
+    for row, prefix, status in zip(observed, ['Synthetic','Unavailable','RateLimited'], [200,503,429]):
+        require(set(row) == {'logicalUri','physicalLoopback','method','typeSearch','query','language','status'}, 'Unexpected upstream metadata')
+        require(row == {'logicalUri':'https://data.creden.co/sapi/search/get_suggestion','physicalLoopback':True,'method':'POST','typeSearch':'prefix','query':prefix+' '+culture,'language':culture,'status':status}, 'Actual logical request and synthetic transport mismatch')
+    return value
+
+def timestamp(value):
+    require(isinstance(value,str), 'UTC timestamp required')
+    try:
+        parsed = datetime.datetime.fromisoformat(value.replace('Z','+00:00'))
+    except ValueError:
+        raise ValueError('Valid UTC timestamp required')
+    require(parsed.utcoffset() == datetime.timedelta(0), 'UTC timestamp offset required')
+    return parsed
+
+def cleanup(value):
+    require(set(value) == {'owner','run','expiresUtc','released','readerFailureRejected','retained','expired','expiryFailure','policy','hosts','children','backends'}, 'Exact owner receipt schema required')
+    require(value.get('owner') == 'web-billing-proof' and value.get('released') is True and value.get('retained') is False and value.get('readerFailureRejected') is False and value.get('expired') is False and value.get('expiryFailure') is None, 'Original joined owner did not release')
+    require(re.fullmatch('[0-9a-f]{32}', value.get('run','')), 'Original run required')
+    owner_expiry = timestamp(value['expiresUtc'])
+    require(value['policy'] == 'Same-owner 1800-second expiry task closes admission, frontends and actual case work before dependent cleanup; unresolved ownership is quarantined, never accepted as release.', 'Original lifetime policy required')
+    require(len(value.get('hosts',[])) == 11 and all(set(row) == {'startupComplete','disposal'} and row['startupComplete'] is True and row['disposal'] == 'RanToCompletion' for row in value['hosts']), 'Exactly all eleven admitted provider/Web/browser/HTTP hosts must settle')
+    child_keys = {'dispatched','identityCaptured','exitVerified','noChildVerified','readersClosed','released','process'}
+    require(len(value.get('children',[])) == 3 and all(set(row) == child_keys and all(row.get(flag) is True for flag in ['dispatched','identityCaptured','exitVerified','readersClosed','released']) and row['noChildVerified'] is False for row in value['children']), 'Exactly three dispatched original seed/Customer/Catalog children must settle')
+    require(len(value.get('backends',[])) == 1, 'One original PG journey backend required')
+    backend = value['backends'][0]
+    backend_keys = {'backend','localEndpoint','databaseSynthetic','name','database','owner','run','expiresUtc','daemon','originalId','baselineAbsent','startDispatched','startupSettled','captureVerified','absenceVerified','sdkReleased','original'}
+    require(set(backend) == backend_keys, 'No unapproved public backend field permitted')
+    original = backend.get('original') or {}; cid = backend.get('originalId')
+    original_keys = {'id','createdUtc','imageId','name','owner','run','expiresUtc','configuredImage','envelopeValid','initEnabled','envelopeSignatureSha256','memoryBytes','swapBytes','nanoCpus','tmpfs','loopbackPorts','persistentData'}
+    require(set(original) == original_keys, 'No unapproved original envelope field permitted')
+    require(re.fullmatch('[0-9a-f]{64}', cid or '') and original['id'] == cid, 'Original PG ID join required')
+    require(all(backend.get(flag) is True for flag in ['databaseSynthetic','baselineAbsent','startDispatched','startupSettled','captureVerified','absenceVerified','sdkReleased']), 'Actual PG identity/start/removal required')
+    require(backend['backend'] == 'postgres' and backend['owner'] == value['owner'] and backend['run'] == value['run'] and backend['name'] == 'billing-proof-'+value['run']+'-postgres' and backend['localEndpoint'] == 'unix:///var/run/docker.sock' and re.fullmatch('profile_contract_[0-9a-f]{32}', backend['database']), 'Original owner/run/name/database/local daemon join required')
+    require(isinstance(backend['daemon'],str) and re.fullmatch('[A-Za-z0-9:_-]{1,256}',backend['daemon']), 'Bounded original daemon identity required')
+    require(original['name'] == '/'+backend['name'] and original['owner'] == value['owner'] and original['run'] == value['run'] and original['expiresUtc'] == backend['expiresUtc'], 'Original resource ownership and expiry join required')
+    require(re.fullmatch('sha256:[0-9a-f]{64}',original['imageId']) and re.fullmatch('[0-9a-f]{64}',original['envelopeSignatureSha256']), 'Original image/signature hashes required')
+    require(timestamp(original['createdUtc']) < owner_expiry < timestamp(original['expiresUtc']), 'Original allocation and distinct owner/backend expiry ordering required')
+    require(all(original.get(k) == v for k,v in {'configuredImage':'postgres:18-alpine','envelopeValid':True,'initEnabled':True,'memoryBytes':536870912,'swapBytes':536870912,'nanoCpus':1000000000,'tmpfs':'/var/lib/postgresql:rw,size=268435456','loopbackPorts':True,'persistentData':False}.items()), 'Original PG resource envelope required')
+    return {key:value[key] for key in ['owner','run','expiresUtc','released','retained','readerFailureRejected','expired','expiryFailure','hosts']} | {'children':[ {key:row[key] for key in ['dispatched','identityCaptured','exitVerified','readersClosed','released']} for row in value['children']], 'backends':[{key:backend[key] for key in sorted(backend_keys)}]}
+
+def main():
+    candidate = os.environ.get('MALIEV_COMPANY_CANDIDATE_HEAD','')
+    require(re.fullmatch('[0-9a-f]{40}',candidate), 'Exact candidate required')
+    require(subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() == candidate, 'Executed checkout must equal candidate')
+    source = Path('acceptance/MemberCompanyCatalogPersistence/Tests/bin/Release/net10.0/TestResults/member-company')
+    output = Path('member-company-retained'); output.mkdir(exist_ok=True)
+    native = list(Path('member-company-test-results').glob('*.trx'))
+    require(len(native) == 1, 'One native company TRX required')
+    native_rows = rows(native[0])
+    seen_ids = set(); seen_runs = set()
+    for culture in ['en','th']:
+        case = receipt(json.loads((source/(culture+'.json')).read_text()), culture, candidate)
+        released = cleanup(json.loads((source/(culture+'-cleanup.json')).read_text()))
+        cid = released['backends'][0]['originalId']
+        require(cid not in seen_ids and released['run'] not in seen_runs, 'Distinct actual journey ownership required')
+        seen_ids.add(cid); seen_runs.add(released['run'])
+        for name, data in [(culture+'.json',case),(culture+'-cleanup.json',released)]:
+            (output/name).write_text(json.dumps(data,indent=2,ensure_ascii=True)+'\n')
+        png = (source/(culture+'.png')).read_bytes()
+        require(png.startswith(b'\x89PNG\r\n\x1a\n') and len(png) < 4000000, 'Bounded actual synthetic screenshot required')
+        (output/(culture+'.png')).write_bytes(png)
+    watchdog = json.loads(Path('billing-watchdog-results/watchdog.json').read_text())
+    require(all(watchdog.get(k) == v for k,v in {'image':'postgres:18-alpine','identityPolicyVerified':True,'initEnabled':True,'forcedKillVerified':True,'absenceVerified':True,'termObserved':True,'exitCode':137}.items()), 'Actual watchdog gate required')
+    require(re.fullmatch('[0-9a-f]{64}',watchdog.get('containerId','')) and 3 <= watchdog.get('elapsedSeconds',0) <= 25, 'Original watchdog ID/timing required')
+    (output/'watchdog.json').write_text(json.dumps(watchdog,indent=2)+'\n')
+    (output/'native-outcomes.json').write_text(json.dumps({'candidateHead':candidate,'rawTrxSha256':hashlib.sha256(native[0].read_bytes()).hexdigest(),'nativeRows':native_rows,'passed':2,'failed':0,'skipped':0,'assertionTextRetained':False},indent=2)+'\n')
+    controls = json.loads(Path('member-company-control-results/transport-controls.json').read_text())
+    require(set(controls) == {'nativeTransportControls','rejectedCases','rejectedPhysicalAttempts','validPhysicalAttempts','realNetworkAllocated','validLoopbackUriVerified'}, 'Strict executable transport controls schema required')
+    require(controls['rejectedCases'] == ['physical-origin-0','physical-origin-1','physical-origin-2','physical-origin-3','logical-http','logical-other-host','logical-other-path','logical-query','method','body','authorization'] and all(controls.get(k) == v for k,v in {'nativeTransportControls':True,'rejectedPhysicalAttempts':0,'validPhysicalAttempts':1,'realNetworkAllocated':False,'validLoopbackUriVerified':True}.items()), 'Actual same-handler transport guard controls required')
+    (output/'transport-controls.json').write_text(json.dumps(controls,indent=2)+'\n')
+    sources = {str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in Path('acceptance/MemberCompanyCatalogPersistence').rglob('*') if p.is_file() and not any(x in p.parts for x in ['bin','obj','__pycache__'])}
+    sources['.github/workflows/member-company-catalog-persistence.yml'] = hashlib.sha256(Path('.github/workflows/member-company-catalog-persistence.yml').read_bytes()).hexdigest()
+    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'Catalog':'3f426723743570a6c20d2c014499445abb0774e1','Customer':'dc090542c02d675f54c3be59e33654dc24ecca9e','Auth':'51afbbd6e2829382a3431338abedccf339de33b1','CatalogRuntimeDefaults':'7edcd961024868513fd5f373cab3dcb261197f77','sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
+    print('Accepted exactly two isolated company UPDATE native cases, original PG cleanup and bounded synthetic upstream observations')
+
+if __name__ == '__main__':
+    main()
