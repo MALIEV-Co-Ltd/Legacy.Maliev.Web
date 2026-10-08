@@ -51,7 +51,18 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey,
                 Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard, requirePhysical: true);
             var buildValue = build.ToString().ToLowerInvariant();
-            await page.Locator($"[data-workflow-build-preference] input[value='{buildValue}']").CheckAsync();
+            var buildRadio = page.Locator($"[data-workflow-build-preference] input[value='{buildValue}']");
+            await buildRadio.EvaluateAsync(
+                "element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })");
+            Assert.True(await buildRadio.EvaluateAsync<bool>(
+                """
+                element => {
+                  const box = element.getBoundingClientRect();
+                  const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+                  return hit === element || element.contains(hit);
+                }
+                """), "The build radio center must receive pointer events above the sticky footer.");
+            await buildRadio.CheckAsync();
             var state = await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey, build, requirePhysical: true);
             await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')",
                 null, new PageWaitForFunctionOptions { Timeout = 30000 });
@@ -169,7 +180,10 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
-        await using var page = await browser.NewPageAsync();
+        await using var page = await browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
+        });
         await page.GotoAsync(new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString(),
             new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
