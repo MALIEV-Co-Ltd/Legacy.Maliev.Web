@@ -7,6 +7,7 @@ from pathlib import Path
 import pwd
 import signal
 import subprocess
+import sys
 import time
 import uuid
 
@@ -157,7 +158,22 @@ def main():
         if deferred and failure is None:
             failure = InterruptedError('Deferred hosted cancellation after owner settlement')
             ledger['failure'] = type(failure).__name__
-        save()
+        try:
+            save()
+        except BaseException as error:
+            # Cleanup evidence durability can fail after exact settlement.
+            # Preserve the first exception object and retain a separate bounded
+            # log receipt; never turn an uncertain write into cleanup success.
+            report = {'unit': unit, 'finalReceiptWriteFailure': type(error).__name__,
+                      'originalFailure': type(failure).__name__ if failure else None,
+                      'cleanupVerified': ledger['cleanupVerified'],
+                      'cleanupFailure': ledger.get('cleanupFailure'),
+                      'managerUnitAbsent': ledger.get('managerUnitAbsent', False)}
+            try:
+                sys.stderr.write(json.dumps(report) + '\n'); sys.stderr.flush()
+            except BaseException:
+                pass
+            if failure is None: failure = error
     if failure is not None: raise failure
 
 
