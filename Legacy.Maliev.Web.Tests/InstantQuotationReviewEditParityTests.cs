@@ -45,9 +45,9 @@ public sealed class InstantQuotationReviewEditParityTests
     }
 
     [Theory]
-    [InlineData("en", "Standard resin")]
-    [InlineData("th", "การพิมพ์เรซินมาตรฐาน")]
-    public async Task Review_ResinDisablesFdmChoicesWithoutDisablingOtherPartSettings(string culture, string label)
+    [InlineData("en", "Standard resin", "Standard")]
+    [InlineData("th", "การพิมพ์เรซินมาตรฐาน", "มาตรฐาน")]
+    public async Task Review_ResinDisablesFdmChoicesWithoutDisablingOtherPartSettings(string culture, string label, string fdmLabel)
     {
         var previous = System.Globalization.CultureInfo.CurrentUICulture;
         try
@@ -70,6 +70,10 @@ public sealed class InstantQuotationReviewEditParityTests
             var fdmPreference = System.Text.RegularExpressions.Regex.Match(fdm, $"<select[^>]*id=\"review-preference-{id}\"[^>]*>");
             Assert.True(fdmPreference.Success);
             Assert.DoesNotContain("disabled", fdmPreference.Value, StringComparison.Ordinal);
+            var fdmStandard = System.Text.RegularExpressions.Regex.Match(
+                WebUtility.HtmlDecode(fdm), "<option value=\"standard\">([^<]*)</option>");
+            Assert.True(fdmStandard.Success);
+            Assert.Equal(fdmLabel, fdmStandard.Groups[1].Value);
         }
         finally
         {
