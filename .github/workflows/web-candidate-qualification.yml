@@ -7,6 +7,7 @@ name: Web sealed source qualification
     - scripts/run_web_account_candidate.py
     - scripts/web-account-failure-policy.json
     - scripts/web-email-change-session-policy.json
+    - scripts/web-optional-tax-build-policy.json
     - scripts/tests/test_web_candidate_email_session.py
     - scripts/tests/test_web_candidate_account.py
     - docs/web-account-failure-transport-policy.schema.json
@@ -32,6 +33,7 @@ name: Web sealed source qualification
         options:
         - existing
         - email-change-session-v1
+        - optional-tax-build-v1
       manifest_blob:
         description: Same-repository Git blob ID of reviewed manifest
         required: true
@@ -579,7 +581,7 @@ jobs:
         retention-days: 7
         if-no-files-found: error
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice != 'email-change-session-v1'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'existing'
     needs: transport-controls
   email-change-native:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'email-change-session-v1'
@@ -658,5 +660,83 @@ jobs:
           ${{ runner.temp }}/web-email-change-evidence/
           email-change-test-results/
           email-change-suite-results/
+        retention-days: 7
+        if-no-files-found: error
+  optional-tax-build-native:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'optional-tax-build-v1'
+    needs: transport-controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      MSBUILDDISABLENODEREUSE: '1'
+      GITHUB_ACTIONS: 'false'
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Retain reviewed tax build transport outside candidate checkout
+      shell: bash
+      run: |
+        set -euo pipefail
+        transport="$RUNNER_TEMP/tax-build-transport-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        mkdir "$transport"
+        cp scripts/materialize_web_candidate.py scripts/check_web_candidate_admission.py scripts/sealed_source_capsule.py scripts/run_web_candidate_phase.py scripts/run_web_account_candidate.py scripts/launch_web_capped_kernel_proof.py scripts/run_web_capped_kernel_proof.py scripts/web-optional-tax-build-policy.json "$transport/"
+        echo "WEB_TRANSPORT_ROOT=$transport" >> "$GITHUB_ENV"
+        echo "WEB_REVIEWED_TRANSPORT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+    - name: Check out exact tax build source base
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: 2f8bed1c4e8315ecd3e0afdfa3f1b960f0e7ffc8
+        persist-credentials: false
+    - name: Reject unissued or replayed grant before source materialization
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ADMISSION_BLOB: ${{ inputs.admission_blob }}
+        MANIFEST_BLOB: ${{ inputs.manifest_blob }}
+        CAPSULE_BLOB: ${{ inputs.capsule_blob }}
+      run: |
+        set -euo pipefail
+        evidence="$RUNNER_TEMP/web-tax-build-evidence"
+        mkdir "$evidence"
+        python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-optional-tax-build-policy.json" --blob "$ADMISSION_BLOB" --permit "$evidence/root-permit.json"
+        python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-optional-tax-build-policy.json" --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$evidence/intake.json"
+    - name: Project exact ServiceDefaults dependency in this job
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+        ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+        path: .dependencies/Legacy.Maliev.ServiceDefaults
+        persist-credentials: false
+    - name: Project exact CompatibilityContracts dependency in this job
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+        ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+        path: .dependencies/Legacy.Maliev.CompatibilityContracts
+        persist-credentials: false
+    - name: Project existing pinned SDK installer source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: actions/setup-dotnet
+        ref: a98b56852c35b8e3190ac28c8c2271da59106c68
+        path: .dependencies/dotnet-installer
+        persist-credentials: false
+    - name: Create same-job existing capped account owner and run tax build-only phases
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -B "$WEB_TRANSPORT_ROOT/launch_web_capped_kernel_proof.py" --account-policy "$WEB_TRANSPORT_ROOT/web-optional-tax-build-policy.json" --permit "$RUNNER_TEMP/web-tax-build-evidence/root-permit.json" --candidate "$GITHUB_WORKSPACE" --evidence "$RUNNER_TEMP/web-tax-build-evidence/owner"
+    - name: Retain tax build logs and compiled identity
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-tax-build-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ runner.temp }}/web-tax-build-evidence/
+
         retention-days: 7
         if-no-files-found: error

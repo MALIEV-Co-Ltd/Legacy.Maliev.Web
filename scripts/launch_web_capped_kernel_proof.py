@@ -101,7 +101,7 @@ def main():
         ledger['argv'] = ['/usr/bin/python3', '-B', str(script), '--owned-worker', '--unit', unit, '--receipt', str(receipt),
                           '--policy', str(args.account_policy.resolve()), '--permit', str(args.permit.resolve()),
                           '--candidate', str(args.candidate.resolve()), '--evidence', str(evidence)]
-        ledger['authorityScope'] = 'email-change-session-v1'
+        ledger['authorityScope'] = grant.get('sliceKind', 'email-change-session-v1')
     forwarded = (['--setenv=' + key + '=' + os.environ[key] for key in
                   ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'WEB_REVIEWED_TRANSPORT_SHA', 'RUNNER_ENVIRONMENT', 'PATH', 'HOME')]
                  if account else [])

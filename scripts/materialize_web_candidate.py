@@ -19,6 +19,7 @@ EMAIL_SESSION_PATHS = {
     "Legacy.Maliev.Web.Tests/EmailChangeConfirmationSessionHttpTests.cs",
     "Legacy.Maliev.Web.Tests/EmailChangeConfirmationRealSessionTests.cs",
 }
+TAX_POLICY_SHA256 = '4248baabc2e2571f620f85edddb82251e8aceb73aa65e2645e421ff7746b37f0'
 EXPECTED_POLICY_SHA256 = "100ae2ae0a4a8c25cbf47ae3f4a0e0039e93f211d091ec48b192852e176ba43b"
 
 
@@ -32,7 +33,7 @@ NoRedirect = shared.NoRedirect
 
 def load_policy(path):
     raw = Path(path).read_bytes()
-    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256, EMAIL_SESSION_POLICY_SHA256}:
+    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256, EMAIL_SESSION_POLICY_SHA256, TAX_POLICY_SHA256}:
         raise ValueError("Reviewed policy raw-byte identity changed")
     return parse_json(raw)
 
@@ -45,7 +46,18 @@ def validate_capsule(manifest_bytes, capsule_bytes, policy):
     manifest = parse_json(manifest_bytes)
     for key in ("owner", "acceptedBase", "sourcePins", "sourceBindingSha256", "sourceFiles", "capsuleRows"):
         if manifest.get(key) != policy[key]: raise ValueError("Reviewed manifest association changed: " + key)
-    if policy.get("sliceKind") == "email-change-session-v1":
+    if policy.get("sliceKind") == "optional-tax-build-v1":
+        paths = {"Legacy.Maliev.Web/Pages/InstantQuotation/3D-Printing.cshtml.cs", "Legacy.Maliev.Web.Tests/InstantQuotationSubmissionEndpointTests.OptionalTax.cs"}
+        if (policy["acceptedBase"] != "2f8bed1c4e8315ecd3e0afdfa3f1b960f0e7ffc8"
+            or len(manifest["sourceFiles"]) != 2002 or len(manifest["capsuleRows"]) != 2
+            or {row["path"] for row in manifest["capsuleRows"]} != paths
+            or policy.get("reviewedSourceManifestSha256") != "2a49d01763a049cd6a58dc237d7b18fc062eb07587d16297527d4ba62695eb30"
+            or policy.get("sourceReviewSha256") != "75aac863454cc9f63e4a6896b05169bfbdc9459988f62e6be59a194c5c4d1c77"
+            or policy["sourcePins"] != {"ServiceDefaults": "3c790ba6414b2a539f24aabb6948549ffd81a86b", "CompatibilityContracts": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7"}
+            or sha256(json.dumps(manifest["sourceFiles"], sort_keys=True, separators=(",", ":")).encode()) != policy["sourceBindingSha256"]):
+            raise ValueError("Exact reviewed tax two-post current source binding required")
+        count = 2002
+    elif policy.get("sliceKind") == "email-change-session-v1":
         if (policy.get("sourceCount") != 1985 or policy.get("baseSourceCount") != 1983
             or policy.get("acceptedBase") != EMAIL_SESSION_BASE
             or policy.get("sourcePins") != {"ServiceDefaults": "3c790ba6414b2a539f24aabb6948549ffd81a86b",
