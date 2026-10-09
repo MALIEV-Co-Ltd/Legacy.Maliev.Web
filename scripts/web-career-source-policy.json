@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "owner": "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5",
+  "acceptedBase": "b290163d41398cab02ee3741abd98b9c00343a34",
+  "sourcePins": {
+    "ServiceDefaults": "3c790ba6414b2a539f24aabb6948549ffd81a86b",
+    "CompatibilityContracts": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7"
+  },
+  "sourceBindingSha256": "a71347d3897e08f8a48f5cd72374dd8438b80364c75f01655838437529bb469b",
+  "sourceFiles": [
+    {
+      "path": "Legacy.Maliev.Web.Application/CareerContracts.cs",
+      "sha256": "1987dc78eee95d4adc7857f2b5133b66f8deb2b1c93cf129153615d8fbb3a000",
+      "bytes": 1555
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/CareerClientTests.cs",
+      "sha256": "1d32c11a1055a0e7b81459cea2f066c32638f1a24541f5d9c8cb3b0346f18852",
+      "bytes": 3882
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/CareerIndexStaticSsrRouteTests.cs",
+      "sha256": "791399416f30182e8d7834bbb9a167b66cae8d413062ee71047e262591950526",
+      "bytes": 18690
+    }
+  ],
+  "capsuleRows": [
+    {
+      "path": "Legacy.Maliev.Web.Application/CareerContracts.cs",
+      "sha256": "1987dc78eee95d4adc7857f2b5133b66f8deb2b1c93cf129153615d8fbb3a000",
+      "bytes": 1555,
+      "compressedBytes": 584,
+      "crc32": 1860751848,
+      "createSystem": 0,
+      "externalAttributes": 25165824,
+      "flags": 0,
+      "compression": 8,
+      "dateTime": [
+        2026,
+        10,
+        9,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/CareerClientTests.cs",
+      "sha256": "1d32c11a1055a0e7b81459cea2f066c32638f1a24541f5d9c8cb3b0346f18852",
+      "bytes": 3882,
+      "compressedBytes": 1286,
+      "crc32": 3192774915,
+      "createSystem": 0,
+      "externalAttributes": 25165824,
+      "flags": 0,
+      "compression": 8,
+      "dateTime": [
+        2026,
+        10,
+        9,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/CareerIndexStaticSsrRouteTests.cs",
+      "sha256": "791399416f30182e8d7834bbb9a167b66cae8d413062ee71047e262591950526",
+      "bytes": 18690,
+      "compressedBytes": 4231,
+      "crc32": 3014295151,
+      "createSystem": 0,
+      "externalAttributes": 25165824,
+      "flags": 0,
+      "compression": 8,
+      "dateTime": [
+        2026,
+        10,
+        9,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "capsuleSha256": "548df812ee8a942a1fe7102d12491783e9fc0c8d081101b58d4062e670b2e7e0",
+  "capsuleBytes": 6649,
+  "sliceKind": "career-total-records-v1",
+  "manifestSha256": "f5dd5ece12fe9505d90691bb9832d047e5404e2ebc886a5bb860dd8fbe1801ac",
+  "nativeAdmissionSha256": null,
+  "sdkOwnerContextSha256": null,
+  "preimages": {
+    "Legacy.Maliev.Web.Application/CareerContracts.cs": "7133af9848304c796e816badfe68e28dc70e6c6f618b4362ddc5258e28de065e",
+    "Legacy.Maliev.Web.Tests/CareerClientTests.cs": "d7308d946418f59774f1b61977127ec26d3923c084f41af869a8bf47070f7153",
+    "Legacy.Maliev.Web.Tests/CareerIndexStaticSsrRouteTests.cs": "73fc76d770184099bc74aacc85b96a18afd9c8b7036f4729386efdc55cbfd45f"
+  },
+  "sharedExtractorSha256": "44a8a5accac9da11422d606be02fe28487642215df511b5f1c4284296a453ee2",
+  "sdkInstaller": {
+    "commit": "a98b56852c35b8e3190ac28c8c2271da59106c68",
+    "sha256": "082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e",
+    "version": "10.0.401"
+  },
+  "sdkOwnerEnrollment": {
+    "backend": "launch_web_capped_kernel_proof-v1",
+    "memoryMaxBytes": 3221225472,
+    "swapMaxBytes": 0,
+    "cpuQuotaPercent": 100,
+    "tasksMax": 512,
+    "leaseSeconds": 2100
+  },
+  "profilePreparationFiles": {
+    "scripts/prepare-profile-producer-boundary.ps1": "c480002fee3edb040e1cd241ca0c4bc390d10eaa82c9fdce1284c0c3f4f3bb63",
+    "scripts/prepare-member-auth-indexing-proof.ps1": "431d319526b09337cf1c1c6e80471a41a6fcf8b6b5d56725e4888f6d22b52c0f",
+    "scripts/prepare-scb-payment-boundary.ps1": "b47edcefd753bee73c988e14198cbb25fcadbe6f2c5d11d7a5687163cb0fa617",
+    "scripts/prepare-billing-catalog-proof.ps1": "56ec48e9cb0377667d172f411d7f34d3020461be742722008d0e378bba3f8120"
+  },
+  "allowedPhases": [
+    "static",
+    "build",
+    "focused",
+    "suite",
+    "native"
+  ],
+  "qualificationOutputRoots": [
+    ".dependencies",
+    "career-test-results",
+    "career-suite-results"
+  ],
+  "focusedCount": 20,
+  "suiteCount": 3702,
+  "phases": [
+    {
+      "id": "career-sdk-install",
+      "name": "static",
+      "argv": [
+        "bash",
+        ".dependencies/dotnet-installer/externals/install-dotnet.sh",
+        "--version",
+        "10.0.401",
+        "--install-dir",
+        ".dependencies/email-sdk",
+        "--no-path"
+      ]
+    },
+    {
+      "id": "career-sdk-version",
+      "name": "static",
+      "argv": [
+        "dotnet",
+        "--version"
+      ]
+    },
+    {
+      "id": "career-restore",
+      "name": "static",
+      "argv": [
+        "dotnet",
+        "restore",
+        "Legacy.Maliev.Web.slnx"
+      ]
+    },
+    {
+      "id": "career-build",
+      "name": "build",
+      "argv": [
+        "dotnet",
+        "build",
+        "Legacy.Maliev.Web.slnx",
+        "-c",
+        "Release",
+        "--no-restore",
+        "-warnaserror",
+        "-m:1",
+        "-nr:false",
+        "-p:UseSharedCompilation=false"
+      ]
+    },
+    {
+      "id": "career-focused",
+      "name": "focused",
+      "argv": [
+        "dotnet",
+        "test",
+        "Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--filter",
+        "FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerIndexStaticSsrRouteTests",
+        "--logger",
+        "trx;LogFileName=career-focused.trx",
+        "--results-directory",
+        "career-test-results"
+      ]
+    },
+    {
+      "id": "career-prepare-profile",
+      "name": "build",
+      "argv": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/prepare-profile-producer-boundary.ps1"
+      ]
+    },
+    {
+      "id": "career-prepare-member",
+      "name": "build",
+      "argv": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/prepare-member-auth-indexing-proof.ps1"
+      ]
+    },
+    {
+      "id": "career-prepare-scb",
+      "name": "build",
+      "argv": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/prepare-scb-payment-boundary.ps1"
+      ]
+    },
+    {
+      "id": "career-prepare-billing",
+      "name": "build",
+      "argv": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/prepare-billing-catalog-proof.ps1"
+      ]
+    },
+    {
+      "id": "career-chromium",
+      "name": "native",
+      "argv": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1",
+        "install",
+        "--with-deps",
+        "chromium"
+      ]
+    },
+    {
+      "id": "career-suite",
+      "name": "suite",
+      "argv": [
+        "dotnet",
+        "test",
+        "Legacy.Maliev.Web.slnx",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=career-suite.trx",
+        "--results-directory",
+        "career-suite-results",
+        "--collect:XPlat Code Coverage",
+        "--settings",
+        "tests/web-fx-generated-inclusive.runsettings"
+      ]
+    },
+    {
+      "id": "career-format",
+      "name": "static",
+      "argv": [
+        "dotnet",
+        "format",
+        "Legacy.Maliev.Web.slnx",
+        "--verify-no-changes",
+        "--no-restore"
+      ]
+    },
+    {
+      "id": "career-packages",
+      "name": "static",
+      "argv": [
+        "dotnet",
+        "list",
+        "Legacy.Maliev.Web.slnx",
+        "package",
+        "--vulnerable",
+        "--include-transitive",
+        "--no-restore"
+      ]
+    },
+    {
+      "id": "career-coverage",
+      "name": "static",
+      "argv": ["pwsh", "-NoProfile", "-File", "tests/Test-WebFxRawCoverage.ps1", "-ResultsRoot", "career-suite-results"]
+    },
+    {
+      "id": "career-gitleaks-install",
+      "name": "static",
+      "argv": ["go", "install", "github.com/zricethezav/gitleaks/v8@6eaad039603a4de39fddd1cf5f727391efe9974e"]
+    },
+    {
+      "id": "career-gitleaks",
+      "name": "static",
+      "argv": ["gitleaks", "detect", "--no-git", "--source", ".", "--redact"]
+    }
+  ]
+}

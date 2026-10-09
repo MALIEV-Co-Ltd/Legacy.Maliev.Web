@@ -4,6 +4,14 @@ title = "MALIEV verified source pin false-positive policy"
 useDefault = true
 
 [[allowlists]]
+description = "Verified Career member-auth preparation SHA256; see docs/account-source-pin-secret-scan.md"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^scripts/web-career-source-policy\.json$''']
+regexes = ['''^\r?\n?[ \t]*"scripts/prepare-member-auth-indexing-proof\.ps1": "431d319526b09337cf1c1c6e80471a41a6fcf8b6b5d56725e4888f6d22b52c0f",[ \t]*$''']
+
+[[allowlists]]
 description = "Verified historical account contract source SHA256; see docs/account-source-pin-secret-scan.md"
 targetRules = ["generic-api-key"]
 condition = "AND"

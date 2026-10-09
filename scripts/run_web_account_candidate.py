@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--phase-id", required=True)
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
-    if policy.get("sliceKind") not in {"account-failure-v1", "email-change-session-v1"}:
+    if policy.get("sliceKind") not in {"account-failure-v1", "email-change-session-v1", "career-total-records-v1"}:
         raise ValueError("Distinct account policy required")
     if not policy.get("nativeAdmissionSha256") or (not policy.get("sdkOwnerContextSha256") and not policy.get("sdkOwnerEnrollment")):
         raise ValueError("Actual independently pinned permit/SDK owner absent; no SDK launch")
@@ -57,6 +57,9 @@ def main():
 
 def authorize_creation(policy_path, permit_path, candidate):
     policy = intake.load_policy(policy_path)
+    if policy.get("sliceKind") == "career-total-records-v1":
+        from career_source_intake import authorize_creation as career_authorize
+        return career_authorize(policy, permit_path, candidate)
     if policy.get("sliceKind") != "email-change-session-v1" or not policy.get("sdkOwnerEnrollment"):
         raise ValueError("Exact new email owner-creation authority required")
     if not policy.get("nativeAdmissionSha256"):
@@ -110,7 +113,7 @@ def expected_email_cases():
         raise ValueError("Independent authored email roster changed")
     return cases
 
-def verify_trx(path, focused=False, assembly_sha256=None):
+def verify_trx(path, focused=False, assembly_sha256=None, expected_cases=None, normalize_storage=False):
     root = ET.parse(path).getroot()
     ns = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
     def one(parent, name):
@@ -154,7 +157,7 @@ def verify_trx(path, focused=False, assembly_sha256=None):
     if assembly_sha256 is not None and intake.sha256(actual_dll.read_bytes()) != assembly_sha256:
         raise ValueError("Actual built Web test assembly changed after build")
     by_id = {row.attrib["id"]: row for row in definitions}
-    expected = expected_email_cases()
+    expected = expected_email_cases() if expected_cases is None else expected_cases
     authored = []
     names = []
     target_classes = {value[0] for value in expected.values()}
@@ -168,7 +171,8 @@ def verify_trx(path, focused=False, assembly_sha256=None):
             or execution.attrib.get("id") != result.attrib["executionId"]
             or not isinstance(cls, str) or not cls.startswith("Legacy.Maliev.Web.Tests.")
             or Path(method.attrib.get("codeBase", "")).resolve() != actual_dll
-            or Path(definition.attrib.get("storage", "")).resolve() != actual_dll):
+            or (str(Path(definition.attrib.get("storage", "")).resolve()).casefold() != str(actual_dll).casefold()
+                if normalize_storage else Path(definition.attrib.get("storage", "")).resolve() != actual_dll)):
             raise ValueError("Exact passing Web assembly/class/definition/execution identity required")
         names.append(name)
         if cls in target_classes or name in expected:
@@ -190,6 +194,9 @@ def owned_worker():
     parser.add_argument("--unit", required=True); parser.add_argument("--owned-worker", action="store_true")
     args = parser.parse_args()
     policy, grant = authorize_creation(args.policy, args.permit, args.candidate)
+    if policy.get("sliceKind") == "career-total-records-v1":
+        from career_source_intake import owned_worker as career_worker
+        return career_worker(args, policy, grant)
     from run_web_capped_kernel_proof import manager
     show = manager(args.unit)
     group = show["ControlGroup"]
