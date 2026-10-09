@@ -37,7 +37,7 @@ def members(group):
 
 
 def collect_sdk_receipt(evidence, ledger, failure):
-    path = evidence / 'email-sdk-version.json'
+    path = evidence / ('career-sdk-version.json' if ledger.get('authorityScope') == 'career-total-records-v1' else 'email-sdk-version.json')
     try:
         if not path.exists():
             ledger['sdkStarted'] = False
@@ -101,7 +101,7 @@ def main():
         ledger['argv'] = ['/usr/bin/python3', '-B', str(script), '--owned-worker', '--unit', unit, '--receipt', str(receipt),
                           '--policy', str(args.account_policy.resolve()), '--permit', str(args.permit.resolve()),
                           '--candidate', str(args.candidate.resolve()), '--evidence', str(evidence)]
-        ledger['authorityScope'] = 'email-change-session-v1'
+        ledger['authorityScope'] = grant['sliceKind']
     forwarded = (['--setenv=' + key + '=' + os.environ[key] for key in
                   ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'WEB_REVIEWED_TRANSPORT_SHA', 'RUNNER_ENVIRONMENT', 'PATH', 'HOME')]
                  if account else [])

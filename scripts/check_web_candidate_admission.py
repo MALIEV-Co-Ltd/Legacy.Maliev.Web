@@ -9,6 +9,9 @@ import materialize_web_candidate as intake
 OWNER = "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5"
 
 def validate(policy, raw, now=None):
+    if policy.get("sliceKind") == "career-total-records-v1":
+        from career_source_intake import validate_permit
+        return validate_permit(policy, raw, now)
     digest = policy.get("nativeAdmissionSha256")
     if policy.get("sliceKind") == "email-change-session-v1":
         return validate_email_session(policy, raw, now)
@@ -182,7 +185,7 @@ def main():
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
     # Missing prerequisites reject before fetching or writing any permit.
-    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1"} and not policy.get("customerLiteralProducerSha")):
+    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1", "career-total-records-v1"} and not policy.get("customerLiteralProducerSha")):
         # Account scope has its own strict Auth/mail prerequisite validator; old branches are unchanged.
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
     census()

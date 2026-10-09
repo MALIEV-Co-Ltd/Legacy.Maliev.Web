@@ -1,0 +1,118 @@
+name: Web Career sealed source qualification
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/web-career-source-qualification.yml'
+      - 'scripts/career_source_intake.py'
+      - 'scripts/web-career-source-policy.json'
+      - 'scripts/tests/test_web_candidate_career.py'
+      - 'scripts/materialize_web_candidate.py'
+      - 'scripts/check_web_candidate_admission.py'
+      - 'scripts/run_web_candidate_phase.py'
+      - 'scripts/run_web_account_candidate.py'
+      - 'scripts/launch_web_capped_kernel_proof.py'
+  workflow_dispatch:
+    inputs:
+      manifest_blob:
+        required: true
+        type: string
+      capsule_blob:
+        required: true
+        type: string
+      admission_blob:
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: web-sealed-source-qualification
+  cancel-in-progress: false
+jobs:
+  transport-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Compile pure transport before rejection controls
+        run: python3 -B -c "from pathlib import Path; [compile(p.read_bytes(), str(p), 'exec') for p in Path('scripts').glob('*.py')]"
+      - name: Preserve existing admission and custody controls
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_web_candidate*.py'
+      - name: Preserve existing raw materializer controls
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_materialize_web_candidate.py'
+      - name: Preserve existing country permit controls
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_country_web_candidate_admission.py'
+      - name: Preserve shared bounded raw capsule controls
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_sealed_source_capsule.py'
+  career-native:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 38
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Retain protected transport outside candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          transport_root="$RUNNER_TEMP/web-career-transport-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir "$transport_root"
+          cp scripts/*.py scripts/*.json "$transport_root/"
+          printf 'WEB_TRANSPORT_ROOT=%s\n' "$transport_root" >> "$GITHUB_ENV"
+          printf 'WEB_REVIEWED_TRANSPORT_SHA=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Check out fixed reviewed Career application base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: b290163d41398cab02ee3741abd98b9c00343a34
+          persist-credentials: false
+      - name: Reject missing independent permit before source fetch or allocation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADMISSION_BLOB: ${{ inputs.admission_blob }}
+          MANIFEST_BLOB: ${{ inputs.manifest_blob }}
+          CAPSULE_BLOB: ${{ inputs.capsule_blob }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/web-career-evidence"
+          python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-career-source-policy.json" --blob "$ADMISSION_BLOB" --permit "$RUNNER_TEMP/web-career-evidence/root-permit.json"
+          python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-career-source-policy.json" --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$RUNNER_TEMP/web-career-evidence/intake.json"
+      - name: Check out exact Defaults projection
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          path: .dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - name: Check out exact contracts projection
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - name: Check out exact existing SDK installer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: actions/setup-dotnet
+          ref: a98b56852c35b8e3190ac28c8c2271da59106c68
+          path: .dependencies/dotnet-installer
+          persist-credentials: false
+      - name: Execute exact phases in the same finite capped owner
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B "$WEB_TRANSPORT_ROOT/launch_web_capped_kernel_proof.py" --account-policy "$WEB_TRANSPORT_ROOT/web-career-source-policy.json" --permit "$RUNNER_TEMP/web-career-evidence/root-permit.json" --candidate "$GITHUB_WORKSPACE" --evidence "$RUNNER_TEMP/web-career-evidence"
+      - name: Retain raw native results and exact owner cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: career-source-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/web-career-evidence/
+            career-test-results/
+            career-suite-results/
+          if-no-files-found: error

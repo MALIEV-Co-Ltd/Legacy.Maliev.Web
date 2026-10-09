@@ -12,8 +12,8 @@ class SourcePinSecretScanControls(unittest.TestCase):
     def test_exception_is_one_rule_one_path_and_exact_verified_inventory_pin(self):
         config = tomllib.loads((ROOT / ".gitleaks.toml").read_text(encoding="utf-8"))
         self.assertEqual({"useDefault": True}, config["extend"])
-        self.assertEqual(3, len(config["allowlists"]))
-        rule = config["allowlists"][0]
+        self.assertEqual(4, len(config["allowlists"]))
+        rule = config["allowlists"][1]
         self.assertEqual(["generic-api-key"], rule["targetRules"])
         self.assertEqual("AND", rule["condition"])
         self.assertEqual("line", rule["regexTarget"])
@@ -45,7 +45,7 @@ class SourcePinSecretScanControls(unittest.TestCase):
             ("Legacy.Maliev.Web.Infrastructure/CustomerAuthenticationClient.cs", policy["producerPrerequisites"]["contractFiles"]),
         ]
         inventory = {row["path"]: row["sha256"] for row in policy["sourceFiles"]}
-        for rule, (path, pins) in zip(config["allowlists"][1:], expected, strict=True):
+        for rule, (path, pins) in zip(config["allowlists"][2:], expected, strict=True):
             with self.subTest(path=path):
                 self.assertEqual(["generic-api-key"], rule["targetRules"])
                 self.assertEqual("AND", rule["condition"])
@@ -64,5 +64,28 @@ class SourcePinSecretScanControls(unittest.TestCase):
                                  line.replace(path, "OtherAuthenticationClient.cs"), line + " extra",
                                  '"api_key": "synthetic-unrelated-credential-control"']:
                     self.assertIsNone(re.fullmatch(rule["regexes"][0], rejected))
+
+    def test_career_exception_is_exact_verified_preparation_pin(self):
+        config = tomllib.loads((ROOT / ".gitleaks.toml").read_text(encoding="utf-8"))
+        rule = config["allowlists"][0]
+        self.assertEqual(["generic-api-key"], rule["targetRules"])
+        self.assertEqual("AND", rule["condition"])
+        self.assertEqual("line", rule["regexTarget"])
+        self.assertEqual(1, len(rule["paths"]))
+        self.assertEqual(1, len(rule["regexes"]))
+        policy_path = "scripts/web-career-source-policy.json"
+        path = "scripts/prepare-member-auth-indexing-proof.ps1"
+        policy = json.loads((ROOT / policy_path).read_text(encoding="utf-8"))
+        digest = policy["profilePreparationFiles"][path]
+        self.assertEqual(hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), digest)
+        line = f'    "{path}": "{digest}",'
+        for accepted in [line, "\n" + line, "\r\n" + line]:
+            self.assertIsNotNone(re.fullmatch(rule["regexes"][0], accepted))
+        self.assertIsNotNone(re.fullmatch(rule["paths"][0], policy_path))
+        for rejected in ["scripts/other-policy.json", "prefix/" + policy_path, policy_path + ".backup"]:
+            self.assertIsNone(re.fullmatch(rule["paths"][0], rejected))
+        for rejected in [line.replace(digest, hashlib.sha256(b"negative control").hexdigest()),
+                         line.replace(path, "scripts/other-proof.ps1"), line + " extra"]:
+            self.assertIsNone(re.fullmatch(rule["regexes"][0], rejected))
 
 if __name__ == "__main__": unittest.main()

@@ -131,7 +131,7 @@ def verify_capped_owner(policy,context_path,proc_root=Path("/proc"),cgroup_root=
     if proc_root==Path("/proc") and (os.name!="posix" or os.geteuid()==0):
         raise ValueError("Unprivileged existing Linux SDK unit required")
     digest=policy.get("sdkOwnerContextSha256")
-    enrolled = (policy.get("sliceKind") == "email-change-session-v1" and digest is None
+    enrolled = (policy.get("sliceKind") in {"email-change-session-v1", "career-total-records-v1"} and digest is None
                 and grant is not None and grant.get("sdkOwnerEnrollment") == policy.get("sdkOwnerEnrollment")
                 and isinstance(grant.get("ownerNonce"), str) and len(grant["ownerNonce"]) == 32)
     if context_path is None or (not enrolled and (not isinstance(digest,str) or len(digest)!=64)):
@@ -213,13 +213,13 @@ def main():
         phase=grant["phase"]
         if args.id!=phase["id"] or args.phase!=phase["name"] or command!=phase["argv"]:
             raise ValueError("Exact country BUILD argv and phase identity required")
-    if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1"}:
+    if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1", "career-total-records-v1"}:
         matched=[row for row in grant["phases"] if row["id"]==args.id]
         if len(matched)!=1 or matched[0]["name"]!=args.phase or matched[0]["argv"]!=command:
             raise ValueError("Exact account phase identity and argv required")
-    if policy.get("sliceKind") == "email-change-session-v1":
+    if policy.get("sliceKind") in {"email-change-session-v1", "career-total-records-v1"}:
         verify_email_phase_history(policy, grant, args.id, args.evidence)
-    owner_arguments = {"grant": grant} if policy.get("sliceKind") == "email-change-session-v1" else {}
+    owner_arguments = {"grant": grant} if policy.get("sliceKind") in {"email-change-session-v1", "career-total-records-v1"} else {}
     owner_context=verify_capped_owner(policy,args.sdk_owner_context,**owner_arguments)
     executable=shutil.which(command[0])
     if not executable:raise ValueError("Executable unavailable")
@@ -230,7 +230,7 @@ def main():
     receipt=args.evidence/(args.id+".json");log=args.evidence/(args.id+".log")
     if receipt.exists() or log.exists():raise ValueError("Fresh phase evidence paths required")
     record={"owner":admission.OWNER,"phase":args.phase,"expiresUtc":grant["expiresUtc"],"command":command,"executable":executable,"persistentData":False,"ports":[],"cleanupVerified":False,"phaseSucceeded":False}
-    if policy.get("sliceKind") == "email-change-session-v1":
+    if policy.get("sliceKind") in {"email-change-session-v1", "career-total-records-v1"}:
         record.update({key: grant[key] for key in ("sourceBindingSha256", "manifestSha256", "transportSha", "runId", "runAttempt")})
         record.update({key: policy[key] for key in ("sdkOwnerContextSha256", "nativeAdmissionSha256")})
         record["admittedArgv"] = list(command)
