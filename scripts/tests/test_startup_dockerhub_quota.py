@@ -141,14 +141,14 @@ class QuotaTests(unittest.TestCase):
 
     def test_cache_actual_mocked_inspection_command(self):
         run = Mock(return_value=SimpleNamespace(returncode=0, stdout=b'sha256:'+b'a'*64+b'\n', stderr=b''))
-        self.assertEqual(q.inspect_cache(run), 'Present')
+        self.assertEqual(q.inspect_cache(run), ('Present', {'category':'ImagePresent','exitCode':0}))
         self.assertEqual(run.call_args.args[0], ['docker','image','inspect','redis:8.4-alpine','--format','{{.Id}}'])
         self.assertEqual(run.call_args.kwargs['timeout'], 3)
 
     def test_cache_absence_is_distinct_from_daemon_fault(self):
         for code, output, error, expected in [(1,b'',b'Error response from daemon: No such image: redis:8.4-alpine\n','Absent'),(1,b'',b'Cannot connect PRIVATE','Unavailable'),(1,b'',b'No such image: other','Unavailable'),(0,b'PRIVATE',b'','Unavailable')]:
-            self.assertEqual(q.inspect_cache(Mock(return_value=SimpleNamespace(returncode=code, stdout=output, stderr=error))), expected)
-        self.assertEqual(q.inspect_cache(Mock(side_effect=subprocess.TimeoutExpired('PRIVATE', 3))), 'Unavailable')
+            self.assertEqual(q.inspect_cache(Mock(return_value=SimpleNamespace(returncode=code, stdout=output, stderr=error)))[0], expected)
+        self.assertEqual(q.inspect_cache(Mock(side_effect=subprocess.TimeoutExpired('PRIVATE', 3))), ('Unavailable', {'category':'Timeout','exitCode':None}))
 
     def test_worker_deadline_and_stderr_not_retained(self):
         run = Mock(side_effect=subprocess.TimeoutExpired('PRIVATE', 20))
@@ -200,15 +200,73 @@ class QuotaTests(unittest.TestCase):
         for state, code in [('Present',0),('Unavailable',1)]:
             with tempfile.TemporaryDirectory() as directory:
                 path=Path(directory)/'receipt.json';network=Mock()
-                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'], network, Mock(return_value=state)),code)
+                diagnostic={'category':'ImagePresent' if state=='Present' else 'UnrecognizedResponse','exitCode':0 if state=='Present' else 1}
+                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'], network, Mock(return_value=(state,diagnostic))),code)
                 network.assert_not_called()
                 self.assertEqual(json.loads(path.read_text())['cache'],state)
 
     def test_cache_absent_continues_fixed_quota_probe(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'receipt.json';network=Mock(return_value=probe()[0])
-            self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,Mock(return_value='Absent')),0)
+            self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,Mock(return_value=('Absent',{'category':'ImageAbsent','exitCode':1}))),0)
             network.assert_called_once();self.assertEqual(json.loads(path.read_text())['cache'],'Absent')
+
+    def test_official_missing_image_lf_and_only_supported_newlines_continue_quota(self):
+        for output in (b'',b'\n',b'\r\n'):
+            with self.subTest(output=output), tempfile.TemporaryDirectory() as directory:
+                path=Path(directory)/'receipt.json'
+                run=Mock(return_value=SimpleNamespace(returncode=1,stdout=output,stderr=b'Error: No such image: redis:8.4-alpine\n'))
+                network=Mock(return_value=probe()[0])
+                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,lambda:q.inspect_cache(run)),0)
+                network.assert_called_once()
+                receipt=json.loads(path.read_text())
+                self.assertEqual(receipt['cacheInspection'],{'category':'ImageAbsent','exitCode':1})
+                q.validate(receipt)
+
+    def test_foreign_stdout_and_return_code_never_become_missing(self):
+        for output,code in [(b' \n',1),(b'\n\n',1),(b'\r',1),(b'PRIVATE\n',1),(b'\n',2),(b'\n',True)]:
+            with self.subTest(output=output,code=code), tempfile.TemporaryDirectory() as directory:
+                run=Mock(return_value=SimpleNamespace(returncode=code,stdout=output,stderr=b'Error: No such image: redis:8.4-alpine\n'))
+                path=Path(directory)/'receipt.json';network=Mock()
+                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,lambda:q.inspect_cache(run)),1)
+                network.assert_not_called();receipt=json.loads(path.read_text())
+                self.assertEqual(receipt['cacheInspection']['category'],'UnrecognizedResponse')
+                self.assertNotIn('PRIVATE',json.dumps(receipt))
+
+    def test_daemon_or_foreign_missing_stderr_does_not_fallback_to_http(self):
+        for error in (b'Cannot connect PRIVATE-DAEMON',b'Error: No such image: other:tag',b'Error: No such image: redis:8.4-alpine\nPRIVATE'):
+            with self.subTest(error=error), tempfile.TemporaryDirectory() as directory:
+                run=Mock(return_value=SimpleNamespace(returncode=1,stdout=b'\n',stderr=error))
+                path=Path(directory)/'receipt.json';network=Mock()
+                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,lambda:q.inspect_cache(run)),1)
+                network.assert_not_called();receipt=json.loads(path.read_text())
+                self.assertEqual(receipt['cacheInspection'],{'category':'UnrecognizedResponse','exitCode':1})
+                self.assertNotIn('PRIVATE',json.dumps(receipt))
+
+    def test_actual_inspect_exceptions_retain_closed_category_without_private_text(self):
+        errors=[(subprocess.TimeoutExpired('PRIVATE-PATH',3,output=b'PRIVATE',stderr=b'PRIVATE'),'Timeout'),
+                (FileNotFoundError('PRIVATE-PATH'),'ExecutableUnavailable'),
+                (PermissionError('PRIVATE-ENDPOINT'),'InspectionOsError')]
+        for error,category in errors:
+            with self.subTest(category=category), tempfile.TemporaryDirectory() as directory:
+                path=Path(directory)/'receipt.json';network=Mock();run=Mock(side_effect=error)
+                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,lambda:q.inspect_cache(run)),1)
+                network.assert_not_called();receipt=json.loads(path.read_text())
+                self.assertEqual(receipt['cacheInspection'],{'category':category,'exitCode':None})
+                self.assertNotIn('PRIVATE',json.dumps(receipt));q.validate(receipt)
+
+    def test_inspection_receipt_closed_schema_state_and_exit_join_inverses(self):
+        receipt=q.empty();self.assertEqual(receipt['schema'],2)
+        receipt['schema']=1
+        with self.assertRaises(ValueError):q.validate(receipt)
+        invalid=[{'category':'PRIVATE','exitCode':None},{'category':'ImageAbsent','exitCode':1},
+                 {'category':'NotChecked','exitCode':1},{'category':'NotChecked','exitCode':True},
+                 {'category':'NotChecked','exitCode':None,'stderr':'PRIVATE'}]
+        for diagnostic in invalid:
+            receipt=q.empty();receipt['cacheInspection']=diagnostic
+            with self.subTest(diagnostic=diagnostic), self.assertRaises(ValueError):q.validate(receipt)
+        receipt=q.empty();receipt.update(cache='Absent',cacheInspection={'category':'ImageAbsent','exitCode':0})
+        with self.assertRaises(ValueError):q.validate(receipt)
 
     def test_unknown_or_abbreviated_cli_no_probe_or_receipt(self):
         network=Mock()

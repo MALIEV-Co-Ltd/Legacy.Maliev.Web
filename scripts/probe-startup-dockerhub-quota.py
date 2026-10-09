@@ -28,10 +28,11 @@ def utc():
 
 
 def empty(reason="Unknown"):
-    return {"schema": 1, "image": IMAGE, "probeUtc": utc(), "serviceDateUtc": None,
+    return {"schema": 2, "image": IMAGE, "probeUtc": utc(), "serviceDateUtc": None,
             "authHttpStatus": None, "registryHttpStatus": None, "limit": None,
             "remaining": None, "windowSeconds": None, "retryAfter": None,
-            "rateLimitReset": None, "cache": "NotChecked", "eligible": False,
+            "rateLimitReset": None, "cache": "NotChecked",
+            "cacheInspection": {"category": "NotChecked", "exitCode": None}, "eligible": False,
             "reason": reason, "limitations": LIMITATIONS}
 
 
@@ -146,15 +147,22 @@ def inspect_cache(run=subprocess.run):
     try:
         response = run(["docker", "image", "inspect", IMAGE, "--format", "{{.Id}}"],
                        capture_output=True, timeout=INSPECT_SECONDS, check=False)
-        if response.returncode == 0 and re.fullmatch(rb"sha256:[0-9a-f]{64}\r?\n?", response.stdout):
-            return "Present"
-        if response.returncode == 1 and not response.stdout and response.stderr.strip() in {
+        if type(response.returncode) is int and response.returncode == 0 and re.fullmatch(rb"sha256:[0-9a-f]{64}\r?\n?", response.stdout):
+            return "Present", {"category": "ImagePresent", "exitCode": 0}
+        # Docker CLI TemplateInspector.Flush emits one LF even for a missing image.
+        # Permit only its empty/single-newline forms, never arbitrary stripped stdout.
+        if type(response.returncode) is int and response.returncode == 1 and response.stdout in {b"", b"\n", b"\r\n"} and response.stderr.strip() in {
                 b"Error response from daemon: No such image: redis:8.4-alpine",
                 b"Error: No such image: redis:8.4-alpine"}:
-            return "Absent"
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-    return "Unavailable"
+            return "Absent", {"category": "ImageAbsent", "exitCode": 1}
+        code = response.returncode if type(response.returncode) is int and -255 <= response.returncode <= 255 else None
+        return "Unavailable", {"category": "UnrecognizedResponse", "exitCode": code}
+    except subprocess.TimeoutExpired:
+        return "Unavailable", {"category": "Timeout", "exitCode": None}
+    except FileNotFoundError:
+        return "Unavailable", {"category": "ExecutableUnavailable", "exitCode": None}
+    except OSError:
+        return "Unavailable", {"category": "InspectionOsError", "exitCode": None}
 
 
 REASONS = {"Unknown", "AuthHttpFailure", "AuthUnavailable", "MalformedResponse", "TransportUnavailable",
@@ -165,10 +173,25 @@ REASONS = {"Unknown", "AuthHttpFailure", "AuthUnavailable", "MalformedResponse",
 def validate(result):
     if not isinstance(result, dict) or set(result) != set(empty()):
         raise ValueError("ReceiptShape")
-    if type(result["schema"]) is not int or result["schema"] != 1 or result["image"] != IMAGE or result["limitations"] != LIMITATIONS:
+    if type(result["schema"]) is not int or result["schema"] != 2 or result["image"] != IMAGE or result["limitations"] != LIMITATIONS:
         raise ValueError("ReceiptIdentity")
     if result["reason"] not in REASONS or result["cache"] not in {"NotChecked", "Absent", "Present", "Unavailable"} or type(result["eligible"]) is not bool:
         raise ValueError("ReceiptType")
+    inspection = result["cacheInspection"]
+    if not isinstance(inspection, dict) or set(inspection) != {"category", "exitCode"}:
+        raise ValueError("InspectionShape")
+    states = {"NotChecked": "NotChecked", "ImagePresent": "Present", "ImageAbsent": "Absent",
+              "Timeout": "Unavailable", "ExecutableUnavailable": "Unavailable",
+              "InspectionOsError": "Unavailable", "UnrecognizedResponse": "Unavailable"}
+    category, code = inspection["category"], inspection["exitCode"]
+    if not isinstance(category, str) or category not in states or states[category] != result["cache"]:
+        raise ValueError("InspectionCategory")
+    if code is not None and (type(code) is not int or not -255 <= code <= 255):
+        raise ValueError("InspectionCode")
+    if category == "ImagePresent" and code != 0 or category == "ImageAbsent" and code != 1:
+        raise ValueError("InspectionIdentity")
+    if category in {"NotChecked", "Timeout", "ExecutableUnavailable", "InspectionOsError"} and code is not None:
+        raise ValueError("InspectionIdentity")
     for key in ("authHttpStatus", "registryHttpStatus"):
         if result[key] is not None and (type(result[key]) is not int or not 100 <= result[key] <= 599):
             raise ValueError("ReceiptStatus")
@@ -238,7 +261,7 @@ def main(argv=None, network=bounded_probe, cache=inspect_cache):
     with os.fdopen(fd, "w", encoding="utf-8") as output:
         result = empty()
         try:
-            state = cache() if args.check_local_cache else "NotChecked"
+            state, inspection = cache() if args.check_local_cache else ("NotChecked", result["cacheInspection"])
             if state == "Present":
                 result.update(cache=state, eligible=True, reason="CacheAvailable")
             elif state == "Unavailable" or state not in {"NotChecked", "Absent"}:
@@ -246,6 +269,7 @@ def main(argv=None, network=bounded_probe, cache=inspect_cache):
             else:
                 result = validate(network())
                 result["cache"] = state
+            result["cacheInspection"] = inspection
         except Exception:
             result = empty("WorkerUnavailable")
         output.write(json.dumps(validate(result), sort_keys=True) + "\n")
