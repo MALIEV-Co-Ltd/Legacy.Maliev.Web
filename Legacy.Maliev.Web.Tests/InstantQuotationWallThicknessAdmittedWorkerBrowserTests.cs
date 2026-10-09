@@ -127,7 +127,52 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         var material = page.Locator("[data-workflow-material-picker] select[name='material']");
         await material.SelectOptionAsync("ABS");
         await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
-        await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+        try
+        {
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+        }
+        catch (TimeoutException)
+        {
+            // Observe only after the original deadline; never replace the primary timeout.
+            try
+            {
+                using var diagnosticDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                var observation = page.EvaluateAsync<string>("""
+                    () => {
+                        const configuration = document.querySelector('[data-workflow-configuration]');
+                        const review = configuration?.querySelector('.instant-quote__configuration-actions button');
+                        const state = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
+                        const states = ['empty', 'uploading', 'uploaded', 'error', 'multipart', 'configured', 'review', 'customerdetails', 'submitted'];
+                        return JSON.stringify({
+                            workflow: states.includes(state) ? state : 'unknown',
+                            configurationPresent: !!configuration,
+                            reviewPresent: !!review,
+                            reviewDisabled: review ? review.disabled : null,
+                            pricingLoading: !!document.querySelector('[data-pricing-loading-status]'),
+                            materialMatched: configuration?.querySelector('select[name="material"]')?.value === 'ABS',
+                            partCount: Math.min(document.querySelectorAll('[data-workflow-part]').length, 10),
+                            priceTierCount: Math.min(document.querySelectorAll('[data-workflow-price-tier]').length, 10),
+                            unavailableCount: Math.min(document.querySelectorAll('[data-workflow-price-unavailable]').length, 10)
+                        });
+                    }
+                    """);
+                _ = observation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                var rendered = await observation.WaitAsync(diagnosticDeadline.Token);
+                output.WriteLine($"[admitted-abs-review-render] {rendered}; pageErrorCount={Math.Min(pageErrors.Count, 10)}; consoleErrorCount={Math.Min(consoleErrors.Count, 10)}");
+                var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+                var observed = await store.GetAsync(transport.SessionId!, transport.OwnerIdentity, diagnosticDeadline.Token)
+                    .WaitAsync(diagnosticDeadline.Token);
+                var observedPart = observed is not null && observed.Parts.Count == 1 ? observed.Parts[0] : null;
+                output.WriteLine($"[admitted-abs-review-authority] sessionPresent={observed is not null}; authorizationPresent={(observed is null ? "unknown" : (observed.QuoteAuthorization is not null).ToString())}; singlePartPresent={(observed is null ? "unknown" : (observedPart is not null).ToString())}; materialMatched={(observedPart is null ? "unknown" : (observedPart.Configuration.MaterialKey == "ABS").ToString())}");
+            }
+            catch
+            {
+                try { output.WriteLine("[admitted-abs-review] observation=unavailable; authority=unknown"); }
+                catch { /* A failing output sink cannot replace the primary timeout. */ }
+            }
+            throw;
+        }
         var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
         var sessions = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
         var session = await sessions.GetAsync(transport.SessionId!, transport.OwnerIdentity, default);

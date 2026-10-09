@@ -14,6 +14,326 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Theory]
+    [MemberData(nameof(MaterialCatalogCrossLayerContractTests.OfferedMaterials), MemberType = typeof(MaterialCatalogCrossLayerContractTests))]
+    public async Task RenderedEveryOfferColorInventoryMatchesOriginalCatalog(string materialKey)
+    {
+        await WithOriginalCatalogMeshBrowserAsync(async (factory, upload, page, partId, _) =>
+        {
+            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync(materialKey);
+            await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey, null, requirePhysical: false);
+            var serverColors = Legacy.Maliev.Web.Application.Pricing.PricingCatalog.MaterialColors[materialKey].ToArray();
+            await page.WaitForFunctionAsync(
+                """
+                expected => {
+                  const picker = document.querySelector('[data-workflow-material-picker] select[name="color"]');
+                  return !!picker && JSON.stringify([...picker.options].map(option => option.value)) === JSON.stringify(expected);
+                }
+                """, serverColors, new PageWaitForFunctionOptions { Timeout = 30000 });
+            var actual = await page.Locator("[data-workflow-material-picker] select[name='color'] option")
+                .EvaluateAllAsync<string[]>("options => options.map(option => option.value)");
+            Assert.Equal(MaterialCatalogCrossLayerContractTests.ExpectedBrowserColors(materialKey), actual);
+        });
+    }
+
+    [Theory]
+    [InlineData("PA612-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard)]
+    [InlineData("PA612-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality)]
+    [InlineData("PA612-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength)]
+    [InlineData("ABS-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard)]
+    [InlineData("ABS-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality)]
+    [InlineData("ABS-ESD", Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength)]
+    public async Task OriginalEsdMaterials_AllBuildsReachRealMeshAutomaticPhysicalPrice(
+        string materialKey, Legacy.Maliev.Web.Application.Pricing.BuildPreference build)
+    {
+        await WithOriginalCatalogMeshBrowserAsync(async (factory, upload, page, partId, digest) =>
+        {
+            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync(materialKey);
+            await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey,
+                Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard, requirePhysical: true);
+            var buildValue = build.ToString().ToLowerInvariant();
+            var buildRadio = page.Locator($"[data-workflow-build-preference] input[value='{buildValue}']");
+            await buildRadio.EvaluateAsync(
+                "element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })");
+            Assert.True(await buildRadio.EvaluateAsync<bool>(
+                """
+                element => {
+                  const box = element.getBoundingClientRect();
+                  const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+                  return hit === element || element.contains(hit);
+                }
+                """), "The build radio center must receive pointer events above the sticky footer.");
+            await buildRadio.CheckAsync();
+            var state = await WaitForCatalogConfigurationAsync(factory, upload, partId, materialKey, build, requirePhysical: true);
+            await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')",
+                null, new PageWaitForFunctionOptions { Timeout = 30000 });
+            Assert.Equal(materialKey, await page.Locator("[data-workflow-material-picker] select[name='material']").InputValueAsync());
+            Assert.True(await page.Locator($"[data-workflow-build-preference] input[value='{buildValue}']").IsCheckedAsync());
+            Assert.Equal(new[] { "Black" }, await page.Locator("[data-workflow-material-picker] select[name='color'] option")
+                .EvaluateAllAsync<string[]>("options => options.map(option => option.value)"));
+            Assert.Equal(0, await page.Locator("[data-workflow-price-unavailable]").CountAsync());
+            await page.Locator("[data-workflow-selected-print-time] dd").WaitForAsync();
+
+            var part = Assert.Single(state.Parts);
+            Assert.Equal(partId, part.PartId);
+            Assert.Equal(materialKey, part.Configuration.MaterialKey);
+            Assert.Equal(build, part.Configuration.BuildPreference);
+            Assert.Equal(1, part.Configuration.Quantity);
+            var physicalUpload = Assert.IsType<InstantQuotationPhysicalAnalysisUpload>(part.PhysicalAnalysisUpload);
+            Assert.Equal(digest, physicalUpload.Sha256);
+            Assert.Equal(digest, part.Geometry.Sha256);
+            var receipt = Assert.Single(state.PhysicalReceipts!, value => value.PartId == partId
+                && value.MaterialKey == materialKey && value.BuildPreference == build);
+            Assert.Equal(state.SessionId, receipt.SessionId);
+            Assert.Equal(upload.OwnerIdentity, receipt.OwnerIdentity);
+            Assert.Equal(physicalUpload.FileId, receipt.FileId);
+            Assert.Equal(digest, receipt.UploadSha256);
+            Assert.Equal(materialKey, receipt.ConfiguredMaterialKey);
+            Assert.Equal(1, receipt.Quantity);
+            Assert.True(double.IsFinite(receipt.MotionSeconds) && receipt.MotionSeconds > 0);
+
+            using var scope = factory.Services.CreateScope();
+            var profiles = scope.ServiceProvider.GetRequiredService<Legacy.Maliev.Web.Application.Pricing.FdmRuntimeProfileCatalog>();
+            Assert.True(profiles.TryResolveTrustedProfile(materialKey, build, out var profile));
+            Assert.NotNull(profile);
+            Assert.Equal(materialKey == "PA612-ESD" ? 12d : 22d, profile.MaximumVolumetricFlowMm3PerSecond!.Value);
+            if (materialKey == "ABS-ESD") Assert.Equal(200d, profile.Motion.TravelSpeedMmPerSecond);
+            Assert.Equal(profiles.ProfileVersion, receipt.ProfileVersion);
+            Assert.Equal(profile.ResolvedProfileSha256, receipt.ProfileSha256);
+            Assert.Null(Legacy.Maliev.Web.Application.Pricing.PricingCatalog.ResolveMaterial("PC-ESD"));
+            Assert.False(profiles.TryResolveTrustedProfile("PC-ESD", build, out _));
+
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
+            var stageStarted = started;
+            var stage = "MeshRead";
+            long meshFinishedAtMs = -1;
+            long analyzeFinishedAtMs = -1;
+            InstantQuotationOrderQuote? quote;
+            try
+            {
+                var mesh = await new InstantQuotationAdmittedMeshService(new BrowserMultiUploadInputReader(upload,
+                    scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>()))
+                    .ReadAsync(state.SessionId, upload.OwnerIdentity, partId, physicalUpload.FileId, digest, deadline.Token);
+                meshFinishedAtMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0L, 600000L);
+                Assert.True(mesh.IsReady);
+                Assert.Equal(digest, mesh.UploadSha256);
+                Assert.Equal(12, mesh.Mesh!.Triangles.Count);
+                var binding = new InstantQuotationPhysicalAnalysisBinding(state.SessionId, upload.OwnerIdentity,
+                    partId, physicalUpload.FileId, digest, materialKey, build, 1, profiles.ProfileVersion);
+                stage = "BoundAnalyze";
+                stageStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+                var analyzed = await scope.ServiceProvider.GetRequiredService<InstantQuotationBoundPhysicalAnalysisService>()
+                    .AnalyzeAsync(binding, deadline.Token);
+                analyzeFinishedAtMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0L, 600000L);
+                Assert.True(analyzed.IsReady, analyzed.Failure.ToString());
+                Assert.Equal(binding, analyzed.Binding);
+                Assert.Equal(receipt.ProfileSha256, analyzed.Physical!.ProfileSha256);
+                Assert.Equal(receipt.MotionSeconds, analyzed.Physical.Motion.TotalSeconds, 6);
+
+                stage = "AuthoritativeQuote";
+                stageStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+                quote = await scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>()
+                    .QuoteAsync(state, upload.OwnerIdentity, includeComparisons: false, deadline.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Failure-only monotonic metadata; preserve the existing caller and production budgets.
+                try
+                {
+                    var elapsedMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0L, 600000L);
+                    var stageElapsedMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds, 0L, 600000L);
+                    var material = materialKey switch { "PA612-ESD" => "PA612-ESD", "ABS-ESD" => "ABS-ESD", _ => "Unknown" };
+                    var preference = build switch
+                    {
+                        Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard => "Standard",
+                        Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality => "Quality",
+                        Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength => "Strength",
+                        _ => "Unknown",
+                    };
+                    output.WriteLine($"[original-esd-cancellation] material={material}; build={preference}; stage={stage}; elapsedMs={elapsedMs}; stageElapsedMs={stageElapsedMs}; meshFinishedAtMs={meshFinishedAtMs}; analyzeFinishedAtMs={analyzeFinishedAtMs}; callerCancellationRequested={deadline.IsCancellationRequested}");
+                }
+                catch { /* A secondary observation or output failure cannot replace the original cancellation. */ }
+                throw;
+            }
+            Assert.NotNull(quote);
+            var line = Assert.Single(quote.Parts);
+            Assert.Equal(partId, line.PartId);
+            Assert.Equal(materialKey, line.MaterialKey);
+            Assert.Equal(build, line.BuildPreference);
+            Assert.Equal(receipt, line.PhysicalReceipt);
+            Assert.True(double.IsFinite(line.PrintTimeMinutesPerUnit) && line.PrintTimeMinutesPerUnit > 0);
+            Assert.Equal(receipt.MotionSeconds / 60, line.PrintTimeMinutesPerUnit, 6);
+            Assert.True(double.IsFinite(line.Subtotal) && line.Subtotal > 0);
+            Assert.True(scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>()
+                .Validate(state, quote, state.QuoteAuthorization!, DateTimeOffset.UtcNow));
+            var subtotal = page.Locator("[data-workflow-part-price] dt")
+                .Filter(new LocatorFilterOptions { HasText = "Subtotal" }).Locator("..").Locator("dd");
+            var renderedSubtotal = await subtotal.EvaluateAsync<double>(
+                "element => Number(element.textContent.replace(/[^0-9.-]/g, ''))");
+            Assert.True(double.IsFinite(renderedSubtotal) && renderedSubtotal > 0);
+            Assert.Equal(line.Subtotal, renderedSubtotal, 2);
+            output.WriteLine($"[original-esd-proof] material={materialKey}; build={build}; part={partId:D}; uploadSha256={digest}; profileSha256={receipt.ProfileSha256}; physicalSha256={receipt.PhysicalSha256}; positiveMinutes={line.PrintTimeMinutesPerUnit > 0}; positiveSubtotal={line.Subtotal > 0}");
+        });
+    }
+
+    private async Task<InstantQuotationSessionState> WaitForCatalogConfigurationAsync(
+        RealUploadTestingWebApplicationFactory factory, HashCheckingUploadClient upload, Guid partId,
+        string materialKey, Legacy.Maliev.Web.Application.Pricing.BuildPreference? build, bool requirePhysical)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+        // Observation uses only the last completed original read; never performs a secondary read.
+        var observationStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+        long lastReadAt = 0;
+        var completedReads = 0;
+        var snapshotAvailable = false;
+        var observationStage = "StoreRead";
+        InstantQuotationSessionState? lastState = null;
+        InstantQuotationPart? lastPart = null;
+        try
+        {
+            while (true)
+            {
+                observationStage = "StoreRead";
+                var state = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, deadline.Token).WaitAsync(deadline.Token);
+                var part = state?.Parts.SingleOrDefault(value => value.PartId == partId);
+                lastState = state;
+                lastPart = part;
+                snapshotAvailable = true;
+                completedReads = Math.Min(completedReads + 1, 10000);
+                lastReadAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                if (part is not null && part.Configuration.MaterialKey == materialKey
+                    && (build is null || part.Configuration.BuildPreference == build)
+                    && (!requirePhysical || (state!.QuoteAuthorization is not null
+                        && state.PhysicalReceipts?.Any(receipt => receipt.PartId == partId
+                            && receipt.MaterialKey == materialKey && receipt.BuildPreference == build) is true)))
+                    return state!;
+                observationStage = "PollDelay";
+                await Task.Delay(TimeSpan.FromMilliseconds(100), deadline.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                var elapsed = (long)System.Diagnostics.Stopwatch.GetElapsedTime(observationStarted).TotalMilliseconds;
+                var expectedMaterial = materialKey switch { "ABS-ESD" => "ABS-ESD", "PA612-ESD" => "PA612-ESD", _ => "Unknown" };
+                var expectedBuild = build switch
+                {
+                    null => "Any",
+                    Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard => "Standard",
+                    Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality => "Quality",
+                    Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength => "Strength",
+                    _ => "Unknown",
+                };
+                output.WriteLine("[original-catalog-convergence-cancellation] " + System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    phase = "OriginalCatalogConfiguration",
+                    category = "CallerCancellation",
+                    stage = observationStage is "StoreRead" or "PollDelay" ? observationStage : "Unknown",
+                    deadlineCancellationRequested = deadline.IsCancellationRequested,
+                    elapsedMilliseconds = Math.Clamp(elapsed, 0L, 600000L),
+                    elapsedCapped = elapsed > 600000L,
+                    completedReads,
+                    completedReadsCapped = completedReads == 10000,
+                    snapshotAvailable,
+                    snapshotAgeMilliseconds = snapshotAvailable ? (long?)Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(lastReadAt).TotalMilliseconds, 0L, 600000L) : null,
+                    expectedMaterial,
+                    expectedBuild,
+                    requirePhysical,
+                    statePresent = snapshotAvailable ? (bool?)(lastState is not null) : null,
+                    partPresent = snapshotAvailable ? (bool?)(lastPart is not null) : null,
+                    materialMatched = snapshotAvailable && lastPart is not null ? (bool?)(lastPart.Configuration.MaterialKey == materialKey) : null,
+                    buildMatched = snapshotAvailable && lastPart is not null ? (bool?)(build is null || lastPart.Configuration.BuildPreference == build) : null,
+                    quoteAuthorizationPresent = snapshotAvailable && lastState is not null ? (bool?)(lastState.QuoteAuthorization is not null) : null,
+                    matchingPhysicalReceipt = snapshotAvailable && lastState is not null ? (bool?)(lastState.PhysicalReceipts?.Any(receipt => receipt.PartId == partId
+                        && receipt.MaterialKey == materialKey && receipt.BuildPreference == build) is true) : null,
+                    partCount = snapshotAvailable && lastState is not null ? (int?)Math.Clamp(lastState.Parts.Count, 0, 100) : null,
+                    receiptCount = snapshotAvailable && lastState is not null ? (int?)Math.Clamp(lastState.PhysicalReceipts?.Count ?? 0, 0, 100) : null,
+                    domTierCount = (int?)null,
+                    domTierVisibility = "Unknown",
+                }));
+            }
+            catch { /* Secondary observation/output failure cannot replace original cancellation. */ }
+            throw;
+        }
+    }
+
+    private async Task WithOriginalCatalogMeshBrowserAsync(
+        Func<RealUploadTestingWebApplicationFactory, HashCheckingUploadClient, IPage, Guid, string, Task> examine)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync("/instantquotation/3d-printing?culture=en");
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
+        });
+        await page.GotoAsync(new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+        var path = CreateBoxStl(20, 20, 5, "original-material-contract");
+        try
+        {
+            var digest = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
+            await page.SetInputFilesAsync("#instant-quote-files", path);
+            var tierWaitStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+            try
+            {
+                await page.Locator("[data-workflow-price-tier]").First.WaitForAsync();
+            }
+            catch (System.TimeoutException)
+            {
+                try
+                {
+                    var elapsed = (long)System.Diagnostics.Stopwatch.GetElapsedTime(tierWaitStarted).TotalMilliseconds;
+                    output.WriteLine("[original-catalog-initial-tier-timeout] " + System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        phase = "OriginalCatalogInitialTier",
+                        category = "CallerTimeout",
+                        elapsedMilliseconds = Math.Clamp(elapsed, 0L, 600000L),
+                        elapsedCapped = elapsed > 600000L,
+                        verifiedUploads = Math.Clamp(upload.VerifiedUploads, 0, 100),
+                        pricingCalls = Math.Clamp(pricing.CallCount, 0, 1000),
+                        tierWaitSatisfied = false,
+                        beforeExamine = true,
+                        pageIsClosed = page.IsClosed,
+                        browserIsConnected = browser.IsConnected,
+                        domTierCount = (int?)null,
+                        domTierVisibility = "Unknown",
+                    }));
+                }
+                catch { /* Secondary observation/output failure cannot replace original timeout. */ }
+                throw;
+            }
+            var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+            await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+            var keys = await page.Locator("[data-workflow-material-picker] select[name='material'] option")
+                .EvaluateAllAsync<string[]>("options => options.map(option => option.value)");
+            Assert.Equal(MaterialCatalogCrossLayerContractTests.ExpectedMaterialKeys, keys.Order(StringComparer.Ordinal));
+            Assert.DoesNotContain("PC-ESD", keys);
+            await examine(factory, upload, page, partId, digest);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
     [InlineData(320, "th")]
     [InlineData(375, "en")]
     public async Task UploadedPartShowsOnlyPhysicallyVerifiedQuantityAndReviewActionsReachable(int width, string culture)
@@ -144,6 +464,61 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(1, await part.CountAsync());
             Assert.Contains(Path.GetFileName(path), await part.InnerTextAsync(), StringComparison.Ordinal);
             var disclosure = part.Locator("[data-review-part-details] > summary");
+            if (culture == "en")
+            {
+                try
+                {
+                    var installation = disclosure.EvaluateAsync("""
+                        summary => {
+                            const details = summary.parentElement;
+                            const rows = [];
+                            let ordinal = 0;
+                            const currentDetails = () => document.querySelector('[data-workflow-review-part] [data-review-part-details]');
+                            const category = target => target === summary || summary.contains(target)
+                                ? 'summary' : target?.matches?.('[data-workflow-review]') ? 'review-wrapper' : 'other';
+                            const snapshot = () => {
+                                const current = currentDetails();
+                                const currentSummary = current?.querySelector(':scope > summary');
+                                return {
+                                    summaryConnected: summary.isConnected,
+                                    detailsConnected: details.isConnected,
+                                    sameSummary: currentSummary === summary,
+                                    sameDetails: current === details,
+                                    open: !!details.open,
+                                    currentOpen: current ? !!current.open : null,
+                                    active: document.activeElement === summary,
+                                    activeCategory: category(document.activeElement)
+                                };
+                            };
+                            const record = (kind, target, event) => {
+                                if (ordinal >= 32) return;
+                                const row = { ordinal: ++ordinal, kind, target: category(target),
+                                    defaultPrevented: event ? !!event.defaultPrevented : null, ...snapshot() };
+                                rows.push(row);
+                                if (event) queueMicrotask(() => { row.defaultPrevented = !!event.defaultPrevented; });
+                            };
+                            const listener = event => {
+                                if ((event.type === 'keydown' || event.type === 'keyup') && event.key !== 'Enter') return;
+                                record(event.type, event.target, event);
+                            };
+                            const kinds = ['focusin', 'focusout', 'keydown', 'keyup', 'click', 'toggle'];
+                            for (const kind of kinds) document.addEventListener(kind, listener, { capture: true, passive: true });
+                            window.__reviewDisclosureObservation = {
+                                read: () => JSON.stringify({ schema: 1, rows, final: snapshot() }),
+                                dispose: () => {
+                                    for (const kind of kinds) document.removeEventListener(kind, listener, true);
+                                    delete window.__reviewDisclosureObservation;
+                                }
+                            };
+                            record('installed', summary, null);
+                        }
+                        """);
+                    _ = installation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    await installation.WaitAsync(TimeSpan.FromSeconds(1));
+                }
+                catch { /* Optional passive observation cannot change the original disclosure assertion. */ }
+            }
             if (culture == "th")
             {
                 await disclosure.TapAsync();
@@ -153,7 +528,44 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 await disclosure.FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
             }
-            Assert.True(await part.Locator("[data-review-part-details]").EvaluateAsync<bool>("element => element.open"));
+            try
+            {
+                Assert.True(await part.Locator("[data-review-part-details]").EvaluateAsync<bool>("element => element.open"));
+            }
+            catch (Xunit.Sdk.TrueException) when (culture == "en")
+            {
+                try
+                {
+                    var observation = page.EvaluateAsync<string>(
+                        "() => window.__reviewDisclosureObservation?.read() ?? '{\"observation\":\"unavailable\"}'");
+                    _ = observation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    var diagnostic = await observation.WaitAsync(TimeSpan.FromSeconds(1));
+                    output.WriteLine(diagnostic.Length <= 16384
+                        ? "[review-disclosure-observation] " + diagnostic
+                        : "[review-disclosure-observation] observation=unavailable");
+                }
+                catch
+                {
+                    try { output.WriteLine("[review-disclosure-observation] observation=unavailable"); }
+                    catch { /* A failing output sink cannot replace the original assertion. */ }
+                }
+                throw;
+            }
+            finally
+            {
+                if (culture == "en")
+                {
+                    try
+                    {
+                        var disposal = page.EvaluateAsync("() => window.__reviewDisclosureObservation?.dispose()");
+                        _ = disposal.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        await disposal.WaitAsync(TimeSpan.FromSeconds(1));
+                    }
+                    catch { /* Page lifecycle also releases passive listeners; preserve any primary failure. */ }
+                }
+            }
             var continueButton = page.Locator("[data-review-continue]");
             await continueButton.ScrollIntoViewIfNeededAsync();
             Assert.True(await continueButton.EvaluateAsync<bool>(
@@ -824,9 +1236,34 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 Assert.True(Guid.TryParse(partIdText, out var partId));
                 Assert.True(partIds.Add(partId));
                 await parts.Nth(index).Locator("button[aria-label^='View']").ClickAsync();
-                await page.WaitForFunctionAsync(
-                    "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
-                    partIdText);
+                try
+                {
+                    await page.WaitForFunctionAsync(
+                        "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                        partIdText);
+                }
+                catch (TimeoutException original)
+                {
+                    await SelectedPrintTimeTimeoutDiagnostics.AttachAsync(original, index + 1, partIdText,
+                        () => page.EvaluateAsync<string>("""
+                            () => {
+                                const duration = document.querySelector('[data-workflow-selected-print-time]');
+                                const configuration = document.querySelector('[data-workflow-material-picker]');
+                                const quantity = configuration?.querySelector('input[name="quantity"]');
+                                return JSON.stringify({
+                                    actualPartId: duration?.getAttribute('data-part-id'),
+                                    configurationPartId: quantity?.id?.replace(/^quantity-/, ''),
+                                    workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                                    isRepricing: !!document.querySelector('[data-pricing-loading-status]'),
+                                    material: configuration?.querySelector('select[name="material"]')?.value,
+                                    quantity: quantity?.value,
+                                    durationPresent: !!duration,
+                                    unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]')
+                                });
+                            }
+                            """), description => output.WriteLine(description));
+                    throw;
+                }
                 using var scope = factory.Services.CreateScope();
                 var store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
                 var beforeMaterialChange = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);

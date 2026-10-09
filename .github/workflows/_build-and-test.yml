@@ -299,7 +299,7 @@ jobs:
           --root ./preliminary-pdf-test-results/pdf
           --receipt ./preliminary-pdf-test-results/parser-receipt.json
       - name: Validate .NET solution
-        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
+        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@53892c362a30130f582c40da7525e44f11474e8e
         with:
           solution: Legacy.Maliev.Web.slnx
           use-local-maliev-dependencies: 'true'
