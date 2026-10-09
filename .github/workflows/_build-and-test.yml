@@ -65,6 +65,13 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify member quotation ID sorting and owned-customer wire contract
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~MemberQuotationSortContractTests"
+          --logger trx --results-directory ./member-quotation-sort-test-results
       - name: Verify protected ticket currency identity
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -331,6 +338,7 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
             ticket-test-results/**/*.trx
+            member-quotation-sort-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
             physical-result-test-results/**/*.trx
             quotation-response-test-results/**/*.trx
