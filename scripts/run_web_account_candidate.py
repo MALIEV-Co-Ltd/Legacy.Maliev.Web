@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--phase-id", required=True)
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
-    if policy.get("sliceKind") not in {"account-failure-v1", "email-change-session-v1"}:
+    if policy.get("sliceKind") not in {"account-failure-v1", "email-change-session-v1", "optional-tax-build-v1"}:
         raise ValueError("Distinct account policy required")
     if not policy.get("nativeAdmissionSha256") or (not policy.get("sdkOwnerContextSha256") and not policy.get("sdkOwnerEnrollment")):
         raise ValueError("Actual independently pinned permit/SDK owner absent; no SDK launch")
@@ -57,7 +57,7 @@ def main():
 
 def authorize_creation(policy_path, permit_path, candidate):
     policy = intake.load_policy(policy_path)
-    if policy.get("sliceKind") != "email-change-session-v1" or not policy.get("sdkOwnerEnrollment"):
+    if policy.get("sliceKind") not in {"email-change-session-v1", "optional-tax-build-v1"} or not policy.get("sdkOwnerEnrollment"):
         raise ValueError("Exact new email owner-creation authority required")
     if not policy.get("nativeAdmissionSha256"):
         raise ValueError("Independent same-job owner creation grant remains unissued")
@@ -234,15 +234,21 @@ def owned_worker():
             sys.argv = ["account", "--policy", str(args.policy), "--candidate", str(root), "--permit", str(args.permit),
                         "--sdk-owner-context", str(context_path), "--evidence", str(args.evidence), "--phase-id", row["id"]]
             main()
-            if row["id"] == "email-build":
+            if row["id"] in {"email-build", "tax-build"}:
                 record["testAssemblySha256"] = intake.sha256((root / "Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll").read_bytes())
+                if row["id"] == "tax-build":
+                    log = (args.evidence / "tax-build.log").read_text()
+                    summaries = re.findall(r"^\s*(\d+)\s+(Warning|Error)\(s\)\s*$", log, re.M)
+                    if {kind for _,kind in summaries} != {"Warning", "Error"} or any(int(n) for n,_ in summaries):
+                        raise ValueError("Actual tax Release zero warnings/errors required")
             if row["id"].startswith("email-prepare-"):
                 if re.search(r"\b(?:warning|error) [A-Z]+\d+\s*:", (args.evidence / (row["id"] + ".log")).read_text()):
                     raise ValueError("Prepared producer build warnings/errors are not accepted")
-            if row["id"] == "email-sdk-install":
+            if row["id"] in {"email-sdk-install", "tax-sdk-install"}:
                 sdk = root / ".dependencies/email-sdk"
                 os.environ.update(DOTNET_ROOT=str(sdk), PATH=str(sdk) + os.pathsep + os.environ["PATH"])
-            if row["id"] == "email-sdk-version" and (args.evidence / "email-sdk-version.log").read_text().strip() != policy["sdkInstaller"]["version"]:
+                if row["id"] == "tax-sdk-install":record["sdkBinarySha256"] = intake.sha256((sdk / "dotnet").read_bytes())
+            if row["id"] in {"email-sdk-version", "tax-sdk-version"} and (args.evidence / (row["id"] + ".log")).read_text().strip() != policy["sdkInstaller"]["version"]:
                 raise ValueError("Actual pinned SDK version mismatch")
             if row["id"] == "email-prepare-billing":
                 outputs = read_profile_outputs(profile_env, root)

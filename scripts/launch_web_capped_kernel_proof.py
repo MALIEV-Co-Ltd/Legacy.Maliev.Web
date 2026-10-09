@@ -37,7 +37,12 @@ def members(group):
 
 
 def collect_sdk_receipt(evidence, ledger, failure):
-    path = evidence / 'email-sdk-version.json'
+    scope = ledger.get('authorityScope', 'email-change-session-v1')
+    if scope not in {'email-change-session-v1', 'optional-tax-build-v1'}:
+        ledger['sdkStarted'] = None
+        error = ValueError('Unsupported exact SDK receipt scope')
+        return failure if failure is not None else error
+    path = evidence / ('tax-sdk-version.json' if scope == 'optional-tax-build-v1' else 'email-sdk-version.json')
     try:
         if not path.exists():
             ledger['sdkStarted'] = False
@@ -101,10 +106,14 @@ def main():
         ledger['argv'] = ['/usr/bin/python3', '-B', str(script), '--owned-worker', '--unit', unit, '--receipt', str(receipt),
                           '--policy', str(args.account_policy.resolve()), '--permit', str(args.permit.resolve()),
                           '--candidate', str(args.candidate.resolve()), '--evidence', str(evidence)]
-        ledger['authorityScope'] = 'email-change-session-v1'
+        ledger['authorityScope'] = grant.get('sliceKind', 'email-change-session-v1')
     forwarded = (['--setenv=' + key + '=' + os.environ[key] for key in
                   ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'WEB_REVIEWED_TRANSPORT_SHA', 'RUNNER_ENVIRONMENT', 'PATH', 'HOME')]
                  if account else [])
+    if account and grant.get("sliceKind") == "optional-tax-build-v1":
+        proof_pin = os.environ.get("WEB_TAX_ADMISSION_PROOF_SHA256")
+        if not proof_pin:raise ValueError("Actual external tax admission proof absent")
+        forwarded.append("--setenv=WEB_TAX_ADMISSION_PROOF_SHA256=" + proof_pin)
     def save():
         (evidence / 'launcher.json').write_text(json.dumps(ledger, indent=2) + '\n')
     save()

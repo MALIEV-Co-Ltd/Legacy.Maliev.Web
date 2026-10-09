@@ -9,6 +9,8 @@ import materialize_web_candidate as intake
 OWNER = "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5"
 
 def validate(policy, raw, now=None):
+    if policy.get("sliceKind") == "optional-tax-build-v1":
+        return validate_tax_build(policy, raw, now)
     digest = policy.get("nativeAdmissionSha256")
     if policy.get("sliceKind") == "email-change-session-v1":
         return validate_email_session(policy, raw, now)
@@ -35,6 +37,46 @@ def validate(policy, raw, now=None):
     if any(grant.get(k) != v for k, v in exact.items()):
         raise ValueError("Hosted permit scope differs from reviewed policy")
     if os.name != "posix": raise ValueError("Actual Linux runner is required")
+    return grant
+
+TAX_BUILD_PHASES = [{'id': 'tax-sdk-install', 'name': 'static', 'argv': ['bash', '.dependencies/dotnet-installer/externals/install-dotnet.sh', '--version', '10.0.401', '--install-dir', '.dependencies/email-sdk', '--no-path']}, {'id': 'tax-sdk-version', 'name': 'static', 'argv': ['dotnet', '--version']}, {'id': 'tax-restore', 'name': 'static', 'argv': ['dotnet', 'restore', 'Legacy.Maliev.Web.slnx']}, {'id': 'tax-build', 'name': 'build', 'argv': ['dotnet', 'build', 'Legacy.Maliev.Web.slnx', '-c', 'Release', '--no-restore', '-warnaserror', '-m:1', '-nr:false', '-p:UseSharedCompilation=false']}]
+
+def validate_tax_build(policy, raw, now=None):
+    enrollment = {"backend": "launch_web_capped_kernel_proof-v1", "memoryMaxBytes": 3221225472,
+                  "swapMaxBytes": 0, "cpuQuotaPercent": 100, "tasksMax": 512, "leaseSeconds": 2100}
+    if (not re.fullmatch(r"[0-9a-f]{64}", policy.get("nativeAdmissionSha256") or "")
+        or policy.get("sdkOwnerContextSha256") is not None or policy.get("sdkOwnerEnrollment") != enrollment):
+        raise ValueError("Independent tax build permit and original owner enrollment remain unpinned")
+    if intake.sha256(raw) != policy["nativeAdmissionSha256"]: raise ValueError("Tax permit raw bytes changed")
+    if policy["allowedPhases"] != ["static", "build"] or policy["phases"] != TAX_BUILD_PHASES:
+        raise ValueError("Tax build-only exact commands required; no tests")
+    if (policy.get("reviewedSourceManifestSha256") != "2a49d01763a049cd6a58dc237d7b18fc062eb07587d16297527d4ba62695eb30"
+        or policy.get("sourceReviewSha256") != "75aac863454cc9f63e4a6896b05169bfbdc9459988f62e6be59a194c5c4d1c77"
+        or policy["acceptedBase"] != "2f8bed1c4e8315ecd3e0afdfa3f1b960f0e7ffc8"):
+        raise ValueError("Tax source review/base association changed")
+    expected = {"owner": OWNER, "issuedBy": "019fc21e-50f0-7112-834f-9fb3b35b9dfe",
+                "environment": "github-hosted-linux", "sliceKind": "optional-tax-build-v1",
+                "acceptedBase": policy["acceptedBase"], "sourcePins": policy["sourcePins"],
+                "sourceBindingSha256": policy["sourceBindingSha256"], "manifestSha256": policy["manifestSha256"],
+                "reviewedSourceManifestSha256": policy["reviewedSourceManifestSha256"], "sourceReviewSha256": policy["sourceReviewSha256"],
+                "sdkOwnerContextSha256": None, "sdkOwnerEnrollment": enrollment,
+                "allowedPhases": policy["allowedPhases"], "phases": policy["phases"],
+                "transportSha": os.environ.get("WEB_REVIEWED_TRANSPORT_SHA"),
+                "runId": os.environ.get("GITHUB_RUN_ID"), "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT")}
+    if (not re.fullmatch(r"[0-9a-f]{40}", expected["transportSha"] or "")
+        or expected["transportSha"] != os.environ.get("GITHUB_SHA")
+        or any(not re.fullmatch(r"[1-9][0-9]*", expected[k] or "") for k in ("runId", "runAttempt"))):
+        raise ValueError("Actual same-job protected tax transport required")
+    grant = intake.parse_json(raw)
+    if not re.fullmatch(r"[0-9a-f]{32}", grant.get("ownerNonce", "")):raise ValueError("Independent one-use tax owner nonce required")
+    expected["ownerNonce"] = grant["ownerNonce"]
+    if set(grant) != set(expected) | {"startsUtc", "expiresUtc"} or any(grant[k] != v for k,v in expected.items()):
+        raise ValueError("Exact tax owner/source/run/commands grant required")
+    start=dt.datetime.fromisoformat(grant["startsUtc"].replace("Z","+00:00"));end=dt.datetime.fromisoformat(grant["expiresUtc"].replace("Z","+00:00"))
+    now=now or dt.datetime.now(dt.timezone.utc)
+    if start.utcoffset()!=dt.timedelta(0) or end.utcoffset()!=dt.timedelta(0) or not start<=now<end or not 0<(end-start).total_seconds()<=2100:
+        raise ValueError("Finite nonrenewed tax build permit required")
+    if os.name!="posix":raise ValueError("Actual hosted Linux required")
     return grant
 
 def validate_country(policy, raw, now=None):
@@ -182,13 +224,14 @@ def main():
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
     # Missing prerequisites reject before fetching or writing any permit.
-    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1"} and not policy.get("customerLiteralProducerSha")):
+    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1", "optional-tax-build-v1"} and not policy.get("customerLiteralProducerSha")):
         # Account scope has its own strict Auth/mail prerequisite validator; old branches are unchanged.
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
     census()
-    raw = intake.fetch_blob(args.blob) if args.blob else args.permit.read_bytes()
+    blob = policy.get("admissionBlob") if policy.get("sliceKind") == "optional-tax-build-v1" else args.blob
+    raw = intake.fetch_blob(blob) if blob else args.permit.read_bytes()
     validate(policy, raw); census()
-    if args.blob:
+    if blob:
         if args.permit.exists(): raise ValueError("Fresh owned permit path required")
         args.permit.write_bytes(raw)
     print("Exact independently reviewed Root hosted permit and resource census verified")
