@@ -264,8 +264,12 @@
                            @bind:event="oninput"
                            @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
                     <small id="quantity-hint-@part.PartId">@Localizer["Maximum {0} pieces", PricingCatalog.MaximumAdditiveQuantity.ToString("N0")]</small>
-                    <fieldset data-workflow-build-preference>
+                    <fieldset data-workflow-build-preference disabled="@(PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin)">
                         <legend>@Localizer["Build preference"]</legend>
+                        @if (PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin)
+                        {
+                            <p data-resin-build-preference>@Localizer["Standard resin"]</p>
+                        }
                         <label>
                             <input type="radio"
                                    name="build-preference-@part.PartId"

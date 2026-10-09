@@ -175,7 +175,7 @@ internal sealed class InstantQuotationFulfillmentClient(
         var draft = new CustomerOrderDraft(
             CustomerOrderKind.Additive,
             OrderName(part.DisplayFileName),
-            $"3D printing: {materialInfo.DisplayName}; {BuildPreferenceDescription(part.Configuration.BuildPreference)}",
+            $"3D printing: {materialInfo.DisplayName}; {BuildPreferenceDescription(materialInfo.Process, part.Configuration.BuildPreference)}",
             process.Id,
             material.Id,
             finish.Id,
@@ -347,7 +347,7 @@ internal sealed class InstantQuotationFulfillmentClient(
         comment.AppendLine("Estimate confidence: provisional");
         comment.AppendLine("Review state: engineer_review_required");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Material key: {part.Configuration.MaterialKey}");
-        comment.AppendLine(CultureInfo.InvariantCulture, $"Build: {BuildPreferenceDescription(part.Configuration.BuildPreference)}");
+        comment.AppendLine(CultureInfo.InvariantCulture, $"Build: {BuildPreferenceDescription(quote.Process, quote.BuildPreference)}");
         comment.AppendLine(CultureInfo.InvariantCulture, $"Color: {part.Configuration.Color}");
         comment.AppendLine("Surface finish: As printed");
         comment.AppendLine(CultureInfo.InvariantCulture,
@@ -384,12 +384,14 @@ internal sealed class InstantQuotationFulfillmentClient(
         return color;
     }
 
-    private static string BuildPreferenceDescription(BuildPreference preference) => preference switch
-    {
-        BuildPreference.Quality => "Quality",
-        BuildPreference.Strength => "Strength",
-        _ => "Standard",
-    };
+    private static string BuildPreferenceDescription(PrintProcess process, BuildPreference preference) => process is PrintProcess.Resin
+        ? FormattableString.Invariant($"Standard resin - {PricingCatalog.ResinLayerHeightMm:0.00} mm layers, full-layer exposure, wash and post-cure")
+        : preference switch
+        {
+            BuildPreference.Quality => "Quality",
+            BuildPreference.Strength => "Strength",
+            _ => "Standard",
+        };
 
     private static string OperationKey(string submissionId, int partIndex, string purpose) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(

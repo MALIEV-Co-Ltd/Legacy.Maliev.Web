@@ -45,7 +45,106 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests
         page.PageError += (_, error) => errors.Add(error);
         page.Console += (_, message) => { if (message.Type == "error") consoleErrors.Add(message.Text); };
         var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-        Assert.Equal(200, (await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }))?.Status);
+        const int maximumNavigationEvents = 200;
+        const int maximumOutstandingRequests = 100;
+        var navigationEvidenceLock = new object();
+        var navigationRequests = new Dictionary<IRequest, string>();
+        var navigationEvents = new List<object>();
+        string SafeRequestPath(IRequest request)
+        {
+            if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri)) return "unparseable";
+            var path = $"{uri.Scheme}://{uri.Host}:{uri.Port}{uri.AbsolutePath}";
+            return path.Length <= 256 ? path : path[..256];
+        }
+        EventHandler<IRequest> onNavigationRequest = (_, request) =>
+        {
+            lock (navigationEvidenceLock)
+            {
+                if (navigationRequests.Count < maximumOutstandingRequests)
+                    navigationRequests.TryAdd(request, SafeRequestPath(request));
+                if (navigationEvents.Count < maximumNavigationEvents)
+                    navigationEvents.Add(new { Event = "request", Path = SafeRequestPath(request), request.ResourceType });
+            }
+        };
+        EventHandler<IRequest> onNavigationRequestFinished = (_, request) =>
+        {
+            lock (navigationEvidenceLock) navigationRequests.Remove(request);
+        };
+        EventHandler<IRequest> onNavigationRequestFailed = (_, request) =>
+        {
+            lock (navigationEvidenceLock)
+            {
+                navigationRequests.Remove(request);
+                if (navigationEvents.Count < maximumNavigationEvents)
+                    navigationEvents.Add(new { Event = "failed", Path = SafeRequestPath(request), request.ResourceType });
+            }
+        };
+        EventHandler<IResponse> onNavigationResponse = (_, response) =>
+        {
+            lock (navigationEvidenceLock)
+            {
+                if (navigationEvents.Count < maximumNavigationEvents)
+                    navigationEvents.Add(new { Event = "response", Path = SafeRequestPath(response.Request), response.Status });
+            }
+        };
+        page.Request += onNavigationRequest;
+        page.RequestFinished += onNavigationRequestFinished;
+        page.RequestFailed += onNavigationRequestFailed;
+        page.Response += onNavigationResponse;
+        try
+        {
+            Assert.Equal(200, (await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }))?.Status);
+        }
+        catch (TimeoutException)
+        {
+            try
+            {
+                var evidenceDirectory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
+                if (!string.IsNullOrWhiteSpace(evidenceDirectory))
+                {
+                    string evidence;
+                    lock (navigationEvidenceLock)
+                    {
+                        evidence = JsonSerializer.Serialize(new
+                        {
+                            Culture = culture,
+                            Width = width,
+                            Stage = "initial-navigation-networkidle",
+                            Events = navigationEvents.ToArray(),
+                            Outstanding = navigationRequests.Values.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
+                            PageErrorCount = errors.Count,
+                            ConsoleErrorCount = consoleErrors.Count,
+                        });
+                    }
+                    Directory.CreateDirectory(evidenceDirectory);
+                    using var evidenceDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await File.WriteAllTextAsync(
+                        Path.Combine(evidenceDirectory, $"sidebar-{culture}-{width}-initial-navigation-timeout.json"),
+                        evidence,
+                        evidenceDeadline.Token);
+                }
+            }
+            catch (Exception)
+            {
+                // Diagnostic failure must never replace the original navigation timeout.
+                try
+                {
+                    Console.Error.WriteLine("Sidebar initial-navigation evidence could not be retained.");
+                }
+                catch (Exception)
+                {
+                    // Best-effort reporting only; preserve the original timeout.
+                }
+            }
+            throw;
+        }
+        finally
+        {
+            page.Request -= onNavigationRequest;
+            page.RequestFinished -= onNavigationRequestFinished;
+            page.RequestFailed -= onNavigationRequestFailed;
+            page.Response -= onNavigationResponse;
+        }
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.IsVisibleAsync()) await consent.ClickAsync();
         var cookie = Assert.Single(await context.CookiesAsync(), item => item.Name == InstantQuotationSessionIdentityCookie.CookieName);

@@ -126,6 +126,28 @@ public sealed class InstantQuotationSubmissionTests
         }
     }
 
+    [Theory]
+    [InlineData(BuildPreference.Quality)]
+    [InlineData(BuildPreference.Standard)]
+    [InlineData(BuildPreference.Strength)]
+    public async Task Submit_ResinRequestDescribesItsQuotedProcessRatherThanAnFdmProfile(BuildPreference preference)
+    {
+        var events = new List<string>();
+        var quotation = new RecordingQuotationClient(_ => new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var session = Session(Part() with { Configuration = new("M68", "Gray", 1, preference) });
+        var service = Service(quotation, new RecordingSubmissionStore(events),
+            new RecordingUploadClient(events, SuccessfulFinalization()), session);
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        var message = Assert.Single(quotation.Calls).Submission.Message;
+        Assert.Contains("Build: Standard resin - 0.05 mm layers, full-layer exposure, wash and post-cure", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Gyroid", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("6 walls", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("sparse infill", message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Submit_ValidCustomer_PersistsAuthoritativeRequestBeforeFinalizingUploads()
     {

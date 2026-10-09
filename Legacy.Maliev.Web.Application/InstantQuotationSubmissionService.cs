@@ -607,7 +607,7 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine("Estimate confidence: provisional");
             message.AppendLine("Review state: engineer_review_required");
             message.AppendLine($"Color: {SingleLine(partQuote.Color)}");
-            message.AppendLine($"Build: {BuildPreferenceDescription(partQuote.BuildPreference)}");
+            message.AppendLine($"Build: {BuildPreferenceDescription(partQuote.Process, partQuote.BuildPreference)}");
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
             message.AppendLine($"Volume: {part.Geometry.VolumeMm3.ToString("0.###", CultureInfo.InvariantCulture)} mm3");
             var geometryWarnings = GeometryWarnings(part.Geometry);
@@ -654,12 +654,14 @@ internal sealed class InstantQuotationSubmissionService(
         return message.ToString();
     }
 
-    private static string BuildPreferenceDescription(BuildPreference preference) => preference switch
-    {
-        BuildPreference.Quality => "Quality (0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill)",
-        BuildPreference.Strength => "Strength (6 walls, 2 mm shells, denser infill)",
-        _ => $"Standard ({PricingCatalog.FdmLayerHeightMm:0.00} mm layers, {PricingCatalog.FdmWallCount} walls, {PricingCatalog.FdmInfillDensity:P0} sparse infill)",
-    };
+    private static string BuildPreferenceDescription(PrintProcess process, BuildPreference preference) => process is PrintProcess.Resin
+        ? FormattableString.Invariant($"Standard resin - {PricingCatalog.ResinLayerHeightMm:0.00} mm layers, full-layer exposure, wash and post-cure")
+        : preference switch
+        {
+            BuildPreference.Quality => "Quality (0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill)",
+            BuildPreference.Strength => "Strength (6 walls, 2 mm shells, denser infill)",
+            _ => $"Standard ({PricingCatalog.FdmLayerHeightMm:0.00} mm layers, {PricingCatalog.FdmWallCount} walls, {PricingCatalog.FdmInfillDensity:P0} sparse infill)",
+        };
 
     private static IReadOnlyList<string> GeometryWarnings(AuthoritativeInstantQuotationGeometry geometry)
     {
