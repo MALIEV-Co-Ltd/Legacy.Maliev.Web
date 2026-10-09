@@ -91,6 +91,36 @@ public sealed class EsdFulfillmentContractTests
         Assert.Empty(boundary.Tokens.Invalidated);
     }
 
+    [Theory]
+    [InlineData(BuildPreference.Quality)]
+    [InlineData(BuildPreference.Standard)]
+    [InlineData(BuildPreference.Strength)]
+    public async Task Provision_ResinOrderWireDescribesResinDespiteStaleFdmPreference(BuildPreference preference)
+    {
+        using var boundary = new Boundary("M68", databaseName: "Resin Standard");
+        var part = Part("M68", preference);
+        var quote = SyntheticPhysicalPricingTestData.Quote(new([part])).Parts.Single();
+        Assert.Equal(PrintProcess.Resin, quote.Process);
+
+        var result = await boundary.Client.ProvisionOrderAsync(
+            SubmissionId, 0, CustomerId, null, part, quote, 7, File, default);
+
+        Assert.True(result.Succeeded);
+        var create = Assert.Single(boundary.Requests, request => request.Method == "POST" && request.Path == "orders");
+        using var document = JsonDocument.Parse(create.Body!);
+        var wire = document.RootElement;
+        const string resin = "Standard resin - 0.05 mm layers, full-layer exposure, wash and post-cure";
+        Assert.Equal($"3D printing: Standard Resin (M68); {resin}", wire.GetProperty("description").GetString());
+        var comment = wire.GetProperty("comment").GetString()!;
+        Assert.Contains($"Build: {resin}", comment, StringComparison.Ordinal);
+        Assert.Contains("Review state: engineer_review_required", comment, StringComparison.Ordinal);
+        Assert.Contains("Estimate confidence: provisional", comment, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build: Quality", comment, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build: Strength", comment, StringComparison.Ordinal);
+        Assert.Equal(boundary.MaterialId, wire.GetProperty("materialId").GetInt32());
+        Assert.Equal(3, wire.GetProperty("processId").GetInt32());
+    }
+
     public static IEnumerable<object[]> FailedCatalogCases()
     {
         foreach (var material in new[] { "PA612-ESD", "ABS-ESD" })
