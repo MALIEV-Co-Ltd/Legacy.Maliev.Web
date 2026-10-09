@@ -268,6 +268,56 @@ class QuotaTests(unittest.TestCase):
         receipt=q.empty();receipt.update(cache='Absent',cacheInspection={'category':'ImageAbsent','exitCode':0})
         with self.assertRaises(ValueError):q.validate(receipt)
 
+    def test_unavailable_inspection_cannot_admit_positive_or_negative_network_receipt(self):
+        for category in ('Timeout','ExecutableUnavailable','InspectionOsError','UnrecognizedResponse'):
+            for eligible,reason in ((True,'QuotaAvailable'),(False,'QuotaRejected'),(False,'QuotaUnknown'),(False,'WorkerUnavailable'),(False,'CacheUnavailable')):
+                result=probe()[0]
+                result.update(cache='Unavailable',cacheInspection={'category':category,'exitCode':1 if category=='UnrecognizedResponse' else None},eligible=eligible,reason=reason)
+                with self.subTest(category=category,eligible=eligible,reason=reason), self.assertRaises(ValueError):q.validate(result)
+
+    def test_each_unavailable_actual_main_receipt_has_no_network_and_valid_closed_state(self):
+        for category in ('Timeout','ExecutableUnavailable','InspectionOsError','UnrecognizedResponse'):
+            diagnostic={'category':category,'exitCode':1 if category=='UnrecognizedResponse' else None}
+            with self.subTest(category=category), tempfile.TemporaryDirectory() as directory:
+                path=Path(directory)/'receipt.json';network=Mock()
+                self.assertEqual(q.main(['--receipt',str(path),'--check-local-cache'],network,Mock(return_value=('Unavailable',diagnostic))),1)
+                network.assert_not_called();receipt=json.loads(path.read_text())
+                self.assertEqual(receipt['cacheInspection'],diagnostic)
+                self.assertEqual(receipt['reason'],'CacheUnavailable');self.assertFalse(receipt['eligible'])
+                self.assertIsNone(receipt['authHttpStatus']);self.assertIsNone(receipt['registryHttpStatus'])
+                q.validate(receipt)
+
+    def test_cache_present_rejects_wrong_reason_eligibility_and_each_http_field(self):
+        good=q.empty();good.update(cache='Present',cacheInspection={'category':'ImagePresent','exitCode':0},eligible=True,reason='CacheAvailable')
+        q.validate(good)
+        for reason,eligible in (('QuotaAvailable',True),('QuotaUnknown',False),('WorkerUnavailable',False),('CacheUnavailable',False),('CacheAvailable',False)):
+            result=dict(good);result.update(reason=reason,eligible=eligible)
+            with self.subTest(reason=reason,eligible=eligible), self.assertRaises(ValueError):q.validate(result)
+        fields={'authHttpStatus':200,'registryHttpStatus':200,'serviceDateUtc':'2026-10-09T21:00:00+00:00',
+                'limit':100,'remaining':99,'windowSeconds':21600,'retryAfter':10,'rateLimitReset':1791580000}
+        for field,value in fields.items():
+            result=dict(good);result[field]=value
+            with self.subTest(field=field), self.assertRaises(ValueError):q.validate(result)
+
+    def test_unavailable_cache_rejects_each_http_field_and_wrong_local_reason(self):
+        good=q.empty();good.update(cache='Unavailable',cacheInspection={'category':'Timeout','exitCode':None},reason='CacheUnavailable')
+        q.validate(good)
+        for field,value in {'authHttpStatus':200,'registryHttpStatus':429,'serviceDateUtc':'2026-10-09T21:00:00+00:00',
+                            'limit':100,'remaining':0,'windowSeconds':21600,'retryAfter':10,'rateLimitReset':1791580000}.items():
+            result=dict(good);result[field]=value
+            with self.subTest(field=field), self.assertRaises(ValueError):q.validate(result)
+        for reason in ('CacheAvailable','Unknown','WorkerUnavailable','TransportUnavailable'):
+            result=dict(good);result['reason']=reason
+            with self.subTest(reason=reason), self.assertRaises(ValueError):q.validate(result)
+
+    def test_notchecked_and_absent_cannot_claim_local_cache_reason_or_negative_available(self):
+        for state,inspection in [('NotChecked',{'category':'NotChecked','exitCode':None}),('Absent',{'category':'ImageAbsent','exitCode':1})]:
+            for reason,eligible in (('CacheUnavailable',False),('CacheAvailable',True),('QuotaAvailable',False)):
+                result=probe()[0];result.update(cache=state,cacheInspection=inspection,reason=reason,eligible=eligible)
+                with self.subTest(state=state,reason=reason), self.assertRaises(ValueError):q.validate(result)
+            result=probe()[0];result.update(cache=state,cacheInspection=inspection)
+            q.validate(result)
+
     def test_unknown_or_abbreviated_cli_no_probe_or_receipt(self):
         network=Mock()
         for args in [['--image','PRIVATE'],['--rece','PRIVATE'],['--receipt','PRIVATE','--proxy','PRIVATE']]:

@@ -207,9 +207,23 @@ def validate(result):
     if retry is not None and not (type(retry) is int and 0 <= retry < 10**9):
         if not isinstance(retry, str) or len(retry) > 40 or dt.datetime.fromisoformat(retry).utcoffset() != dt.timedelta(0):
             raise ValueError("ReceiptRetry")
+    no_http = all(result[key] is None for key in (
+        "authHttpStatus", "registryHttpStatus", "serviceDateUtc", "limit", "remaining",
+        "windowSeconds", "retryAfter", "rateLimitReset"))
+    if result["cache"] == "Present":
+        if result["reason"] != "CacheAvailable" or not result["eligible"] or not no_http:
+            raise ValueError("CacheReceiptCoherence")
+    elif result["cache"] == "Unavailable":
+        if result["reason"] != "CacheUnavailable" or result["eligible"] or not no_http:
+            raise ValueError("CacheReceiptCoherence")
+    elif result["reason"] in {"CacheAvailable", "CacheUnavailable"}:
+        raise ValueError("CacheReceiptCoherence")
+    if result["reason"] == "QuotaAvailable" and not result["eligible"]:
+        raise ValueError("ReceiptAdmission")
     if result["eligible"]:
         cache = result["reason"] == "CacheAvailable" and result["cache"] == "Present"
-        available = (result["reason"] == "QuotaAvailable" and result["authHttpStatus"] == 200
+        available = (result["cache"] in {"NotChecked", "Absent"}
+                     and result["reason"] == "QuotaAvailable" and result["authHttpStatus"] == 200
                      and result["registryHttpStatus"] == 200 and type(result["remaining"]) is int
                      and type(result["limit"]) is int and 0 < result["remaining"] <= result["limit"]
                      and type(result["windowSeconds"]) is int and result["windowSeconds"] > 0)
