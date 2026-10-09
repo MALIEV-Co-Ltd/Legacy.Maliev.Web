@@ -49,7 +49,8 @@ public sealed class MemberDocumentsHttpTests
     [Fact]
     public async Task InternalMetadataAndCrossTenantResponsesAreRefusedWithoutPartialDisclosure()
     {
-        foreach (var summary in new[] { new CustomerDocumentSummary(Guid.NewGuid(), 42, "Nda", "private-synthetic-title", "Internal", 1), new CustomerDocumentSummary(Guid.NewGuid(), 999, "Nda", "private-synthetic-title", "Customer", 1) }) {
+        foreach (var summary in new[] { new CustomerDocumentSummary(Guid.NewGuid(), 42, "Nda", "private-synthetic-title", "Internal", 1), new CustomerDocumentSummary(Guid.NewGuid(), 999, "Nda", "private-synthetic-title", "Customer", 1) })
+        {
             var registry = new RecordingRegistry { Summary = summary }; await using var app = await HostAsync(registry);
             using var http = app.GetTestClient(); http.DefaultRequestHeaders.Add("Synthetic-Member", "yes");
             using var response = await http.GetAsync("/member/documents"); Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode); Assert.DoesNotContain("private-synthetic-title", await response.Content.ReadAsStringAsync());
@@ -141,7 +142,8 @@ public sealed class MemberDocumentsHttpTests
         builder.Services.AddAuthorization(); builder.Services.AddAntiforgery(); builder.Services.AddHttpContextAccessor(); builder.Services.AddLocalization(options => options.ResourcesPath = "Resources"); builder.Services.AddSingleton<IAccountSessionManager>(new FixtureSession()); builder.Services.AddSingleton<ICustomerDocumentClient>(registry);
         var app = builder.Build(); app.UseRequestLocalization(new Microsoft.AspNetCore.Builder.RequestLocalizationOptions().SetDefaultCulture("en").AddSupportedCultures("en", "th").AddSupportedUICultures("en", "th")); app.UseAuthentication(); app.UseAuthorization(); app.MapCustomerDocumentEndpoints();
         app.MapGet("/fixture/csrf", (HttpContext context, IAntiforgery antiforgery) => Results.Json(antiforgery.GetAndStoreTokens(context).RequestToken));
-        app.MapGet("/fixture/page", async (HttpContext context) => {
+        app.MapGet("/fixture/page", async (HttpContext context) =>
+        {
             await using var renderer = new HtmlRenderer(context.RequestServices, context.RequestServices.GetRequiredService<ILoggerFactory>());
             var html = await renderer.Dispatcher.InvokeAsync(async () => (await renderer.RenderComponentAsync<MemberDocumentsPage>(ParameterView.Empty)).ToHtmlString());
             return Results.Content(html, "text/html; charset=utf-8");
