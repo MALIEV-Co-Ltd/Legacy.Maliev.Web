@@ -19,6 +19,8 @@ EMAIL_SESSION_PATHS = {
     "Legacy.Maliev.Web.Tests/EmailChangeConfirmationSessionHttpTests.cs",
     "Legacy.Maliev.Web.Tests/EmailChangeConfirmationRealSessionTests.cs",
 }
+RESIN_EXPIRY_POLICY_SHA256 = "0ca46316d8bc44e206ea93bc0f3e77c0813e04fa9395be2de9897b2ec76811ee"
+RESIN_EXPIRY_SOURCE_COUNT = 2003
 EXPECTED_POLICY_SHA256 = "100ae2ae0a4a8c25cbf47ae3f4a0e0039e93f211d091ec48b192852e176ba43b"
 
 
@@ -32,7 +34,7 @@ NoRedirect = shared.NoRedirect
 
 def load_policy(path):
     raw = Path(path).read_bytes()
-    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256, EMAIL_SESSION_POLICY_SHA256}:
+    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256, EMAIL_SESSION_POLICY_SHA256, RESIN_EXPIRY_POLICY_SHA256}:
         raise ValueError("Reviewed policy raw-byte identity changed")
     return parse_json(raw)
 
@@ -45,7 +47,15 @@ def validate_capsule(manifest_bytes, capsule_bytes, policy):
     manifest = parse_json(manifest_bytes)
     for key in ("owner", "acceptedBase", "sourcePins", "sourceBindingSha256", "sourceFiles", "capsuleRows"):
         if manifest.get(key) != policy[key]: raise ValueError("Reviewed manifest association changed: " + key)
-    if policy.get("sliceKind") == "email-change-session-v1":
+    if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+        from run_web_resin_comparison_expiry import BASE, CONTROL_SHA, TEST_PATH, PINS
+        if (policy.get("acceptedBase") != BASE or policy.get("controlCommit") != CONTROL_SHA
+            or policy.get("sourcePins") != PINS or policy.get("sourceCount") != RESIN_EXPIRY_SOURCE_COUNT
+            or len(manifest["capsuleRows"]) != 1 or manifest["capsuleRows"][0]["path"] != TEST_PATH
+            or sha256(json.dumps(manifest["sourceFiles"], sort_keys=True, separators=(",", ":")).encode()) != policy["sourceBindingSha256"]):
+            raise ValueError("Exact paired expiry source inventory/postimage required")
+        count = RESIN_EXPIRY_SOURCE_COUNT
+    elif policy.get("sliceKind") == "email-change-session-v1":
         if (policy.get("sourceCount") != 1985 or policy.get("baseSourceCount") != 1983
             or policy.get("acceptedBase") != EMAIL_SESSION_BASE
             or policy.get("sourcePins") != {"ServiceDefaults": "3c790ba6414b2a539f24aabb6948549ffd81a86b",
@@ -134,7 +144,7 @@ def materialize(root, policy, files):
 
 
 def source_status(policy, materialized=False):
-    count = len(policy["sourceFiles"]) if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1"} else 1983
+    count = len(policy["sourceFiles"]) if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1", "resin-comparison-expiry-v1"} else 1983
     if materialized:
         return f"Reviewed raw candidate materialized ({count} files); native validation pending."
     return f"Reviewed raw candidate source remains unchanged ({count} files)."

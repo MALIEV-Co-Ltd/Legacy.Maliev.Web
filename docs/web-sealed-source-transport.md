@@ -1,5 +1,83 @@
 # Sealed Web source transport
 
+## Unactivated paired Resin expiry review scope
+
+The isolated `resin-comparison-expiry-v1` dispatch choice prepares only the two
+`ResinComparisonBudget_BothOverloadsPreserveSelectedQuoteAfterRealExpiry` rows
+from control commit `6261787b83b4e6b391146da3cd325298ac98ce84`, using base
+`80b69dd81a7dce23c3ac07ef507ac5ae16a92d9b` and one reviewed test postimage.
+Its complete 2,003-file inventory and dependency pins are sealed separately.
+Its policy's `nativeAdmissionSha256` remains null. Resin alone obtains its digest
+from the fixed enrolled context after independently assigned origin validation;
+the original complete permit validator runs on a private digest-bound policy copy.
+Its `enrollmentCustodian` login, numeric ID and role-binding digest remain null:
+this source cannot start SDK or resource work. Protected-main dispatch, a finite
+independently enrolled Root permit, actual run/attempt/transport binding and existing kernel limits,
+pidfd/group settlement and original manager/cache absence remain required.
+No branch-dispatch bootstrap or account/financial producer execution is admitted.
+The account worker and existing scope policies remain unchanged; only the shared
+intake/admission/phase/launcher closed scope selections are extended.
+
+Before activation, the execution owner and Root must independently review the
+whole final transport, upload the exact reviewed manifest/capsule blobs and
+legitimately assign an independent current custodian account in the sealed policy.
+An observed connected account is not a role assignment. The source now removes
+the same-commit/future-run digest cycle through the following Resin-only protocol;
+old scopes keep their original policy-pinned permit behavior.
+
+The protected-main workflow first emits and uploads a canonical run challenge
+before allocation. It binds the actual transport commit, run, attempt, complete
+policy/source/manifest hashes and fresh nonce. Its UTC start is floored to a second
+to match GitHub timestamp precision, with the same original 300-second deadline.
+The assigned custodian posts one exact canonical record after
+`MALIEV_RESIN_EXPIRY_ENROLLMENT_V1` and a newline in the already authorized
+`MALIEV-Co-Ltd/Legacy.Maliev.Workflows` issue98. The record includes every challenge
+binding plus the exact current custodian issuer tuple (login, numeric ID and
+role-binding digest), original same-Web-repository permit Git blob ID,
+raw SHA256, enrolled UTC and finite expiry (at most 2,100 seconds). The custodian
+must provide the complete original permit, including all fixed phases, argv,
+source pins, limits, nonce and actual run coordinates; no caller digest creates
+authority. No new access, credentials, grant or security setting is introduced.
+
+Discovery uses only the fixed anonymous public API issue98 route with `since`
+equal to the original challenge timestamp, 100 maximum rows and 128 KiB response
+cap. A full cohort is rejected, not silently truncated. Polls are ten seconds,
+bounded by the original challenge deadline minus a 120-second materialization
+reserve; setup/upload delay reduces the wait rather than restarting it. Reads
+have a five-second total deadline, reject redirects, and treat denial, deletion
+and rate limits as fatal. The admission step remains five minutes and job remains
+40 minutes. The existing read token is used only for the original Git blob intake,
+never forwarded to the SDK unit or phases. Anonymous API availability is an
+execution prerequisite, not an asserted pass.
+
+Dedicated comment readback checks the source-assigned numeric author ID, login,
+`User` type, fixed issue and comment ID, canonical exact record and original raw
+permit hashes. Equal creation/update timestamps and exact subsequent response/body
+readback establish observed timestamp/body stability. They do not prove a
+cryptographic never-edited history or all past revocations. Git blob identity
+binds the immutable raw permit. The same retained comment and context bytes are
+rechecked before cache/unit allocation, immediately before first SDK allocation,
+and before every later phase. UTC is refreshed after each bounded authority read.
+Later phases also require the actual successful prior SDK/phase cleanup receipts;
+a claimed first verification timestamp cannot replace them.
+
+Final acceptance joins the actual unit and all five phase authority receipts to
+the original context, comment, challenge, permit and policy hashes and observes
+the original comment again. It validates each original admission time and first
+SDK deadline without requiring an already completed permit to remain live
+forever. Original pidfd, group, generation, manager/cache absence, failure
+preservation and cleanup assertions remain mandatory. This unassigned-custodian
+source and pure synthetic controls do not establish runnable or native acceptance.
+
+The narrow experiment retains original raw TRX, exact authored two-row UUID and
+assembly joins, bounded phase logs and original finite owner cleanup receipts.
+It performs a strict test-project build and no browser/CRM/financial preparation.
+It does not qualify ContactNoJS, Summary navigation, all material paths, or full
+generated-inclusive80% coverage; the existing ordinary full gates stay mandatory.
+Prepared PR512 real-upload transport has a different fixed scope and base
+`66d220af825a6d4829d1b97512e21b6486a08c87`; it cannot accept these626 controls
+unchanged. Its `runtime/run_focus.py` and `runtime/verify_focus_trx.py` are untouched.
+
 This transport qualifies the uncommitted inquiry and localization bundle without committing application C# to trigger CI. The source capsule is transported as same-repository Git blobs, following the existing Quotation PR130 pattern used by File. The committed policy pins the full raw manifest, Web owner, accepted Git base, source binding, dependency pins and 1,983 exact file hashes. The capsule carries 103 exact postimages (1,621,328 bytes, ZIP349,397 bytes) on the accepted Git checkout. Full readback verifies 1,943 source files and 40 asset preimages. File's shared extractor is copied byte-for-byte at SHA256 `44a8a5accac9da11422d606be02fe28487642215df511b5f1c4284296a453ee2`; its 1 MiB archive, 2 MiB API/file, 8 MiB expanded and 256-entry limits are unchanged. It preserves UTF-8, BOMs and line endings.
 
 The archived candidate remains outside this commit. Frozen v15 binding SHA256 is `bb9de9699a4ae8f1b6dbcede02a71489cf32761aad9c5ed25c123fbfb97cca51`; candidate base is `0b036c813d25d4d7785ad66be6e10b54f2432381`. The separate two-file literal company acknowledgment fix and four cases are excluded and retained in their own worktree. PR500 is outside this transport.

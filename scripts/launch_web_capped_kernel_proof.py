@@ -37,7 +37,7 @@ def members(group):
 
 
 def collect_sdk_receipt(evidence, ledger, failure):
-    path = evidence / 'email-sdk-version.json'
+    path = evidence / ('resin-sdk-version.json' if ledger.get('authorityScope') == 'resin-comparison-expiry-v1' else 'email-sdk-version.json')
     try:
         if not path.exists():
             ledger['sdkStarted'] = False
@@ -65,7 +65,9 @@ def main():
     signal.signal(signal.SIGINT, interrupted)
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence', type=Path, required=True)
-    parser.add_argument('--account-policy', type=Path)
+    policies = parser.add_mutually_exclusive_group()
+    policies.add_argument('--account-policy', type=Path)
+    policies.add_argument('--resin-policy', type=Path)
     parser.add_argument('--permit', type=Path)
     parser.add_argument('--candidate', type=Path)
     args = parser.parse_args()
@@ -78,17 +80,22 @@ def main():
     run = os.environ['GITHUB_RUN_ID']; attempt = os.environ['GITHUB_RUN_ATTEMPT']
     if not run.isdecimal() or not attempt.isdecimal():
         raise ValueError('Exact hosted run identity required')
-    account = args.account_policy is not None
+    resin = args.resin_policy is not None
+    selected_policy = args.resin_policy if resin else args.account_policy
+    account = selected_policy is not None
     grant = None
     if account:
         if args.permit is None or args.candidate is None:
             raise ValueError('Account source and independent creation grant required')
-        from run_web_account_candidate import authorize_creation
-        _, grant = authorize_creation(args.account_policy, args.permit, args.candidate)
+        if resin:
+            from run_web_resin_comparison_expiry import authorize_creation
+        else:
+            from run_web_account_candidate import authorize_creation
+        _, grant = authorize_creation(selected_policy, args.permit, args.candidate)
     nonce = grant['ownerNonce'][:12] if account else uuid.uuid4().hex[:12]
     unit = f'web-kernel-{run}-{attempt}-{nonce}.service'
     description = f'WebKernelProof:{uuid.uuid4().hex}'
-    script = Path(__file__).with_name('run_web_account_candidate.py' if account else 'run_web_capped_kernel_proof.py').resolve()
+    script = Path(__file__).with_name('run_web_resin_comparison_expiry.py' if resin else ('run_web_account_candidate.py' if account else 'run_web_capped_kernel_proof.py')).resolve()
     evidence = args.evidence.resolve(); evidence.mkdir(exist_ok=False)
     receipt = evidence / 'kernel-proof.json'
     ledger = {'unit': unit, 'description': description, 'runId': run,
@@ -99,12 +106,21 @@ def main():
               'cleanupVerified': False, 'expirySeconds': 2100}
     if account:
         ledger['argv'] = ['/usr/bin/python3', '-B', str(script), '--owned-worker', '--unit', unit, '--receipt', str(receipt),
-                          '--policy', str(args.account_policy.resolve()), '--permit', str(args.permit.resolve()),
+                          '--policy', str(selected_policy.resolve()), '--permit', str(args.permit.resolve()),
                           '--candidate', str(args.candidate.resolve()), '--evidence', str(evidence)]
-        ledger['authorityScope'] = 'email-change-session-v1'
+        ledger['authorityScope'] = 'resin-comparison-expiry-v1' if resin else 'email-change-session-v1'
+        if resin:
+            ledger['sourceBindingSha256'] = grant['sourceBindingSha256']
     forwarded = (['--setenv=' + key + '=' + os.environ[key] for key in
                   ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'WEB_REVIEWED_TRANSPORT_SHA', 'RUNNER_ENVIRONMENT', 'PATH', 'HOME')]
                  if account else [])
+    if resin:
+        context = os.environ.get('RESIN_ENROLLMENT_CONTEXT')
+        if not context:
+            raise ValueError('Original Resin enrollment context absent')
+        forwarded.append('--setenv=RESIN_ENROLLMENT_CONTEXT=' + context)
+        forwarded.extend('--setenv=' + key + '=' + os.environ[key]
+                         for key in ('GITHUB_EVENT_NAME', 'GITHUB_REF'))
     def save():
         (evidence / 'launcher.json').write_text(json.dumps(ledger, indent=2) + '\n')
     save()
@@ -122,14 +138,21 @@ def main():
         raise ValueError('Refuse an existing manager owner')
     failure = None; invocation = None; caches = []
     try:
+        if resin:
+            from resin_expiry_enrollment import require_context
+            require_context(policy=admission.intake.load_policy(selected_policy), permit_raw=args.permit.read_bytes(), initial=True)
         if account:
-            for cache in (args.candidate.resolve() / '.dependencies/email-sdk', evidence / 'browser-cache'):
+            for cache in (args.candidate.resolve() / ('.dependencies/resin-sdk' if resin else '.dependencies/email-sdk'), evidence / 'browser-cache'):
                 if cache.is_symlink() or cache.parent.is_symlink():
                     raise ValueError('Private account cache path changed')
                 cache.mkdir(exist_ok=False)
                 identity = cache.stat()
                 caches.append((cache, identity.st_dev, identity.st_ino))
                 (cache / '.account-owner').write_text(grant['ownerNonce'])
+        if resin:
+            from resin_expiry_enrollment import require_context, last_receipt
+            require_context(admission.intake.load_policy(selected_policy), args.permit.read_bytes(), initial=True)
+            ledger['enrollment'] = last_receipt()
         ledger['dispatchAttempted'] = True; save()
         command('sudo', '-n', 'systemd-run', f'--unit={unit}', f'--description={description}',
                 '--service-type=exec', '--remain-after-exit',

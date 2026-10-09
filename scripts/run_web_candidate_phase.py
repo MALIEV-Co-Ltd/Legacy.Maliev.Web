@@ -131,7 +131,7 @@ def verify_capped_owner(policy,context_path,proc_root=Path("/proc"),cgroup_root=
     if proc_root==Path("/proc") and (os.name!="posix" or os.geteuid()==0):
         raise ValueError("Unprivileged existing Linux SDK unit required")
     digest=policy.get("sdkOwnerContextSha256")
-    enrolled = (policy.get("sliceKind") == "email-change-session-v1" and digest is None
+    enrolled = (policy.get("sliceKind") in {"email-change-session-v1", "resin-comparison-expiry-v1"} and digest is None
                 and grant is not None and grant.get("sdkOwnerEnrollment") == policy.get("sdkOwnerEnrollment")
                 and isinstance(grant.get("ownerNonce"), str) and len(grant["ownerNonce"]) == 32)
     if context_path is None or (not enrolled and (not isinstance(digest,str) or len(digest)!=64)):
@@ -192,6 +192,9 @@ def verify_email_phase_history(policy, grant, phase_id, evidence):
     positions = [index for index, row in enumerate(rows) if row["id"] == phase_id]
     if len(positions) != 1:
         raise ValueError("Exact email session phase identity required")
+    if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+        import resin_expiry_enrollment as enrollment
+        previous_observed = enrollment.instant(grant["startsUtc"])
     for row in rows[:positions[0]]:
         receipt = admission.intake.parse_json((evidence / (row["id"] + ".json")).read_bytes())
         expected = {"sourceBindingSha256": policy["sourceBindingSha256"], "manifestSha256": policy["manifestSha256"],
@@ -201,6 +204,20 @@ def verify_email_phase_history(policy, grant, phase_id, evidence):
             or receipt.get("phaseSucceeded") is not True or receipt.get("cleanupVerified") is not True
             or receipt.get("phase") != row["name"] or receipt.get("admittedArgv") != row["argv"]):
             raise ValueError("Successful same-source/run prior email phase required")
+        if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+            import resin_expiry_enrollment as enrollment
+            current = enrollment.last_receipt()
+            prior = receipt.get("enrollment")
+            identity = {key: current[key] for key in ("contextSha256", "challengeSha256", "commentId", "commentSha256", "permitSha256", "policySha256")}
+            if (not isinstance(prior, dict) or set(prior) != set(identity) | {"observedUtc", "initial"}
+                or any(enrollment.canonical({key: prior[key]}) != enrollment.canonical({key: value}) for key, value in identity.items())
+                or type(prior["initial"]) is not bool or prior["initial"] is not (row["id"] == "resin-sdk-install")
+                or not enrollment.instant(grant["startsUtc"]) <= enrollment.instant(prior["observedUtc"]) <= enrollment.instant(current["observedUtc"])):
+                raise ValueError("Prior Resin phase must join the currently verified original custody/permit")
+            observed = enrollment.instant(prior["observedUtc"])
+            if observed < previous_observed or (prior["initial"] and observed >= enrollment.original_challenge_deadline(policy, current)):
+                raise ValueError("Prior Resin observations must remain ordered within original SDK admission")
+            previous_observed = observed
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--policy",type=Path,required=True);parser.add_argument("--permit",type=Path,required=True)
@@ -213,13 +230,16 @@ def main():
         phase=grant["phase"]
         if args.id!=phase["id"] or args.phase!=phase["name"] or command!=phase["argv"]:
             raise ValueError("Exact country BUILD argv and phase identity required")
-    if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1"}:
+    if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1", "resin-comparison-expiry-v1"}:
         matched=[row for row in grant["phases"] if row["id"]==args.id]
         if len(matched)!=1 or matched[0]["name"]!=args.phase or matched[0]["argv"]!=command:
             raise ValueError("Exact account phase identity and argv required")
-    if policy.get("sliceKind") == "email-change-session-v1":
+    if policy.get("sliceKind") in {"email-change-session-v1", "resin-comparison-expiry-v1"}:
         verify_email_phase_history(policy, grant, args.id, args.evidence)
-    owner_arguments = {"grant": grant} if policy.get("sliceKind") == "email-change-session-v1" else {}
+    owner_arguments = {"grant": grant} if policy.get("sliceKind") in {"email-change-session-v1", "resin-comparison-expiry-v1"} else {}
+    if policy.get("sliceKind") == "resin-comparison-expiry-v1" and args.id == "resin-sdk-install":
+        import resin_expiry_enrollment as enrollment
+        enrollment.require_context(policy, raw, initial=True)
     owner_context=verify_capped_owner(policy,args.sdk_owner_context,**owner_arguments)
     executable=shutil.which(command[0])
     if not executable:raise ValueError("Executable unavailable")
@@ -230,10 +250,13 @@ def main():
     receipt=args.evidence/(args.id+".json");log=args.evidence/(args.id+".log")
     if receipt.exists() or log.exists():raise ValueError("Fresh phase evidence paths required")
     record={"owner":admission.OWNER,"phase":args.phase,"expiresUtc":grant["expiresUtc"],"command":command,"executable":executable,"persistentData":False,"ports":[],"cleanupVerified":False,"phaseSucceeded":False}
-    if policy.get("sliceKind") == "email-change-session-v1":
+    if policy.get("sliceKind") in {"email-change-session-v1", "resin-comparison-expiry-v1"}:
         record.update({key: grant[key] for key in ("sourceBindingSha256", "manifestSha256", "transportSha", "runId", "runAttempt")})
         record.update({key: policy[key] for key in ("sdkOwnerContextSha256", "nativeAdmissionSha256")})
         record["admittedArgv"] = list(command)
+    if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+        import resin_expiry_enrollment as enrollment
+        record["enrollment"] = enrollment.last_receipt()
     record["existingSdkOwner"]=owner_context
     proc=None;pidfd=None;first_failure=None
     previous={sig:signal.signal(sig,request_stop) for sig in (signal.SIGTERM,signal.SIGINT)}
@@ -243,6 +266,12 @@ def main():
             grant=admission.validate(policy,raw);admission.census();duration=remaining_seconds(grant)
             if verify_capped_owner(policy,args.sdk_owner_context,**owner_arguments)!=owner_context:
                 raise ValueError("Existing unrenewed SDK owner context changed")
+            if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+                import resin_expiry_enrollment as enrollment
+                if args.id == "resin-sdk-install":
+                    enrollment.require_context(policy, raw, initial=True)
+                verify_email_phase_history(policy, grant, args.id, args.evidence)
+                record["enrollment"] = enrollment.last_receipt()
             command[0]=executable
             owner_expiry=dt.datetime.fromisoformat(owner_context["expiresUtc"].replace("Z","+00:00"))
             owner_budget=(owner_expiry-dt.datetime.now(dt.timezone.utc)).total_seconds()-40
