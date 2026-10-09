@@ -12,13 +12,15 @@ using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Real Catalog geography, normal Auth login/cookie/session and existing Customer address persistence.</summary>
-public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture authority) : IClassFixture<MemberAuthorityFixture>
+public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture authority, ITestOutputHelper output) : IClassFixture<MemberAuthorityFixture>
 {
     [Theory]
     [InlineData("en", 1280)]
@@ -27,6 +29,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     {
         var database = $"profile_contract_{Guid.NewGuid():N}";
         await using var resources = new BillingProofLifetime(proofCulture: culture);
+        output.WriteLine("billing-attempt-run " + resources.AttemptRun);
         await resources.RunAsync(async () =>
         {
             var postgres = resources.Postgres(database);
@@ -99,9 +102,13 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                 var expectedState = tuple.GetProperty("province").GetProperty(name).GetString();
                 var expectedCity = tuple.GetProperty("district").GetProperty(name).GetString();
 
+                using var initialProbe = new BillingInitialProbeDiagnostics(culture, width, resources.AttemptRun);
                 var baseWeb = resources.AcquireHost(() => authority.Web(retained: false), value => value.DisposeAsync());
                 var web = resources.AcquireHost(() => baseWeb.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
                 {
+                    services.AddSingleton<IStartupFilter>(initialProbe);
+                    services.AddLogging(logging => logging.AddProvider(initialProbe)
+                        .AddFilter<BillingInitialProbeDiagnostics>((category, _) => BillingInitialProbeDiagnostics.ObservedCategory(category)));
                     services.AddHttpClient("customers", client => client.BaseAddress = customerOrigin);
                     services.AddHttpClient("catalog", client => client.BaseAddress = catalogOrigin);
                     services.RemoveAll<IServiceAccessTokenProvider>();
@@ -117,15 +124,47 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                 certificateRequest.CertificateExtensions.Add(alternativeNames.Build());
                 var certificate = resources.AcquireDependency(() => certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1)), value => { value.Dispose(); return ValueTask.CompletedTask; });
                 web.UseKestrel(options => options.Listen(IPAddress.Loopback, webOrigin.Port, listener => listener.UseHttps(certificate)));
-                resources.StartHost(webLease, () => web.StartServer());
+                try
+                {
+                    initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartInvoked);
+                    resources.StartHost(webLease, () => web.StartServer());
+                    initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartReturned);
+                }
+                catch (Exception failure)
+                {
+                    initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.InitialProbeFailed, failure: failure);
+                    initialProbe.StopAndPersist();
+                    throw;
+                }
                 // Probe an actual socket rather than CreateClient's factory transport before giving the origin to Chromium.
                 using var transport = resources.AcquireHost(() => new HttpClientHandler
                 {
-                    ServerCertificateCustomValidationCallback = (request, peer, _, _) => request.RequestUri?.Host == "127.0.0.1"
-                        && peer is not null && CryptographicOperations.FixedTimeEquals(peer.GetCertHash(), certificate.GetCertHash()),
+                    ServerCertificateCustomValidationCallback = (request, peer, _, _) =>
+                    {
+                        var accepted = request.RequestUri?.Host == "127.0.0.1"
+                            && peer is not null && CryptographicOperations.FixedTimeEquals(peer.GetCertHash(), certificate.GetCertHash());
+                        initialProbe.Observe(accepted ? BillingInitialProbeDiagnostics.Stage.CertificatePinAccepted : BillingInitialProbeDiagnostics.Stage.CertificatePinRejected);
+                        return accepted;
+                    },
                 }, value => { value.Dispose(); return ValueTask.CompletedTask; });
                 using var host = resources.AcquireHost(() => new HttpClient(transport) { BaseAddress = webOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
-                using var loginReady = await host.GetAsync("/Account/Login?culture=en");
+                async Task<HttpResponseMessage> ProbeInitialLoginAsync()
+                {
+                    try
+                    {
+                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.GetInvoked);
+                        var response = await host.GetAsync("/Account/Login?culture=en");
+                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.GetReturned, (int)response.StatusCode);
+                        return response;
+                    }
+                    catch (Exception failure)
+                    {
+                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.InitialProbeFailed, failure: failure);
+                        throw;
+                    }
+                    finally { initialProbe.StopAndPersist(); }
+                }
+                using var loginReady = await ProbeInitialLoginAsync();
                 Assert.Equal(HttpStatusCode.OK, loginReady.StatusCode);
                 var playwright = await resources.AcquireHostAsync(Playwright.CreateAsync, value => { value.Dispose(); return ValueTask.CompletedTask; });
                 var browser = await resources.AcquireHostAsync(() => playwright.Chromium.LaunchAsync(new() { Headless = true }), value => value.DisposeAsync());
@@ -200,7 +239,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                     """);
                 Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"),
                     "Synthetic address layout dimensions only: " + overflow);
-                await File.WriteAllTextAsync(Path.Combine(evidence, culture + ".json"), JsonSerializer.Serialize(new
+                await resources.WriteBusinessProofAsync(new
                 {
                     surface = "member-billing",
                     culture,
@@ -214,7 +253,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                     shippingPreserved = true,
                     manualDetailPreserved = true,
                     auth = "Pinned Auth normal login, encrypted cookie, Redis session; synthetic scoped service JWT",
-                }));
+                });
             }
         });
     }

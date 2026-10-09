@@ -7,8 +7,12 @@ on:
       - 'Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingInitialProbeDiagnostics.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingInitialProbeDiagnosticsTests.cs'
+      - 'scripts/tests/test_billing_receipt_attempt_custody.py'
       - 'scripts/prepare-billing-catalog-proof.ps1'
       - 'scripts/verify-billing-persistence-proof.py'
+      - 'scripts/retain-billing-initial-probe-comparison.py'
       - '.github/workflows/billing-persistence.yml'
       - 'Legacy.Maliev.Web/Components/Layout/PublicNavigation.razor'
       - 'Legacy.Maliev.Web/wwwroot/src/app/css/public-navigation.css'
@@ -21,8 +25,12 @@ on:
       - 'Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingInitialProbeDiagnostics.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingInitialProbeDiagnosticsTests.cs'
+      - 'scripts/tests/test_billing_receipt_attempt_custody.py'
       - 'scripts/prepare-billing-catalog-proof.ps1'
       - 'scripts/verify-billing-persistence-proof.py'
+      - 'scripts/retain-billing-initial-probe-comparison.py'
       - '.github/workflows/billing-persistence.yml'
       - 'Legacy.Maliev.Web/Components/Layout/PublicNavigation.razor'
       - 'Legacy.Maliev.Web/wwwroot/src/app/css/public-navigation.css'
@@ -37,11 +45,17 @@ concurrency:
 
 jobs:
   billing:
+    name: billing (${{ matrix.mode }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [focused, collected]
     env:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      BILLING_COMPARISON_MODE: ${{ matrix.mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -74,7 +88,7 @@ jobs:
       - name: Preserve generated shared stylesheet
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: billing-stylesheet-${{ github.event.pull_request.head.sha || github.sha }}
+          name: billing-stylesheet-${{ matrix.mode }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: Legacy.Maliev.Web/wwwroot/dist/site.min.css
           if-no-files-found: error
           retention-days: 7
@@ -172,11 +186,21 @@ jobs:
                   (directory / 'watchdog.json').write_text(json.dumps(receipt, indent=2) + '\n')
           PY
       - name: Execute genuine billing selection save readback and reload
-        run: >-
-          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore
-          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~ThaiLookupBillingPersistenceTests"
-          --logger trx --results-directory ./billing-persistence-test-results
+        run: |
+          mkdir -p billing-comparison-results
+          if [ "$BILLING_COMPARISON_MODE" = focused ]; then
+            settings=(-p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=)
+          elif [ "$BILLING_COMPARISON_MODE" = collected ]; then
+            # Exact full-lane inclusive collector configuration, in a fresh job/build tree.
+            settings=(-p:CI=true '-p:VSTestCollect=XPlat Code Coverage' "-p:RunSettingsFilePath=$GITHUB_WORKSPACE/tests/web-fx-generated-inclusive.runsettings")
+          else
+            exit 1
+          fi
+          dotnet msbuild Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -nologo "${settings[@]}" \
+            -getProperty:CI,VSTestCollect,RunSettingsFilePath > billing-comparison-results/evaluated-properties.private.json
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore \
+            "${settings[@]}" --filter "FullyQualifiedName~ThaiLookupBillingPersistenceTests" \
+            --logger trx --results-directory ./billing-persistence-test-results
       - name: Verify billing ownership fault controls without native child allocation
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore
@@ -299,16 +323,64 @@ jobs:
                   raise SystemExit('Original journey creation/expiry timestamps required')
           print('Verified actual English and Thai PostgreSQL original identity and exact cleanup; shared authority excluded')
           PY
+      - name: Verify five diagnostic fault controls without native child allocation
+        if: always()
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~BillingInitialProbeDiagnosticsTests"
+          --logger trx --results-directory ./billing-diagnostic-control-results
+      - name: Require five exact unique passed diagnostic control rows
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          prefix = 'Legacy.Maliev.Web.Tests.BillingInitialProbeDiagnosticsTests.'
+          expected = {
+              prefix + 'FaultingDiagnosticFeaturesPreserveTheExactDownstreamException(fault: "request-path")',
+              prefix + 'FaultingDiagnosticFeaturesPreserveTheExactDownstreamException(fault: "response-status")',
+              prefix + 'ProviderNeverFormatsOrReadsStateAndHasAFiniteStoppedInventory',
+              prefix + 'MismatchedRequestAndUnrelatedProviderAreNotObserved',
+              prefix + 'StageInventoryIsBoundedAndProviderDisposalIsInertAfterStop',
+          }
+          files = list(Path('billing-diagnostic-control-results').glob('*.trx'))
+          if len(files) != 1:
+              raise SystemExit('Exactly one diagnostic control TRX required')
+          root = ET.parse(files[0]).getroot()
+          rows = root.findall('.//t:UnitTestResult', ns)
+          names = [row.get('testName') for row in rows]
+          if len(rows) != 5 or len(set(names)) != 5 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
+              raise SystemExit('Missing duplicate foreign or unsuccessful diagnostic control row')
+          counters = root.find('.//t:Counters', ns)
+          required = {key: '5' if key in ('total', 'executed', 'passed') else '0' for key in
+              'total executed passed failed error timeout aborted inconclusive passedButRunAborted notRunnable notExecuted disconnected warning completed inProgress pending'.split()}
+          summary = root.find('.//t:ResultSummary', ns)
+          if counters is None or counters.attrib != required or summary is None or summary.get('outcome') != 'Completed':
+              raise SystemExit('Diagnostic control TRX counters or summary mismatch')
+          print('Verified five exact unique Passed diagnostic controls')
+          PY
+      - name: Retain exact comparison source collector and original result projection
+        if: always()
+        run: python3 -B scripts/retain-billing-initial-probe-comparison.py
       - name: Preserve bounded synthetic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: member-billing-${{ github.event.pull_request.head.sha || github.sha }}
+          name: member-billing-${{ matrix.mode }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             billing-persistence-test-results/**/*.trx
             billing-lifetime-test-results/**/*.trx
+            billing-diagnostic-control-results/**/*.trx
             billing-watchdog-results/*.json
+            billing-comparison-results/comparison.json
+            billing-persistence-test-results/**/coverage.json
+            billing-persistence-test-results/**/coverage.cobertura.xml
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/initial-readiness/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.png
           if-no-files-found: error
           retention-days: 7
