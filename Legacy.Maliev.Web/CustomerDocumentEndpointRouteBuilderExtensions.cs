@@ -59,7 +59,7 @@ public static class CustomerDocumentEndpointRouteBuilderExtensions
         var session = await SessionAsync(context, sessions, token);
         if (session is null) return Results.Unauthorized();
         var result = await client.ListAsync(session.Value.CustomerId, session.Value.AccessToken, token);
-        if (result.StatusCode != 200 || result.Value is null) return Results.StatusCode(result.StatusCode);
+        if (result.StatusCode != 200 || result.Value is null) return Results.StatusCode(result.StatusCode == 200 ? 503 : result.StatusCode);
         // An Internal result is evidence of a broken upstream boundary. Return no partial metadata.
         if (result.Value.Count > 50 || result.Value.Any(x => !CustomerDocumentContractGuard.MemberSummary(x, session.Value.CustomerId))) return Results.StatusCode(503);
         return Results.Json(result.Value.Select(x => new { x.DocumentId, x.Kind, x.Title, x.Revision }));
@@ -71,9 +71,9 @@ public static class CustomerDocumentEndpointRouteBuilderExtensions
         var session = await SessionAsync(context, sessions, token);
         if (session is null) return Results.Unauthorized();
         var result = await client.ReceiptAsync(session.Value.CustomerId, documentId, versionId, session.Value.AccessToken, token);
-        if (result.StatusCode != 200 || result.Value is null) return Results.StatusCode(result.StatusCode);
+        if (result.StatusCode != 200 || result.Value is null) return Results.StatusCode(result.StatusCode == 200 ? 503 : result.StatusCode);
         var value = result.Value;
-        if (value.CustomerId != session.Value.CustomerId || value.DocumentId != documentId || value.VersionId != versionId || value.Revision <= 0 || value.ContentSha256 is not { Length: 64 } || !value.ContentSha256.All(x => x is >= '0' and <= '9' or >= 'a' and <= 'f') || value.VerificationStatus is not ("PendingVerification" or "Verified" or "Rejected")) return Results.StatusCode(503);
+        if (value.CustomerId != session.Value.CustomerId || value.DocumentId != documentId || value.VersionId != versionId || value.Revision <= 0 || !CustomerDocumentContractGuard.Digest(value.ContentSha256) || !CustomerDocumentContractGuard.KnownKind(value.Kind) || !CustomerDocumentContractGuard.VerificationEvidence(value.VerificationStatus, value.VerifiedBySubject, value.VerifiedAtUtc)) return Results.StatusCode(503);
         return Results.Json(new MemberDocumentReceipt(value.DocumentId, value.VersionId, value.Kind, value.ContentSha256, value.VerificationStatus, value.Revision));
     }
 

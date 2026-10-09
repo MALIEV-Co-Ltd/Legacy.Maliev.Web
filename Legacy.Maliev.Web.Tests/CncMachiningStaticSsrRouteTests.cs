@@ -71,6 +71,7 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
                 "SiliconeCastingPage.razor",
                 "LowVolumeInjectionMoldingPage.razor"
             }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
+            .LegacyPagesAfterVerifyingDocuments()
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();

@@ -23,5 +23,9 @@ public static class CustomerDocumentContractGuard
     public static bool KnownKind(string? kind) => kind is "Nda" or "Corporate" or "BillingInstruction" or "Shipment" or "Release" or "Acceptance" or "Evidence";
     public static bool Digest(string? digest) => digest is { Length: 64 } && digest.All(x => x is >= '0' and <= '9' or >= 'a' and <= 'f');
     public static bool MemberSummary(CustomerDocumentSummary value, int customerId) => value.CustomerId == customerId && value.DocumentId != Guid.Empty && value.Revision > 0 && value.Visibility == "Customer" && KnownKind(value.Kind) && !string.IsNullOrWhiteSpace(value.Title) && value.Title.Length <= 250;
-    public static bool Version(CustomerDocumentVersionSummary value, Guid documentId, string kind) => value.DocumentId == documentId && value.VersionId != Guid.Empty && value.VersionNumber > 0 && value.Revision > 0 && value.Kind == kind && KnownKind(value.Kind) && Digest(value.ContentSha256) && value.CreatedAtUtc != default && value.CreatedAtUtc.Offset == TimeSpan.Zero && (value.VerificationStatus is "PendingVerification" or "Verified" or "Rejected") && (value.VerifiedAtUtc is null || value.VerifiedAtUtc.Value.Offset == TimeSpan.Zero) && (value.VerificationStatus != "Verified" || !string.IsNullOrWhiteSpace(value.VerifiedBySubject) && value.VerifiedAtUtc is not null);
+    public static bool VerificationEvidence(string? status, string? actor, DateTimeOffset? time) =>
+        status is "PendingVerification" or "Verified" or "Rejected"
+        && (time is null || time.Value != default && time.Value.Offset == TimeSpan.Zero)
+        && (status == "PendingVerification" || !string.IsNullOrWhiteSpace(actor) && time is not null);
+    public static bool Version(CustomerDocumentVersionSummary value, Guid documentId, string kind) => value.DocumentId == documentId && value.VersionId != Guid.Empty && value.VersionNumber > 0 && value.Revision > 0 && value.Kind == kind && KnownKind(value.Kind) && Digest(value.ContentSha256) && value.CreatedAtUtc != default && value.CreatedAtUtc.Offset == TimeSpan.Zero && VerificationEvidence(value.VerificationStatus, value.VerifiedBySubject, value.VerifiedAtUtc);
 }
