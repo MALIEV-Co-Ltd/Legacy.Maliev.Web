@@ -11,6 +11,14 @@ REPOSITORY = "MALIEV-Co-Ltd/Legacy.Maliev.Web"
 COUNTRY_POLICY_SHA256 = "c920c1a0aef5782020f0c2621d59dfed500804d0ed4ba38c79d529bfeb251c2d"
 ACCOUNT_POLICY_SHA256 = "411c09afea2ca4181c15c2c5ba88239ac9f39c2ce7db1537a1cbf17ab4432f3a"
 ACCOUNT_SOURCE_COUNT = 1963
+EMAIL_SESSION_POLICY_SHA256 = "14b6bde2b3a1f17746c141e2d739d749dccf9efb9f43ea905f22b5e13d4d9d6b"
+EMAIL_SESSION_BASE = "66d220af825a6d4829d1b97512e21b6486a08c87"
+EMAIL_SESSION_PATHS = {
+    "Legacy.Maliev.Web/Pages/Account/ChangeEmailConfirmation.cshtml.cs",
+    "Legacy.Maliev.Web/Components/Pages/Account/ChangeEmailConfirmationPage.razor",
+    "Legacy.Maliev.Web.Tests/EmailChangeConfirmationSessionHttpTests.cs",
+    "Legacy.Maliev.Web.Tests/EmailChangeConfirmationRealSessionTests.cs",
+}
 EXPECTED_POLICY_SHA256 = "100ae2ae0a4a8c25cbf47ae3f4a0e0039e93f211d091ec48b192852e176ba43b"
 
 
@@ -24,7 +32,7 @@ NoRedirect = shared.NoRedirect
 
 def load_policy(path):
     raw = Path(path).read_bytes()
-    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256}:
+    if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256, EMAIL_SESSION_POLICY_SHA256}:
         raise ValueError("Reviewed policy raw-byte identity changed")
     return parse_json(raw)
 
@@ -37,7 +45,19 @@ def validate_capsule(manifest_bytes, capsule_bytes, policy):
     manifest = parse_json(manifest_bytes)
     for key in ("owner", "acceptedBase", "sourcePins", "sourceBindingSha256", "sourceFiles", "capsuleRows"):
         if manifest.get(key) != policy[key]: raise ValueError("Reviewed manifest association changed: " + key)
-    if policy.get("sliceKind") == "account-failure-v1":
+    if policy.get("sliceKind") == "email-change-session-v1":
+        if (policy.get("sourceCount") != 1985 or policy.get("baseSourceCount") != 1983
+            or policy.get("acceptedBase") != EMAIL_SESSION_BASE
+            or policy.get("sourcePins") != {"ServiceDefaults": "3c790ba6414b2a539f24aabb6948549ffd81a86b",
+                                            "CompatibilityContracts": "78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7"}
+            or len(manifest["capsuleRows"]) != 4
+            or {row["path"] for row in manifest["capsuleRows"]} != EMAIL_SESSION_PATHS):
+            raise ValueError("Exact four-path email session source/base/pins required")
+        binding = sha256(json.dumps(manifest["sourceFiles"], sort_keys=True, separators=(",", ":")).encode())
+        if binding != policy["sourceBindingSha256"]:
+            raise ValueError("Email session inventory binding changed")
+        count = 1985
+    elif policy.get("sliceKind") == "account-failure-v1":
         if policy.get("sourceCount") != ACCOUNT_SOURCE_COUNT:
             raise ValueError("Exact account inventory count required")
         count = ACCOUNT_SOURCE_COUNT
@@ -114,7 +134,7 @@ def materialize(root, policy, files):
 
 
 def source_status(policy, materialized=False):
-    count = len(policy["sourceFiles"]) if policy.get("sliceKind") == "account-failure-v1" else 1983
+    count = len(policy["sourceFiles"]) if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1"} else 1983
     if materialized:
         return f"Reviewed raw candidate materialized ({count} files); native validation pending."
     return f"Reviewed raw candidate source remains unchanged ({count} files)."
