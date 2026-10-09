@@ -64,4 +64,6 @@
   <data name="This order submission conflicts with an existing request. Please reload and try again." xml:space="preserve"><value>คำสั่งซื้อนี้ซ้ำกับคำขอที่มีอยู่ โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง</value></data>
   <data name="Your order could not be submitted." xml:space="preserve"><value>ไม่สามารถส่งคำสั่งซื้อได้</value></data>
   <data name="Order processing is temporarily unavailable." xml:space="preserve"><value>ระบบรับคำสั่งซื้อไม่พร้อมใช้งานชั่วคราว</value></data>
+  <data name="Quantity must be at least 1" xml:space="preserve"><value>จำนวนต้องไม่น้อยกว่า 1</value></data>
+  <data name="Please give your order a name" xml:space="preserve"><value>กรุณาตั้งชื่อคำสั่งซื้อ</value></data>
 </root>
