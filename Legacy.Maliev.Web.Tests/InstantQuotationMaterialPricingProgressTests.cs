@@ -509,6 +509,80 @@ public sealed class InstantQuotationMaterialPricingProgressTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ResinComparisonBudget_BothOverloadsPreserveSelectedQuoteAfterRealExpiry(bool displayProgress)
+    {
+        await using var fixture = new Fixture(gateRead: 1);
+        var session = await fixture.CreateAsync(materialKey: "M68");
+        using var caller = new CancellationTokenSource();
+        var frames = new List<InstantQuotationMaterialPricingProgress>();
+        var run = displayProgress
+            ? fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, caller.Token)
+            : fixture.Service.QuoteAsync(session, Owner, true, caller.Token);
+        Exception? executionFailure = null;
+        try
+        {
+            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(1, fixture.Reader.ReadCount);
+            var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.NotNull(quote);
+            Assert.False(caller.IsCancellationRequested);
+            Assert.Equal(1, fixture.Reader.ReadCount);
+            var selected = Assert.Single(quote.Parts);
+            Assert.Equal("M68", selected.MaterialKey);
+            Assert.Equal(PrintProcess.Resin, selected.Process);
+            Assert.Null(selected.PhysicalReceipt);
+            Assert.Equal(Assert.Single(new InstantQuotationPricingService().Quote(session.RequestState).Parts).UnitPrice,
+                selected.UnitPrice);
+            Assert.True(double.IsFinite(selected.UnitPrice) && selected.UnitPrice > 0);
+            var fdmCards = selected.MaterialPrices.Where(card =>
+                PricingCatalog.ResolveMaterial(card.MaterialKey)!.Process == PrintProcess.Fdm).ToArray();
+            Assert.NotEmpty(fdmCards);
+            Assert.All(fdmCards, card =>
+            {
+                Assert.Null(card.UnitPrice);
+                Assert.Null(card.PhysicalReceipt);
+            });
+            if (displayProgress)
+            {
+                Assert.Equal(new[] { InstantQuotationMaterialPricingStatus.Pending, InstantQuotationMaterialPricingStatus.Completed },
+                    frames.Where(frame => frame.MaterialKey == "M68").Select(frame => frame.Status));
+                var selectedCompleted = Assert.Single(frames, frame => frame.MaterialKey == "M68"
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+                Assert.Equal(selected.UnitPrice, selectedCompleted.UnitPrice);
+                var attempted = Assert.Single(frames, frame => PricingCatalog.ResolveMaterial(frame.MaterialKey)!.Process == PrintProcess.Fdm
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Pending);
+                Assert.Equal(PrintProcess.Fdm, PricingCatalog.ResolveMaterial(attempted.MaterialKey)!.Process);
+                Assert.Null(attempted.UnitPrice);
+                var terminal = Assert.Single(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+                Assert.Null(terminal.UnitPrice);
+                Assert.True(frames.IndexOf(selectedCompleted) < frames.IndexOf(attempted));
+                Assert.True(frames.IndexOf(attempted) < frames.IndexOf(terminal));
+                Assert.DoesNotContain(frames, frame => PricingCatalog.ResolveMaterial(frame.MaterialKey)!.Process == PrintProcess.Fdm
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+            }
+            else Assert.Empty(frames);
+        }
+        catch (Exception error) { executionFailure = error; throw; }
+        finally
+        {
+            fixture.Reader.Release.TrySetResult();
+            try { await run; }
+            catch (Exception cleanupFailure) when (executionFailure is not null)
+            {
+                if (!ReferenceEquals(executionFailure, cleanupFailure))
+                {
+                    try { executionFailure.Data["ComparisonTaskSettlementFailure"] = cleanupFailure; }
+                    catch { /* Preserve the original control failure if secondary retention fails. */ }
+                }
+            }
+        }
+    }
+
     [Fact]
     public async Task DisplayOverload_DoesNotChangeFinalKernelMoneyOrProtectedSession()
     {
