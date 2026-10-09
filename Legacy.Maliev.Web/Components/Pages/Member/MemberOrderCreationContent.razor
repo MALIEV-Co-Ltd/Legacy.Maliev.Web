@@ -42,9 +42,9 @@
         else
         {
             <fieldset class="maliev-form-field"><legend>@Localizer["Measurement system"]</legend><label><input type="radio" name="IsMetric" value="true" checked="@Model.IsMetric" /> @Localizer["Metric (mm)"]</label><label><input type="radio" name="IsMetric" value="false" checked="@(!Model.IsMetric)" /> @Localizer["Imperial (in)"]</label></fieldset>
-            <div class="maliev-form-field"><label for="member-order-width">@Localizer["Width"]</label><input id="member-order-width" type="number" name="Width" value="@Model.Width" min="0.01" step="any" required /></div>
-            <div class="maliev-form-field"><label for="member-order-length">@Localizer["Length"]</label><input id="member-order-length" type="number" name="Length" value="@Model.Length" min="0.01" step="any" required /></div>
-            <div class="maliev-form-field"><label for="member-order-height">@Localizer["Height"]</label><input id="member-order-height" type="number" name="Height" value="@Model.Height" min="0.01" step="any" required /></div>
+            <div class="maliev-form-field"><label for="member-order-width">@Localizer["Width"]</label><input id="member-order-width" type="number" name="Width" value="@Model.Width" step="any" required /></div>
+            <div class="maliev-form-field"><label for="member-order-length">@Localizer["Length"]</label><input id="member-order-length" type="number" name="Length" value="@Model.Length" step="any" required /></div>
+            <div class="maliev-form-field"><label for="member-order-height">@Localizer["Height"]</label><input id="member-order-height" type="number" name="Height" value="@Model.Height" step="any" required /></div>
         }
         <div class="maliev-form-field maliev-form-field--full"><label for="member-order-description">@Localizer["Description"]</label><textarea id="member-order-description" name="Description" rows="8" maxlength="500">@Model.Description</textarea><span class="maliev-form-help">@Localizer["Maximum 500 characters."]</span></div>
     </div>
