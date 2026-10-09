@@ -68,7 +68,7 @@ public sealed class MemberOrderHistoryParityTests : IClassFixture<TestingWebAppl
         Assert.Contains($">{ascendingLabel}</option>", selector.Value, StringComparison.Ordinal);
         Assert.Contains($">{descendingLabel}</option>", selector.Value, StringComparison.Ordinal);
         Assert.Contains($"value=\"{sort}\" selected", selector.Value, StringComparison.Ordinal);
-        Assert.Equal(1, Regex.Matches(selector.Value, @"\sselected(?:\s|=|>)").Count);
+        Assert.Single(Regex.Matches(selector.Value, @"\sselected(?:\s|=|>)"));
         foreach (var retained in new[] { "OrderCreatedDate_Descending", "OrderCreatedDate_Ascending", "OrderName_Ascending", "OrderName_Descending" })
             Assert.Contains($"value=\"{retained}\"", selector.Value, StringComparison.Ordinal);
         Assert.Contains("noindex,follow", html, StringComparison.Ordinal);
