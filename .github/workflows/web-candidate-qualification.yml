@@ -48,8 +48,8 @@ name: Web sealed source qualification
         required: true
         type: string
       admission_blob:
-        description: Same-repository Git blob ID of independently reviewed Root hosted permit
-        required: true
+        description: Required permit Git blob for existing/email slices; omit for same-run Resin enrollment
+        required: false
         type: string
 permissions:
   contents: read
@@ -119,6 +119,8 @@ jobs:
       run: 'set -euo pipefail
 
         mkdir -p "$RUNNER_TEMP/web-candidate-evidence"
+
+        test -n "$ADMISSION_BLOB"
 
         python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-candidate-policy.json"
         --blob "$ADMISSION_BLOB" --permit "$RUNNER_TEMP/web-candidate-evidence/root-permit.json"
@@ -628,6 +630,8 @@ jobs:
         set -euo pipefail
         evidence="$RUNNER_TEMP/web-email-change-evidence"
         mkdir "$evidence"
+        test -n "$ADMISSION_BLOB"
+
         python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-email-change-session-policy.json" --blob "$ADMISSION_BLOB" --permit "$evidence/root-permit.json"
         python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-email-change-session-policy.json" --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$evidence/intake.json"
     - name: Project exact ServiceDefaults dependency in this job
