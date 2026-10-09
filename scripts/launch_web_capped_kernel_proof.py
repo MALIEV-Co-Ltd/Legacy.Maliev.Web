@@ -10,6 +10,8 @@ import subprocess
 import sys
 import time
 import uuid
+import shutil
+import datetime as dt
 
 
 def command(*argv):
@@ -34,6 +36,28 @@ def members(group):
             for pid in path.read_text().split()] if root.exists() else []
 
 
+def collect_sdk_receipt(evidence, ledger, failure):
+    path = evidence / 'email-sdk-version.json'
+    try:
+        if not path.exists():
+            ledger['sdkStarted'] = False
+            return failure
+        if path.is_symlink() or not path.is_file():
+            raise ValueError('Exact regular SDK phase receipt required')
+        with path.open('rb') as stream:
+            raw = stream.read(1048577)
+        if len(raw) > 1048576:
+            raise ValueError('SDK receipt exceeds bounded final read')
+        receipt = json.loads(raw)
+        if not isinstance(receipt, dict):
+            raise ValueError('SDK receipt object required')
+        ledger['sdkStarted'] = 'pid' in receipt
+    except BaseException as error:
+        ledger['sdkReceiptReadFailure'] = type(error).__name__
+        ledger['sdkStarted'] = None
+        if failure is None: failure = error
+    return failure
+
 def main():
     def interrupted(*_):
         raise InterruptedError('Hosted launcher interrupted; settle exact owner')
@@ -41,6 +65,9 @@ def main():
     signal.signal(signal.SIGINT, interrupted)
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence', type=Path, required=True)
+    parser.add_argument('--account-policy', type=Path)
+    parser.add_argument('--permit', type=Path)
+    parser.add_argument('--candidate', type=Path)
     args = parser.parse_args()
     if os.uname().sysname != 'Linux' or os.geteuid() == 0 or os.environ.get('GITHUB_REPOSITORY') != 'MALIEV-Co-Ltd/Legacy.Maliev.Web':
         raise ValueError('Unprivileged isolated hosted Web runner required')
@@ -51,9 +78,17 @@ def main():
     run = os.environ['GITHUB_RUN_ID']; attempt = os.environ['GITHUB_RUN_ATTEMPT']
     if not run.isdecimal() or not attempt.isdecimal():
         raise ValueError('Exact hosted run identity required')
-    unit = f'web-kernel-{run}-{attempt}-{uuid.uuid4().hex[:12]}.service'
+    account = args.account_policy is not None
+    grant = None
+    if account:
+        if args.permit is None or args.candidate is None:
+            raise ValueError('Account source and independent creation grant required')
+        from run_web_account_candidate import authorize_creation
+        _, grant = authorize_creation(args.account_policy, args.permit, args.candidate)
+    nonce = grant['ownerNonce'][:12] if account else uuid.uuid4().hex[:12]
+    unit = f'web-kernel-{run}-{attempt}-{nonce}.service'
     description = f'WebKernelProof:{uuid.uuid4().hex}'
-    script = Path(__file__).with_name('run_web_capped_kernel_proof.py').resolve()
+    script = Path(__file__).with_name('run_web_account_candidate.py' if account else 'run_web_capped_kernel_proof.py').resolve()
     evidence = args.evidence.resolve(); evidence.mkdir(exist_ok=False)
     receipt = evidence / 'kernel-proof.json'
     ledger = {'unit': unit, 'description': description, 'runId': run,
@@ -62,6 +97,14 @@ def main():
               'argv': ['/usr/bin/python3', '-B', str(script), '--unit', unit, '--receipt', str(receipt)],
               'persistentData': False, 'sdkStarted': False, 'dispatchAttempted': False,
               'cleanupVerified': False, 'expirySeconds': 2100}
+    if account:
+        ledger['argv'] = ['/usr/bin/python3', '-B', str(script), '--owned-worker', '--unit', unit, '--receipt', str(receipt),
+                          '--policy', str(args.account_policy.resolve()), '--permit', str(args.permit.resolve()),
+                          '--candidate', str(args.candidate.resolve()), '--evidence', str(evidence)]
+        ledger['authorityScope'] = 'email-change-session-v1'
+    forwarded = (['--setenv=' + key + '=' + os.environ[key] for key in
+                  ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'WEB_REVIEWED_TRANSPORT_SHA', 'RUNNER_ENVIRONMENT', 'PATH', 'HOME')]
+                 if account else [])
     def save():
         (evidence / 'launcher.json').write_text(json.dumps(ledger, indent=2) + '\n')
     save()
@@ -77,8 +120,16 @@ def main():
         return group
     if observe(unit)['LoadState'] != 'not-found':
         raise ValueError('Refuse an existing manager owner')
-    failure = None; invocation = None
+    failure = None; invocation = None; caches = []
     try:
+        if account:
+            for cache in (args.candidate.resolve() / '.dependencies/email-sdk', evidence / 'browser-cache'):
+                if cache.is_symlink() or cache.parent.is_symlink():
+                    raise ValueError('Private account cache path changed')
+                cache.mkdir(exist_ok=False)
+                identity = cache.stat()
+                caches.append((cache, identity.st_dev, identity.st_ino))
+                (cache / '.account-owner').write_text(grant['ownerNonce'])
         ledger['dispatchAttempted'] = True; save()
         command('sudo', '-n', 'systemd-run', f'--unit={unit}', f'--description={description}',
                 '--service-type=exec', '--remain-after-exit',
@@ -89,8 +140,11 @@ def main():
                 '--property=KillMode=control-group', '--property=SendSIGKILL=yes',
                 '--property=LimitCORE=0', '--property=LimitFSIZE=268435456',
                 '--setenv=GITHUB_REPOSITORY=MALIEV-Co-Ltd/Legacy.Maliev.Web',
-                '--setenv=PYTHONDONTWRITEBYTECODE=1', *ledger['argv'])
-        deadline = time.monotonic() + 120
+                '--setenv=PYTHONDONTWRITEBYTECODE=1', *forwarded, *ledger['argv'])
+        remaining = (dt.datetime.fromisoformat(grant['expiresUtc'].replace('Z', '+00:00')) - dt.datetime.now(dt.timezone.utc)).total_seconds() - 40 if account else 120
+        if remaining <= 0:
+            raise ValueError('Independent owner grant shutdown reserve exhausted')
+        deadline = time.monotonic() + min(2060, remaining)
         while time.monotonic() < deadline:
             state = observe(unit)
             if state['Description'] != description:
@@ -166,7 +220,27 @@ def main():
         except BaseException as error:
             ledger['cleanupFailure'] = type(error).__name__
             if failure is None: failure = error
+        if ledger['cleanupVerified']:
+            for cache, device, inode in caches:
+                try:
+                    actual = cache.stat()
+                    if cache.is_symlink() or (actual.st_dev, actual.st_ino) != (device, inode):
+                        raise ValueError('Private account cache ownership changed; preserved')
+                    if (cache / '.account-owner').exists():
+                        if (cache / '.account-owner').read_text() != grant['ownerNonce']:
+                            raise ValueError('Private account cache marker changed; preserved')
+                        shutil.rmtree(cache)
+                    else:
+                        cache.rmdir()  # Only remove our exact empty partial creation.
+                    if cache.exists() or cache.is_symlink():
+                        raise ValueError('Private account cache removal unverified')
+                    ledger.setdefault('removedCaches', []).append(str(cache))
+                except BaseException as error:
+                    ledger['cacheCleanupFailure'] = type(error).__name__
+                    if failure is None: failure = error
         ledger['deferredSignals'] = deferred
+        if account:
+            failure = collect_sdk_receipt(evidence, ledger, failure)
         if deferred and failure is None:
             failure = InterruptedError('Deferred hosted cancellation after owner settlement')
             ledger['failure'] = type(failure).__name__

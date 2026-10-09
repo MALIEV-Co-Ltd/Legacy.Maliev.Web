@@ -24,9 +24,9 @@ public abstract class MemberOrderCreatePageModel(
 
     public MemberOrderCreationDisplayModel DisplayModel { get; private set; } = default!;
 
-    [BindProperty, Required, StringLength(200)] public string Name { get; set; } = string.Empty;
+    [BindProperty, Required(ErrorMessage = "Please give your order a name"), StringLength(200)] public string Name { get; set; } = string.Empty;
     [BindProperty, StringLength(500)] public string? Description { get; set; }
-    [BindProperty, Range(1, int.MaxValue)] public int Quantity { get; set; } = 1;
+    [BindProperty, Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")] public int Quantity { get; set; } = 1;
     [BindProperty] public int ProcessId { get; set; }
     [BindProperty] public int MaterialId { get; set; }
     [BindProperty] public int ColorId { get; set; }
@@ -199,7 +199,7 @@ public abstract class MemberOrderCreatePageModel(
         var unit = IsMetric ? "mm" : "in";
         var dimensions = string.Create(
             CultureInfo.InvariantCulture,
-            $"Approximate dimensions: {Width:0.##} W x {Length:0.##} L x {Height:0.##} H {unit}.");
+            $"Approximate dimensions: {Width} W x {Length} L x {Height} H {unit}.");
         return string.IsNullOrWhiteSpace(Description) ? dimensions : $"{dimensions} {Description.Trim()}";
     }
 

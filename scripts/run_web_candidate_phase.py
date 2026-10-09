@@ -125,22 +125,28 @@ def shutdown(proc,pidfd,record):
         try:time.sleep(.05)
         except BaseException as error:retain(error)
 
-def verify_capped_owner(policy,context_path,proc_root=Path("/proc"),cgroup_root=Path("/sys/fs/cgroup"),show=None):
+def verify_capped_owner(policy,context_path,proc_root=Path("/proc"),cgroup_root=Path("/sys/fs/cgroup"),show=None,grant=None):
     # Read-only adapter to the existing hosted_owner SDK unit. This function
     # allocates no unit, cgroup, daemon or SDK; absent enrollment fails closed.
     if proc_root==Path("/proc") and (os.name!="posix" or os.geteuid()==0):
         raise ValueError("Unprivileged existing Linux SDK unit required")
     digest=policy.get("sdkOwnerContextSha256")
-    if context_path is None or not isinstance(digest,str) or len(digest)!=64:
+    enrolled = (policy.get("sliceKind") == "email-change-session-v1" and digest is None
+                and grant is not None and grant.get("sdkOwnerEnrollment") == policy.get("sdkOwnerEnrollment")
+                and isinstance(grant.get("ownerNonce"), str) and len(grant["ownerNonce"]) == 32)
+    if context_path is None or (not enrolled and (not isinstance(digest,str) or len(digest)!=64)):
         raise ValueError("Root-pinned existing capped SDK owner is required")
     raw=Path(context_path).read_bytes()
-    if len(raw)>131072 or admission.intake.sha256(raw)!=digest:
+    if len(raw)>131072 or (not enrolled and admission.intake.sha256(raw)!=digest):
         raise ValueError("Existing SDK owner context bytes changed")
     context=admission.intake.parse_json(raw)
     required={"owner","unit","invocationId","cgroup","device","inode","hostBootId","expiresUtc"}
     if set(context)!=required or context["owner"]!=admission.OWNER:
         raise ValueError("Exact externally enrolled Web SDK owner required")
     unit=context["unit"]
+    if enrolled and (unit != f"web-kernel-{grant['runId']}-{grant['runAttempt']}-{grant['ownerNonce'][:12]}.service"
+                     or context["expiresUtc"] != grant["expiresUtc"]):
+        raise ValueError("Actual same-job independently granted SDK owner required")
     if not isinstance(unit,str) or len(unit)>160 or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-_." for c in unit) or not unit.endswith(".service"):
         raise ValueError("Bounded exact SDK unit identity required")
     group=context["cgroup"]
@@ -181,6 +187,21 @@ def verify_capped_owner(policy,context_path,proc_root=Path("/proc"),cgroup_root=
         raise ValueError("SDK cgroup generation changed during admission")
     return context
 
+def verify_email_phase_history(policy, grant, phase_id, evidence):
+    rows = policy["phases"]
+    positions = [index for index, row in enumerate(rows) if row["id"] == phase_id]
+    if len(positions) != 1:
+        raise ValueError("Exact email session phase identity required")
+    for row in rows[:positions[0]]:
+        receipt = admission.intake.parse_json((evidence / (row["id"] + ".json")).read_bytes())
+        expected = {"sourceBindingSha256": policy["sourceBindingSha256"], "manifestSha256": policy["manifestSha256"],
+                    "transportSha": grant["transportSha"], "runId": grant["runId"], "runAttempt": grant["runAttempt"],
+                    "sdkOwnerContextSha256": policy["sdkOwnerContextSha256"], "nativeAdmissionSha256": policy["nativeAdmissionSha256"]}
+        if (any(receipt.get(key) != value for key, value in expected.items())
+            or receipt.get("phaseSucceeded") is not True or receipt.get("cleanupVerified") is not True
+            or receipt.get("phase") != row["name"] or receipt.get("admittedArgv") != row["argv"]):
+            raise ValueError("Successful same-source/run prior email phase required")
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--policy",type=Path,required=True);parser.add_argument("--permit",type=Path,required=True)
     parser.add_argument("--evidence",type=Path,required=True);parser.add_argument("--phase",required=True);parser.add_argument("--id",required=True);parser.add_argument("--sdk-owner-context",type=Path);parser.add_argument("command",nargs=argparse.REMAINDER)
@@ -192,11 +213,14 @@ def main():
         phase=grant["phase"]
         if args.id!=phase["id"] or args.phase!=phase["name"] or command!=phase["argv"]:
             raise ValueError("Exact country BUILD argv and phase identity required")
-    if policy.get("sliceKind")=="account-failure-v1":
+    if policy.get("sliceKind") in {"account-failure-v1", "email-change-session-v1"}:
         matched=[row for row in grant["phases"] if row["id"]==args.id]
         if len(matched)!=1 or matched[0]["name"]!=args.phase or matched[0]["argv"]!=command:
             raise ValueError("Exact account phase identity and argv required")
-    owner_context=verify_capped_owner(policy,args.sdk_owner_context)
+    if policy.get("sliceKind") == "email-change-session-v1":
+        verify_email_phase_history(policy, grant, args.id, args.evidence)
+    owner_arguments = {"grant": grant} if policy.get("sliceKind") == "email-change-session-v1" else {}
+    owner_context=verify_capped_owner(policy,args.sdk_owner_context,**owner_arguments)
     executable=shutil.which(command[0])
     if not executable:raise ValueError("Executable unavailable")
     if not hasattr(os,"pidfd_open"):raise ValueError("Actual Linux pidfd support required")
@@ -206,6 +230,10 @@ def main():
     receipt=args.evidence/(args.id+".json");log=args.evidence/(args.id+".log")
     if receipt.exists() or log.exists():raise ValueError("Fresh phase evidence paths required")
     record={"owner":admission.OWNER,"phase":args.phase,"expiresUtc":grant["expiresUtc"],"command":command,"executable":executable,"persistentData":False,"ports":[],"cleanupVerified":False,"phaseSucceeded":False}
+    if policy.get("sliceKind") == "email-change-session-v1":
+        record.update({key: grant[key] for key in ("sourceBindingSha256", "manifestSha256", "transportSha", "runId", "runAttempt")})
+        record.update({key: policy[key] for key in ("sdkOwnerContextSha256", "nativeAdmissionSha256")})
+        record["admittedArgv"] = list(command)
     record["existingSdkOwner"]=owner_context
     proc=None;pidfd=None;first_failure=None
     previous={sig:signal.signal(sig,request_stop) for sig in (signal.SIGTERM,signal.SIGINT)}
@@ -213,7 +241,7 @@ def main():
         with log.open("xb") as output:
             # Reobserve admission immediately before creating the single private phase group.
             grant=admission.validate(policy,raw);admission.census();duration=remaining_seconds(grant)
-            if verify_capped_owner(policy,args.sdk_owner_context)!=owner_context:
+            if verify_capped_owner(policy,args.sdk_owner_context,**owner_arguments)!=owner_context:
                 raise ValueError("Existing unrenewed SDK owner context changed")
             command[0]=executable
             owner_expiry=dt.datetime.fromisoformat(owner_context["expiresUtc"].replace("Z","+00:00"))

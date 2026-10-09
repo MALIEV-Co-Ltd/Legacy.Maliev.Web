@@ -392,9 +392,12 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains($">{historyLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{cncLabel}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/history\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/member/orders/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation/CNC-Machining\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation/3D-Printing\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("href=\"/member/orders/CNC-Machining\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("href=\"/member/orders/3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("href=\"/member/orders/3D-Scanning\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
@@ -470,6 +473,149 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Equal(30, invocation.Draft.ColorId);
         Assert.Equal(40, invocation.Draft.SurfaceFinishId);
         Assert.Equal(2, invocation.Draft.Quantity);
+    }
+
+    [Theory]
+    [InlineData("3d-printing", "en", 0, "Quantity must be at least 1")]
+    [InlineData("3d-printing", "th", 0, "จำนวนต้องไม่น้อยกว่า 1")]
+    [InlineData("cnc-machining", "en", 0, "Quantity must be at least 1")]
+    [InlineData("cnc-machining", "th", 0, "จำนวนต้องไม่น้อยกว่า 1")]
+    [InlineData("3d-printing", "en", 1, "Quantity must be at least 1")]
+    [InlineData("3d-printing", "th", 1, "จำนวนต้องไม่น้อยกว่า 1")]
+    [InlineData("cnc-machining", "en", 1, "Quantity must be at least 1")]
+    [InlineData("cnc-machining", "th", 1, "จำนวนต้องไม่น้อยกว่า 1")]
+    public async Task MemberOrderCreation_MinimumQuantityPreservesLocalizedErrorAndSubmissionBoundary(
+        string orderRoute,
+        string culture,
+        int quantity,
+        string minimumMessage)
+    {
+        await SignInAsync();
+        var route = $"/member/orders/{orderRoute}";
+        var form = await GetAntiforgeryFormAsync($"{route}?culture={culture}");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form["__RequestVerificationToken"]), "__RequestVerificationToken");
+        content.Add(new StringContent("Bracket"), "Name");
+        content.Add(new StringContent(quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)), "Quantity");
+        content.Add(new StringContent("10"), "ProcessId");
+        content.Add(new StringContent("20"), "MaterialId");
+        content.Add(new StringContent("30"), "ColorId");
+        content.Add(new StringContent("40"), "SurfaceFinishId");
+        content.Add(new StringContent("true"), "AcceptTermsAndConditions");
+        content.Add(new StringContent(Guid.NewGuid().ToString()), "OperationId");
+
+        using var response = await client.PostAsync($"{route}?handler=Submit&culture={culture}", content);
+        if (quantity == 0)
+        {
+            var decoded = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains(minimumMessage, decoded, StringComparison.Ordinal);
+            Assert.Null(submission.LastInvocation);
+            return;
+        }
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders/View?itemID=81", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<OrderSubmissionInvocation>(submission.LastInvocation);
+        Assert.Equal(1, invocation.Draft.Quantity);
+        Assert.Equal(orderRoute == "cnc-machining" ? CustomerOrderKind.Machining : CustomerOrderKind.Additive, invocation.Draft.Kind);
+    }
+
+    [Theory]
+    [InlineData("3d-printing", "en", "Please give your order a name")]
+    [InlineData("3d-printing", "th", "กรุณาตั้งชื่อคำสั่งซื้อ")]
+    [InlineData("cnc-machining", "en", "Please give your order a name")]
+    [InlineData("cnc-machining", "th", "กรุณาตั้งชื่อคำสั่งซื้อ")]
+    [InlineData("3d-scanning", "en", "Please give your order a name")]
+    [InlineData("3d-scanning", "th", "กรุณาตั้งชื่อคำสั่งซื้อ")]
+    public async Task MemberOrderCreation_MissingNamePreservesLocalizedErrorAndPostedState(
+        string orderRoute, string culture, string requiredMessage)
+    {
+        await SignInAsync();
+        var route = $"/member/orders/{orderRoute}";
+        var form = await GetAntiforgeryFormAsync($"{route}?culture={culture}");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        var operationId = Guid.NewGuid().ToString();
+        using var content = new MultipartFormDataContent();
+        foreach (var field in new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = form["__RequestVerificationToken"],
+            ["Name"] = "",
+            ["Description"] = "Handle recess.",
+            ["Quantity"] = "1",
+            ["ProcessId"] = "10",
+            ["MaterialId"] = "20",
+            ["ColorId"] = "30",
+            ["SurfaceFinishId"] = "40",
+            ["Width"] = "1",
+            ["Length"] = "2",
+            ["Height"] = "3",
+            ["AcceptTermsAndConditions"] = "true",
+            ["OperationId"] = operationId
+        })
+            content.Add(new StringContent(field.Value), field.Key);
+        using var response = await client.PostAsync($"{route}?handler=Submit&culture={culture}", content);
+        var decoded = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(requiredMessage, decoded, StringComparison.Ordinal);
+        Assert.Contains("Handle recess.", decoded, StringComparison.Ordinal);
+        Assert.Contains(operationId, decoded, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(submission.LastInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", true, "mm")]
+    [InlineData("th", true, "mm")]
+    [InlineData("en", false, "in")]
+    [InlineData("th", false, "in")]
+    public async Task MemberOrderCreation_ScanningPreservesDimensionPrecisionAndSelectedUnit(
+        string culture, bool isMetric, string unit)
+    {
+        await SignInAsync();
+        var route = "/member/orders/3d-scanning";
+        using var displayResponse = await client.GetAsync($"{route}?culture={culture}");
+        Assert.Equal(HttpStatusCode.OK, displayResponse.StatusCode);
+        var displayHtml = await displayResponse.Content.ReadAsStringAsync();
+        foreach (var dimension in new[] { "width", "length", "height" })
+        {
+            var input = Regex.Match(displayHtml, $"<input[^>]*id=\"member-order-{dimension}\"[^>]*>", RegexOptions.IgnoreCase);
+            Assert.True(input.Success);
+            Assert.Contains("step=\"any\"", input.Value, StringComparison.Ordinal);
+            Assert.Matches(@"\srequired(?:\s|=|>)", input.Value);
+            Assert.DoesNotMatch(@"\smin\s*=", input.Value);
+        }
+        var form = await GetAntiforgeryFormAsync($"{route}?culture={culture}");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+        using var content = new MultipartFormDataContent();
+        foreach (var field in new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = form["__RequestVerificationToken"],
+            ["Name"] = "Bracket",
+            ["Description"] = "Handle recess.",
+            ["Quantity"] = "1",
+            ["Width"] = "0.001",
+            ["Length"] = "1.234",
+            ["Height"] = "2.345",
+            ["IsMetric"] = isMetric.ToString(),
+            ["AcceptTermsAndConditions"] = "true",
+            ["OperationId"] = Guid.NewGuid().ToString()
+        })
+            content.Add(new StringContent(field.Value), field.Key);
+        using var response = await client.PostAsync($"{route}?handler=Submit&culture={culture}", content);
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders/View?itemID=81", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<OrderSubmissionInvocation>(submission.LastInvocation);
+        Assert.Equal(CustomerOrderKind.Scanning, invocation.Draft.Kind);
+        Assert.Equal(1, invocation.Draft.Quantity);
+        Assert.Equal($"Approximate dimensions: 0.001 W x 1.234 L x 2.345 H {unit}. Handle recess.", invocation.Draft.Description);
     }
 
     [Fact]

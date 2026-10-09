@@ -10,3 +10,19 @@ condition = "AND"
 regexTarget = "line"
 paths = ['''^scripts/web-account-failure-policy\.json$''']
 regexes = ['''^\r?\n?[ \t]*"Legacy\.Maliev\.Web\.Infrastructure/CustomerAuthenticationClient\.cs": "fa7f185ad1cc070e963a7dd2731ca20523856e93cfda663274b7ab1f128594e1",[ \t]*$''']
+
+[[allowlists]]
+description = "Verified email-session member-auth preparation SHA256; see docs/account-source-pin-secret-scan.md"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^scripts/web-email-change-session-policy\.json$''']
+regexes = ['''^\r?\n?[ \t]*"scripts/prepare-member-auth-indexing-proof\.ps1": "431d319526b09337cf1c1c6e80471a41a6fcf8b6b5d56725e4888f6d22b52c0f",[ \t]*$''']
+
+[[allowlists]]
+description = "Verified email-session account contract SHA256; see docs/account-source-pin-secret-scan.md"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^scripts/web-email-change-session-policy\.json$''']
+regexes = ['''^\r?\n?[ \t]*"Legacy\.Maliev\.Web\.Infrastructure/CustomerAuthenticationClient\.cs": "fa7f185ad1cc070e963a7dd2731ca20523856e93cfda663274b7ab1f128594e1",[ \t]*$''']
