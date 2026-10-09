@@ -11,7 +11,7 @@
     <button id="preliminary-quotation-button"
             type="button"
             disabled="@(!CanBuildPreliminaryQuotation)"
-            aria-disabled="@(!CanBuildPreliminaryQuotation).ToString().ToLowerInvariant()"
+            aria-disabled="@((!CanBuildPreliminaryQuotation).ToString().ToLowerInvariant())"
             aria-label="@Localizer["Print preliminary quotation"]"
             @onclick="OpenPreliminaryQuotationAsync">
         PDF

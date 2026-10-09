@@ -123,6 +123,28 @@ public sealed class InstantQuotationResinPresentationTests
         }
     }
 
+    [Fact]
+    public async Task PreliminaryQuotation_NotReadyDisablesButtonAndDoesNotOpenSnapshot()
+    {
+        var javascript = new RecordingJavaScript();
+        var activator = new CapturingActivator();
+        using var services = Services(activator, javascript);
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var output = await renderer.RenderComponentAsync<InstantQuotationPreliminaryQuotation>(ParameterView.Empty);
+            var button = Regex.Match(output.ToHtmlString(), "<button\\b[^>]*>");
+            Assert.True(button.Success);
+            Assert.Matches("\\sdisabled(?:\\s|=|>)", button.Value);
+            Assert.Contains("aria-disabled=\"true\"", button.Value, StringComparison.Ordinal);
+            var component = Assert.IsType<InstantQuotationPreliminaryQuotation>(activator.Preliminary);
+            var open = typeof(InstantQuotationPreliminaryQuotation).GetMethod(
+                "OpenPreliminaryQuotationAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            await (Task)open.Invoke(component, [])!;
+        });
+        Assert.Empty(javascript.Snapshots);
+    }
+
     private static InstantQuotationPart Part(string material, BuildPreference preference) => new(
         Guid.NewGuid(), material + ".stl", new InstantQuotationUploadReference("synthetic-presentation"),
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 1, true),

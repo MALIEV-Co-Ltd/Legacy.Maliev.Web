@@ -10,6 +10,8 @@ OWNER = "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5"
 
 def validate(policy, raw, now=None):
     digest = policy.get("nativeAdmissionSha256")
+    if policy.get("sliceKind") == "email-change-session-v1":
+        return validate_email_session(policy, raw, now)
     if policy.get("sliceKind") == "account-failure-v1":
         return validate_account(policy, raw, now)
     if policy.get("sliceKind") == "country-operation-v1":
@@ -107,6 +109,61 @@ def validate_account(policy, raw, now=None):
     if os.name != "posix": raise ValueError("Actual hosted Linux required")
     return grant
 
+def validate_email_session(policy, raw, now=None):
+    # New scope cannot inherit any previously issued account/Career grant.
+    owner_digest = policy.get("sdkOwnerContextSha256")
+    enrollment = policy.get("sdkOwnerEnrollment")
+    creates_owner = owner_digest is None and enrollment == {
+        "backend": "launch_web_capped_kernel_proof-v1", "memoryMaxBytes": 3221225472,
+        "swapMaxBytes": 0, "cpuQuotaPercent": 100, "tasksMax": 512, "leaseSeconds": 2100}
+    if (not isinstance(policy.get("nativeAdmissionSha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", policy["nativeAdmissionSha256"])
+        or (not creates_owner and (not isinstance(owner_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", owner_digest)))):
+        raise ValueError("Independent email session permit and SDK owner remain unpinned")
+    if intake.sha256(raw) != policy["nativeAdmissionSha256"]:
+        raise ValueError("Email session permit raw bytes changed")
+    prerequisites = policy.get("producerPrerequisites", {})
+    inventory = {row["path"]: row["sha256"] for row in policy["sourceFiles"]}
+    contracts = {"Legacy.Maliev.Web.Infrastructure/AccountSessionManager.cs",
+                 "Legacy.Maliev.Web.Infrastructure/AccountSessionStore.cs",
+                 "Legacy.Maliev.Web.Infrastructure/CustomerAuthenticationClient.cs",
+                 "Legacy.Maliev.Web.Infrastructure/ServiceCollectionExtensions.cs",
+                 "Legacy.Maliev.Web.Application/AccountContracts.cs"}
+    if (prerequisites.get("mode") != "controlled-auth-revoke-wire"
+        or prerequisites.get("remoteServiceQualification") is not False
+        or prerequisites.get("authEndpoint") != "auth/v1/revoke"
+        or set(prerequisites.get("contractFiles", {})) != contracts
+        or any(inventory.get(path) != digest for path, digest in prerequisites["contractFiles"].items())):
+        raise ValueError("Exact email session/Auth consumer contracts required")
+    expected = {"owner": OWNER, "issuedBy": "019fc21e-50f0-7112-834f-9fb3b35b9dfe",
+                "environment": "github-hosted-linux", "sliceKind": "email-change-session-v1",
+                "acceptedBase": policy["acceptedBase"], "sourcePins": policy["sourcePins"],
+                "sourceBindingSha256": policy["sourceBindingSha256"], "manifestSha256": policy["manifestSha256"],
+                "producerPrerequisites": prerequisites, "sdkOwnerContextSha256": owner_digest,
+                "allowedPhases": policy["allowedPhases"], "phases": policy["phases"],
+                "transportSha": os.environ.get("WEB_REVIEWED_TRANSPORT_SHA"),
+                "runId": os.environ.get("GITHUB_RUN_ID"), "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT")}
+    if (not re.fullmatch(r"[0-9a-f]{40}", expected["transportSha"] or "")
+        or any(not re.fullmatch(r"[1-9][0-9]*", expected[key] or "") for key in ("runId", "runAttempt"))):
+        raise ValueError("Actual hosted email run/head association required")
+    grant = intake.parse_json(raw)
+    if creates_owner:
+        expected["sdkOwnerEnrollment"] = enrollment
+        if not re.fullmatch(r"[0-9a-f]{32}", grant.get("ownerNonce", "")):
+            raise ValueError("Independent one-use SDK owner nonce required")
+        expected["ownerNonce"] = grant["ownerNonce"]
+    if set(grant) != set(expected) | {"startsUtc", "expiresUtc"} or any(grant[k] != value for k, value in expected.items()):
+        raise ValueError("Email session scope/run/commands changed")
+    start = dt.datetime.fromisoformat(grant["startsUtc"].replace("Z", "+00:00"))
+    end = dt.datetime.fromisoformat(grant["expiresUtc"].replace("Z", "+00:00"))
+    now = now or dt.datetime.now(dt.timezone.utc)
+    if (start.utcoffset() != dt.timedelta(0) or end.utcoffset() != dt.timedelta(0)
+        or not start <= now < end or not 0 < (end - start).total_seconds() <= 2100):
+        raise ValueError("Finite nonrenewed email session grant required")
+    if os.name != "posix":
+        raise ValueError("Actual hosted Linux required")
+    return grant
+
 def census(proc_root=Path("/proc")):
     values = dict(re.findall(r"^(MemAvailable):\s+(\d+)", (proc_root / "meminfo").read_text(), re.M))
     if int(values.get("MemAvailable", "0")) < 4194304: raise ValueError("4096 MiB memory guard failed")
@@ -125,7 +182,7 @@ def main():
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
     # Missing prerequisites reject before fetching or writing any permit.
-    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1"} and not policy.get("customerLiteralProducerSha")):
+    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1"} and not policy.get("customerLiteralProducerSha")):
         # Account scope has its own strict Auth/mail prerequisite validator; old branches are unchanged.
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
     census()

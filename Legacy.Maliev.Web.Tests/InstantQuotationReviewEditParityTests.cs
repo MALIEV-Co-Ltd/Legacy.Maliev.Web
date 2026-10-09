@@ -71,7 +71,10 @@ public sealed class InstantQuotationReviewEditParityTests
             Assert.True(fdmPreference.Success);
             Assert.DoesNotContain("disabled", fdmPreference.Value, StringComparison.Ordinal);
             var fdmStandard = System.Text.RegularExpressions.Regex.Match(
-                WebUtility.HtmlDecode(fdm), "<option value=\"standard\">([^<]*)</option>");
+                WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(
+                    fdm, $"<select[^>]*id=\"review-preference-{id}\"[^>]*>(.*?)</select>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline).Groups[1].Value),
+                "<option\\b[^>]*\\bvalue=\"standard\"[^>]*>([^<]*)</option>");
             Assert.True(fdmStandard.Success);
             Assert.Equal(fdmLabel, fdmStandard.Groups[1].Value);
         }
