@@ -1,0 +1,41 @@
+@using Legacy.Maliev.Web.Application
+@using Microsoft.AspNetCore.Antiforgery
+@inject IStringLocalizer<MemberDocumentsContent> Text
+
+<section class="maliev-section" aria-labelledby="member-documents-title">
+    <h1 id="member-documents-title">@Text["Documents"]</h1>
+    <p>@Text["NDA uploads remain pending staff verification. Expiry does not release confidentiality."]</p>
+    @if (StatusCode != 200) { <p role="alert">@Text[StatusCode is 401 or 403 ? "Document access denied." : StatusCode == 409 ? "The document changed. Reload before retrying." : "Document service is unavailable. Please retry later."]</p> }
+    else {
+        <ul>@foreach (var item in Items) { <li><strong>@item.Title</strong> <span>@Text[item.Kind]</span>
+            @if (Versions.TryGetValue(item.DocumentId, out var history)) { <ul>@foreach (var version in history) { <li>@Text["Version"] @version.VersionNumber - @Text[version.VerificationStatus]
+                <a href="@($"/member/documents/{item.DocumentId:D}/versions/{version.VersionId:D}/download")">@Text["Download attachment"]</a>
+            </li> }</ul> }
+            <form method="post" action="@($"/member/documents/{item.DocumentId:D}/versions")" enctype="multipart/form-data">
+                @if (Tokens is not null) { <input type="hidden" name="@Tokens.FormFieldName" value="@Tokens.RequestToken" /> }
+                <input type="hidden" name="IdempotencyKey" value="@Guid.NewGuid().ToString("D")" />
+                <input type="hidden" name="ExpectedRevision" value="@item.Revision" /><input type="hidden" name="Kind" value="@item.Kind" /><input type="hidden" name="Title" value="@item.Title" />
+                <label for="@($"replacement-{item.DocumentId:D}")">@Text["PDF, PNG or JPEG, maximum 20 MiB"]</label><input id="@($"replacement-{item.DocumentId:D}")" type="file" name="files" accept="application/pdf,image/png,image/jpeg" required />
+                <button type="submit">@Text["Upload replacement version for staff verification"]</button>
+            </form>
+        </li> }</ul>
+        @if (Items.Count == 0) { <p>@Text["No documents found."]</p> }
+    }
+    <form method="post" action="/member/documents/upload" enctype="multipart/form-data" class="maliev-panel maliev-form">
+        @if (Tokens is not null) { <input type="hidden" name="@Tokens.FormFieldName" value="@Tokens.RequestToken" /> }
+        <input type="hidden" name="IdempotencyKey" value="@idempotencyKey" />
+        <label for="document-title">@Text["Title"]</label><input id="document-title" name="Title" required maxlength="250" />
+        <label for="document-kind">@Text["Document category"]</label><select id="document-kind" name="Kind">@foreach (var kind in kinds) { <option value="@kind">@Text[kind]</option> }</select>
+        <label for="document-file">@Text["PDF, PNG or JPEG, maximum 20 MiB"]</label><input id="document-file" type="file" name="files" accept="application/pdf,image/png,image/jpeg" required />
+        <button type="submit" class="maliev-button" disabled="@(StatusCode != 200)">@Text["Upload for staff verification"]</button>
+    </form>
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<CustomerDocumentSummary> Items { get; set; } = [];
+    [Parameter] public int StatusCode { get; set; } = 503;
+    [Parameter] public IReadOnlyDictionary<Guid, IReadOnlyList<CustomerDocumentVersionSummary>> Versions { get; set; } = new Dictionary<Guid, IReadOnlyList<CustomerDocumentVersionSummary>>();
+    [Parameter] public AntiforgeryTokenSet? Tokens { get; set; }
+    private readonly string idempotencyKey = Guid.NewGuid().ToString("D");
+    private static readonly string[] kinds = ["Nda", "Corporate", "BillingInstruction", "Shipment", "Release", "Acceptance", "Evidence"];
+}

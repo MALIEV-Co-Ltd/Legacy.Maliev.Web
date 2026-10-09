@@ -45,6 +45,7 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<TestingW
                 "SiliconeCastingPage.razor",
                 "LowVolumeInjectionMoldingPage.razor"
             }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
+            .LegacyPagesAfterVerifyingDocuments()
             .ToArray();
         Assert.Equal(50, routedPages.Length);
         Assert.Contains(routedPages, path => Path.GetFileName(path) == "LineContactPage.razor");
