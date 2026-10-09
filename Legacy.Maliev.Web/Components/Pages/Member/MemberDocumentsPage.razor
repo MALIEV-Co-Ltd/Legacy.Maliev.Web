@@ -1,0 +1,48 @@
+@page "/Member/Documents"
+@using Legacy.Maliev.Web.Application
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Configuration
+@attribute [Authorize]
+@inject IHttpContextAccessor ContextAccessor
+@inject IAccountSessionManager Sessions
+@inject IServiceProvider Services
+@inject IConfiguration Configuration
+@inject IAntiforgery Antiforgery
+@inject IStringLocalizer<MemberDocumentsContent> Text
+
+<PageTitle>@Text["Documents | MALIEV"]</PageTitle>
+<HeadContent><meta name="robots" content="noindex,nofollow" /></HeadContent>
+<MemberWorkspaceShell><MemberDocumentsContent Items="items" Versions="versions" StatusCode="status" Tokens="tokens" /></MemberWorkspaceShell>
+
+@code {
+    private IReadOnlyList<CustomerDocumentSummary> items = [];
+    private int status = 503;
+    private readonly Dictionary<Guid, IReadOnlyList<CustomerDocumentVersionSummary>> versions = [];
+    private AntiforgeryTokenSet? tokens;
+    protected override async Task OnInitializedAsync()
+    {
+        var context = ContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires HTTP context.");
+        context.Response.Headers.CacheControl = "no-store";
+        if (!Configuration.GetValue<bool>("CustomerDocuments:Enabled")) { context.Response.StatusCode = 503; return; }
+        var Documents = Services.GetRequiredService<ICustomerDocumentClient>();
+        tokens = Antiforgery.GetAndStoreTokens(context);
+        var credential = await Sessions.GetAccessTokenAsync(context, context.RequestAborted);
+        var customerId = await Sessions.GetCustomerDatabaseIdAsync(context, context.RequestAborted);
+        if (context.User.FindFirst("identity_kind")?.Value != "customer" || customerId is not > 0 || string.IsNullOrWhiteSpace(credential)) { status = 401; return; }
+        var result = await Documents.ListAsync(customerId.Value, credential, context.RequestAborted);
+        status = result.StatusCode;
+        if (status != 200) { items = []; versions.Clear(); return; }
+        if (result.Value is { Count: <= 50 } && result.Value.All(x => CustomerDocumentContractGuard.MemberSummary(x, customerId.Value))) {
+            items = result.Value;
+            foreach (var item in items) {
+                var history = await Documents.VersionsAsync(customerId.Value, item.DocumentId, credential, context.RequestAborted);
+                if (history.StatusCode != 200 || history.Value is null || history.Value.Count > 50 || history.Value.Any(x => !CustomerDocumentContractGuard.Version(x, item.DocumentId, item.Kind))) { status = history.StatusCode == 200 ? 503 : history.StatusCode; items = []; versions.Clear(); return; }
+                versions[item.DocumentId] = history.Value;
+            }
+        }
+        else if (status == 200) status = 503;
+    }
+}

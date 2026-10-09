@@ -507,6 +507,14 @@ else
 
 builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 
+#pragma warning disable EXTEXP0001 // Document mutations must not inherit automatic retries.
+builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentClient, Legacy.Maliev.Web.Infrastructure.CustomerDocumentClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:File"]
+        ?? throw new InvalidOperationException("Services:File is required."));
+}).RemoveAllResilienceHandlers()
+  .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+#pragma warning restore EXTEXP0001
 var app = builder.Build();
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.Use(async (context, next) =>
@@ -565,6 +573,7 @@ app.MapGet("/instant-quotation/fdm-profiles.v1.json", (FdmRuntimeProfileCatalog 
     return Results.Text(profiles.BrowserManifestJson, "application/json; charset=utf-8");
 });
 app.MapMemberCompatibilityEndpoints();
+if (builder.Configuration.GetValue<bool>("CustomerDocuments:Enabled")) app.MapCustomerDocumentEndpoints();
 app.MapThaiLookupEndpoints();
 app.MapPost("/InstantQuotation/CNC-Machining", async (
     HttpContext context,

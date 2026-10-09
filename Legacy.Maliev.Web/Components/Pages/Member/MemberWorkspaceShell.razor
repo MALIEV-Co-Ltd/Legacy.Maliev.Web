@@ -1,5 +1,6 @@
 @inject IStringLocalizer<MemberWorkspaceShell> Localizer
 @inject IHttpContextAccessor HttpContextAccessor
+@inject Microsoft.Extensions.Configuration.IConfiguration DocumentFeatureConfiguration
 
 <div class="workspace-page" data-member-workspace>
     <div class="workspace-shell">
@@ -23,6 +24,7 @@
                         <li><a class="workspace-nav-link" href="/Quotation/3D-Scanning"><i class="fas fa-cube" aria-hidden="true"></i><span>@Localizer["New 3D scanning quote"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/Member/Quotations"><i class="fas fa-file-invoice" aria-hidden="true"></i><span>@Localizer["Quotations"]</span></a></li>
                         <li><a class="workspace-nav-link" href="/Member/Orders/History"><i class="fas fa-history" aria-hidden="true"></i><span>@Localizer["Order history"]</span></a></li>
+                        @if (string.Equals(DocumentFeatureConfiguration["CustomerDocuments:Enabled"], "true", StringComparison.OrdinalIgnoreCase)) { <li><a class="workspace-nav-link" href="/Member/Documents"><span>@Localizer["Documents"]</span></a></li> }
                     </ul>
                 </section>
                 <section class="workspace-nav-group" aria-labelledby="member-account-navigation">
