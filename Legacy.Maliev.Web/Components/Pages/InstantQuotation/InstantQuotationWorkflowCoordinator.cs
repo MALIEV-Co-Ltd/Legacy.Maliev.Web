@@ -408,7 +408,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     material.Key,
                     color,
                     quantity,
-                    buildPreference ?? previous.Configuration.BuildPreference),
+                    material.Process is PrintProcess.Resin
+                        ? BuildPreference.Standard
+                        : buildPreference ?? previous.Configuration.BuildPreference),
             };
             entry.HasConfigured = true;
             await PersistAndPriceAsync(cancellationToken);
@@ -806,7 +808,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             {
                 ThrowIfPricingCanceled(cancellationToken);
                 entries.Clear();
-                entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
+                entries.AddRange(parts.Select(static part => UploadEntry.Restore(
+                    PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin
+                        ? part with { Configuration = part.Configuration with { BuildPreference = BuildPreference.Standard } }
+                        : part)));
                 session = existing;
                 OrderQuote = null;
                 if (parts.Length > 0) await PersistAndPriceAsync(cancellationToken);

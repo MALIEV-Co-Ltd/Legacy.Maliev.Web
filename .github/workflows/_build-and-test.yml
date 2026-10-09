@@ -14,6 +14,7 @@ jobs:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
       MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      MALIEV_BROWSER_EVIDENCE_DIR: ${{ github.workspace }}/sidebar-navigation-test-results
     steps:
       - name: Check out Web
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -81,6 +82,20 @@ jobs:
           python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
           printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Verify focused TRX rejection controls
+        run: python3 -B tests/FocusedWebTrxGate.Tests.py
+      - name: Verify all ten sidebar culture and viewport browser cases
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~InstantQuotationSidebarLayoutBrowserTests"
+          --logger trx --results-directory ./sidebar-focused-test-results
+      - name: Require exact ten passing sidebar browser rows
+        run: >-
+          python3 -B scripts/verify-focused-web-trx.py
+          --directory ./sidebar-focused-test-results --suite sidebar
+          --assembly ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
       - name: Verify regressions reject exact pre-fix pricing source and restore patched HEAD
         env:
           GH_TOKEN: ${{ github.token }}
@@ -150,7 +165,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~EsdFulfillmentContractTests|FullyQualifiedName~InstantQuotationFulfillmentMappingTests"
+          --filter "FullyQualifiedName~EsdFulfillmentContractTests|FullyQualifiedName~InstantQuotationFulfillmentMappingTests|FullyQualifiedName~InstantQuotationResinPresentationTests|FullyQualifiedName~InstantQuotationReviewEditParityTests|FullyQualifiedName~InstantQuotationBuildPreferenceParityTests|FullyQualifiedName~InstantQuotationWorkflowUploadTests|FullyQualifiedName~InstantQuotationSubmissionTests"
           --logger trx --results-directory ./material-identity-test-results
       - name: Verify signed-link whole-operation deadline and compatibility
         run: >-
@@ -331,6 +346,8 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
             ticket-test-results/**/*.trx
+            sidebar-navigation-test-results/sidebar-*-initial-navigation-timeout.json
+            sidebar-focused-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
             physical-result-test-results/**/*.trx
             quotation-response-test-results/**/*.trx

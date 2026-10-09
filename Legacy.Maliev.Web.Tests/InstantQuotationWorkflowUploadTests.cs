@@ -96,6 +96,27 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.NotNull(workflow.OrderQuote);
     }
 
+    [Theory]
+    [InlineData(BuildPreference.Quality)]
+    [InlineData(BuildPreference.Strength)]
+    public async Task Initialize_ResinProtectedSessionRepairsStalePreferenceBeforeRepricing(BuildPreference preference)
+    {
+        var part = PersistedPart("resin.stl", "opaque-restored") with { Configuration = new("M68", "Gray", 1, preference) };
+        var store = new RecordingSessionStore
+        {
+            ExistingOwnerIdentity = "member-42",
+            ExistingSession = Session("protected-resume", part),
+        };
+        await using var workflow = CreateWorkflow(store: store, ownerIdentity: "member-42");
+
+        await workflow.InitializeAsync("protected-resume", default);
+
+        Assert.Equal(0, store.CreateCalls);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(workflow.Parts).Configuration.BuildPreference);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(workflow.OrderQuote!.Parts).BuildPreference);
+    }
+
     [Fact]
     public async Task Initialize_OwnerMismatch_DoesNotRestoreProtectedPartsAndCreatesFreshSession()
     {
@@ -707,6 +728,35 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal(1, updated.Configuration.Quantity);
         Assert.Equal(2, pricing.QuoteCalls);
         Assert.Equal(BuildPreference.Quality, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
+    }
+
+    [Theory]
+    [InlineData(BuildPreference.Quality)]
+    [InlineData(BuildPreference.Strength)]
+    public async Task ResinConfiguration_CanonicalizesPersistedPreferenceBeforePricingAndMaterialTransitions(BuildPreference preference)
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        await using var workflow = CreateWorkflow(client: client, store: store, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        var uploading = workflow.UploadAsync([UploadFile("part.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("part.stl", "opaque", Geometry());
+        await uploading;
+        var id = Assert.Single(workflow.Parts).PartId;
+
+        await workflow.UpdateConfigurationAsync(id, "PLA", "Black", 1, preference, default);
+        Assert.Equal(preference, Assert.Single(workflow.Parts).Configuration.BuildPreference);
+        await workflow.UpdateConfigurationAsync(id, "M68", "Gray", 1, default);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(workflow.Parts).Configuration.BuildPreference);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
+        await workflow.UpdateConfigurationAsync(id, "M68", "Gray", 1, preference, default);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(workflow.Parts).Configuration.BuildPreference);
+        await workflow.UpdateConfigurationAsync(id, "PLA", "Black", 1, default);
+        Assert.Equal(BuildPreference.Standard, Assert.Single(workflow.Parts).Configuration.BuildPreference);
+        await workflow.UpdateConfigurationAsync(id, "PLA", "Black", 1, preference, default);
+        Assert.Equal(preference, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
     }
 
     [Fact]
