@@ -6,6 +6,8 @@ name: Web sealed source qualification
     - scripts/tests/test_web_candidate_secret_scan.py
     - scripts/run_web_account_candidate.py
     - scripts/web-account-failure-policy.json
+    - scripts/web-email-change-session-policy.json
+    - scripts/tests/test_web_candidate_email_session.py
     - scripts/tests/test_web_candidate_account.py
     - docs/web-account-failure-transport-policy.schema.json
     - scripts/materialize_web_candidate.py
@@ -22,6 +24,14 @@ name: Web sealed source qualification
     - scripts/tests/test_sealed_source_capsule.py
   workflow_dispatch:
     inputs:
+      slice:
+        description: Reviewed candidate intake profile
+        required: true
+        default: existing
+        type: choice
+        options:
+        - existing
+        - email-change-session-v1
       manifest_blob:
         description: Same-repository Git blob ID of reviewed manifest
         required: true
@@ -569,5 +579,84 @@ jobs:
         retention-days: 7
         if-no-files-found: error
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice != 'email-change-session-v1'
     needs: transport-controls
+  email-change-native:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'email-change-session-v1'
+    needs: transport-controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      MSBUILDDISABLENODEREUSE: '1'
+      GITHUB_ACTIONS: 'false'
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Retain reviewed email transport outside candidate checkout
+      shell: bash
+      run: |
+        set -euo pipefail
+        transport="$RUNNER_TEMP/email-transport-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        mkdir "$transport"
+        cp scripts/materialize_web_candidate.py scripts/check_web_candidate_admission.py scripts/sealed_source_capsule.py scripts/run_web_candidate_phase.py scripts/run_web_account_candidate.py scripts/launch_web_capped_kernel_proof.py scripts/run_web_capped_kernel_proof.py scripts/web-email-change-session-policy.json "$transport/"
+        echo "WEB_TRANSPORT_ROOT=$transport" >> "$GITHUB_ENV"
+        echo "WEB_REVIEWED_TRANSPORT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+    - name: Check out exact email-change source base
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: 66d220af825a6d4829d1b97512e21b6486a08c87
+        persist-credentials: false
+    - name: Reject unissued or replayed grant before source materialization
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ADMISSION_BLOB: ${{ inputs.admission_blob }}
+        MANIFEST_BLOB: ${{ inputs.manifest_blob }}
+        CAPSULE_BLOB: ${{ inputs.capsule_blob }}
+      run: |
+        set -euo pipefail
+        evidence="$RUNNER_TEMP/web-email-change-evidence"
+        mkdir "$evidence"
+        python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-email-change-session-policy.json" --blob "$ADMISSION_BLOB" --permit "$evidence/root-permit.json"
+        python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-email-change-session-policy.json" --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$evidence/intake.json"
+    - name: Project exact ServiceDefaults dependency in this job
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+        ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+        path: .dependencies/Legacy.Maliev.ServiceDefaults
+        persist-credentials: false
+    - name: Project exact CompatibilityContracts dependency in this job
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+        ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+        path: .dependencies/Legacy.Maliev.CompatibilityContracts
+        persist-credentials: false
+    - name: Project existing pinned SDK installer source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: actions/setup-dotnet
+        ref: a98b56852c35b8e3190ac28c8c2271da59106c68
+        path: .dependencies/dotnet-installer
+        persist-credentials: false
+    - name: Create same-job existing capped account owner and prepare profile
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -B "$WEB_TRANSPORT_ROOT/launch_web_capped_kernel_proof.py" --account-policy "$WEB_TRANSPORT_ROOT/web-email-change-session-policy.json" --permit "$RUNNER_TEMP/web-email-change-evidence/root-permit.json" --candidate "$GITHUB_WORKSPACE" --evidence "$RUNNER_TEMP/web-email-change-evidence/owner"
+    - name: Retain email phase receipts and TRX
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-email-change-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ runner.temp }}/web-email-change-evidence/
+          email-change-test-results/
+          email-change-suite-results/
+        retention-days: 7
+        if-no-files-found: error
