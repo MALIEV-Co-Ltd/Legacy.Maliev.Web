@@ -1018,9 +1018,34 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 Assert.True(Guid.TryParse(partIdText, out var partId));
                 Assert.True(partIds.Add(partId));
                 await parts.Nth(index).Locator("button[aria-label^='View']").ClickAsync();
-                await page.WaitForFunctionAsync(
-                    "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
-                    partIdText);
+                try
+                {
+                    await page.WaitForFunctionAsync(
+                        "id => document.querySelector('[data-workflow-selected-print-time]')?.getAttribute('data-part-id') === id",
+                        partIdText);
+                }
+                catch (TimeoutException original)
+                {
+                    await SelectedPrintTimeTimeoutDiagnostics.AttachAsync(original, index + 1, partIdText,
+                        () => page.EvaluateAsync<string>("""
+                            () => {
+                                const duration = document.querySelector('[data-workflow-selected-print-time]');
+                                const configuration = document.querySelector('[data-workflow-material-picker]');
+                                const quantity = configuration?.querySelector('input[name="quantity"]');
+                                return JSON.stringify({
+                                    actualPartId: duration?.getAttribute('data-part-id'),
+                                    configurationPartId: quantity?.id?.replace(/^quantity-/, ''),
+                                    workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                                    isRepricing: !!document.querySelector('[data-pricing-loading-status]'),
+                                    material: configuration?.querySelector('select[name="material"]')?.value,
+                                    quantity: quantity?.value,
+                                    durationPresent: !!duration,
+                                    unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]')
+                                });
+                            }
+                            """), description => output.WriteLine(description));
+                    throw;
+                }
                 using var scope = factory.Services.CreateScope();
                 var store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
                 var beforeMaterialChange = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
