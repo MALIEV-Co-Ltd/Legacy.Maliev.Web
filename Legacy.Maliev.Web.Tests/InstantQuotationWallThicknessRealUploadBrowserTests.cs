@@ -373,6 +373,61 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(1, await part.CountAsync());
             Assert.Contains(Path.GetFileName(path), await part.InnerTextAsync(), StringComparison.Ordinal);
             var disclosure = part.Locator("[data-review-part-details] > summary");
+            if (culture == "en")
+            {
+                try
+                {
+                    var installation = disclosure.EvaluateAsync("""
+                        summary => {
+                            const details = summary.parentElement;
+                            const rows = [];
+                            let ordinal = 0;
+                            const currentDetails = () => document.querySelector('[data-workflow-review-part] [data-review-part-details]');
+                            const category = target => target === summary || summary.contains(target)
+                                ? 'summary' : target?.matches?.('[data-workflow-review]') ? 'review-wrapper' : 'other';
+                            const snapshot = () => {
+                                const current = currentDetails();
+                                const currentSummary = current?.querySelector(':scope > summary');
+                                return {
+                                    summaryConnected: summary.isConnected,
+                                    detailsConnected: details.isConnected,
+                                    sameSummary: currentSummary === summary,
+                                    sameDetails: current === details,
+                                    open: !!details.open,
+                                    currentOpen: current ? !!current.open : null,
+                                    active: document.activeElement === summary,
+                                    activeCategory: category(document.activeElement)
+                                };
+                            };
+                            const record = (kind, target, event) => {
+                                if (ordinal >= 32) return;
+                                const row = { ordinal: ++ordinal, kind, target: category(target),
+                                    defaultPrevented: event ? !!event.defaultPrevented : null, ...snapshot() };
+                                rows.push(row);
+                                if (event) queueMicrotask(() => { row.defaultPrevented = !!event.defaultPrevented; });
+                            };
+                            const listener = event => {
+                                if ((event.type === 'keydown' || event.type === 'keyup') && event.key !== 'Enter') return;
+                                record(event.type, event.target, event);
+                            };
+                            const kinds = ['focusin', 'focusout', 'keydown', 'keyup', 'click', 'toggle'];
+                            for (const kind of kinds) document.addEventListener(kind, listener, { capture: true, passive: true });
+                            window.__reviewDisclosureObservation = {
+                                read: () => JSON.stringify({ schema: 1, rows, final: snapshot() }),
+                                dispose: () => {
+                                    for (const kind of kinds) document.removeEventListener(kind, listener, true);
+                                    delete window.__reviewDisclosureObservation;
+                                }
+                            };
+                            record('installed', summary, null);
+                        }
+                        """);
+                    _ = installation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    await installation.WaitAsync(TimeSpan.FromSeconds(1));
+                }
+                catch { /* Optional passive observation cannot change the original disclosure assertion. */ }
+            }
             if (culture == "th")
             {
                 await disclosure.TapAsync();
@@ -382,7 +437,44 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 await disclosure.FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
             }
-            Assert.True(await part.Locator("[data-review-part-details]").EvaluateAsync<bool>("element => element.open"));
+            try
+            {
+                Assert.True(await part.Locator("[data-review-part-details]").EvaluateAsync<bool>("element => element.open"));
+            }
+            catch (Xunit.Sdk.TrueException) when (culture == "en")
+            {
+                try
+                {
+                    var observation = page.EvaluateAsync<string>(
+                        "() => window.__reviewDisclosureObservation?.read() ?? '{\"observation\":\"unavailable\"}'");
+                    _ = observation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    var diagnostic = await observation.WaitAsync(TimeSpan.FromSeconds(1));
+                    output.WriteLine(diagnostic.Length <= 16384
+                        ? "[review-disclosure-observation] " + diagnostic
+                        : "[review-disclosure-observation] observation=unavailable");
+                }
+                catch
+                {
+                    try { output.WriteLine("[review-disclosure-observation] observation=unavailable"); }
+                    catch { /* A failing output sink cannot replace the original assertion. */ }
+                }
+                throw;
+            }
+            finally
+            {
+                if (culture == "en")
+                {
+                    try
+                    {
+                        var disposal = page.EvaluateAsync("() => window.__reviewDisclosureObservation?.dispose()");
+                        _ = disposal.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        await disposal.WaitAsync(TimeSpan.FromSeconds(1));
+                    }
+                    catch { /* Page lifecycle also releases passive listeners; preserve any primary failure. */ }
+                }
+            }
             var continueButton = page.Locator("[data-review-continue]");
             await continueButton.ScrollIntoViewIfNeededAsync();
             Assert.True(await continueButton.EvaluateAsync<bool>(

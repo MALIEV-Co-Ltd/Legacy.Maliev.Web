@@ -41,4 +41,6 @@
   <data name="Action" xml:space="preserve"><value>ดำเนินการ</value></data>
   <data name="First" xml:space="preserve"><value>หน้าแรก</value></data>
   <data name="Last" xml:space="preserve"><value>หน้าสุดท้าย</value></data>
+  <data name="Order ID ascending" xml:space="preserve"><value>ID น้อยไปมาก</value></data>
+  <data name="Order ID descending" xml:space="preserve"><value>ID มากไปน้อย</value></data>
 </root>
