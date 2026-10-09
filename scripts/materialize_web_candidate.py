@@ -31,11 +31,88 @@ canonical_path = shared.canonical_path
 decode_blob = shared.decode_git_blob
 NoRedirect = shared.NoRedirect
 
+
+TAX_ADMISSION_PATH = "scripts/web-optional-tax-build-admission.json"
+
+def verify_tax_admission_commit(root, execution, activation):
+    """Protected main may add only the external grant pin after the run exists."""
+    def git(*argv):
+        return subprocess.check_output(["git", "-C", str(root), *argv], timeout=30)
+    if not all(re.fullmatch(r"[0-9a-f]{40}", value or "") for value in (execution, activation)):
+        raise ValueError("Exact actual execution and protected admission commits required")
+    parents = git("rev-list", "--parents", "-n", "1", activation).decode().split()
+    if parents != [activation, execution]:
+        raise ValueError("Admission must be the single direct child of actual reviewed transport")
+    changed = git("diff", "--name-only", execution, activation).decode().splitlines()
+    if changed != [TAX_ADMISSION_PATH]:
+        raise ValueError("Admission commit may change only the external grant-pin sidecar")
+    try:
+        git("cat-file", "-e", execution+":"+TAX_ADMISSION_PATH)
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        raise ValueError("Admission must add a fresh sidecar, not replace prior authority")
+    mode = git("ls-tree", activation, "--", TAX_ADMISSION_PATH).decode().split()[0]
+    if mode != "100644":raise ValueError("Admission pin must be an ordinary nonexecutable file")
+    raw = git("show", activation+":"+TAX_ADMISSION_PATH)
+    if len(raw)>4096:raise ValueError("Bounded admission sidecar required")
+    pin = parse_json(raw)
+    if (set(pin) != {"transportSha", "nativeAdmissionSha256", "admissionBlob"}
+        or pin["transportSha"] != execution
+        or not re.fullmatch(r"[0-9a-f]{64}", pin["nativeAdmissionSha256"])
+        or not re.fullmatch(r"[0-9a-f]{40}", pin["admissionBlob"])):
+        raise ValueError("Exact transport/raw-grant/Git-blob pin required")
+    return dict(pin, activationCommit=activation)
+
+def project_tax_admission(root, destination):
+    execution=os.environ.get("GITHUB_SHA")
+    if (os.environ.get("GITHUB_REF") != "refs/heads/main"
+        or os.environ.get("GITHUB_REPOSITORY") != REPOSITORY
+        or execution != os.environ.get("WEB_REVIEWED_TRANSPORT_SHA")):
+        raise ValueError("Actual protected main transport required")
+    actual=subprocess.check_output(["git","-C",str(root),"rev-parse","HEAD"],timeout=10).decode().strip()
+    remote=subprocess.check_output(["git","-C",str(root),"remote","get-url","origin"],timeout=10).decode().strip()
+    if actual != execution or remote not in {"https://github.com/"+REPOSITORY+".git", "https://github.com/"+REPOSITORY}:
+        raise ValueError("Actual checkout and authoritative repository required")
+    import base64
+    token=os.environ.get("GH_TOKEN")
+    if not token:raise ValueError("Existing read-only job token required for protected pin projection")
+    fetch_env=dict(os.environ)
+    fetch_env.update(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="http.extraheader",
+                     GIT_CONFIG_VALUE_0="AUTHORIZATION: basic "+base64.b64encode(("x-access-token:"+token).encode()).decode())
+    subprocess.run(["git","-C",str(root),"fetch","--no-tags","--depth=2","origin","refs/heads/main"],check=True,timeout=30,env=fetch_env)
+    activation=subprocess.check_output(["git","-C",str(root),"rev-parse","FETCH_HEAD"],timeout=10).decode().strip()
+    proof=verify_tax_admission_commit(root,execution,activation)
+    if destination.exists():raise ValueError("Fresh private admission proof path required")
+    raw=json.dumps(proof,sort_keys=True,separators=(",",":")).encode()
+    destination.write_bytes(raw)
+    print(sha256(raw))
+
+def tax_external_pin(policy_path, policy):
+    pin=os.environ.get("WEB_TAX_ADMISSION_PROOF_SHA256")
+    if pin is None:return policy
+    proof_path=Path(policy_path).parent/"tax-admission-proof.json"
+    if not re.fullmatch(r"[0-9a-f]{64}",pin) or proof_path.is_symlink():
+        raise ValueError("Private actual admission proof identity required")
+    raw=proof_path.read_bytes()
+    if len(raw)>4096 or sha256(raw)!=pin:raise ValueError("Admission proof bytes changed")
+    proof=parse_json(raw)
+    if (set(proof)!={"transportSha","nativeAdmissionSha256","admissionBlob","activationCommit"}
+        or proof["transportSha"]!=os.environ.get("GITHUB_SHA")
+        or proof["transportSha"]!=os.environ.get("WEB_REVIEWED_TRANSPORT_SHA")
+        or not re.fullmatch(r"[0-9a-f]{40}",proof["activationCommit"])
+        or not re.fullmatch(r"[0-9a-f]{64}",proof["nativeAdmissionSha256"])
+        or not re.fullmatch(r"[0-9a-f]{40}",proof["admissionBlob"])):
+        raise ValueError("Exact actual transport/external raw-grant proof required")
+    if policy["nativeAdmissionSha256"] is not None:raise ValueError("Bootstrap policy must remain unissued")
+    return dict(policy,nativeAdmissionSha256=proof["nativeAdmissionSha256"],admissionBlob=proof["admissionBlob"],admissionCommit=proof["activationCommit"])
+
 def load_policy(path):
     raw = Path(path).read_bytes()
     if sha256(raw) not in {EXPECTED_POLICY_SHA256, COUNTRY_POLICY_SHA256, ACCOUNT_POLICY_SHA256, EMAIL_SESSION_POLICY_SHA256, TAX_POLICY_SHA256}:
         raise ValueError("Reviewed policy raw-byte identity changed")
-    return parse_json(raw)
+    policy = parse_json(raw)
+    return tax_external_pin(path, policy) if policy.get("sliceKind") == "optional-tax-build-v1" else policy
 
 def fetch_blob(oid):
     return shared.fetch_git_blob(REPOSITORY, oid)

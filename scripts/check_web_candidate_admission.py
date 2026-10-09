@@ -228,9 +228,10 @@ def main():
         # Account scope has its own strict Auth/mail prerequisite validator; old branches are unchanged.
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
     census()
-    raw = intake.fetch_blob(args.blob) if args.blob else args.permit.read_bytes()
+    blob = policy.get("admissionBlob") if policy.get("sliceKind") == "optional-tax-build-v1" else args.blob
+    raw = intake.fetch_blob(blob) if blob else args.permit.read_bytes()
     validate(policy, raw); census()
-    if args.blob:
+    if blob:
         if args.permit.exists(): raise ValueError("Fresh owned permit path required")
         args.permit.write_bytes(raw)
     print("Exact independently reviewed Root hosted permit and resource census verified")

@@ -678,6 +678,8 @@ jobs:
       with:
         persist-credentials: false
     - name: Retain reviewed tax build transport outside candidate checkout
+      env:
+        GH_TOKEN: ${{ github.token }}
       shell: bash
       run: |
         set -euo pipefail
@@ -685,7 +687,11 @@ jobs:
         mkdir "$transport"
         cp scripts/materialize_web_candidate.py scripts/check_web_candidate_admission.py scripts/sealed_source_capsule.py scripts/run_web_candidate_phase.py scripts/run_web_account_candidate.py scripts/launch_web_capped_kernel_proof.py scripts/run_web_capped_kernel_proof.py scripts/web-optional-tax-build-policy.json "$transport/"
         echo "WEB_TRANSPORT_ROOT=$transport" >> "$GITHUB_ENV"
-        echo "WEB_REVIEWED_TRANSPORT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        execution=$(git rev-parse HEAD)
+        echo "WEB_REVIEWED_TRANSPORT_SHA=$execution" >> "$GITHUB_ENV"
+        export WEB_REVIEWED_TRANSPORT_SHA="$execution"
+        proof_pin=$(PYTHONPATH="$transport" python3 -B -c 'from pathlib import Path; import os, materialize_web_candidate as m; m.project_tax_admission(Path("."), Path(os.environ["RUNNER_TEMP"])/("tax-build-transport-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ["GITHUB_RUN_ATTEMPT"])/"tax-admission-proof.json")')
+        echo "WEB_TAX_ADMISSION_PROOF_SHA256=$proof_pin" >> "$GITHUB_ENV"
     - name: Check out exact tax build source base
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
