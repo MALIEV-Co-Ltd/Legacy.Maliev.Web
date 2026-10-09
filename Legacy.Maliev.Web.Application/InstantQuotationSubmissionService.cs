@@ -657,11 +657,11 @@ internal sealed class InstantQuotationSubmissionService(
     private static string BuildPreferenceDescription(PrintProcess process, BuildPreference preference) => process is PrintProcess.Resin
         ? FormattableString.Invariant($"Standard resin - {PricingCatalog.ResinLayerHeightMm:0.00} mm layers, full-layer exposure, wash and post-cure")
         : preference switch
-    {
-        BuildPreference.Quality => "Quality (0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill)",
-        BuildPreference.Strength => "Strength (6 walls, 2 mm shells, denser infill)",
-        _ => $"Standard ({PricingCatalog.FdmLayerHeightMm:0.00} mm layers, {PricingCatalog.FdmWallCount} walls, {PricingCatalog.FdmInfillDensity:P0} sparse infill)",
-    };
+        {
+            BuildPreference.Quality => "Quality (0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill)",
+            BuildPreference.Strength => "Strength (6 walls, 2 mm shells, denser infill)",
+            _ => $"Standard ({PricingCatalog.FdmLayerHeightMm:0.00} mm layers, {PricingCatalog.FdmWallCount} walls, {PricingCatalog.FdmInfillDensity:P0} sparse infill)",
+        };
 
     private static IReadOnlyList<string> GeometryWarnings(AuthoritativeInstantQuotationGeometry geometry)
     {

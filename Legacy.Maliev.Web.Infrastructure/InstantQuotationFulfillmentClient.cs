@@ -387,11 +387,11 @@ internal sealed class InstantQuotationFulfillmentClient(
     private static string BuildPreferenceDescription(PrintProcess process, BuildPreference preference) => process is PrintProcess.Resin
         ? FormattableString.Invariant($"Standard resin - {PricingCatalog.ResinLayerHeightMm:0.00} mm layers, full-layer exposure, wash and post-cure")
         : preference switch
-    {
-        BuildPreference.Quality => "Quality",
-        BuildPreference.Strength => "Strength",
-        _ => "Standard",
-    };
+        {
+            BuildPreference.Quality => "Quality",
+            BuildPreference.Strength => "Strength",
+            _ => "Standard",
+        };
 
     private static string OperationKey(string submissionId, int partIndex, string purpose) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
