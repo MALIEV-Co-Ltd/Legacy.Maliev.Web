@@ -29,7 +29,8 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     {
         var database = $"profile_contract_{Guid.NewGuid():N}";
         await using var resources = new BillingProofLifetime(proofCulture: culture);
-        output.WriteLine("billing-attempt-run " + resources.AttemptRun);
+        try { output.WriteLine("billing-attempt-run " + resources.AttemptRun); }
+        catch (Exception) { /* Missing output fails the proof verifier; it must not change the actual journey. */ }
         await resources.RunAsync(async () =>
         {
             var postgres = resources.Postgres(database);

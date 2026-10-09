@@ -325,7 +325,8 @@ internal sealed class BillingProofLifetime : IAsyncDisposable
             && (body?.IsFaulted == true || body?.IsCanceled == true))
         {
             // A new archive failure cannot replace the original failed body. The old alias fails its case-run join.
-            Console.Error.WriteLine("billing-attempt-archive-unavailable " + AttemptRun);
+            try { Console.Error.WriteLine("billing-attempt-archive-unavailable " + AttemptRun); }
+            catch (Exception) { /* A secondary output failure cannot replace the original failed body. */ }
         }
         if (released && (!complete || !Regex.IsMatch(candidate ?? "", "\\A[a-f0-9]{40}\\z")))
             throw new InvalidOperationException("Released graph lacks complete original billing backend evidence; proof refused.");
