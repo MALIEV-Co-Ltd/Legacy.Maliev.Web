@@ -26,6 +26,28 @@ public sealed class InstantQuotationFulfillmentMappingTests
         Assert.DoesNotContain("untrusted", result, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(BuildPreference.Quality)]
+    [InlineData(BuildPreference.Standard)]
+    [InlineData(BuildPreference.Strength)]
+    public void BuildOrderComment_ResinUsesQuotedProcessWithProvisionalReviewStatus(BuildPreference preference)
+    {
+        var geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+            10, 1_000, 100, [10], [10], 12, 1, true);
+        var part = new InstantQuotationPart(Guid.NewGuid(), "resin.stl",
+            new InstantQuotationUploadReference(Guid.NewGuid().ToString("D")), geometry,
+            new("M68", "Gray", 1, preference));
+        var quote = new InstantQuotationPricingService().Quote(new([part])).Parts[0];
+
+        var comment = InstantQuotationFulfillmentClient.BuildOrderComment(new string('f', 64), 0, part, quote, 7, null);
+
+        Assert.Contains("Build: Standard resin - 0.05 mm layers, full-layer exposure, wash and post-cure", comment, StringComparison.Ordinal);
+        Assert.Contains("Estimate confidence: provisional", comment, StringComparison.Ordinal);
+        Assert.Contains("Review state: engineer_review_required", comment, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build: Strength", comment, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build: Quality", comment, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void BuildOrderComment_PreservesManufacturingMetadataWithoutStorageIdentifiers()
     {

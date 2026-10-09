@@ -121,7 +121,9 @@
             part.DisplayFileName,
             MaterialName(part.Configuration.MaterialKey),
             Localizer[part.Configuration.Color].Value,
-            BuildPreferenceLabel(part.Configuration.BuildPreference),
+            quote.Process is PrintProcess.Resin
+                ? Localizer["Standard resin"].Value
+                : BuildPreferenceLabel(quote.BuildPreference),
             part.Configuration.Quantity,
             quote.UnitPrice,
             quote.Subtotal,

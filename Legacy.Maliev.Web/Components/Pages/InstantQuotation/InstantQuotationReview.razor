@@ -49,9 +49,10 @@
                     <div>
                         <label for="review-preference-@part.PartId">@Localizer["Preference"]</label>
                         <select id="review-preference-@part.PartId" value="@part.Configuration.BuildPreference.ToString().ToLowerInvariant()"
+                                disabled="@(PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin)"
                                 @onchange="args => OnBuildPreferenceChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.BuildPreference.ToString()))">
                             <option value="quality">@Localizer["Quality"]</option>
-                            <option value="standard">@Localizer["Standard"]</option>
+                            <option value="standard">@Localizer[PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin ? "Standard resin" : "Standard"]</option>
                             <option value="strength">@Localizer["Strength"]</option>
                         </select>
                     </div>

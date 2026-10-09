@@ -44,6 +44,39 @@ public sealed class InstantQuotationReviewEditParityTests
         Assert.Contains("data-workflow-review-total", html, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", "Standard resin")]
+    [InlineData("th", "การพิมพ์เรซินมาตรฐาน")]
+    public async Task Review_ResinDisablesFdmChoicesWithoutDisablingOtherPartSettings(string culture, string label)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var resin = Part(id, "resin.stl") with { Configuration = new("M68", "Gray", 1) };
+            var html = await RenderReviewAsync([resin], id);
+            var preference = System.Text.RegularExpressions.Regex.Match(html, $"<select[^>]*id=\"review-preference-{id}\"[^>]*>");
+            Assert.True(preference.Success);
+            Assert.Contains("disabled", preference.Value, StringComparison.Ordinal);
+            Assert.Contains(label, WebUtility.HtmlDecode(html), StringComparison.Ordinal);
+            foreach (var field in new[] { "material", "color" })
+            {
+                var control = System.Text.RegularExpressions.Regex.Match(html, $"<select[^>]*id=\"review-{field}-{id}\"[^>]*>");
+                Assert.True(control.Success);
+                Assert.DoesNotContain("disabled", control.Value, StringComparison.Ordinal);
+            }
+            var fdm = await RenderReviewAsync([Part(id, "fdm.stl")], id);
+            var fdmPreference = System.Text.RegularExpressions.Regex.Match(fdm, $"<select[^>]*id=\"review-preference-{id}\"[^>]*>");
+            Assert.True(fdmPreference.Success);
+            Assert.DoesNotContain("disabled", fdmPreference.Value, StringComparison.Ordinal);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     [Fact]
     public async Task Review_CollapsesMeasurementsButAnnouncesEachPartsDfmVerdict()
     {
