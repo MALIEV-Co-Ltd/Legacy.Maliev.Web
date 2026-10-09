@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import uuid
 import xml.etree.ElementTree as ET
@@ -81,6 +82,77 @@ def native(path):
             "twoCasesPassed": passed and counts == expected and summary.get("outcome") == "Completed"}
 
 
+def coverage_from_original(trx, results, mode):
+    """Join original collector attachments; permit only their one byte-identical VSTest mirror."""
+    formats = ("coverage.json", "coverage.cobertura.xml")
+    if results.is_symlink() or any(parent.is_symlink() for parent in results.parents) or not results.is_dir():
+        raise ValueError("CoverageRoot")
+    base = results.resolve(strict=True)
+    inventory = {name: [] for name in formats}
+    nodes = 0
+    for parent, directories, files in os.walk(results, followlinks=False):
+        for name in directories + files:
+            path = Path(parent) / name
+            nodes += 1
+            if nodes > 256 or path.is_symlink() or not path.resolve(strict=True).is_relative_to(base):
+                raise ValueError("CoverageInventory")
+            if name in formats:
+                if not stat.S_ISREG(path.lstat().st_mode) or not 0 < path.stat().st_size <= 32 * 1024 * 1024:
+                    raise ValueError("CoverageFile")
+                inventory[name].append(path)
+    if mode == "focused":
+        if any(inventory.values()):
+            raise ValueError("CoverageUnexpected")
+        return {name: [] for name in formats}, {"collectorAttachmentVerified": False, "mirrorVerified": False, "mirrorCount": 0}
+    if mode != "collected" or trx.parent != results or trx.is_symlink():
+        raise ValueError("CoverageMode")
+    raw = trx.read_bytes()
+    if len(raw) > 8_000_000 or b"<!DOCTYPE" in raw.upper() or b"<!ENTITY" in raw.upper() or b"\0" in raw:
+        raise ValueError("CoverageTrx")
+    root = ET.fromstring(raw)
+    deployments = root.findall(NS + "TestSettings/" + NS + "Deployment")
+    collectors = root.findall(NS + "ResultSummary/" + NS + "CollectorDataEntries/" + NS + "Collector")
+    if root.tag != NS + "TestRun" or len(deployments) != 1 or len(collectors) != 1:
+        raise ValueError("CoverageAttachmentShape")
+    deployment = deployments[0].get("runDeploymentRoot", "")
+    collector = collectors[0]
+    agent = collector.get("agentName", "")
+    if any(not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,119}", value) or value in {".", ".."} for value in (deployment, agent)):
+        raise ValueError("CoverageAttachmentComponent")
+    if trx.name != deployment + "_net10.0.trx" or collector.get("uri") != "datacollector://microsoft/CoverletCodeCoverage/1.0" or collector.get("collectorDisplayName") != "XPlat code coverage":
+        raise ValueError("CoverageAttachmentIdentity")
+    attachments = collector.findall(NS + "UriAttachments/" + NS + "UriAttachment")
+    hrefs = []
+    for attachment in attachments:
+        links = list(attachment)
+        if len(links) != 1 or links[0].tag != NS + "A" or set(links[0].attrib) != {"href"}:
+            raise ValueError("CoverageAttachmentLink")
+        hrefs.append(links[0].get("href"))
+    if len(hrefs) != 2 or set(hrefs) != {agent + "/" + name for name in formats}:
+        raise ValueError("CoverageAttachmentRoster")
+    original = {name: results / deployment / "In" / agent / name for name in formats}
+    mirrors = []
+    projected = {}
+    for name in formats:
+        if original[name] not in inventory[name] or len(inventory[name]) not in {1, 2}:
+            raise ValueError("CoverageOriginalMissingOrSurplus")
+        canonical = original[name].read_bytes()
+        if not 0 < len(canonical) <= 32 * 1024 * 1024:
+            raise ValueError("CoverageOriginalBytes")
+        copied = [path for path in inventory[name] if path != original[name]]
+        if copied:
+            mirror = copied[0]
+            if mirror.parent.parent != results or not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", mirror.parent.name) or str(uuid.UUID(mirror.parent.name)) != mirror.parent.name:
+                raise ValueError("CoverageMirrorGeometry")
+            if mirror.read_bytes() != canonical:
+                raise ValueError("CoverageMirrorBytes")
+            mirrors.append(mirror.parent)
+        projected[name] = [{"sha256": hashlib.sha256(canonical).hexdigest(), "bytes": len(canonical)}]
+    if len(mirrors) not in {0, 2} or mirrors and mirrors[0] != mirrors[1]:
+        raise ValueError("CoverageMirrorCohort")
+    return projected, {"collectorAttachmentVerified": True, "mirrorVerified": bool(mirrors), "mirrorCount": 1 if mirrors else 0}
+
+
 def main():
     root = Path(__file__).resolve().parents[1]
     destination = root / "billing-comparison-results"
@@ -124,10 +196,7 @@ def main():
         report["native"] = native(files[0])
         if report["native"]["collectorRecorded"] != (mode == "collected"):
             raise ValueError("CollectorActivationMismatch")
-        coverage = {name: list(results.rglob(name)) for name in ("coverage.json", "coverage.cobertura.xml")}
-        if any(len(paths) != (1 if mode == "collected" else 0) for paths in coverage.values()):
-            raise ValueError("CoveragePresenceMismatch")
-        report["coverage"] = {name: [{"sha256": sha(path), "bytes": path.stat().st_size} for path in paths] for name, paths in coverage.items()}
+        report["coverage"], report["coverageCustody"] = coverage_from_original(files[0], results, mode)
     except (OSError, ValueError, KeyError, TypeError, ET.ParseError):
         report["unavailable"].append("OriginalResultUnavailable")
     (destination / "comparison.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
