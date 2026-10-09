@@ -396,9 +396,13 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             Page.RequestFinished += onFinished;
             Page.RequestFailed += onFailed;
             Page.Response += onResponse;
+            var lifecycle = new NavigationLifecycleObservation(Page, context, browser,
+                new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").AbsoluteUri, timer);
             try
             {
+                lifecycle.Record("navigation-call-start", null, null);
                 var response = await navigate();
+                lifecycle.ObserveReturned(response);
                 Assert.NotNull(response);
                 Assert.Equal(200, response.Status);
                 // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
@@ -407,12 +411,19 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                     "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
                     options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
             }
+            catch (System.TimeoutException)
+            {
+                lifecycle.Record("caller-timeout", null, null);
+                lifecycle.RetainFailure(phase, output);
+                throw;
+            }
             finally
             {
                 Page.Request -= onRequest;
                 Page.RequestFinished -= onFinished;
                 Page.RequestFailed -= onFailed;
                 Page.Response -= onResponse;
+                lifecycle.Detach();
                 timer.Stop();
                 lock (gate)
                 {
@@ -430,6 +441,149 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                     }));
                     pending.Clear();
                 }
+            }
+        }
+
+        // Passive caller-boundary metadata only; never reads a body, evaluates or waits.
+        private sealed class NavigationLifecycleObservation
+        {
+            private readonly IPage page;
+            private readonly IBrowserContext? context;
+            private readonly IBrowser? browser;
+            private readonly string expectedUrl;
+            private readonly System.Diagnostics.Stopwatch timer;
+            private readonly object gate = new();
+            private readonly List<(string Kind, IRequest? Request, long Elapsed, int? Status)> events = [];
+            private IRequest? initialRequest;
+            private IRequest? returnedRequest;
+            private int? returnedStatus;
+            private bool truncated, pageClosed, pageCrashed, contextClosed, browserDisconnected, domContentLoaded;
+            private bool requestSubscribed, responseSubscribed, finishedSubscribed, failedSubscribed;
+            private bool pageCloseSubscribed, pageCrashSubscribed, domSubscribed, contextCloseSubscribed, browserDisconnectSubscribed;
+
+            public NavigationLifecycleObservation(IPage page, IBrowserContext? context, IBrowser? browser,
+                string expectedUrl, System.Diagnostics.Stopwatch timer)
+            {
+                this.page = page;
+                this.context = context;
+                this.browser = browser;
+                this.expectedUrl = expectedUrl;
+                this.timer = timer;
+                try { page.Request += OnRequest; requestSubscribed = true; } catch { }
+                try { page.Response += OnResponse; responseSubscribed = true; } catch { }
+                try { page.RequestFinished += OnFinished; finishedSubscribed = true; } catch { }
+                try { page.RequestFailed += OnFailed; failedSubscribed = true; } catch { }
+                try { page.Close += OnPageClose; pageCloseSubscribed = true; } catch { }
+                try { page.Crash += OnPageCrash; pageCrashSubscribed = true; } catch { }
+                try { page.DOMContentLoaded += OnDom; domSubscribed = true; } catch { }
+                try { if (context is not null) { context.Close += OnContextClose; contextCloseSubscribed = true; } } catch { }
+                try { if (browser is not null) { browser.Disconnected += OnDisconnected; browserDisconnectSubscribed = true; } } catch { }
+            }
+
+            public void Record(string kind, IRequest? request, int? status)
+            {
+                try
+                {
+                    lock (gate)
+                    {
+                        if (kind == "page-close") pageClosed = true;
+                        if (kind == "page-crash") pageCrashed = true;
+                        if (kind == "context-close") contextClosed = true;
+                        if (kind == "browser-disconnected") browserDisconnected = true;
+                        if (kind == "dom-content-loaded") domContentLoaded = true;
+                        if (kind == "document-started" && initialRequest is null) initialRequest = request;
+                        if (events.Count < 32)
+                            events.Add((kind, request, Math.Clamp(timer.ElapsedMilliseconds, 0, 600000), status is >= 100 and <= 599 ? status : null));
+                        else truncated = true;
+                    }
+                }
+                catch { /* Observation cannot replace the original caller or cleanup failure. */ }
+            }
+
+            private bool Matches(IRequest request) => request.IsNavigationRequest && request.Method == "GET"
+                && ReferenceEquals(request.Frame, page.MainFrame) && string.Equals(request.Url, expectedUrl, StringComparison.Ordinal);
+
+            private void Observe(string kind, IRequest request, int? status = null)
+            {
+                try { if (Matches(request)) Record(kind, request, status); }
+                catch { /* No raw request, URL or failure string is retained. */ }
+            }
+
+            private void OnRequest(object? sender, IRequest request) => Observe("document-started", request);
+            private void OnFinished(object? sender, IRequest request) => Observe("document-finished", request);
+            private void OnFailed(object? sender, IRequest request) => Observe("document-failed", request);
+            private void OnResponse(object? sender, IResponse response)
+            {
+                try { Observe("document-response", response.Request, response.Status); } catch { }
+            }
+            private void OnPageClose(object? sender, IPage value) => Record("page-close", null, null);
+            private void OnPageCrash(object? sender, IPage value) => Record("page-crash", null, null);
+            private void OnDom(object? sender, IPage value) => Record("dom-content-loaded", null, null);
+            private void OnContextClose(object? sender, IBrowserContext value) => Record("context-close", null, null);
+            private void OnDisconnected(object? sender, IBrowser value) => Record("browser-disconnected", null, null);
+
+            public void ObserveReturned(IResponse? response)
+            {
+                try
+                {
+                    lock (gate)
+                    {
+                        returnedRequest = response?.Request;
+                        returnedStatus = response is not null && response.Status is >= 100 and <= 599 ? response.Status : null;
+                        Record("navigation-call-returned", returnedRequest, returnedStatus);
+                    }
+                }
+                catch { /* The original response assertions remain authoritative. */ }
+            }
+
+            public void RetainFailure(string phase, ITestOutputHelper output)
+            {
+                try
+                {
+                    lock (gate)
+                    {
+                        output.WriteLine("summary-navigation-lifecycle-failure " + JsonSerializer.Serialize(new
+                        {
+                            schemaVersion = 1,
+                            accepted = false,
+                            phase = phase is "initial" or "reload" ? phase : "unknown",
+                            category = "caller-timeout",
+                            elapsedMilliseconds = Math.Clamp(timer.ElapsedMilliseconds, 0, 600000),
+                            elapsedCapped = timer.ElapsedMilliseconds > 600000,
+                            initialRequestObserved = initialRequest is not null,
+                            returnedRequestObserved = returnedRequest is not null,
+                            returnedReferenceMatch = initialRequest is null || returnedRequest is null ? (bool?)null : ReferenceEquals(initialRequest, returnedRequest),
+                            returnedStatus,
+                            pageIsClosed = page.IsClosed,
+                            browserIsConnected = browser?.IsConnected,
+                            pageClosed, pageCrashed, contextClosed, browserDisconnected, domContentLoaded, truncated,
+                            requestSubscribed, responseSubscribed, finishedSubscribed, failedSubscribed,
+                            pageCloseSubscribed, pageCrashSubscribed, domSubscribed, contextCloseSubscribed, browserDisconnectSubscribed,
+                            events = events.Select((row, index) => new
+                            {
+                                ordinal = index + 1,
+                                kind = row.Kind,
+                                elapsedMilliseconds = row.Elapsed,
+                                status = row.Status,
+                                referenceMatch = row.Request is null || initialRequest is null ? (bool?)null : ReferenceEquals(row.Request, initialRequest),
+                            }).ToArray(),
+                        }));
+                    }
+                }
+                catch { /* Guarded synchronous metadata only; original TimeoutException is rethrown. */ }
+            }
+
+            public void Detach()
+            {
+                try { page.Request -= OnRequest; } catch { }
+                try { page.Response -= OnResponse; } catch { }
+                try { page.RequestFinished -= OnFinished; } catch { }
+                try { page.RequestFailed -= OnFailed; } catch { }
+                try { page.Close -= OnPageClose; } catch { }
+                try { page.Crash -= OnPageCrash; } catch { }
+                try { page.DOMContentLoaded -= OnDom; } catch { }
+                try { if (context is not null) context.Close -= OnContextClose; } catch { }
+                try { if (browser is not null) browser.Disconnected -= OnDisconnected; } catch { }
             }
         }
 
