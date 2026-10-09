@@ -299,7 +299,7 @@ jobs:
           --root ./preliminary-pdf-test-results/pdf
           --receipt ./preliminary-pdf-test-results/parser-receipt.json
       - name: Validate .NET solution
-        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@d7efac266bc66273bc45eab583618871292ecbd6
+        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
         with:
           solution: Legacy.Maliev.Web.slnx
           use-local-maliev-dependencies: 'true'
@@ -375,6 +375,9 @@ jobs:
             billing-persistence-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/initial-readiness/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.png
             Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json

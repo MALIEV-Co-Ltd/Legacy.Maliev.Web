@@ -22,6 +22,10 @@ internal sealed class BillingProofLifetime : IAsyncDisposable
     private readonly List<BillingHostLease> dependencies = [];
     private readonly List<BillingBackendLease> backends = [];
     private readonly string? proofCulture;
+    private JsonObject? businessProof;
+    private byte[]? businessScreenshot;
+    private string? archivedReceipt;
+    internal string AttemptRun => run.ToString("N");
     private readonly List<Task> operations = [];
     private readonly object resourceGate = new();
     private readonly SemaphoreSlim cleanup = new(1, 1);
@@ -60,6 +64,36 @@ internal sealed class BillingProofLifetime : IAsyncDisposable
     }
 
     internal Task ExpirySettled => expiry;
+
+    internal async Task WriteBusinessProofAsync(object proof)
+    {
+        if (proofCulture is null) throw new InvalidOperationException("Billing proof culture required.");
+        var business = JsonSerializer.SerializeToNode(proof)?.AsObject()
+            ?? throw new InvalidOperationException("Billing business proof required.");
+        var candidate = Environment.GetEnvironmentVariable("MALIEV_BILLING_CANDIDATE_HEAD");
+        if (!Regex.IsMatch(candidate ?? "", "\\A[a-f0-9]{40}\\z")
+            || business["candidateHead"]?.GetValue<string>() != candidate
+            || business["surface"]?.GetValue<string>() != "member-billing"
+            || business["culture"]?.GetValue<string>() != proofCulture
+            || new[] { "attemptRun", "businessComplete", "attemptScreenshot", "billingBackendCleanup" }.Any(business.ContainsKey)
+            || business.ToJsonString().Length > 16384)
+            throw new InvalidOperationException("Foreign or oversized billing business proof refused.");
+        var screenshot = Path.Combine(AppContext.BaseDirectory, "TestResults", "billing-persistence", proofCulture + ".png");
+        if ((File.GetAttributes(screenshot) & FileAttributes.ReparsePoint) != 0
+            || new FileInfo(screenshot).Length is <= 0 or > 16 * 1024 * 1024)
+            throw new InvalidOperationException("Bounded original billing screenshot required.");
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var bytes = await File.ReadAllBytesAsync(screenshot, deadline.Token);
+        if (bytes.Length is <= 0 or > 16 * 1024 * 1024)
+            throw new InvalidOperationException("Bounded original billing screenshot required.");
+        lock (resourceGate)
+        {
+            EnsureOpen();
+            if (businessProof is not null) throw new InvalidOperationException("Billing business proof already recorded.");
+            businessProof = business;
+            businessScreenshot = bytes;
+        }
+    }
 
     internal void StartHost(BillingHostLease host, Action start)
     {
@@ -241,11 +275,59 @@ internal sealed class BillingProofLifetime : IAsyncDisposable
         Directory.CreateDirectory(evidence);
         var file = Path.Combine(evidence, proofCulture + ".json");
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var business = File.Exists(file) ? JsonNode.Parse(await File.ReadAllTextAsync(file, deadline.Token))!.AsObject() : new JsonObject();
+        JsonObject business;
+        byte[]? screenshot;
+        lock (resourceGate)
+        {
+            // Only this case's completed body can supply business fields. Never reopen a prior alias.
+            var completed = body?.IsCompletedSuccessfully == true && businessProof is not null;
+            business = completed ? (JsonObject)businessProof!.DeepClone() : new JsonObject();
+            screenshot = completed ? businessScreenshot : null;
+            business["businessComplete"] = completed;
+        }
+        business["surface"] = "member-billing";
+        business["culture"] = proofCulture;
+        business["candidateHead"] = candidate;
+        business["attemptRun"] = AttemptRun;
+        var archiveName = proofCulture + "-" + AttemptRun;
+        if (screenshot is not null)
+            business["attemptScreenshot"] = JsonSerializer.SerializeToNode(new
+            {
+                file = archiveName + ".png",
+                bytes = screenshot.Length,
+                sha256 = Convert.ToHexString(SHA256.HashData(screenshot)).ToLowerInvariant(),
+            });
         business["billingBackendCleanup"] = JsonSerializer.SerializeToNode(proof);
         var serialized = business.ToJsonString();
         if (serialized.Length > 16384) throw new InvalidOperationException("Bounded synthetic billing receipt exceeded.");
-        await File.WriteAllTextAsync(file, serialized, deadline.Token);
+        var archive = Path.Combine(evidence, "attempts");
+        var archiveFile = Path.Combine(archive, archiveName + ".json");
+        try
+        {
+            Directory.CreateDirectory(archive);
+            if (archivedReceipt is null)
+            {
+                if (screenshot is not null)
+                {
+                    await using var image = new FileStream(Path.Combine(archive, archiveName + ".png"), FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    await image.WriteAsync(screenshot, deadline.Token);
+                }
+                await using (var receipt = new FileStream(archiveFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    await receipt.WriteAsync(Encoding.UTF8.GetBytes(serialized), deadline.Token);
+                archivedReceipt = serialized;
+            }
+            // A later cleanup retry may recover resources, but cannot rewrite this attempt's first archive.
+            else if (archivedReceipt != serialized || await File.ReadAllTextAsync(archiveFile, deadline.Token) != serialized)
+                throw new InvalidOperationException("Immutable billing attempt receipt changed; publication refused.");
+            await File.WriteAllTextAsync(file, serialized, deadline.Token);
+        }
+        catch (Exception failure) when ((failure is IOException or UnauthorizedAccessException or OperationCanceledException or InvalidOperationException)
+            && (body?.IsFaulted == true || body?.IsCanceled == true))
+        {
+            // A new archive failure cannot replace the original failed body. The old alias fails its case-run join.
+            try { Console.Error.WriteLine("billing-attempt-archive-unavailable " + AttemptRun); }
+            catch (Exception) { /* A secondary output failure cannot replace the original failed body. */ }
+        }
         if (released && (!complete || !Regex.IsMatch(candidate ?? "", "\\A[a-f0-9]{40}\\z")))
             throw new InvalidOperationException("Released graph lacks complete original billing backend evidence; proof refused.");
     }
