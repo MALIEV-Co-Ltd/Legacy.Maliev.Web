@@ -59,11 +59,11 @@ public sealed class InstantQuotationResinPresentationTests
             {
                 var control = Regex.Match(html, "<select\\b[^>]*id=\"" + field + "-" + part.PartId + "\"[^>]*>");
                 Assert.True(control.Success);
-                Assert.False(Regex.IsMatch(control.Value, "\\sdisabled(?:\\s|=|>)"));
+                Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", control.Value);
             }
             var quantityControl = Regex.Match(html, "<input\\b[^>]*id=\"quantity-" + part.PartId + "\"[^>]*>");
             Assert.True(quantityControl.Success);
-            Assert.False(Regex.IsMatch(quantityControl.Value, "\\sdisabled(?:\\s|=|>)"));
+            Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", quantityControl.Value);
         }
     }
 
@@ -100,7 +100,7 @@ public sealed class InstantQuotationResinPresentationTests
             var output = await renderer.RenderComponentAsync<InstantQuotationPreliminaryQuotation>(parameters);
             var button = Regex.Match(output.ToHtmlString(), "<button\\b[^>]*>");
             Assert.True(button.Success);
-            Assert.False(Regex.IsMatch(button.Value, "\\sdisabled(?:\\s|=|>)"));
+            Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", button.Value);
             Assert.Contains("aria-disabled=\"false\"", button.Value, StringComparison.Ordinal);
             var component = Assert.IsType<InstantQuotationPreliminaryQuotation>(activator.Preliminary);
             var open = typeof(InstantQuotationPreliminaryQuotation).GetMethod(
