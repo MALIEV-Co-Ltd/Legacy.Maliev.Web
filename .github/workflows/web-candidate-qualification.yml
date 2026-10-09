@@ -5,6 +5,12 @@ name: Web sealed source qualification
     - .gitleaks.toml
     - scripts/tests/test_web_candidate_secret_scan.py
     - scripts/run_web_account_candidate.py
+    - scripts/run_web_resin_comparison_expiry.py
+    - scripts/resin_expiry_enrollment.py
+    - scripts/web-resin-comparison-expiry-policy.json
+    - scripts/launch_web_capped_kernel_proof.py
+    - scripts/tests/test_web_candidate_resin_expiry.py
+    - scripts/tests/test_web_candidate_resin_enrollment.py
     - scripts/web-account-failure-policy.json
     - scripts/web-email-change-session-policy.json
     - scripts/tests/test_web_candidate_email_session.py
@@ -32,6 +38,7 @@ name: Web sealed source qualification
         options:
         - existing
         - email-change-session-v1
+        - resin-comparison-expiry-v1
       manifest_blob:
         description: Same-repository Git blob ID of reviewed manifest
         required: true
@@ -579,7 +586,7 @@ jobs:
         retention-days: 7
         if-no-files-found: error
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice != 'email-change-session-v1'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'existing'
     needs: transport-controls
   email-change-native:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'email-change-session-v1'
@@ -658,5 +665,96 @@ jobs:
           ${{ runner.temp }}/web-email-change-evidence/
           email-change-test-results/
           email-change-suite-results/
+        retention-days: 7
+        if-no-files-found: error
+
+  resin-expiry-native:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.slice == 'resin-comparison-expiry-v1'
+    needs: transport-controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      MSBUILDDISABLENODEREUSE: '1'
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Retain reviewed paired expiry transport outside candidate
+      shell: bash
+      run: |
+        set -euo pipefail
+        transport="$RUNNER_TEMP/resin-transport-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        mkdir "$transport"
+        cp scripts/materialize_web_candidate.py scripts/check_web_candidate_admission.py scripts/run_web_candidate_phase.py scripts/run_web_resin_comparison_expiry.py scripts/resin_expiry_enrollment.py scripts/launch_web_capped_kernel_proof.py scripts/run_web_capped_kernel_proof.py scripts/sealed_source_capsule.py scripts/web-resin-comparison-expiry-policy.json "$transport/"
+        printf 'WEB_TRANSPORT_ROOT=%s\n' "$transport" >> "$GITHUB_ENV"
+        printf 'WEB_REVIEWED_TRANSPORT_SHA=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+    - name: Check out exact paired expiry candidate base
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: 80b69dd81a7dce23c3ac07ef507ac5ae16a92d9b
+        persist-credentials: false
+    - name: Prepare original paired expiry run challenge without SDK allocation
+      shell: bash
+      run: |
+        set -euo pipefail
+        evidence="$RUNNER_TEMP/resin-expiry-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        mkdir "$evidence"
+        printf 'RESIN_EVIDENCE=%s\n' "$evidence" >> "$GITHUB_ENV"
+        printf 'RESIN_ENROLLMENT_CONTEXT=%s\n' "$evidence/enrolled-context.json" >> "$GITHUB_ENV"
+        python3 -B "$WEB_TRANSPORT_ROOT/resin_expiry_enrollment.py" --challenge "$evidence/challenge.json"
+    - name: Retain original paired expiry challenge for the assigned custodian
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: resin-expiry-challenge-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/resin-expiry-evidence-${{ github.run_id }}-${{ github.run_attempt }}/challenge.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Read independently enrolled paired expiry custody and materialize exact source
+      timeout-minutes: 5
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        MANIFEST_BLOB: ${{ inputs.manifest_blob }}
+        CAPSULE_BLOB: ${{ inputs.capsule_blob }}
+      run: |
+        set -euo pipefail
+        python3 -B "$WEB_TRANSPORT_ROOT/resin_expiry_enrollment.py" --challenge "$RESIN_EVIDENCE/challenge.json" --wait --context "$RESIN_ENROLLMENT_CONTEXT" --permit "$RESIN_EVIDENCE/root-permit.json"
+        python3 -B "$WEB_TRANSPORT_ROOT/check_web_candidate_admission.py" --policy "$WEB_TRANSPORT_ROOT/web-resin-comparison-expiry-policy.json" --permit "$RESIN_EVIDENCE/root-permit.json"
+        python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-resin-comparison-expiry-policy.json" --candidate . --manifest-blob "$MANIFEST_BLOB" --capsule-blob "$CAPSULE_BLOB" --receipt "$RESIN_EVIDENCE/intake.json"
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+        ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+        path: .dependencies/Legacy.Maliev.ServiceDefaults
+        persist-credentials: false
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+        ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+        path: .dependencies/Legacy.Maliev.CompatibilityContracts
+        persist-credentials: false
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: actions/setup-dotnet
+        ref: a98b56852c35b8e3190ac28c8c2271da59106c68
+        path: .dependencies/dotnet-installer
+        persist-credentials: false
+    - name: Execute exactly the two paired expiry rows in the existing finite kernel owner
+      timeout-minutes: 36
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -B "$WEB_TRANSPORT_ROOT/launch_web_capped_kernel_proof.py" --resin-policy "$WEB_TRANSPORT_ROOT/web-resin-comparison-expiry-policy.json" --permit "$RESIN_EVIDENCE/root-permit.json" --candidate "$GITHUB_WORKSPACE" --evidence "$RESIN_EVIDENCE/owner"
+        python3 -B "$WEB_TRANSPORT_ROOT/run_web_resin_comparison_expiry.py" --verify-final "$RESIN_EVIDENCE/owner"
+    - name: Retain exact paired source, raw TRX and owned cleanup receipts
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: resin-expiry-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ runner.temp }}/resin-expiry-evidence-${{ github.run_id }}-${{ github.run_attempt }}/
+          resin-comparison-expiry-results/
         retention-days: 7
         if-no-files-found: error

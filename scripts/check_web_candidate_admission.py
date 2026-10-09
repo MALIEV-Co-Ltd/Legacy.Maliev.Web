@@ -10,6 +10,9 @@ OWNER = "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5"
 
 def validate(policy, raw, now=None):
     digest = policy.get("nativeAdmissionSha256")
+    if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+        from run_web_resin_comparison_expiry import validate as validate_resin
+        return validate_resin(policy, raw, now)
     if policy.get("sliceKind") == "email-change-session-v1":
         return validate_email_session(policy, raw, now)
     if policy.get("sliceKind") == "account-failure-v1":
@@ -182,7 +185,13 @@ def main():
     args = parser.parse_args()
     policy = intake.load_policy(args.policy)
     # Missing prerequisites reject before fetching or writing any permit.
-    if not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1"} and not policy.get("customerLiteralProducerSha")):
+    if policy.get("sliceKind") == "resin-comparison-expiry-v1":
+        if args.blob:
+            raise ValueError("Resin authority comes only from the fixed enrolled context")
+        import resin_expiry_enrollment as enrollment
+        enrollment.body_policy(policy)
+        enrollment.custodian(policy)
+    elif not policy.get("nativeAdmissionSha256") or (policy.get("sliceKind") not in {"country-operation-v1", "account-failure-v1", "email-change-session-v1", "resin-comparison-expiry-v1"} and not policy.get("customerLiteralProducerSha")):
         # Account scope has its own strict Auth/mail prerequisite validator; old branches are unchanged.
         raise ValueError("Root hosted permit and qualified Customer producer remain unpinned")
     census()
