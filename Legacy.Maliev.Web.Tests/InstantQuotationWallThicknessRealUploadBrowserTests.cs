@@ -103,23 +103,58 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.False(profiles.TryResolveTrustedProfile("PC-ESD", build, out _));
 
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            var mesh = await new InstantQuotationAdmittedMeshService(new BrowserMultiUploadInputReader(upload,
-                scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>()))
-                .ReadAsync(state.SessionId, upload.OwnerIdentity, partId, physicalUpload.FileId, digest, deadline.Token);
-            Assert.True(mesh.IsReady);
-            Assert.Equal(digest, mesh.UploadSha256);
-            Assert.Equal(12, mesh.Mesh!.Triangles.Count);
-            var binding = new InstantQuotationPhysicalAnalysisBinding(state.SessionId, upload.OwnerIdentity,
-                partId, physicalUpload.FileId, digest, materialKey, build, 1, profiles.ProfileVersion);
-            var analyzed = await scope.ServiceProvider.GetRequiredService<InstantQuotationBoundPhysicalAnalysisService>()
-                .AnalyzeAsync(binding, deadline.Token);
-            Assert.True(analyzed.IsReady, analyzed.Failure.ToString());
-            Assert.Equal(binding, analyzed.Binding);
-            Assert.Equal(receipt.ProfileSha256, analyzed.Physical!.ProfileSha256);
-            Assert.Equal(receipt.MotionSeconds, analyzed.Physical.Motion.TotalSeconds, 6);
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
+            var stageStarted = started;
+            var stage = "MeshRead";
+            long meshFinishedAtMs = -1;
+            long analyzeFinishedAtMs = -1;
+            InstantQuotationOrderQuote? quote;
+            try
+            {
+                var mesh = await new InstantQuotationAdmittedMeshService(new BrowserMultiUploadInputReader(upload,
+                    scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>()))
+                    .ReadAsync(state.SessionId, upload.OwnerIdentity, partId, physicalUpload.FileId, digest, deadline.Token);
+                meshFinishedAtMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0L, 600000L);
+                Assert.True(mesh.IsReady);
+                Assert.Equal(digest, mesh.UploadSha256);
+                Assert.Equal(12, mesh.Mesh!.Triangles.Count);
+                var binding = new InstantQuotationPhysicalAnalysisBinding(state.SessionId, upload.OwnerIdentity,
+                    partId, physicalUpload.FileId, digest, materialKey, build, 1, profiles.ProfileVersion);
+                stage = "BoundAnalyze";
+                stageStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+                var analyzed = await scope.ServiceProvider.GetRequiredService<InstantQuotationBoundPhysicalAnalysisService>()
+                    .AnalyzeAsync(binding, deadline.Token);
+                analyzeFinishedAtMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0L, 600000L);
+                Assert.True(analyzed.IsReady, analyzed.Failure.ToString());
+                Assert.Equal(binding, analyzed.Binding);
+                Assert.Equal(receipt.ProfileSha256, analyzed.Physical!.ProfileSha256);
+                Assert.Equal(receipt.MotionSeconds, analyzed.Physical.Motion.TotalSeconds, 6);
 
-            var quote = await scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>()
-                .QuoteAsync(state, upload.OwnerIdentity, includeComparisons: false, deadline.Token);
+                stage = "AuthoritativeQuote";
+                stageStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+                quote = await scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>()
+                    .QuoteAsync(state, upload.OwnerIdentity, includeComparisons: false, deadline.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Failure-only monotonic metadata; preserve the existing caller and production budgets.
+                try
+                {
+                    var elapsedMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0L, 600000L);
+                    var stageElapsedMs = Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds, 0L, 600000L);
+                    var material = materialKey switch { "PA612-ESD" => "PA612-ESD", "ABS-ESD" => "ABS-ESD", _ => "Unknown" };
+                    var preference = build switch
+                    {
+                        Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard => "Standard",
+                        Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality => "Quality",
+                        Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength => "Strength",
+                        _ => "Unknown",
+                    };
+                    output.WriteLine($"[original-esd-cancellation] material={material}; build={preference}; stage={stage}; elapsedMs={elapsedMs}; stageElapsedMs={stageElapsedMs}; meshFinishedAtMs={meshFinishedAtMs}; analyzeFinishedAtMs={analyzeFinishedAtMs}; callerCancellationRequested={deadline.IsCancellationRequested}");
+                }
+                catch { /* A secondary observation or output failure cannot replace the original cancellation. */ }
+                throw;
+            }
             Assert.NotNull(quote);
             var line = Assert.Single(quote.Parts);
             Assert.Equal(partId, line.PartId);
