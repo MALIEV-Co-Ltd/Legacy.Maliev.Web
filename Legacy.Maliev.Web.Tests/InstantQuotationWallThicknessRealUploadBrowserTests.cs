@@ -176,27 +176,90 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         });
     }
 
-    private static async Task<InstantQuotationSessionState> WaitForCatalogConfigurationAsync(
+    private async Task<InstantQuotationSessionState> WaitForCatalogConfigurationAsync(
         RealUploadTestingWebApplicationFactory factory, HashCheckingUploadClient upload, Guid partId,
         string materialKey, Legacy.Maliev.Web.Application.Pricing.BuildPreference? build, bool requirePhysical)
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
-        while (true)
+        // Observation uses only the last completed original read; never performs a secondary read.
+        var observationStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+        long lastReadAt = 0;
+        var completedReads = 0;
+        var snapshotAvailable = false;
+        var observationStage = "StoreRead";
+        InstantQuotationSessionState? lastState = null;
+        InstantQuotationPart? lastPart = null;
+        try
         {
-            var state = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, deadline.Token).WaitAsync(deadline.Token);
-            var part = state?.Parts.SingleOrDefault(value => value.PartId == partId);
-            if (part is not null && part.Configuration.MaterialKey == materialKey
-                && (build is null || part.Configuration.BuildPreference == build)
-                && (!requirePhysical || (state!.QuoteAuthorization is not null
-                    && state.PhysicalReceipts?.Any(receipt => receipt.PartId == partId
-                        && receipt.MaterialKey == materialKey && receipt.BuildPreference == build) is true)))
-                return state!;
-            await Task.Delay(TimeSpan.FromMilliseconds(100), deadline.Token);
+            while (true)
+            {
+                observationStage = "StoreRead";
+                var state = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, deadline.Token).WaitAsync(deadline.Token);
+                var part = state?.Parts.SingleOrDefault(value => value.PartId == partId);
+                lastState = state;
+                lastPart = part;
+                snapshotAvailable = true;
+                completedReads = Math.Min(completedReads + 1, 10000);
+                lastReadAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                if (part is not null && part.Configuration.MaterialKey == materialKey
+                    && (build is null || part.Configuration.BuildPreference == build)
+                    && (!requirePhysical || (state!.QuoteAuthorization is not null
+                        && state.PhysicalReceipts?.Any(receipt => receipt.PartId == partId
+                            && receipt.MaterialKey == materialKey && receipt.BuildPreference == build) is true)))
+                    return state!;
+                observationStage = "PollDelay";
+                await Task.Delay(TimeSpan.FromMilliseconds(100), deadline.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                var elapsed = (long)System.Diagnostics.Stopwatch.GetElapsedTime(observationStarted).TotalMilliseconds;
+                var expectedMaterial = materialKey switch { "ABS-ESD" => "ABS-ESD", "PA612-ESD" => "PA612-ESD", _ => "Unknown" };
+                var expectedBuild = build switch
+                {
+                    null => "Any",
+                    Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard => "Standard",
+                    Legacy.Maliev.Web.Application.Pricing.BuildPreference.Quality => "Quality",
+                    Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength => "Strength",
+                    _ => "Unknown",
+                };
+                output.WriteLine("[original-catalog-convergence-cancellation] " + System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    phase = "OriginalCatalogConfiguration",
+                    category = "CallerCancellation",
+                    stage = observationStage is "StoreRead" or "PollDelay" ? observationStage : "Unknown",
+                    deadlineCancellationRequested = deadline.IsCancellationRequested,
+                    elapsedMilliseconds = Math.Clamp(elapsed, 0L, 600000L),
+                    elapsedCapped = elapsed > 600000L,
+                    completedReads,
+                    completedReadsCapped = completedReads == 10000,
+                    snapshotAvailable,
+                    snapshotAgeMilliseconds = snapshotAvailable ? (long?)Math.Clamp((long)System.Diagnostics.Stopwatch.GetElapsedTime(lastReadAt).TotalMilliseconds, 0L, 600000L) : null,
+                    expectedMaterial,
+                    expectedBuild,
+                    requirePhysical,
+                    statePresent = snapshotAvailable ? (bool?)(lastState is not null) : null,
+                    partPresent = snapshotAvailable ? (bool?)(lastPart is not null) : null,
+                    materialMatched = snapshotAvailable && lastPart is not null ? (bool?)(lastPart.Configuration.MaterialKey == materialKey) : null,
+                    buildMatched = snapshotAvailable && lastPart is not null ? (bool?)(build is null || lastPart.Configuration.BuildPreference == build) : null,
+                    quoteAuthorizationPresent = snapshotAvailable && lastState is not null ? (bool?)(lastState.QuoteAuthorization is not null) : null,
+                    matchingPhysicalReceipt = snapshotAvailable && lastState is not null ? (bool?)(lastState.PhysicalReceipts?.Any(receipt => receipt.PartId == partId
+                        && receipt.MaterialKey == materialKey && receipt.BuildPreference == build) is true) : null,
+                    partCount = snapshotAvailable && lastState is not null ? (int?)Math.Clamp(lastState.Parts.Count, 0, 100) : null,
+                    receiptCount = snapshotAvailable && lastState is not null ? (int?)Math.Clamp(lastState.PhysicalReceipts?.Count ?? 0, 0, 100) : null,
+                    domTierCount = (int?)null,
+                    domTierVisibility = "Unknown",
+                }));
+            }
+            catch { /* Secondary observation/output failure cannot replace original cancellation. */ }
+            throw;
         }
     }
 
-    private static async Task WithOriginalCatalogMeshBrowserAsync(
+    private async Task WithOriginalCatalogMeshBrowserAsync(
         Func<RealUploadTestingWebApplicationFactory, HashCheckingUploadClient, IPage, Guid, string, Task> examine)
     {
         var upload = new HashCheckingUploadClient();
@@ -227,7 +290,35 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         {
             var digest = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
             await page.SetInputFilesAsync("#instant-quote-files", path);
-            await page.Locator("[data-workflow-price-tier]").First.WaitForAsync();
+            var tierWaitStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+            try
+            {
+                await page.Locator("[data-workflow-price-tier]").First.WaitForAsync();
+            }
+            catch (System.TimeoutException)
+            {
+                try
+                {
+                    var elapsed = (long)System.Diagnostics.Stopwatch.GetElapsedTime(tierWaitStarted).TotalMilliseconds;
+                    output.WriteLine("[original-catalog-initial-tier-timeout] " + System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        phase = "OriginalCatalogInitialTier",
+                        category = "CallerTimeout",
+                        elapsedMilliseconds = Math.Clamp(elapsed, 0L, 600000L),
+                        elapsedCapped = elapsed > 600000L,
+                        verifiedUploads = Math.Clamp(upload.VerifiedUploads, 0, 100),
+                        pricingCalls = Math.Clamp(pricing.CallCount, 0, 1000),
+                        tierWaitSatisfied = false,
+                        beforeExamine = true,
+                        pageIsClosed = page.IsClosed,
+                        browserIsConnected = browser.IsConnected,
+                        domTierCount = (int?)null,
+                        domTierVisibility = "Unknown",
+                    }));
+                }
+                catch { /* Secondary observation/output failure cannot replace original timeout. */ }
+                throw;
+            }
             var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
             await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
             var keys = await page.Locator("[data-workflow-material-picker] select[name='material'] option")
