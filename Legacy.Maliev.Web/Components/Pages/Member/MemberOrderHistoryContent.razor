@@ -26,6 +26,8 @@
         <div class="maliev-form-field">
             <label for="member-order-sort">@Localizer["Sort by"]</label>
             <select id="member-order-sort" name="sort">
+                <option value="OrderId_Ascending" selected="@(EffectiveSort == "OrderId_Ascending")">@Localizer["Order ID ascending"]</option>
+                <option value="OrderId_Descending" selected="@(EffectiveSort == "OrderId_Descending")">@Localizer["Order ID descending"]</option>
                 <option value="OrderCreatedDate_Descending" selected="@(EffectiveSort == "OrderCreatedDate_Descending")">@Localizer["Newest first"]</option>
                 <option value="OrderCreatedDate_Ascending" selected="@(EffectiveSort == "OrderCreatedDate_Ascending")">@Localizer["Oldest first"]</option>
                 <option value="OrderName_Ascending" selected="@(EffectiveSort == "OrderName_Ascending")">@Localizer["Name A-Z"]</option>
