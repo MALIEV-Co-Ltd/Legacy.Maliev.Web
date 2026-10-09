@@ -13,10 +13,10 @@ public static class ShippingCalculator
     private static readonly double[] CarrierRatesThb = [25, 35, 35, 36, 52, 63, 73, 84, 99, 110, 128, 150, 160, 172, 182, 194, 211, 221, 233, 244];
 
     /// <summary>Gets the carrier weight thresholds used by the browser estimate.</summary>
-    public static IReadOnlyList<double> ClientWeightBoundsKg => WeightBoundsKg;
+    public static IReadOnlyList<double> ClientWeightBoundsKg { get; } = Array.AsReadOnly(WeightBoundsKg);
 
     /// <summary>Gets the carrier rates paired with <see cref="ClientWeightBoundsKg"/>.</summary>
-    public static IReadOnlyList<double> ClientCarrierRatesThb => CarrierRatesThb;
+    public static IReadOnlyList<double> ClientCarrierRatesThb { get; } = Array.AsReadOnly(CarrierRatesThb);
 
     public static double CarrierRateThb(double weightKg)
     {
