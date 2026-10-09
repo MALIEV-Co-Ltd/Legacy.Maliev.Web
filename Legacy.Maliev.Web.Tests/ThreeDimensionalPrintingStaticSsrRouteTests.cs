@@ -59,6 +59,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "SiliconeCastingPage.razor",
                 "LowVolumeInjectionMoldingPage.razor"
             }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
+            .LegacyPagesAfterVerifyingDocuments()
             .Select(path => Path.GetFileName(path)!)
             .Order(StringComparer.Ordinal)
             .ToArray();

@@ -50,4 +50,5 @@
   <data name="Change password" xml:space="preserve"><value>เปลี่ยนรหัสผ่าน</value></data>
   <data name="Create password" xml:space="preserve"><value>สร้างรหัสผ่าน</value></data>
   <data name="Member menu" xml:space="preserve"><value>เมนูสมาชิก</value></data>
+  <data name="Documents" xml:space="preserve"><value>เอกสาร</value></data>
 </root>
