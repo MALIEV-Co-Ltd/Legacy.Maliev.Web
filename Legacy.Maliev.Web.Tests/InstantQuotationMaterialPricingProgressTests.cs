@@ -6,10 +6,11 @@ using Legacy.Maliev.Web.Application.Pricing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationMaterialPricingProgressTests
+public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelper output)
 {
     private const string Owner = "progress-fixture-owner";
     private static readonly Guid PartId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -402,19 +403,69 @@ public sealed class InstantQuotationMaterialPricingProgressTests
         var session = await fixture.CreateAsync();
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var caller = new CancellationTokenSource();
+        int observedBoundaries = 0;
+        Exception? primaryFailure = null;
+        bool waitingForReader = true;
         var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
         {
+            // Fixed bits record only structural boundaries, without material/session data.
+            int boundary = (frame.MaterialKey == "ABS", frame.Status) switch
+            {
+                (true, InstantQuotationMaterialPricingStatus.Pending) => 1,
+                (true, InstantQuotationMaterialPricingStatus.Completed) => 2,
+                (true, InstantQuotationMaterialPricingStatus.Unavailable) => 4,
+                (false, InstantQuotationMaterialPricingStatus.Pending) => 8,
+                (false, InstantQuotationMaterialPricingStatus.Completed) => 16,
+                (false, InstantQuotationMaterialPricingStatus.Unavailable) => 32,
+                _ => 0,
+            };
+            Interlocked.Or(ref observedBoundaries, boundary);
             if (frame.Status != InstantQuotationMaterialPricingStatus.Unavailable) return ValueTask.CompletedTask;
             entered.TrySetResult(); return new ValueTask(late.Task);
-        }, default);
-        await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        clock.Advance(TimeSpan.FromSeconds(3));
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.False(run.IsCompleted);
-        clock.Advance(TimeSpan.FromSeconds(30));
-        Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
-        late.TrySetResult();
-        Assert.Equal(2, fixture.Reader.ReadCount);
+        }, caller.Token);
+        try
+        {
+            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            waitingForReader = false;
+            clock.Advance(TimeSpan.FromSeconds(3));
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.False(run.IsCompleted);
+            clock.Advance(TimeSpan.FromSeconds(30));
+            Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+            late.TrySetResult();
+            Assert.Equal(2, fixture.Reader.ReadCount);
+        }
+        catch (Exception exception)
+        {
+            primaryFailure = exception;
+            if (waitingForReader)
+            {
+                // Samples are advisory; reporting must preserve the original exception.
+                try
+                {
+                    output.WriteLine("reader-ordinal-2: reads={0}; entered={1}; quote={2}; unavailable={3}; boundaries={4}; fault={5}",
+                        fixture.Reader.ReadCount, fixture.Reader.Entered.Task.IsCompleted, run.Status,
+                        entered.Task.IsCompleted, Volatile.Read(ref observedBoundaries),
+                        run.Exception?.GetBaseException().GetType().Name ?? "none");
+                }
+                catch { }
+            }
+            throw;
+        }
+        finally
+        {
+            Exception? cleanupFailure = null;
+            try { caller.Cancel(); }
+            catch (Exception exception) { cleanupFailure = exception; }
+            fixture.Reader.Release.TrySetResult();
+            late.TrySetResult();
+            // Attempt a bounded drain before disposal, without replacing a primary failure.
+            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); }
+            catch (Exception exception) { cleanupFailure ??= exception; }
+            if (primaryFailure is null && cleanupFailure is not null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupFailure).Throw();
+        }
     }
 
     [Theory]
