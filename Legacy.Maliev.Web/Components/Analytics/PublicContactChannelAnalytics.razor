@@ -7,6 +7,20 @@
             return (path || '/').replace(/\/+$/, '').toLowerCase() || '/';
         }
 
+        function normalizeLineToken(url) {
+            var token = (url.pathname || '').replace(/\/+$/, '');
+            token = token.replace(/^\/ti\/p\//i, '').toLowerCase();
+            try {
+                token = decodeURIComponent(token || '');
+            } catch (error) {
+                return null;
+            }
+            while (token.length > 0 && token.charCodeAt(0) === 64) {
+                token = token.substring(1);
+            }
+            return token;
+        }
+
         function classifyContact(anchor) {
             var contactEmail = (anchor.getAttribute('data-contact-email') || '').trim().toLowerCase();
             var knownContactEmails = [
@@ -39,7 +53,7 @@
                 return { eventName: 'email_click', channel: 'email', destination: 'business_email' };
             }
 
-            if ((host === 'line.me' || host === 'www.line.me') && path === '/ti/p/@@maliev') {
+            if ((host === 'line.me' || host === 'www.line.me') && normalizeLineToken(url) === 'maliev') {
                 return { eventName: 'line_click', channel: 'line', destination: 'line_oa' };
             }
 

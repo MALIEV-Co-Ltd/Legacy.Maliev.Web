@@ -68,7 +68,7 @@ public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<
         Assert.DoesNotContain("eventName: 'facebook_click'", source, StringComparison.Ordinal);
         Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
         Assert.Contains("event: 'maliev_review_link_click'", source, StringComparison.Ordinal);
-        Assert.Contains("path === '/ti/p/@maliev'", source, StringComparison.Ordinal);
+        Assert.Contains("normalizeLineToken(url) === 'maliev'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("path === '/ti/p/@@maliev'", source, StringComparison.Ordinal);
         Assert.Contains("event.preventDefault()", source, StringComparison.Ordinal);
         Assert.Contains("window.setTimeout", source, StringComparison.Ordinal);

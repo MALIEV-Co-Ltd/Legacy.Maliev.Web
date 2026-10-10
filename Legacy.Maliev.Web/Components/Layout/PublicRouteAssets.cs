@@ -26,7 +26,7 @@ public static class PublicRouteAssets
             return ["route-error.css"];
         }
 
-        if (path == "/contact" || path.StartsWith("/quotation", StringComparison.OrdinalIgnoreCase))
+        if (path == "/contact" || path == "/contact/line" || path.StartsWith("/quotation", StringComparison.OrdinalIgnoreCase))
         {
             return ["route-inquiry.css"];
         }
@@ -57,7 +57,7 @@ public static class PublicRouteAssets
             return ["route-error.js"];
         }
 
-        if (path == "/contact" || path.StartsWith("/quotation", StringComparison.OrdinalIgnoreCase))
+        if (path == "/contact" || path == "/contact/line" || path.StartsWith("/quotation", StringComparison.OrdinalIgnoreCase))
         {
             return ["route-inquiry.js"];
         }
