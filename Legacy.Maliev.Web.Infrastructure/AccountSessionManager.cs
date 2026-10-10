@@ -76,7 +76,8 @@ internal sealed class AccountSessionManager(
             result.Tokens.AccessToken,
             result.Tokens.RefreshToken,
             now.AddSeconds(result.Tokens.ExpiresIn),
-            result.Tokens.RefreshExpiresAt);
+            result.Tokens.RefreshExpiresAt,
+            result.IdentitySubject);
         await store.SetAsync(sessionId, session, cancellationToken);
 
         var identity = new ClaimsIdentity(
@@ -92,6 +93,10 @@ internal sealed class AccountSessionManager(
                 new Claim(SessionIdClaim, sessionId),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme);
+        if (!string.IsNullOrWhiteSpace(session.IdentitySubject))
+        {
+            identity.AddClaim(new Claim(CustomerIdentityClaims.AnalyticsSubject, session.IdentitySubject));
+        }
         await context.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(identity),
@@ -178,13 +183,22 @@ internal sealed class AccountSessionManager(
             return null;
         }
 
+        if (session.IdentitySubject is not null
+            && refreshed.IdentitySubject is not null
+            && !string.Equals(session.IdentitySubject, refreshed.IdentitySubject, StringComparison.Ordinal))
+        {
+            await store.RemoveAsync(sessionId, cancellationToken);
+            return null;
+        }
+
         var rotated = new AccountSession(
             session.Email,
             session.CustomerDatabaseId,
             refreshed.Tokens.AccessToken,
             refreshed.Tokens.RefreshToken,
             now.AddSeconds(refreshed.Tokens.ExpiresIn),
-            refreshed.Tokens.RefreshExpiresAt);
+            refreshed.Tokens.RefreshExpiresAt,
+            session.IdentitySubject);
         await store.SetAsync(sessionId, rotated, cancellationToken);
         return rotated.AccessToken;
     }
@@ -217,7 +231,12 @@ internal sealed class AccountCookieEvents(IAccountSessionStore store) : CookieAu
         var expectedOwner = session is { CustomerDatabaseId: > 0 }
             ? $"customer:{session.CustomerDatabaseId.ToString(CultureInfo.InvariantCulture)}"
             : null;
-        if (expectedOwner is null
+        var subjects = context.Principal?.FindAll(CustomerIdentityClaims.AnalyticsSubject).Take(2).ToArray();
+        var subjectMatches = session?.IdentitySubject is null
+            ? subjects is { Length: 0 }
+            : subjects is { Length: 1 }
+                && string.Equals(subjects[0].Value, session.IdentitySubject, StringComparison.Ordinal);
+        if (!subjectMatches || expectedOwner is null
             || !string.Equals(
                 context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier),
                 expectedOwner,
