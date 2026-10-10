@@ -157,6 +157,12 @@ test('real imported M14 worker repeats and switches material with one authentica
             partVolumeMm3: 5350, partSurfaceAreaMm2: 3000 } };
     const first = await c.estimate(input, () => {});
     assert.equal(first.status, 'finalized', JSON.stringify(first.reviewReasons));
+    // Original delivery record 6c00db5: supplier freight belongs to the real
+    // finalized item quote exactly once, independently of customer delivery.
+    const freight = first.quote.lineItems.filter(line => line.code === 'shipping');
+    assert.equal(freight.length, 1);
+    assert.equal(freight[0].amountBeforeVat, 200);
+    assert.equal(first.quote.stockPlan.supplierShippingBeforeVat, 200);
     const tampered = plain(input);
     tampered.topology.validationMesh.vertices[0].x += 1;
     const rejected = await c.estimate(tampered, () => {});
@@ -173,6 +179,16 @@ test('real imported M14 worker repeats and switches material with one authentica
     assert.equal(c.counters.planValidations, 1);
     assert.equal(c.counters.quotes, 2);
     assert.notEqual(first.quote.estimatedPriceBeforeVat, steel.quote.estimatedPriceBeforeVat);
+    // The freight-excluded quote uses the actual pipeline; no quote, plan,
+    // validator or native eligibility is replaced. This is a worker component
+    // contract, not proof of the page's multi-part allocation orchestration.
+    const nextPart = await c.estimate({ ...input, analysisRevision: 'real-cache-next-part',
+        includeShipping: false }, () => {});
+    assert.equal(nextPart.status, 'finalized', JSON.stringify(nextPart.reviewReasons));
+    assert.equal(nextPart.quote.stockPlan.supplierShippingBeforeVat, 0);
+    const nextFreight = nextPart.quote.lineItems.filter(line => line.code === 'shipping');
+    assert.equal(nextFreight.length, 1);
+    assert.equal(nextFreight[0].amountBeforeVat, 0);
 });
 
 test('requirements-only changes invalidate the manufacturing plan and quote caches', async () => {
