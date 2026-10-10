@@ -222,9 +222,13 @@ internal sealed class ContactFallbackNavigationEvidence : IDisposable
         {
             if (disposed || observed >= 32) return;
             observed++;
-            events.Enqueue(new { stage, path = SafePath(origin, url),
+            events.Enqueue(new
+            {
+                stage,
+                path = SafePath(origin, url),
                 elapsedMs = Math.Min(60000, elapsed.ElapsedMilliseconds),
-                status = status is >= 100 and <= 599 ? status : null });
+                status = status is >= 100 and <= 599 ? status : null
+            });
         }
     }
 
