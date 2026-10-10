@@ -26,10 +26,12 @@ public static class BambuStudioProfileResolver
             throw new FileNotFoundException("Bambu Studio profile was not found.", profilePath);
         }
 
-        Dictionary<string, string> profilesByName = BuildProfileIndex(searchRoots.Append(Path.GetDirectoryName(Path.GetFullPath(profilePath))!));
+        string fullProfilePath = Path.GetFullPath(profilePath);
+        string sourceSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(fullProfilePath)));
+        Dictionary<string, string> profilesByName = BuildProfileIndex(searchRoots.Append(Path.GetDirectoryName(fullProfilePath)!));
         var sourceNames = new List<string>();
         var resolving = new HashSet<string>(StringComparer.Ordinal);
-        JsonObject settings = ResolveFile(Path.GetFullPath(profilePath), profilesByName, resolving, sourceNames);
+        JsonObject settings = ResolveFile(fullProfilePath, profilesByName, resolving, sourceNames);
         settings.Remove("include");
 
         RequireNonEmptyString(settings, "type");
@@ -38,7 +40,7 @@ public static class BambuStudioProfileResolver
 
         string json = settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         string sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
-        return new ResolvedBambuProfile(settings, sourceNames, sha256, json + Environment.NewLine);
+        return new ResolvedBambuProfile(settings, sourceNames, sourceSha256, sha256, json + Environment.NewLine);
     }
 
     private static Dictionary<string, string> BuildProfileIndex(IEnumerable<string> searchRoots)
@@ -181,10 +183,12 @@ public static class BambuStudioProfileResolver
 /// </summary>
 /// <param name="Settings">Resolved settings.</param>
 /// <param name="SourceProfileNames">Profiles merged in precedence order.</param>
+/// <param name="SourceSha256">Digest of the unmodified leaf preset bytes.</param>
 /// <param name="Sha256">Digest of the resolved JSON bytes before the trailing newline.</param>
 /// <param name="Json">Resolved JSON suitable for a CLI input file.</param>
 public sealed record ResolvedBambuProfile(
     JsonObject Settings,
     IReadOnlyList<string> SourceProfileNames,
+    string SourceSha256,
     string Sha256,
     string Json);

@@ -15,6 +15,9 @@ public static partial class AdditiveBenchmarkRunner
     /// <summary>The supported manifest schema version.</summary>
     public const string ManifestSchemaVersion = "1.0";
 
+    /// <summary>The matched-input evidence contract.</summary>
+    public const string MatchedManifestSchemaVersion = "2.0";
+
     /// <summary>The report schema version emitted by this runner.</summary>
     public const string ReportSchemaVersion = "1.0";
 
@@ -89,6 +92,16 @@ public static partial class AdditiveBenchmarkRunner
         "missingDataReasons",
     ];
 
+    private static readonly string[] MatchedCaseFields =
+    [
+        .. CaseFields,
+        "orientationPolicy",
+        "inputArtifactSha256",
+        "profileBundleSha256",
+        "referenceTransform4x4",
+        "metricDefinitions",
+    ];
+
     private static readonly JsonSerializerOptions ReportJsonOptions = new()
     {
         WriteIndented = true,
@@ -111,7 +124,7 @@ public static partial class AdditiveBenchmarkRunner
         List<BenchmarkIssue> blocked = [];
         List<BenchmarkCaseResult> caseResults = [];
 
-        ValidateSchema(schemaBytes, invalid);
+        string? schemaVersion = ValidateSchema(schemaBytes, invalid);
 
         JsonDocument manifest;
         try
@@ -130,18 +143,34 @@ public static partial class AdditiveBenchmarkRunner
 
         using (manifest)
         {
+            if (schemaVersion is not null
+                && manifest.RootElement.ValueKind == JsonValueKind.Object
+                && manifest.RootElement.TryGetProperty("schemaVersion", out JsonElement actualVersion)
+                && actualVersion.ValueKind == JsonValueKind.String
+                && (actualVersion.GetString() == ManifestSchemaVersion || actualVersion.GetString() == MatchedManifestSchemaVersion)
+                && actualVersion.GetString() != schemaVersion)
+            {
+                invalid.Add(new BenchmarkIssue("schema.manifest_version_mismatch", "$.schemaVersion", null,
+                    "Manifest version must match the supplied schema version."));
+            }
             ValidateManifest(manifest.RootElement, invalid, blocked, caseResults);
         }
 
         return CreateResult(manifestBytes, invalid, blocked, caseResults);
     }
 
-    private static void ValidateSchema(byte[] schemaBytes, List<BenchmarkIssue> invalid)
+    private static string? ValidateSchema(byte[] schemaBytes, List<BenchmarkIssue> invalid)
     {
+        string? schemaVersion = null;
         try
         {
             using JsonDocument schema = JsonDocument.Parse(schemaBytes);
             JsonElement root = schema.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                invalid.Add(new BenchmarkIssue("schema.root_type", "$schema", null, "Schema root must be an object."));
+                return null;
+            }
             RequireExactString(
                 root,
                 "$schema",
@@ -151,16 +180,23 @@ public static partial class AdditiveBenchmarkRunner
                 invalid);
 
             if (!root.TryGetProperty("properties", out JsonElement properties)
+                || properties.ValueKind != JsonValueKind.Object
                 || !properties.TryGetProperty("schemaVersion", out JsonElement version)
+                || version.ValueKind != JsonValueKind.Object
                 || !version.TryGetProperty("const", out JsonElement constant)
                 || constant.ValueKind != JsonValueKind.String
-                || constant.GetString() != ManifestSchemaVersion)
+                || (constant.GetString() != ManifestSchemaVersion
+                    && constant.GetString() != MatchedManifestSchemaVersion))
             {
                 invalid.Add(new BenchmarkIssue(
                     "schema.version_contract_missing",
                     "$.properties.schemaVersion.const",
                     null,
-                    $"Schema must pin schemaVersion to {ManifestSchemaVersion}."));
+                    $"Schema must pin schemaVersion to {ManifestSchemaVersion} or {MatchedManifestSchemaVersion}."));
+            }
+            else
+            {
+                schemaVersion = constant.GetString();
             }
 
             if (!root.TryGetProperty("additionalProperties", out JsonElement additional)
@@ -181,6 +217,7 @@ public static partial class AdditiveBenchmarkRunner
                 null,
                 exception.Message));
         }
+        return schemaVersion;
     }
 
     private static void ValidateManifest(
@@ -197,12 +234,13 @@ public static partial class AdditiveBenchmarkRunner
 
         RejectUnknownProperties(root, RootFields, "$", null, invalid);
 
-        RequireExactString(
-            root,
-            "schemaVersion",
-            ManifestSchemaVersion,
-            "$.schemaVersion",
+        string? schemaVersion = ReadRequiredString(root, "schemaVersion", "$.schemaVersion", invalid);
+        ValidateEnum(
+            schemaVersion,
+            [ManifestSchemaVersion, MatchedManifestSchemaVersion],
             "manifest.unsupported_version",
+            "$.schemaVersion",
+            null,
             invalid);
         RequireNonEmptyString(root, "benchmarkVersion", "$.benchmarkVersion", invalid);
         string? declaredStatus = ReadRequiredString(root, "status", "$.status", invalid);
@@ -221,7 +259,7 @@ public static partial class AdditiveBenchmarkRunner
             int index = 0;
             foreach (JsonElement benchmarkCase in cases.EnumerateArray())
             {
-                ValidateCase(benchmarkCase, index, invalid, blocked, caseResults, caseIds, models, preferences);
+                ValidateCase(benchmarkCase, index, schemaVersion, invalid, blocked, caseResults, caseIds, models, preferences);
                 index++;
             }
         }
@@ -250,6 +288,7 @@ public static partial class AdditiveBenchmarkRunner
     private static void ValidateCase(
         JsonElement benchmarkCase,
         int index,
+        string? schemaVersion,
         List<BenchmarkIssue> invalid,
         List<BenchmarkIssue> blocked,
         List<BenchmarkCaseResult> caseResults,
@@ -264,7 +303,12 @@ public static partial class AdditiveBenchmarkRunner
             return;
         }
 
-        RejectUnknownProperties(benchmarkCase, CaseFields, path, null, invalid);
+        RejectUnknownProperties(
+            benchmarkCase,
+            schemaVersion == MatchedManifestSchemaVersion ? MatchedCaseFields : CaseFields,
+            path,
+            null,
+            invalid);
 
         Dictionary<string, string?> values = [];
         foreach (string property in RequiredCaseStrings)
@@ -330,6 +374,10 @@ public static partial class AdditiveBenchmarkRunner
         ValidateMetricsObject(benchmarkCase, "productionActual", path, caseId, invalid);
         ValidateWorkbookInputs(benchmarkCase, path, caseId, invalid);
         ValidateProvenance(benchmarkCase, path, caseId, invalid);
+        if (schemaVersion == MatchedManifestSchemaVersion)
+        {
+            ValidateMatchedReference(benchmarkCase, path, caseId, invalid);
+        }
 
         List<string> missingReasons = ReadMissingReasons(benchmarkCase, path, caseId, invalid);
         bool ready = values["availability"] == "ready";
@@ -358,6 +406,88 @@ public static partial class AdditiveBenchmarkRunner
             caseId ?? $"invalid-case-{index}",
             values["availability"] ?? "invalid",
             missingReasons.Order(StringComparer.Ordinal).ToArray()));
+    }
+
+    private static void ValidateMatchedReference(
+        JsonElement benchmarkCase,
+        string path,
+        string? caseId,
+        List<BenchmarkIssue> invalid)
+    {
+        string? policy = ReadRequiredString(
+            benchmarkCase,
+            "orientationPolicy",
+            $"{path}.orientationPolicy",
+            invalid,
+            caseId);
+        ValidateEnum(policy, ["fixed", "search"], "case.orientation_policy", $"{path}.orientationPolicy", caseId, invalid);
+        ValidateRequiredSha(benchmarkCase, "inputArtifactSha256", $"{path}.inputArtifactSha256", caseId, invalid);
+        ValidateRequiredSha(benchmarkCase, "profileBundleSha256", $"{path}.profileBundleSha256", caseId, invalid);
+
+        if (!benchmarkCase.TryGetProperty("metricDefinitions", out JsonElement definitions)
+            || definitions.ValueKind != JsonValueKind.Object)
+        {
+            invalid.Add(new BenchmarkIssue(
+                "case.metric_definitions_missing",
+                $"{path}.metricDefinitions",
+                caseId,
+                "Matched evidence requires explicit time, material, and support metric definitions."));
+        }
+        else
+        {
+            RejectUnknownProperties(definitions, ["time", "material", "support"], $"{path}.metricDefinitions", caseId, invalid);
+            foreach (string name in new[] { "time", "material", "support" })
+            {
+                ReadRequiredString(definitions, name, $"{path}.metricDefinitions.{name}", invalid, caseId);
+            }
+        }
+
+        if (!TryReadTransform(benchmarkCase, "transform4x4", out double[] requested)
+            || !TryReadTransform(benchmarkCase, "referenceTransform4x4", out double[] observed))
+        {
+            invalid.Add(new BenchmarkIssue(
+                "case.reference_transform_invalid",
+                $"{path}.referenceTransform4x4",
+                caseId,
+                "Matched evidence requires finite requested and observed 4x4 transforms."));
+            return;
+        }
+
+        BenchmarkComparisonResult comparison = BenchmarkReferenceValidator.Validate(requested, observed, policy ?? string.Empty);
+        if (!comparison.IsComparable)
+        {
+            invalid.Add(new BenchmarkIssue(
+                comparison.ReasonCode ?? "reference_not_comparable",
+                $"{path}.referenceTransform4x4",
+                caseId,
+                "Reference transform does not match the requested fixed pose."));
+        }
+    }
+
+    private static bool TryReadTransform(JsonElement parent, string property, out double[] values)
+    {
+        values = [];
+        if (!parent.TryGetProperty(property, out JsonElement transform)
+            || transform.ValueKind != JsonValueKind.Array
+            || transform.GetArrayLength() != 16)
+        {
+            return false;
+        }
+
+        values = new double[16];
+        int index = 0;
+        foreach (JsonElement value in transform.EnumerateArray())
+        {
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out double number) || !double.IsFinite(number))
+            {
+                values = [];
+                return false;
+            }
+
+            values[index++] = number;
+        }
+
+        return true;
     }
 
     private static void ValidateReadyCase(
@@ -449,6 +579,12 @@ public static partial class AdditiveBenchmarkRunner
         foreach (JsonElement blocker in blockers.EnumerateArray())
         {
             string path = $"$.evidenceBlockers[{index}]";
+            if (blocker.ValueKind != JsonValueKind.Object)
+            {
+                invalid.Add(new BenchmarkIssue("blocker.type", path, null, "Evidence blocker must be an object."));
+                index++;
+                continue;
+            }
             RejectUnknownProperties(blocker, ["blockerId", "status", "missingDataReason"], path, null, invalid);
             string? blockerId = ReadRequiredString(blocker, "blockerId", $"{path}.blockerId", invalid);
             string? reason = ReadRequiredString(blocker, "missingDataReason", $"{path}.missingDataReason", invalid);
@@ -683,6 +819,13 @@ public static partial class AdditiveBenchmarkRunner
         int index = 0;
         foreach (JsonElement record in provenance.EnumerateArray())
         {
+            if (record.ValueKind != JsonValueKind.Object)
+            {
+                invalid.Add(new BenchmarkIssue("case.provenance_record_type", $"{path}[{index}]", caseId,
+                    "Provenance record must be an object."));
+                index++;
+                continue;
+            }
             RejectUnknownProperties(
                 record,
                 ["sourceKind", "uri", "sha256", "observedAtUtc", "notes"],
@@ -808,6 +951,25 @@ public static partial class AdditiveBenchmarkRunner
                 && (value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(value.GetString()))))
         {
             invalid.Add(new BenchmarkIssue("case.nullable_string", path, caseId, $"{property} must be null or a non-empty string."));
+        }
+    }
+
+    private static void ValidateRequiredSha(
+        JsonElement element,
+        string property,
+        string path,
+        string? caseId,
+        List<BenchmarkIssue> invalid)
+    {
+        if (!element.TryGetProperty(property, out JsonElement value))
+        {
+            invalid.Add(new BenchmarkIssue("case.sha_missing", path, caseId, $"{property} must be present."));
+            return;
+        }
+
+        if (value.ValueKind != JsonValueKind.String || !Sha256Regex().IsMatch(value.GetString() ?? string.Empty))
+        {
+            invalid.Add(new BenchmarkIssue("case.sha_invalid", path, caseId, $"{property} must be a non-null 64-character SHA-256 digest."));
         }
     }
 
