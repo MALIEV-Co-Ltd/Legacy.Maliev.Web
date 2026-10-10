@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <MalievWorkspaceRoot Condition="'$(MalievWorkspaceRoot)' == '' and '$(GITHUB_ACTIONS)' != 'true'">$(MSBuildThisFileDirectory)..\..</MalievWorkspaceRoot>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Legacy.Maliev.Web.Application\Legacy.Maliev.Web.Application.csproj" />
+    <ProjectReference Include="$(MalievWorkspaceRoot)\Legacy.Maliev.ServiceDefaults\src\Legacy.Maliev.ServiceDefaults\Legacy.Maliev.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Google.Cloud.RecaptchaEnterprise.V1" Version="2.20.0" />
