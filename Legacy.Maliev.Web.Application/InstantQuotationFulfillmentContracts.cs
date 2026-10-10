@@ -31,7 +31,17 @@ public sealed record InstantQuotationWelcomePreparationResult(
 public sealed record InstantQuotationNotificationPayload(
     EmailNotification Customer,
     EmailNotification Manufacturing,
-    DateTimeOffset ExpiresAt);
+    DateTimeOffset ExpiresAt)
+{
+    /// <summary>Copies recipient collections so caller-owned arrays cannot alter a frozen retry payload.</summary>
+    public InstantQuotationNotificationPayload Snapshot() => new(Copy(Customer), Copy(Manufacturing), ExpiresAt);
+
+    private static EmailNotification Copy(EmailNotification message) => message with
+    {
+        Cc = message.Cc is null ? null : Array.AsReadOnly(message.Cc.ToArray()),
+        Bcc = message.Bcc is null ? null : Array.AsReadOnly(message.Bcc.ToArray()),
+    };
+}
 
 /// <summary>Result of preparing both replay-stable quotation notification bodies.</summary>
 public sealed record InstantQuotationNotificationPreparationResult(

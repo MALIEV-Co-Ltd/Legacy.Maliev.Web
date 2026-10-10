@@ -46,6 +46,8 @@ public sealed class InstantQuotationSubmissionStoreTests
         Assert.Equal(payload.Customer.Body, read.QuotationNotifications.Customer.Body);
         Assert.Equal(payload.Manufacturing.Body, read.QuotationNotifications.Manufacturing.Body);
         Assert.Equal(payload.ExpiresAt, read.QuotationNotifications.ExpiresAt);
+        Assert.Equal("mail-tracking@maliev.com", Assert.Single(read.QuotationNotifications.Customer.Bcc!));
+        Assert.Throws<NotSupportedException>(() => ((IList<string>)read.QuotationNotifications.Customer.Bcc!)[0] = "changed@example.test");
         Assert.False(await lease.TryPutAsync(checkpoint with
         { QuotationNotifications = payload with { Customer = payload.Customer with { Body = "replaced body" } } }, prior, default));
         checkpoint = checkpoint with { CustomerQuotationNotificationSent = true };

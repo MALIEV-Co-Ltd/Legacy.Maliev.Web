@@ -313,7 +313,7 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
             if (!prepared.ServiceAvailable) return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             if (!prepared.Authorized) return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
             if (prepared.Payload is null) return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
-            var next = checkpoint with { QuotationNotifications = prepared.Payload };
+            var next = checkpoint with { QuotationNotifications = prepared.Payload.Snapshot() };
             if (!await TryAdvanceAsync(lease, checkpoint, next, cancellationToken)) return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
             checkpoint = next;
         }

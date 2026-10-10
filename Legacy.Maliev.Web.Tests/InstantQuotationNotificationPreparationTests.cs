@@ -59,6 +59,23 @@ public sealed class InstantQuotationNotificationPreparationTests
     }
 
     [Fact]
+    public async Task StaleSigningDateDoesNotFreezeAlreadyExpiredPayload()
+    {
+        using var boundary = new Boundary { ServerDate = DateTimeOffset.UtcNow.AddHours(-2) };
+        Assert.Null((await boundary.PrepareAsync()).Payload);
+    }
+
+    [Fact]
+    public async Task FutureSigningDateCannotExtendPreparationLifetime()
+    {
+        var before = DateTimeOffset.UtcNow;
+        using var boundary = new Boundary { ServerDate = before.AddHours(2) };
+        var payload = (await boundary.PrepareAsync()).Payload;
+        Assert.NotNull(payload);
+        Assert.InRange(payload.ExpiresAt, before.AddMinutes(44), DateTimeOffset.UtcNow.AddMinutes(45));
+    }
+
+    [Fact]
     public async Task UnmatchedFinalizedBytesNeverRequestSignedLink()
     {
         using var boundary = new Boundary();
@@ -172,6 +189,7 @@ public sealed class InstantQuotationNotificationPreparationTests
         public int Status { get; init; } = 200;
         public string Link { get; init; } = "https://files.example/part?one=a&two=b";
         public bool IncludeDate { get; init; } = true;
+        public DateTimeOffset? ServerDate { get; init; }
         public Func<HttpResponseMessage, Task<HttpResponseMessage>>? Transport { get; init; }
         public HttpContent? Content { get; init; }
         public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(30);
@@ -209,7 +227,7 @@ public sealed class InstantQuotationNotificationPreparationTests
                 owner.Paths.Add(request.RequestUri!.PathAndQuery);
                 owner.AuthorizationSeen = request.Headers.Authorization?.Scheme == "Bearer";
                 var response = new HttpResponseMessage((HttpStatusCode)owner.Status) { Content = owner.Content ?? JsonContent.Create(owner.Link) };
-                if (owner.IncludeDate) response.Headers.Date = DateTimeOffset.UtcNow;
+                if (owner.IncludeDate) response.Headers.Date = owner.ServerDate ?? DateTimeOffset.UtcNow;
                 return owner.Transport?.Invoke(response) ?? Task.FromResult(response);
             }
         }

@@ -46,6 +46,7 @@ internal sealed class InstantQuotationNotificationPreparationClient(
                     itemQuote.Process, itemQuote.BuildPreference, link.Url, Convert.ToDecimal(itemQuote.PrintTimeMinutesPerUnit),
                     Convert.ToDecimal(itemQuote.PrintTimeMinutesPerUnit * itemQuote.Quantity)));
             }
+            if (expiresAt <= timeProvider.GetUtcNow()) return new(null, true, true);
             var plan = AdditiveQuotationNotificationComposer.Compose(new(reference, customer, items,
                 Convert.ToDecimal(quote.FinalOrderPrice), quote.LeadTimeMaximumDays,
                 quote.ShippingState == ShippingPricingState.DomesticPriced, quote.DestinationCountryCode, quote.LeadTimeMinimumDays));

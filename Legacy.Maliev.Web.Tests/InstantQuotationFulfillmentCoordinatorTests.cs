@@ -8,6 +8,26 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
     private const string SubmissionId = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
 
     [Fact]
+    public void QuotationPayloadSnapshotCopiesAndFreezesBothRecipientCollections()
+    {
+        var cc = new[] { "office@example.test" };
+        var bcc = new[] { "mail-tracking@maliev.com" };
+        var message = new EmailNotification("customer@example.test", "Quotation", "frozen", null, cc, bcc);
+        var original = new InstantQuotationNotificationPayload(message, message, DateTimeOffset.UtcNow.AddMinutes(30));
+        var frozen = original.Snapshot();
+        cc[0] = "changed@example.test";
+        bcc[0] = "changed@example.test";
+        foreach (var copy in new[] { frozen.Customer, frozen.Manufacturing })
+        {
+            Assert.Equal("office@example.test", Assert.Single(copy.Cc!));
+            Assert.Equal("mail-tracking@maliev.com", Assert.Single(copy.Bcc!));
+            Assert.Throws<NotSupportedException>(() => ((IList<string>)copy.Cc!)[0] = "mutated@example.test");
+            Assert.Throws<NotSupportedException>(() => ((IList<string>)copy.Bcc!)[0] = "mutated@example.test");
+        }
+        Assert.Equal(original.ExpiresAt, frozen.ExpiresAt);
+    }
+
+    [Fact]
     public async Task QuotationNotificationPreparationFailureDoesNotSendEitherMessage()
     {
         var lease = new RecordingLease(FilesLinkedCheckpoint());

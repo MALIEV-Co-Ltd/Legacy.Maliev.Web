@@ -219,7 +219,7 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                 checkpoint.JourneyId,
                 checkpoint.FrozenCustomer,
                 checkpoint.ProfileCompleted,
-                checkpoint.QuotationNotifications,
+                checkpoint.QuotationNotifications?.Snapshot(),
                 checkpoint.CustomerQuotationNotificationSent,
                 checkpoint.ManufacturingQuotationNotificationSent);
             var payload = JsonSerializer.SerializeToUtf8Bytes(persisted);
@@ -361,7 +361,7 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             persisted.JourneyId,
             persisted.FrozenCustomer,
             persisted.ProfileCompleted,
-            persisted.QuotationNotifications,
+            persisted.QuotationNotifications?.Snapshot(),
             persisted.CustomerQuotationNotificationSent,
             persisted.ManufacturingQuotationNotificationSent);
 
