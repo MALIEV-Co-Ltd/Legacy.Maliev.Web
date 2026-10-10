@@ -130,7 +130,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~InstantQuotationPhysicalResultRendererTests|FullyQualifiedName~InstantQuotationSummaryTransitionBrowserTests|FullyQualifiedName~PublicCookieConsentMigrationTests|FullyQualifiedName~PublicCookieConsentBrowserTests|FullyQualifiedName~MeasurementLifecycleBrowserTests"
+          --filter "FullyQualifiedName~SelectedPrintTimeTimeoutDiagnosticsTests|FullyQualifiedName~InstantQuotationWallThicknessAdmittedWorkerBrowserTests|FullyQualifiedName~InstantQuotationPhysicalResultRendererTests|FullyQualifiedName~InstantQuotationSummaryTransitionBrowserTests|FullyQualifiedName~PublicCookieConsentMigrationTests|FullyQualifiedName~PublicCookieConsentBrowserTests|FullyQualifiedName~MeasurementLifecycleBrowserTests"
           --logger trx --results-directory ./physical-result-test-results
       - name: Verify Accounting numeric email state response compatibility
         run: >-
@@ -172,7 +172,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~InstantQuotationNotificationPreparationTests|FullyQualifiedName~InstantQuotationFulfillmentCoordinatorTests|FullyQualifiedName~InstantQuotationSubmissionStoreTests|FullyQualifiedName~AdditiveQuotationNotificationComposerTests|FullyQualifiedName~EsdFulfillmentContractTests|FullyQualifiedName~InstantQuotationFulfillmentMappingTests|FullyQualifiedName~InstantQuotationResinPresentationTests|FullyQualifiedName~InstantQuotationReviewEditParityTests|FullyQualifiedName~InstantQuotationBuildPreferenceParityTests|FullyQualifiedName~InstantQuotationWorkflowUploadTests|FullyQualifiedName~InstantQuotationSubmissionTests"
+          --filter "FullyQualifiedName~InstantQuotationNotificationPreparationTests|FullyQualifiedName~InstantQuotationFulfillmentCoordinatorTests|FullyQualifiedName~InstantQuotationSubmissionStoreTests|FullyQualifiedName~AdditiveQuotationNotificationComposerTests|FullyQualifiedName~AdditiveCommercialEconomicsTests|FullyQualifiedName~FdmQuantityMarginTests|FullyQualifiedName~ResinServerSupportEvidenceParityTests|FullyQualifiedName~EsdFulfillmentContractTests|FullyQualifiedName~InstantQuotationFulfillmentMappingTests|FullyQualifiedName~InstantQuotationResinPresentationTests|FullyQualifiedName~InstantQuotationReviewEditParityTests|FullyQualifiedName~InstantQuotationBuildPreferenceParityTests|FullyQualifiedName~InstantQuotationWorkflowUploadTests|FullyQualifiedName~InstantQuotationSubmissionTests"
           --logger trx --results-directory ./material-identity-test-results
       - name: Verify signed-link whole-operation deadline and compatibility
         run: >-

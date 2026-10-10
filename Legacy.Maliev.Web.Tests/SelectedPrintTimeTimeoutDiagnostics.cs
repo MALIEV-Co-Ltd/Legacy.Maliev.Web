@@ -8,6 +8,32 @@ namespace Legacy.Maliev.Web.Tests;
 internal static class SelectedPrintTimeTimeoutDiagnostics
 {
     internal const string DataKey = "NineUploadSelectedPrintTime";
+    internal const string MaterialDataKey = "MaterialChangeCompletion";
+
+    internal static void AttachMaterialCompletion(Exception original, InstantQuotationSessionState? current,
+        DateTimeOffset before, Guid partId, Action<string>? emit = null)
+    {
+        try
+        {
+            var part = current?.Parts.FirstOrDefault(candidate => candidate.PartId == partId);
+            var material = part?.Configuration.MaterialKey switch
+            {
+                "PLA" => Material.PLA,
+                "ABS" => Material.ABS,
+                _ => Material.Unknown,
+            };
+            var quantity = part is not null && part.Configuration.Quantity is >= 1 and <= 10000
+                ? part.Configuration.Quantity.ToString(CultureInfo.InvariantCulture)
+                : "unknown";
+            var description = string.Join(';', "sample=last-successful-read",
+                $"sessionSeen={current is not null}", $"changed={current is not null && current.UpdatedAt != before}",
+                $"authorized={current?.QuoteAuthorization is not null}", $"expectedPartSeen={part is not null}",
+                $"material={material}", $"quantity={quantity}");
+            original.Data[MaterialDataKey] = description;
+            emit?.Invoke(description);
+        }
+        catch { /* Failure-only metadata must never replace the original timeout. */ }
+    }
 
     internal static bool IsMaterialChangeComplete(InstantQuotationSessionState? current,
         DateTimeOffset before, Guid partId) => current is not null
@@ -38,6 +64,10 @@ internal static class SelectedPrintTimeTimeoutDiagnostics
                 Text(root, "material") switch { "PLA" => Material.PLA, "ABS" => Material.ABS, _ => Material.Unknown },
                 Quantity(Text(root, "quantity")), Boolean(root, "durationPresent"), Boolean(root, "unavailablePresent"));
             description = state.Describe();
+            if (Boolean(root, "configurationEnabled") is { } configurationEnabled)
+            {
+                description += $";configurationEnabled={configurationEnabled}";
+            }
         }
         catch { /* Secondary observation failure is represented only by the fixed unavailable marker. */ }
         try

@@ -7,6 +7,74 @@ public sealed class SelectedPrintTimeTimeoutDiagnosticsTests
     private const string Id = "12345678-1234-1234-1234-123456789abc";
 
     [Theory]
+    [InlineData(true, "True")]
+    [InlineData(false, "False")]
+    public async Task ConfigurationButtonObservationUsesOnlyBooleanState(bool enabled, string expected)
+    {
+        var original = new TimeoutException();
+        await SelectedPrintTimeTimeoutDiagnostics.AttachAsync(original, 1, null,
+            () => Task.FromResult($"{{\"workflow\":\"configured\",\"configurationEnabled\":{enabled.ToString().ToLowerInvariant()},\"private\":\"private-ticket\"}}"));
+        var description = Assert.IsType<string>(original.Data[SelectedPrintTimeTimeoutDiagnostics.DataKey]);
+        Assert.EndsWith($";configurationEnabled={expected}", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("private", description, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0, "ABS", 1, true, true, "sample=last-successful-read;sessionSeen=True;changed=False;authorized=True;expectedPartSeen=True;material=ABS;quantity=1")]
+    [InlineData(1, "ABS", 1, false, true, "sample=last-successful-read;sessionSeen=True;changed=True;authorized=False;expectedPartSeen=True;material=ABS;quantity=1")]
+    [InlineData(1, "ABS", 1, true, true, "sample=last-successful-read;sessionSeen=True;changed=True;authorized=True;expectedPartSeen=True;material=ABS;quantity=1")]
+    [InlineData(1, "ABS", 10000, true, true, "sample=last-successful-read;sessionSeen=True;changed=True;authorized=True;expectedPartSeen=True;material=ABS;quantity=10000")]
+    [InlineData(1, "PLA", 1, true, true, "sample=last-successful-read;sessionSeen=True;changed=True;authorized=True;expectedPartSeen=True;material=PLA;quantity=1")]
+    [InlineData(1, "ABS", 1, true, false, "sample=last-successful-read;sessionSeen=True;changed=True;authorized=True;expectedPartSeen=False;material=Unknown;quantity=unknown")]
+    [InlineData(1, "private-material", 10001, true, true, "sample=last-successful-read;sessionSeen=True;changed=True;authorized=True;expectedPartSeen=True;material=Unknown;quantity=unknown")]
+    public void MaterialCompletionMetadataDistinguishesUnfinishedStagesWithoutPrivateValues(
+        int seconds, string material, int quantity, bool authorized, bool samePart, string expected)
+    {
+        var before = DateTimeOffset.UnixEpoch;
+        var partId = Guid.Parse(Id);
+        var part = new InstantQuotationPart(samePart ? partId : Guid.Empty, "private-filename",
+            new InstantQuotationUploadReference("private-upload"), null!,
+            new InstantQuotationPartConfiguration(material, "private-color", quantity));
+        var current = new InstantQuotationSessionState("private-session", "private-submission",
+            new InstantQuotationOrderState([part]), before, before.AddSeconds(seconds),
+            authorized ? new InstantQuotationQuoteAuthorization(["private-ticket"], "private-order-ticket") : null,
+            "private-owner");
+        var original = new TimeoutException("Original material timeout.");
+        var emitted = new List<string>();
+
+        SelectedPrintTimeTimeoutDiagnostics.AttachMaterialCompletion(original, current, before, partId, emitted.Add);
+
+        Assert.Equal(expected, original.Data[SelectedPrintTimeTimeoutDiagnostics.MaterialDataKey]);
+        Assert.Equal(expected, Assert.Single(emitted));
+        Assert.Equal("Original material timeout.", original.Message);
+        Assert.DoesNotContain("private", expected, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MissingMaterialSessionIsExplicitAndDoesNotSatisfyCompletion()
+    {
+        var original = new TimeoutException();
+        SelectedPrintTimeTimeoutDiagnostics.AttachMaterialCompletion(original, null, DateTimeOffset.UnixEpoch, Guid.Parse(Id));
+        Assert.Equal("sample=last-successful-read;sessionSeen=False;changed=False;authorized=False;expectedPartSeen=False;material=Unknown;quantity=unknown",
+            original.Data[SelectedPrintTimeTimeoutDiagnostics.MaterialDataKey]);
+    }
+
+    [Fact]
+    public void MaterialObservationSinkFailurePreservesOriginalTimeout()
+    {
+        var original = new TimeoutException("Original material timeout.");
+        var attempts = 0;
+        SelectedPrintTimeTimeoutDiagnostics.AttachMaterialCompletion(original, null, DateTimeOffset.UnixEpoch, Guid.Parse(Id), _ =>
+        {
+            attempts++;
+            throw new InvalidOperationException("private-secondary-failure");
+        });
+        Assert.Equal(1, attempts);
+        Assert.Equal("Original material timeout.", original.Message);
+        Assert.Null(original.InnerException);
+    }
+
+    [Theory]
     [InlineData(0, "ABS", 1, true, true, false)] // Stale pre-change authorization.
     [InlineData(1, "ABS", 1, false, true, false)] // Initial Put has no authority yet.
     [InlineData(1, "PLA", 1, true, true, false)]
