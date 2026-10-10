@@ -262,7 +262,7 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
         {
         rsa = partialRsa = RSA.Create(2048);
         certificatePassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-        Password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)) + "!a";
+        this.Password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)) + "!a";
         lease = partialLease = new CancellationTokenSource(TimeSpan.FromMinutes(3));
         var expiry = DateTimeOffset.UtcNow.AddMinutes(3).ToString("O");
         containerOwner = partialOwner = new MemberOwnedContainers(run);
