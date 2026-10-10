@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -161,8 +162,17 @@ public sealed class CountrySourceFailureObservationTests
         using var fixture = new Fixture((_, _) => Task.FromResult(Response(404)));
         using var countries = fixture.Factory.CreateClient("countries");
         using var careers = fixture.Factory.CreateClient("careers");
-        Assert.Equal(TimeSpan.FromSeconds(10), countries.Timeout);
-        Assert.Equal(TimeSpan.FromSeconds(10), careers.Timeout);
+        // Standard resilience overrides the configured ten-second HttpClient timeout.
+        // Freeze the actual existing pipeline deadlines rather than changing production registration.
+        Assert.Equal(Timeout.InfiniteTimeSpan, countries.Timeout);
+        Assert.Equal(Timeout.InfiniteTimeSpan, careers.Timeout);
+        var options = fixture.Scope.ServiceProvider.GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>();
+        var defaults = new HttpStandardResilienceOptions();
+        foreach (var name in new[] { "countries-standard", "careers-standard" })
+        {
+            Assert.Equal(defaults.AttemptTimeout.Timeout, options.Get(name).AttemptTimeout.Timeout);
+            Assert.Equal(defaults.TotalRequestTimeout.Timeout, options.Get(name).TotalRequestTimeout.Timeout);
+        }
         Assert.Null(countries.DefaultRequestHeaders.Authorization);
         Assert.Null(careers.DefaultRequestHeaders.Authorization);
     }
