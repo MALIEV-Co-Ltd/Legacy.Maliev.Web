@@ -78,7 +78,7 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
         Assert.Equal(accepted ? HttpStatusCode.Redirect : HttpStatusCode.OK, response.StatusCode);
         if (accepted)
         {
-            Assert.Equal("/Account/Login?email=user%40example.test", response.Headers.Location?.OriginalString);
+            Assert.Equal("/Account/Login?email=user@example.test", response.Headers.Location?.OriginalString);
         }
         else
         {
