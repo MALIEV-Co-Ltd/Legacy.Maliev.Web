@@ -8,6 +8,8 @@ public sealed class InstantQuotationNavigationFailureDiagnosticsTests
     [InlineData("http://127.0.0.1:46767/_blazor?id=secret#secret", "/_blazor")]
     [InlineData("http://127.0.0.1:46767/instantquotation/3d-printing?culture=th&token=secret", "/instantquotation/3d-printing")]
     [InlineData("http://127.0.0.1:46767/dist/app.min.js?v=secret", "/dist/app.min.js")]
+    [InlineData("http://127.0.0.1:46767/services/3d-printing?culture=en&token=secret#secret", "/services/3d-printing")]
+    [InlineData("http://127.0.0.1:46767/services/3d-printing/secret", "same-origin-other")]
     [InlineData("http://127.0.0.1:46767/customer/secret", "same-origin-other")]
     [InlineData("http://127.0.0.1:46767/dist/secret.js", "same-origin-other")]
     [InlineData("http://secret@127.0.0.1:46767/_blazor", "cross-origin")]

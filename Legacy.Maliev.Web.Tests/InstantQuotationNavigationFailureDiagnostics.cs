@@ -150,7 +150,7 @@ internal sealed class NavigationRequestLedger(Uri origin)
         // Exact public bootstrap assets only. Unknown same-origin paths may contain capabilities/content.
         return uri.AbsolutePath switch
         {
-            "/instantquotation/3d-printing" or "/_blazor" or "/_blazor/negotiate" or "/_framework/blazor.web.js"
+            "/services/3d-printing" or "/instantquotation/3d-printing" or "/_blazor" or "/_blazor/negotiate" or "/_framework/blazor.web.js"
                 or "/instant-quotation/fdm-profiles.v1.json" or "/dist/site.min.css" or "/dist/vendor.min.js"
                 or "/dist/app.min.js" or "/dist/route-instant-quotation.css" or "/dist/route-instant-quotation.js"
                 or "/dist/instant-quotation-viewer.mjs" or "/dist/instant-quotation-workflow.mjs" => uri.AbsolutePath,
