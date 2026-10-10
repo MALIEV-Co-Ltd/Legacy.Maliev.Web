@@ -37,7 +37,7 @@ function Pinned-Checkout([string] $Repository, [string] $Directory, [string] $Sh
     return $path
 }
 
-$customer = Pinned-Checkout 'Legacy.Maliev.CustomerService' 'profile-producer' 'ad420f111992366b4ca561224c35f1b73b55e904'
+$customer = Pinned-Checkout 'Legacy.Maliev.CustomerService' 'profile-producer' '68df44fcc416ae712d01f32ad5b1a3a969ac6ba2'
 $auth = Pinned-Checkout 'Legacy.Maliev.AuthService' 'profile-auth' '82c8d63dd08677a7f8ccd107c05dd6c9badbfd79'
 $null = Pinned-Checkout 'Legacy.Maliev.ServiceDefaults' 'profile-producer-runtime/Legacy.Maliev.ServiceDefaults' '086760fa0aae976a799dbcda1960d5c0981248cb'
 $null = Pinned-Checkout 'Legacy.Maliev.CompatibilityContracts' 'profile-producer-runtime/Legacy.Maliev.CompatibilityContracts' '78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7'
