@@ -24,7 +24,9 @@ public sealed class InstantQuotationSubmissionStoreTests
         var checkpoint = Persisted("submission-mail") with
         {
             FinalizedFiles = [new(Guid.NewGuid(), "private-quotation-files", "instant-quotation/42/part.stl", "part.stl", "model/stl", 100, new string('a', 64))],
-            CustomerId = 71, OrderIds = [901], IdentityCreated = false,
+            CustomerId = 71,
+            OrderIds = [901],
+            IdentityCreated = false,
         };
         InstantQuotationSubmissionCheckpointStatus? prior = null;
         foreach (var stage in Enum.GetValues<InstantQuotationSubmissionCheckpointStatus>().Where(stage => stage <= InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned))
