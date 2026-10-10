@@ -28,8 +28,10 @@
             <select id="member-quotation-sort" name="sort">
                 <option value="QuotationCreatedDate_Descending" selected="@(EffectiveSort == "QuotationCreatedDate_Descending")">@Localizer["Newest first"]</option>
                 <option value="QuotationCreatedDate_Ascending" selected="@(EffectiveSort == "QuotationCreatedDate_Ascending")">@Localizer["Oldest first"]</option>
-                <option value="QuotationExpirationDate_Ascending" selected="@(EffectiveSort == "QuotationExpirationDate_Ascending")">@Localizer["Expiring first"]</option>
-                <option value="QuotationQuotedAmount_Descending" selected="@(EffectiveSort == "QuotationQuotedAmount_Descending")">@Localizer["Highest amount"]</option>
+                <option value="QuotationModifiedDate_Descending" selected="@(EffectiveSort == "QuotationModifiedDate_Descending")">@Localizer["Recently updated first"]</option>
+                <option value="QuotationModifiedDate_Ascending" selected="@(EffectiveSort == "QuotationModifiedDate_Ascending")">@Localizer["Least recently updated first"]</option>
+                <option value="QuotationId_Descending" selected="@(EffectiveSort == "QuotationId_Descending")">@Localizer["Highest quotation number first"]</option>
+                <option value="QuotationId_Ascending" selected="@(EffectiveSort == "QuotationId_Ascending")">@Localizer["Lowest quotation number first"]</option>
             </select>
         </div>
         <div class="maliev-form-field">
