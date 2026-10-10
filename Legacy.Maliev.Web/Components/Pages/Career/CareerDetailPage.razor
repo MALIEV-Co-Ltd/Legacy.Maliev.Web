@@ -56,6 +56,7 @@ else if (offer is not null)
 
 @code {
     private CareerOffer? offer;
+    private IReadOnlyList<CareerLevel> levels = [];
     private int? failureStatus;
 
     [Parameter]
@@ -67,6 +68,7 @@ else if (offer is not null)
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
         var cancellationToken = context.RequestAborted;
         offer = null;
+        levels = [];
         failureStatus = null;
 
         if (!int.TryParse(Id, NumberStyles.None, CultureInfo.InvariantCulture, out var offerId) || offerId <= 0)
@@ -77,7 +79,11 @@ else if (offer is not null)
 
         try
         {
-            var response = await CareerClient.GetOfferAsync(offerId, cancellationToken);
+            var offerTask = CareerClient.GetOfferAsync(offerId, cancellationToken);
+            var levelsTask = CareerClient.GetLevelsAsync(cancellationToken);
+            await Task.WhenAll(offerTask, levelsTask);
+            var response = await offerTask;
+            levels = (await levelsTask).Value ?? [];
             if (!response.ServiceAvailable)
             {
                 SetFailure(context, StatusCodes.Status503ServiceUnavailable);
@@ -107,7 +113,7 @@ else if (offer is not null)
     }
 
     private CareerDetailContentModel CreateDisplayModel() => CareerDetailContentModel.Create(
-        offer ?? throw new InvalidOperationException("A successful career response must include an offer."));
+        offer ?? throw new InvalidOperationException("A successful career response must include an offer."), levels);
 
     private void SetFailure(HttpContext context, int statusCode)
     {
