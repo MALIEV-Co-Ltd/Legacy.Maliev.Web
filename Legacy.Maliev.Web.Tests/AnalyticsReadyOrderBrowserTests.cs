@@ -124,8 +124,8 @@ public sealed class AnalyticsReadyOrderBrowserTests(PublicContactBrowserFixture 
         Assert.Single(cycle.EnumerateArray(), IsReady);
         // Same-document grant/regrant cannot discover a withheld server identity.
         Assert.DoesNotContain(cycle.EnumerateArray(), IsIdentity);
-        Assert.True(cycle.EnumerateArray().Any(item => item.ValueKind == JsonValueKind.Array
-            && item[0].GetString() == "set" && item[1].GetProperty("user_id").ValueKind == JsonValueKind.Null));
+        Assert.Contains(cycle.EnumerateArray(), item => item.ValueKind == JsonValueKind.Array
+            && item[0].GetString() == "set" && item[1].GetProperty("user_id").ValueKind == JsonValueKind.Null);
         Assert.Equal(1, await page.Locator("script[data-maliev-gtm-loader]").CountAsync());
     }
 
