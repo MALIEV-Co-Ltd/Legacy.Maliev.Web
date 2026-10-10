@@ -207,7 +207,7 @@ public static class PricingEngine
                 Quantity = quantity,
                 DirectCostPerUnitThb = Convert.ToDecimal(directCostPerUnit),
                 TargetMarginRate = Convert.ToDecimal(tier.TargetMargin),
-                DiscountRate = Convert.ToDecimal(tier.BulkDiscount),
+                DiscountRate = material.Process == PrintProcess.Fdm ? 0m : Convert.ToDecimal(tier.BulkDiscount),
                 ReserveRate = Convert.ToDecimal(PricingCatalog.FailureReserveRate(material.Process)),
                 MinimumLineBaseThb = material.RequiresDrying ? Convert.ToDecimal(PricingCatalog.TechnicalFilamentMinimumPrice) : 0m,
                 MinimumOrderPriceThb = Convert.ToDecimal(PricingCatalog.MinimumOrderPrice(material.Process)),
@@ -321,7 +321,7 @@ public static class PricingEngine
         DiscountTier tier,
         int quantity)
     {
-        var marginBased = (complexityAdjustedCost / (1 - tier.TargetMargin)) * (1 - tier.BulkDiscount);
+        var marginBased = complexityAdjustedCost / (1 - tier.TargetMargin);
         var reservedPrice = marginBased * (1 + failureRate);
         var unitWithSetup = reservedPrice + (setupLabor / Math.Max(1, quantity));
         return unitWithSetup * paymentGrossUp;

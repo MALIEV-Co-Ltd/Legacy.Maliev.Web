@@ -94,14 +94,14 @@ public sealed class AdditiveCommercialEconomicsTests
     }
 
     [Theory]
-    [InlineData(499, .20, .15, 1340, 668660)]
-    [InlineData(500, .18, .15, 1300, 650000)]
-    [InlineData(999, .18, .15, 1300, 1298700)]
-    [InlineData(1000, .17, .15, 1290, 1290000)]
-    [InlineData(4999, .17, .15, 1290, 6448710)]
-    [InlineData(5000, .16, .15, 1270, 6350000)]
-    [InlineData(9999, .16, .15, 1270, 12698730)]
-    [InlineData(10000, .15, .15, 1260, 12600000)]
+    [InlineData(499, .20, .15, 1570, 783430)]
+    [InlineData(500, .18, .15, 1530, 765000)]
+    [InlineData(999, .18, .15, 1530, 1528470)]
+    [InlineData(1000, .17, .15, 1520, 1520000)]
+    [InlineData(4999, .17, .15, 1520, 7598480)]
+    [InlineData(5000, .16, .15, 1500, 7500000)]
+    [InlineData(9999, .16, .15, 1500, 14998500)]
+    [InlineData(10000, .15, .15, 1480, 14800000)]
     public void QuotePhysical_QuantityAtCommercialBoundary_UsesContributionProtectedEconomics(
         int quantity, double margin, double discount, double expectedUnitPrice, double expectedSubtotal)
     {
@@ -118,9 +118,12 @@ public sealed class AdditiveCommercialEconomicsTests
 
         var tier = PricingCatalog.ResolveTier(quantity);
         Assert.Equal(margin, tier.TargetMargin, 6);
+        // The shared table retains the resin discount; FDM applies only its quantity margin.
         Assert.Equal(discount, tier.BulkDiscount, 6);
         // Independent synthetic direct cost:1000*1.10 +17/60 +311097*.70/43200.
         // Literal goldens use the reviewed decimal commercial stages, not a production helper.
+        // Round the margin base to 5 THB, add reserve/setup/packaging, then payment/VAT;
+        // round gross to 5 THB and commercial unit price to 10 THB without a second discount.
         Assert.Equal(1105.3242569444444, quote.DirectCostPerUnit, 6);
         Assert.Equal(expectedUnitPrice, quote.UnitPrice, 2);
         Assert.Equal(expectedSubtotal, quote.Subtotal, 2);

@@ -42,7 +42,7 @@ public sealed class EsdFulfillmentContractTests
         Assert.True(result.ServiceAvailable);
         Assert.True(result.Authorized);
         Assert.False(result.Conflict);
-        Assert.Equal("additive-2026-10-01.v11", PricingCatalog.AdditivePricingPolicyVersion);
+        Assert.Equal("additive-2026-10-10.v12", PricingCatalog.AdditivePricingPolicyVersion);
         var create = Assert.Single(boundary.Requests, request => request.Method == "POST" && request.Path == "orders");
         using var document = JsonDocument.Parse(create.Body!);
         var wire = document.RootElement;
@@ -70,7 +70,7 @@ public sealed class EsdFulfillmentContractTests
         Assert.Contains(material, wire.GetProperty("description").GetString()!, StringComparison.Ordinal);
         var comment = wire.GetProperty("comment").GetString()!;
         Assert.Contains($"Material key: {material}", comment, StringComparison.Ordinal);
-        Assert.Contains("Pricing policy: additive-2026-10-01.v11", comment, StringComparison.Ordinal);
+        Assert.Contains("Pricing policy: additive-2026-10-10.v12", comment, StringComparison.Ordinal);
         Assert.Contains("Surface finish: As printed", comment, StringComparison.Ordinal);
         Assert.Contains("Color: Black", comment, StringComparison.Ordinal);
         Assert.Contains("ตรวจสอบชิ้นงาน / inspect fixture", comment, StringComparison.Ordinal);

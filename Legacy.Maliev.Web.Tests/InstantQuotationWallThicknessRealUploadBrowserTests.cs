@@ -843,12 +843,13 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 Assert.Equal(expectedHash, mesh.UploadSha256);
                 Assert.Equal(12, mesh.Mesh!.Triangles.Count);
                 await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+                InstantQuotationSessionState? lastMaterialChangeState = null;
                 using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
                 {
                     try
                     {
                         while (!SelectedPrintTimeTimeoutDiagnostics.IsMaterialChangeComplete(
-                            await store.GetAsync(upload.SessionId, upload.OwnerIdentity, completionDeadline.Token)
+                            lastMaterialChangeState = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, completionDeadline.Token)
                                 .WaitAsync(completionDeadline.Token), beforeMaterialChange.UpdatedAt, partId))
                         {
                             await Task.Delay(TimeSpan.FromMilliseconds(100), completionDeadline.Token);
@@ -856,7 +857,10 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     }
                     catch (OperationCanceledException) when (completionDeadline.IsCancellationRequested)
                     {
-                        throw new TimeoutException("Protected material change completion was not observed.");
+                        var original = new TimeoutException("Protected material change completion was not observed.");
+                        SelectedPrintTimeTimeoutDiagnostics.AttachMaterialCompletion(original, lastMaterialChangeState,
+                            beforeMaterialChange.UpdatedAt, partId, output.WriteLine);
+                        throw original;
                     }
                 }
                 await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')");
