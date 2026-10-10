@@ -27,7 +27,13 @@ public sealed class EmailConfirmation(ICustomerAuthenticationClient authenticati
     {
         Response.Headers.CacheControl = "no-store";
         Response.Headers["Referrer-Policy"] = "no-referrer";
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            ModelState.AddModelError(string.Empty, "The confirmation link is invalid or expired.");
+            return Page();
+        }
+
+        if (string.IsNullOrWhiteSpace(token))
         {
             return BadRequest();
         }

@@ -51,7 +51,13 @@
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers["Referrer-Policy"] = "no-referrer";
-        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Token))
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            showInvalidResult = true;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Token))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
