@@ -318,6 +318,117 @@ public sealed class AccountSessionStoreTests
             new AuthenticationTicket(principal, scheme.Name));
     }
 
+    [Theory]
+    [InlineData(null, null, true)]
+    [InlineData("member-crawl-customer", "member-crawl-customer", true)]
+    [InlineData("member-crawl-customer", null, false)]
+    [InlineData(null, "member-crawl-customer", false)]
+    [InlineData("member-crawl-customer", "other", false)]
+    public async Task CookieValidation_BindsOpaqueMetadataToProtectedSession(
+        string? storedSubject, string? cookieSubject, bool accepted)
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "customer@example.com", 42, "access", "refresh",
+            now.AddMinutes(10), now.AddDays(1), storedSubject));
+        var claims = new List<Claim> {
+            new(AccountSessionManager.SessionIdClaim, "session-id"),
+            new(ClaimTypes.NameIdentifier, "customer:42") };
+        if (cookieSubject is not null)
+            claims.Add(new Claim(CustomerIdentityClaims.AnalyticsSubject, cookieSubject));
+        var context = CreateCookieValidationContext(claims);
+        await new AccountCookieEvents(store).ValidatePrincipal(context);
+        Assert.Equal(accepted, context.Principal is not null);
+    }
+
+    [Fact]
+    public async Task SignIn_RetainsAuthSubjectWithoutChangingCustomerOwner()
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "customer@example.com", 42, "old-access", "old-refresh",
+            now.AddMinutes(10), now.AddDays(1)));
+        var authentication = new RefreshingAuthenticationClient(now,
+            new CustomerAuthenticationResult(
+                new CustomerTokenSet("access-secret", "refresh-secret", "Bearer", 900, now.AddDays(1)),
+                true, 42, IdentitySubject: "member-crawl-customer"));
+        var service = new CapturingAuthenticationService();
+        var status = await new AccountSessionManager(authentication, store, new FixedTimeProvider(now))
+            .SignInAsync(CreateHttpContext(service), "customer@example.com", "password", false, default);
+        Assert.Equal(AccountSignInStatus.Succeeded, status);
+        Assert.Equal("member-crawl-customer", store.Session.IdentitySubject);
+        var principal = Assert.IsType<ClaimsPrincipal>(service.SignedInPrincipal);
+        Assert.Equal("customer:42", principal.FindFirstValue(ClaimTypes.NameIdentifier));
+        Assert.Equal("member-crawl-customer", principal.FindFirstValue(CustomerIdentityClaims.AnalyticsSubject));
+    }
+
+    [Theory]
+    [InlineData("subject", "subject", true)]
+    [InlineData("subject", null, true)]
+    [InlineData("subject", "other", false)]
+    [InlineData(null, "new-subject", true)]
+    public async Task Refresh_PreservesCookieSubjectAndRejectsChangedIdentity(
+        string? original, string? refreshed, bool accepted)
+    {
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        var store = new LockingStore(new AccountSession(
+            "customer@example.com", 42, "old-access", "old-refresh",
+            now.AddSeconds(30), now.AddDays(1), original));
+        var authentication = new RefreshingAuthenticationClient(now, refreshResult:
+            new CustomerAuthenticationResult(
+                new CustomerTokenSet("new-access", "new-refresh", "Bearer", 900, now.AddDays(1)),
+                true, 42, IdentitySubject: refreshed));
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AccountSessionManager.SessionIdClaim, "session-id")], "test"))
+        };
+        var token = await new AccountSessionManager(authentication, store, new FixedTimeProvider(now))
+            .GetAccessTokenAsync(context, default);
+        Assert.Equal(accepted ? "new-access" : null, token);
+        Assert.Equal(accepted ? 1 : 0, store.SetCalls);
+        Assert.Equal(accepted ? 0 : 1, store.RemoveCalls);
+        Assert.Equal(original, store.Session.IdentitySubject);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProtectedSession_LegacyPayloadAndOpaqueSubjectRoundTrip(bool legacyPayload)
+    {
+        using var services = new ServiceCollection().AddDataProtection().Services
+            .AddDistributedMemoryCache().BuildServiceProvider();
+        var cache = services.GetRequiredService<IDistributedCache>();
+        var provider = services.GetRequiredService<IDataProtectionProvider>();
+        var store = new DistributedAccountSessionStore(cache, provider, services, TimeProvider.System,
+            NullLogger<DistributedAccountSessionStore>.Instance);
+        var expiry = DateTimeOffset.UtcNow.AddDays(1);
+        if (legacyPayload)
+        {
+            var payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                Email = "customer@example.com",
+                CustomerDatabaseId = 42,
+                AccessToken = "access",
+                RefreshToken = "refresh",
+                AccessExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15),
+                RefreshExpiresAt = expiry
+            });
+            await cache.SetAsync("legacy:web:session:subject-proof",
+                provider.CreateProtector("Legacy.Maliev.Web.AccountSession.v1").Protect(payload));
+        }
+        else
+        {
+            await store.SetAsync("subject-proof", new AccountSession("customer@example.com", 42,
+                "access", "refresh", DateTimeOffset.UtcNow.AddMinutes(15), expiry,
+                "member-crawl-customer"), default);
+        }
+        var session = await store.GetAsync("subject-proof", default);
+        Assert.NotNull(session);
+        Assert.Equal(42, session.CustomerDatabaseId);
+        Assert.Equal(legacyPayload ? null : "member-crawl-customer", session.IdentitySubject);
+    }
+
     private sealed class CapturingAuthenticationService : IAuthenticationService
     {
         public ClaimsPrincipal? SignedInPrincipal { get; private set; }
@@ -356,6 +467,7 @@ public sealed class AccountSessionStoreTests
         private readonly SemaphoreSlim refreshLock = new(1, 1);
         public AccountSession Session { get; private set; } = session;
         public int SetCalls { get; private set; }
+        public int RemoveCalls { get; private set; }
 
         public Task<AccountSession?> GetAsync(string sessionId, CancellationToken cancellationToken) =>
             Task.FromResult<AccountSession?>(Session);
@@ -367,7 +479,11 @@ public sealed class AccountSessionStoreTests
             return Task.CompletedTask;
         }
 
-        public Task RemoveAsync(string sessionId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task RemoveAsync(string sessionId, CancellationToken cancellationToken)
+        {
+            RemoveCalls++;
+            return Task.CompletedTask;
+        }
 
         public async ValueTask<IAsyncDisposable?> AcquireRefreshLockAsync(string sessionId, CancellationToken cancellationToken)
         {
@@ -387,14 +503,15 @@ public sealed class AccountSessionStoreTests
 
     private sealed class RefreshingAuthenticationClient(
         DateTimeOffset now,
-        CustomerAuthenticationResult? loginResult = null) : ICustomerAuthenticationClient
+        CustomerAuthenticationResult? loginResult = null,
+        CustomerAuthenticationResult? refreshResult = null) : ICustomerAuthenticationClient
     {
         public int RefreshCalls { get; private set; }
 
         public Task<CustomerAuthenticationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
         {
             RefreshCalls++;
-            return Task.FromResult(new CustomerAuthenticationResult(
+            return Task.FromResult(refreshResult ?? new CustomerAuthenticationResult(
                 new CustomerTokenSet("new-access", "new-refresh", "Bearer", 900, now.AddDays(1)),
                 true));
         }

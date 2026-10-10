@@ -194,6 +194,8 @@ function createContactHarness(pathname) {
 function createConsentContext(initialConsent) {
     const script = extractFirstScript(analyticsHeadSource)
         .replace("var consentState = '@Model.ConsentState';", `var consentState = '${initialConsent}';`)
+        // These existing queue cases render an anonymous model, so no identity block is emitted.
+        .replace(/@if \(Model\.CanTrack && !string\.IsNullOrEmpty\(Model\.UserIdConfigurationJson\)\)\s*\{\s*<text>window\.gtag\('set', @\(\(MarkupString\)Model\.UserIdConfigurationJson\)\);<\/text>\s*\}/, '')
         .replace(/\s*@\(\(MarkupString\)Model\.QueuedEventScript\)\s*/, '\n');
     const context = vm.createContext({ console });
     context.window = context;

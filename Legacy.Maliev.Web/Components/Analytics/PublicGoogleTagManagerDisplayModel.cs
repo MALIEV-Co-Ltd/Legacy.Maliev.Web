@@ -10,6 +10,8 @@ public sealed record PublicGoogleTagManagerDisplayModel(
     bool CanTrack,
     string QueuedEventScript)
 {
+    public string UserIdConfigurationJson { get; init; } = string.Empty;
+
     public static PublicGoogleTagManagerDisplayModel Create(
         HttpContext context,
         ITempDataDictionaryFactory tempDataDictionaryFactory)
@@ -34,7 +36,11 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         return new PublicGoogleTagManagerDisplayModel(
             canTrack ? "granted" : "denied",
             canTrack,
-            queuedEventScript);
+            queuedEventScript)
+        {
+            UserIdConfigurationJson = GoogleAnalyticsUserId.TryBuildConfiguration(context.User, canTrack, out var userIdJson)
+                ? userIdJson : string.Empty,
+        };
     }
 
     private static string BuildQueuedEventScript(ITempDataDictionary tempData)

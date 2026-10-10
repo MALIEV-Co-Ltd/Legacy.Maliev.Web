@@ -10,10 +10,24 @@
         'ad_personalization': consentState,
         'wait_for_update': 500
     });
+    @if (Model.CanTrack && !string.IsNullOrEmpty(Model.UserIdConfigurationJson))
+    {
+        <text>window.gtag('set', @((MarkupString)Model.UserIdConfigurationJson));</text>
+    }
     window.malievAnalytics = window.malievAnalytics || (function (initialConsentGranted) {
         var consentGranted = initialConsentGranted;
         var consentDecisionMade = initialConsentGranted;
         var pendingEvents = [];
+        var readyEmitted = false;
+
+        function signalReady() {
+            if (!consentGranted || readyEmitted) {
+                return;
+            }
+
+            readyEmitted = true;
+            window.dataLayer.push({ event: 'maliev_analytics_ready' });
+        }
 
         function push(eventData) {
             if (!eventData || typeof eventData.event !== 'string') {
@@ -24,6 +38,7 @@
         }
 
         return {
+            ready: signalReady,
             emit: function (eventData) {
                 if (consentGranted) {
                     push(eventData);
@@ -39,14 +54,17 @@
                 consentGranted = state === 'granted';
                 if (!consentGranted) {
                     pendingEvents.length = 0;
+                    window.gtag('set', { user_id: null });
                     return;
                 }
 
                 pendingEvents.splice(0).forEach(push);
+                signalReady();
             }
         };
     })(consentState === 'granted');
     @((MarkupString)Model.QueuedEventScript)
+    window.malievAnalytics.ready();
 </script>
 
 <!-- Google Tag Manager: network loading is deferred until optional tracking is allowed. -->
