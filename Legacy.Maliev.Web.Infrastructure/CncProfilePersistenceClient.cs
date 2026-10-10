@@ -187,10 +187,10 @@ internal sealed class CncProfilePersistenceClient(IHttpClientFactory clients, IS
     private static bool StringMatches(JsonElement root, string property, string? expected) => root.TryGetProperty(property, out var value)
         ? value.ValueKind == JsonValueKind.Null ? expected is null : value.ValueKind == JsonValueKind.String && value.GetString() == expected
         : expected is null;
-    private static bool CompanyMatches(JsonElement root, CompanyWrite expected) => StringMatches(root, "Name", expected.Name.Trim())
+    private static bool CompanyMatches(JsonElement root, CompanyWrite expected) => StringMatches(root, "Name", expected.Name)
         && StringMatches(root, "TaxNumber", expected.TaxNumber) && StringMatches(root, "Registrar", expected.Registrar);
     private static bool AddressMatches(JsonElement root, AddressWrite expected) => StringMatches(root, "Building", expected.Building)
-        && StringMatches(root, "AddressLine1", expected.AddressLine1.Trim()) && StringMatches(root, "AddressLine2", expected.AddressLine2)
+        && StringMatches(root, "AddressLine1", expected.AddressLine1) && StringMatches(root, "AddressLine2", expected.AddressLine2)
         && StringMatches(root, "City", expected.City) && StringMatches(root, "State", expected.State) && StringMatches(root, "PostalCode", expected.PostalCode)
         && root.TryGetProperty("CountryId", out var country) && country.ValueKind == JsonValueKind.Number && country.TryGetInt32(out var id) && id == expected.CountryId;
     private static bool IsDefiniteRejection(HttpStatusCode status) => (int)status is 400 or 401 or 403 or 404 or 405 or 413 or 415 or 422;
