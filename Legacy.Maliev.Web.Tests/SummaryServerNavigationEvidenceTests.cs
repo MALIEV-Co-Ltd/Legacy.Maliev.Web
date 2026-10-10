@@ -31,12 +31,14 @@ public sealed class SummaryServerNavigationEvidenceTests
     public async Task RealServerResponseStartIsObservedWithoutRetainingRequestData()
     {
         var evidence = new SummaryServerNavigationEvidence();
-        using var server = new TestServer(new WebHostBuilder().Configure(app =>
-        {
-            app.Use(evidence.ObserveAsync);
-            app.Run(context => context.Response.WriteAsync("fixed"));
-        }));
-        using var client = server.CreateClient();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        await using var app = builder.Build();
+        app.Use(evidence.ObserveAsync);
+        app.Run(context => context.Response.WriteAsync("fixed"));
+        using var startup = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await app.StartAsync(startup.Token);
+        using var client = app.GetTestClient();
         client.Timeout = TimeSpan.FromSeconds(5);
         using var response = await client.GetAsync("/instantquotation/3d-printing?token=private-token");
         Assert.True(response.IsSuccessStatusCode);
