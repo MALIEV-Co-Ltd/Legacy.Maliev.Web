@@ -10,6 +10,159 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class CncProfilePersistenceClientTests
 {
+    [Theory]
+    [InlineData("  ถนน มาลีฟ  ")]
+    [InlineData("\u00a0ถนน มาลีฟ\u00a0")]
+    [InlineData("  ถนน \U0001F680 มาลีฟ  ")]
+    public async Task CompleteAsync_LiteralAddressReadbackConfirmsCreateBeforeCustomerLink(string addressLine1)
+    {
+        var handler = LiteralAddressHandler(addressLine1, null);
+        var original = Request(true);
+        var request = original with { Completion = original.Completion with { Billing = original.Completion.Billing with { AddressLine1 = addressLine1 } } };
+
+        var result = await Client(handler).CompleteAsync(request, CancellationToken.None);
+
+        Assert.Equal(CncProfilePersistenceOutcome.Completed, result.Outcome);
+        Assert.Equal(CncProfilePersistenceStage.Complete, result.Stage);
+        Assert.Equal(42, result.QuotationRequestId);
+        Assert.Equal(21, result.CreatedCompanyId);
+        Assert.Equal(31, result.CreatedBillingAddressId);
+        Assert.True(result.HasConfirmedChanges);
+        Assert.Equal(["POST /customers/companies", "GET /countries/", "POST /customers/7/addresses", "PUT /customers/7"], handler.Calls.Select(call => $"{call.Method} {call.Path}"));
+        using var address = JsonDocument.Parse(handler.Calls[2].Body!);
+        Assert.Equal(addressLine1, address.RootElement.GetProperty("AddressLine1").GetString());
+        Assert.Equal(new[] { "AddressLine1", "AddressLine2", "Building", "City", "CountryId", "PostalCode", "State" }, address.RootElement.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+        using var customer = JsonDocument.Parse(handler.Calls[3].Body!);
+        Assert.Equal(21, customer.RootElement.GetProperty("CompanyId").GetInt32());
+        Assert.Equal(31, customer.RootElement.GetProperty("BillingAddressId").GetInt32());
+        Assert.Equal(31, customer.RootElement.GetProperty("ShippingAddressId").GetInt32());
+        Assert.Equal("fax-kept", customer.RootElement.GetProperty("Fax").GetString());
+    }
+
+    [Theory]
+    [InlineData("trimmed")]
+    [InlineData("altered")]
+    [InlineData("building")]
+    [InlineData("addressLine2")]
+    [InlineData("city")]
+    [InlineData("state")]
+    [InlineData("postal")]
+    [InlineData("country")]
+    [InlineData("id")]
+    [InlineData("location")]
+    public async Task CompleteAsync_NonMatchingAddressReadbackIsUnknownAndStopsCustomerLink(string mismatch)
+    {
+        const string addressLine1 = "\u00a0ถนน \U0001F680 มาลีฟ\u00a0";
+        var handler = LiteralAddressHandler(addressLine1, mismatch);
+        var original = Request(true);
+        var request = original with { Completion = original.Completion with { Billing = original.Completion.Billing with { AddressLine1 = addressLine1 } } };
+
+        var result = await Client(handler).CompleteAsync(request, CancellationToken.None);
+
+        Assert.Equal(CncProfilePersistenceOutcome.Unknown, result.Outcome);
+        Assert.Equal(CncProfilePersistenceStage.BillingAddress, result.Stage);
+        Assert.Equal(42, result.QuotationRequestId);
+        Assert.Equal(21, result.CreatedCompanyId);
+        Assert.Null(result.CreatedBillingAddressId);
+        Assert.Null(result.CreatedShippingAddressId);
+        Assert.True(result.HasConfirmedChanges);
+        Assert.Equal(["POST /customers/companies", "GET /countries/", "POST /customers/7/addresses"], handler.Calls.Select(call => $"{call.Method} {call.Path}"));
+        using var address = JsonDocument.Parse(handler.Calls[2].Body!);
+        Assert.Equal(addressLine1, address.RootElement.GetProperty("AddressLine1").GetString());
+    }
+
+    private static RecordingHandler LiteralAddressHandler(string addressLine1, string? mismatch) => new(request => request.RequestUri!.AbsolutePath switch
+    {
+        "/customers/companies" => Created("/customers/Companies/21", new { Id = 21, Name = "MALIEV", TaxNumber = "010", Registrar = (string?)null }),
+        "/countries/" => Json(HttpStatusCode.OK, new[] { new { Id = 138, Name = "Thailand" } }),
+        "/customers/7/addresses" => Created(mismatch == "location" ? "/customers/7/addresses/32" : "/customers/7/addresses/31", new
+        {
+            Id = mismatch == "id" ? 0 : 31,
+            Building = mismatch == "building" ? "changed" : "9",
+            AddressLine1 = mismatch == "trimmed" ? addressLine1.Trim() : mismatch == "altered" ? addressLine1 + "changed" : addressLine1,
+            AddressLine2 = mismatch == "addressLine2" ? "changed" : (string?)null,
+            City = mismatch == "city" ? "changed" : "Bangkok",
+            State = mismatch == "state" ? "changed" : "Bangkok",
+            PostalCode = mismatch == "postal" ? "changed" : "10210",
+            CountryId = mismatch == "country" ? 139 : 138,
+        }),
+        "/customers/7" => new(HttpStatusCode.NoContent),
+        _ => throw new InvalidOperationException(request.RequestUri.AbsolutePath),
+    });
+
+    [Theory]
+    [InlineData("  บริษัท มาลีฟ  ")]
+    [InlineData("\u00a0บริษัท มาลีฟ\u00a0")]
+    [InlineData("  บริษัท \U0001F680 มาลีฟ  ")]
+    public async Task CompleteAsync_LiteralCompanyReadbackConfirmsCreateBeforeAddressAndCustomerLink(string name)
+    {
+        var handler = new RecordingHandler(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/customers/companies" => Created("/customers/Companies/21", new { Id = 21, Name = name, TaxNumber = "010", Registrar = (string?)null }),
+            "/countries/" => Json(HttpStatusCode.OK, new[] { new { Id = 138, Name = "Thailand" } }),
+            "/customers/7/addresses" => Created("/customers/7/addresses/31", new { Id = 31, Building = "9", AddressLine1 = "Road", AddressLine2 = (string?)null, City = "Bangkok", State = "Bangkok", PostalCode = "10210", CountryId = 138 }),
+            "/customers/7" => new(HttpStatusCode.NoContent),
+            _ => throw new InvalidOperationException(request.RequestUri.AbsolutePath),
+        });
+        var request = Request(true) with { Completion = Request(true).Completion with { Company = name } };
+
+        var result = await Client(handler).CompleteAsync(request, CancellationToken.None);
+
+        Assert.Equal(CncProfilePersistenceOutcome.Completed, result.Outcome);
+        Assert.Equal(CncProfilePersistenceStage.Complete, result.Stage);
+        Assert.Equal(42, result.QuotationRequestId);
+        Assert.Equal(21, result.CreatedCompanyId);
+        Assert.Equal(31, result.CreatedBillingAddressId);
+        Assert.True(result.HasConfirmedChanges);
+        Assert.Equal(["POST /customers/companies", "GET /countries/", "POST /customers/7/addresses", "PUT /customers/7"],
+            handler.Calls.Select(call => $"{call.Method} {call.Path}"));
+        using var company = JsonDocument.Parse(handler.Calls[0].Body!);
+        Assert.Equal(name, company.RootElement.GetProperty("Name").GetString());
+        Assert.Equal("010", company.RootElement.GetProperty("TaxNumber").GetString());
+        Assert.Equal(JsonValueKind.Null, company.RootElement.GetProperty("Registrar").ValueKind);
+        Assert.Equal(new[] { "Name", "Registrar", "TaxNumber" }, company.RootElement.EnumerateObject()
+            .Select(property => property.Name).Order(StringComparer.Ordinal));
+        using var customer = JsonDocument.Parse(handler.Calls[^1].Body!);
+        Assert.Equal(21, customer.RootElement.GetProperty("CompanyId").GetInt32());
+        Assert.Equal(31, customer.RootElement.GetProperty("BillingAddressId").GetInt32());
+        Assert.Equal(31, customer.RootElement.GetProperty("ShippingAddressId").GetInt32());
+        Assert.Equal("fax-kept", customer.RootElement.GetProperty("Fax").GetString());
+    }
+
+    [Theory]
+    [InlineData("trimmed")]
+    [InlineData("altered")]
+    [InlineData("tax")]
+    [InlineData("registrar")]
+    [InlineData("id")]
+    [InlineData("location")]
+    public async Task CompleteAsync_NonMatchingCompanyCreateReadbackIsUnknownAndStopsDownstreamWrites(string mismatch)
+    {
+        const string name = "\u00a0บริษัท \U0001F680 มาลีฟ\u00a0";
+        var handler = new RecordingHandler(_ => Created(mismatch == "location" ? "/customers/Companies/22" : "/customers/Companies/21",
+            new
+            {
+                Id = mismatch == "id" ? 0 : 21,
+                Name = mismatch == "trimmed" ? name.Trim() : mismatch == "altered" ? name + "changed" : name,
+                TaxNumber = mismatch == "tax" ? "changed" : "010",
+                Registrar = mismatch == "registrar" ? "changed" : (string?)null,
+            }));
+        var request = Request(true) with { Completion = Request(true).Completion with { Company = name } };
+
+        var result = await Client(handler).CompleteAsync(request, CancellationToken.None);
+
+        Assert.Equal(CncProfilePersistenceOutcome.Unknown, result.Outcome);
+        Assert.Equal(CncProfilePersistenceStage.Company, result.Stage);
+        Assert.Equal(42, result.QuotationRequestId);
+        Assert.Null(result.CreatedCompanyId);
+        Assert.Null(result.CreatedBillingAddressId);
+        Assert.False(result.HasConfirmedChanges);
+        var call = Assert.Single(handler.Calls);
+        Assert.Equal("POST /customers/companies", $"{call.Method} {call.Path}");
+        using var company = JsonDocument.Parse(call.Body!);
+        Assert.Equal(name, company.RootElement.GetProperty("Name").GetString());
+    }
+
     [Fact]
     public async Task CompleteAsync_CreatesCompanyAndBillingThenLinksCustomerLast()
     {
