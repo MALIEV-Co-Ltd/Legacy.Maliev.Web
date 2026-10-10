@@ -801,7 +801,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var pageErrors = new System.Collections.Concurrent.ConcurrentQueue<string>();
         page.PageError += (_, error) => pageErrors.Enqueue(error);
         var paths = new List<string>();
-        using var failureEvidence = new BrowserFailureEvidence(page);
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[pdf-evidence-cleanup] " + metadata));
         failureEvidence.Stage("Navigation");
         try
         {

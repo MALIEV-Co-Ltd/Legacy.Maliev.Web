@@ -41,7 +41,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await using var context = await browser.NewContextAsync(new()
         { ViewportSize = new() { Width = width, Height = 800 }, HasTouch = width <= 375 });
         await using var page = await context.NewPageAsync();
-        using var failureEvidence = new BrowserFailureEvidence(page);
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[sidebar-evidence-cleanup] " + metadata));
         failureEvidence.Stage("Navigation");
         var errors = new List<string>();
         var consoleErrors = new List<string>();
