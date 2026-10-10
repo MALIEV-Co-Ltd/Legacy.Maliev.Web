@@ -157,9 +157,9 @@ public sealed class CountrySourceFailureObservationTests
     }
 
     [Fact]
-    public void RealFactoryPreservesDefaultTenSecondTimeoutAndNoAddedAuthorization()
+    public async Task RealFactoryPreservesDefaultTenSecondTimeoutAndNoAddedAuthorization()
     {
-        using var fixture = new Fixture((_, _) => Task.FromResult(Response(404)));
+        using var fixture = new Fixture((_, _) => Task.FromResult(Response(503)), probeNamedPipeline: true);
         using var countries = fixture.Factory.CreateClient("countries");
         using var careers = fixture.Factory.CreateClient("careers");
         // Standard resilience overrides the configured ten-second HttpClient timeout.
@@ -170,9 +170,20 @@ public sealed class CountrySourceFailureObservationTests
         var defaults = new HttpStandardResilienceOptions();
         foreach (var name in new[] { "countries-standard", "careers-standard" })
         {
+            Assert.Equal(1, options.Get(name).Retry.MaxRetryAttempts);
             Assert.Equal(defaults.AttemptTimeout.Timeout, options.Get(name).AttemptTimeout.Timeout);
             Assert.Equal(defaults.TotalRequestTimeout.Timeout, options.Get(name).TotalRequestTimeout.Timeout);
         }
+        // A typo resolves fallback options, but cannot pass the named retry marker or actual transport proof.
+        Assert.Equal(defaults.Retry.MaxRetryAttempts, options.Get("misnamed-standard").Retry.MaxRetryAttempts);
+        Assert.NotEqual(1, options.Get("misnamed-standard").Retry.MaxRetryAttempts);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var countryResponse = await countries.GetAsync("Countries", deadline.Token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, countryResponse.StatusCode);
+        Assert.Equal(2, fixture.Transport.Calls);
+        using var careerResponse = await careers.GetAsync("Careers", deadline.Token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, careerResponse.StatusCode);
+        Assert.Equal(4, fixture.Transport.Calls);
         Assert.Null(countries.DefaultRequestHeaders.Authorization);
         Assert.Null(careers.DefaultRequestHeaders.Authorization);
     }
@@ -214,7 +225,7 @@ public sealed class CountrySourceFailureObservationTests
         internal IHttpClientFactory Factory => host.Services.GetRequiredService<IHttpClientFactory>();
         internal ICountryClient Country => Scope.ServiceProvider.GetRequiredService<ICountryClient>();
 
-        internal Fixture(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send, TimeSpan? timeout = null)
+        internal Fixture(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send, TimeSpan? timeout = null, bool probeNamedPipeline = false)
         {
             Transport = new(send);
             var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
@@ -222,6 +233,12 @@ public sealed class CountrySourceFailureObservationTests
             builder.Configuration["Services:Country"] = "https://private-country-host.example/";
             builder.Configuration["Services:Career"] = "https://private-career-host.example/";
             builder.Services.AddLegacyServiceClients(builder.Configuration);
+            if (probeNamedPipeline)
+            {
+                // Test-only marker: leave attempt/total deadlines intact and prove these names feed actual clients.
+                builder.Services.Configure<HttpStandardResilienceOptions>("countries-standard", options => options.Retry.MaxRetryAttempts = 1);
+                builder.Services.Configure<HttpStandardResilienceOptions>("careers-standard", options => options.Retry.MaxRetryAttempts = 1);
+            }
             // Keep the real standard resilience pipeline; only its retry scheduling is shortened for this controlled transport.
             builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
             {
