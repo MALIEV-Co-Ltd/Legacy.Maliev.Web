@@ -8,6 +8,17 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class PageSizeQueryValidationTests
 {
     [Theory]
+    [InlineData("QuotationExpirationDate_Ascending")]
+    [InlineData("QuotationQuotedAmount_Descending")]
+    [InlineData("6")]
+    [InlineData("unknown")]
+    public async Task RetainedRazorQuotationHandler_RejectsUndefinedSortBeforeDownstreamWork(string sort)
+    {
+        var quotations = new QuotationIndex(null!, null!) { Sort = sort };
+        Assert.IsType<BadRequestResult>(await quotations.OnGetAsync(CancellationToken.None));
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-1)]
     [InlineData(101)]

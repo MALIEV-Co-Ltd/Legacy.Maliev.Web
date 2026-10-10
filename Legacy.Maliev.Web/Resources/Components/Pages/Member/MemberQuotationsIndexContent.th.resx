@@ -58,8 +58,10 @@
   <data name="Sort by" xml:space="preserve"><value>เรียงตาม</value></data>
   <data name="Newest first" xml:space="preserve"><value>ใหม่ล่าสุดก่อน</value></data>
   <data name="Oldest first" xml:space="preserve"><value>เก่าที่สุดก่อน</value></data>
-  <data name="Expiring first" xml:space="preserve"><value>ใกล้หมดอายุก่อน</value></data>
-  <data name="Highest amount" xml:space="preserve"><value>ยอดสูงสุดก่อน</value></data>
+  <data name="Recently updated first" xml:space="preserve"><value>แก้ไขล่าสุดก่อน</value></data>
+  <data name="Least recently updated first" xml:space="preserve"><value>แก้ไขเก่าที่สุดก่อน</value></data>
+  <data name="Highest quotation number first" xml:space="preserve"><value>เลขที่ใบเสนอราคาสูงสุดก่อน</value></data>
+  <data name="Lowest quotation number first" xml:space="preserve"><value>เลขที่ใบเสนอราคาต่ำสุดก่อน</value></data>
   <data name="Rows per page" xml:space="preserve"><value>จำนวนรายการต่อหน้า</value></data>
   <data name="Showing {0} of {1} quotations" xml:space="preserve"><value>แสดง {0} จากใบเสนอราคาทั้งหมด {1} รายการ</value></data>
   <data name="Status" xml:space="preserve"><value>สถานะ</value></data>
