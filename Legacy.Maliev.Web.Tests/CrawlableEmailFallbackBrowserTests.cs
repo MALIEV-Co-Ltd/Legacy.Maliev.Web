@@ -1,11 +1,14 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(PublicContactBrowserCollection.Name)]
-public sealed class CrawlableEmailFallbackBrowserTests(PublicContactBrowserFixture fixture)
+public sealed class CrawlableEmailFallbackBrowserTests(PublicContactBrowserFixture fixture, ITestOutputHelper output)
 {
     [Theory]
     [InlineData("en", "/legal", ".landing-footer-contact-row", "info@maliev.com")]
@@ -26,9 +29,13 @@ public sealed class CrawlableEmailFallbackBrowserTests(PublicContactBrowserFixtu
         Assert.Equal(recipient, await anchor.InnerTextAsync());
         Assert.Equal("/contact#contact-us", await anchor.GetAttributeAsync("href"));
         Assert.Equal(recipient, await anchor.GetAttributeAsync("data-contact-email"));
-        await anchor.ClickAsync();
-        await page.WaitForURLAsync(url => new Uri(url).AbsolutePath == "/contact" && new Uri(url).Fragment == "#contact-us");
-        Assert.Equal(1, await page.Locator("#contact-us").CountAsync());
+        using var navigation = new ContactFallbackNavigationEvidence(page, fixture.Origin);
+        await ContactFallbackNavigationEvidence.PreserveFailureAsync(async () =>
+        {
+            await anchor.ClickAsync();
+            await page.WaitForURLAsync(url => new Uri(url).AbsolutePath == "/contact" && new Uri(url).Fragment == "#contact-us");
+            Assert.Equal(1, await page.Locator("#contact-us").CountAsync());
+        }, () => navigation.WriteFailure(output, culture));
     }
 
     [Theory]
@@ -153,5 +160,122 @@ public sealed class CrawlableEmailFallbackBrowserTests(PublicContactBrowserFixtu
             """, new { marker, mode, script = match.Groups["script"].Value });
         using var document = JsonDocument.Parse(json);
         return document.RootElement.Clone();
+    }
+}
+
+// Failure-only bounded network metadata; no headers, queries, bodies, raw URLs or exception text.
+internal sealed class ContactFallbackNavigationEvidence : IDisposable
+{
+    private readonly IPage page;
+    private readonly Uri origin;
+    private readonly Stopwatch elapsed = Stopwatch.StartNew();
+    private readonly ConcurrentQueue<object> events = new();
+    private readonly object gate = new();
+    private int observed;
+    private bool disposed;
+    internal int DetachFailures { get; private set; }
+
+    internal ContactFallbackNavigationEvidence(IPage page, Uri origin)
+    {
+        this.page = page;
+        this.origin = origin;
+        try
+        {
+            page.Request += Started;
+            page.Response += Responded;
+            page.RequestFinished += Finished;
+            page.RequestFailed += Failed;
+            page.FrameNavigated += Navigated;
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
+    }
+
+    internal static async Task PreserveFailureAsync(Func<Task> operation, Action observeFailure)
+    {
+        try { await operation(); }
+        catch
+        {
+            try { observeFailure(); }
+            catch { /* Best-effort metadata must preserve the original failure. */ }
+            throw;
+        }
+    }
+
+    internal static string SafePath(Uri origin, string value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var target)) return "invalid";
+        if (target.Scheme != origin.Scheme || target.Host != origin.Host || target.Port != origin.Port
+            || target.UserInfo.Length != 0) return "cross-origin";
+        if (target.AbsolutePath.Equals("/contact", StringComparison.OrdinalIgnoreCase)) return "contact";
+        if (target.AbsolutePath.Equals("/legal", StringComparison.OrdinalIgnoreCase)) return "legal";
+        if (target.AbsolutePath.Equals("/legal/nondisclosureagreement", StringComparison.OrdinalIgnoreCase)) return "nda";
+        return "same-origin-other";
+    }
+
+    private void Record(string stage, string url, int? status = null)
+    {
+        lock (gate)
+        {
+            if (disposed || observed >= 32) return;
+            observed++;
+            events.Enqueue(new { stage, path = SafePath(origin, url),
+                elapsedMs = Math.Min(60000, elapsed.ElapsedMilliseconds),
+                status = status is >= 100 and <= 599 ? status : null });
+        }
+    }
+
+    private void Started(object? sender, IRequest request)
+    {
+        if (request.ResourceType == "document") Record("request", request.Url);
+    }
+    private void Responded(object? sender, IResponse response)
+    {
+        if (response.Request.ResourceType == "document") Record("response", response.Url, response.Status);
+    }
+    private void Finished(object? sender, IRequest request)
+    {
+        if (request.ResourceType == "document") Record("finished", request.Url);
+    }
+    private void Failed(object? sender, IRequest request)
+    {
+        if (request.ResourceType == "document") Record("failed", request.Url);
+    }
+    private void Navigated(object? sender, IFrame frame)
+    {
+        if (frame == page.MainFrame) Record("committed", frame.Url);
+    }
+    internal void WriteFailure(ITestOutputHelper output, string culture) =>
+        output.WriteLine("WEB_CONTACT_FALLBACK_NAVIGATION_FAILURE " + JsonSerializer.Serialize(new
+        {
+            culture = culture == "th" ? "th" : "en",
+            pageClosed = page.IsClosed,
+            finalPath = page.IsClosed ? "closed" : SafePath(origin, page.Url),
+            finalContactFragment = !page.IsClosed && Uri.TryCreate(page.Url, UriKind.Absolute, out var location)
+                && location.Fragment == "#contact-us",
+            events = events.ToArray(),
+        }));
+
+    public void Dispose()
+    {
+        lock (gate)
+        {
+            if (disposed) return;
+            disposed = true;
+        }
+        Detach(() => page.Request -= Started);
+        Detach(() => page.Response -= Responded);
+        Detach(() => page.RequestFinished -= Finished);
+        Detach(() => page.RequestFailed -= Failed);
+        Detach(() => page.FrameNavigated -= Navigated);
+    }
+
+    private void Detach(Action remove)
+    {
+        try { remove(); }
+        catch { DetachFailures++; /* Keep attempting other removals and preserve the original test failure. */ }
     }
 }
