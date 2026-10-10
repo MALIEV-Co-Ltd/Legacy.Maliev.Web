@@ -206,7 +206,7 @@ public sealed class CncLiteralProducerBoundaryTests
             Assert.False(process.HasExited, "Owned producer exited before readiness.");
             try
             {
-                using var response = await http.GetAsync("health", readiness.Token);
+                using var response = await http.GetAsync("customer/readiness", readiness.Token);
                 if (response.IsSuccessStatusCode) return;
             }
             catch (HttpRequestException) { }
