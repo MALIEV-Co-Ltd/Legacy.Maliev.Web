@@ -759,18 +759,20 @@ public sealed class ResinServerSupportEvidenceParityTests
     }
 
     [Fact]
-    public void Policy_NewResinEconomics_IsV11WithoutChangingProtectedV4Purpose()
+    public void Policy_CurrentEconomics_IsV12WithoutChangingProtectedV4Purpose()
     {
-        Assert.Equal("additive-2026-10-01.v11", PricingCatalog.AdditivePricingPolicyVersion);
+        Assert.Equal("additive-2026-10-10.v12", PricingCatalog.AdditivePricingPolicyVersion);
         Assert.Equal("additive-line-quote.v4", AdditiveQuoteTicketService.LineSchemaVersion);
         Assert.Equal("additive-order-quote.v2", AdditiveQuoteTicketService.OrderSchemaVersion);
         Assert.Equal("additive-upload-receipt.v1", AdditiveQuoteTicketService.UploadSchemaVersion);
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Policy_OldV4V10LineAndOrderReplay_RejectsRatherThanRepricingHistory(bool orderTicket)
+    [InlineData(false, "additive-2026-09-30.v10")]
+    [InlineData(true, "additive-2026-09-30.v10")]
+    [InlineData(false, "additive-2026-10-01.v11")]
+    [InlineData(true, "additive-2026-10-01.v11")]
+    public void Policy_PreCorrectionLineAndOrderReplay_RejectsRatherThanRepricingHistory(bool orderTicket, string policyVersion)
     {
         var session = ConsumerSession();
         var quote = new InstantQuotationPricingService().Quote(session.RequestState);
@@ -779,8 +781,8 @@ public sealed class ResinServerSupportEvidenceParityTests
         var line = tickets.UnprotectLine(authorization.LineTickets[0], session.CreatedAt);
         var order = tickets.UnprotectOrder(authorization.OrderTicket, session.CreatedAt);
         line.SchemaVersion = "additive-line-quote.v4";
-        line.PolicyVersion = "additive-2026-09-30.v10";
-        order.PolicyVersion = "additive-2026-09-30.v10";
+        line.PolicyVersion = policyVersion;
+        order.PolicyVersion = policyVersion;
         var historicalMoney = line.SubtotalThb;
 
         if (orderTicket)
@@ -797,7 +799,7 @@ public sealed class ResinServerSupportEvidenceParityTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Policy_CurrentV4V11LineAndOrder_RoundTripCanonicalMoney(bool orderTicket)
+    public void Policy_CurrentV4V12LineAndOrder_RoundTripCanonicalMoney(bool orderTicket)
     {
         var session = ConsumerSession();
         var quote = new InstantQuotationPricingService().Quote(session.RequestState);
@@ -805,8 +807,8 @@ public sealed class ResinServerSupportEvidenceParityTests
         var authorization = tickets.Issue(session, quote, session.CreatedAt);
         var line = tickets.UnprotectLine(authorization.LineTickets[0], session.CreatedAt);
         var order = tickets.UnprotectOrder(authorization.OrderTicket, session.CreatedAt);
-        line.PolicyVersion = "additive-2026-10-01.v11";
-        order.PolicyVersion = "additive-2026-10-01.v11";
+        line.PolicyVersion = "additive-2026-10-10.v12";
+        order.PolicyVersion = "additive-2026-10-10.v12";
 
         if (orderTicket)
         {

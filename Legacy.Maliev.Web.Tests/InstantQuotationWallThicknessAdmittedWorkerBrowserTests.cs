@@ -127,7 +127,29 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         var material = page.Locator("[data-workflow-material-picker] select[name='material']");
         await material.SelectOptionAsync("ABS");
         await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
-        await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+        try
+        {
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+        }
+        catch (TimeoutException original)
+        {
+            await SelectedPrintTimeTimeoutDiagnostics.AttachAsync(original, 1, null,
+                () => page.EvaluateAsync<string>("""
+                    () => {
+                        const configuration = document.querySelector('[data-workflow-material-picker]');
+                        const quantity = configuration?.querySelector('input[name="quantity"]');
+                        return JSON.stringify({
+                            workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                            isRepricing: !!document.querySelector('[data-pricing-loading-status]'),
+                            material: configuration?.querySelector('select[name="material"]')?.value,
+                            quantity: quantity?.value,
+                            unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]'),
+                            configurationEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')
+                        });
+                    }
+                    """), description => output.WriteLine(description));
+            throw;
+        }
         var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
         var sessions = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
         var session = await sessions.GetAsync(transport.SessionId!, transport.OwnerIdentity, default);
