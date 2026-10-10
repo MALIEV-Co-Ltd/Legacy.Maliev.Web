@@ -127,7 +127,9 @@ public sealed class AdditiveBenchmarkInheritedValidationTests
                 benchmarkCase["referenceTransform4x4"] = Transform();
                 benchmarkCase["metricDefinitions"] = new JsonObject
                 {
-                    ["time"] = "synthetic seconds", ["material"] = "synthetic grams", ["support"] = "known-role positive extrusion",
+                    ["time"] = "synthetic seconds",
+                    ["material"] = "synthetic grams",
+                    ["support"] = "known-role positive extrusion",
                 };
             }
         }
