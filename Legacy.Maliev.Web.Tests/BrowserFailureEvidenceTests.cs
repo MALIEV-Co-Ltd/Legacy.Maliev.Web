@@ -222,10 +222,10 @@ public sealed class BrowserFailureEvidenceTests
         proxy.RemoveFailures = 1;
         var original = new TimeoutException("primary");
         var evidence = new BrowserFailureEvidence(page, _ => throw new InvalidOperationException("private-sink"));
-        var actual = Record.Exception(() =>
+        var actual = Record.Exception((Action)(() =>
         {
             using (evidence) { throw original; }
-        });
+        }));
         Assert.Same(original, actual);
         evidence.Dispose();
         Assert.Empty(proxy.Handlers);
@@ -269,25 +269,36 @@ public sealed class BrowserFailureEvidenceTests
         var page = DispatchProxy.Create<IPage, EventProxy>();
         var pending = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var cleanup = new List<string>();
-        await using var evidence = new BrowserFailureEvidence(page, cleanup.Add);
+        var original = new TimeoutException("primary");
+        BrowserFailureEvidence? recovery = null;
         try
         {
-            await evidence.AttachAsync(new TimeoutException(), () => pending.Task, _ => { });
-            await evidence.DisposeAsync();
+            await LeaveEvidenceScopeAsync();
+            recovery = Assert.IsType<BrowserFailureEvidence>(original.Data[BrowserFailureEvidence.RecoveryKey]);
+            Assert.False(pending.Task.IsCompleted);
             using var report = JsonDocument.Parse(cleanup.Last());
             Assert.Equal("unsettled", report.RootElement.GetProperty("State").GetString());
             Assert.Equal(1, report.RootElement.GetProperty("PendingObservations").GetInt32());
+            Assert.Equal("exception-owned", report.RootElement.GetProperty("Recovery").GetString());
         }
         finally
         {
             pending.TrySetException(new InvalidOperationException("private-late-fault"));
             try { await pending.Task.WaitAsync(TimeSpan.FromSeconds(1)); }
             catch (InvalidOperationException) { }
-            await evidence.DisposeAsync();
+            recovery ??= original.Data[BrowserFailureEvidence.RecoveryKey] as BrowserFailureEvidence;
+            if (recovery is not null) await recovery.DisposeAsync();
         }
         using var settled = JsonDocument.Parse(cleanup.Last());
         Assert.Equal(0, settled.RootElement.GetProperty("PendingObservations").GetInt32());
+        Assert.False(original.Data.Contains(BrowserFailureEvidence.RecoveryKey));
         Assert.DoesNotContain("private-", string.Join('\n', cleanup), StringComparison.Ordinal);
+
+        async Task LeaveEvidenceScopeAsync()
+        {
+            await using var evidence = new BrowserFailureEvidence(page, cleanup.Add);
+            await evidence.AttachAsync(original, () => pending.Task, _ => { });
+        }
     }
 
     [Fact]
@@ -322,15 +333,18 @@ public sealed class BrowserFailureEvidenceTests
         var close = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         proxy.OnClose = () => close.Task;
         var cleanup = new List<string>();
+        var original = new TimeoutException("primary");
         await using var evidence = new BrowserFailureEvidence(page, cleanup.Add);
         try
         {
+            await evidence.AttachAsync(original, () => Task.FromResult("{\"workflow\":\"configured\"}"), _ => { });
             await evidence.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(4));
             Assert.False(close.Task.IsCompleted);
             Assert.Equal(1, proxy.CloseCalls);
             using var report = JsonDocument.Parse(cleanup.Last());
             Assert.Equal("pending", report.RootElement.GetProperty("PageClose").GetString());
             Assert.Equal("unsettled", report.RootElement.GetProperty("State").GetString());
+            Assert.Same(evidence, original.Data[BrowserFailureEvidence.RecoveryKey]);
         }
         finally
         {
@@ -341,6 +355,29 @@ public sealed class BrowserFailureEvidenceTests
         Assert.Equal(1, proxy.CloseCalls);
         using var settled = JsonDocument.Parse(cleanup.Last());
         Assert.Equal("complete", settled.RootElement.GetProperty("State").GetString());
+        Assert.False(original.Data.Contains(BrowserFailureEvidence.RecoveryKey));
+    }
+
+    [Fact]
+    public async Task OriginalFailureOwnsFailedUndoAfterLexicalScopeAndRetryReleasesIt()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        proxy.ThrowRemove = "Console";
+        proxy.RemoveFailures = 2;
+        var original = new TimeoutException("primary");
+        var actual = await Record.ExceptionAsync(async () =>
+        {
+            await using var evidence = new BrowserFailureEvidence(page);
+            await evidence.AttachAsync(original, () => Task.FromResult("{\"workflow\":\"configured\"}"), _ => { });
+            throw original;
+        });
+        Assert.Same(original, actual);
+        var recovery = Assert.IsType<BrowserFailureEvidence>(original.Data[BrowserFailureEvidence.RecoveryKey]);
+        Assert.Single(proxy.Handlers);
+        recovery.Dispose();
+        Assert.Empty(proxy.Handlers);
+        Assert.False(original.Data.Contains(BrowserFailureEvidence.RecoveryKey));
     }
 
     [Fact]
@@ -365,6 +402,27 @@ public sealed class BrowserFailureEvidenceTests
         Assert.Empty(socketProxy.Handlers);
         using var settled = JsonDocument.Parse(cleanup.Last());
         Assert.Equal(0, settled.RootElement.GetProperty("RemainingSubscriptions").GetInt32());
+    }
+
+    [Fact]
+    public async Task SynchronousUndoRetryKeepsRecoveryUntilConfirmedPageClose()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        proxy.ThrowRemove = "Console";
+        proxy.RemoveFailures = 1;
+        var original = new TimeoutException("primary");
+        await using var evidence = new BrowserFailureEvidence(page);
+        await evidence.AttachAsync(original, () => Task.FromResult("{\"workflow\":\"configured\"}"), _ => { });
+        evidence.Dispose();
+        Assert.Same(evidence, original.Data[BrowserFailureEvidence.RecoveryKey]);
+        evidence.Dispose();
+        Assert.Empty(proxy.Handlers);
+        Assert.Equal(0, proxy.CloseCalls);
+        Assert.Same(evidence, original.Data[BrowserFailureEvidence.RecoveryKey]);
+        await evidence.DisposeAsync();
+        Assert.Equal(1, proxy.CloseCalls);
+        Assert.False(original.Data.Contains(BrowserFailureEvidence.RecoveryKey));
     }
 
     // No browser or SDK process is created: only interface event accessors are emulated.

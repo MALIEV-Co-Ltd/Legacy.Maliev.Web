@@ -8,6 +8,7 @@ namespace Legacy.Maliev.Web.Tests;
 internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
 {
     internal const string DataKey = "BrowserFailureEvidence";
+    internal const string RecoveryKey = "BrowserFailureEvidence.Recovery";
     private readonly IPage page;
     private readonly object gate = new();
     private readonly Stopwatch clock = Stopwatch.StartNew();
@@ -17,6 +18,7 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
     private readonly List<Task> observations = [];
     private readonly Action<string>? cleanupSink;
     private Task? pageClose;
+    private Exception? primaryFailure;
     private bool acquisitionFailed;
     private string stage = "Navigation";
     private bool disposed;
@@ -106,6 +108,7 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
             Task<string> pending;
             lock (gate)
             {
+                primaryFailure ??= original;
                 RemoveSettledObservations();
                 if (disposed || observations.Count >= 32) throw new InvalidOperationException();
                 pending = observe() ?? throw new InvalidOperationException();
@@ -206,18 +209,46 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
             RemoveSettledObservations();
             var closeState = pageClose is null ? "not-attempted" : !pageClose.IsCompleted ? "pending"
                 : pageClose.IsCompletedSuccessfully ? "closed" : "failed";
+            var unsettled = subscriptions.Count != 0 || observations.Count != 0 || closeState is "pending" or "failed";
+            var recovery = RetainRecovery(unsettled,
+                !unsettled && pageClose?.IsCompletedSuccessfully == true);
             cleanupSink?.Invoke(JsonSerializer.Serialize(new
             {
                 Kind = "browser-evidence-cleanup",
-                State = subscriptions.Count != 0 || observations.Count != 0 || closeState is "pending" or "failed"
+                State = unsettled
                     ? "unsettled" : closeState == "closed" ? "complete" : "detached",
                 RemainingSubscriptions = subscriptions.Count,
                 PendingObservations = observations.Count,
                 PageClose = closeState,
                 AcquisitionFailed = acquisitionFailed,
+                Recovery = recovery,
             }));
         }
         catch { /* No cleanup sink may replace the primary failure. */ }
+    }
+
+    private string RetainRecovery(bool unsettled, bool releaseEligible)
+    {
+        if (primaryFailure is null) return "not-applicable";
+        try
+        {
+            if (unsettled)
+            {
+                // The original failure owns this actual helper, including pending tasks and exact undo actions.
+                // It remains reachable after lexical await-using ends; this is private recovery state, not emitted data.
+                if (primaryFailure.Data[RecoveryKey] is { } existing && !ReferenceEquals(existing, this))
+                    return "unavailable";
+                primaryFailure.Data[RecoveryKey] = this;
+                return ReferenceEquals(primaryFailure.Data[RecoveryKey], this) ? "exception-owned" : "unavailable";
+            }
+            if (releaseEligible)
+            {
+                if (ReferenceEquals(primaryFailure.Data[RecoveryKey], this)) primaryFailure.Data.Remove(RecoveryKey);
+                return "released";
+            }
+            return ReferenceEquals(primaryFailure.Data[RecoveryKey], this) ? "exception-owned" : "not-retained";
+        }
+        catch { return "unavailable"; }
     }
 
     public void Dispose()
