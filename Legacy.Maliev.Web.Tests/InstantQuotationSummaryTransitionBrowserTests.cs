@@ -241,13 +241,14 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    private sealed class Host(Control control, SummaryServerNavigationEvidence serverEvidence) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<IStartupFilter>(serverEvidence);
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
@@ -269,6 +270,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         private string culture = "";
         private int pageErrors;
         private int consoleErrors;
+        private readonly SummaryServerNavigationEvidence serverEvidence = new();
         private readonly TaskCompletionSource releaseNavigationControl = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource navigationControlEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly List<Task> navigationControlCompletions = [];
@@ -280,7 +282,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator Breakdown => Page.Locator("[data-workflow-order-summary]");
         public ILocator Duration => Page.Locator("[data-workflow-selected-print-time]");
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
-        private Fixture() => Factory = new(Control);
+        private Fixture() => Factory = new(Control, serverEvidence);
 
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
@@ -416,7 +418,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 timer.Stop();
                 lock (gate)
                 {
-                    output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
+                    SummaryServerNavigationEvidence.PreserveFailure(() => output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
                     {
                         phase,
                         elapsedMilliseconds = timer.ElapsedMilliseconds,
@@ -425,9 +427,11 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                         finished,
                         failed,
                         omitted,
+                        server = serverEvidence.Snapshot(),
+                        runner = SummaryServerNavigationEvidence.RunnerSnapshot(),
                         pendingCategories = pending.Values.GroupBy(value => value)
                             .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
-                    }));
+                    })));
                     pending.Clear();
                 }
             }
