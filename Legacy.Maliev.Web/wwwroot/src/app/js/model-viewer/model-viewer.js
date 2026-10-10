@@ -3962,6 +3962,14 @@ function ModelViewerUtils(culture, currency, viewer) {
         var showAll = materialsExpanded || searching || selectedIndex >= materialPreviewCount;
         var limit = showAll ? 0 : materialPreviewCount;
 
+        var previousSelected = container.querySelector('.iq-mat-card.sel');
+        var previousListBox = container.getBoundingClientRect();
+        var previousCardBox = previousSelected ? previousSelected.getBoundingClientRect() : null;
+        var preserveSelectedVisibility = !searching && previousSelected
+            && previousSelected.dataset.key === selectedKey
+            && previousCardBox.top >= previousListBox.top - 1
+            && previousCardBox.bottom <= previousListBox.bottom + 1;
+
         var item = items[activeId];
         container.replaceChildren(BuildMaterialCardsFragment(
             selectedKey,
@@ -3977,11 +3985,16 @@ function ModelViewerUtils(culture, currency, viewer) {
         // down the catalogue left the chosen card below the visible window -- it looked
         // like the selection was drifting off the bottom of the page -- and because the
         // wheel handler used to swallow vertical scrolling there was no way to bring it
-        // back. Only reveal on an actual change of selection, so typing in the search box
-        // does not yank the list around while results narrow.
-        if (selectedKey !== lastRevealedMaterialKey) {
+        // back. Preserve a visible selection when price rows change height, while leaving
+        // a customer's deliberate scroll away and search position alone. Measure after
+        // the selection event finishes updating the rest of the configuration layout.
+        if (selectedKey !== lastRevealedMaterialKey || preserveSelectedVisibility) {
             lastRevealedMaterialKey = selectedKey;
-            RevealSelectedMaterialCard(container);
+            window.requestAnimationFrame(function () {
+                if (activeId && items[activeId].material === selectedKey) {
+                    RevealSelectedMaterialCard(container);
+                }
+            });
         }
     };
 
