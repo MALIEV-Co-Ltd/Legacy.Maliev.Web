@@ -76,6 +76,9 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         }
 
         Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"MassTransit.RabbitMQ\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"MassTransit.Abstractions\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"Scalar.AspNetCore\" Version=\"2.17.13\"", webProject, StringComparison.Ordinal);
         Assert.DoesNotMatch("Microsoft\\.[^\"]+\" Version=\"10\\.0\\.(?:[0-9]|1[01])\"", webProject + testProject);
     }
 
