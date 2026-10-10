@@ -563,6 +563,12 @@ if (useBlazorRouteHost)
         branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
 }
 app.MapDefaultEndpoints("web");
+if (useBlazorRouteHost && useBlazorCareerIndexRoute)
+{
+    app.UseWhen(
+        CareerSearchCompatibilityEndpoint.Matches,
+        branch => branch.Run(CareerSearchCompatibilityEndpoint.HandleAsync));
+}
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))

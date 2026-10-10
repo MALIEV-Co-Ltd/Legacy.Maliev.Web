@@ -56,7 +56,7 @@ internal sealed class CareerClient(
         }
     }
 
-    private async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+    public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
         CareerSort sort,
         string? search,
         int pageIndex,
@@ -89,7 +89,7 @@ internal sealed class CareerClient(
         }
     }
 
-    private async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(
+    public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(
         CancellationToken cancellationToken)
     {
         try
