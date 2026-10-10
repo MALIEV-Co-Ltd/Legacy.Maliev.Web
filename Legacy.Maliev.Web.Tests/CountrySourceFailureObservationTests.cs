@@ -157,7 +157,7 @@ public sealed class CountrySourceFailureObservationTests
     }
 
     [Fact]
-    public async Task RealFactoryPreservesDefaultTenSecondTimeoutAndNoAddedAuthorization()
+    public async Task RealFactoryPreservesActiveNamedResilienceDeadlinesAndNoAddedAuthorization()
     {
         using var fixture = new Fixture((_, _) => Task.FromResult(Response(503)), probeNamedPipeline: true);
         using var countries = fixture.Factory.CreateClient("countries");
