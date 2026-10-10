@@ -358,7 +358,7 @@ internal sealed class InstantQuotationSubmissionService(
         {
             return fulfillmentClient is null
                 ? Partial(checkpoint, InstantQuotationProblemCategory.Unexpected)
-                : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
+                : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient, clock).FulfillAsync(
                     session,
                     quote,
                     ownerIdentity,
@@ -543,7 +543,7 @@ internal sealed class InstantQuotationSubmissionService(
             }
 
             return filesLinkedStored
-                ? await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
+                ? await new InstantQuotationFulfillmentCoordinator(fulfillmentClient, clock).FulfillAsync(
                     session,
                     quote,
                     ownerIdentity,
@@ -609,6 +609,7 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Color: {SingleLine(partQuote.Color)}");
             message.AppendLine($"Build: {BuildPreferenceDescription(partQuote.Process, partQuote.BuildPreference)}");
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
+            message.AppendLine(FormattableString.Invariant($"Size: {part.Geometry.DimensionXmm:0.###} x {part.Geometry.DimensionYmm:0.###} x {part.Geometry.DimensionZmm:0.###} mm"));
             message.AppendLine($"Volume: {part.Geometry.VolumeMm3.ToString("0.###", CultureInfo.InvariantCulture)} mm3");
             var geometryWarnings = GeometryWarnings(part.Geometry);
             if (geometryWarnings.Count > 0)
@@ -619,6 +620,7 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Quantity: {partQuote.Quantity.ToString(CultureInfo.InvariantCulture)} piece(s)");
             message.AppendLine($"Cost per unit: {partQuote.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB");
             message.AppendLine($"Print time per unit: {partQuote.PrintTimeMinutesPerUnit.ToString("0.##", CultureInfo.InvariantCulture)} minute(s)");
+            message.AppendLine($"Total print time: {(partQuote.PrintTimeMinutesPerUnit * partQuote.Quantity).ToString("0.##", CultureInfo.InvariantCulture)} minute(s)");
             message.AppendLine($"Total cost: {partQuote.Subtotal.ToString("0.00", CultureInfo.InvariantCulture)} THB");
             message.AppendLine($"Allocated order total: {partQuote.AllocatedOrderTotal.ToString("0.00", CultureInfo.InvariantCulture)} THB");
             message.AppendLine();
