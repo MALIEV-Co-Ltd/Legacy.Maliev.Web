@@ -801,6 +801,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var pageErrors = new System.Collections.Concurrent.ConcurrentQueue<string>();
         page.PageError += (_, error) => pageErrors.Enqueue(error);
         var paths = new List<string>();
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[pdf-evidence-cleanup] " + metadata));
+        failureEvidence.Stage("Navigation");
         try
         {
             var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
@@ -811,10 +814,32 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             {
                 paths.Add(CreatePreliminaryPdfBoxStl(index + 1));
             }
+            failureEvidence.Stage("UploadAdmission");
             await page.SetInputFilesAsync("#instant-quote-files", paths);
-            await page.WaitForFunctionAsync(
-                "count => document.querySelectorAll('[data-workflow-part]').length === count",
-                partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    "count => document.querySelectorAll('[data-workflow-part]').length === count",
+                    partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            }
+            catch (Exception original)
+            {
+                await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                    () => JSON.stringify({
+                      workflow:document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                      parts:document.querySelectorAll('[data-workflow-part]').length,
+                      uploadRows:document.querySelectorAll('[data-workflow-upload-item]').length,
+                      progress:document.querySelectorAll('[data-workflow-upload-item] progress').length > 0,
+                      errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
+                    })
+                    """), metadata => output.WriteLine("[pdf-upload-admission] " + metadata));
+                try
+                {
+                    output.WriteLine($"[pdf-upload-services] expected={partCount}; started={Math.Min(upload.StartedUploads, 32)}; verified={Math.Min(upload.VerifiedUploads, 32)}; validationRejected={Math.Min(upload.ValidationRejectedUploads, 32)}");
+                }
+                catch { /* Secondary evidence must preserve the upload admission failure. */ }
+                throw;
+            }
             Assert.Equal(partCount, upload.VerifiedUploads);
             var parts = page.Locator("[data-workflow-part]");
             var partIds = new HashSet<Guid>();
@@ -1112,11 +1137,15 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
 
     private sealed class HashCheckingUploadClient : IInstantQuotationUploadClient
     {
+        private int startedUploads;
+        private int validationRejectedUploads;
         private int verifiedUploads;
         private BrowserUpload? verifiedUpload;
         private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, BrowserUpload> uploads = new();
 
         public int VerifiedUploads => Volatile.Read(ref verifiedUploads);
+        public int StartedUploads => Volatile.Read(ref startedUploads);
+        public int ValidationRejectedUploads => Volatile.Read(ref validationRejectedUploads);
 
         public string SessionId => verifiedUpload!.SessionId;
 
@@ -1146,12 +1175,14 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             string operationId,
             CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref startedUploads);
             using var copy = new MemoryStream();
             await content.CopyToAsync(copy, cancellationToken);
             var sha256 = Convert.ToHexString(SHA256.HashData(copy.GetBuffer().AsSpan(0, (int)copy.Length)))
                 .ToLowerInvariant();
             if (copy.Length != contentLength || !string.Equals(sha256, geometryClaim.Sha256, StringComparison.Ordinal))
             {
+                Interlocked.Increment(ref validationRejectedUploads);
                 return InstantQuotationUploadResult.Failed(
                     operationId,
                     InstantQuotationServiceStatus.Available,
