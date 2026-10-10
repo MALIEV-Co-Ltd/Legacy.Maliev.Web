@@ -2,7 +2,7 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
-    private const string ServiceDefaultsCommit = "3c790ba6414b2a539f24aabb6948549ffd81a86b";
+    private const string ServiceDefaultsCommit = "4ffba0639620e7e923d331317f3f28501526b573";
 
     private const string DotNetPatchVersion = "10.0.12";
 
@@ -15,6 +15,13 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         Assert.Contains("Legacy.Maliev.ServiceDefaults\\src\\Legacy.Maliev.ServiceDefaults\\Legacy.Maliev.ServiceDefaults.csproj", project, StringComparison.Ordinal);
         Assert.DoesNotContain("Maliev.Aspire\\Maliev.Aspire.ServiceDefaults", project, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Maliev.MessagingContracts", project, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SharedLibraryVersion", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("PackageReference Include=\"Legacy.Maliev.ServiceDefaults\"", project, StringComparison.Ordinal);
+        var infrastructure = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web.Infrastructure", "Legacy.Maliev.Web.Infrastructure.csproj"));
+        Assert.Contains("Legacy.Maliev.ServiceDefaults\\src\\Legacy.Maliev.ServiceDefaults\\Legacy.Maliev.ServiceDefaults.csproj", infrastructure, StringComparison.Ordinal);
+        Assert.DoesNotContain("PackageReference Include=\"Legacy.Maliev.ServiceDefaults\"", infrastructure, StringComparison.Ordinal);
+        Assert.Equal("Legacy.Maliev.ServiceDefaults",
+            typeof(Microsoft.Extensions.Hosting.PrivateFailureObservationExtensions).Assembly.GetName().Name);
     }
 
     [Fact]
@@ -69,6 +76,9 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         }
 
         Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"MassTransit.RabbitMQ\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"MassTransit.Abstractions\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"Scalar.AspNetCore\" Version=\"2.17.13\"", webProject, StringComparison.Ordinal);
         Assert.DoesNotMatch("Microsoft\\.[^\"]+\" Version=\"10\\.0\\.(?:[0-9]|1[01])\"", webProject + testProject);
     }
 
