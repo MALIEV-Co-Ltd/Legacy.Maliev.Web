@@ -7,11 +7,12 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(MeasurementLifecycleBrowserCollection.Name)]
-public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowserFixture fixture)
+public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowserFixture fixture, ITestOutputHelper output)
 {
     [Theory]
     [InlineData(390)]
@@ -100,7 +101,12 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
         await session.Page.EvaluateAsync(
             "() => window.dataLayer.push({ event: 'service_finder_completed', finder_session_id: crypto.randomUUID() })");
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
-        await session.Page.GotoAsync(new Uri(fixture.Origin, "/services/3d-printing?culture=en").ToString());
+        using (var navigation = new InstantQuotationNavigationFailureDiagnostics(session.Page, fixture.Origin))
+        {
+            await InstantQuotationNavigationFailureDiagnostics.PreserveFailureAsync(
+                () => session.Page.GotoAsync(new Uri(fixture.Origin, "/services/3d-printing?culture=en").ToString()),
+                () => navigation.WriteFailureAsync(output, new { stage = "rejected-consent-service-navigation", waitUntil = "load", timeoutMs = 30000 }));
+        }
         await session.Page.GoBackAsync(new PageGoBackOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
         Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
