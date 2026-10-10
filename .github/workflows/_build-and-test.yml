@@ -66,6 +66,20 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify exact owned-resource refusal and cleanup controls
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CncOwnedResourceScopeTests"
+          --logger trx --results-directory ./cnc-resource-test-results
+      - name: Verify literal CNC profile writes through the exact composed producer
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CncLiteralProducerBoundaryTests"
+          --logger trx --results-directory ./cnc-literal-producer-test-results
       - name: Verify material pricing progress boundaries
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -363,6 +377,8 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
             ticket-test-results/**/*.trx
+            cnc-resource-test-results/**/*.trx
+            cnc-literal-producer-test-results/**/*.trx
             sidebar-navigation-test-results/sidebar-*-initial-navigation-timeout.json
             sidebar-focused-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
