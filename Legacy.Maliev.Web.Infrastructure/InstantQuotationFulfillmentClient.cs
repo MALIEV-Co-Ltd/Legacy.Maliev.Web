@@ -15,9 +15,19 @@ internal sealed class InstantQuotationFulfillmentClient(
     ICustomerOrderCatalogClient catalogClient,
     ICustomerOrderSubmissionTransport orderTransport,
     INotificationClient notificationClient,
-    ILogger<InstantQuotationFulfillmentClient> logger) : IInstantQuotationFulfillmentClient
+    ILogger<InstantQuotationFulfillmentClient> logger,
+    InstantQuotationNotificationPreparationClient? quotationNotifications = null) : IInstantQuotationFulfillmentClient
 {
     private const string CanonicalOrigin = "https://www.maliev.com";
+
+    public Task<InstantQuotationNotificationPreparationResult> PrepareQuotationNotificationsAsync(
+        InstantQuotationSessionState session, InstantQuotationOrderQuote quote, InstantQuotationCustomerSubmission customer,
+        int requestReference, IReadOnlyList<InstantQuotationFinalizedFile> files, CancellationToken cancellationToken) =>
+        quotationNotifications is null ? Task.FromResult(new InstantQuotationNotificationPreparationResult(null, false, true))
+            : quotationNotifications.PrepareAsync(session, quote, customer, requestReference, files, cancellationToken);
+
+    public Task<NotificationResult> SendQuotationNotificationAsync(EmailNotification message, Guid operationId, CancellationToken cancellationToken) =>
+        notificationClient.SendIdempotentAsync(NotificationChannel.Manufacturing, message, operationId, cancellationToken);
 
     public async Task<InstantQuotationCustomerProvisionResult> ProvisionCustomerAsync(
         string? ownerIdentity,

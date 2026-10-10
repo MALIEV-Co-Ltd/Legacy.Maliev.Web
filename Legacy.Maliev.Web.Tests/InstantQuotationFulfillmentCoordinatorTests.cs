@@ -8,6 +8,117 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
     private const string SubmissionId = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
 
     [Fact]
+    public async Task QuotationNotificationPreparationFailureDoesNotSendEitherMessage()
+    {
+        var lease = new RecordingLease(FilesLinkedCheckpoint());
+        var client = new RecordingClient { QuotationPreparationAvailable = false };
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Empty(client.QuotationNotifications);
+        Assert.NotEqual(InstantQuotationSubmissionCheckpointStatus.Completed, lease.Checkpoint.Status);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OneFailedQuotationMessageStillAttemptsOtherAndRetryUsesFrozenPayload(bool customerFails)
+    {
+        var lease = new RecordingLease(FilesLinkedCheckpoint());
+        var client = new RecordingClient { FailedQuotationRecipient = customerFails ? "customer@example.test" : "manufacturing@maliev.com" };
+        var coordinator = new InstantQuotationFulfillmentCoordinator(client);
+        var result = await coordinator.FulfillAsync(Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(2, client.QuotationNotifications.Count);
+        Assert.Equal(1, client.QuotationPreparations);
+        Assert.NotEqual(client.QuotationNotifications[0].OperationId, client.QuotationNotifications[1].OperationId);
+        var failed = client.QuotationNotifications.Single(item => item.Message.To == client.FailedQuotationRecipient);
+        client.FailedQuotationRecipient = null;
+        result = await coordinator.FulfillAsync(Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        Assert.Equal(3, client.QuotationNotifications.Count);
+        Assert.Equal(1, client.QuotationPreparations);
+        Assert.Equal(failed, client.QuotationNotifications[^1]);
+        Assert.True(lease.Checkpoint.CustomerQuotationNotificationSent);
+        Assert.True(lease.Checkpoint.ManufacturingQuotationNotificationSent);
+    }
+
+    [Fact]
+    public async Task FailedFreezeCheckpointDoesNotSendQuotationMessages()
+    {
+        var lease = new RecordingLease(FilesLinkedCheckpoint()) { FailNotificationFreeze = true };
+        var client = new RecordingClient();
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Empty(client.QuotationNotifications);
+        Assert.Null(lease.Checkpoint.QuotationNotifications);
+    }
+
+    [Fact]
+    public async Task SuccessfulSendWithoutCheckpointReplaysExactOperationAndBody()
+    {
+        var lease = new RecordingLease(FilesLinkedCheckpoint()) { FailNotificationSendCheckpoint = true };
+        var client = new RecordingClient();
+        var coordinator = new InstantQuotationFulfillmentCoordinator(client);
+        var result = await coordinator.FulfillAsync(Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        var first = Assert.Single(client.QuotationNotifications);
+        lease.FailNotificationSendCheckpoint = false;
+        result = await coordinator.FulfillAsync(Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        Assert.Equal(first, client.QuotationNotifications[1]);
+        Assert.Equal(1, client.QuotationPreparations);
+        Assert.Equal(2, client.QuotationNotifications.Select(item => item.OperationId).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task ExpiredFrozenLinksFailClosedWithoutRegeneratingOrSending()
+    {
+        var lease = new RecordingLease(FilesLinkedCheckpoint());
+        var client = new RecordingClient { ExpiredQuotationLinks = true };
+        var coordinator = new InstantQuotationFulfillmentCoordinator(client);
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var result = await coordinator.FulfillAsync(Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, CancellationToken.None);
+            Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+            Assert.Equal(lease.Checkpoint.RequestReference, result.RequestReference);
+        }
+        Assert.Equal(1, client.QuotationPreparations);
+        Assert.Empty(client.QuotationNotifications);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CancellationOrLostLeaseAfterFirstSendPreventsSecondSend(bool cancel)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var lease = new RecordingLease(FilesLinkedCheckpoint());
+        var client = new RecordingClient
+        {
+            AfterQuotationSend = () =>
+            {
+                if (cancel) cancellation.Cancel();
+                else lease.FailNextRenewal = true;
+            },
+        };
+        var coordinator = new InstantQuotationFulfillmentCoordinator(client);
+        if (cancel)
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => coordinator.FulfillAsync(
+                Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, cancellation.Token));
+        else
+        {
+            var result = await coordinator.FulfillAsync(
+                Session(Part(1)), Quote(Part(1)), null, Customer(), lease, lease.Checkpoint, cancellation.Token);
+            Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        }
+        Assert.Single(client.QuotationNotifications);
+        Assert.False(lease.Checkpoint.ManufacturingQuotationNotificationSent);
+        Assert.NotEqual(InstantQuotationSubmissionCheckpointStatus.Completed, lease.Checkpoint.Status);
+    }
+
+    [Fact]
     public async Task Fulfill_GuestSubmission_CheckpointsEveryBoundaryAndCreatesOneOrderPerPart()
     {
         var checkpoint = FilesLinkedCheckpoint();
@@ -38,6 +149,9 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
                 InstantQuotationSubmissionCheckpointStatus.IdentityPrepared,
                 InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned,
                 InstantQuotationSubmissionCheckpointStatus.WelcomePrepared,
+                InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent,
+                InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent,
+                InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent,
                 InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent,
                 InstantQuotationSubmissionCheckpointStatus.Completed,
             ],
@@ -259,6 +373,8 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         public InstantQuotationSubmissionCheckpoint Checkpoint { get; private set; } = checkpoint;
         public List<InstantQuotationSubmissionCheckpoint> Writes { get; } = [];
         public bool FailNextRenewal { get; set; }
+        public bool FailNotificationFreeze { get; set; }
+        public bool FailNotificationSendCheckpoint { get; set; }
 
         public Task<bool> RenewAsync(CancellationToken cancellationToken)
         {
@@ -275,10 +391,13 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             InstantQuotationSubmissionCheckpointStatus? expectedPriorStatus,
             CancellationToken cancellationToken)
         {
-            if (Checkpoint.Status != expectedPriorStatus)
+            if (Checkpoint.Status != expectedPriorStatus
+                || (FailNotificationFreeze && value.QuotationNotifications is not null && Checkpoint.QuotationNotifications is null))
             {
                 return Task.FromResult(false);
             }
+            if (FailNotificationSendCheckpoint && value.CustomerQuotationNotificationSent && !Checkpoint.CustomerQuotationNotificationSent)
+                return Task.FromResult(false);
 
             Checkpoint = value;
             Writes.Add(value);
@@ -303,6 +422,31 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         public bool CompensationSucceeds { get; set; } = true;
         public List<int> CompensatedOrderIds { get; } = [];
         public List<int> CompensatedCustomerIds { get; } = [];
+        public bool QuotationPreparationAvailable { get; set; } = true;
+        public bool ExpiredQuotationLinks { get; set; }
+        public int QuotationPreparations { get; private set; }
+        public string? FailedQuotationRecipient { get; set; }
+        public List<(EmailNotification Message, Guid OperationId)> QuotationNotifications { get; } = [];
+        public Action? AfterQuotationSend { get; init; }
+
+        public Task<InstantQuotationNotificationPreparationResult> PrepareQuotationNotificationsAsync(
+            InstantQuotationSessionState session, InstantQuotationOrderQuote quote, InstantQuotationCustomerSubmission customer,
+            int requestReference, IReadOnlyList<InstantQuotationFinalizedFile> files, CancellationToken cancellationToken)
+        {
+            QuotationPreparations++;
+            return Task.FromResult(new InstantQuotationNotificationPreparationResult(QuotationPreparationAvailable
+                ? new(new("customer@example.test", "Quotation", "frozen customer body", null, null, null),
+                    new("manufacturing@maliev.com", "Quotation", "frozen manufacturing body", null, null, null),
+                    DateTimeOffset.UtcNow.AddMinutes(ExpiredQuotationLinks ? -1 : 30)) : null, QuotationPreparationAvailable, true));
+        }
+
+        public Task<NotificationResult> SendQuotationNotificationAsync(EmailNotification message, Guid operationId, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            QuotationNotifications.Add((message, operationId));
+            AfterQuotationSend?.Invoke();
+            return Task.FromResult(new NotificationResult(message.To != FailedQuotationRecipient, true, true));
+        }
 
         public Task<InstantQuotationCustomerProvisionResult> ProvisionCustomerAsync(
             string? ownerIdentity,

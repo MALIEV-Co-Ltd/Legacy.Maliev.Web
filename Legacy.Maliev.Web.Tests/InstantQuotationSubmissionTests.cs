@@ -1291,6 +1291,17 @@ public sealed class InstantQuotationSubmissionTests
 
     private sealed class RecordingFulfillmentClient : IInstantQuotationFulfillmentClient
     {
+        public Task<InstantQuotationNotificationPreparationResult> PrepareQuotationNotificationsAsync(
+            InstantQuotationSessionState session, InstantQuotationOrderQuote quote, InstantQuotationCustomerSubmission customer,
+            int requestReference, IReadOnlyList<InstantQuotationFinalizedFile> files, CancellationToken cancellationToken) => Task.FromResult(
+                new InstantQuotationNotificationPreparationResult(new(
+                    new(customer.Email, "Quotation", "customer body", null, null, null),
+                    new("manufacturing@maliev.com", "Quotation", "manufacturing body", customer.Email, null, null),
+                    DateTimeOffset.UtcNow.AddMinutes(30)), true, true));
+
+        public Task<NotificationResult> SendQuotationNotificationAsync(EmailNotification message, Guid operationId, CancellationToken cancellationToken) =>
+            Task.FromResult(new NotificationResult(true, true, true));
+
         public int CustomerCalls { get; private set; }
         public int IdentityCalls { get; private set; }
         public List<int> OrderPartIndexes { get; } = [];

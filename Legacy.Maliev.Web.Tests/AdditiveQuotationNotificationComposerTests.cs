@@ -22,6 +22,12 @@ public sealed class AdditiveQuotationNotificationComposerTests
         Assert.Contains("Total print time: 25 minutes", plan.Manufacturing.Body, StringComparison.Ordinal);
         Assert.Contains("Includes 7% VAT and estimated domestic shipping", plan.Customer.Body, StringComparison.Ordinal);
         Assert.Contains("International shipping is quoted separately", plan.Manufacturing.Body, StringComparison.Ordinal);
+        Assert.Contains("(same as billing)", plan.Customer.Body, StringComparison.Ordinal);
+        Assert.Contains("We will review all the files", plan.Customer.Body, StringComparison.Ordinal);
+        Assert.Contains("printability tests", plan.Customer.Body, StringComparison.Ordinal);
+        Assert.Contains("write us back", plan.Customer.Body, StringComparison.Ordinal);
+        Assert.Contains("36/1 Moo 3", plan.Customer.Body, StringComparison.Ordinal);
+        Assert.Contains("Nonthaburi 11120, Thailand", plan.Customer.Body, StringComparison.Ordinal);
         foreach (var body in new[] { plan.Customer.Body, plan.Manufacturing.Body })
         {
             Assert.Contains("part.stl", body, StringComparison.Ordinal);
@@ -41,15 +47,26 @@ public sealed class AdditiveQuotationNotificationComposerTests
         var summary = Summary();
         var customer = summary.Customer with
         {
-            FirstName = "<script>name</script>", LastName = "<last>", CompanyName = "<company>",
-            TaxIdentification = "<tax>", Email = "user+tag@example.test", MobileNumber = "'<mobile>",
-            TelephoneNumber = "<office>", BillingAddressLine1 = "<billing>", ShippingAddressLine1 = "<shipping>",
-            ShipToBillingAddress = false, Description = "<note>\nsecond & line",
+            FirstName = "<script>name</script>",
+            LastName = "<last>",
+            CompanyName = "<company>",
+            TaxIdentification = "<tax>",
+            Email = "user+tag@example.test",
+            MobileNumber = "'<mobile>",
+            TelephoneNumber = "<office>",
+            BillingAddressLine1 = "<billing>",
+            ShippingAddressLine1 = "<shipping>",
+            ShipToBillingAddress = false,
+            Description = "<note>\nsecond & line",
         };
         var item = summary.Items[0] with
         {
-            FileName = "<file>", Material = "<material>", Color = "<color>", Dimensions = "<size>",
-            GeometryWarning = "<warning>", DownloadUrl = new Uri("https://files.example/part?one=a&two=b"),
+            FileName = "<file>",
+            Material = "<material>",
+            Color = "<color>",
+            Dimensions = "<size>",
+            GeometryWarning = "<warning>",
+            DownloadUrl = new Uri("https://files.example/part?one=a&two=b"),
         };
         var plan = AdditiveQuotationNotificationComposer.Compose(summary with { Customer = customer, Items = [item] });
         foreach (var body in new[] { plan.Customer.Body, plan.Manufacturing.Body })
@@ -98,11 +115,29 @@ public sealed class AdditiveQuotationNotificationComposerTests
     [Fact]
     public void InternationalEstimateDoesNotClaimShippingIsIncluded()
     {
-        var plan = AdditiveQuotationNotificationComposer.Compose(Summary() with { DomesticShippingPriced = false });
+        var plan = AdditiveQuotationNotificationComposer.Compose(Summary() with { DomesticShippingPriced = false, DestinationCountryCode = "JP" });
         foreach (var body in new[] { plan.Customer.Body, plan.Manufacturing.Body })
         {
             Assert.Contains("International shipping is excluded; quoted separately", body, StringComparison.Ordinal);
             Assert.DoesNotContain("estimated domestic shipping", body, StringComparison.Ordinal);
+            Assert.Contains("Shipping to JP", body, StringComparison.Ordinal);
+            Assert.Contains("VAT is calculated only on the included amount", body, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void PreservesPreparedTaxBranchAndAuthoritativeLeadTimeRange()
+    {
+        var summary = Summary();
+        var plan = AdditiveQuotationNotificationComposer.Compose(summary with
+        {
+            Customer = summary.Customer with { TaxIdentification = "1234567890123 (สาขาที่ 00001)" },
+            LeadTimeMinimumDays = 3,
+        });
+        foreach (var body in new[] { plan.Customer.Body, plan.Manufacturing.Body })
+        {
+            Assert.Contains(System.Net.WebUtility.HtmlEncode("1234567890123 (สาขาที่ 00001)"), body, StringComparison.Ordinal);
+            Assert.Contains("Lead time: 3-7 days", body, StringComparison.Ordinal);
         }
     }
 
@@ -110,5 +145,5 @@ public sealed class AdditiveQuotationNotificationComposerTests
         42, new("Thai", "Customer", "customer@example.test", null, "Thailand", null, null, "Review the sealing face"),
         [new("part.stl", "ABS", "Black", "10 x 20 x 30", null, 2, 123.45m, 246.90m,
             PrintProcess.Fdm, BuildPreference.Strength, new Uri("https://files.example/part?token=fixture"), 12.5m, 25m)],
-        345.67m, 7, true);
+        345.67m, 7, true, "TH", 7);
 }

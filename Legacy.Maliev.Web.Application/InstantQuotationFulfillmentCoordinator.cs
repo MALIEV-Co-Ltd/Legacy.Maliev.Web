@@ -3,8 +3,9 @@ using System.Text;
 
 namespace Legacy.Maliev.Web.Application;
 
-internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFulfillmentClient client)
+internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFulfillmentClient client, TimeProvider? timeProvider = null)
 {
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
     internal async Task<InstantQuotationSubmissionResult> FulfillAsync(
         InstantQuotationSessionState session,
         InstantQuotationOrderQuote quote,
@@ -303,6 +304,48 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
 
             checkpoint = next;
         }
+
+        if (checkpoint.QuotationNotifications is null)
+        {
+            if (!await HasWriteFenceAsync(lease, cancellationToken)) return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+            var prepared = await client.PrepareQuotationNotificationsAsync(
+                session, quote, customer, checkpoint.RequestReference, files, cancellationToken);
+            if (!prepared.ServiceAvailable) return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
+            if (!prepared.Authorized) return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
+            if (prepared.Payload is null) return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+            var next = checkpoint with { QuotationNotifications = prepared.Payload };
+            if (!await TryAdvanceAsync(lease, checkpoint, next, cancellationToken)) return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+            checkpoint = next;
+        }
+
+        var payload = checkpoint.QuotationNotifications;
+        if (payload is null) return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+        var notificationFailure = InstantQuotationProblemCategory.None;
+        foreach (var customerMessage in new[] { true, false })
+        {
+            if (customerMessage ? checkpoint.CustomerQuotationNotificationSent : checkpoint.ManufacturingQuotationNotificationSent) continue;
+            cancellationToken.ThrowIfCancellationRequested();
+            // FileService's existing contract guarantees at least one hour. Preparation freezes a 45-minute bound.
+            // Expired payloads fail closed; never regenerate signed bodies under the same operation identity.
+            if (payload.ExpiresAt <= clock.GetUtcNow())
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+            if (!await HasWriteFenceAsync(lease, cancellationToken)) return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+            var notification = await client.SendQuotationNotificationAsync(
+                customerMessage ? payload.Customer : payload.Manufacturing,
+                CreateOperationId(session.SubmissionId, customerMessage ? "quotation-customer" : "quotation-manufacturing"), cancellationToken);
+            if (!notification.Sent || !notification.ServiceAvailable || !notification.Authorized)
+            {
+                if (notificationFailure == InstantQuotationProblemCategory.None)
+                    notificationFailure = !notification.Authorized ? InstantQuotationProblemCategory.Authorization
+                        : !notification.ServiceAvailable ? InstantQuotationProblemCategory.DependencyUnavailable : InstantQuotationProblemCategory.Unexpected;
+                continue;
+            }
+            var next = customerMessage ? checkpoint with { CustomerQuotationNotificationSent = true }
+                : checkpoint with { ManufacturingQuotationNotificationSent = true };
+            if (!await TryAdvanceAsync(lease, checkpoint, next, cancellationToken)) return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+            checkpoint = next;
+        }
+        if (notificationFailure != InstantQuotationProblemCategory.None) return Partial(checkpoint, notificationFailure);
 
         var completed = checkpoint with
         {

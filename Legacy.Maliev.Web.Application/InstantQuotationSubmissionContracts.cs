@@ -59,7 +59,10 @@ public sealed record InstantQuotationSubmissionCheckpoint(
     string? TransactionId = null,
     Guid? JourneyId = null,
     InstantQuotationCustomerSubmission? FrozenCustomer = null,
-    bool ProfileCompleted = false);
+    bool ProfileCompleted = false,
+    InstantQuotationNotificationPayload? QuotationNotifications = null,
+    bool CustomerQuotationNotificationSent = false,
+    bool ManufacturingQuotationNotificationSent = false);
 
 public sealed record InstantQuotationSubmissionCheckpointRead(
     bool LeaseValid,

@@ -15,6 +15,51 @@ public sealed class InstantQuotationSubmissionStoreTests
     private static readonly TimeSpan LeaseLifetime = TimeSpan.FromMinutes(2);
 
     [Fact]
+    public async Task QuotationMessages_AreProtectedFrozenAndSentFlagsCannotRegress()
+    {
+        var storage = new FakeAtomicStorage();
+        var store = CreateStore(storage);
+        await using var lease = await store.TryAcquireAsync("submission-mail", "owner-a", default);
+        Assert.NotNull(lease);
+        var checkpoint = Persisted("submission-mail") with
+        {
+            FinalizedFiles = [new(Guid.NewGuid(), "private-quotation-files", "instant-quotation/42/part.stl", "part.stl", "model/stl", 100, new string('a', 64))],
+            CustomerId = 71, OrderIds = [901], IdentityCreated = false,
+        };
+        InstantQuotationSubmissionCheckpointStatus? prior = null;
+        foreach (var stage in Enum.GetValues<InstantQuotationSubmissionCheckpointStatus>().Where(stage => stage <= InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned))
+        {
+            checkpoint = checkpoint with { Status = stage };
+            Assert.True(await lease.TryPutAsync(checkpoint, prior, default));
+            prior = stage;
+        }
+        var payload = new InstantQuotationNotificationPayload(
+            new("private@example.test", "Quotation", "private customer body", null, null, ["mail-tracking@maliev.com"]),
+            new("manufacturing@maliev.com", "Quotation", "private manufacturing body", "private@example.test", null, null),
+            DateTimeOffset.UtcNow.AddMinutes(30));
+        checkpoint = checkpoint with { QuotationNotifications = payload };
+        Assert.True(await lease.TryPutAsync(checkpoint, prior, default));
+        Assert.DoesNotContain("private@example.test", Encoding.UTF8.GetString(storage.LastPayload!), StringComparison.Ordinal);
+        var read = (await lease.ReadAsync(default)).Checkpoint;
+        Assert.NotNull(read);
+        Assert.NotNull(read.QuotationNotifications);
+        Assert.Equal(payload.Customer.Body, read.QuotationNotifications.Customer.Body);
+        Assert.Equal(payload.Manufacturing.Body, read.QuotationNotifications.Manufacturing.Body);
+        Assert.Equal(payload.ExpiresAt, read.QuotationNotifications.ExpiresAt);
+        Assert.False(await lease.TryPutAsync(checkpoint with
+        { QuotationNotifications = payload with { Customer = payload.Customer with { Body = "replaced body" } } }, prior, default));
+        checkpoint = checkpoint with { CustomerQuotationNotificationSent = true };
+        Assert.True(await lease.TryPutAsync(checkpoint, prior, default));
+        Assert.False(await lease.TryPutAsync(checkpoint with { CustomerQuotationNotificationSent = false }, prior, default));
+        Assert.False(await lease.TryPutAsync(checkpoint with { QuotationNotifications = null }, prior, default));
+        Assert.False(await lease.TryPutAsync(checkpoint with { QuotationNotifications = null, CustomerQuotationNotificationSent = false }, prior, default));
+        Assert.False(await lease.TryPutAsync(checkpoint with { Status = InstantQuotationSubmissionCheckpointStatus.Completed }, prior, default));
+        checkpoint = checkpoint with { ManufacturingQuotationNotificationSent = true };
+        Assert.True(await lease.TryPutAsync(checkpoint, prior, default));
+        Assert.True(await lease.TryPutAsync(checkpoint with { Status = InstantQuotationSubmissionCheckpointStatus.Completed }, prior, default));
+    }
+
+    [Fact]
     public async Task FrozenProfileOperation_IsProtectedRoundTripsAndRecordsCompletionBeforeFinalization()
     {
         var storage = new FakeAtomicStorage();

@@ -15,7 +15,7 @@ internal sealed record AdditiveQuotationNotificationItem(
 internal sealed record AdditiveQuotationNotificationSummary(
     int RequestReference, InstantQuotationCustomerSubmission Customer,
     IReadOnlyList<AdditiveQuotationNotificationItem> Items, decimal FinalOrderPrice, int LeadTimeMaximumDays,
-    bool DomesticShippingPriced);
+    bool DomesticShippingPriced, string DestinationCountryCode, int LeadTimeMinimumDays);
 
 internal sealed record AdditiveQuotationNotificationPlan(
     NotificationChannel Channel, EmailNotification Customer, EmailNotification Manufacturing);
@@ -26,6 +26,7 @@ internal static class AdditiveQuotationNotificationComposer
     {
         if (summary.RequestReference <= 0 || summary.Items.Count is < 1 or > 32
             || summary.FinalOrderPrice < 0 || summary.LeadTimeMaximumDays <= 0
+            || summary.LeadTimeMinimumDays <= 0 || summary.LeadTimeMinimumDays > summary.LeadTimeMaximumDays
             || summary.Items.Any(item => item.Quantity <= 0 || item.UnitPrice < 0 || item.Subtotal < 0
                 || item.UnitPrintTimeMinutes < 0 || item.TotalPrintTimeMinutes < 0
                 || !item.DownloadUrl.IsAbsoluteUri || item.DownloadUrl.Scheme != Uri.UriSchemeHttps
@@ -47,6 +48,9 @@ internal static class AdditiveQuotationNotificationComposer
         var customer = summary.Customer;
         var body = new StringBuilder("<!doctype html><html><body>");
         Field(body, "Hello", manufacturing ? "Manufacturing Team" : customer.FirstName + " " + customer.LastName);
+        Field(body, "Review", manufacturing
+            ? "A customer sent files for manufacturability review. Please review the request and get back with a final quotation."
+            : "Thank you for your order. We will review all the files and get back to you with the final quotation. If any file fails our printability tests, we will explain how to improve the part.");
         Field(body, "Status", "Estimated quotation only; staff review required before final quotation or payment.");
         Field(body, "First name", customer.FirstName);
         Field(body, "Last name", customer.LastName);
@@ -56,7 +60,7 @@ internal static class AdditiveQuotationNotificationComposer
         Contact(body, "Mobile", "tel", customer.MobileNumber);
         Contact(body, "Office phone", "tel", customer.TelephoneNumber);
         Field(body, "Billing address", Address(customer, false));
-        Field(body, "Shipping address", Address(customer, !customer.ShipToBillingAddress));
+        Field(body, customer.ShipToBillingAddress ? "Shipping address (same as billing)" : "Shipping address", Address(customer, !customer.ShipToBillingAddress));
         foreach (var item in summary.Items)
         {
             body.Append("<div><a href=\"").Append(Html(item.DownloadUrl.AbsoluteUri)).Append("\"><strong>")
@@ -77,11 +81,23 @@ internal static class AdditiveQuotationNotificationComposer
         }
         foreach (var line in (customer.Description ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
             if (line.Length != 0) Field(body, "Note", line);
-        Field(body, "Lead time", "up to " + summary.LeadTimeMaximumDays.ToString(CultureInfo.InvariantCulture) + " days");
+        Field(body, "Lead time", summary.LeadTimeMinimumDays == summary.LeadTimeMaximumDays
+            ? "up to " + summary.LeadTimeMaximumDays.ToString(CultureInfo.InvariantCulture) + " days"
+            : FormattableString.Invariant($"{summary.LeadTimeMinimumDays}-{summary.LeadTimeMaximumDays} days"));
         Field(body, "Estimated price", Money(summary.FinalOrderPrice));
         Field(body, "Estimate includes", summary.DomesticShippingPriced
             ? "Includes 7% VAT and estimated domestic shipping. International shipping is quoted separately."
-            : "Includes 7% VAT. International shipping is excluded; quoted separately.");
+            : "Includes 7% VAT. International shipping is excluded; quoted separately. VAT is calculated only on the included amount.");
+        Field(body, "Shipping to " + Html(summary.DestinationCountryCode), summary.DomesticShippingPriced
+            ? "Domestic Thailand rate included (Flash Express)."
+            : "To be quoted (excluded from total).");
+        if (!manufacturing)
+        {
+            Field(body, "Questions", "If you have questions or need changes to your order, please write us back to this email.");
+            body.Append("<div>Best regards,</div><a href=\"https://www.maliev.com/\">MALIEV</a>");
+            Field(body, "Address", "36/1 Moo 3, Khlong Khoi, Pak Kret, Nonthaburi 11120, Thailand");
+            Field(body, "Tel.", "+66(0)81-803-0404 / +66(0)89-895-0690");
+        }
         return body.Append("</body></html>").ToString();
     }
 

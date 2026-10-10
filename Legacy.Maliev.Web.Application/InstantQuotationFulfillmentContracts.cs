@@ -27,9 +27,30 @@ public sealed record InstantQuotationWelcomePreparationResult(
     bool ServiceAvailable,
     bool Authorized);
 
+/// <summary>Exact protected quotation messages and their conservative signed-link validity bound.</summary>
+public sealed record InstantQuotationNotificationPayload(
+    EmailNotification Customer,
+    EmailNotification Manufacturing,
+    DateTimeOffset ExpiresAt);
+
+/// <summary>Result of preparing both replay-stable quotation notification bodies.</summary>
+public sealed record InstantQuotationNotificationPreparationResult(
+    InstantQuotationNotificationPayload? Payload,
+    bool ServiceAvailable,
+    bool Authorized);
+
 /// <summary>Cross-service fulfillment operations owned by the Legacy Web BFF.</summary>
 public interface IInstantQuotationFulfillmentClient
 {
+    /// <summary>Prepares both messages from the frozen authoritative submission and finalized files.</summary>
+    Task<InstantQuotationNotificationPreparationResult> PrepareQuotationNotificationsAsync(
+        InstantQuotationSessionState session, InstantQuotationOrderQuote quote, InstantQuotationCustomerSubmission customer,
+        int requestReference, IReadOnlyList<InstantQuotationFinalizedFile> files, CancellationToken cancellationToken);
+
+    /// <summary>Sends an exact prepared quotation body using a stable operation identity.</summary>
+    Task<NotificationResult> SendQuotationNotificationAsync(
+        EmailNotification message, Guid operationId, CancellationToken cancellationToken);
+
     /// <summary>Selects the authenticated customer or atomically provisions a guest profile.</summary>
     Task<InstantQuotationCustomerProvisionResult> ProvisionCustomerAsync(
         string? ownerIdentity,

@@ -358,7 +358,7 @@ internal sealed class InstantQuotationSubmissionService(
         {
             return fulfillmentClient is null
                 ? Partial(checkpoint, InstantQuotationProblemCategory.Unexpected)
-                : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
+                : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient, clock).FulfillAsync(
                     session,
                     quote,
                     ownerIdentity,
@@ -543,7 +543,7 @@ internal sealed class InstantQuotationSubmissionService(
             }
 
             return filesLinkedStored
-                ? await new InstantQuotationFulfillmentCoordinator(fulfillmentClient).FulfillAsync(
+                ? await new InstantQuotationFulfillmentCoordinator(fulfillmentClient, clock).FulfillAsync(
                     session,
                     quote,
                     ownerIdentity,
