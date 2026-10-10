@@ -45,10 +45,20 @@ public sealed class CncLiteralProducerBoundaryTests
             var database = $"profile_contract_{Guid.NewGuid():N}";
             var postgres = scope.OwnContainer(new PostgreSqlBuilder("postgres:18-alpine").WithDatabase(database)
                 .WithLabel("maliev.cnc.run", scope.RunId).WithLabel("maliev.cnc.expires", scope.Expires.ToString("o"))
-                .WithCreateParameterModifier(value => { value.HostConfig.Memory = 402653184; value.HostConfig.NanoCPUs = 1000000000; }).Build(), 402653184, 1000000000);
+                .WithCreateParameterModifier(value =>
+                {
+                    var host = value.HostConfig ?? throw new InvalidOperationException("Disposable PostgreSQL host configuration unavailable.");
+                    host.Memory = 402653184;
+                    host.NanoCPUs = 1000000000;
+                }).Build(), 402653184, 1000000000);
             var redis = scope.OwnContainer(new RedisBuilder("redis:8.4-alpine")
                 .WithLabel("maliev.cnc.run", scope.RunId).WithLabel("maliev.cnc.expires", scope.Expires.ToString("o"))
-                .WithCreateParameterModifier(value => { value.HostConfig.Memory = 134217728; value.HostConfig.NanoCPUs = 1000000000; }).Build(), 134217728, 1000000000);
+                .WithCreateParameterModifier(value =>
+                {
+                    var host = value.HostConfig ?? throw new InvalidOperationException("Disposable Redis host configuration unavailable.");
+                    host.Memory = 134217728;
+                    host.NanoCPUs = 1000000000;
+                }).Build(), 134217728, 1000000000);
             await scope.StartContainerAsync(postgres, cancellation);
             await scope.StartContainerAsync(redis, cancellation);
             var connection = postgres.GetConnectionString();

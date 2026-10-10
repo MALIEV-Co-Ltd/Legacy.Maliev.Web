@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Docker.DotNet;
+using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -17,7 +18,9 @@ internal sealed class CncOwnedResourceScope
     private readonly List<OwnedChild> children = [];
     private readonly List<(IContainer Container, long Memory, long Cpu)> containers = [];
     internal List<object> Receipts { get; } = [];
-    internal Func<IDockerClient> DockerFactory { get; set; } = () => new DockerClientConfiguration().CreateClient();
+    internal Func<IDockerClient> DockerFactory { get; set; } = () => new DockerClientBuilder()
+        .WithEndpoint(TestcontainersSettings.OS.DockerEndpointAuthConfig.Endpoint)
+        .WithTimeout(TimeSpan.FromSeconds(15)).Build();
     internal bool AcquisitionRejectionControl { get; set; }
     internal static async Task ExecuteAsync(Func<CncOwnedResourceScope, Task> body, Action<IReadOnlyList<object>>? inspect = null)
     {
@@ -59,14 +62,18 @@ internal sealed class CncOwnedResourceScope
                     if (!string.IsNullOrEmpty(id))
                     {
                         var actual = await docker.Containers.InspectContainerAsync(id, deadline.Token);
-                        if (actual.ID != id || actual.Config.Labels["maliev.cnc.run"] != scope.RunId
-                            || actual.Config.Labels["maliev.cnc.expires"] != scope.Expires.ToString("o")
-                            || actual.Mounts.Any(mount => mount.Type == "bind"))
+                        var labels = actual.Config?.Labels ?? throw new InvalidOperationException("Disposable provider labels unavailable.");
+                        var host = actual.HostConfig ?? throw new InvalidOperationException("Disposable provider host configuration unavailable.");
+                        var mounts = actual.Mounts ?? throw new InvalidOperationException("Disposable provider mounts unavailable.");
+                        if (actual.ID != id || labels["maliev.cnc.run"] != scope.RunId
+                            || labels["maliev.cnc.expires"] != scope.Expires.ToString("o")
+                            || host.Memory != item.Memory || host.NanoCPUs != item.Cpu
+                            || mounts.Any(mount => mount is null || mount.Type == "bind"))
                             throw new InvalidOperationException("Container ownership or disposable mounts mismatch; preserved.");
                         await item.Container.DisposeAsync().AsTask().WaitAsync(deadline.Token);
                         var remaining = await docker.Containers.ListContainersAsync(new() { All = true }, deadline.Token);
                         if (remaining.Any(container => container.ID == id)) throw new InvalidOperationException("Owned container remains.");
-                        scope.Receipts.Add(new { kind = "container", id, scope.RunId, scope.Expires, actual.Created, memory = actual.HostConfig.Memory, cpu = actual.HostConfig.NanoCPUs, persistentData = false, absent = true });
+                        scope.Receipts.Add(new { kind = "container", id, scope.RunId, scope.Expires, actual.Created, memory = host.Memory, cpu = host.NanoCPUs, persistentData = false, absent = true });
                     }
                     else await item.Container.DisposeAsync().AsTask().WaitAsync(deadline.Token);
                 }
@@ -98,13 +105,16 @@ internal sealed class CncOwnedResourceScope
     internal async Task StartContainerAsync(IContainer container, CancellationToken token)
     {
         await container.StartAsync(token);
-        using var docker = new DockerClientConfiguration().CreateClient();
+        using var docker = DockerFactory();
         var actual = await docker.Containers.InspectContainerAsync(container.Id, token);
         var expected = containers.Single(item => ReferenceEquals(item.Container, container));
-        if (actual.ID != container.Id || actual.Config.Labels["maliev.cnc.run"] != RunId
-            || actual.Config.Labels["maliev.cnc.expires"] != Expires.ToString("o")
-            || actual.HostConfig.Memory != expected.Memory || actual.HostConfig.NanoCPUs != expected.Cpu
-            || actual.Mounts.Any(mount => mount.Type == "bind"))
+        var labels = actual.Config?.Labels ?? throw new InvalidOperationException("Disposable provider labels unavailable.");
+        var host = actual.HostConfig ?? throw new InvalidOperationException("Disposable provider host configuration unavailable.");
+        var mounts = actual.Mounts ?? throw new InvalidOperationException("Disposable provider mounts unavailable.");
+        if (actual.ID != container.Id || labels["maliev.cnc.run"] != RunId
+            || labels["maliev.cnc.expires"] != Expires.ToString("o")
+            || host.Memory != expected.Memory || host.NanoCPUs != expected.Cpu
+            || mounts.Any(mount => mount is null || mount.Type == "bind"))
             throw new InvalidOperationException("Disposable provider ownership/caps inspection failed.");
     }
     internal OwnedChild StartChild(string dll, Dictionary<string, string> environment, Action? afterStart = null)
