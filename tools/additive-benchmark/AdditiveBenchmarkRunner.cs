@@ -166,6 +166,11 @@ public static partial class AdditiveBenchmarkRunner
         {
             using JsonDocument schema = JsonDocument.Parse(schemaBytes);
             JsonElement root = schema.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                invalid.Add(new BenchmarkIssue("schema.root_type", "$schema", null, "Schema root must be an object."));
+                return null;
+            }
             RequireExactString(
                 root,
                 "$schema",
@@ -175,7 +180,9 @@ public static partial class AdditiveBenchmarkRunner
                 invalid);
 
             if (!root.TryGetProperty("properties", out JsonElement properties)
+                || properties.ValueKind != JsonValueKind.Object
                 || !properties.TryGetProperty("schemaVersion", out JsonElement version)
+                || version.ValueKind != JsonValueKind.Object
                 || !version.TryGetProperty("const", out JsonElement constant)
                 || constant.ValueKind != JsonValueKind.String
                 || (constant.GetString() != ManifestSchemaVersion
@@ -572,6 +579,12 @@ public static partial class AdditiveBenchmarkRunner
         foreach (JsonElement blocker in blockers.EnumerateArray())
         {
             string path = $"$.evidenceBlockers[{index}]";
+            if (blocker.ValueKind != JsonValueKind.Object)
+            {
+                invalid.Add(new BenchmarkIssue("blocker.type", path, null, "Evidence blocker must be an object."));
+                index++;
+                continue;
+            }
             RejectUnknownProperties(blocker, ["blockerId", "status", "missingDataReason"], path, null, invalid);
             string? blockerId = ReadRequiredString(blocker, "blockerId", $"{path}.blockerId", invalid);
             string? reason = ReadRequiredString(blocker, "missingDataReason", $"{path}.missingDataReason", invalid);
@@ -806,6 +819,13 @@ public static partial class AdditiveBenchmarkRunner
         int index = 0;
         foreach (JsonElement record in provenance.EnumerateArray())
         {
+            if (record.ValueKind != JsonValueKind.Object)
+            {
+                invalid.Add(new BenchmarkIssue("case.provenance_record_type", $"{path}[{index}]", caseId,
+                    "Provenance record must be an object."));
+                index++;
+                continue;
+            }
             RejectUnknownProperties(
                 record,
                 ["sourceKind", "uri", "sha256", "observedAtUtc", "notes"],
