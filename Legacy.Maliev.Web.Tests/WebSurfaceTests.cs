@@ -2936,7 +2936,11 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     [InlineData("/account/resetpassword")]
     public async Task AccountChallengeRoutes_RejectMissingChallengeData(string route)
     {
-        using var response = await client.GetAsync(route);
+        // Missing email renders the source-parity invalid-link result; a missing token still rejects.
+        var requestUri = route == "/account/emailconfirmation"
+            ? $"{route}?email=user%40example.test"
+            : route;
+        using var response = await client.GetAsync(requestUri);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
