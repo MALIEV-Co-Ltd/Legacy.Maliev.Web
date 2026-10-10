@@ -124,7 +124,7 @@ public static partial class AdditiveBenchmarkRunner
         List<BenchmarkIssue> blocked = [];
         List<BenchmarkCaseResult> caseResults = [];
 
-        ValidateSchema(schemaBytes, invalid);
+        string? schemaVersion = ValidateSchema(schemaBytes, invalid);
 
         JsonDocument manifest;
         try
@@ -143,14 +143,25 @@ public static partial class AdditiveBenchmarkRunner
 
         using (manifest)
         {
+            if (schemaVersion is not null
+                && manifest.RootElement.ValueKind == JsonValueKind.Object
+                && manifest.RootElement.TryGetProperty("schemaVersion", out JsonElement actualVersion)
+                && actualVersion.ValueKind == JsonValueKind.String
+                && (actualVersion.GetString() == ManifestSchemaVersion || actualVersion.GetString() == MatchedManifestSchemaVersion)
+                && actualVersion.GetString() != schemaVersion)
+            {
+                invalid.Add(new BenchmarkIssue("schema.manifest_version_mismatch", "$.schemaVersion", null,
+                    "Manifest version must match the supplied schema version."));
+            }
             ValidateManifest(manifest.RootElement, invalid, blocked, caseResults);
         }
 
         return CreateResult(manifestBytes, invalid, blocked, caseResults);
     }
 
-    private static void ValidateSchema(byte[] schemaBytes, List<BenchmarkIssue> invalid)
+    private static string? ValidateSchema(byte[] schemaBytes, List<BenchmarkIssue> invalid)
     {
+        string? schemaVersion = null;
         try
         {
             using JsonDocument schema = JsonDocument.Parse(schemaBytes);
@@ -176,6 +187,10 @@ public static partial class AdditiveBenchmarkRunner
                     null,
                     $"Schema must pin schemaVersion to {ManifestSchemaVersion} or {MatchedManifestSchemaVersion}."));
             }
+            else
+            {
+                schemaVersion = constant.GetString();
+            }
 
             if (!root.TryGetProperty("additionalProperties", out JsonElement additional)
                 || additional.ValueKind != JsonValueKind.False)
@@ -195,6 +210,7 @@ public static partial class AdditiveBenchmarkRunner
                 null,
                 exception.Message));
         }
+        return schemaVersion;
     }
 
     private static void ValidateManifest(
@@ -398,8 +414,8 @@ public static partial class AdditiveBenchmarkRunner
             invalid,
             caseId);
         ValidateEnum(policy, ["fixed", "search"], "case.orientation_policy", $"{path}.orientationPolicy", caseId, invalid);
-        ValidateNullableSha(benchmarkCase, "inputArtifactSha256", $"{path}.inputArtifactSha256", caseId, invalid);
-        ValidateNullableSha(benchmarkCase, "profileBundleSha256", $"{path}.profileBundleSha256", caseId, invalid);
+        ValidateRequiredSha(benchmarkCase, "inputArtifactSha256", $"{path}.inputArtifactSha256", caseId, invalid);
+        ValidateRequiredSha(benchmarkCase, "profileBundleSha256", $"{path}.profileBundleSha256", caseId, invalid);
 
         if (!benchmarkCase.TryGetProperty("metricDefinitions", out JsonElement definitions)
             || definitions.ValueKind != JsonValueKind.Object)
@@ -455,7 +471,7 @@ public static partial class AdditiveBenchmarkRunner
         int index = 0;
         foreach (JsonElement value in transform.EnumerateArray())
         {
-            if (!value.TryGetDouble(out double number) || !double.IsFinite(number))
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out double number) || !double.IsFinite(number))
             {
                 values = [];
                 return false;
@@ -915,6 +931,25 @@ public static partial class AdditiveBenchmarkRunner
                 && (value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(value.GetString()))))
         {
             invalid.Add(new BenchmarkIssue("case.nullable_string", path, caseId, $"{property} must be null or a non-empty string."));
+        }
+    }
+
+    private static void ValidateRequiredSha(
+        JsonElement element,
+        string property,
+        string path,
+        string? caseId,
+        List<BenchmarkIssue> invalid)
+    {
+        if (!element.TryGetProperty(property, out JsonElement value))
+        {
+            invalid.Add(new BenchmarkIssue("case.sha_missing", path, caseId, $"{property} must be present."));
+            return;
+        }
+
+        if (value.ValueKind != JsonValueKind.String || !Sha256Regex().IsMatch(value.GetString() ?? string.Empty))
+        {
+            invalid.Add(new BenchmarkIssue("case.sha_invalid", path, caseId, $"{property} must be a non-null 64-character SHA-256 digest."));
         }
     }
 
