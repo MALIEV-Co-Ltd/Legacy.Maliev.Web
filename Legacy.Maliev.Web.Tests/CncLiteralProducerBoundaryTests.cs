@@ -96,7 +96,10 @@ public sealed class CncLiteralProducerBoundaryTests
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
             using var created = await http.PostAsJsonAsync("customers", new
             {
-                FirstName = "Stored", LastName = "Name", Email = "literal@example.test", Fax = "fax-kept",
+                FirstName = "Stored",
+                LastName = "Name",
+                Email = "literal@example.test",
+                Fax = "fax-kept",
             }, new JsonSerializerOptions { PropertyNamingPolicy = null }, cancellation);
             Assert.Equal(HttpStatusCode.Created, created.StatusCode);
             using var json = JsonDocument.Parse(await created.Content.ReadAsStringAsync(cancellation));
