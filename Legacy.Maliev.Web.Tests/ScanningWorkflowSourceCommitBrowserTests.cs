@@ -48,6 +48,12 @@ public sealed class ScanningWorkflowSourceCommitBrowserTests(CncNativeBrowserFix
             var stage = stages.Nth(index);
             await stage.ScrollIntoViewIfNeededAsync();
             await page.WaitForFunctionAsync("index => Number(getComputedStyle(document.querySelectorAll('#scanning-selection-guide .scanning-workflow-step')[index]).opacity) === 1", index);
+            if (javaScript)
+            {
+                Assert.True(await page.Locator("html").EvaluateAsync<bool>("html => html.classList.contains('js')"));
+                Assert.True(await workflow.Locator("[data-scanning-workflow]").EvaluateAsync<bool>("timeline => timeline.classList.contains('is-active') && timeline.dataset.scanningWorkflowRevealed === 'true'"));
+                Assert.True(await stage.EvaluateAsync<bool>("stage => stage.classList.contains('is-visible')"));
+            }
             Assert.True(await stage.Locator("h3").IsVisibleAsync());
             Assert.Equal((index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), await stage.Locator(".scanning-workflow-node").InnerTextAsync());
             Assert.True(await stage.Locator(".scanning-workflow-output").IsVisibleAsync());
@@ -63,7 +69,9 @@ public sealed class ScanningWorkflowSourceCommitBrowserTests(CncNativeBrowserFix
             if (reducedMotion || !javaScript)
             {
                 Assert.Equal("none", await stage.EvaluateAsync<string>("stage => getComputedStyle(stage).transform"));
-                Assert.Equal("0s", await stage.EvaluateAsync<string>("stage => getComputedStyle(stage).transitionDuration"));
+                // The application shell caps reduced-motion transitions at .01ms.
+                Assert.InRange(await stage.EvaluateAsync<double>("stage => Math.max(...getComputedStyle(stage).transitionDuration.split(',').map(value => parseFloat(value)))"),
+                    0, reducedMotion ? .00001 : 0);
             }
         }
 
