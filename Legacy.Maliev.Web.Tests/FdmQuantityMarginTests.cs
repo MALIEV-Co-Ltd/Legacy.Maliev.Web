@@ -9,7 +9,6 @@ namespace Legacy.Maliev.Web.Tests
     using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Text.Json;
     using Xunit;
 
@@ -75,7 +74,7 @@ namespace Legacy.Maliev.Web.Tests
                 Assert.Equal(ExpectedGeometryUnitPrice(quote.DirectCostPerUnit, material, tier.MinQuantity), tier.UnitPrice);
             }
 
-            Assert.Equal(100, Assert.Single(quote.Tiers.Where(tier => tier.Active)).MinQuantity);
+            Assert.Equal(100, Assert.Single(quote.Tiers, tier => tier.Active).MinQuantity);
         }
 
         /// <summary>Technical filament floors remain independent of the quantity margin.</summary>
