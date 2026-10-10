@@ -7,6 +7,21 @@ namespace Maliev.AdditiveBenchmark;
 /// </summary>
 public static class BambuStudioResultParser
 {
+    private static readonly HashSet<string> KnownFeatureRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Outer wall",
+        "Inner wall",
+        "Sparse infill",
+        "Internal solid infill",
+        "Top surface",
+        "Bottom surface",
+        "Bridge",
+        "Support",
+        "Support interface",
+        "Skirt",
+        "Brim",
+    };
+
     /// <summary>
     /// Parses one completed slice result.
     /// </summary>
@@ -80,6 +95,112 @@ public static class BambuStudioResultParser
             slicedPlates.GetArrayLength());
     }
 
+    /// <summary>
+    /// Parses positive extrusion length by feature while honoring common G-code extrusion modes.
+    /// Unknown feature roles make support evidence unavailable for certification.
+    /// </summary>
+    /// <param name="gcode">One or more concatenated plate G-code streams.</param>
+    /// <returns>Extrusion evidence and any ambiguity reasons.</returns>
+    public static GCodeExtrusionEvidence ParseGCodeEvidence(string gcode)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gcode);
+        bool absolute = true;
+        int tool = 0;
+        var positions = new Dictionary<int, double>();
+        string? feature = null;
+        double total = 0;
+        double support = 0;
+        var reasons = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (string raw in gcode.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            string line = raw.Trim();
+            if (line.StartsWith("; FEATURE:", StringComparison.OrdinalIgnoreCase))
+            {
+                feature = line[10..].Trim();
+                if (!KnownFeatureRoles.Contains(feature))
+                {
+                    reasons.Add("ambiguous_feature_role");
+                }
+
+                continue;
+            }
+
+            string command = line.Split(';', 2)[0].Trim();
+            if (command.Equals("M82", StringComparison.OrdinalIgnoreCase))
+            {
+                absolute = true;
+                continue;
+            }
+
+            if (command.Equals("M83", StringComparison.OrdinalIgnoreCase))
+            {
+                absolute = false;
+                continue;
+            }
+
+            if (command.Length > 1 && command[0] == 'T' && int.TryParse(command[1..], out int selectedTool))
+            {
+                tool = selectedTool;
+                continue;
+            }
+
+            if (command.StartsWith("G92", StringComparison.OrdinalIgnoreCase)
+                && TryReadWord(command, 'E', out double reset))
+            {
+                positions[tool] = reset;
+                continue;
+            }
+
+            if (!(command.StartsWith("G0 ", StringComparison.OrdinalIgnoreCase)
+                || command.StartsWith("G1 ", StringComparison.OrdinalIgnoreCase)
+                || command.StartsWith("G2 ", StringComparison.OrdinalIgnoreCase)
+                || command.StartsWith("G3 ", StringComparison.OrdinalIgnoreCase))
+                || !TryReadWord(command, 'E', out double eValue))
+            {
+                continue;
+            }
+
+            double prior = positions.GetValueOrDefault(tool);
+            double delta = absolute ? eValue - prior : eValue;
+            positions[tool] = absolute ? eValue : prior + eValue;
+            if (delta <= 0)
+            {
+                continue;
+            }
+
+            total += delta;
+            if (feature is not null && feature.Contains("Support", StringComparison.OrdinalIgnoreCase))
+            {
+                support += delta;
+            }
+            else if (feature is null)
+            {
+                reasons.Add("missing_feature_role");
+            }
+        }
+
+        double? certifyingSupport = reasons.Count == 0 ? support : null;
+        return new GCodeExtrusionEvidence(total, support, certifyingSupport, reasons.Order().ToArray());
+    }
+
+    private static bool TryReadWord(string command, char word, out double value)
+    {
+        foreach (string token in command.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (token.Length > 1
+                && char.ToUpperInvariant(token[0]) == word
+                && double.TryParse(token[1..], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+        }
+
+        value = 0;
+        return false;
+    }
+
     private static int ReadRequiredInt32(JsonElement parent, string propertyName)
     {
         if (!parent.TryGetProperty(propertyName, out JsonElement value)
@@ -137,3 +258,14 @@ public sealed record BambuStudioSliceMetrics(
     double SparseInfillPercent,
     int WallLoops,
     int PlateCount);
+
+/// <summary>Feature-level extrusion evidence parsed from reference G-code.</summary>
+/// <param name="TotalPositiveExtrusionMillimetres">Positive filament-axis motion after retractions.</param>
+/// <param name="SupportExtrusionMillimetres">Observed extrusion tagged with a support role.</param>
+/// <param name="SupportExtrusionMillimetresForCertification">Support extrusion only when every feature role was unambiguous.</param>
+/// <param name="ReasonCodes">Stable evidence limitations.</param>
+public sealed record GCodeExtrusionEvidence(
+    double TotalPositiveExtrusionMillimetres,
+    double SupportExtrusionMillimetres,
+    double? SupportExtrusionMillimetresForCertification,
+    IReadOnlyList<string> ReasonCodes);
