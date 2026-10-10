@@ -91,6 +91,13 @@ jobs:
           pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Verify focused TRX rejection controls
         run: python3 -B tests/FocusedWebTrxGate.Tests.py
+      - name: Verify bounded browser failure evidence controls
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~BrowserFailureEvidenceTests"
+          --logger trx --results-directory ./browser-failure-evidence-test-results
       - name: Verify all ten sidebar culture and viewport browser cases
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
