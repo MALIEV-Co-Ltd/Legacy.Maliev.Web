@@ -191,6 +191,9 @@ public sealed class InstantQuotationSubmissionTests
         Assert.NotEqual(quotedLine.Subtotal, quotedLine.AllocatedOrderTotal);
         Assert.Contains($"Cost per unit: {quotedLine.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains($"Total cost: {quotedLine.Subtotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
+        var quotedGeometry = PartWithDfm(quantity: 2).Geometry;
+        Assert.Contains(FormattableString.Invariant($"Size: {quotedGeometry.DimensionXmm:0.###} x {quotedGeometry.DimensionYmm:0.###} x {quotedGeometry.DimensionZmm:0.###} mm"), call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains($"Total print time: {(quotedLine.PrintTimeMinutesPerUnit * quotedLine.Quantity).ToString("0.##", CultureInfo.InvariantCulture)} minute(s)", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains($"Allocated order total: {quotedLine.AllocatedOrderTotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains(
             "Geometry warning: Non-watertight mesh; Non-manifold edges; Multi-body mesh (2 bodies)",
