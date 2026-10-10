@@ -173,6 +173,10 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
         {
             cancellationToken.ThrowIfCancellationRequested();
             ArgumentNullException.ThrowIfNull(checkpoint);
+            if (checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Completed
+                && expectedPriorStatus is InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned or InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent
+                && (checkpoint.QuotationNotifications is null || !checkpoint.CustomerQuotationNotificationSent || !checkpoint.ManufacturingQuotationNotificationSent))
+                return false;
             if (Volatile.Read(ref disposed) != 0
                 || (!IsValidTransition(expectedPriorStatus, checkpoint.Status)
                     && !(expectedPriorStatus == InstantQuotationSubmissionCheckpointStatus.Persisted
@@ -181,6 +185,20 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                 || !IsValid(checkpoint))
             {
                 return false;
+            }
+
+            if (expectedPriorStatus is InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned or InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent
+                || checkpoint.QuotationNotifications is not null || checkpoint.CustomerQuotationNotificationSent || checkpoint.ManufacturingQuotationNotificationSent)
+            {
+                var read = await ReadAsync(cancellationToken);
+                if (!read.LeaseValid || read.Checkpoint is not { } prior
+                    || (prior.CustomerQuotationNotificationSent && !checkpoint.CustomerQuotationNotificationSent)
+                    || (prior.ManufacturingQuotationNotificationSent && !checkpoint.ManufacturingQuotationNotificationSent)
+                    || (prior.QuotationNotifications is not null
+                        && JsonSerializer.Serialize(prior.QuotationNotifications) != JsonSerializer.Serialize(checkpoint.QuotationNotifications))
+                    || (prior.QuotationNotifications is null
+                        && (checkpoint.CustomerQuotationNotificationSent || checkpoint.ManufacturingQuotationNotificationSent)))
+                    return false;
             }
 
             var persisted = new PersistedCheckpoint(
@@ -200,7 +218,10 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                 checkpoint.TransactionId,
                 checkpoint.JourneyId,
                 checkpoint.FrozenCustomer,
-                checkpoint.ProfileCompleted);
+                checkpoint.ProfileCompleted,
+                checkpoint.QuotationNotifications?.Snapshot(),
+                checkpoint.CustomerQuotationNotificationSent,
+                checkpoint.ManufacturingQuotationNotificationSent);
             var payload = JsonSerializer.SerializeToUtf8Bytes(persisted);
             var protectedPayload = protector.Protect(payload);
             try
@@ -247,6 +268,7 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             && (checkpoint.TransactionId is null || IsValidTransactionId(checkpoint.TransactionId, checkpoint.RequestReference))
             && Enum.IsDefined(checkpoint.Status)
             && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest)
+            && ValidNotifications(checkpoint.Status, checkpoint.QuotationNotifications, checkpoint.CustomerQuotationNotificationSent, checkpoint.ManufacturingQuotationNotificationSent)
             && IsValidStageData(checkpoint.Status, checkpoint.FinalizedFiles, checkpoint.CustomerId, checkpoint.IdentityCreated, checkpoint.OrderIds, checkpoint.WelcomeConfirmationToken);
 
         private bool IsValid(InstantQuotationSubmissionCheckpoint checkpoint) =>
@@ -255,7 +277,14 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             && (checkpoint.TransactionId is null || IsValidTransactionId(checkpoint.TransactionId, checkpoint.RequestReference))
             && Enum.IsDefined(checkpoint.Status)
             && !string.IsNullOrWhiteSpace(checkpoint.SnapshotDigest)
+            && ValidNotifications(checkpoint.Status, checkpoint.QuotationNotifications, checkpoint.CustomerQuotationNotificationSent, checkpoint.ManufacturingQuotationNotificationSent)
             && IsValidStageData(checkpoint.Status, checkpoint.FinalizedFiles, checkpoint.CustomerId, checkpoint.IdentityCreated, checkpoint.OrderIds, checkpoint.WelcomeConfirmationToken);
+
+        private static bool ValidNotifications(InstantQuotationSubmissionCheckpointStatus status, InstantQuotationNotificationPayload? payload, bool customerSent, bool manufacturingSent) =>
+            payload is null ? !customerSent && !manufacturingSent
+                : status is InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned or InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent or InstantQuotationSubmissionCheckpointStatus.Completed
+                    && payload.Customer is not null && payload.Manufacturing is not null
+                    && (status != InstantQuotationSubmissionCheckpointStatus.Completed || customerSent && manufacturingSent);
 
         private static bool IsValidTransition(
             InstantQuotationSubmissionCheckpointStatus? expected,
@@ -267,7 +296,9 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
                         or InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent
                         or InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned
                     : status == expected
-                        ? status == InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning
+                        ? status is InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning
+                            or InstantQuotationSubmissionCheckpointStatus.IdentityProvisioned
+                            or InstantQuotationSubmissionCheckpointStatus.WelcomeNotificationSent
                         : (expected == InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning
                                 && status == InstantQuotationSubmissionCheckpointStatus.FilesLinked)
                             || (int)status == (int)expected.Value + 1;
@@ -329,7 +360,10 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
             persisted.TransactionId,
             persisted.JourneyId,
             persisted.FrozenCustomer,
-            persisted.ProfileCompleted);
+            persisted.ProfileCompleted,
+            persisted.QuotationNotifications?.Snapshot(),
+            persisted.CustomerQuotationNotificationSent,
+            persisted.ManufacturingQuotationNotificationSent);
 
         private static bool IsValidTransactionId(string transactionId, int requestReference) =>
             string.Equals(transactionId, $"request-{requestReference}", StringComparison.Ordinal);
@@ -352,7 +386,10 @@ internal sealed class InstantQuotationSubmissionStore : IInstantQuotationSubmiss
         string? TransactionId = null,
         Guid? JourneyId = null,
         InstantQuotationCustomerSubmission? FrozenCustomer = null,
-        bool ProfileCompleted = false);
+        bool ProfileCompleted = false,
+        InstantQuotationNotificationPayload? QuotationNotifications = null,
+        bool CustomerQuotationNotificationSent = false,
+        bool ManufacturingQuotationNotificationSent = false);
 }
 
 internal sealed record InstantQuotationSubmissionAtomicRead(

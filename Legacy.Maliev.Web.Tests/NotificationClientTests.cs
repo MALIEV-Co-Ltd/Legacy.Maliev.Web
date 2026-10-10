@@ -10,6 +10,38 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class NotificationClientTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task QuotationFulfillmentSendsExactFrozenBodyAndMetadataOnManufacturingChannel(bool customer)
+    {
+        var operationId = Guid.Parse("3c12214d-8794-4dd0-a812-d32040752010");
+        var notification = customer
+            ? new EmailNotification("customer@example.test", "Quotation Request #42", "<p>frozen customer &amp; facts</p>", null, null, ["mail-tracking@maliev.com"])
+            : new EmailNotification("manufacturing@maliev.com", "Quotation Request #42", "<p>frozen manufacturing facts</p>", "customer@example.test", null, null);
+        using var handler = new RecordingHandler(async request =>
+        {
+            Assert.Equal("/notifications/v1/email/Manufacturing", request.RequestUri!.AbsolutePath);
+            Assert.Equal(operationId.ToString("D"), request.Headers.GetValues("Idempotency-Key").Single());
+            Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-token"), request.Headers.Authorization);
+            using var json = JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
+            Assert.Equal(notification.To, json.RootElement.GetProperty("to").GetString());
+            Assert.Equal(notification.Subject, json.RootElement.GetProperty("subject").GetString());
+            Assert.Equal(notification.Body, json.RootElement.GetProperty("body").GetString());
+            Assert.Equal(notification.ReplyTo, json.RootElement.GetProperty("replyTo").GetString());
+            if (customer)
+                Assert.Equal("mail-tracking@maliev.com", json.RootElement.GetProperty("bcc")[0].GetString());
+            else
+                Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("bcc").ValueKind);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://notifications.test/") };
+        var notifications = new NotificationClient(new NamedHttpClientFactory(http), new StubTokenProvider("service-token"), NullLogger<NotificationClient>.Instance);
+        var fulfillment = new InstantQuotationFulfillmentClient(null!, null!, null!, null!, null!, notifications, NullLogger<InstantQuotationFulfillmentClient>.Instance);
+        Assert.True((await fulfillment.SendQuotationNotificationAsync(notification, operationId, CancellationToken.None)).Sent);
+        Assert.Single(handler.Requests);
+    }
+
     [Fact]
     public async Task Send_UsesAuthenticatedJsonContractWithoutPiiInUrl()
     {
