@@ -128,8 +128,11 @@ internal sealed class NativeCompanyProcess(string dll, Dictionary<string, string
         // Timer establishment, installed version and native behavior require hosted proof.
         var start = new ProcessStartInfo("/usr/bin/timeout")
         {
-            WorkingDirectory = Path.GetDirectoryName(dll)!, UseShellExecute = false,
-            CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(dll)!,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
         };
         start.ArgumentList.Add("--foreground");
         start.ArgumentList.Add("--signal=TERM");
@@ -174,10 +177,19 @@ internal sealed class NativeCompanyProcess(string dll, Dictionary<string, string
         try { pid = process.Id; } catch (InvalidOperationException) { }
         Console.WriteLine("[company-owned-resource] " + System.Text.Json.JsonSerializer.Serialize(new
         {
-            ownershipId, state, run = Environment.GetEnvironmentVariable("GITHUB_RUN_ID"), purpose = Path.GetFileName(dll),
-            pid, spawnObservedUtc = startedUtc, executable = "/usr/bin/timeout", managedExecutable = "dotnet",
-            independentDeadlineSeconds = 180, independentKillAfterSeconds = 5,
-            expiresUtc = startedUtc?.AddSeconds(185), persistentData = false, cleanupVerified = false,
+            ownershipId,
+            state,
+            run = Environment.GetEnvironmentVariable("GITHUB_RUN_ID"),
+            purpose = Path.GetFileName(dll),
+            pid,
+            spawnObservedUtc = startedUtc,
+            executable = "/usr/bin/timeout",
+            managedExecutable = "dotnet",
+            independentDeadlineSeconds = 180,
+            independentKillAfterSeconds = 5,
+            expiresUtc = startedUtc?.AddSeconds(185),
+            persistentData = false,
+            cleanupVerified = false,
         }));
     }
 

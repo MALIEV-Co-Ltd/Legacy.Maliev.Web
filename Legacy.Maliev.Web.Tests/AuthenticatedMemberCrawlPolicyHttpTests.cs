@@ -260,36 +260,36 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
         RedisContainer? partialRedis = null;
         try
         {
-        rsa = partialRsa = RSA.Create(2048);
-        certificatePassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-        this.Password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)) + "!a";
-        lease = partialLease = new CancellationTokenSource(TimeSpan.FromMinutes(3));
-        var expiry = DateTimeOffset.UtcNow.AddMinutes(3).ToString("O");
-        containerOwner = partialOwner = new MemberOwnedContainers(run);
-        postgres = partialPostgres = new PostgreSqlBuilder("postgres:18-alpine")
-            .WithDockerEndpoint(MemberOwnedContainers.Endpoint)
-            .WithLabel("maliev.task", "web-476-member-authority")
-            .WithLabel("maliev.run", run).WithLabel("maliev.disposable", "true")
-            .WithLabel("maliev.expiresUtc", expiry)
-            .WithCreateParameterModifier(value =>
-            {
-                value.Entrypoint = ["sh", "-c"];
-                value.Cmd = ["exec timeout -s TERM -k 5 180 docker-entrypoint.sh postgres"];
-                MemberOwnedContainers.Cap(value, 512L * 1024 * 1024, "/var/lib/postgresql", 256 * 1024 * 1024);
-            })
-            .Build();
-        redis = partialRedis = new RedisBuilder("redis:8.4-alpine")
-            .WithDockerEndpoint(MemberOwnedContainers.Endpoint)
-            .WithLabel("maliev.task", "web-476-member-authority")
-            .WithLabel("maliev.run", run).WithLabel("maliev.disposable", "true")
-            .WithLabel("maliev.expiresUtc", expiry)
-            .WithCreateParameterModifier(value =>
-            {
-                value.Entrypoint = ["sh", "-c"];
-                value.Cmd = ["exec timeout -s TERM -k 5 180 docker-entrypoint.sh redis-server --save '' --appendonly no"];
-                MemberOwnedContainers.Cap(value, 128L * 1024 * 1024, "/data", 64 * 1024 * 1024);
-            })
-            .Build();
+            rsa = partialRsa = RSA.Create(2048);
+            certificatePassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+            this.Password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)) + "!a";
+            lease = partialLease = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+            var expiry = DateTimeOffset.UtcNow.AddMinutes(3).ToString("O");
+            containerOwner = partialOwner = new MemberOwnedContainers(run);
+            postgres = partialPostgres = new PostgreSqlBuilder("postgres:18-alpine")
+                .WithDockerEndpoint(MemberOwnedContainers.Endpoint)
+                .WithLabel("maliev.task", "web-476-member-authority")
+                .WithLabel("maliev.run", run).WithLabel("maliev.disposable", "true")
+                .WithLabel("maliev.expiresUtc", expiry)
+                .WithCreateParameterModifier(value =>
+                {
+                    value.Entrypoint = ["sh", "-c"];
+                    value.Cmd = ["exec timeout -s TERM -k 5 180 docker-entrypoint.sh postgres"];
+                    MemberOwnedContainers.Cap(value, 512L * 1024 * 1024, "/var/lib/postgresql", 256 * 1024 * 1024);
+                })
+                .Build();
+            redis = partialRedis = new RedisBuilder("redis:8.4-alpine")
+                .WithDockerEndpoint(MemberOwnedContainers.Endpoint)
+                .WithLabel("maliev.task", "web-476-member-authority")
+                .WithLabel("maliev.run", run).WithLabel("maliev.disposable", "true")
+                .WithLabel("maliev.expiresUtc", expiry)
+                .WithCreateParameterModifier(value =>
+                {
+                    value.Entrypoint = ["sh", "-c"];
+                    value.Cmd = ["exec timeout -s TERM -k 5 180 docker-entrypoint.sh redis-server --save '' --appendonly no"];
+                    MemberOwnedContainers.Cap(value, 128L * 1024 * 1024, "/data", 64 * 1024 * 1024);
+                })
+                .Build();
         }
         catch (Exception construction)
         {
@@ -344,9 +344,14 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
             await containerOwner.CaptureAsync(redis.Id, "redis:8.4-alpine", 6379);
             Console.WriteLine("[member-owned-containers] " + System.Text.Json.JsonSerializer.Serialize(new
             {
-                run, postgresId = postgres.Id, redisId = redis.Id,
-                postgresPort = postgres.GetMappedPublicPort(5432), redisPort = redis.GetMappedPublicPort(6379),
-                observedStartedUtc = DateTimeOffset.UtcNow, leaseSeconds = 180, persistentData = false,
+                run,
+                postgresId = postgres.Id,
+                redisId = redis.Id,
+                postgresPort = postgres.GetMappedPublicPort(5432),
+                redisPort = redis.GetMappedPublicPort(6379),
+                observedStartedUtc = DateTimeOffset.UtcNow,
+                leaseSeconds = 180,
+                persistentData = false,
             }));
             var containerConnection = new NpgsqlConnectionStringBuilder(postgres.GetConnectionString()) { Pooling = false };
             await using (var admin = new NpgsqlConnection(containerConnection.ConnectionString))

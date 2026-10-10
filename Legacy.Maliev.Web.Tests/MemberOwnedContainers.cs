@@ -71,8 +71,14 @@ internal sealed class MemberOwnedContainers(string run) : IDisposable
         births[id] = record;
         Console.WriteLine("[member-container-birth] " + JsonSerializer.Serialize(new
         {
-            id, run, image = record.Image, created = record.Created, port = record.Port,
-            mounts = "tmpfs-only", persistentData = false, independentLifetimeSeconds = 185,
+            id,
+            run,
+            image = record.Image,
+            created = record.Created,
+            port = record.Port,
+            mounts = "tmpfs-only",
+            persistentData = false,
+            independentLifetimeSeconds = 185,
         }));
     }
 

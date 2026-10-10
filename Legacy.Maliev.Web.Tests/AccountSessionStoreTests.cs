@@ -378,8 +378,11 @@ public sealed class AccountSessionStoreTests
             new CustomerAuthenticationResult(
                 new CustomerTokenSet("new-access", "new-refresh", "Bearer", 900, now.AddDays(1)),
                 true, 42, IdentitySubject: refreshed));
-        var context = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(AccountSessionManager.SessionIdClaim, "session-id")], "test")) };
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AccountSessionManager.SessionIdClaim, "session-id")], "test"))
+        };
         var token = await new AccountSessionManager(authentication, store, new FixedTimeProvider(now))
             .GetAccessTokenAsync(context, default);
         Assert.Equal(accepted ? "new-access" : null, token);
@@ -402,10 +405,15 @@ public sealed class AccountSessionStoreTests
         var expiry = DateTimeOffset.UtcNow.AddDays(1);
         if (legacyPayload)
         {
-            var payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new {
-                Email = "customer@example.com", CustomerDatabaseId = 42,
-                AccessToken = "access", RefreshToken = "refresh",
-                AccessExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15), RefreshExpiresAt = expiry });
+            var payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                Email = "customer@example.com",
+                CustomerDatabaseId = 42,
+                AccessToken = "access",
+                RefreshToken = "refresh",
+                AccessExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15),
+                RefreshExpiresAt = expiry
+            });
             await cache.SetAsync("legacy:web:session:subject-proof",
                 provider.CreateProtector("Legacy.Maliev.Web.AccountSession.v1").Protect(payload));
         }

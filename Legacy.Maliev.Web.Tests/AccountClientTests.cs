@@ -344,8 +344,14 @@ public sealed class AccountClientTests
     [InlineData(true)]
     public async Task AuthHttpResponse_RetainsSubjectSeparatelyFromEmailAndOwner(bool refresh)
     {
-        var accessToken = Jwt(new { sub = "member-crawl-customer", legacy_database_id = "42",
-            email = "private@example.test", name = "private-name", has_password = false });
+        var accessToken = Jwt(new
+        {
+            sub = "member-crawl-customer",
+            legacy_database_id = "42",
+            email = "private@example.test",
+            name = "private-name",
+            has_password = false
+        });
         var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK,
             JsonSerializer.Serialize(new CustomerTokenSet(accessToken, "refresh", "Bearer", 900,
                 new DateTimeOffset(2026, 7, 16, 0, 0, 0, TimeSpan.Zero)),
