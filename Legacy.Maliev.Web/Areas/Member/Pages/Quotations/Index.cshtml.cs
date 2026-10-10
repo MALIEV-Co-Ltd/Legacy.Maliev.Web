@@ -35,7 +35,8 @@ public sealed class Index(
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid || !PageSizeQuery.TryResolve(PageSize, out var pageSize))
+        if (!ModelState.IsValid || !PageSizeQuery.TryResolve(PageSize, out var pageSize)
+            || !CustomerQuotationSortQuery.TryResolve(Sort, out var canonicalSort))
         {
             return BadRequest();
         }
@@ -48,9 +49,10 @@ public sealed class Index(
 
         PageIndex = Math.Max(PageIndex, 1);
         PageSize = pageSize;
+        Sort = canonicalSort;
         var result = await quotationClient.ListAsync(
             customerId.Value,
-            string.IsNullOrWhiteSpace(Sort) ? "QuotationCreatedDate_Descending" : Sort,
+            canonicalSort,
             Search,
             PageIndex,
             PageSize,

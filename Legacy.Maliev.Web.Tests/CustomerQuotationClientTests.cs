@@ -9,6 +9,97 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class CustomerQuotationClientTests
 {
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("", "")]
+    [InlineData(" ", "%20")]
+    public async Task List_OmittedSortPreservesOriginalProducerQuery(string? sort, string wire)
+    {
+        using var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK,
+            "{\"items\":[],\"pageIndex\":1,\"totalPages\":0,\"totalRecords\":0}"));
+        var client = CreateClient(handler);
+        await client.ListAsync(42, sort, null, 1, 25, CancellationToken.None);
+        Assert.Equal($"quotations/customers/42?sort={wire}&search=&index=1&size=25", Assert.Single(handler.Requests).Path);
+    }
+
+    [Theory]
+    [InlineData(400, true, true)]
+    [InlineData(401, true, false)]
+    [InlineData(403, true, false)]
+    [InlineData(502, false, true)]
+    [InlineData(503, false, true)]
+    [InlineData(504, false, true)]
+    public async Task List_TerminalStatusPreservesAvailabilityAndAuthorization(int status, bool available, bool authorized)
+    {
+        using var handler = new RecordingHandler(_ => new HttpResponseMessage((HttpStatusCode)status));
+        var token = new RecordingTokenProvider();
+        var client = CreateClient(handler, token);
+        var result = await client.ListAsync(42, "QuotationCreatedDate_Descending", null, 1, 25, CancellationToken.None);
+        Assert.Null(result.Page);
+        Assert.Equal(available, result.ServiceAvailable);
+        Assert.Equal(authorized, result.Authorized);
+        Assert.Single(handler.Requests);
+        if (authorized) Assert.Empty(token.Invalidated);
+        else Assert.Equal("service-token", Assert.Single(token.Invalidated));
+    }
+
+    [Theory]
+    [InlineData(400, true, true)]
+    [InlineData(401, true, false)]
+    [InlineData(403, true, false)]
+    [InlineData(502, false, true)]
+    [InlineData(503, false, true)]
+    [InlineData(504, false, true)]
+    public async Task Read_TerminalStatusPreservesAvailabilityAndAuthorization(int status, bool available, bool authorized)
+    {
+        using var handler = new RecordingHandler(_ => new HttpResponseMessage((HttpStatusCode)status));
+        var token = new RecordingTokenProvider();
+        var client = CreateClient(handler, token);
+        var result = await client.GetAsync(42, 9, CancellationToken.None);
+        Assert.Null(result.Details);
+        Assert.Equal(available, result.ServiceAvailable);
+        Assert.Equal(authorized, result.Authorized);
+        Assert.Single(handler.Requests);
+        if (authorized) Assert.Empty(token.Invalidated);
+        else Assert.Equal("service-token", Assert.Single(token.Invalidated));
+    }
+
+    [Theory]
+    [InlineData("0", "QuotationId_Ascending")]
+    [InlineData("1", "QuotationId_Descending")]
+    [InlineData("2", "QuotationCreatedDate_Ascending")]
+    [InlineData("3", "QuotationCreatedDate_Descending")]
+    [InlineData("4", "QuotationModifiedDate_Ascending")]
+    [InlineData("5", "QuotationModifiedDate_Descending")]
+    public async Task List_CanonicalizesDefinedProducerEnumQuery(string input, string canonical)
+    {
+        using var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK,
+            "{\"items\":[],\"pageIndex\":1,\"totalPages\":0,\"totalRecords\":0}"));
+        var client = CreateClient(handler);
+        var result = await client.ListAsync(42, input, "CNC & parts", 1, 25, CancellationToken.None);
+        Assert.True(result.Authorized);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal($"quotations/customers/42?sort={canonical}&search=CNC%20%26%20parts&index=1&size=25", request.Path);
+        Assert.Equal("Bearer service-token", request.Authorization);
+    }
+
+    [Theory]
+    [InlineData("QuotationExpirationDate_Ascending")]
+    [InlineData("QuotationQuotedAmount_Descending")]
+    [InlineData("6")]
+    [InlineData("unknown")]
+    public async Task List_RejectsUndefinedSortWithoutDependencyRequest(string sort)
+    {
+        using var handler = new RecordingHandler(_ => throw new InvalidOperationException("No HTTP request permitted."));
+        var token = new RecordingTokenProvider();
+        var client = CreateClient(handler, token);
+        var failure = await Assert.ThrowsAsync<ArgumentException>(() => client.ListAsync(42, sort, null, 1, 25, CancellationToken.None));
+        Assert.Equal("sort", failure.ParamName);
+        Assert.Equal(0, token.AcquisitionCount);
+        Assert.Empty(token.Invalidated);
+        Assert.Empty(handler.Requests);
+    }
+
     [Fact]
     public async Task List_UsesOwnedCustomerRouteAndOpaqueServiceBearer()
     {
@@ -254,8 +345,13 @@ public sealed class CustomerQuotationClientTests
     {
         public List<string> Invalidated { get; } = [];
 
-        public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult<string?>("service-token");
+        public int AcquisitionCount { get; private set; }
+
+        public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken)
+        {
+            AcquisitionCount++;
+            return ValueTask.FromResult<string?>("service-token");
+        }
 
         public void Invalidate(string token) => Invalidated.Add(token);
     }

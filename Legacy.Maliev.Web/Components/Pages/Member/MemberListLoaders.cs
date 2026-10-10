@@ -98,7 +98,8 @@ public static class MemberListLoaders
         string? size,
         CancellationToken cancellationToken)
     {
-        if (!PageSizeQuery.TryResolve(size, out var pageSize))
+        if (!PageSizeQuery.TryResolve(size, out var pageSize)
+            || !CustomerQuotationSortQuery.TryResolve(sort, out var canonicalSort))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.Headers.CacheControl = "no-store";
@@ -114,7 +115,7 @@ public static class MemberListLoaders
 
         var result = await quotationClient.ListAsync(
             customerId.Value,
-            string.IsNullOrWhiteSpace(sort) ? "QuotationCreatedDate_Descending" : sort,
+            canonicalSort,
             search,
             pageIndex,
             pageSize,
@@ -131,7 +132,7 @@ public static class MemberListLoaders
         return CreateQuotationDisplayModel(
             page,
             search,
-            sort,
+            canonicalSort,
             pageSize,
             errors.Distinct(StringComparer.Ordinal).ToArray());
     }

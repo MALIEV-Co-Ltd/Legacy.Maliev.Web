@@ -754,6 +754,73 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
+    [InlineData("en", "0", "QuotationId_Ascending", "Lowest quotation number first")]
+    [InlineData("th", "0", "QuotationId_Ascending", "เลขที่ใบเสนอราคาต่ำสุดก่อน")]
+    [InlineData("en", "1", "QuotationId_Descending", "Highest quotation number first")]
+    [InlineData("th", "1", "QuotationId_Descending", "เลขที่ใบเสนอราคาสูงสุดก่อน")]
+    [InlineData("en", "2", "QuotationCreatedDate_Ascending", "Oldest first")]
+    [InlineData("th", "2", "QuotationCreatedDate_Ascending", "เก่าที่สุดก่อน")]
+    [InlineData("en", "3", "QuotationCreatedDate_Descending", "Newest first")]
+    [InlineData("th", "3", "QuotationCreatedDate_Descending", "ใหม่ล่าสุดก่อน")]
+    [InlineData("en", "4", "QuotationModifiedDate_Ascending", "Least recently updated first")]
+    [InlineData("th", "4", "QuotationModifiedDate_Ascending", "แก้ไขเก่าที่สุดก่อน")]
+    [InlineData("en", "5", "QuotationModifiedDate_Descending", "Recently updated first")]
+    [InlineData("th", "5", "QuotationModifiedDate_Descending", "แก้ไขล่าสุดก่อน")]
+    public async Task MemberQuotationsIndex_DefinedNumericSortPreservesCanonicalQueryAndLocalizedChoice(
+        string culture, string number, string canonical, string label)
+    {
+        await SignInAsync();
+        var quotations = Assert.IsType<StubCustomerQuotationClient>(configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotations.ResetInvocation();
+        using var response = await client.GetAsync($"/member/quotations?culture={culture}&sort={number}&index=2&search=CNC");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(canonical, Assert.IsType<QuotationListInvocation>(quotations.LastInvocation).Sort);
+        Assert.Contains($"value=\"{canonical}\" selected", html, StringComparison.Ordinal);
+        Assert.Contains($">{label}<", html, StringComparison.Ordinal);
+        Assert.Contains($"sort={canonical}&search=CNC", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("QuotationExpirationDate_Ascending", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("QuotationQuotedAmount_Descending", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "QuotationExpirationDate_Ascending")]
+    [InlineData("th", "QuotationQuotedAmount_Descending")]
+    [InlineData("en", "6")]
+    [InlineData("th", "unknown")]
+    public async Task MemberQuotationsIndex_UndefinedSortReturnsBadRequestBeforeService(string culture, string sort)
+    {
+        await SignInAsync();
+        var quotations = Assert.IsType<StubCustomerQuotationClient>(configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotations.ResetInvocation();
+        using var response = await client.GetAsync($"/member/quotations?culture={culture}&sort={sort}");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(quotations.LastInvocation);
+    }
+
+    [Theory]
+    [InlineData("en", false, "Quotation service is temporarily unavailable.")]
+    [InlineData("th", false, "ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว")]
+    [InlineData("en", true, "Quotation service is temporarily unavailable.")]
+    [InlineData("th", true, "ระบบใบเสนอราคาไม่พร้อมใช้งานชั่วคราว")]
+    public async Task MemberQuotationReads_UnavailableServiceUsesLocalizedErrorRatherThanNotFound(
+        string culture, bool detail, string message)
+    {
+        await SignInAsync();
+        var quotations = Assert.IsType<StubCustomerQuotationClient>(configuredFactory.Services.GetRequiredService<ICustomerQuotationClient>());
+        quotations.ResetInvocation();
+        if (detail) quotations.DetailResultOverride = new(null, false, true);
+        else quotations.ListResultOverride = new(null, false, true);
+        var path = detail ? "/member/quotations/view?id=15&" : "/member/quotations?";
+        using var response = await client.GetAsync(path + "culture=" + culture);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(message, html, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("en")]
     [InlineData("th")]
     public async Task MemberQuotationsIndex_MalformedPageSizeReturnsBadRequestBeforeCallingService(string culture)
@@ -4712,6 +4779,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
 
         public CustomerQuotationDetailsResult? DetailResultOverride { get; set; }
 
+        public CustomerQuotationListResult? ListResultOverride { get; set; }
+
         public CustomerQuotationDecisionResult? DecisionResultOverride { get; set; }
 
         public void ResetInvocation()
@@ -4720,6 +4789,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             LastDetailInvocation = null;
             LastDecisionInvocation = null;
             DetailResultOverride = null;
+            ListResultOverride = null;
             DecisionResultOverride = null;
         }
 
@@ -4732,6 +4802,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             CancellationToken cancellationToken)
         {
             LastInvocation = new(customerId, sort, search, pageIndex, pageSize);
+            if (ListResultOverride is not null) return Task.FromResult(ListResultOverride);
             return Task.FromResult(new CustomerQuotationListResult(
                 customerId == 42 ? new CustomerQuotationPage([Quotation], pageIndex, 3, 1) : null,
                 true,
