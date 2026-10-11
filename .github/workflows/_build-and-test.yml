@@ -85,7 +85,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~InstantQuotationMaterialPricingProgressTests"
+          --filter "FullyQualifiedName~InstantQuotationMaterialPricingProgressTests|FullyQualifiedName~MaterialCompletionObservationForwardingTests"
           --logger trx --results-directory ./material-progress-test-results
       - name: Verify protected ticket currency identity
         run: >-
