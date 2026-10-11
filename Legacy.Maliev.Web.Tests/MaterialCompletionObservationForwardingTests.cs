@@ -228,8 +228,11 @@ public sealed class MaterialCompletionObservationForwardingTests
             Frame = new(partId, selected ? "ABS" : comparisonKey ?? "PLA", status,
                 status == InstantQuotationMaterialPricingStatus.Completed ? 1 : null);
             if (includePetg)
-                Quote = Quote with { Parts = [new(partId, "ABS", "White", 1, PrintProcess.Fdm,
-                    1, 1, 1, 1, 1, 1, 1, false, 0, 0, [], BuildPreference.Standard, [new("PETG", 1)])] };
+                Quote = Quote with
+                {
+                    Parts = [new(partId, "ABS", "White", 1, PrintProcess.Fdm,
+                        1, 1, 1, 1, 1, 1, 1, false, 0, 0, [], BuildPreference.Standard, [new("PETG", 1)])]
+                };
             Inner = new(Frame, Quote);
             var services = new ServiceCollection();
             services.AddSingleton<IInstantQuotationAuthoritativePricingService>(Inner);
