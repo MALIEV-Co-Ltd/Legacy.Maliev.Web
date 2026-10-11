@@ -1734,7 +1734,9 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 [data-material-selector] [aria-checked="true"] { outline: 2px solid currentColor; outline-offset: -2px; }
 [data-material-selector] [role="radio"]:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
 [data-material-selector] .material-card__heading, [data-material-selector] .material-card__detail { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; align-items: baseline; gap: .45rem; }
-[data-material-selector] .material-card__detail { font-size: .75rem; margin-top: .375rem; }
+[data-material-selector] .material-card__detail { font-size: .75rem; line-height: 1.2; margin-top: .375rem; }
+[data-material-selector] .material-card__detail:has([data-price-status="unavailable"]) { grid-template-columns: minmax(0, 1fr); row-gap: .1rem; }
+[data-material-selector] [data-price-status="unavailable"] { white-space: normal; }
 [data-material-selector] [data-material-card-price] { text-align: right; min-width: 0; font-weight: 600; }
 [data-material-selector] [data-price-status="completed"] { white-space: nowrap; }
 [data-material-selector] [data-material-card-price] small { display: block; }

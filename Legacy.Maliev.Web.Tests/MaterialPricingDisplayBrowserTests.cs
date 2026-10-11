@@ -119,10 +119,13 @@ public sealed class MaterialPricingDisplayBrowserTests
             System.Text.Json.JsonSerializer.Serialize(new { Culture = culture, Width = 1280, Height = 720, Geometry = hitArea }));
         Assert.True(hitArea[0] == 1 && hitArea[1] >= hitArea[3] - 1 && hitArea[2] <= hitArea[4] + 1 && hitArea[2] <= hitArea[5] + 1,
             "The complete material card and its normal click target must stay above the summary footer.");
+        await Assertions.Expect(card.Locator("[data-material-card-price]")).ToHaveAttributeAsync("data-price-status", "unavailable");
+        // This historical fixture has resin authority; retain ABS geometry coverage before selecting supported resin.
+        card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
         await card.ClickAsync();
         await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
-        Assert.Equal("ABS", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        Assert.Equal("K", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
         await Assertions.Expect(fixture.Page.Locator(".instant-quote__configuration-footer")).ToBeVisibleAsync();
         await Assertions.Expect(fixture.Page.Locator("[data-summary-legal]")).ToBeVisibleAsync();
         await fixture.CaptureAsync($"source-material-safe-hit-area-{culture}-1280-720");

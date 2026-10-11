@@ -16,6 +16,10 @@
             {
                 var selected = material.Key == SelectedMaterialKey;
                 var price = PriceRows.FirstOrDefault(row => row.MaterialKey == material.Key);
+                var completedPrice = price is { Status: InstantQuotationMaterialPricingStatus.Completed, UnitPrice: { } value } && double.IsFinite(value) && value >= 0;
+                var priceStatus = completedPrice ? "completed"
+                    : price?.Status is InstantQuotationMaterialPricingStatus.Unavailable or InstantQuotationMaterialPricingStatus.Completed || price is null && !PricingPending
+                        ? "unavailable" : "pending";
                 <div @key="material.Key" role="radio" aria-label="@(material.Name + " — " + Localizer[material.Category])" aria-checked="@selected.ToString().ToLowerInvariant()"
                      tabindex="@(selected ? 0 : -1)" data-material-key="@material.Key"
                      @onclick="() => SelectionChanged.InvokeAsync(material.Key)">
@@ -27,7 +31,7 @@
                     </div>
                     <div class="material-card__detail">
                         <span>@(material.Name.Contains(" — ", StringComparison.Ordinal) ? material.Name.Split(" — ", 2)[1] : string.Empty)</span>
-                        <span data-material-card-price="@material.Key" data-price-status="@(price?.Status.ToString().ToLowerInvariant() ?? (PricingPending ? "pending" : "unavailable"))">
+                        <span data-material-card-price="@material.Key" data-price-status="@priceStatus">
                             @if (price is { Status: InstantQuotationMaterialPricingStatus.Completed, UnitPrice: { } amount } && double.IsFinite(amount) && amount >= 0)
                             {
                                 @FormatPrice(amount)<small>@Localizer["per piece"]</small>
