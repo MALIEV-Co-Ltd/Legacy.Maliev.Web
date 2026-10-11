@@ -101,7 +101,8 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", ColorScheme.Dark)]
     public async Task ShortDesktopMaterialCardClickIsNotCoveredBySummaryFooter(string culture, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, 1280, scheme, height: 720);
+        await using var fixture = await Fixture.CreateAsync(culture, 1280, scheme, height: 720,
+            displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
         var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
         await card.ScrollIntoViewIfNeededAsync();
         var hitArea = await card.EvaluateAsync<double[]>("""
@@ -437,7 +438,8 @@ public sealed class MaterialPricingDisplayBrowserTests
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         public Fixture() => Factory = new(Control);
 
-        public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme, int height = 800)
+        public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme, int height = 800,
+            string displayFileName = "historical-controlled.stl")
         {
             var fixture = new Fixture();
             try
@@ -472,7 +474,7 @@ public sealed class MaterialPricingDisplayBrowserTests
                     InstantQuotationUploadResult.Succeeded("synthetic-historical-browser", reference, digest),
                     new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
-                var part = new InstantQuotationPart(Guid.NewGuid(), "historical-controlled.stl", reference, geometry, new("M68", "White", 1));
+                var part = new InstantQuotationPart(Guid.NewGuid(), displayFileName, reference, geometry, new("M68", "White", 1));
                 Assert.True(await store.PutAsync(stored with { RequestState = new([part]) }, null, default));
                 await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();

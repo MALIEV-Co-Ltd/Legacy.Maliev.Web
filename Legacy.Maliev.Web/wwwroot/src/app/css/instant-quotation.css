@@ -1647,6 +1647,39 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         overflow: auto;
     }
 
+    .instant-quote__workflow > [data-workflow-parts] {
+        max-height: min(30dvh, 16rem);
+        min-height: 0;
+        overflow-y: auto;
+        align-items: flex-start;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: .35rem;
+        padding: .5rem .6rem;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > :is([data-workflow-part-number], h4) {
+        grid-column: 1 / -1;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > h4 {
+        margin: 0;
+        font-size: .85rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > button {
+        min-width: 44px;
+        min-height: 44px;
+        margin: 0;
+        padding: .35rem;
+    }
+
     .instant-quote__workflow > [data-workflow-configuration] {
         display: flex;
         flex-direction: column;
