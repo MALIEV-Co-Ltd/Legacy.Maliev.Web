@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -241,13 +242,18 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    private sealed class Host(Control control, SummaryNavigationBoundaryRecorder navigation)
+        : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<IStartupFilter>(new SummaryNavigationStartupFilter(navigation));
+                services.AddSingleton<ILoggerProvider>(new SummaryNavigationLoggerProvider(navigation));
+                services.AddLogging(logging => logging.AddFilter<SummaryNavigationLoggerProvider>(
+                    SummaryNavigationLoggerProvider.EndpointCategory, LogLevel.Information));
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
@@ -269,6 +275,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         private string culture = "";
         private int pageErrors;
         private int consoleErrors;
+        private readonly SummaryNavigationBoundaryRecorder navigation = new();
         private readonly TaskCompletionSource releaseNavigationControl = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource navigationControlEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly List<Task> navigationControlCompletions = [];
@@ -280,7 +287,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator Breakdown => Page.Locator("[data-workflow-order-summary]");
         public ILocator Duration => Page.Locator("[data-workflow-selected-print-time]");
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
-        private Fixture() => Factory = new(Control);
+        private Fixture() => Factory = new(Control, navigation);
 
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
@@ -372,8 +379,11 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             int started = 0, finished = 0, failed = 0, omitted = 0;
             int? documentStatus = null;
             var timer = System.Diagnostics.Stopwatch.StartNew();
+            var observation = navigation.Begin(phase);
+            Exception? originalFailure = null;
             EventHandler<IRequest> onRequest = (_, request) =>
             {
+                if (request.IsNavigationRequest) observation.Record(SummaryNavigationStage.BrowserDocumentStarted);
                 var category = request.IsNavigationRequest ? "document"
                     : !Uri.TryCreate(request.Url, UriKind.Absolute, out var address) || address.Authority != origin.Authority ? "external"
                     : address.AbsolutePath.StartsWith("/_blazor", StringComparison.Ordinal) ? "interactive-transport"
@@ -386,18 +396,30 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                     else omitted++;
                 }
             };
-            EventHandler<IRequest> onFinished = (_, request) => { lock (gate) { finished++; pending.Remove(request); } };
-            EventHandler<IRequest> onFailed = (_, request) => { lock (gate) { failed++; pending.Remove(request); } };
+            EventHandler<IRequest> onFinished = (_, request) =>
+            {
+                if (request.IsNavigationRequest) observation.Record(SummaryNavigationStage.BrowserDocumentFinished);
+                lock (gate) { finished++; pending.Remove(request); }
+            };
+            EventHandler<IRequest> onFailed = (_, request) =>
+            {
+                if (request.IsNavigationRequest) observation.Record(SummaryNavigationStage.BrowserDocumentFailed);
+                lock (gate) { failed++; pending.Remove(request); }
+            };
             EventHandler<IResponse> onResponse = (_, response) =>
             {
-                if (response.Request.IsNavigationRequest) lock (gate) documentStatus = response.Status;
+                if (response.Request.IsNavigationRequest)
+                {
+                    observation.Record(SummaryNavigationStage.BrowserDocumentResponse, response.Status);
+                    lock (gate) documentStatus = response.Status;
+                }
             };
-            Page.Request += onRequest;
-            Page.RequestFinished += onFinished;
-            Page.RequestFailed += onFailed;
-            Page.Response += onResponse;
             try
             {
+                Page.Request += onRequest;
+                Page.RequestFinished += onFinished;
+                Page.RequestFailed += onFailed;
+                Page.Response += onResponse;
                 var response = await navigate();
                 Assert.NotNull(response);
                 Assert.Equal(200, response.Status);
@@ -406,7 +428,13 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 await Page.WaitForFunctionAsync(
                     "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
                     options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                var observed = observation.Snapshot().Events;
+                Assert.Contains(observed, item => item.Stage == SummaryNavigationStage.KestrelIngress);
+                Assert.Contains(observed, item => item.Stage == SummaryNavigationStage.EndpointExecuting);
+                Assert.Contains(observed, item => item.Stage == SummaryNavigationStage.ResponseStarting);
+                observation.Record(SummaryNavigationStage.InteractiveInputReady);
             }
+            catch (Exception exception) { originalFailure = exception; throw; }
             finally
             {
                 Page.Request -= onRequest;
@@ -414,22 +442,29 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 Page.RequestFailed -= onFailed;
                 Page.Response -= onResponse;
                 timer.Stop();
-                lock (gate)
+                observation.Dispose();
+                try
                 {
-                    output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
+                    SummaryNavigationObservationWriter.Write(() =>
                     {
-                        phase,
-                        elapsedMilliseconds = timer.ElapsedMilliseconds,
-                        documentStatus,
-                        started,
-                        finished,
-                        failed,
-                        omitted,
-                        pendingCategories = pending.Values.GroupBy(value => value)
-                            .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
-                    }));
-                    pending.Clear();
+                        lock (gate)
+                        {
+                            return "summary-navigation " + JsonSerializer.Serialize(new
+                            {
+                                phase,
+                                elapsedMilliseconds = timer.ElapsedMilliseconds,
+                                documentStatus,
+                                started,
+                                finished,
+                                failed,
+                                omitted,
+                                pendingCategories = pending.Values.GroupBy(value => value)
+                                    .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
+                            }) + Environment.NewLine + "summary-navigation-boundary " + JsonSerializer.Serialize(observation.Snapshot());
+                        }
+                    }, output.WriteLine, originalFailure, Console.Error.WriteLine);
                 }
+                finally { lock (gate) pending.Clear(); }
             }
         }
 
