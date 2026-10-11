@@ -62,8 +62,8 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", card.Value);
                 Assert.DoesNotContain("aria-disabled=\"true\"", card.Value, StringComparison.Ordinal);
             }
-            var selectedCard = Assert.Single(materialCards.Cast<Match>()
-                .Where(card => card.Value.Contains("aria-checked=\"true\"", StringComparison.Ordinal)));
+            var selectedCard = Assert.Single(materialCards.Cast<Match>(),
+                card => card.Value.Contains("aria-checked=\"true\"", StringComparison.Ordinal));
             Assert.Contains("data-material-key=\"" + material + "\"", selectedCard.Value, StringComparison.Ordinal);
 
             foreach (var field in new[] { "color" })
