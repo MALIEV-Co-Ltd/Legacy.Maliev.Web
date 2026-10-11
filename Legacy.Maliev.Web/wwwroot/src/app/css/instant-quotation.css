@@ -901,14 +901,18 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     border-radius: 0;
 }
 
-.instant-quote__workflow > [data-workflow-configuration] > h3 {
+.instant-quote__workflow > [data-workflow-configuration] > h3,
+.instant-quote__workflow [data-workflow-configuration-content] > h3 {
     margin: 0 0 .75rem;
     font-size: 1.15rem;
 }
 
 .instant-quote__workflow > [data-workflow-configuration] > section,
 .instant-quote__workflow > [data-workflow-configuration] > fieldset,
-.instant-quote__workflow > [data-workflow-configuration] > dl {
+.instant-quote__workflow > [data-workflow-configuration] > dl,
+.instant-quote__workflow [data-workflow-configuration-content] > section,
+.instant-quote__workflow [data-workflow-configuration-content] > fieldset,
+.instant-quote__workflow [data-workflow-configuration-content] > dl {
     margin: 0 0 .75rem;
     padding: .85rem;
     border: 1px solid #e7ebf0;
@@ -1643,12 +1647,60 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         overflow: auto;
     }
 
+    .instant-quote__workflow > [data-workflow-parts] {
+        max-height: min(30dvh, 16rem);
+        min-height: 0;
+        overflow-y: auto;
+        align-items: flex-start;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: .35rem;
+        padding: .5rem .6rem;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > :is([data-workflow-part-number], h4) {
+        grid-column: 1 / -1;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > h4 {
+        margin: 0;
+        font-size: .85rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > button {
+        min-width: 44px;
+        min-height: 44px;
+        margin: 0;
+        padding: .35rem;
+    }
+
+    .instant-quote__workflow > [data-workflow-configuration] {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .instant-quote__workflow [data-workflow-configuration-content] {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
     .instant-quote__workflow > [data-workflow-review],
     .instant-quote__workflow > [data-workflow-customer-details] {
         grid-row: 1 / -1;
     }
 
     .instant-quote__workflow .instant-quote__configuration-footer {
+        position: static;
+        flex: 0 0 auto;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: .65rem;
     }
@@ -1707,3 +1759,22 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         min-width: 8rem;
     }
 }
+
+/* Original material-card consumer: the picker owns its scrolling rail. */
+[data-material-selector] [data-material-card-scroll] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; grid-auto-rows: min-content; gap: .5rem; max-height: 24rem; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: .25rem; }
+[data-material-selector] [data-material-category] { grid-column: 1 / -1; margin: .5rem 0 0; font-size: .875rem; }
+[data-material-selector] [role="radio"] { border: 1px solid currentColor; border-radius: .5rem; min-width: 0; min-height: 3.15rem; padding: .45rem .6rem; cursor: pointer; }
+[data-material-selector] [aria-checked="true"] { outline: 2px solid currentColor; outline-offset: -2px; }
+[data-material-selector] [role="radio"]:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+[data-material-selector] .material-card__heading, [data-material-selector] .material-card__detail { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; align-items: baseline; gap: .45rem; }
+[data-material-selector] .material-card__detail { font-size: .75rem; line-height: 1.2; margin-top: .375rem; }
+[data-material-selector] .material-card__detail:has([data-price-status="unavailable"]) { grid-template-columns: minmax(0, 1fr); row-gap: .1rem; }
+[data-material-selector] [data-price-status="unavailable"] { white-space: normal; }
+[data-material-selector] [data-material-card-price] { text-align: right; min-width: 0; font-weight: 600; }
+[data-material-selector] [data-price-status="completed"] { white-space: nowrap; }
+[data-material-selector] [data-material-card-price] small { display: block; }
+[data-material-selector] input[type="search"] { display: block; width: 100%; }
+[data-material-selector] .material-card__detail > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+[data-material-selector] .material-card__heading { position: relative; min-height: 44px; align-items: center; padding-right: 2.75rem; }
+[data-material-selector] .material-card__heading strong { font-size: .8rem; overflow-wrap: anywhere; }
+[data-material-selector] .material-card__heading button { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 44px; min-width: 44px; height: 44px; margin: 0; padding: 0; }

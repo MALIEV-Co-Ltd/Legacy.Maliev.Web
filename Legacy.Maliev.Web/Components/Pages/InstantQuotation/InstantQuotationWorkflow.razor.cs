@@ -101,6 +101,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         return [];
     }
 
+    private IReadOnlyList<InstantQuotationMaterialPricingProgress> CardPriceRows(InstantQuotationWorkflowPartViewModel part)
+    {
+        var current = DisplayRows(part);
+        if (current.Count > 0) return current;
+        if (!IsRepricing && DisplayQuote(part) is { } quote)
+            return quote.MaterialPrices.Select(price => new InstantQuotationMaterialPricingProgress(
+                part.PartId, price.MaterialKey,
+                price.UnitPrice is null ? InstantQuotationMaterialPricingStatus.Unavailable : InstantQuotationMaterialPricingStatus.Completed,
+                price.UnitPrice)).ToArray();
+        return [];
+    }
+
     private ValueTask MaterialDisplayChangedAsync(InstantQuotationMaterialPriceDisplaySnapshot snapshot, CancellationToken token)
     {
         if (disposed || token.IsCancellationRequested) return ValueTask.CompletedTask;

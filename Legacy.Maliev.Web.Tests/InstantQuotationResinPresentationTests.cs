@@ -55,7 +55,18 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.DoesNotContain("data-resin-build-preference", fieldset, StringComparison.Ordinal);
             }
 
-            foreach (var field in new[] { "material", "color" })
+            var materialCards = Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"[^\"]+\"[^>]*>");
+            Assert.NotEmpty(materialCards.Cast<Match>());
+            foreach (Match card in materialCards)
+            {
+                Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", card.Value);
+                Assert.DoesNotContain("aria-disabled=\"true\"", card.Value, StringComparison.Ordinal);
+            }
+            var selectedCard = Assert.Single(materialCards.Cast<Match>(),
+                card => card.Value.Contains("aria-checked=\"true\"", StringComparison.Ordinal));
+            Assert.Contains("data-material-key=\"" + material + "\"", selectedCard.Value, StringComparison.Ordinal);
+
+            foreach (var field in new[] { "color" })
             {
                 var control = Regex.Match(html, "<select\\b[^>]*id=\"" + field + "-" + part.PartId + "\"[^>]*>");
                 Assert.True(control.Success);
