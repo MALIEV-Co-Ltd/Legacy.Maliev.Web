@@ -11,7 +11,11 @@ internal sealed class MaterialCompletionObservation
     private Operation current = new();
 
     public void BeginEdit() => Volatile.Write(ref current, new Operation());
-    public string Describe() => Volatile.Read(ref current).Describe();
+    public string Describe()
+    {
+        var operation = Volatile.Read(ref current);
+        return operation.Describe() + "; " + operation.DescribeComparison();
+    }
 
     public void Decorate(IServiceCollection services)
     {
@@ -40,6 +44,31 @@ internal sealed class MaterialCompletionObservation
         private int comparisonCallbackEntered, comparisonCallbackReturned, comparisonCallbackCanceled, comparisonCallbackFaulted;
         private string pricingFinishBucket = "notReturned";
         private readonly Stopwatch pricingElapsed = new();
+        private int petgPending, petgCompleted, petgUnavailable, petgReturned;
+        private bool? returnedQuoteHasPetg;
+
+        public void PetgFrame(InstantQuotationMaterialPricingProgress frame, bool returned)
+        {
+            if (frame.MaterialKey != "PETG") return;
+            lock (gate)
+            {
+                if (returned) petgReturned++;
+                else if (frame.Status == InstantQuotationMaterialPricingStatus.Pending) petgPending++;
+                else if (frame.Status == InstantQuotationMaterialPricingStatus.Completed) petgCompleted++;
+                else if (frame.Status == InstantQuotationMaterialPricingStatus.Unavailable) petgUnavailable++;
+            }
+        }
+
+        public void QuoteMaterials(InstantQuotationOrderQuote? quote)
+        {
+            lock (gate) returnedQuoteHasPetg = quote is null ? null
+                : quote.Parts.Any(part => part.MaterialPrices.Any(price => price.MaterialKey == "PETG"));
+        }
+
+        public string DescribeComparison()
+        {
+            lock (gate) return $"petgPending={Math.Min(petgPending, 128)}; petgCompleted={Math.Min(petgCompleted, 128)}; petgUnavailable={Math.Min(petgUnavailable, 128)}; petgCallbackReturned={Math.Min(petgReturned, 128)}; returnedQuoteHasPetg={returnedQuoteHasPetg?.ToString() ?? "unknown"}";
+        }
 
         public void Enter(DateTimeOffset value)
         {
@@ -140,10 +169,12 @@ internal sealed class MaterialCompletionObservation
                 var isSelected = selected.TryGetValue(frame.PartId, out var key)
                     && string.Equals(key, frame.MaterialKey, StringComparison.Ordinal);
                 if (isSelected) operation.Frame(frame.Status);
+                operation.PetgFrame(frame, returned: false);
                 operation.Callback(isSelected, "entered");
                 try
                 {
                     await observer(frame, token);
+                    operation.PetgFrame(frame, returned: true);
                     operation.Callback(isSelected, "returned");
                 }
                 catch (OperationCanceledException) { operation.Callback(isSelected, "canceled"); throw; }
@@ -159,6 +190,7 @@ internal sealed class MaterialCompletionObservation
             try
             {
                 var quote = await invoke();
+                operation.QuoteMaterials(quote);
                 operation.Finish(quote is null ? "null" : "quote");
                 return quote;
             }

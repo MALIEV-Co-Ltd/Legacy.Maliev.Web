@@ -20,8 +20,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     {
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
+        var comparisonObservation = new MaterialCompletionObservation();
         await using var factory = new RealUploadTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing, comparisonObservation);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
@@ -90,7 +91,22 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(protectedSession.Parts.Single().Geometry.Sha256, receipt.UploadSha256);
             Assert.True(receipt.MotionSeconds > 0);
             Assert.Equal(0, await page.Locator("[data-workflow-price-unavailable]").CountAsync());
-            var petgComparison = await page.Locator("[data-workflow-material-price='PETG'] strong").InnerTextAsync();
+            string petgComparison;
+            try
+            {
+                petgComparison = await page.Locator("[data-workflow-material-price='PETG'] strong").InnerTextAsync();
+            }
+            catch (TimeoutException original)
+            {
+                try
+                {
+                    var description = comparisonObservation.Describe();
+                    original.Data["PetgComparisonServiceObservation"] = description;
+                    output.WriteLine("[petg-comparison-services] " + description);
+                }
+                catch { /* Fixed secondary metadata cannot replace the original price timeout. */ }
+                throw;
+            }
             Assert.DoesNotContain("฿0", petgComparison, StringComparison.Ordinal);
             var pricingCallsBeforePhysicalCheck = pricing.CallCount;
 
