@@ -30,6 +30,9 @@ public sealed class CandidateHeadWorkflowContractTests
         Assert.Contains("eventPullRequestHead = $event.pull_request.head.sha", source, StringComparison.Ordinal);
         Assert.Contains("workflowSha = $env:GITHUB_WORKFLOW_SHA", source, StringComparison.Ordinal);
         Assert.Contains("runtimeAcceptance = $false", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MALIEV_SOURCE_CUSTODY_DIR: ${{ runner.temp }}", source, StringComparison.Ordinal);
+        Assert.Contains("Join-Path $env:RUNNER_TEMP $env:MALIEV_SOURCE_CUSTODY_DIR", source, StringComparison.Ordinal);
+        Assert.Contains("path: ${{ runner.temp }}/${{ env.MALIEV_SOURCE_CUSTODY_DIR }}/source-head.json", source, StringComparison.Ordinal);
         Assert.Contains("if-no-files-found: error", source, StringComparison.Ordinal);
         var custody = source.IndexOf("Verify exact caller source", StringComparison.Ordinal);
         var firstBoundaryBuild = source.IndexOf("Build exact-pinned disposable profile boundary services", StringComparison.Ordinal);

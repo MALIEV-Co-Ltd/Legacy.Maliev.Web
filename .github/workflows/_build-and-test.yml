@@ -20,7 +20,7 @@ jobs:
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
       MALIEV_BILLING_CANDIDATE_HEAD: ${{ inputs.candidate_head }}
       MALIEV_VALIDATION_CANDIDATE_HEAD: ${{ inputs.candidate_head }}
-      MALIEV_SOURCE_CUSTODY_DIR: ${{ runner.temp }}/maliev-web-source-custody-${{ github.run_id }}-${{ github.run_attempt }}
+      MALIEV_SOURCE_CUSTODY_DIR: maliev-web-source-custody-${{ github.run_id }}-${{ github.run_attempt }}
       MALIEV_BROWSER_EVIDENCE_DIR: ${{ github.workspace }}/sidebar-navigation-test-results
     steps:
       - name: Check out Web
@@ -41,7 +41,7 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $tree -cnotmatch '^[0-9a-f]{40}$') { throw 'Actual Web tree unavailable.' }
           if ((git status --porcelain) -or $LASTEXITCODE -ne 0) { throw 'Candidate source must be clean.' }
           $event = Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH | ConvertFrom-Json -Depth 64
-          $directory = $env:MALIEV_SOURCE_CUSTODY_DIR
+          $directory = Join-Path $env:RUNNER_TEMP $env:MALIEV_SOURCE_CUSTODY_DIR
           if (Test-Path -LiteralPath $directory) { throw 'Fresh source custody directory required.' }
           New-Item -ItemType Directory -Path $directory | Out-Null
           [ordered]@{
@@ -450,6 +450,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: web-source-custody-${{ inputs.candidate_head }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.MALIEV_SOURCE_CUSTODY_DIR }}/source-head.json
+          path: ${{ runner.temp }}/${{ env.MALIEV_SOURCE_CUSTODY_DIR }}/source-head.json
           retention-days: 14
           if-no-files-found: error
