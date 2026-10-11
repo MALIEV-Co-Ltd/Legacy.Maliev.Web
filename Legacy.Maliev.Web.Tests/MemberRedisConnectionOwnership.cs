@@ -7,6 +7,13 @@ internal sealed class MemberRedisConnectionOwnership
     private readonly Dictionary<IDisposable, bool> connections = new(ReferenceEqualityComparer.Instance);
     private bool terminal;
 
+    internal static Action ForHost(IDisposable connection)
+    {
+        var ownership = new MemberRedisConnectionOwnership();
+        ownership.Capture(connection);
+        return ownership.Release;
+    }
+
     internal void Capture(IDisposable connection)
     {
         ArgumentNullException.ThrowIfNull(connection);

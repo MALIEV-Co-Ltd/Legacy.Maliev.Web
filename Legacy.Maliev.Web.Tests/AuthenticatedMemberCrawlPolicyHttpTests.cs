@@ -615,15 +615,12 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
     private sealed class MemberWebFactory(Uri auth, string redis, string certificate, string password, bool retained,
         CancellationToken fixtureLease, MemberHostOwnership ownership) : WebApplicationFactory<Program>
     {
-        private readonly MemberRedisConnectionOwnership connections = new();
-
         protected override IHost CreateHost(IHostBuilder builder) => ownership.BuildAndStartHost(builder, fixtureLease,
             host =>
             {
-                connections.Capture(host.Services.GetRequiredService<IConnectionMultiplexer>());
                 // The exact host lease releases this externally registered instance only
                 // after actual host disposal, including an uncached partial startup failure.
-                return connections.Release;
+                return MemberRedisConnectionOwnership.ForHost(host.Services.GetRequiredService<IConnectionMultiplexer>());
             });
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)

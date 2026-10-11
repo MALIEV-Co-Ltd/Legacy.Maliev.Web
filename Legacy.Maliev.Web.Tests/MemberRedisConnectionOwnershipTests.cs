@@ -89,6 +89,38 @@ public sealed class MemberRedisConnectionOwnershipTests
     }
 
     [Fact]
+    public async Task FailedHostStop_DoesNotReleaseItsConnectionWhenAnotherHostDisposes()
+    {
+        var firstService = new RetryStopService();
+        var secondService = new CountingService();
+        var first = new Connection();
+        var second = new Connection();
+        first.BeforeDispose = () => Assert.Equal(1, firstService.Disposals);
+        second.BeforeDispose = () => Assert.Equal(1, secondService.Disposals);
+        var hosts = new MemberHostOwnership();
+        hosts.BuildAndStartHost(new HostBuilder().ConfigureServices(services =>
+            services.AddSingleton<IHostedService>(_ => firstService)), default,
+            _ => MemberRedisConnectionOwnership.ForHost(first));
+        hosts.BuildAndStartHost(new HostBuilder().ConfigureServices(services =>
+            services.AddSingleton<IHostedService>(_ => secondService)), default,
+            _ => MemberRedisConnectionOwnership.ForHost(second));
+        try
+        {
+            await Assert.ThrowsAsync<AggregateException>(() => hosts.ReleaseAsync());
+            Assert.Equal(0, first.Disposals);
+            Assert.Equal(0, firstService.Disposals);
+            Assert.Equal(1, second.Disposals);
+            Assert.Equal(1, secondService.Stops);
+            await hosts.ReleaseAsync();
+            Assert.Equal(1, first.Disposals);
+            Assert.Equal(2, firstService.Stops);
+            Assert.Equal(1, second.Disposals);
+            Assert.Equal(1, secondService.Stops);
+        }
+        finally { await hosts.ReleaseAsync(); }
+    }
+
+    [Fact]
     public async Task ConcurrentRelease_ClosesOnlyEachCapturedInstanceOnce()
     {
         var resource = new Connection();
@@ -139,6 +171,19 @@ public sealed class MemberRedisConnectionOwnershipTests
         public int Disposals;
         public Task StartAsync(CancellationToken token) => throw new InvalidOperationException("Controlled startup failure.");
         public Task StopAsync(CancellationToken token) { Stops++; return Task.CompletedTask; }
+        public void Dispose() => Disposals++;
+    }
+
+    private sealed class RetryStopService : IHostedService, IDisposable
+    {
+        public int Stops;
+        public int Disposals;
+        public Task StartAsync(CancellationToken token) => Task.CompletedTask;
+        public Task StopAsync(CancellationToken token)
+        {
+            if (++Stops == 1) throw new InvalidOperationException("Controlled first stop failure.");
+            return Task.CompletedTask;
+        }
         public void Dispose() => Disposals++;
     }
 }
