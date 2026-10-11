@@ -84,7 +84,45 @@ public sealed class AuthenticatedConsentNavigationBrowserTests(MemberAuthorityFi
         await page.Locator("[data-consent-action='reject']").ClickAsync();
         await page.Locator("#Email").FillAsync("member-crawl@example.test");
         await page.Locator("#Password").FillAsync(authority.Password);
+        var loginRequests = 0;
+        var loginResponses = 0;
+        page.Request += (_, request) =>
+        {
+            if (request.Method == "POST" && new Uri(request.Url).AbsolutePath == "/Account/Login"
+                && Interlocked.Increment(ref loginRequests) <= 8)
+            {
+                Console.WriteLine("[member-consent-login-request] " + JsonSerializer.Serialize(new
+                {
+                    retained,
+                    culture,
+                    method = request.Method,
+                    path = new Uri(request.Url).AbsolutePath,
+                }));
+            }
+        };
+        page.Response += (_, response) =>
+        {
+            if (response.Request.Method == "POST" && new Uri(response.Url).AbsolutePath == "/Account/Login"
+                && Interlocked.Increment(ref loginResponses) <= 8)
+            {
+                response.Headers.TryGetValue("location", out var location);
+                Console.WriteLine("[member-consent-login-response] " + JsonSerializer.Serialize(new
+                {
+                    retained,
+                    culture,
+                    status = response.Status,
+                    path = new Uri(response.Url).AbsolutePath,
+                    redirectPath = Uri.TryCreate(origin, location, out var redirect) ? redirect.AbsolutePath : null,
+                }));
+            }
+        };
         await page.Locator("#customer-login button[type='submit']").ClickAsync();
+        Console.WriteLine("[member-consent-login-submit] " + JsonSerializer.Serialize(new
+        {
+            retained,
+            culture,
+            requestsObserved = Volatile.Read(ref loginRequests),
+        }));
         await page.WaitForURLAsync("**/Member/Account*");
         await Assertions.Expect(page.Locator("[data-migration-component='member-account-index-content']")).ToHaveCountAsync(1);
         Assert.Equal(culture, await page.Locator("html").GetAttributeAsync("lang"));
