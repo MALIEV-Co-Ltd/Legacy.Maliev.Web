@@ -7,6 +7,32 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class MemberHostOwnershipTests
 {
     [Fact]
+    public void ReleasedOwner_DoesNotRetainDisposedHostAndFactoryGraphs()
+    {
+        var ownership = new MemberHostOwnership();
+        var references = ReleaseOwnedGraphs(ownership);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Assert.False(references.Host.IsAlive, "A terminal owner must release the disposed host graph.");
+        Assert.False(references.Factory.IsAlive, "A terminal owner must release the completed factory graph.");
+        GC.KeepAlive(ownership);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static (WeakReference Host, WeakReference Factory) ReleaseOwnedGraphs(MemberHostOwnership ownership)
+    {
+        var host = new Host();
+        var factory = new Factory();
+        ownership.StartHost(() => host, default);
+        ownership.RegisterFactory(() => factory, default);
+        ownership.ReleaseAsync().GetAwaiter().GetResult();
+        Assert.Equal(1, host.Disposals);
+        Assert.Equal(1, factory.Disposals);
+        return (new WeakReference(host), new WeakReference(factory));
+    }
+
+    [Fact]
     public async Task ExpiredLease_RejectsStartupBeforeDelegateRuns()
     {
         var ownership = new MemberHostOwnership();

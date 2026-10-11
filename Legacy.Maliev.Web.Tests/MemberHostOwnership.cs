@@ -135,6 +135,9 @@ internal sealed class MemberHostOwnership
                 }
                 catch (Exception error) { failures.Add(error); }
             }
+            // A completed lease must not keep its disposed service graph alive while
+            // this terminal owner remains reachable. Failed leases stay available for retry.
+            hosts.RemoveAll(host => host.Disposed);
             if (hosts.Any(host => !host.Disposed))
                 throw new AggregateException("Member host quiescence is unverified; factories/children/containers preserved.", failures);
             foreach (var owned in factories.Where(factory => !factory.Released))
@@ -153,6 +156,7 @@ internal sealed class MemberHostOwnership
                 }
                 catch (Exception error) { failures.Add(error); }
             }
+            factories.RemoveAll(factory => factory.Released);
             if (failures.Count != 0)
                 throw new AggregateException("Member exact factory/client release incomplete; unreleased entries retained.", failures);
         }

@@ -35,7 +35,7 @@ internal sealed class MemberRedisConnectionOwnership
                 try
                 {
                     connection.Dispose();
-                    connections[connection] = true;
+                    connections.Remove(connection);
                 }
                 catch (Exception error) { failures.Add(error); }
             }
