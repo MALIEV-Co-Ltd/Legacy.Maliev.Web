@@ -227,7 +227,7 @@
                 <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
                     <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
                     <InstantQuotationMaterialSelector @key="part.PartId" Materials="Materials"
-                        SelectedMaterialKey="part.Configuration.MaterialKey" PriceRows="CardPriceRows(part)"
+                        SelectedMaterialKey="@part.Configuration.MaterialKey" PriceRows="CardPriceRows(part)"
                         PricingPending="@(IsRepricing || HasUnacceptedConfiguration(part))"
                         FormatPrice="Money"
                         SelectionChanged="key => ChangeMaterialAsync(part.PartId, new ChangeEventArgs { Value = key })" />

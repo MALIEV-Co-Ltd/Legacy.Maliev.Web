@@ -35,6 +35,35 @@ public sealed class MaterialPricingDisplayBrowserTests
             """);
         Assert.True(cardLayout[1] > cardLayout[0], "The price belongs in the source secondary row.");
         Assert.True(cardLayout[2] <= cardLayout[3], "Card price must remain inside the narrow card.");
+        var firstRow = await selector.EvaluateAsync<double[]>("""
+            selector => {
+                const first = selector.querySelector('[data-material-key="PLA"]').getBoundingClientRect();
+                const second = selector.querySelector('[data-material-key="PETG"]').getBoundingClientRect();
+                return [first.top, second.top, first.left, second.left];
+            }
+            """);
+        Assert.InRange(Math.Abs(firstRow[0] - firstRow[1]), 0, 1);
+        Assert.True(firstRow[3] > firstRow[2], "The source picker uses two columns in both locales.");
+        var informationBounds = await selected.EvaluateAsync<double[]>("""
+            card => {
+                const button = card.querySelector('button').getBoundingClientRect();
+                const price = card.querySelector('[data-material-card-price]').getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                return [button.left, button.top, button.right, button.bottom, bounds.left, bounds.top, bounds.right, bounds.bottom, price.top];
+            }
+            """);
+        Assert.True(informationBounds[0] >= informationBounds[4] && informationBounds[1] >= informationBounds[5]);
+        Assert.True(informationBounds[2] <= informationBounds[6] && informationBounds[3] <= informationBounds[7]);
+        Assert.True(informationBounds[3] <= informationBounds[8], "The info hit area must not overlap the price row.");
+        await selected.Locator("button").ClickAsync();
+        await Assertions.Expect(selected).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(selected.Locator("button")).ToHaveAttributeAsync("aria-expanded", "true");
+        await selected.Locator("button").ClickAsync();
+        var otherInformation = selector.Locator("[data-material-key='PLA'] button");
+        await otherInformation.ClickAsync();
+        await Assertions.Expect(selector.Locator("[data-material-key='PLA']")).ToHaveAttributeAsync("aria-checked", "false");
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await otherInformation.ClickAsync();
         await selected.FocusAsync();
         await selected.PressAsync("ArrowDown");
         await Assertions.Expect(selected).ToHaveAttributeAsync("data-material-key", "M68");
@@ -58,6 +87,13 @@ public sealed class MaterialPricingDisplayBrowserTests
         await fixture.Page.WaitForFunctionAsync("() => document.querySelector('[data-material-card-scroll]').scrollTop > 0");
         Assert.Equal(outerScroll, await fixture.Page.EvaluateAsync<double>("() => window.scrollY"));
         Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await selected.FocusAsync();
+        await selected.PressAsync("ArrowDown");
+        await selector.Locator("[data-material-key='K']").PressAsync(" ");
+        await Assertions.Expect(selector.Locator("[data-material-key='K']")).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        Assert.Equal("K", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await fixture.CaptureAsync($"source-material-consumer-{culture}-{width}");
     }
 
     [Theory]
