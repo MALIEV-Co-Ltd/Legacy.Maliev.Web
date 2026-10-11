@@ -150,7 +150,7 @@ public sealed class SummaryNavigationBoundaryObservationTests
     {
         var original = new TimeoutException("controlled navigation deadline");
         var fallback = new List<string>();
-        var retained = Assert.Throws<TimeoutException>(() =>
+        var retained = Assert.Throws<TimeoutException>((Action)(() =>
         {
             try { throw original; }
             catch (Exception failure)
@@ -160,7 +160,7 @@ public sealed class SummaryNavigationBoundaryObservationTests
                     _ => throw new InvalidOperationException("secret"), failure, fallback.Add);
                 throw;
             }
-        });
+        }));
         Assert.Same(original, retained);
         Assert.Equal(captureFails ? "capture" : "write", original.Data["SummaryNavigationObserverFailure"]);
         Assert.DoesNotContain("secret", Assert.Single(fallback), StringComparison.Ordinal);
