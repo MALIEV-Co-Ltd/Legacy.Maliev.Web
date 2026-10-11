@@ -7,12 +7,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 // Same normal cookie/protected historical-input seam as MaterialPricingDisplayBrowserTests.
 // This proves real Razor/circuit layout, not FileService admission or commercial pricing.
-public sealed class InstantQuotationSidebarLayoutBrowserTests
+public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData("en", 320)]
@@ -40,6 +41,9 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests
         await using var context = await browser.NewContextAsync(new()
         { ViewportSize = new() { Width = width, Height = 800 }, HasTouch = width <= 375 });
         await using var page = await context.NewPageAsync();
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[sidebar-evidence-cleanup] " + metadata));
+        failureEvidence.Stage("Navigation");
         var errors = new List<string>();
         var consoleErrors = new List<string>();
         page.PageError += (_, error) => errors.Add(error);
@@ -170,7 +174,9 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests
             return new InstantQuotationPart(Guid.NewGuid(), name, reference, geometry, new("M68", "White", 1));
         }).ToArray();
         Assert.True(await store.PutAsync(session with { RequestState = new(parts) }, null, default));
+        failureEvidence.Stage("Reload");
         await page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
+        failureEvidence.Stage("PartsRail");
         var rail = page.Locator("[data-workflow-parts]");
         await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(2);
         var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
@@ -237,6 +243,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests
         // Historical inputs have no live FileService deletion capability. Test Remove reachability,
         // and exercise real View/Review/Customer transitions without claiming upload deletion proof.
         Assert.Equal(names, (await store.GetAsync(sessionId, null, default))!.Parts.Select(part => part.DisplayFileName));
+        failureEvidence.Stage("Review");
         await review.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(2);
@@ -247,6 +254,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests
         await Assertions.Expect(continueButton).ToBeFocusedAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(page.Locator("[data-workflow-customer-details]")).ToBeFocusedAsync();
+        failureEvidence.Stage("CustomerInput");
         var firstName = page.Locator("input[name='FirstName']");
         var longName = culture == "th" ? "ชื่อลูกค้าทดสอบสำหรับตรวจสอบความกว้างของแบบฟอร์ม" : "LongCustomerNameForResponsiveLayoutVerification";
         await firstName.FillAsync(longName);
@@ -255,7 +263,23 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
         if (!string.IsNullOrWhiteSpace(directory))
             await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"sidebar-{culture}-{width}-customer.png"), FullPage = true });
-        Assert.Empty(errors);
-        Assert.Empty(consoleErrors);
+        try
+        {
+            Assert.Empty(errors);
+            Assert.Empty(consoleErrors);
+        }
+        catch (Exception original)
+        {
+            await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                () => JSON.stringify({
+                  workflow:document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
+                  parts:document.querySelectorAll('[data-workflow-part]').length,
+                  uploadRows:document.querySelectorAll('[data-workflow-upload-item]').length,
+                  progress:document.querySelectorAll('[data-workflow-upload-item] progress').length > 0,
+                  errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
+                })
+                """), metadata => output.WriteLine("[sidebar-failure] " + metadata));
+            throw;
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
+using Maliev.Aspire.ServiceDefaults.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Legacy.Maliev.Web.Infrastructure;
@@ -12,10 +13,13 @@ internal sealed class CountryClient(
     public async Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(
         CancellationToken cancellationToken)
     {
+        var observation = new PrivateDependencyFailureObservation();
         try
         {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "Countries");
             using var response = await clientFactory.CreateClient("countries")
-                .GetAsync("Countries", cancellationToken);
+                .SendWithPrivateFailureObservationAsync(request, cancellationToken, observation,
+                    HttpCompletionOption.ResponseContentRead);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new ServiceResponse<IReadOnlyList<Country>>([], true);
@@ -28,7 +32,10 @@ internal sealed class CountryClient(
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
-            logger.LogWarning(exception, "Country service was unavailable while loading the contact form.");
+            if (!observation.WasObserved)
+            {
+                logger.LogWarning("Country service was unavailable while loading the contact form.");
+            }
             return new ServiceResponse<IReadOnlyList<Country>>([], false);
         }
     }

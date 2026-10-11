@@ -21,11 +21,14 @@ internal sealed class CustomerQuotationClient(
         int pageSize,
         CancellationToken cancellationToken)
     {
+        if (!CustomerQuotationSortQuery.TryResolve(sort, out var canonicalSort))
+            throw new ArgumentException("Unsupported quotation sort value.", nameof(sort));
         var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(token)) return new(null, false, false);
         var query = string.Join('&', new Dictionary<string, string>
         {
-            ["sort"] = sort ?? string.Empty,
+            // Keep omitted-client query semantics; member routes explicitly supply their existing default.
+            ["sort"] = string.IsNullOrWhiteSpace(sort) ? sort ?? string.Empty : canonicalSort,
             ["search"] = search ?? string.Empty,
             ["index"] = Math.Max(pageIndex, 1).ToString(CultureInfo.InvariantCulture),
             ["size"] = Math.Clamp(pageSize, 1, 100).ToString(CultureInfo.InvariantCulture),
@@ -74,7 +77,7 @@ internal sealed class CustomerQuotationClient(
             using var response = await Client().SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return FailureDetails(response.StatusCode, token);
+                return ReadFailureDetails(response.StatusCode, token);
             }
 
             var details = await response.Content.ReadFromJsonAsync<CustomerQuotationDetails>(cancellationToken);
@@ -224,7 +227,7 @@ internal sealed class CustomerQuotationClient(
     private CustomerQuotationListResult FailureList(HttpStatusCode statusCode, string token)
     {
         var authorized = Authorized(statusCode, token);
-        return new(null, true, authorized);
+        return new(null, ServiceAvailable(statusCode), authorized);
     }
 
     private CustomerQuotationDetailsResult FailureDetails(HttpStatusCode statusCode, string token)
@@ -232,6 +235,16 @@ internal sealed class CustomerQuotationClient(
         var authorized = Authorized(statusCode, token);
         return new(null, true, authorized);
     }
+
+    // Public read mapping only: the decision path retains its original FailureDetails contract.
+    private CustomerQuotationDetailsResult ReadFailureDetails(HttpStatusCode statusCode, string token)
+    {
+        var authorized = Authorized(statusCode, token);
+        return new(null, ServiceAvailable(statusCode), authorized);
+    }
+
+    private static bool ServiceAvailable(HttpStatusCode statusCode) =>
+        statusCode is not (HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout);
 
     private bool Authorized(HttpStatusCode statusCode, string token)
     {

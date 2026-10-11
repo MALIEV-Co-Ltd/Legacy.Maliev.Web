@@ -8,6 +8,7 @@ on:
       - 'tools/fx-catalog-host/**'
       - 'tools/fx-provider-transport/**'
       - 'scripts/run-fx-joined-hosted.py'
+      - 'scripts/verify-fx-browser-assets.py'
       - '.github/workflows/fx-joined.yml'
 
 permissions:
@@ -62,7 +63,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          ref: 4ffba0639620e7e923d331317f3f28501526b573
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -75,7 +76,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Require committed baseline browser assets
-        run: git diff --exit-code 224bcde1d1fc7e915f4d0d0de9b3863bcae4fcff HEAD -- Legacy.Maliev.Web/wwwroot/dist
+        run: |
+          python3 -B tests/fx-joined/test_browser_asset_guard.py
+          python3 -B scripts/verify-fx-browser-assets.py
       - name: Verify offline orchestration controls
         env:
           PYTHONDONTWRITEBYTECODE: '1'

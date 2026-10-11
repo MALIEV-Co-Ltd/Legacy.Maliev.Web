@@ -63,24 +63,58 @@ internal static class CncSubmissionFormBinder
             return false;
         }
 
-        var indexes = itemKeys
+        var fieldIndexes = itemKeys
             .Select(ParseItemIndex)
-            .Where(index => index.HasValue)
-            .Select(index => index!.Value)
-            .Distinct()
-            .Order()
+            .Select(index => index!)
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
-        if (indexes.Length > MaximumItems || indexes.Where((value, position) => value != position).Any())
+        string[] indexes;
+        if (form.ContainsKey("OrderItems.Index"))
+        {
+            indexes = form["OrderItems.Index"].Select(value => value ?? string.Empty).ToArray();
+            if (indexes.Length is 0 or > MaximumItems
+                || indexes.Any(index => !CncProtectedUploadBindings.IsValidItemId(index))
+                || indexes.Distinct(StringComparer.Ordinal).Count() != indexes.Length
+                || !new HashSet<string>(indexes, StringComparer.Ordinal).SetEquals(fieldIndexes))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            var numericIndexes = new List<int>();
+            foreach (string index in fieldIndexes)
+            {
+                if (!int.TryParse(index, NumberStyles.None, CultureInfo.InvariantCulture, out int number)
+                    || number is < 0 or >= MaximumItems
+                    || index != number.ToString(CultureInfo.InvariantCulture))
+                {
+                    return false;
+                }
+
+                numericIndexes.Add(number);
+            }
+
+            numericIndexes.Sort();
+            if (numericIndexes.Where((value, position) => value != position).Any())
+            {
+                return false;
+            }
+
+            indexes = numericIndexes.Select(index => index.ToString(CultureInfo.InvariantCulture)).ToArray();
+        }
+
+        if (indexes.Length > MaximumItems)
         {
             return false;
         }
 
-        foreach (int index in indexes)
+        foreach (string index in indexes)
         {
             var item = new ItemDetail();
             foreach (string field in ItemFields)
             {
-                if (!TryOptionalSingle(form, $"OrderItems[{index.ToString(CultureInfo.InvariantCulture)}].{field}", out string value))
+                if (!TryOptionalSingle(form, $"OrderItems[{index}].{field}", out string value))
                 {
                     return false;
                 }
@@ -94,7 +128,7 @@ internal static class CncSubmissionFormBinder
         return true;
     }
 
-    private static int? ParseItemIndex(string key)
+    private static string? ParseItemIndex(string key)
     {
         const string prefix = "OrderItems[";
         if (!key.StartsWith(prefix, StringComparison.Ordinal))
@@ -103,13 +137,13 @@ internal static class CncSubmissionFormBinder
         }
 
         int close = key.IndexOf(']', prefix.Length);
-        return close > prefix.Length
-            && close + 2 < key.Length
-            && key[close + 1] == '.'
-            && int.TryParse(key.AsSpan(prefix.Length, close - prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out int index)
-            && index is >= 0 and < MaximumItems
-                ? index
-                : null;
+        if (close <= prefix.Length || close + 2 >= key.Length || key[close + 1] != '.')
+        {
+            return null;
+        }
+
+        string index = key[prefix.Length..close];
+        return CncProtectedUploadBindings.IsValidItemId(index) ? index : null;
     }
 
     private static bool TrySingle(IFormCollection form, string key, out string value)

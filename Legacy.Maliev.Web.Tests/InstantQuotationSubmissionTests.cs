@@ -191,6 +191,9 @@ public sealed class InstantQuotationSubmissionTests
         Assert.NotEqual(quotedLine.Subtotal, quotedLine.AllocatedOrderTotal);
         Assert.Contains($"Cost per unit: {quotedLine.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains($"Total cost: {quotedLine.Subtotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
+        var quotedGeometry = PartWithDfm(quantity: 2).Geometry;
+        Assert.Contains(FormattableString.Invariant($"Size: {quotedGeometry.DimensionXmm:0.###} x {quotedGeometry.DimensionYmm:0.###} x {quotedGeometry.DimensionZmm:0.###} mm"), call.Submission.Message, StringComparison.Ordinal);
+        Assert.Contains($"Total print time: {(quotedLine.PrintTimeMinutesPerUnit * quotedLine.Quantity).ToString("0.##", CultureInfo.InvariantCulture)} minute(s)", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains($"Allocated order total: {quotedLine.AllocatedOrderTotal.ToString("0.00", CultureInfo.InvariantCulture)} THB", call.Submission.Message, StringComparison.Ordinal);
         Assert.Contains(
             "Geometry warning: Non-watertight mesh; Non-manifold edges; Multi-body mesh (2 bodies)",
@@ -1291,6 +1294,17 @@ public sealed class InstantQuotationSubmissionTests
 
     private sealed class RecordingFulfillmentClient : IInstantQuotationFulfillmentClient
     {
+        public Task<InstantQuotationNotificationPreparationResult> PrepareQuotationNotificationsAsync(
+            InstantQuotationSessionState session, InstantQuotationOrderQuote quote, InstantQuotationCustomerSubmission customer,
+            int requestReference, IReadOnlyList<InstantQuotationFinalizedFile> files, CancellationToken cancellationToken) => Task.FromResult(
+                new InstantQuotationNotificationPreparationResult(new(
+                    new(customer.Email, "Quotation", "customer body", null, null, null),
+                    new("manufacturing@maliev.com", "Quotation", "manufacturing body", customer.Email, null, null),
+                    DateTimeOffset.UtcNow.AddMinutes(30)), true, true));
+
+        public Task<NotificationResult> SendQuotationNotificationAsync(EmailNotification message, Guid operationId, CancellationToken cancellationToken) =>
+            Task.FromResult(new NotificationResult(true, true, true));
+
         public int CustomerCalls { get; private set; }
         public int IdentityCalls { get; private set; }
         public List<int> OrderPartIndexes { get; } = [];

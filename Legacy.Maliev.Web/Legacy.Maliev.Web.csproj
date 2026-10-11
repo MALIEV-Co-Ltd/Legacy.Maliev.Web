@@ -1,17 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <MalievWorkspaceRoot Condition="'$(MalievWorkspaceRoot)' == '' and '$(GITHUB_ACTIONS)' != 'true'">$(MSBuildThisFileDirectory)..\..</MalievWorkspaceRoot>
-    <SharedLibraryVersion Condition="'$(SharedLibraryVersion)' == ''">1.0.*-*</SharedLibraryVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Legacy.Maliev.Web.Application\Legacy.Maliev.Web.Application.csproj" />
     <ProjectReference Include="..\Legacy.Maliev.Web.Infrastructure\Legacy.Maliev.Web.Infrastructure.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true' Or '$(UseLocalMalievDependencies)' == 'true'">
+  <ItemGroup>
     <ProjectReference Include="$(MalievWorkspaceRoot)\Legacy.Maliev.ServiceDefaults\src\Legacy.Maliev.ServiceDefaults\Legacy.Maliev.ServiceDefaults.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true' And '$(UseLocalMalievDependencies)' != 'true'">
-    <PackageReference Include="Legacy.Maliev.ServiceDefaults" Version="$(SharedLibraryVersion)" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
@@ -27,8 +23,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="9.2.2" />
-    <PackageReference Include="MassTransit.Abstractions" Version="9.2.2" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="9.2.3" />
+    <PackageReference Include="MassTransit.Abstractions" Version="9.2.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
@@ -37,7 +33,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
-    <PackageReference Include="Scalar.AspNetCore" Version="2.17.10" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.17.13" />
   </ItemGroup>
   <!-- Keep worker cache URLs tied to their source bytes, even for JavaScript-only builds. -->
   <Target Name="FingerprintWorkerAssets" BeforeTargets="GetAssemblyAttributes">

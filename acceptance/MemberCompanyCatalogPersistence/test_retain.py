@@ -1,9 +1,10 @@
 import copy
 import datetime
 import tempfile
+import subprocess
 import unittest
 from pathlib import Path
-from retain import PREFIX, NS, rows, receipt, cleanup, original_run, helper_source, HELPER_SHA256
+from retain import PREFIX, NS, rows, receipt, cleanup, original_run, helper_source, HELPER_SHA256, HELPER_REVISION
 import xml.etree.ElementTree as ET
 
 class RejectionControls(unittest.TestCase):
@@ -144,6 +145,28 @@ class CleanupRejectionControls(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'BillingProofLifetime.cs';path.write_text('changed serialization source')
             with self.assertRaises(ValueError):helper_source(path)
+    def test_reject_pre527_helper_even_with_original_valid_schema(self):
+        root = Path(__file__).resolve().parents[2]
+        old = subprocess.check_output(['git','show','aaa411c51869359bae6f7dc6b3f257bb0136a90a:Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'], cwd=root, timeout=30)
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'BillingProofLifetime.cs';path.write_bytes(old)
+            with self.assertRaises(ValueError):helper_source(path)
+    def test_successor_bytes_match_exact_accepted_pr527_commit(self):
+        root = Path(__file__).resolve().parents[2]
+        accepted = subprocess.check_output(['git','show',HELPER_REVISION+':Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'], cwd=root, timeout=30)
+        helper = root/'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
+        self.assertEqual(helper.read_bytes(),accepted)
+        self.assertEqual(helper_source(helper),HELPER_SHA256)
+    def test_reject_single_byte_mutation_of_qualified_successor(self):
+        helper = Path(__file__).resolve().parents[2]/'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'BillingProofLifetime.cs';path.write_bytes(helper.read_bytes()+b' ')
+            with self.assertRaises(ValueError):helper_source(path)
+    def test_reject_billing_archive_fields_in_company_owner_receipt(self):
+        for key in ['businessComplete','attemptRun','attemptScreenshot','billingBackendCleanup']:
+            with self.subTest(key=key):
+                value=self.valid();value[key]=True
+                with self.assertRaises(ValueError):cleanup(value)
     def test_accept_canonical_n_without_rewriting_d(self):
         value=self.valid();value['run']=original_run(value['run'])
         self.assertEqual(cleanup(value)['run'],value['run'])

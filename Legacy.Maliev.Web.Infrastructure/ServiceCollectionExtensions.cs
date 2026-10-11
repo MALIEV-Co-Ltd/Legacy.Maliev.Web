@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Infrastructure;
@@ -87,6 +88,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IInstantQuotationExchangeRateClient, InstantQuotationExchangeRateClient>();
         services.AddScoped<ICustomerOrderSubmissionTransport, CustomerOrderSubmissionTransport>();
         services.AddScoped<IInstantQuotationFulfillmentClient, InstantQuotationFulfillmentClient>();
+        services.AddScoped<InstantQuotationNotificationPreparationClient>();
         services.AddScoped<ICustomerOrderSubmissionService, CustomerOrderSubmissionService>();
         services.AddScoped<ICustomerMemberDetailClient, CustomerMemberDetailClient>();
         services.AddSingleton<IAccountSessionStore, DistributedAccountSessionStore>();
@@ -140,11 +142,12 @@ public static class ServiceCollectionExtensions
                         ? ValueTask.FromResult(false) : original(arguments);
             });
         }
-        services.AddHttpClient(name, (provider, client) =>
+        var builder = services.AddHttpClient(name, (provider, client) =>
         {
             client.BaseAddress = resolveBaseAddress(provider.GetRequiredService<IOptions<ServiceEndpoints>>().Value);
             client.Timeout = TimeSpan.FromSeconds(10);
-        }).AddStandardResilienceHandler(options =>
+        });
+        builder.AddStandardResilienceHandler(options =>
         {
             options.Retry.DisableForUnsafeHttpMethods();
             if (name == "catalog" && options.Retry.ShouldHandle is { } original)
@@ -163,5 +166,9 @@ public static class ServiceCollectionExtensions
                 };
             }
         });
+        if (name == "countries")
+        {
+            builder.AddPrivateFailureSourceObservation("CountryService");
+        }
     }
 }

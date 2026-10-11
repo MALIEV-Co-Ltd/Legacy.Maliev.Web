@@ -10,7 +10,10 @@ import xml.etree.ElementTree as ET
 
 NS = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
 PREFIX = 'Legacy.Maliev.Web.Tests.MemberCompanyCatalogPersistenceTests.CompanyUpdate_RealAdapter_NormalSave_ApiReadbackAndReload'
-HELPER_SHA256 = '6f1d1b394bf50b91f6454636e8ec231b68c4250538c8218aa185ad24ad606616'
+# PR527 changed billing attempt archives, not OwnershipReceipt() used by this lane
+# (which constructs the owner with proofCulture:null). Qualify only that exact successor.
+HELPER_REVISION = '4bcf40db748daa1c4fb4db0fba81e8a039f94627'
+HELPER_SHA256 = '096be55636a60184c452ab0c85a562d0b4b0926e310e95c0a6cf841f00bfccd4'
 
 def require(value, message):
     if not value:
@@ -24,7 +27,7 @@ def original_run(value):
 
 def helper_source(path):
     data = path.read_bytes()
-    require(hashlib.sha256(data).hexdigest() == HELPER_SHA256, 'Exact unchanged lifetime receipt source required')
+    require(hashlib.sha256(data).hexdigest() == HELPER_SHA256, 'Exact PR527 lifetime receipt successor source required')
     return HELPER_SHA256
 
 def rows(path):
@@ -177,7 +180,7 @@ def main():
         {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults',
          'revision':'7edcd961024868513fd5f373cab3dcb261197f77'},
     ]
-    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
+    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'lifetimeHelperRevision':HELPER_REVISION,'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
     print('Accepted exactly two isolated company UPDATE native cases, original PG cleanup and bounded synthetic upstream observations')
 
 if __name__ == '__main__':
