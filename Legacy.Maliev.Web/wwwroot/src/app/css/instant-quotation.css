@@ -901,14 +901,18 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     border-radius: 0;
 }
 
-.instant-quote__workflow > [data-workflow-configuration] > h3 {
+.instant-quote__workflow > [data-workflow-configuration] > h3,
+.instant-quote__workflow [data-workflow-configuration-content] > h3 {
     margin: 0 0 .75rem;
     font-size: 1.15rem;
 }
 
 .instant-quote__workflow > [data-workflow-configuration] > section,
 .instant-quote__workflow > [data-workflow-configuration] > fieldset,
-.instant-quote__workflow > [data-workflow-configuration] > dl {
+.instant-quote__workflow > [data-workflow-configuration] > dl,
+.instant-quote__workflow [data-workflow-configuration-content] > section,
+.instant-quote__workflow [data-workflow-configuration-content] > fieldset,
+.instant-quote__workflow [data-workflow-configuration-content] > dl {
     margin: 0 0 .75rem;
     padding: .85rem;
     border: 1px solid #e7ebf0;
@@ -1643,12 +1647,27 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         overflow: auto;
     }
 
+    .instant-quote__workflow > [data-workflow-configuration] {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .instant-quote__workflow [data-workflow-configuration-content] {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
     .instant-quote__workflow > [data-workflow-review],
     .instant-quote__workflow > [data-workflow-customer-details] {
         grid-row: 1 / -1;
     }
 
     .instant-quote__workflow .instant-quote__configuration-footer {
+        position: static;
+        flex: 0 0 auto;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: .65rem;
     }

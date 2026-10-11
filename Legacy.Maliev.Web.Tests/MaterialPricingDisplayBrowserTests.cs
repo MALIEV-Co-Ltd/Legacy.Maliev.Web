@@ -97,6 +97,38 @@ public sealed class MaterialPricingDisplayBrowserTests
     }
 
     [Theory]
+    [InlineData("en", ColorScheme.Light)]
+    [InlineData("th", ColorScheme.Dark)]
+    public async Task ShortDesktopMaterialCardClickIsNotCoveredBySummaryFooter(string culture, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, 1280, scheme, height: 720);
+        var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
+        await card.ScrollIntoViewIfNeededAsync();
+        var hitArea = await card.EvaluateAsync<double[]>("""
+            card => {
+                const bounds = card.getBoundingClientRect();
+                const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
+                const footer = card.closest('[data-workflow-configuration]').querySelector('.instant-quote__configuration-footer').getBoundingClientRect();
+                const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom, footer.top];
+            }
+            """);
+        var evidenceName = $"source-material-safe-hit-area-before-{culture}-1280-720";
+        await fixture.CaptureAsync(evidenceName);
+        await File.WriteAllTextAsync(Path.GetFullPath(Path.Combine("TestResults", "material-display-browser-controls", evidenceName + "-geometry.json")),
+            System.Text.Json.JsonSerializer.Serialize(new { Culture = culture, Width = 1280, Height = 720, Geometry = hitArea }));
+        Assert.True(hitArea[0] == 1 && hitArea[1] >= hitArea[3] - 1 && hitArea[2] <= hitArea[4] + 1 && hitArea[2] <= hitArea[5] + 1,
+            "The complete material card and its normal click target must stay above the summary footer.");
+        await card.ClickAsync();
+        await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        Assert.Equal("ABS", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await Assertions.Expect(fixture.Page.Locator(".instant-quote__configuration-footer")).ToBeVisibleAsync();
+        await Assertions.Expect(fixture.Page.Locator("[data-summary-legal]")).ToBeVisibleAsync();
+        await fixture.CaptureAsync($"source-material-safe-hit-area-{culture}-1280-720");
+    }
+
+    [Theory]
     [InlineData("en", 375, ColorScheme.Light, InstantQuotationMaterialPricingStatus.Pending, "Calculating price…")]
     [InlineData("th", 320, ColorScheme.Dark, InstantQuotationMaterialPricingStatus.Completed, "600.00")]
     public async Task ActualQuantityEventShowsCurrentProgressBeforeFinalAuthority(string culture, int width,
@@ -402,7 +434,7 @@ public sealed class MaterialPricingDisplayBrowserTests
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         public Fixture() => Factory = new(Control);
 
-        public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme)
+        public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme, int height = 800)
         {
             var fixture = new Fixture();
             try
@@ -417,7 +449,7 @@ public sealed class MaterialPricingDisplayBrowserTests
                 fixture.playwright = await Playwright.CreateAsync();
                 fixture.browser = await fixture.playwright.Chromium.LaunchAsync(new() { Headless = true });
                 fixture.context = await fixture.browser.NewContextAsync(new()
-                { ViewportSize = new() { Width = width, Height = 800 }, ColorScheme = scheme });
+                { ViewportSize = new() { Width = width, Height = height }, ColorScheme = scheme });
                 fixture.Page = await fixture.context.NewPageAsync();
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrorCount);
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
