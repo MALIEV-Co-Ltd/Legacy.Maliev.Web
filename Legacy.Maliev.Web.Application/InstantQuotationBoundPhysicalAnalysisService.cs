@@ -45,11 +45,22 @@ internal sealed record InstantQuotationBoundPhysicalAnalysisResult(
         InstantQuotationBoundPhysicalAnalysisFailure failure) => new(null, null, failure);
 }
 
+internal enum InstantQuotationPhysicalAnalysisStage { SessionBefore, AdmittedMesh, Simulation, SessionAfter }
+internal enum InstantQuotationPhysicalAnalysisStageOutcome { Entered, Returned, Canceled, Faulted }
+
+// Optional diagnostics contain categorical stage outcomes only, never bindings or customer data.
+internal interface IInstantQuotationPhysicalAnalysisObservation
+{
+    void Record(InstantQuotationPhysicalAnalysisStage stage,
+        InstantQuotationPhysicalAnalysisStageOutcome outcome, bool tokenCanceled);
+}
+
 /// <summary>Runs bounded physical analysis only for the exact current, owner-scoped admitted STL.</summary>
 internal sealed class InstantQuotationBoundPhysicalAnalysisService(
     IInstantQuotationSessionStore sessionStore,
     InstantQuotationAdmittedMeshService admittedMeshService,
-    FdmRuntimeProfileCatalog profileCatalog)
+    FdmRuntimeProfileCatalog profileCatalog,
+    IInstantQuotationPhysicalAnalysisObservation? observation = null)
 {
     private const int MaximumTriangles = 100_000;
     private const int MaximumLayers = 2_000;
@@ -71,8 +82,8 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         InstantQuotationSessionState? before;
         try
         {
-            before = await sessionStore.GetAsync(
-                binding.SessionId, binding.OwnerIdentity, cancellationToken);
+            before = await ObserveAsync(InstantQuotationPhysicalAnalysisStage.SessionBefore,
+                () => sessionStore.GetAsync(binding.SessionId, binding.OwnerIdentity, cancellationToken), cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -99,9 +110,9 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
                 InstantQuotationBoundPhysicalAnalysisFailure.ProfileUnavailable);
         }
 
-        InstantQuotationAdmittedMeshResult admitted = await admittedMeshService.ReadAsync(
-            binding.SessionId, binding.OwnerIdentity, binding.PartId, binding.FileId,
-            binding.UploadSha256, cancellationToken);
+        InstantQuotationAdmittedMeshResult admitted = await ObserveAsync(InstantQuotationPhysicalAnalysisStage.AdmittedMesh,
+            () => admittedMeshService.ReadAsync(binding.SessionId, binding.OwnerIdentity, binding.PartId, binding.FileId,
+                binding.UploadSha256, cancellationToken), cancellationToken);
         if (!admitted.IsReady)
         {
             return InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
@@ -119,10 +130,11 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         SimulationResult physical;
         try
         {
-            physical = await Task.Run(() => FdmSimulationEngine.Estimate(new SimulationRequest(
-                admitted.Mesh!, new Pose("source", Matrix4x4.Identity), profile!, binding.Quantity,
-                new AnalysisBudget(MaximumTriangles, MaximumLayers, MaximumPathSegments, cancellationToken))),
-                cancellationToken);
+            physical = await ObserveAsync(InstantQuotationPhysicalAnalysisStage.Simulation,
+                () => Task.Run(() => FdmSimulationEngine.Estimate(new SimulationRequest(
+                    admitted.Mesh!, new Pose("source", Matrix4x4.Identity), profile!, binding.Quantity,
+                    new AnalysisBudget(MaximumTriangles, MaximumLayers, MaximumPathSegments, cancellationToken))),
+                    cancellationToken), cancellationToken);
         }
         catch (SimulationGeometryException exception)
         {
@@ -149,8 +161,8 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         InstantQuotationSessionState? after;
         try
         {
-            after = await sessionStore.GetAsync(
-                binding.SessionId, binding.OwnerIdentity, cancellationToken);
+            after = await ObserveAsync(InstantQuotationPhysicalAnalysisStage.SessionAfter,
+                () => sessionStore.GetAsync(binding.SessionId, binding.OwnerIdentity, cancellationToken), cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -175,6 +187,34 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
             ? new(binding, physical, InstantQuotationBoundPhysicalAnalysisFailure.None, boundingCm3)
             : InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
                 InstantQuotationBoundPhysicalAnalysisFailure.AnalysisUnavailable);
+    }
+
+    private async Task<T> ObserveAsync<T>(InstantQuotationPhysicalAnalysisStage stage,
+        Func<Task<T>> invoke, CancellationToken cancellationToken)
+    {
+        Notice(InstantQuotationPhysicalAnalysisStageOutcome.Entered);
+        try
+        {
+            var result = await invoke();
+            Notice(InstantQuotationPhysicalAnalysisStageOutcome.Returned);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            Notice(InstantQuotationPhysicalAnalysisStageOutcome.Canceled);
+            throw;
+        }
+        catch
+        {
+            Notice(InstantQuotationPhysicalAnalysisStageOutcome.Faulted);
+            throw;
+        }
+
+        void Notice(InstantQuotationPhysicalAnalysisStageOutcome outcome)
+        {
+            try { observation?.Record(stage, outcome, cancellationToken.IsCancellationRequested); }
+            catch { /* A secondary diagnostic must preserve the actual service outcome. */ }
+        }
     }
 
     private static double BoundingCm3(NormalizedMesh mesh)

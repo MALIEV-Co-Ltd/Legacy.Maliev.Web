@@ -777,8 +777,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     {
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
+        var observation = new MaterialCompletionObservation();
         await using var factory = new RealUploadTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing, observation);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
@@ -867,6 +868,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 Assert.True(mesh.IsReady);
                 Assert.Equal(expectedHash, mesh.UploadSha256);
                 Assert.Equal(12, mesh.Mesh!.Triangles.Count);
+                observation.BeginEdit();
                 await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
                 InstantQuotationSessionState? lastMaterialChangeState = null;
                 using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
@@ -883,6 +885,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     catch (OperationCanceledException) when (completionDeadline.IsCancellationRequested)
                     {
                         var original = new TimeoutException("Protected material change completion was not observed.");
+                        try { output.WriteLine($"[pdf-material-services] {observation.Describe()}"); }
+                        catch { /* Secondary observation must preserve the original completion timeout. */ }
+
                         SelectedPrintTimeTimeoutDiagnostics.AttachMaterialCompletion(original, lastMaterialChangeState,
                             beforeMaterialChange.UpdatedAt, partId, output.WriteLine);
                         throw original;

@@ -194,6 +194,8 @@ function createContactHarness(pathname) {
 function createConsentContext(initialConsent) {
     const script = extractFirstScript(analyticsHeadSource)
         .replace("var consentState = '@Model.ConsentState';", `var consentState = '${initialConsent}';`)
+        // These existing queue cases render an anonymous model, so no identity block is emitted.
+        .replace(/@if \(Model\.CanTrack && !string\.IsNullOrEmpty\(Model\.UserIdConfigurationJson\)\)\s*\{\s*<text>window\.gtag\('set', @\(\(MarkupString\)Model\.UserIdConfigurationJson\)\);<\/text>\s*\}/, '')
         .replace(/\s*@\(\(MarkupString\)Model\.QueuedEventScript\)\s*/, '\n');
     const context = vm.createContext({ console });
     context.window = context;
@@ -224,3 +226,63 @@ function findConsentUpdateIndex(dataLayer) {
     return dataLayer.findIndex(value =>
         value && typeof value.length === 'number' && value[0] === 'consent' && value[1] === 'update');
 }
+
+
+test('confirmed LINE friendship emits only the four public conversion fields and never reads a profile', async () => {
+    const bridgeSource = await readFile(
+        new URL('../Components/Pages/Contact/LineContactPage.razor', import.meta.url), 'utf8');
+    const events = [];
+    let profileReads = 0;
+    let tokenReads = 0;
+    const script = bridgeSource.match(/<script>([\s\S]*?)<\/script>/)[1]
+        .replace('var liffId = @((MarkupString)JsonSerializer.Serialize(liffId));', 'var liffId = "1234567890-TestBridge";')
+        .replace(/@T\("(?:[^"\\]|\\.)*",\s*"(?:[^"\\]|\\.)*"\)/g, 'fixture status');
+    const context = vm.createContext({
+        document: { getElementById: () => ({ textContent: '' }), body: { dataset: {} } },
+        location: { href: 'https://maliev.com/contact/line' },
+        malievAnalytics: { emit: event => events.push({ ...event }) },
+        liff: {
+            init: async () => {}, isLoggedIn: () => true,
+            getFriendship: async () => ({ friendFlag: true, userId: 'private-line-subject', email: 'private@example.test', displayName: 'Private Name', accessToken: 'private-token' }),
+            getProfile: () => { profileReads++; return { userId: 'private-line-subject' }; },
+            getAccessToken: () => { tokenReads++; return 'private-token'; },
+        },
+    });
+    context.window = context;
+    vm.runInContext(script, context);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(events, [{ event: 'line_friend_confirmed', channel: 'line', destination: 'line_oa', conversion_tier: 'secondary' }]);
+    assert.equal(JSON.stringify(events).includes('private'), false);
+    assert.equal(profileReads, 0, 'Friendship confirmation must not request a LINE profile.');
+    assert.equal(tokenReads, 0, 'Friendship conversion must not request a LINE token.');
+});
+
+test('an unconfirmed LINE friendship emits no conversion even with provider identity fields', async () => {
+    const bridgeSource = await readFile(
+        new URL('../Components/Pages/Contact/LineContactPage.razor', import.meta.url), 'utf8');
+    const events = [];
+    const script = bridgeSource.match(/<script>([\s\S]*?)<\/script>/)[1]
+        .replace('var liffId = @((MarkupString)JsonSerializer.Serialize(liffId));', 'var liffId = "1234567890-TestBridge";')
+        .replace(/@T\("(?:[^"\\]|\\.)*",\s*"(?:[^"\\]|\\.)*"\)/g, 'fixture status');
+    const context = vm.createContext({
+        document: { getElementById: () => ({ textContent: '' }), body: { dataset: {} } },
+        location: { href: 'https://maliev.com/contact/line' },
+        malievAnalytics: { emit: event => events.push(event) },
+        liff: { init: async () => {}, isLoggedIn: () => true,
+            getFriendship: async () => ({ friendFlag: false, userId: 'private-line-subject' }) },
+    });
+    context.window = context;
+    vm.runInContext(script, context);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(events, []);
+});
+
+test('consent revocation clears identity explicitly and does not publish later LINE events', () => {
+    const context = createConsentContext('granted');
+    context.malievAnalytics.setConsent('denied');
+    context.malievAnalytics.emit({ event: 'line_friend_confirmed', channel: 'line', destination: 'line_oa', conversion_tier: 'secondary' });
+    const clearing = context.dataLayer.filter(value => value && value[0] === 'set');
+    assert.equal(clearing.length, 1);
+    assert.deepEqual({ ...clearing[0][1] }, { user_id: null });
+    assert.equal(findEvents(context.dataLayer, 'line_friend_confirmed').length, 0);
+});

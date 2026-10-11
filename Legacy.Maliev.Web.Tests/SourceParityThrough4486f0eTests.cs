@@ -41,7 +41,10 @@ public sealed class SourceParityThrough4486f0eTests : IClassFixture<TestingWebAp
         Assert.Contains($"'{serializedFallback[1..^1]}'", source, StringComparison.Ordinal);
         Assert.Contains("line_friend_confirmed", source, StringComparison.Ordinal);
         Assert.Contains("friendship.friendFlag === true", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("user_id", source, StringComparison.OrdinalIgnoreCase);
+        // Anonymous LINE must disclose no identifier. Consent revocation must still clear a prior identity.
+        Assert.Contains("window.gtag('set', { user_id: null });", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("user_id", source.Replace(
+            "window.gtag('set', { user_id: null });", string.Empty, StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("static.line-scdn.net/liff/edge/2/sdk.js", source, StringComparison.Ordinal);
     }
 

@@ -14,7 +14,8 @@ internal sealed record AccountSession(
     string AccessToken,
     string RefreshToken,
     DateTimeOffset AccessExpiresAt,
-    DateTimeOffset RefreshExpiresAt);
+    DateTimeOffset RefreshExpiresAt,
+    string? IdentitySubject = null);
 
 internal interface IAccountSessionStore
 {

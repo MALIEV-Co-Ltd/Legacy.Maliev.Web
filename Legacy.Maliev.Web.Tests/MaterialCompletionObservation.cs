@@ -6,15 +6,21 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Legacy.Maliev.Web.Tests;
 
 // Test-only observations of actual service calls. No payload, identity, ticket or price is emitted.
-internal sealed class MaterialCompletionObservation
+internal sealed class MaterialCompletionObservation : IInstantQuotationPhysicalAnalysisObservation
 {
     private Operation current = new();
+    private readonly AsyncLocal<Operation?> physicalOperation = new();
 
     public void BeginEdit() => Volatile.Write(ref current, new Operation());
     public string Describe() => Volatile.Read(ref current).Describe();
 
+    void IInstantQuotationPhysicalAnalysisObservation.Record(InstantQuotationPhysicalAnalysisStage stage,
+        InstantQuotationPhysicalAnalysisStageOutcome outcome, bool tokenCanceled) =>
+        physicalOperation.Value?.Stage(stage, outcome, tokenCanceled);
+
     public void Decorate(IServiceCollection services)
     {
+        services.AddSingleton<IInstantQuotationPhysicalAnalysisObservation>(this);
         Decorate<IInstantQuotationAuthoritativePricingService>(services, inner => new Pricing(inner, this));
         Decorate<IInstantQuotationQuoteTicketService>(services, inner => new Tickets(inner, this));
         Decorate<IInstantQuotationSessionStore>(services, inner => new Store(inner, this));
@@ -32,6 +38,24 @@ internal sealed class MaterialCompletionObservation
     private sealed class Operation
     {
         private readonly object gate = new();
+        private readonly int[,] physicalStages = new int[4, 4];
+        private readonly int[] physicalTokenCanceled = new int[4];
+
+        public void Stage(InstantQuotationPhysicalAnalysisStage stage,
+            InstantQuotationPhysicalAnalysisStageOutcome outcome, bool tokenCanceled)
+        {
+            lock (gate)
+            {
+                var row = (int)stage;
+                var column = (int)outcome;
+                physicalStages[row, column] = Math.Min(physicalStages[row, column] + 1, 128);
+                if (tokenCanceled) physicalTokenCanceled[row] = Math.Min(physicalTokenCanceled[row] + 1, 128);
+            }
+        }
+
+        private string DescribePhysicalStages() => string.Join("; ",
+            Enum.GetValues<InstantQuotationPhysicalAnalysisStage>().Select(stage =>
+                $"{stage}Entered={physicalStages[(int)stage, 0]}; {stage}Returned={physicalStages[(int)stage, 1]}; {stage}Canceled={physicalStages[(int)stage, 2]}; {stage}Faulted={physicalStages[(int)stage, 3]}; {stage}TokenCanceled={physicalTokenCanceled[(int)stage]}"));
         private readonly Stopwatch elapsed = Stopwatch.StartNew();
         private DateTimeOffset? revision;
         private int entered, running, returnedNull, returnedQuote, canceled, faulted;
@@ -117,7 +141,7 @@ internal sealed class MaterialCompletionObservation
             {
                 var seconds = elapsed.Elapsed.TotalSeconds;
                 var bucket = seconds < 5 ? "under5" : seconds < 15 ? "5to15" : seconds < 30 ? "15to30" : "30plus";
-                return $"pricingEntered={Math.Min(entered, 9)}; pricingRunning={Math.Min(running, 9)}; returnedNull={Math.Min(returnedNull, 9)}; returnedQuote={Math.Min(returnedQuote, 9)}; canceled={Math.Min(canceled, 9)}; faulted={Math.Min(faulted, 9)}; selectedPending={Math.Min(pending, 9)}; selectedCompleted={Math.Min(completed, 9)}; selectedUnavailable={Math.Min(unavailable, 9)}; ticketEntered={Math.Min(ticketEntered, 9)}; ticketIssued={Math.Min(ticketIssued, 9)}; authorizedWriteAttempted={Math.Min(authorizedWrite, 9)}; authorizedWriteSucceeded={Math.Min(authorizedStored, 9)}; elapsedBucket={bucket}; pricingFinishBucket={pricingFinishBucket}; selectedCallbackReturned={Math.Min(selectedCallbackReturned, 18)}; selectedCallbackCanceled={Math.Min(selectedCallbackCanceled, 18)}; selectedCallbackFaulted={Math.Min(selectedCallbackFaulted, 18)}; comparisonCallbackEntered={Math.Min(comparisonCallbackEntered, 128)}; comparisonCallbackReturned={Math.Min(comparisonCallbackReturned, 128)}; comparisonCallbackCanceled={Math.Min(comparisonCallbackCanceled, 128)}; comparisonCallbackFaulted={Math.Min(comparisonCallbackFaulted, 128)}";
+                return $"pricingEntered={Math.Min(entered, 9)}; pricingRunning={Math.Min(running, 9)}; returnedNull={Math.Min(returnedNull, 9)}; returnedQuote={Math.Min(returnedQuote, 9)}; canceled={Math.Min(canceled, 9)}; faulted={Math.Min(faulted, 9)}; selectedPending={Math.Min(pending, 9)}; selectedCompleted={Math.Min(completed, 9)}; selectedUnavailable={Math.Min(unavailable, 9)}; ticketEntered={Math.Min(ticketEntered, 9)}; ticketIssued={Math.Min(ticketIssued, 9)}; authorizedWriteAttempted={Math.Min(authorizedWrite, 9)}; authorizedWriteSucceeded={Math.Min(authorizedStored, 9)}; elapsedBucket={bucket}; pricingFinishBucket={pricingFinishBucket}; selectedCallbackReturned={Math.Min(selectedCallbackReturned, 18)}; selectedCallbackCanceled={Math.Min(selectedCallbackCanceled, 18)}; selectedCallbackFaulted={Math.Min(selectedCallbackFaulted, 18)}; comparisonCallbackEntered={Math.Min(comparisonCallbackEntered, 128)}; comparisonCallbackReturned={Math.Min(comparisonCallbackReturned, 128)}; comparisonCallbackCanceled={Math.Min(comparisonCallbackCanceled, 128)}; comparisonCallbackFaulted={Math.Min(comparisonCallbackFaulted, 128)}; {DescribePhysicalStages()}";
             }
         }
     }
@@ -156,6 +180,8 @@ internal sealed class MaterialCompletionObservation
         {
             operation ??= Volatile.Read(ref observation.current);
             operation.Enter(session.UpdatedAt);
+            var previous = observation.physicalOperation.Value;
+            observation.physicalOperation.Value = operation;
             try
             {
                 var quote = await invoke();
@@ -164,6 +190,7 @@ internal sealed class MaterialCompletionObservation
             }
             catch (OperationCanceledException) { operation.Finish("canceled"); throw; }
             catch { operation.Finish("faulted"); throw; }
+            finally { observation.physicalOperation.Value = previous; }
         }
     }
 

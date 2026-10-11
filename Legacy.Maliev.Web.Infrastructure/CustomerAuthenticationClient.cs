@@ -128,7 +128,8 @@ internal sealed class CustomerAuthenticationClient(
                     tokens,
                     true,
                     ExtractDatabaseId(tokens!.AccessToken),
-                    HasPassword: ExtractHasPassword(tokens.AccessToken))
+                    HasPassword: ExtractHasPassword(tokens.AccessToken),
+                    IdentitySubject: ExtractIdentitySubject(tokens.AccessToken))
                 : new(null, false);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
@@ -167,7 +168,8 @@ internal sealed class CustomerAuthenticationClient(
                     tokens,
                     true,
                     ExtractDatabaseId(tokens!.AccessToken),
-                    HasPassword: ExtractHasPassword(tokens.AccessToken))
+                    HasPassword: ExtractHasPassword(tokens.AccessToken),
+                    IdentitySubject: ExtractIdentitySubject(tokens.AccessToken))
                 : new(null, false);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
@@ -652,6 +654,28 @@ internal sealed class CustomerAuthenticationClient(
                     out var number) && number > 0 => number,
                 _ => null,
             };
+        }
+        catch (Exception exception) when (exception is FormatException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    // This payload comes only from the configured Auth login/refresh HTTP response.
+    // It is identity metadata, never an authorization decision or a browser token input.
+    internal static string? ExtractIdentitySubject(string accessToken)
+    {
+        try
+        {
+            var segments = accessToken.Split('.');
+            if (segments.Length != 3) return null;
+            using var payload = JsonDocument.Parse(WebEncoders.Base64UrlDecode(segments[1]));
+            if (payload.RootElement.ValueKind != JsonValueKind.Object) return null;
+            var subjects = payload.RootElement.EnumerateObject()
+                .Where(property => property.NameEquals("sub")).Take(2).ToArray();
+            return subjects.Length == 1 && subjects[0].Value.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(subjects[0].Value.GetString())
+                ? subjects[0].Value.GetString() : null;
         }
         catch (Exception exception) when (exception is FormatException or JsonException)
         {

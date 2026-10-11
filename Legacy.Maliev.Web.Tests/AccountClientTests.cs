@@ -339,6 +339,32 @@ public sealed class AccountClientTests
         Assert.DoesNotContain("opaque-token", handler.RequestUri, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AuthHttpResponse_RetainsSubjectSeparatelyFromEmailAndOwner(bool refresh)
+    {
+        var accessToken = Jwt(new
+        {
+            sub = "member-crawl-customer",
+            legacy_database_id = "42",
+            email = "private@example.test",
+            name = "private-name",
+            has_password = false
+        });
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK,
+            JsonSerializer.Serialize(new CustomerTokenSet(accessToken, "refresh", "Bearer", 900,
+                new DateTimeOffset(2026, 7, 16, 0, 0, 0, TimeSpan.Zero)),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web))));
+        var client = CreateClient(handler);
+        var result = refresh ? await client.RefreshAsync("refresh", default)
+            : await client.LoginAsync("private@example.test", "password", default);
+        Assert.Equal("member-crawl-customer", result.IdentitySubject);
+        Assert.Equal(42, result.DatabaseId);
+        Assert.False(result.HasPassword);
+        Assert.Equal(refresh ? "auth/v1/refresh" : "auth/v1/login", handler.RequestUri);
+    }
+
     private static CustomerAuthenticationClient CreateClient(RecordingHandler handler) => new(
         new SingleClientFactory(new HttpClient(handler) { BaseAddress = new Uri("https://auth.test/") }),
         new StubServiceTokenProvider(),

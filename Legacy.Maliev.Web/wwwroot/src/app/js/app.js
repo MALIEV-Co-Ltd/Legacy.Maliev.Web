@@ -146,17 +146,7 @@ function initializeApplication() {
         });
     });
 
-    document.querySelectorAll('[data-single-submit]').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.dataset.submitting === 'true') {
-                event.preventDefault();
-                return;
-            }
-
-            form.dataset.submitting = 'true';
-            form.setAttribute?.('aria-busy', 'true');
-        });
-    });
+    document.querySelectorAll('[data-single-submit]').forEach(bindSingleSubmitGuard);
 
     document.querySelectorAll('[data-member-workspace]').forEach(function (workspace) {
         var navigation = workspace.querySelector('#member-navigation');
@@ -331,11 +321,15 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
 }
 
 function GuardSingleSubmit(formId) {
-    var form = document.getElementById(formId);
-    if (!form) {
+    bindSingleSubmitGuard(document.getElementById(formId));
+}
+
+function bindSingleSubmitGuard(form) {
+    if (!form || form.dataset.singleSubmitGuardBound === 'true') {
         return;
     }
 
+    form.dataset.singleSubmitGuardBound = 'true';
     form.addEventListener('submit', function (event) {
         if (form.dataset.submitting === 'true') {
             event.preventDefault();

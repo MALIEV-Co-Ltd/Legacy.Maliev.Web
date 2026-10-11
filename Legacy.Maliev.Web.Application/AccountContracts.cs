@@ -12,7 +12,8 @@ public sealed record CustomerAuthenticationResult(
     bool ServiceAvailable,
     int? DatabaseId = null,
     CustomerLoginRequiredAction? RequiredAction = null,
-    bool HasPassword = true);
+    bool HasPassword = true,
+    string? IdentitySubject = null);
 
 public sealed record CustomerLoginRequiredAction(string Action, string Token);
 
@@ -306,4 +307,11 @@ public interface ICustomerAccountClient
         int customerId,
         CustomerProfileUpdate update,
         CancellationToken cancellationToken);
+}
+
+/// <summary>Non-secret identity metadata issued by the server-owned account session.</summary>
+public static class CustomerIdentityClaims
+{
+    /// <summary>The Auth identity subject retained separately from customer resource ownership.</summary>
+    public const string AnalyticsSubject = "maliev_analytics_subject";
 }

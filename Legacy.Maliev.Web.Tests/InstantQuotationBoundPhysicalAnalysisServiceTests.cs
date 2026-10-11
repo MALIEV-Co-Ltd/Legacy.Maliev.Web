@@ -213,8 +213,78 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         Assert.Equal(0, fixture.Reader.ReadCount);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PhysicalStageObservation_PreservesActualAnalysis_WhenDiagnosticsThrow(bool diagnosticsThrow)
+    {
+        var observation = new StageObservation(diagnosticsThrow);
+        var fixture = Fixture(observation: observation);
+        var result = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+        Assert.True(result.IsReady);
+        Assert.Equal(fixture.Binding, result.Binding);
+        Assert.Equal(2, fixture.Store.ReadCount);
+        Assert.Equal(1, fixture.Reader.ReadCount);
+        Assert.Equal(Enum.GetValues<InstantQuotationPhysicalAnalysisStage>().SelectMany(stage => new[]
+        {
+            (stage, InstantQuotationPhysicalAnalysisStageOutcome.Entered, false),
+            (stage, InstantQuotationPhysicalAnalysisStageOutcome.Returned, false),
+        }), observation.Events);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task PhysicalStageObservation_PreservesSessionFailureAndOriginalCancellation(
+        bool canceled, bool diagnosticsThrow)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var observation = new StageObservation(diagnosticsThrow);
+        var fixture = Fixture(observation: observation);
+        var original = new OperationCanceledException("Synthetic session cancellation", cancellation.Token);
+        fixture.Store.OnRead = () =>
+        {
+            if (canceled) { cancellation.Cancel(); throw original; }
+            throw new IOException("Synthetic session failure");
+        };
+        if (canceled)
+        {
+            Assert.Same(original, await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                fixture.Service.AnalyzeAsync(fixture.Binding, cancellation.Token)));
+        }
+        else
+        {
+            var result = await fixture.Service.AnalyzeAsync(fixture.Binding, cancellation.Token);
+            Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.SessionUnavailable, result.Failure);
+        }
+        Assert.Equal(1, fixture.Store.ReadCount);
+        Assert.Equal(0, fixture.Reader.ReadCount);
+        Assert.Equal(new[]
+        {
+            (InstantQuotationPhysicalAnalysisStage.SessionBefore, InstantQuotationPhysicalAnalysisStageOutcome.Entered, false),
+            (InstantQuotationPhysicalAnalysisStage.SessionBefore, canceled
+                ? InstantQuotationPhysicalAnalysisStageOutcome.Canceled : InstantQuotationPhysicalAnalysisStageOutcome.Faulted, canceled),
+        }, observation.Events);
+    }
+
+    private sealed class StageObservation(bool diagnosticsThrow) : IInstantQuotationPhysicalAnalysisObservation
+    {
+        public List<(InstantQuotationPhysicalAnalysisStage Stage,
+            InstantQuotationPhysicalAnalysisStageOutcome Outcome, bool TokenCanceled)> Events
+        { get; } = [];
+        public void Record(InstantQuotationPhysicalAnalysisStage stage,
+            InstantQuotationPhysicalAnalysisStageOutcome outcome, bool tokenCanceled)
+        {
+            Events.Add((stage, outcome, tokenCanceled));
+            if (diagnosticsThrow) throw new IOException("Synthetic secondary diagnostic failure");
+        }
+    }
+
     private static (InstantQuotationBoundPhysicalAnalysisService Service,
-        InstantQuotationPhysicalAnalysisBinding Binding, SessionStore Store, InputReader Reader) Fixture(int quantity = 1)
+        InstantQuotationPhysicalAnalysisBinding Binding, SessionStore Store, InputReader Reader) Fixture(int quantity = 1,
+        IInstantQuotationPhysicalAnalysisObservation? observation = null)
     {
         var reference = new InstantQuotationUploadReference(FileId.ToString("D"));
         var claim = new InstantQuotationGeometryClaim(
@@ -233,7 +303,7 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
             OwnerIdentity: Owner));
         var reader = new InputReader();
         var service = new InstantQuotationBoundPhysicalAnalysisService(
-            store, new InstantQuotationAdmittedMeshService(reader), FdmRuntimeProfileCatalog.LoadEmbedded());
+            store, new InstantQuotationAdmittedMeshService(reader), FdmRuntimeProfileCatalog.LoadEmbedded(), observation);
         var binding = new InstantQuotationPhysicalAnalysisBinding(
             SessionId, Owner, PartId, FileId, Digest, "PLA", BuildPreference.Standard,
             quantity, FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion);
@@ -278,11 +348,13 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         public InstantQuotationSessionState State { get; set; } = state;
 
         public int ReadCount { get; private set; }
+        public Action? OnRead { get; set; }
 
         public Task<InstantQuotationSessionState?> GetAsync(
             string sessionId, string? ownerIdentity, CancellationToken cancellationToken)
         {
             ReadCount++;
+            OnRead?.Invoke();
             return Task.FromResult<InstantQuotationSessionState?>(
                 sessionId == State.SessionId && ownerIdentity == Owner ? State : null);
         }

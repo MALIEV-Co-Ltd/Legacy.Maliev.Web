@@ -220,6 +220,46 @@ test('quotation upload emits the controlled analytics event before native submis
     assert.equal(events[0].file_count, 2);
 });
 
+for (const inlineFirst of [true, false]) {
+    test(`single-submit guard permits the first submit and rejects a duplicate when inlineFirst=${inlineFirst}`, () => {
+        const submitHandlers = [];
+        const readyHandlers = [];
+        const attributes = new Map();
+        const form = {
+            dataset: {},
+            addEventListener: (event, handler) => {
+                assert.equal(event, 'submit');
+                submitHandlers.push(handler);
+            },
+            setAttribute: (name, value) => attributes.set(name, value),
+        };
+        const document = createDocument({ '[data-single-submit]': [form] });
+        document.getElementById = id => id === 'customer-login' ? form : null;
+        if (inlineFirst) {
+            document.readyState = 'loading';
+            document.addEventListener = (event, handler) => {
+                assert.equal(event, 'DOMContentLoaded');
+                readyHandlers.push(handler);
+            };
+        }
+        const context = createBrowserContext(document);
+        vm.runInContext(appSource, context);
+        context.GuardSingleSubmit('customer-login');
+        readyHandlers.forEach(handler => handler());
+        context.GuardSingleSubmit('customer-login');
+
+        const submit = () => {
+            const event = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+            submitHandlers.forEach(handler => handler(event));
+            return event.defaultPrevented;
+        };
+        assert.equal(submit(), false, 'the original browser submit must remain allowed');
+        assert.equal(form.dataset.submitting, 'true');
+        assert.equal(attributes.get('aria-busy'), 'true');
+        assert.equal(submit(), true, 'a later duplicate submit must be canceled');
+    });
+}
+
 function createBrowserContext(document, windowOverrides = {}) {
     const context = vm.createContext({
         console,
