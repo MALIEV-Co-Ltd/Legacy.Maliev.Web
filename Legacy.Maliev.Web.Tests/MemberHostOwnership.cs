@@ -10,11 +10,46 @@ internal sealed class MemberHostOwnership
     private readonly List<HostLease> hosts = [];
     private readonly List<FactoryLease> factories = [];
     private bool terminal;
-    private sealed class HostLease(IHost host)
+    private sealed class HostLease(IHost host) : IHost
     {
+        private readonly SemaphoreSlim lifecycle = new(1, 1);
+        private int stopped;
+        private int disposed;
         public IHost Host { get; } = host;
-        public bool Stopped { get; set; }
-        public bool Disposed { get; set; }
+        public IServiceProvider Services => Host.Services;
+        public bool Stopped => Volatile.Read(ref stopped) != 0;
+        public bool Disposed => Volatile.Read(ref disposed) != 0;
+        public Task StartAsync(CancellationToken cancellationToken = default) => Host.StartAsync(cancellationToken);
+
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            await lifecycle.WaitAsync(cancellationToken);
+            try
+            {
+                if (Disposed || Stopped) return;
+                await Host.StopAsync(cancellationToken);
+                Volatile.Write(ref stopped, 1);
+            }
+            finally { lifecycle.Release(); }
+        }
+
+        public void Dispose()
+        {
+            lifecycle.Wait();
+            try
+            {
+                if (Disposed) return;
+                if (!Stopped)
+                {
+                    using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    Host.StopAsync(budget.Token).GetAwaiter().GetResult();
+                    Volatile.Write(ref stopped, 1);
+                }
+                Host.Dispose();
+                Volatile.Write(ref disposed, 1);
+            }
+            finally { lifecycle.Release(); }
+        }
     }
     private sealed class FactoryLease(WebApplicationFactory<Program> factory)
     {
@@ -61,10 +96,12 @@ internal sealed class MemberHostOwnership
             token.ThrowIfCancellationRequested();
             if (terminal) throw new ObjectDisposedException(nameof(MemberHostOwnership));
             var host = builder.Build();
-            hosts.Add(new HostLease(host)); // Retain before even a partially failing StartAsync.
+            var owned = new HostLease(host);
+            hosts.Add(owned); // Retain the actual handle before even a partially failing StartAsync.
             host.StartAsync(token).GetAwaiter().GetResult();
             token.ThrowIfCancellationRequested();
-            return host;
+            // Normal WAF disposal and fixture expiry must update the same exact-host ownership state.
+            return owned;
         }
         finally { gate.Release(); }
     }
@@ -84,11 +121,9 @@ internal sealed class MemberHostOwnership
                     if (!owned.Stopped)
                     {
                         using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                        await owned.Host.StopAsync(budget.Token);
-                        owned.Stopped = true;
+                        await owned.StopAsync(budget.Token);
                     }
-                    owned.Host.Dispose();
-                    owned.Disposed = true;
+                    owned.Dispose();
                 }
                 catch (Exception error) { failures.Add(error); }
             }

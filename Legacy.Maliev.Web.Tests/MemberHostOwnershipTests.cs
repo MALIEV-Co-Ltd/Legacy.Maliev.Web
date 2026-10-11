@@ -117,6 +117,85 @@ public sealed class MemberHostOwnershipTests
         finally { await ownership.ReleaseAsync(); }
     }
 
+    [Fact]
+    public async Task NormalFrameworkDisposal_AndFixtureCleanupShareTheActualHostReleaseState()
+    {
+        var ownership = new MemberHostOwnership();
+        var service = new CountingHostedService();
+        var returned = ownership.BuildAndStartHost(new HostBuilder()
+            .ConfigureServices(services => services.AddSingleton<IHostedService>(_ => service)), default);
+        try
+        {
+            // Pinned WAF 10.0.12 DisposeAsync stops and disposes the returned IHost this way.
+            await returned.StopAsync();
+            returned.Dispose();
+            await ownership.ReleaseAsync();
+            Assert.Equal(1, service.Stops);
+            Assert.Equal(1, service.Disposals);
+        }
+        finally { await ownership.ReleaseAsync(); }
+    }
+
+    [Fact]
+    public async Task ConcurrentFrameworkAndFixtureRelease_DoNotRepeatActualStopOrDisposal()
+    {
+        var ownership = new MemberHostOwnership();
+        var service = new CountingHostedService { HoldStop = true };
+        var returned = ownership.BuildAndStartHost(new HostBuilder()
+            .ConfigureServices(services => services.AddSingleton<IHostedService>(_ => service)), default);
+        try
+        {
+            var frameworkStop = returned.StopAsync();
+            await service.StopEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var cleanup = ownership.ReleaseAsync();
+            Assert.False(cleanup.IsCompleted);
+            service.ReleaseStop.TrySetResult();
+            await frameworkStop.WaitAsync(TimeSpan.FromSeconds(5));
+            returned.Dispose();
+            await cleanup.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(1, service.Stops);
+            Assert.Equal(1, service.Disposals);
+        }
+        finally { service.ReleaseStop.TrySetResult(); await ownership.ReleaseAsync(); }
+    }
+
+    [Fact]
+    public async Task FrameworkStopFailure_RemainsOwnedForAnExactHostRetry()
+    {
+        var ownership = new MemberHostOwnership();
+        var service = new CountingHostedService { FailStopOnce = true };
+        var returned = ownership.BuildAndStartHost(new HostBuilder()
+            .ConfigureServices(services => services.AddSingleton<IHostedService>(_ => service)), default);
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => returned.StopAsync());
+            Assert.Equal(0, service.Disposals);
+            await ownership.ReleaseAsync();
+            Assert.Equal(2, service.Stops);
+            Assert.Equal(1, service.Disposals);
+        }
+        finally { await ownership.ReleaseAsync(); }
+    }
+
+    private sealed class CountingHostedService : IHostedService, IDisposable
+    {
+        public int Stops;
+        public int Disposals;
+        public bool HoldStop;
+        public bool FailStopOnce;
+        public TaskCompletionSource StopEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReleaseStop { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref Stops);
+            StopEntered.TrySetResult();
+            if (FailStopOnce) { FailStopOnce = false; throw new InvalidOperationException("Controlled actual-host stop failure."); }
+            return HoldStop ? ReleaseStop.Task.WaitAsync(cancellationToken) : Task.CompletedTask;
+        }
+        public void Dispose() => Interlocked.Increment(ref Disposals);
+    }
+
     private sealed class TransientAsyncDisposalFactory : WebApplicationFactory<Program>
     {
         public int Disposals;
