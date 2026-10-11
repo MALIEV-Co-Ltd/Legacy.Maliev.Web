@@ -15,6 +15,8 @@ internal sealed class MemberHostOwnership
         private readonly SemaphoreSlim lifecycle = new(1, 1);
         private int stopped;
         private int disposed;
+        private int actualHostDisposed;
+        internal Action? ReleaseCompanions { get; set; }
         public IHost Host { get; } = host;
         public IServiceProvider Services => Host.Services;
         public bool Stopped => Volatile.Read(ref stopped) != 0;
@@ -45,7 +47,12 @@ internal sealed class MemberHostOwnership
                     Host.StopAsync(budget.Token).GetAwaiter().GetResult();
                     Volatile.Write(ref stopped, 1);
                 }
-                Host.Dispose();
+                if (Volatile.Read(ref actualHostDisposed) == 0)
+                {
+                    Host.Dispose();
+                    Volatile.Write(ref actualHostDisposed, 1);
+                }
+                ReleaseCompanions?.Invoke();
                 Volatile.Write(ref disposed, 1);
             }
             finally { lifecycle.Release(); }
@@ -88,7 +95,7 @@ internal sealed class MemberHostOwnership
         finally { gate.Release(); }
     }
 
-    internal IHost BuildAndStartHost(IHostBuilder builder, CancellationToken token)
+    internal IHost BuildAndStartHost(IHostBuilder builder, CancellationToken token, Func<IHost, Action?>? captureCompanions = null)
     {
         gate.Wait(token);
         try
@@ -98,6 +105,7 @@ internal sealed class MemberHostOwnership
             var host = builder.Build();
             var owned = new HostLease(host);
             hosts.Add(owned); // Retain the actual handle before even a partially failing StartAsync.
+            owned.ReleaseCompanions = captureCompanions?.Invoke(host); // Retain companions before startup can fail.
             host.StartAsync(token).GetAwaiter().GetResult();
             token.ThrowIfCancellationRequested();
             // Normal WAF disposal and fixture expiry must update the same exact-host ownership state.

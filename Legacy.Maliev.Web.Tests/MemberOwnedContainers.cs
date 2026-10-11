@@ -36,6 +36,19 @@ internal sealed class MemberOwnedContainers(string run) : IDisposable
         NativeMemberAuthorityProcess.Preflight();
         var available = File.ReadLines("/proc/meminfo").Single(line => line.StartsWith("MemAvailable:", StringComparison.Ordinal));
         var fields = available.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        try
+        {
+            using var current = System.Diagnostics.Process.GetCurrentProcess();
+            _ = long.TryParse(fields[1], NumberStyles.None, CultureInfo.InvariantCulture, out var observedKib);
+            Console.WriteLine("[member-memory-admission] " + JsonSerializer.Serialize(new
+            {
+                availableKiB = observedKib,
+                requiredKiB = 4096L * 1024,
+                currentProcessWorkingSetBytes = current.WorkingSet64,
+                currentManagedBytes = GC.GetTotalMemory(forceFullCollection: false),
+            }));
+        }
+        catch { /* Secondary observation cannot alter the unchanged admission decision. */ }
         if (!long.TryParse(fields[1], NumberStyles.None, CultureInfo.InvariantCulture, out var kib) || kib < 4096L * 1024)
             throw new InvalidOperationException("Member authority allocation requires at least 4096 MiB available memory.");
         client = new DockerClientBuilder().WithEndpoint(new Uri(Endpoint)).Build();
