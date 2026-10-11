@@ -58,7 +58,8 @@ internal static class MaterialCardBrowserActions
             // Wait cancellation does not cancel Playwright; the caller's page disposal owns final teardown.
             ObserveLateFailure(capture);
             var snapshot = await capture.WaitAsync(timeout.Token);
-            var directory = Path.GetFullPath(Path.Combine("TestResults", "material-card-click-diagnostics"));
+            Console.Error.WriteLine("MaterialCardClickGeometry: " + snapshot.GetRawText());
+            var directory = Path.GetFullPath(Path.Combine("TestResults", "material-display-browser-diagnostics"));
             Directory.CreateDirectory(directory);
             var write = File.WriteAllTextAsync(Path.Combine(directory, $"click-{Guid.NewGuid():N}.json"), snapshot.GetRawText(), timeout.Token);
             ObserveLateFailure(write);
