@@ -272,7 +272,8 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
     private sealed class StageObservation(bool diagnosticsThrow) : IInstantQuotationPhysicalAnalysisObservation
     {
         public List<(InstantQuotationPhysicalAnalysisStage Stage,
-            InstantQuotationPhysicalAnalysisStageOutcome Outcome, bool TokenCanceled)> Events { get; } = [];
+            InstantQuotationPhysicalAnalysisStageOutcome Outcome, bool TokenCanceled)> Events
+        { get; } = [];
         public void Record(InstantQuotationPhysicalAnalysisStage stage,
             InstantQuotationPhysicalAnalysisStageOutcome outcome, bool tokenCanceled)
         {
