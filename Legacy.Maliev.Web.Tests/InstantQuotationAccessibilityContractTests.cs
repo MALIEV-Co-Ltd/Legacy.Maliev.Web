@@ -86,7 +86,16 @@ public sealed class InstantQuotationAccessibilityContractTests
         var review = ReadComponent("InstantQuotationReview.razor");
         var customer = ReadComponent("InstantQuotationCustomerForm.razor");
 
-        Assert.Contains("<option value=\"@material.Key\">@Localizer[material.DisplayName]</option>", workflow, StringComparison.Ordinal);
+        var selector = ReadComponent("InstantQuotationMaterialSelector.razor");
+        Assert.Contains("SelectedMaterialKey=\"@part.Configuration.MaterialKey\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("ChangeMaterialAsync(part.PartId, new ChangeEventArgs { Value = key })", workflow, StringComparison.Ordinal);
+        Assert.Contains("role=\"radiogroup\" aria-label=\"@Localizer[\"Material\"]\"", selector, StringComparison.Ordinal);
+        Assert.Contains("role=\"radio\" aria-label=", selector, StringComparison.Ordinal);
+        Assert.Contains("Localizer[material.Category]", selector, StringComparison.Ordinal);
+        Assert.Contains("data-material-key=\"@material.Key\"", selector, StringComparison.Ordinal);
+        Assert.Contains("aria-checked=\"@selected.ToString().ToLowerInvariant()\"", selector, StringComparison.Ordinal);
+        Assert.Contains("tabindex=\"@(selected ? 0 : -1)\"", selector, StringComparison.Ordinal);
+        Assert.Contains("SelectionChanged.InvokeAsync(material.Key)", selector, StringComparison.Ordinal);
         Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", workflow, StringComparison.Ordinal);
         Assert.Contains("<option value=\"@material.Key\">@Localizer[material.DisplayName]</option>", review, StringComparison.Ordinal);
         Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", review, StringComparison.Ordinal);

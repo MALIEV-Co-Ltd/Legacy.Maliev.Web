@@ -110,6 +110,14 @@ jobs:
           python3 -B scripts/verify-focused-web-trx.py
           --directory ./sidebar-focused-test-results --suite sidebar
           --assembly ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
+      - name: Verify source material card catalogue and actual localized interactions
+        timeout-minutes: 5
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~MaterialCardPresentationCatalogTests|FullyQualifiedName~MaterialPricingDisplayRendererContractTests|FullyQualifiedName~MaterialPricingDisplayBrowserTests"
+          --logger trx --results-directory ./material-card-test-results
       - name: Verify regressions reject exact pre-fix pricing source and restore patched HEAD
         env:
           GH_TOKEN: ${{ github.token }}
@@ -130,7 +138,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~ComparisonCallback"
+          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~OneMillimeterFdmUploadDoesNotInventAThinWallWarning|FullyQualifiedName~ComparisonCallback"
           --logger trx --results-directory ./publisher-mesh-test-results
       - name: Verify localized physical result, actual summary and consent browser boundaries
         run: >-
@@ -381,6 +389,10 @@ jobs:
             authenticated-profile-test-results/**/*.trx
             material-identity-test-results/**/*.trx
             material-progress-test-results/**/*.trx
+            material-card-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-diagnostics/*.json
             signed-link-test-results/**/*.trx
             startup-security-test-results/**/*.trx
             startup-image-acquisition/dockerhub-quota.json

@@ -560,4 +560,124 @@
   <data name="We could not securely load your customer profile. Please try again." xml:space="preserve"><value>ไม่สามารถโหลดข้อมูลลูกค้าของคุณได้อย่างปลอดภัย กรุณาลองอีกครั้ง</value></data>
   <data name="Please sign in again to securely load your current customer details." xml:space="preserve"><value>กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลลูกค้าปัจจุบันของคุณอย่างปลอดภัย</value></data>
   <data name="Preview only. No physical price is available. Repair the mesh and upload it again." xml:space="preserve"><value>แสดงตัวอย่างเท่านั้น ยังไม่มีราคาจากการวิเคราะห์การพิมพ์จริง กรุณาแก้ไขเมชแล้วอัปโหลดใหม่</value></data>
+  <data name="Rapid prototyping" xml:space="preserve">
+    <value>งานต้นแบบรวดเร็ว</value>
+  </data>
+  <data name="Functional &amp; outdoor" xml:space="preserve">
+    <value>งานใช้งานจริงและกลางแจ้ง</value>
+  </data>
+  <data name="Flexible" xml:space="preserve">
+    <value>วัสดุยืดหยุ่น</value>
+  </data>
+  <data name="Engineering plastics" xml:space="preserve">
+    <value>พลาสติกวิศวกรรม</value>
+  </data>
+  <data name="Carbon-fiber reinforced" xml:space="preserve">
+    <value>เสริมคาร์บอนไฟเบอร์</value>
+  </data>
+  <data name="ESD-safe for electronics" xml:space="preserve">
+    <value>ป้องกันไฟฟ้าสถิตสำหรับงานอิเล็กทรอนิกส์</value>
+  </data>
+  <data name="Flame-retardant" xml:space="preserve">
+    <value>หน่วงไฟ</value>
+  </data>
+  <data name="Resin (SLA / DLP)" xml:space="preserve">
+    <value>เรซิ่น (SLA / DLP)</value>
+  </data>
+  <data name="Support material" xml:space="preserve">
+    <value>วัสดุรองรับ</value>
+  </data>
+  <data name="Easy to print, eco-friendly and dimensionally stable. Best for prototypes, display models and low-stress parts." xml:space="preserve">
+    <value>พิมพ์ง่าย เป็นมิตรต่อสิ่งแวดล้อม และคงรูปได้ดี เหมาะกับงานต้นแบบ โมเดลจัดแสดง และชิ้นงานที่รับแรงไม่มาก</value>
+  </data>
+  <data name="Tougher and more heat-resistant than PLA with good layer adhesion. A solid all-round choice for functional parts." xml:space="preserve">
+    <value>เหนียวและทนความร้อนกว่า PLA ยึดเกาะระหว่างชั้นได้ดี เป็นตัวเลือกรอบด้านสำหรับชิ้นงานใช้งานจริง</value>
+  </data>
+  <data name="Lightweight and easy to machine or sand; also used as a dissolvable support material for ABS." xml:space="preserve">
+    <value>น้ำหนักเบา ขัดแต่งและกลึงง่าย ใช้เป็นวัสดุรองรับที่ละลายออกได้สำหรับ ABS ด้วย</value>
+  </data>
+  <data name="Heat resistant and impact-tough, but shrinks and warps more during printing. Common for enclosures and fixtures." xml:space="preserve">
+    <value>ทนความร้อนและแรงกระแทกได้ดี แต่หดตัวและบิดงอระหว่างพิมพ์มากกว่า นิยมใช้ทำกล่องครอบและฟิกซ์เจอร์</value>
+  </data>
+  <data name="Like ABS but UV-stable — holds up outdoors without yellowing or turning brittle." xml:space="preserve">
+    <value>คุณสมบัติใกล้เคียง ABS แต่ทนรังสียูวี ใช้งานกลางแจ้งได้นานโดยไม่เหลืองหรือกรอบ</value>
+  </data>
+  <data name="Flexible, rubber-like material at 95 Shore A hardness — for gaskets, grips, wearables and parts that need to bend." xml:space="preserve">
+    <value>ยืดหยุ่นคล้ายยาง ความแข็ง 95 Shore A เหมาะกับปะเก็น ด้ามจับ อุปกรณ์สวมใส่ และชิ้นงานที่ต้องโค้งงอ</value>
+  </data>
+  <data name="High-strength, heat- and impact-resistant engineering plastic for demanding mechanical parts." xml:space="preserve">
+    <value>แข็งแรงสูง ทนความร้อนและแรงกระแทก เหมาะกับชิ้นส่วนกลไกที่ใช้งานหนัก</value>
+  </data>
+  <data name="Tough, wear-resistant nylon with good fatigue resistance — ideal for gears, snap-fits and living hinges." xml:space="preserve">
+    <value>ไนลอนเหนียว ทนการสึกหรอและความล้า เหมาะกับเฟือง สแนปฟิต และบานพับยืดหยุ่น</value>
+  </data>
+  <data name="Low-moisture-absorption eSUN ePA12 nylon with excellent chemical resistance and durability." xml:space="preserve">
+    <value>ไนลอน eSUN ePA12 ที่ดูดความชื้นต่ำ ทนสารเคมีได้ดีเยี่ยม และมีความทนทานสูง</value>
+  </data>
+  <data name="Carbon-fiber-reinforced PLA — stiffer and lighter than standard PLA, with a matte finish." xml:space="preserve">
+    <value>PLA เสริมคาร์บอนไฟเบอร์ แข็งกว่าและเบากว่า PLA ทั่วไป ให้ผิวด้าน</value>
+  </data>
+  <data name="Fiberon PETG reinforced with 8% recycled carbon fiber for stiff, tough functional parts." xml:space="preserve">
+    <value>Fiberon PETG เสริมคาร์บอนไฟเบอร์รีไซเคิล 8% เพิ่มความแข็งโดยยังคงความเหนียวสำหรับชิ้นงานใช้งานจริง</value>
+  </data>
+  <data name="Fiberon PET reinforced with 17% carbon fiber for high-stiffness, low-warp jigs and tooling." xml:space="preserve">
+    <value>Fiberon PET เสริมคาร์บอนไฟเบอร์ 17% ให้ความแข็งสูงและบิดงอน้อย เหมาะกับจิ๊กและเครื่องมือช่วยผลิต</value>
+  </data>
+  <data name="Carbon-fiber nylon — very high strength-to-weight ratio for demanding mechanical applications." xml:space="preserve">
+    <value>ไนลอนเสริมคาร์บอนไฟเบอร์ อัตราส่วนความแข็งแรงต่อน้ำหนักสูงมาก เหมาะกับงานกลไกที่รับแรงมาก</value>
+  </data>
+  <data name="Bambu carbon-fiber ASA — UV-stable and rigid, suited to outdoor structural parts." xml:space="preserve">
+    <value>Bambu ASA เสริมคาร์บอนไฟเบอร์ แข็งและทนรังสียูวี เหมาะกับชิ้นส่วนโครงสร้างที่ใช้งานกลางแจ้ง</value>
+  </data>
+  <data name="Static-dissipative PETG for parts that handle or house sensitive electronics." xml:space="preserve">
+    <value>PETG ที่สลายประจุไฟฟ้าสถิต เหมาะกับชิ้นงานที่ต้องจับหรือใส่อุปกรณ์อิเล็กทรอนิกส์ที่ไวต่อไฟฟ้าสถิต</value>
+  </data>
+  <data name="Fiberon PA612 nylon with carbon nanotubes and carbon fiber for electronics fixtures. ESD performance depends on printing and must be tested for the application." xml:space="preserve">
+    <value>ไนลอน Fiberon PA612 ผสมคาร์บอนนาโนทิวบ์และคาร์บอนไฟเบอร์สำหรับฟิกซ์เจอร์อิเล็กทรอนิกส์ สมบัติ ESD ขึ้นกับการพิมพ์และต้องทดสอบตามการใช้งาน</value>
+  </data>
+  <data name="eSUN static-dissipative ABS for electronics fixtures and housings. Supplier currently reports out of stock; procurement and delivery must be confirmed. Application testing is required." xml:space="preserve">
+    <value>ABS สลายประจุไฟฟ้าสถิตจาก eSUN สำหรับฟิกซ์เจอร์และกล่องอิเล็กทรอนิกส์ ผู้ขายแจ้งสินค้าหมด ต้องยืนยันการจัดหาและกำหนดส่ง และทดสอบตามการใช้งาน</value>
+  </data>
+  <data name="Flame-retardant ABS for enclosures with fire-safety requirements." xml:space="preserve">
+    <value>ABS หน่วงไฟ สำหรับกล่องครอบที่ต้องผ่านข้อกำหนดด้านความปลอดภัยจากอัคคีภัย</value>
+  </data>
+  <data name="Bambu flame-retardant polycarbonate for enclosures and components with fire-safety requirements." xml:space="preserve">
+    <value>Bambu โพลีคาร์บอเนตหน่วงไฟ สำหรับกล่องครอบและชิ้นส่วนที่ต้องผ่านข้อกำหนดด้านความปลอดภัยจากอัคคีภัย</value>
+  </data>
+  <data name="Smooth, highly detailed finish. Great for miniatures, visual prototypes and presentation models." xml:space="preserve">
+    <value>ผิวเรียบ เก็บรายละเอียดได้คมชัด เหมาะกับโมเดลขนาดเล็ก ต้นแบบเพื่อความสวยงาม และงานนำเสนอ</value>
+  </data>
+  <data name="Higher impact and flex resistance than standard resin, for functional snap-fit and mechanical parts." xml:space="preserve">
+    <value>ทนแรงกระแทกและการงอได้ดีกว่าเรซิ่นมาตรฐาน เหมาะกับสแนปฟิตและชิ้นส่วนกลไก</value>
+  </data>
+  <data name="Optically clear resin for lenses, light guides and see-through prototypes." xml:space="preserve">
+    <value>เรซิ่นใสสำหรับเลนส์ ตัวนำแสง และต้นแบบที่ต้องมองทะลุได้</value>
+  </data>
+  <data name="Soft, rubber-like resin for gaskets, seals and flexible details." xml:space="preserve">
+    <value>เรซิ่นนุ่มคล้ายยาง เหมาะกับปะเก็น ซีล และรายละเอียดที่ต้องการความยืดหยุ่น</value>
+  </data>
+  <data name="Burns out cleanly for jewelry and investment-casting workflows." xml:space="preserve">
+    <value>เผาไหม้หมดจดไม่เหลือเถ้า เหมาะกับงานเครื่องประดับและการหล่อแบบขี้ผึ้งหาย</value>
+  </data>
+  <data name="Water-soluble support material that dissolves away cleanly — ideal for complex overhangs and internal channels." xml:space="preserve">
+    <value>วัสดุรองรับที่ละลายน้ำได้ ล้างออกสะอาด เหมาะกับชิ้นงานที่มีส่วนยื่นหรือช่องภายในซับซ้อน</value>
+  </data>
+  <data name="Search materials" xml:space="preserve">
+    <value>ค้นหาวัสดุ</value>
+  </data>
+  <data name="Show more materials" xml:space="preserve">
+    <value>แสดงวัสดุเพิ่มเติม</value>
+  </data>
+  <data name="Show fewer materials" xml:space="preserve">
+    <value>แสดงวัสดุน้อยลง</value>
+  </data>
+  <data name="No materials match your search." xml:space="preserve">
+    <value>ไม่พบวัสดุที่ตรงกับคำค้นหา</value>
+  </data>
+  <data name="Material information" xml:space="preserve">
+    <value>ข้อมูลวัสดุ</value>
+  </data>
+  <data name="Other materials" xml:space="preserve">
+    <value>วัสดุอื่น ๆ</value>
+  </data>
 </root>
