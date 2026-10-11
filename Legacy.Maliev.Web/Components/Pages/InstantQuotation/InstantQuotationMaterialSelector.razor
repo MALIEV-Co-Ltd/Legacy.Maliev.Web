@@ -1,0 +1,139 @@
+@using Legacy.Maliev.Web.Application
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+@inject IJSRuntime JavaScript
+
+<div data-material-selector @ref="root">
+    <label>@Localizer["Search materials"]
+        <input type="search" value="@search" @oninput="SearchChanged" data-material-search />
+    </label>
+    <div role="radiogroup" aria-label="@Localizer["Material"]" data-material-card-scroll>
+        @foreach (var group in VisibleMaterials.GroupBy(material => material.Category))
+        {
+            <h3 role="presentation" data-material-category>@Localizer[group.Key]</h3>
+            @foreach (var material in group)
+            {
+                var selected = material.Key == SelectedMaterialKey;
+                var price = PriceRows.FirstOrDefault(row => row.MaterialKey == material.Key);
+                <div @key="material.Key" role="radio" aria-label="@(material.Name + " — " + Localizer[material.Category])" aria-checked="@selected.ToString().ToLowerInvariant()"
+                     tabindex="@(selected ? 0 : -1)" data-material-key="@material.Key"
+                     @onclick="() => SelectionChanged.InvokeAsync(material.Key)">
+                    <div class="material-card__heading">
+                        <strong>@material.Name.Split(" — ", 2)[0]</strong>
+                        <button type="button" aria-label="@Localizer["Material information"]"
+                                aria-expanded="@((informationKey == material.Key).ToString().ToLowerInvariant())"
+                                @onclick:stopPropagation="true" @onclick="() => ToggleInformation(material.Key)">ⓘ</button>
+                    </div>
+                    <div class="material-card__detail">
+                        <span>@(material.Name.Contains(" — ", StringComparison.Ordinal) ? material.Name.Split(" — ", 2)[1] : string.Empty)</span>
+                        <span data-material-card-price="@material.Key" data-price-status="@(price?.Status.ToString().ToLowerInvariant() ?? (PricingPending ? "pending" : "unavailable"))">
+                            @if (price is { Status: InstantQuotationMaterialPricingStatus.Completed, UnitPrice: { } amount } && double.IsFinite(amount) && amount >= 0)
+                            {
+                                @FormatPrice(amount)<small>@Localizer["per piece"]</small>
+                            }
+                            else if (price?.Status is InstantQuotationMaterialPricingStatus.Unavailable or InstantQuotationMaterialPricingStatus.Completed || price is null && !PricingPending)
+                            {
+                                @Localizer["Price unavailable — engineering review required."]
+                            }
+                            else
+                            {
+                                @Localizer["Calculating price…"]
+                            }
+                        </span>
+                    </div>
+                    @if (informationKey == material.Key)
+                    {
+                        <p>@Localizer[material.Description]</p>
+                    }
+                </div>
+            }
+        }
+        @if (!VisibleMaterials.Any())
+        {
+            <p role="status">@Localizer["No materials match your search."]</p>
+        }
+    </div>
+    @if (search.Length == 0 && Catalogue.Count > previewCount)
+    {
+        <button type="button" data-material-toggle aria-expanded="@ShowAll.ToString().ToLowerInvariant()"
+                @onclick="() => expanded = !ShowAll">@Localizer[ShowAll ? "Show fewer materials" : "Show all materials"]</button>
+    }
+</div>
+
+@code {
+    /// <summary>Materials offered by the existing server workflow.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; set; } = [];
+    /// <summary>Current accepted material selection.</summary>
+    [Parameter, EditorRequired] public string SelectedMaterialKey { get; set; } = string.Empty;
+    /// <summary>Current-generation ephemeral display rows.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<InstantQuotationMaterialPricingProgress> PriceRows { get; set; } = [];
+    /// <summary>Whether an existing workflow operation is calculating current configuration prices.</summary>
+    [Parameter] public bool PricingPending { get; set; }
+    /// <summary>Existing workflow currency formatting.</summary>
+    [Parameter, EditorRequired] public Func<double?, string> FormatPrice { get; set; } = _ => string.Empty;
+    /// <summary>Uses the existing configuration update path.</summary>
+    [Parameter] public EventCallback<string> SelectionChanged { get; set; }
+
+    private ElementReference root;
+    private string search = string.Empty;
+    private string? informationKey;
+    private bool expanded;
+    private int previewCount = 4;
+    private IJSObjectReference? module;
+    private IJSObjectReference? controller;
+    private DotNetObjectReference<InstantQuotationMaterialSelector>? reference;
+    private IReadOnlyList<MaterialCardPresentation> Catalogue => MaterialCardPresentationCatalog.ForMaterials(Materials);
+    private bool ShowAll => expanded || Catalogue.Take(previewCount).All(material => material.Key != SelectedMaterialKey);
+    private IEnumerable<MaterialCardPresentation> VisibleMaterials => Catalogue
+        .Where(material => MaterialCardPresentationCatalog.Matches(material, search, key => Localizer[key]))
+        .Take(search.Length > 0 || ShowAll ? int.MaxValue : previewCount);
+
+    private void SearchChanged(ChangeEventArgs args) => search = args.Value?.ToString()?.Trim() ?? string.Empty;
+    private void ToggleInformation(string key) => informationKey = informationKey == key ? null : key;
+
+    /// <summary>Sets the source responsive preview size without changing selection.</summary>
+    [JSInvokable]
+    public Task SetPreviewCount(int count)
+    {
+        if (count is 4 or 6 or 8 or 10 && previewCount != count)
+        {
+            previewCount = count;
+            return InvokeAsync(StateHasChanged);
+        }
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JavaScript.InvokeAsync<IJSObjectReference>("import", "/dist/instant-quotation-workflow.mjs");
+            reference = DotNetObjectReference.Create(this);
+            controller = await module.InvokeAsync<IJSObjectReference>("createMaterialCardSelector", root, reference);
+        }
+    }
+
+    /// <summary>Releases selector observers and circuit references.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (controller is not null)
+            {
+                try { await controller.InvokeVoidAsync("dispose"); }
+                finally { await controller.DisposeAsync(); }
+            }
+        }
+        catch (JSDisconnectedException) { }
+        finally
+        {
+            try
+            {
+                if (module is not null) await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException) { }
+            finally { reference?.Dispose(); }
+        }
+    }
+}

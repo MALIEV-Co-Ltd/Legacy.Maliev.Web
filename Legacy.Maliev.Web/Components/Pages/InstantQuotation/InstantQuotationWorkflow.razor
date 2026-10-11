@@ -226,16 +226,11 @@
                 var displayQuote = DisplayQuote(part);
                 <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
                     <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
-                    <label for="material-@part.PartId">@Localizer["Material"]</label>
-                    <select id="material-@part.PartId"
-                            name="material"
-                            value="@part.Configuration.MaterialKey"
-                            @onchange="args => ChangeMaterialAsync(part.PartId, args)">
-                        @foreach (var material in Materials)
-                        {
-                            <option value="@material.Key">@Localizer[material.DisplayName]</option>
-                        }
-                    </select>
+                    <InstantQuotationMaterialSelector @key="part.PartId" Materials="Materials"
+                        SelectedMaterialKey="part.Configuration.MaterialKey" PriceRows="CardPriceRows(part)"
+                        PricingPending="@(IsRepricing || HasUnacceptedConfiguration(part))"
+                        FormatPrice="Money"
+                        SelectionChanged="key => ChangeMaterialAsync(part.PartId, new ChangeEventArgs { Value = key })" />
                     <label for="color-@part.PartId">@Localizer["Color"]</label>
                     <select id="color-@part.PartId"
                             name="color"

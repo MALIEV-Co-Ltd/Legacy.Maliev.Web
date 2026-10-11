@@ -16,6 +16,51 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class MaterialPricingDisplayBrowserTests
 {
     [Theory]
+    [InlineData("en", 375, ColorScheme.Light)]
+    [InlineData("th", 1280, ColorScheme.Dark)]
+    public async Task MaterialCardsSearchBothLanguagesAndArrowFocusDoesNotChangeSelection(string culture, int width, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        var selector = fixture.Page.Locator("[data-material-selector]");
+        var selected = selector.Locator("[role='radio'][aria-checked='true']");
+        await Assertions.Expect(selected).ToHaveAttributeAsync("data-material-key", "M68");
+        var initialUnitPrice = Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote).Parts).UnitPrice;
+        await Assertions.Expect(selector.Locator("[data-material-card-price='M68']")).ToContainTextAsync(initialUnitPrice.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
+        var cardLayout = await selected.EvaluateAsync<double[]>("""
+            card => {
+                const name = card.querySelector('strong').getBoundingClientRect();
+                const price = card.querySelector('[data-material-card-price]').getBoundingClientRect();
+                return [name.top, price.top, price.right, card.getBoundingClientRect().right];
+            }
+            """);
+        Assert.True(cardLayout[1] > cardLayout[0], "The price belongs in the source secondary row.");
+        Assert.True(cardLayout[2] <= cardLayout[3], "Card price must remain inside the narrow card.");
+        await selected.FocusAsync();
+        await selected.PressAsync("ArrowDown");
+        await Assertions.Expect(selected).ToHaveAttributeAsync("data-material-key", "M68");
+        await Assertions.Expect(selector.Locator("[data-material-key='K']")).ToBeFocusedAsync();
+        var search = selector.Locator("[data-material-search]");
+        await search.FillAsync("carbon nanotubes");
+        await Assertions.Expect(selector.Locator("[role='radio']")).ToHaveCountAsync(1);
+        await Assertions.Expect(selector.Locator("[data-material-key='PA612-ESD']")).ToBeVisibleAsync();
+        await search.FillAsync("เป็นมิตร");
+        await Assertions.Expect(selector.Locator("[data-material-key='PLA']")).ToBeVisibleAsync();
+        await search.FillAsync("not-a-material-550");
+        await Assertions.Expect(selector.Locator("[data-material-category]")).ToHaveCountAsync(0);
+        await Assertions.Expect(selector.Locator("[role='radio']")).ToHaveCountAsync(0);
+        await search.FillAsync(string.Empty);
+        await Assertions.Expect(selector.Locator("[data-material-key='M68']")).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        var scroller = selector.Locator("[data-material-card-scroll]");
+        await scroller.HoverAsync();
+        var outerScroll = await fixture.Page.EvaluateAsync<double>("() => window.scrollY");
+        await fixture.Page.Mouse.WheelAsync(0, 300);
+        await fixture.Page.WaitForFunctionAsync("() => document.querySelector('[data-material-card-scroll]').scrollTop > 0");
+        Assert.Equal(outerScroll, await fixture.Page.EvaluateAsync<double>("() => window.scrollY"));
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+    }
+
+    [Theory]
     [InlineData("en", 375, ColorScheme.Light, InstantQuotationMaterialPricingStatus.Pending, "Calculating price…")]
     [InlineData("th", 320, ColorScheme.Dark, InstantQuotationMaterialPricingStatus.Completed, "600.00")]
     public async Task ActualQuantityEventShowsCurrentProgressBeforeFinalAuthority(string culture, int width,
@@ -30,6 +75,10 @@ public sealed class MaterialPricingDisplayBrowserTests
             await fixture.Page.Locator("[data-workflow-material-comparison] > summary").ClickAsync();
             var row = fixture.Page.Locator("[data-workflow-material-price='M68']");
             await Assertions.Expect(row).ToBeVisibleAsync();
+            var cardPrice = fixture.Page.Locator("[data-material-card-price='M68']");
+            await Assertions.Expect(cardPrice).ToHaveAttributeAsync("data-price-status", status.ToString().ToLowerInvariant());
+            await Assertions.Expect(cardPrice).ToContainTextAsync(culture == "th" && status == InstantQuotationMaterialPricingStatus.Pending
+                ? "กำลังคำนวณราคา" : expected);
             await Assertions.Expect(row).ToContainTextAsync(expected);
             Assert.DoesNotContain("฿0", await row.InnerTextAsync(), StringComparison.Ordinal);
             if (status == InstantQuotationMaterialPricingStatus.Pending)

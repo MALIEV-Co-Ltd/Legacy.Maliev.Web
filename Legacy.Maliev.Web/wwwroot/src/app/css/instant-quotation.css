@@ -1707,3 +1707,16 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         min-width: 8rem;
     }
 }
+
+/* Original material-card consumer: the picker owns its scrolling rail. */
+[data-material-selector] [data-material-card-scroll] { max-height: 24rem; overflow-y: auto; overscroll-behavior: contain; padding: .25rem; }
+[data-material-selector] [data-material-category] { margin: 1rem 0 .5rem; font-size: .875rem; }
+[data-material-selector] [role="radio"] { border: 1px solid currentColor; border-radius: .5rem; padding: .75rem; margin-bottom: .5rem; cursor: pointer; }
+[data-material-selector] [aria-checked="true"] { outline: 2px solid currentColor; outline-offset: -2px; }
+[data-material-selector] [role="radio"]:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+[data-material-selector] .material-card__heading, [data-material-selector] .material-card__detail { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+[data-material-selector] .material-card__detail { font-size: .75rem; margin-top: .375rem; }
+[data-material-selector] [data-material-card-price] { text-align: right; flex-shrink: 0; max-width: 55%; }
+[data-material-selector] [data-price-status="completed"] { white-space: nowrap; }
+[data-material-selector] [data-material-card-price] small { display: block; }
+[data-material-selector] input[type="search"] { display: block; width: 100%; }

@@ -124,8 +124,8 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         Assert.InRange(actual.GetProperty("summary").GetProperty("minMm").GetDouble(), height - 0.05, height + 0.05);
         Assert.Equal(0, actual.GetProperty("errors").GetArrayLength());
 
-        var material = page.Locator("[data-workflow-material-picker] select[name='material']");
-        await material.SelectOptionAsync("ABS");
+
+        await MaterialCardBrowserActions.SelectAsync(page, "ABS");
         await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
         try
         {
@@ -141,7 +141,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
                         return JSON.stringify({
                             workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
                             isRepricing: !!document.querySelector('[data-pricing-loading-status]'),
-                            material: configuration?.querySelector('select[name="material"]')?.value,
+                            material: configuration?.querySelector('[data-material-selector] [aria-checked="true"]')?.dataset.materialKey,
                             quantity: quantity?.value,
                             unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]'),
                             configurationEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')
@@ -201,9 +201,9 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
         await ScreenshotAsync(page, $"admitted-fdm-{height}-{culture}-{width}");
 
-        await material.SelectOptionAsync("M68");
+        await MaterialCardBrowserActions.SelectAsync(page, "M68");
         await page.WaitForFunctionAsync("limit => document.querySelector('.instant-quote__thickness-legend')?.textContent?.includes(limit)", resinLimit);
-        Assert.Equal("M68", await material.InputValueAsync());
+        Assert.Equal("M68", await page.Locator("[data-material-selector] [aria-checked='true']").GetAttributeAsync("data-material-key"));
         Assert.Equal(0, await page.Locator("[data-dfm-code='thin-wall']").CountAsync());
         Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
         Assert.Equal(1, await page.EvaluateAsync<int>("window.__wallAcceptance.started"));
