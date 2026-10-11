@@ -9,8 +9,11 @@ using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Playwright;
 
@@ -42,7 +45,8 @@ public sealed class AuthenticatedConsentNavigationBrowserTests(MemberAuthorityFi
         await using var host = authority.Web(retained).WithWebHostBuilder(builder =>
         {
             builder.UseContentRoot(BrowserHostIdentityVerifier.SourceProjectDirectory());
-            builder.ConfigureKestrel(options => options.ConfigureEndpointDefaults(endpoint => endpoint.UseHttps(certificate)));
+            builder.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, port,
+                endpoint => endpoint.UseHttps(certificate)));
         });
         host.UseKestrel(port);
         using var startup = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -62,6 +66,20 @@ public sealed class AuthenticatedConsentNavigationBrowserTests(MemberAuthorityFi
         });
         var page = await context.NewPageAsync();
         var memberPath = $"/Member/Account?culture={culture}";
+        var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+        var addresses = host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses.ToArray() ?? [];
+        Console.WriteLine("[member-consent-listener] " + JsonSerializer.Serialize(new
+        {
+            expectedOrigin = origin.GetLeftPart(UriPartial.Authority),
+            actualAddresses = addresses,
+            started = lifetime.ApplicationStarted.IsCancellationRequested,
+            stopping = lifetime.ApplicationStopping.IsCancellationRequested,
+            stopped = lifetime.ApplicationStopped.IsCancellationRequested,
+        }));
+        Assert.True(lifetime.ApplicationStarted.IsCancellationRequested);
+        Assert.False(lifetime.ApplicationStopping.IsCancellationRequested);
+        Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);
+        Assert.Contains(origin.GetLeftPart(UriPartial.Authority), addresses);
         await page.GotoAsync(new Uri(origin, $"/Account/Login?culture={culture}&returnUrl={Uri.EscapeDataString(memberPath)}").ToString());
         await page.Locator("[data-consent-action='reject']").ClickAsync();
         await page.Locator("#Email").FillAsync("member-crawl@example.test");
