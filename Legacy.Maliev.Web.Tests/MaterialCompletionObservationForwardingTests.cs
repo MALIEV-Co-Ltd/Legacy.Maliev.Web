@@ -142,6 +142,28 @@ public sealed class MaterialCompletionObservationForwardingTests
         finally { await ReleaseAndObserveAsync(release, invocation); }
     }
 
+    [Fact]
+    public async Task PhysicalStageCorrelation_OlderPricingCannotWriteIntoANewerEdit()
+    {
+        using var fixture = new Fixture(true);
+        using var caller = new CancellationTokenSource();
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invocation = fixture.Service.QuoteAsync(fixture.Session, "synthetic-owner", true,
+            (_, _) => new ValueTask(release.Task), caller.Token);
+        try
+        {
+            Assert.False(invocation.IsCompleted);
+            Assert.Contains("SessionBeforeEntered=1", fixture.Observation.Describe());
+            fixture.Observation.BeginEdit();
+            release.SetResult(true);
+            Assert.Same(fixture.Quote, await invocation);
+            Assert.Contains("pricingEntered=0", fixture.Observation.Describe());
+            Assert.Contains("SessionBeforeEntered=0", fixture.Observation.Describe());
+            Assert.Contains("SessionBeforeReturned=0", fixture.Observation.Describe());
+        }
+        finally { await ReleaseAndObserveAsync(release, invocation); }
+    }
+
     private static async Task ReleaseAndObserveAsync(TaskCompletionSource<bool> release, Task invocation)
     {
         release.TrySetResult(true);
@@ -178,6 +200,7 @@ public sealed class MaterialCompletionObservationForwardingTests
             Observation.Decorate(services);
             provider = services.BuildServiceProvider();
             Service = provider.GetRequiredService<IInstantQuotationAuthoritativePricingService>();
+            Inner.PhysicalObservation = provider.GetRequiredService<IInstantQuotationPhysicalAnalysisObservation>();
             Assert.NotSame(Inner, Service); // Exercises actual decorator, not a mirrored forwarding implementation.
             Observation.BeginEdit();
         }
@@ -196,6 +219,7 @@ public sealed class MaterialCompletionObservationForwardingTests
     private sealed class ForwardingPricing(InstantQuotationMaterialPricingProgress frame,
         InstantQuotationOrderQuote quote) : IInstantQuotationAuthoritativePricingService
     {
+        public IInstantQuotationPhysicalAnalysisObservation? PhysicalObservation { get; set; }
         public int Calls { get; private set; }
         public int ObserverInvocations { get; private set; }
         public InstantQuotationSessionState? Session { get; private set; }
@@ -218,7 +242,11 @@ public sealed class MaterialCompletionObservationForwardingTests
             IncludeComparisons = includeComparisons;
             Token = cancellationToken;
             ObserverInvocations++;
+            PhysicalObservation?.Record(InstantQuotationPhysicalAnalysisStage.SessionBefore,
+                InstantQuotationPhysicalAnalysisStageOutcome.Entered, cancellationToken.IsCancellationRequested);
             await observer(frame, cancellationToken);
+            PhysicalObservation?.Record(InstantQuotationPhysicalAnalysisStage.SessionBefore,
+                InstantQuotationPhysicalAnalysisStageOutcome.Returned, cancellationToken.IsCancellationRequested);
             return quote;
         }
     }
