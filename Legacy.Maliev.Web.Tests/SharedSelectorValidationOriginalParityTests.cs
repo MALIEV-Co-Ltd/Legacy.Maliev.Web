@@ -122,7 +122,8 @@ public sealed class SharedSelectorValidationOriginalParityTests(TestingWebApplic
         using var page = await client.GetAsync($"/contact?culture={culture}");
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         var html = WebUtility.HtmlDecode(await page.Content.ReadAsStringAsync());
-        var form = Form(html, "<form(?=[^>]*id=\"contact-us\")(?=[^>]*action=\"(?<action>[^\"]+)\")[^>]*[\\s\\S]*?</form>");
+        var form = Form(html, "<form(?=[^>]*id=\"contact-us\")(?=[^>]*\\saction=\"(?<action>[^\"]+)\")[^>]*[\\s\\S]*?</form>");
+        Assert.Contains("handler=SubmitRequest", form.Groups["action"].Value, StringComparison.Ordinal);
         using var response = await client.PostAsync(form.Groups["action"].Value,
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
