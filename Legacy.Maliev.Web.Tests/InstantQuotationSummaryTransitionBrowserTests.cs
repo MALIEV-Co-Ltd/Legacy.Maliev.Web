@@ -241,13 +241,15 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    private sealed class Host(Control control, BillingInitialProbeDiagnostics initialNavigation) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter>(initialNavigation);
+                services.AddSingleton<Microsoft.Extensions.Logging.ILoggerProvider>(initialNavigation);
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
@@ -261,6 +263,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
     {
         public Control Control { get; } = new();
         private Host Factory { get; }
+        private BillingInitialProbeDiagnostics InitialNavigation { get; }
         private IPlaywright? playwright;
         private IBrowser? browser;
         private IBrowserContext? context;
@@ -280,18 +283,24 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator Breakdown => Page.Locator("[data-workflow-order-summary]");
         public ILocator Duration => Page.Locator("[data-workflow-selected-print-time]");
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
-        private Fixture() => Factory = new(Control);
+        private Fixture(string culture, int width)
+        {
+            InitialNavigation = new(culture, width, Guid.NewGuid().ToString("N"), summary: true);
+            Factory = new(Control, InitialNavigation);
+        }
 
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
-            var fixture = new Fixture { culture = culture };
+            var fixture = new Fixture(culture, width) { culture = culture };
             try
             {
                 var listener = new TcpListener(IPAddress.Loopback, 0);
                 listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
+                fixture.InitialNavigation.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartInvoked);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+                fixture.InitialNavigation.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartReturned);
                 fixture.playwright = await Playwright.CreateAsync();
                 fixture.browser = await fixture.playwright.Chromium.LaunchAsync(new() { Headless = true });
                 fixture.context = await fixture.browser.NewContextAsync(new()
@@ -300,8 +309,19 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrors);
                 fixture.Page.Console += (_, message) => { if (message.Type == "error") Interlocked.Increment(ref fixture.consoleErrors); };
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                await fixture.ObserveNavigationAsync("initial", origin, output,
-                    () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.DOMContentLoaded }));
+                try
+                {
+                    fixture.InitialNavigation.Observe(BillingInitialProbeDiagnostics.Stage.GetInvoked);
+                    await fixture.ObserveNavigationAsync("initial", origin, output,
+                        () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.DOMContentLoaded }));
+                    fixture.InitialNavigation.Observe(BillingInitialProbeDiagnostics.Stage.GetReturned);
+                }
+                catch (Exception original)
+                {
+                    fixture.InitialNavigation.Observe(BillingInitialProbeDiagnostics.Stage.InitialProbeFailed, failure: original);
+                    throw;
+                }
+                finally { fixture.InitialNavigation.StopAndPersist(output.WriteLine); }
                 var consent = fixture.Page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await consent.IsVisibleAsync()) await consent.ClickAsync();
                 var cookie = Assert.Single(await fixture.context.CookiesAsync(), candidate => candidate.Name == InstantQuotationSessionIdentityCookie.CookieName);
@@ -332,7 +352,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 Assert.False(string.IsNullOrWhiteSpace(await fixture.Page.TitleAsync()));
                 return fixture;
             }
-            catch { await fixture.DisposeAsync(); throw; }
+            catch { fixture.InitialNavigation.StopAndPersist(output.WriteLine); await fixture.DisposeAsync(); throw; }
         }
 
         private async Task HoldUnrelatedFetchAsync()

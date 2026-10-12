@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Passive fixed first-login observations; no request data, worker, retry or readiness substitution.</summary>
-internal sealed class BillingInitialProbeDiagnostics(string culture, int width, string attemptRun, bool shipping = false) : IStartupFilter, ILoggerProvider
+internal sealed class BillingInitialProbeDiagnostics(string culture, int width, string attemptRun, bool shipping = false, bool summary = false) : IStartupFilter, ILoggerProvider
 {
     private const int MaximumEvents = 16;
     private const int MaximumReceiptBytes = 32768;
@@ -149,9 +149,10 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
         next(app);
     };
 
-    private static bool Matches(HttpContext context)
+    private bool Matches(HttpContext context)
     {
-        try { return HttpMethods.IsGet(context.Request.Method) && context.Request.Path == "/Account/Login" && context.Request.QueryString.Value == "?culture=en"; }
+        try { return HttpMethods.IsGet(context.Request.Method) && context.Request.Path == (summary ? "/instantquotation/3d-printing" : "/Account/Login")
+            && context.Request.QueryString.Value == (summary ? culture switch { "en" => "?culture=en", "th" => "?culture=th", _ => null } : "?culture=en"); }
         catch (Exception) { return false; }
     }
 
@@ -180,7 +181,7 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
         catch (Exception) { active = false; }
     }
 
-    internal void StopAndPersist()
+    internal void StopAndPersist(Action<string>? emit = null)
     {
         try
         {
@@ -202,7 +203,7 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
             var receipt = JsonSerializer.SerializeToUtf8Bytes(new
             {
                 schemaVersion = 1,
-                surface = shipping ? "member-shipping-initial-readiness" : "member-billing-initial-readiness",
+                surface = summary ? "summary-initial-navigation" : shipping ? "member-shipping-initial-readiness" : "member-billing-initial-readiness",
                 invocation,
                 attemptRun,
                 culture,
@@ -213,7 +214,7 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
                 comparisonMode = Environment.GetEnvironmentVariable("BILLING_COMPARISON_MODE") is "focused" ? "focused"
                     : Environment.GetEnvironmentVariable("BILLING_COMPARISON_MODE") is "collected" ? "collected" : null,
                 observerStopped = true,
-                httpTimeoutSeconds = 15,
+                httpTimeoutSeconds = summary ? 30 : 15,
                 maximumEvents = MaximumEvents,
                 maximumTotalEvents = MaximumEvents * 2,
                 dropped,
@@ -222,6 +223,8 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
                 providerObservations = providerSnapshot,
             }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             if (receipt.Length > MaximumReceiptBytes) return;
+            try { emit?.Invoke("summary-initial-navigation " + System.Text.Encoding.UTF8.GetString(receipt)); }
+            catch (Exception) { /* A failing secondary sink cannot replace navigation. */ }
             var directory = Path.Combine(AppContext.BaseDirectory, "TestResults", "billing-persistence", "initial-readiness");
             Directory.CreateDirectory(directory);
             // Fresh invocation path never collides with or merges the en/th business receipts.
