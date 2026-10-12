@@ -71,7 +71,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public string BillingPostalCode { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please select your country.")]
     [StringLength(50)]
     public string Country { get; set; } = string.Empty;
 
@@ -82,23 +82,23 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public InstantQuotationDisplayModel DisplayModel => InstantQuotationCalculator.CreateDisplayModel();
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please enter your email address.")]
     [EmailAddress]
     [StringLength(50)]
     public string Email { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please enter your first name.")]
     [StringLength(50)]
     public string FirstName { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please enter your last name.")]
     [StringLength(50)]
     public string LastName { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please enter your mobile number.")]
     [StringLength(50)]
     public string Mobile { get; set; } = string.Empty;
 
