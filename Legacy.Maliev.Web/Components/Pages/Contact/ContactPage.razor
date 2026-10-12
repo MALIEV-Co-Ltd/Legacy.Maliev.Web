@@ -1,4 +1,7 @@
 @page "/Contact"
+@attribute [StreamRendering(false)]
+@using Microsoft.AspNetCore.Diagnostics
+@using Legacy.Maliev.Web.Middleware
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Components.Layout
 @using Legacy.Maliev.Web.Infrastructure
@@ -6,6 +9,7 @@
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @using Microsoft.Extensions.Options
 @inject IHttpContextAccessor HttpContextAccessor
+@inject ILogger<ContactPage> Logger
 @inject ICountryClient CountryClient
 @inject IContactTrustedCustomerLoader TrustedCustomerLoader
 @inject IAntiforgery Antiforgery
@@ -31,6 +35,13 @@
         <script src="https://www.google.com/recaptcha/enterprise.js?render=@Uri.EscapeDataString(RecaptchaOptions.Value.SiteKey)" async defer></script>
     }
 </HeadContent>
+@if (failure is not null)
+{
+    <HeadContent><meta name="robots" content="noindex,nofollow" /></HeadContent>
+    <ErrorContent Model="failure" />
+}
+else
+{
 <main class="inquiry-page" data-migration-route-owner="blazor-static-ssr">
     <ContactHeroContent />
     <section class="inquiry-content">
@@ -71,8 +82,10 @@
       </div>
     </section>
 </main>
+}
 
 @code {
+    private ErrorDisplayModel? failure;
     private ContactFormDisplayModel model = new(
         string.Empty,
         string.Empty,
@@ -96,15 +109,36 @@
     {
         var context = HttpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-        var countries = await CountryClient.GetCountriesAsync(context.RequestAborted);
+        ServiceResponse<IReadOnlyList<Country>> countries;
+        try
+        {
+            countries = await CountryClient.GetCountriesAsync(context.RequestAborted);
+        }
+        catch (Exception exception) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            var incident = ErrorIncidentHandler.LogUnhandledFailure(context, Logger, exception, DateTimeOffset.UtcNow);
+            failure = new ErrorDisplayModel(false, incident.IncidentId, incident.OccurredAtUtc, StatusCodes.Status500InternalServerError);
+            if (context.Features.Get<IStatusCodePagesFeature>() is { } statusCodePages)
+            {
+                statusCodePages.Enabled = false;
+            }
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers["Referrer-Policy"] = "no-referrer";
+            context.Response.OnStarting(() =>
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                return Task.CompletedTask;
+            });
+            return;
+        }
         var countryValues = countries.Value ?? [];
         var trustedCustomer = await TrustedCustomerLoader.LoadAsync(context, countryValues, context.RequestAborted);
-        var serviceAvailable = countries.ServiceAvailable;
+        var serviceAvailable = countries.ServiceAvailable && countries.UpstreamStatus != System.Net.HttpStatusCode.NotFound;
         var errors = serviceAvailable
             ? new Dictionary<string, IReadOnlyList<string>>()
             : new Dictionary<string, IReadOnlyList<string>>
             {
-                [string.Empty] = ["Could not retrieve countries from the server."]
+                [string.Empty] = [Localizer["Could not retrieve countries from the server"].Value]
             };
         if (trustedCustomer.IsAuthenticated && trustedCustomer.Customer is null)
         {

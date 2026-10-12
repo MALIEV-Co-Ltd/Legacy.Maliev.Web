@@ -54,7 +54,12 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         try
         {
             await page.SetInputFilesAsync("#instant-quote-files", path);
-            await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
+            try { await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync(); }
+            catch (TimeoutException original)
+            {
+                await ObserveUploadPricingFailureAsync(original, factory, page, upload, comparisonObservation, pageErrors.Count);
+                throw;
+            }
             var viewerControlsFit = await page.Locator("[data-workflow-viewer] > button:not(.instant-quote__thickness-toggle)")
                 .EvaluateAllAsync<bool>("""
                     buttons => {
@@ -384,6 +389,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                                 });
                             }
                             """), description => output.WriteLine(description));
+                    await ObserveUploadPricingFailureAsync(original, factory, page, upload, observation, pageErrors.Count);
                     throw;
                 }
                 using var completionScope = factory.Services.CreateScope();
@@ -1047,6 +1053,45 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         {
             if (File.Exists(temporary)) File.Delete(temporary);
         }
+    }
+
+    private async Task ObserveUploadPricingFailureAsync(Exception original,
+        RealUploadTestingWebApplicationFactory factory, IPage page, HashCheckingUploadClient upload,
+        MaterialCompletionObservation observation, int pageErrors)
+    {
+        // Only bounded counts/booleans and existing categorical service observations.
+        // One shared secondary budget; no retry, state mutation or customer payload.
+        try
+        {
+            output.WriteLine("[upload-pricing-services] " + observation.Describe());
+            output.WriteLine($"[upload-pricing-counts] started={Math.Clamp(upload.StartedUploads, 0, 32)}; verified={Math.Clamp(upload.VerifiedUploads, 0, 32)}; rejected={Math.Clamp(upload.ValidationRejectedUploads, 0, 32)}; pageErrors={Math.Clamp(pageErrors, 0, 10)}");
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            if (upload.VerifiedUploads > 0)
+            {
+                using var scope = factory.Services.CreateScope();
+                var stored = await scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>()
+                    .GetAsync(upload.SessionId, upload.OwnerIdentity, deadline.Token).WaitAsync(deadline.Token);
+                output.WriteLine($"[upload-pricing-store] present={stored is not null}; partCount={Math.Clamp(stored?.Parts.Count ?? 0, 0, 32)}; authorizationPresent={stored?.QuoteAuthorization is not null}");
+            }
+            var rendering = page.EvaluateAsync<string>("""
+                () => JSON.stringify({
+                    sample: 'upload-pricing-render',
+                    uploading: document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'uploading',
+                    configured: document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'configured',
+                    repricing: !!document.querySelector('[data-pricing-loading-status]'),
+                    partCount: Math.min(document.querySelectorAll('[data-workflow-part]').length, 32),
+                    tierCount: Math.min(document.querySelectorAll('[data-workflow-price-tier]').length, 32),
+                    durationPresent: !!document.querySelector('[data-workflow-selected-print-time]'),
+                    unavailablePresent: !!document.querySelector('[data-workflow-price-unavailable]')
+                })
+                """);
+            _ = rendering.ContinueWith(static task => _ = task.Exception, CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            var rendered = await rendering.WaitAsync(deadline.Token);
+            original.Data["UploadPricingObservation"] = rendered;
+            output.WriteLine(rendered);
+        }
+        catch { /* Secondary diagnostics cannot replace the primary timeout. */ }
     }
 
     private static int ReserveFreePort()

@@ -77,6 +77,33 @@ public sealed class MaterialPricingDisplayRendererContractTests
         Assert.True(fixture.Tickets.Validate(stored, quote, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
     }
 
+    [Theory]
+    [InlineData("en", "Price unavailable — engineering review required.")]
+    [InlineData("th", "ยังไม่สามารถแสดงราคาได้ ต้องให้วิศวกรตรวจสอบ")]
+    public async Task Renderer_CompletedQuoteAddsMissingComparisonRowsWithoutInventingPhysicalPrices(
+        string culture, string unavailable)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, InstantQuotationMaterialPricingStatus.Completed);
+        await fixture.Pricing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await fixture.AssertNoFinalAuthorityAsync();
+        var pendingHtml = await fixture.HtmlAsync();
+        AssertReviewDisabled(pendingHtml);
+        Assert.DoesNotContain("data-workflow-material-price=\"PETG\"", pendingHtml, StringComparison.Ordinal);
+        await fixture.CompleteAsync();
+        var quote = Assert.IsType<InstantQuotationOrderQuote>(fixture.Pricing.FinalQuote);
+        var petg = Assert.Single(Assert.Single(quote.Parts).MaterialPrices, price => price.MaterialKey == "PETG");
+        Assert.Null(petg.UnitPrice);
+        var html = await fixture.HtmlAsync();
+        var row = WebUtility.HtmlDecode(MaterialRow(html, "PETG"));
+        Assert.Contains(unavailable, row, StringComparison.Ordinal);
+        Assert.DoesNotContain("฿0", row, StringComparison.Ordinal);
+        Assert.Contains("600.00", WebUtility.HtmlDecode(MaterialRow(html, "M68")), StringComparison.Ordinal);
+        Assert.DoesNotContain("disabled", ReviewButton(html), StringComparison.Ordinal);
+        var stored = await fixture.Store.GetAsync(fixture.SessionId, null, default);
+        Assert.NotNull(stored?.QuoteAuthorization);
+        Assert.True(fixture.Tickets.Validate(stored, quote, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
+    }
+
     private static string MaterialRow(string html, string key)
     {
         var match = Regex.Match(html, $"<li\\b[^>]*data-workflow-material-price=\"{Regex.Escape(key)}\"[^>]*>.*?</li>", RegexOptions.Singleline);

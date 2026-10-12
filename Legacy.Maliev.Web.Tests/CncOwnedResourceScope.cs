@@ -22,7 +22,8 @@ internal sealed class CncOwnedResourceScope
         .WithEndpoint(TestcontainersSettings.OS.DockerEndpointAuthConfig.Endpoint)
         .WithTimeout(TimeSpan.FromSeconds(15)).Build();
     internal bool AcquisitionRejectionControl { get; set; }
-    internal static async Task ExecuteAsync(Func<CncOwnedResourceScope, Task> body, Action<IReadOnlyList<object>>? inspect = null)
+    internal static async Task ExecuteAsync(Func<CncOwnedResourceScope, Task> body,
+        Action<IReadOnlyList<object>>? inspect = null, Action<string>? receiptSink = null)
     {
         var scope = new CncOwnedResourceScope();
         Exception? primary = null;
@@ -91,7 +92,19 @@ internal sealed class CncOwnedResourceScope
             catch (Exception exception) { cleanup.Add("docker-disposal:" + exception.GetType().Name); }
             try { inspect?.Invoke(scope.Receipts); }
             catch (Exception exception) { cleanup.Add(exception.GetType().Name); }
-            try { Console.WriteLine(JsonSerializer.Serialize(new { scope.RunId, scope.Expires, resources = scope.Receipts, cleanupFailures = cleanup, primaryFailure = primary?.GetType().Name })); }
+            try
+            {
+                var receipt = JsonSerializer.Serialize(new
+                {
+                    scope.RunId,
+                    scope.Expires,
+                    resources = scope.Receipts,
+                    cleanupFailures = cleanup,
+                    primaryFailure = primary?.GetType().Name,
+                });
+                if (receiptSink is null) Console.WriteLine(receipt);
+                else receiptSink(receipt);
+            }
             catch (Exception exception) { cleanup.Add("receipt-output:" + exception.GetType().Name); }
         }
         if (primary is not null) ExceptionDispatchInfo.Capture(primary).Throw();
@@ -243,19 +256,30 @@ internal sealed class CncOwnedResourceScope
         }
         [DllImport("libc", EntryPoint = "kill", SetLastError = true)]
         private static extern int SendSignal(int pid, int signal);
+        private static object ObserveTask(Task task) => new
+        {
+            status = task.Status.ToString(),
+            failure = task.Exception?.InnerException?.GetType().Name,
+        };
         internal async Task CloseAsync()
         {
             if (closed) return;
             var settled = false;
+            var cleanupPhase = "not-started";
             try
             {
                 if (started)
                 {
+                    cleanupPhase = "stop-exact";
                     await StopExact();
+                    cleanupPhase = "cancel-readers";
                     readerStop.Cancel();
+                    cleanupPhase = "dispose-streams";
                     Process.StandardOutput.BaseStream.Dispose();
                     Process.StandardError.BaseStream.Dispose();
+                    cleanupPhase = "settle-tasks";
                     await Task.WhenAll(stdout, stderr, monitor).WaitAsync(TimeSpan.FromSeconds(5));
+                    cleanupPhase = "verify-terminal";
                     if (!Process.HasExited) throw new InvalidOperationException("Owned child remains.");
                     scope.Receipts.Add(new { kind = "process", pid, start, executable, scope.RunId, scope.Expires, stdoutBytes, stderrBytes, budgetFailure, terminal = true, readersSettled = true, exit = Process.ExitCode, persistentData = false, workingSetCap = 536870912, cpuSecondsCap = 60, memoryEnforcement = "50ms observed working set plus256MiB GC hard limit" });
                     RetainedCustody.TryRemove((pid, start), out _);
@@ -268,7 +292,7 @@ internal sealed class CncOwnedResourceScope
                 try { terminal = started ? Process.HasExited : true; }
                 catch { }
                 RetainedCustody[(pid, start)] = this;
-                scope.Receipts.Add(new { kind = "unresolved-process", pid, start, executable, scope.RunId, scope.Expires, purpose = "CNC child cleanup recovery", terminal, readersSettled = stdout.IsCompleted && stderr.IsCompleted && monitor.IsCompleted, handleRetained = true, closed = false, cleanupFailure = exception.GetType().Name, continuationLease = scope.Expires, reobserveBeforeAnySignal = true });
+                scope.Receipts.Add(new { kind = "unresolved-process", pid, start, executable, scope.RunId, scope.Expires, purpose = "CNC child cleanup recovery", terminal, readersSettled = stdout.IsCompleted && stderr.IsCompleted && monitor.IsCompleted, handleRetained = true, closed = false, cleanupFailure = exception.GetType().Name, cleanupPhase, stdoutTask = ObserveTask(stdout), stderrTask = ObserveTask(stderr), monitorTask = ObserveTask(monitor), continuationLease = scope.Expires, reobserveBeforeAnySignal = true });
                 throw;
             }
             finally

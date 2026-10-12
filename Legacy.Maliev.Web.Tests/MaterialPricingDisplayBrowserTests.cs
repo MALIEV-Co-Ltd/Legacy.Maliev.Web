@@ -139,6 +139,7 @@ public sealed class MaterialPricingDisplayBrowserTests
         ColorScheme scheme, InstantQuotationMaterialPricingStatus status, string expected)
     {
         await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        fixture.Observation.BeginEdit();
         var gate = fixture.Control.Arm(2, status);
         try
         {
@@ -160,7 +161,12 @@ public sealed class MaterialPricingDisplayBrowserTests
             await fixture.CaptureAsync($"{culture}-{width}-{status}");
         }
         finally { gate.Release.TrySetResult(); }
-        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        try { await Assertions.Expect(fixture.Review).ToBeEnabledAsync(); }
+        catch (Exception original) when (original is PlaywrightException or TimeoutException)
+        {
+            await fixture.ObserveCompletionFailureAsync(original, gate);
+            throw;
+        }
         var stored = await fixture.StoredAsync();
         Assert.Equal(2, Assert.Single(stored.Parts).Configuration.Quantity);
         var final = Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote);
@@ -402,7 +408,7 @@ public sealed class MaterialPricingDisplayBrowserTests
         }
     }
 
-    private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    private sealed class Host(Control control, MaterialCompletionObservation observation) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -420,6 +426,7 @@ public sealed class MaterialPricingDisplayBrowserTests
                     new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
                         ?? store.ImplementationFactory?.Invoke(provider)
                         ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), store.Lifetime));
+                observation.Decorate(services);
             });
         }
     }
@@ -427,6 +434,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     private sealed class Fixture : IAsyncDisposable
     {
         public Control Control { get; } = new();
+        public MaterialCompletionObservation Observation { get; } = new();
         public Host Factory { get; }
         private IPlaywright? playwright;
         private IBrowser? browser;
@@ -436,7 +444,7 @@ public sealed class MaterialPricingDisplayBrowserTests
         private int pageErrorCount;
         public ILocator Quantity => Page.Locator("input[name='quantity']");
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
-        public Fixture() => Factory = new(Control);
+        public Fixture() => Factory = new(Control, Observation);
 
         public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme, int height = 800,
             string displayFileName = "historical-controlled.stl")
@@ -504,6 +512,49 @@ public sealed class MaterialPricingDisplayBrowserTests
         }
         public async Task<InstantQuotationSessionState> StoredAsync() =>
             (await Factory.Services.GetRequiredService<IInstantQuotationSessionStore>().GetAsync(sessionId, null, default))!;
+        public async Task ObserveCompletionFailureAsync(Exception original, Gate gate)
+        {
+            // Fixed metadata only; neither observation nor output may replace the primary assertion.
+            try
+            {
+                Console.WriteLine("[quantity-completion-services] " + Observation.Describe());
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sample = "quantity-completion-gate",
+                    claimed = Volatile.Read(ref gate.Claimed),
+                    completed = gate.Completed.Task.Status.ToString(),
+                    finalQuotePresent = Control.FinalQuote is not null,
+                    pageErrors = Math.Clamp(pageErrorCount, 0, 10),
+                }));
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                var stored = await Factory.Services.GetRequiredService<IInstantQuotationSessionStore>()
+                    .GetAsync(sessionId, null, deadline.Token).WaitAsync(deadline.Token);
+                var part = stored?.Parts.SingleOrDefault();
+                var description = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sample = "quantity-completion-store",
+                    sessionPresent = stored is not null,
+                    partCount = Math.Clamp(stored?.Parts.Count ?? 0, 0, 32),
+                    quantityMatched = part?.Configuration.Quantity == gate.Quantity,
+                    authorizationPresent = stored?.QuoteAuthorization is not null,
+                });
+                original.Data["QuantityCompletionObservation"] = description;
+                Console.WriteLine(description);
+                var rendering = Page.EvaluateAsync<string>("""
+                    () => JSON.stringify({
+                        sample: 'quantity-completion-render',
+                        configured: document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'configured',
+                        repricing: !!document.querySelector('[data-pricing-loading-status]'),
+                        reviewDisabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button')?.disabled,
+                        durationPresent: !!document.querySelector('[data-workflow-selected-print-time]')
+                    })
+                    """);
+                _ = rendering.ContinueWith(static task => _ = task.Exception, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                Console.WriteLine(await rendering.WaitAsync(deadline.Token));
+            }
+            catch { /* Preserve the existing Playwright assertion and deadline. */ }
+        }
         public async Task CaptureAsync(string name)
         {
             var directory = Path.GetFullPath(Path.Combine("TestResults", "material-display-browser-controls"));

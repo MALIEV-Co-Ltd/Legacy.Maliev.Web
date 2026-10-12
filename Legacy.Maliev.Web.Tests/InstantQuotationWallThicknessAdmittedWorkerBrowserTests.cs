@@ -112,7 +112,57 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
             Buffer = WallThicknessParityBrowserFixture.Box(height),
         });
         await page.Locator("[data-workflow-part]").WaitForAsync();
-        await page.WaitForFunctionAsync("() => window.__wallAcceptance.evidence.length === 1 && !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)')");
+        try
+        {
+            await page.WaitForFunctionAsync("() => window.__wallAcceptance.evidence.length === 1 && !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)')");
+        }
+        catch (TimeoutException original)
+        {
+            // Fixed categorical metadata from the existing observer only; the native worker is untouched.
+            var description = "observation=unavailable";
+            try
+            {
+                var observation = page.EvaluateAsync<string>("""
+                    () => {
+                        const state = window.__wallAcceptance;
+                        const count = value => Number.isSafeInteger(value) && value >= 0 && value <= 64 ? value : null;
+                        const toggle = document.querySelector('.instant-quote__thickness-toggle');
+                        const workflow = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
+                        const evidenceState = state?.evidence?.[0]?.summary?.state;
+                        return JSON.stringify({
+                            started: count(state?.started), evidence: count(state?.evidence?.length), errors: count(state?.errors?.length),
+                            evidenceState: ['complete', 'incomplete', 'unavailable'].includes(evidenceState) ? evidenceState : 'unknown',
+                            togglePresent: !!toggle, toggleEnabled: !!toggle && !toggle.disabled,
+                            workflow: ['Empty', 'Uploading', 'Configuring', 'Reviewing', 'Submitting', 'Completed', 'Failed'].includes(workflow) ? workflow : 'unknown',
+                            isRepricing: !!document.querySelector('[data-pricing-loading-status]')
+                        });
+                    }
+                    """);
+                _ = observation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                var snapshot = await observation.WaitAsync(TimeSpan.FromSeconds(1));
+                if (snapshot.Length <= 1024) description = snapshot;
+            }
+            catch (Exception) { /* The original timeout remains the primary failure. */ }
+            try
+            {
+                description = JsonSerializer.Serialize(new
+                {
+                    phase = "initial-worker-readiness",
+                    observation = description,
+                    browserConnected = browser.IsConnected,
+                    pageClosed = page.IsClosed,
+                    pageErrorCount = Math.Min(pageErrors.Count, 64),
+                    consoleErrorCount = Math.Min(consoleErrors.Count, 64),
+                    uploadCount = Math.Min(transport.UploadCount, 64),
+                    readCount = Math.Min(transport.ReadCount, 64),
+                });
+                original.Data["InitialWallWorkerReadiness"] = description;
+                output.WriteLine("initial-wall-worker-readiness " + description);
+            }
+            catch (Exception) { /* A failing metadata sink cannot replace the original timeout. */ }
+            throw;
+        }
         var actual = await page.EvaluateAsync<JsonElement>("""
             () => ({started:window.__wallAcceptance.started,
               summary:window.__wallAcceptance.evidence[0].summary,

@@ -227,7 +227,7 @@
   <data name="The submitted value is invalid." xml:space="preserve"><value>ข้อมูลที่ส่งมาไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง</value></data>
   <data name="The Email field is not a valid e-mail address." xml:space="preserve"><value>กรุณาระบุอีเมลที่ถูกต้อง</value></data>
   <data name="Security verification failed. Please try again." xml:space="preserve"><value>การตรวจสอบความปลอดภัยไม่สำเร็จ กรุณาลองอีกครั้ง</value></data>
-  <data name="Could not retrieve countries from the server." xml:space="preserve"><value>ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้</value></data>
+  <data name="Could not retrieve countries from the server" xml:space="preserve"><value>ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้</value></data>
   <data name="We could not save your message. Please try again." xml:space="preserve"><value>ไม่สามารถบันทึกข้อความได้ กรุณาลองอีกครั้ง</value></data>
   <data name="The contact service is temporarily unavailable. Please email info@maliev.com." xml:space="preserve"><value>บริการติดต่อไม่พร้อมใช้งานชั่วคราว กรุณาส่งอีเมลไปที่ info@maliev.com</value></data>
   <data name="Could not retrieve your customer profile. Please update your profile or contact us directly." xml:space="preserve"><value>ไม่สามารถดึงข้อมูลลูกค้าของคุณได้ กรุณาอัปเดตข้อมูลหรือติดต่อเราโดยตรง</value></data>

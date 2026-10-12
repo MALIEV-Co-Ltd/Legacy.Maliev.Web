@@ -2,11 +2,13 @@ using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Display seam/observer reach, with registered kernel/store; not real uploaded-byte or renderer proof.</summary>
-public sealed class MaterialPricingDisplayContractTests
+public sealed class MaterialPricingDisplayContractTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData(false)]
@@ -458,6 +460,179 @@ public sealed class MaterialPricingDisplayContractTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new InstantQuotationMaterialPriceDisplaySnapshot(0));
     }
 
+    [Fact]
+    public async Task VerifiedUploadCompletions_ArePromotedAfterHeldPricingReleasesStateGate()
+    {
+        var uploads = new TwoUploadBoundary();
+        await using var fixture = await Fixture.CreateAsync(uploadClient: uploads);
+        var pending = fixture.Pricing.Arm();
+        var digest = uploads.Digest;
+        var claim = new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
+            Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+            12, 1, true, false, false, 1);
+        InstantQuotationWorkflowUploadFile File(string name) => new(name, "model/stl", uploads.Bytes.Length, claim,
+            _ => Task.FromResult<Stream>(new MemoryStream(uploads.Bytes, writable: false)));
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var run = fixture.Workflow.UploadAsync([File("completion-a.stl"), File("completion-b.stl")], lifetime.Token);
+        Exception? primaryFailure = null;
+        try
+        {
+            uploads.First.TrySetResult();
+            await pending.Entered.Task.WaitAsync(lifetime.Token);
+            uploads.Second.TrySetResult();
+            await uploads.SecondReturned.Task.WaitAsync(lifetime.Token);
+            Assert.False(run.IsCompleted);
+            var held = (await fixture.Store.GetAsync(fixture.SessionId, Owner, lifetime.Token))!;
+            Assert.Equal(2, held.Parts.Count);
+            Assert.Equal(2, fixture.Workflow.Parts.Count);
+            Assert.Contains(held.Parts, part => part.DisplayFileName == "completion-a.stl");
+            Assert.DoesNotContain(held.Parts, part => part.DisplayFileName == "completion-b.stl");
+            Assert.Null(held.QuoteAuthorization);
+            Assert.Null(fixture.Workflow.OrderQuote);
+            Assert.True(pending.ObserverRoute);
+            output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                stage = "pricing-held",
+                persistedParts = held.Parts.Select(part => part.PartId).ToArray(),
+                coordinatorParts = fixture.Workflow.Parts.Select(part => part.PartId).ToArray(),
+                secondServiceReturned = uploads.SecondReturned.Task.IsCompletedSuccessfully,
+                authorizationPresent = held.QuoteAuthorization is not null,
+                runSettled = run.IsCompleted,
+            }));
+            pending.Release.TrySetResult();
+            await run.WaitAsync(lifetime.Token);
+            var settled = (await fixture.Store.GetAsync(fixture.SessionId, Owner, lifetime.Token))!;
+            Assert.Equal(3, settled.Parts.Count);
+            Assert.Equal(settled.Parts.Select(part => part.PartId), fixture.Workflow.Parts.Select(part => part.PartId));
+            Assert.Equal(new[] { "controlled.stl", "completion-a.stl", "completion-b.stl" },
+                settled.Parts.Select(part => part.DisplayFileName));
+            Assert.Equal(3, fixture.Workflow.OrderQuote!.Parts.Count);
+            Assert.NotNull(settled.QuoteAuthorization);
+            Assert.True(fixture.Workflow.AuthoritativeQuoteRevision > 1);
+            output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                stage = "pricing-released",
+                persistedParts = settled.Parts.Select(part => part.PartId).ToArray(),
+                coordinatorParts = fixture.Workflow.Parts.Select(part => part.PartId).ToArray(),
+                authorizationPresent = settled.QuoteAuthorization is not null,
+                runSettled = run.IsCompleted,
+            }));
+        }
+        catch (Exception failure) { primaryFailure = failure; throw; }
+        finally
+        {
+            pending.Release.TrySetResult();
+            uploads.First.TrySetResult();
+            uploads.Second.TrySetResult();
+            lifetime.Cancel();
+            // Every test-owned hold is released and the coordinator's existing cancellation
+            // waits settle this task. Join the actual task before the await-using fixture closes.
+            try { await run; }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+            catch (Exception cleanupFailure) when (primaryFailure is not null)
+            {
+                primaryFailure.Data["DiscriminatorCleanupFailureCategory"] = cleanupFailure.GetType().Name;
+            }
+            finally
+            {
+                try
+                {
+                    output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        stage = "cleanup",
+                        runSettled = run.IsCompleted,
+                        runStatus = run.Status.ToString(),
+                        holdsReleased = pending.Release.Task.IsCompleted
+                            && uploads.First.Task.IsCompleted && uploads.Second.Task.IsCompleted,
+                    }));
+                }
+                catch (Exception) { /* Secondary diagnostic sinks cannot replace the primary failure. */ }
+            }
+        }
+    }
+
+    private sealed class TwoUploadBoundary : IInstantQuotationUploadClient, IInstantQuotationPhysicalAnalysisInputReader
+    {
+        public byte[] Bytes { get; } = Box();
+        public string Digest => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes)).ToLowerInvariant();
+        public IInstantQuotationSessionStore Store { get; set; } = null!;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid,
+            (string Session, string? Owner, string Name)> admitted = new();
+        public TaskCompletionSource First { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Second { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource SecondReturned { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity,
+            Stream content, string fileName, string contentType, long contentLength,
+            InstantQuotationGeometryClaim geometryClaim, string operationId, CancellationToken cancellationToken)
+        {
+            var second = fileName == "completion-b.stl";
+            await (second ? Second.Task : First.Task).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            using var copy = new MemoryStream();
+            await content.CopyToAsync(copy, cancellationToken);
+            Assert.Equal(Bytes, copy.ToArray());
+            Assert.Equal(Bytes.Length, contentLength);
+            Assert.Equal(Digest, geometryClaim.Sha256);
+            var fileId = second ? Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+                : Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            Assert.True(admitted.TryAdd(fileId, (sessionId, ownerIdentity, fileName)));
+            var result = InstantQuotationUploadResult.Succeeded(operationId,
+                new InstantQuotationUploadReference(fileId.ToString("D")), Digest,
+                new InstantQuotationPhysicalAnalysisUpload(fileId, fileName, "model/stl", Bytes.Length, Digest, "clean"));
+            if (second) SecondReturned.TrySetResult();
+            return result;
+        }
+        public async Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(string sessionId,
+            string? ownerIdentity, Guid partId, CancellationToken cancellationToken)
+        {
+            var session = await Store.GetAsync(sessionId, ownerIdentity, cancellationToken);
+            Assert.NotNull(session);
+            var part = Assert.Single(session.Parts, candidate => candidate.PartId == partId);
+            var upload = Assert.IsType<InstantQuotationPhysicalAnalysisUpload>(part.PhysicalAnalysisUpload);
+            Assert.True(admitted.TryGetValue(upload.FileId, out var admission));
+            Assert.Equal(admission.Session, sessionId);
+            Assert.Equal(admission.Owner, ownerIdentity);
+            Assert.Equal(admission.Name, upload.FileName);
+            Assert.Equal(upload.FileId.ToString("D"), part.UploadReference.Value);
+            Assert.Equal(Digest, upload.Sha256);
+            Assert.Equal(Digest, part.Geometry.Sha256);
+            Assert.Equal(Bytes.Length, upload.SizeBytes);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(Bytes, InstantQuotationPhysicalAnalysisInputFailure.None,
+                upload.FileId, upload.FileName, upload.Sha256);
+        }
+        private static byte[] Box()
+        {
+            System.Numerics.Vector3[] points = [new(0, 0, 0), new(8, 0, 0), new(8, 8, 0), new(0, 8, 0),
+                new(0, 0, 8), new(8, 0, 8), new(8, 8, 8), new(0, 8, 8)];
+            int[][] faces = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4],
+                [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]];
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+            writer.Write(new byte[80]);
+            writer.Write((uint)faces.Length);
+            foreach (var face in faces)
+            {
+                writer.Write(new byte[12]);
+                foreach (var vertex in face)
+                {
+                    writer.Write(points[vertex].X);
+                    writer.Write(points[vertex].Y);
+                    writer.Write(points[vertex].Z);
+                }
+                writer.Write((ushort)0);
+            }
+            return stream.ToArray();
+        }
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
+            InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The discriminator must retain both admitted uploads.");
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity,
+            int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
+            string operationId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The discriminator cannot finalize an order.");
+    }
+
     private const string Owner = "material-display-fixture-owner";
     private static readonly Guid PartId = Guid.Parse("55555555-5555-5555-5555-555555555555");
     private sealed class Pending
@@ -529,21 +704,22 @@ public sealed class MaterialPricingDisplayContractTests
         public InstantQuotationWorkflowCoordinator Workflow { get; }
         public Guid PartId { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
         public string SessionId { get; private set; } = "";
-        private Fixture(TimeProvider? clock)
+        private Fixture(TimeProvider? clock, IInstantQuotationUploadClient? uploadClient)
         {
-            factory = new Factory(clock);
+            factory = new Factory(clock, uploadClient as IInstantQuotationPhysicalAnalysisInputReader);
             scope = factory.Services.CreateAsyncScope();
             Store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
+            if (uploadClient is TwoUploadBoundary boundary) boundary.Store = Store;
             Pricing = new(scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
             Workflow = new(Store,
-                scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
+                uploadClient ?? scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
                 scope.ServiceProvider.GetRequiredService<IInstantQuotationPricingService>(), Owner,
                 quoteTicketService: scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>(),
                 authoritativePricingService: Pricing);
         }
-        public static async Task<Fixture> CreateAsync(bool initialize = true, TimeProvider? clock = null, int partCount = 1)
+        public static async Task<Fixture> CreateAsync(bool initialize = true, TimeProvider? clock = null, int partCount = 1, IInstantQuotationUploadClient? uploadClient = null)
         {
-            var fixture = new Fixture(clock);
+            var fixture = new Fixture(clock, uploadClient);
             try
             {
                 var reference = new InstantQuotationUploadReference("66666666-6666-6666-6666-666666666666");
@@ -577,12 +753,20 @@ public sealed class MaterialPricingDisplayContractTests
         }
     }
 
-    private sealed class Factory(TimeProvider? clock) : TestingWebApplicationFactory
+    private sealed class Factory(TimeProvider? clock, IInstantQuotationPhysicalAnalysisInputReader? reader) : TestingWebApplicationFactory
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
-            if (clock is not null) builder.ConfigureServices(services => services.AddSingleton(clock));
+            builder.ConfigureServices(services =>
+            {
+                if (clock is not null) services.AddSingleton(clock);
+                if (reader is not null)
+                {
+                    services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
+                    services.AddSingleton(reader);
+                }
+            });
         }
     }
 

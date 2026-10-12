@@ -1,0 +1,55 @@
+{
+  "sourcePacketSha256": "3427ec21bb7274066f96f7ebdd4e844c104d7f7ccd58df543cf1a4288a694f3a",
+  "base": "046fef23ba40639a7cc1448fb9a112f92737f10d",
+  "records": [
+    {
+      "sourceSha": "18c9f126bbbb2aab33b9b46f069f6d6225348053",
+      "parents": [
+        "1e8da789aa371f5fca2e9ed4437ba26bbec27b22"
+      ],
+      "fullChangedPaths": [
+        "Maliev.Web.Tests/ContactCountryFailureTests.cs",
+        "Maliev.Web/Pages/Contact/Index.cshtml.cs"
+      ],
+      "originalTestBlobOid": "df21679be8c3731747c712a25152369f459ab1f7",
+      "originalTestSha256": "85ed32ce6f4e4e05da0788bbbf6c24649305dfeb74f8d2446fdcfa4a47e2b4c7",
+      "mapping": {
+        "production": [
+          "Legacy.Maliev.Web/Pages/Contact/Index.cshtml.cs",
+          "Legacy.Maliev.Web/Components/Pages/Contact/ContactPage.razor",
+          "Legacy.Maliev.Web/Resources/Components/Pages/Contact/ContactContent.th.resx"
+        ],
+        "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs",
+        "statusProvenance": [
+          "Legacy.Maliev.Web.Application/CareerContracts.cs",
+          "Legacy.Maliev.Web.Infrastructure/CountryClient.cs"
+        ]
+      },
+      "assertion": "Empty Countries and exact empty-key ModelState error on transport,503 and404; real EN/TH active/fallback renderer and success empty/nonempty controls; other Country consumers retain404availableempty",
+      "disposition": "Implemented source non-success404 error through Contact-only private provenance; exact-head focused/full/main acceptance pending. No whole-original disposition yet."
+    },
+    {
+      "sourceSha": "8777004f1014707401ee150d548cf08e0923efa0",
+      "parents": [
+        "a26fac7505854143f1b3069c97d01df3ae0fb1b4"
+      ],
+      "fullChangedPaths": [
+        "Maliev.Web.Tests/CareerViewMissingOfferTests.cs",
+        "Maliev.Web/Pages/Career/View.cshtml.cs"
+      ],
+      "originalTestBlobOid": "43744162d0b8fd0eca10cbcfea57dba43a27a44b",
+      "originalTestSha256": "36ae742d8a22cf56ef823e1c35467c55b1bdf8fac4ab7421a05fa021b60de8d1",
+      "mapping": {
+        "production": [
+          "Legacy.Maliev.Web/Pages/Career/View.cshtml.cs",
+          "Legacy.Maliev.Web/Components/Pages/Career/CareerDetailPage.razor"
+        ],
+        "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs"
+      },
+      "assertion": "Direct NotFoundResult at2147483647; real Jobs/2147483647 HTTP404 renders EN/TH404 safely; original levels200 fixture retained but current detail contract intentionally makes no levels request",
+      "disposition": "Await native qualification and Root complete two-path acceptance; existing guard reused without duplicate production change"
+    }
+  ],
+  "nativeQualification": "Pending hosted successor Release/focused61/full/format/security/audit/browser/PDF/unchanged coverage and strict prior4034 retention; predecessor focused54P2F in new class, full NOT RUN; local native NOT RUN admission unavailable",
+  "wholeOriginalClosure": false
+}

@@ -115,3 +115,33 @@ public sealed class BillingInitialProbeDiagnosticsTests
         public void OnCompleted(Func<object, Task> callback, object state) { }
     }
 }
+
+/// <summary>Actor-free controls for the anonymous summary observer; separate from the five-row billing contract.</summary>
+public sealed class SummaryInitialNavigationDiagnosticsTests
+{
+    [Theory]
+    [InlineData("en", "GET", "/instantquotation/3d-printing", "?culture=en", true)]
+    [InlineData("th", "GET", "/instantquotation/3d-printing", "?culture=th", true)]
+    [InlineData("th", "GET", "/Account/Login", "?culture=en", false)]
+    [InlineData("en", "POST", "/instantquotation/3d-printing", "?culture=en", false)]
+    public async Task SummaryObserverUsesOnlyTheOriginalAnonymousDocumentRoute(
+        string culture, string method, string path, string query, bool observed)
+    {
+        var observer = new BillingInitialProbeDiagnostics(culture, 1280, new string('a', 32), summary: true);
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var builder = new ApplicationBuilder(services);
+        var sentinel = new InvalidOperationException("private-downstream-message-must-not-be-retained");
+        observer.Configure(app => app.Run(_ => Task.FromException(sentinel)))(builder);
+        var context = new DefaultHttpContext();
+        context.Request.Method = method;
+        context.Request.Path = path;
+        context.Request.QueryString = new QueryString(query);
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => builder.Build()(context));
+        Assert.Same(sentinel, actual);
+        Assert.Equal(observed ? 3 : 0, observer.State.Events);
+        observer.Stop();
+        var stopped = observer.State;
+        observer.Observe(BillingInitialProbeDiagnostics.Stage.GetInvoked);
+        Assert.Equal(stopped, observer.State);
+    }
+}
