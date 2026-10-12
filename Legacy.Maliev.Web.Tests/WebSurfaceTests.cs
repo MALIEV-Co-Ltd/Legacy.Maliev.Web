@@ -11,14 +11,16 @@ using Microsoft.Extensions.Configuration;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
+public sealed class WebSurfaceTests : IDisposable
 {
-    private readonly WebApplicationFactory<Program> configuredFactory;
-    private readonly HttpClient client;
+    private readonly OwnedWebSurfaceHost ownedHost;
+    private WebApplicationFactory<Program> configuredFactory => ownedHost.Factory;
+    internal OwnedWebSurfaceHost LifetimeOwner => ownedHost;
+    private HttpClient client => ownedHost.Client;
 
-    public WebSurfaceTests(TestingWebApplicationFactory factory)
+    public WebSurfaceTests()
     {
-        configuredFactory = factory.WithWebHostBuilder(builder =>
+        ownedHost = OwnedWebSurfaceHost.Create(builder =>
             {
                 builder.UseEnvironment("Testing");
                 builder.ConfigureAppConfiguration((_, configuration) =>
@@ -63,11 +65,6 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
-        client = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost"),
-        });
     }
 
     [Theory]
@@ -4842,7 +4839,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         }
     }
 
-    public void Dispose() => configuredFactory.Dispose();
+    public void Dispose() => ownedHost.Dispose();
 
     private sealed record QuotationListInvocation(
         int CustomerId,
