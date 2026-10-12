@@ -74,8 +74,24 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         await using var fixture = await Fixture.CreateAsync(culture, width, output, holdUnrelatedFetch: true);
         Assert.True(fixture.HasPendingNavigationControl);
         await fixture.AssertFinalAsync(2);
-        await fixture.Quantity.FillAsync("4");
-        await fixture.Quantity.PressAsync("Tab");
+        fixture.Control.Armed = true;
+        try
+        {
+            await fixture.Quantity.FillAsync("4");
+            await fixture.Quantity.PressAsync("Tab");
+            await fixture.Control.Pending.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(4, Assert.Single(fixture.Control.Captured!.Parts).Configuration.Quantity);
+            Assert.False(fixture.Control.Finished.Task.IsCompleted,
+                "The captured accepted quantity4 request must remain incomplete while its pricing callback is held.");
+            Assert.Equal(600d, Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.Final).Parts).UnitPrice);
+            Assert.True(fixture.HasPendingNavigationControl);
+        }
+        finally { fixture.Control.ReleaseAll(); }
+        await fixture.Control.Finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var captured = Assert.IsType<InstantQuotationSessionState>(fixture.Control.Captured);
+        var stored = await fixture.StoredAsync();
+        Assert.Equal(captured.UpdatedAt, stored.UpdatedAt);
+        Assert.Equal(Assert.Single(captured.Parts).Configuration, Assert.Single(stored.Parts).Configuration);
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         await fixture.AssertFinalAsync(4);
         Assert.True(fixture.HasPendingNavigationControl);
