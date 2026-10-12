@@ -104,13 +104,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IReadOnlyList<InstantQuotationMaterialPricingProgress> CardPriceRows(InstantQuotationWorkflowPartViewModel part)
     {
         var current = DisplayRows(part);
-        if (current.Count > 0) return current;
-        if (!IsRepricing && DisplayQuote(part) is { } quote)
-            return quote.MaterialPrices.Select(price => new InstantQuotationMaterialPricingProgress(
+        if (IsRepricing || DisplayQuote(part) is not { } quote) return current;
+        var observedKeys = current.Select(row => row.MaterialKey).ToHashSet(StringComparer.Ordinal);
+        return current.Concat(quote.MaterialPrices
+            .Where(price => !observedKeys.Contains(price.MaterialKey))
+            .Select(price => new InstantQuotationMaterialPricingProgress(
                 part.PartId, price.MaterialKey,
                 price.UnitPrice is null ? InstantQuotationMaterialPricingStatus.Unavailable : InstantQuotationMaterialPricingStatus.Completed,
-                price.UnitPrice)).ToArray();
-        return [];
+                price.UnitPrice))).ToArray();
     }
 
     private ValueTask MaterialDisplayChangedAsync(InstantQuotationMaterialPriceDisplaySnapshot snapshot, CancellationToken token)

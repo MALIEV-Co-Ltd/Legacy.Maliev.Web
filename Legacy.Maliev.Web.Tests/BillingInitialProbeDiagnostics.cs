@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Passive fixed first-login observations; no request data, worker, retry or readiness substitution.</summary>
-internal sealed class BillingInitialProbeDiagnostics(string culture, int width, string attemptRun) : IStartupFilter, ILoggerProvider
+internal sealed class BillingInitialProbeDiagnostics(string culture, int width, string attemptRun, bool shipping = false) : IStartupFilter, ILoggerProvider
 {
     private const int MaximumEvents = 16;
     private const int MaximumReceiptBytes = 32768;
@@ -202,7 +202,7 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
             var receipt = JsonSerializer.SerializeToUtf8Bytes(new
             {
                 schemaVersion = 1,
-                surface = "member-billing-initial-readiness",
+                surface = shipping ? "member-shipping-initial-readiness" : "member-billing-initial-readiness",
                 invocation,
                 attemptRun,
                 culture,
