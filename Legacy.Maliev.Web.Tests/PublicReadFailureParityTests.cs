@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Contact;
 using Legacy.Maliev.Web.Infrastructure;
@@ -12,8 +14,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xunit.Abstractions;
 using ContactPage = Legacy.Maliev.Web.Pages.Contact.Index;
 using CareerView = Legacy.Maliev.Web.Pages.About.Career.View;
 
@@ -24,8 +28,59 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
 {
     private const string CountryError = "Could not retrieve countries from the server";
     private readonly TestingWebApplicationFactory factory;
+    private readonly ITestOutputHelper output;
 
-    public PublicReadFailureParityTests(TestingWebApplicationFactory factory) => this.factory = factory;
+    public PublicReadFailureParityTests(TestingWebApplicationFactory factory, ITestOutputHelper output)
+    {
+        this.factory = factory;
+        this.output = output;
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    [InlineData("available", true)]
+    [InlineData("available", false)]
+    public void PrivateStatus_PreservesRecordEqualityHashTextDeconstructionAndJson(string? value, bool available)
+    {
+        var baseline = new ServiceResponse<string>(value, available);
+        // This unchanged two-position record is the pre-metadata declaration witness.
+        var original = new OriginalServiceResponse<string>(value, available);
+        var provenance = baseline with { UpstreamStatus = HttpStatusCode.NotFound };
+        Assert.True(baseline == provenance);
+        Assert.True(provenance == baseline);
+        Assert.True(baseline.Equals((object)provenance));
+        Assert.Equal(baseline.GetHashCode(), provenance.GetHashCode());
+        var typeHashDifference = unchecked(EqualityComparer<Type>.Default.GetHashCode(typeof(ServiceResponse<string>))
+            - EqualityComparer<Type>.Default.GetHashCode(typeof(OriginalServiceResponse<string>)));
+        var expectedOldHashWithCurrentType = unchecked(original.GetHashCode()
+            + (typeHashDifference * -1521134295 * -1521134295));
+        Assert.Equal(expectedOldHashWithCurrentType, provenance.GetHashCode());
+        Assert.True(new HashSet<ServiceResponse<string>> { baseline }.Contains(provenance));
+        var (actualValue, actualAvailable) = provenance;
+        Assert.Equal(value, actualValue);
+        Assert.Equal(available, actualAvailable);
+        Assert.Equal($"ServiceResponse {{ Value = {value}, ServiceAvailable = {available} }}", provenance.ToString());
+        Assert.Equal(baseline.ToString(), provenance.ToString());
+        Assert.Equal(original.ToString().Replace("OriginalServiceResponse", "ServiceResponse", StringComparison.Ordinal), provenance.ToString());
+        var json = JsonSerializer.Serialize(provenance);
+        Assert.Equal(JsonSerializer.Serialize(baseline), json);
+        Assert.Equal(JsonSerializer.Serialize(original), json);
+        Assert.DoesNotContain("UpstreamStatus", json, StringComparison.Ordinal);
+        Assert.Null(JsonSerializer.Deserialize<ServiceResponse<string>>(json)!.UpstreamStatus);
+        Assert.NotEqual(baseline, baseline with { ServiceAvailable = !available });
+        Assert.NotEqual(baseline, baseline with { Value = "different" });
+    }
+
+    [Fact]
+    public void PrivateStatus_CannotBeSuppliedThroughJson()
+    {
+        var result = JsonSerializer.Deserialize<ServiceResponse<string>>(
+            "{\"Value\":null,\"ServiceAvailable\":true,\"UpstreamStatus\":404}")!;
+        Assert.True(result.ServiceAvailable);
+        Assert.Null(result.Value);
+        Assert.Null(result.UpstreamStatus);
+    }
 
     [Theory]
     [InlineData(ResponseMode.Success)]
@@ -45,7 +100,7 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         else
         {
             Assert.IsType<PageResult>(await page.OnGetAsync(CancellationToken.None));
-            var failed = mode is ResponseMode.Transport or ResponseMode.Unavailable;
+            var failed = mode is ResponseMode.Transport or ResponseMode.Unavailable or ResponseMode.Missing;
             Assert.Equal(!failed, page.CountryServiceAvailable);
             if (mode == ResponseMode.Success)
             {
@@ -61,7 +116,7 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
                 }
                 else
                 {
-                    // The accepted Country client treats 404 as an available empty catalogue.
+                    // Successful empty catalogues remain available without a validation error.
                     Assert.True(page.ModelState.IsValid);
                 }
             }
@@ -123,7 +178,7 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
             new object[] { culture, enabled, ResponseMode.EmptySuccess })));
 
     [Fact]
-    public async Task Country404AndSuccessfulEmptyCatalogue_HaveTheSameAcceptedTypedResult()
+    public async Task Country404AndSuccessfulEmptyCatalogue_RetainAvailabilityWithDistinctPrivateProvenance()
     {
         using var missing = new Upstream(ResponseMode.Missing, countries: true);
         using var empty = new Upstream(ResponseMode.EmptySuccess, countries: true);
@@ -133,6 +188,8 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         Assert.True(emptyResult.ServiceAvailable);
         Assert.Empty(missingResult.Value!);
         Assert.Empty(emptyResult.Value!);
+        Assert.Equal(HttpStatusCode.NotFound, missingResult.UpstreamStatus);
+        Assert.Null(emptyResult.UpstreamStatus);
     }
 
     [Theory]
@@ -140,16 +197,36 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
     public async Task ContactRoute_ActualHttpRendersBothLanguagesWithoutUpstreamLeak(string culture, bool enabled, ResponseMode mode)
     {
         using var upstream = new Upstream(mode, countries: true);
-        await using var host = CreateFactory(upstream, "Contact", enabled);
+        using var events = new BoundaryLogProvider();
+        await using var host = CreateFactory(upstream, "Contact", enabled, events);
         using var client = CreateClient(host);
         using var response = await client.GetAsync($"/contact?culture={culture}");
         var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        if (mode == ResponseMode.Unexpected && response.StatusCode != HttpStatusCode.InternalServerError)
+        {
+            output.WriteLine(JsonSerializer.Serialize(new
+            {
+                boundary = "contact-unexpected-render",
+                culture,
+                enabled,
+                status = (int)response.StatusCode,
+                requests = upstream.Paths.Count,
+                mediaType = response.Content.Headers.ContentType?.MediaType,
+                hasErrorComponent = html.Contains("data-migration-component=\"error-content\"", StringComparison.Ordinal),
+                hasContactComponent = html.Contains("data-migration-component=\"contact-form-fields\"", StringComparison.Ordinal),
+                hasAntiforgeryText = html.Contains("antiforgery", StringComparison.OrdinalIgnoreCase),
+                hasContentTypeText = html.Contains("Content-type", StringComparison.OrdinalIgnoreCase),
+                hasIncidentHeader = response.Headers.Contains("X-Incident-Id"),
+                hasPrivateDetail = html.Contains("private upstream detail", StringComparison.Ordinal),
+                frameworkEvents = events.Snapshot(),
+            }));
+        }
         Assert.Equal(mode == ResponseMode.Unexpected ? HttpStatusCode.InternalServerError : HttpStatusCode.OK, response.StatusCode);
         Assert.DoesNotContain("private upstream detail", html, StringComparison.Ordinal);
         if (mode != ResponseMode.Unexpected)
         {
             Assert.Contains("data-migration-component=\"contact-form-fields\"", html, StringComparison.Ordinal);
-            if (mode is ResponseMode.Transport or ResponseMode.Unavailable)
+            if (mode is ResponseMode.Transport or ResponseMode.Unavailable or ResponseMode.Missing)
             {
                 Assert.Contains(culture == "th" ? "ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้" : CountryError, html, StringComparison.Ordinal);
                 Assert.DoesNotContain("<option value=\"Thailand\"", html, StringComparison.Ordinal);
@@ -203,10 +280,16 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         Assert.Equal("/Jobs/2147483647", Assert.Single(upstream.Paths));
     }
 
-    private WebApplicationFactory<Program> CreateFactory(Upstream upstream, string route, bool enabled) =>
+    private WebApplicationFactory<Program> CreateFactory(Upstream upstream, string route, bool enabled,
+        BoundaryLogProvider? events = null) =>
         factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting($"BlazorRouting:{route}", enabled.ToString());
+            if (events is not null)
+            {
+                builder.ConfigureLogging(logging => logging.AddProvider(events)
+                    .AddFilter<BoundaryLogProvider>(null, LogLevel.Debug));
+            }
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ICountryClient>();
@@ -304,4 +387,35 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(respond(request));
     }
+
+    private sealed class BoundaryLogProvider : ILoggerProvider
+    {
+        private readonly ConcurrentQueue<BoundaryEvent> events = new();
+        private int count;
+        public ILogger CreateLogger(string categoryName) => new BoundaryLogger(this, categoryName);
+        public BoundaryEvent[] Snapshot() => events.ToArray();
+        public void Dispose()
+        {
+        }
+
+        private sealed class BoundaryLogger(BoundaryLogProvider owner, string category) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel logLevel) => category.StartsWith("Microsoft.AspNetCore.Components.Endpoints", StringComparison.Ordinal)
+                || category.StartsWith("Microsoft.AspNetCore.Diagnostics", StringComparison.Ordinal)
+                || category.StartsWith("Microsoft.AspNetCore.Mvc", StringComparison.Ordinal);
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (IsEnabled(logLevel) && Interlocked.Increment(ref owner.count) <= 64)
+                {
+                    owner.events.Enqueue(new BoundaryEvent(category, eventId.Id, eventId.Name, exception?.GetType().Name));
+                }
+            }
+        }
+    }
+
+    private sealed record BoundaryEvent(string Category, int EventId, string? EventName, string? ExceptionType);
+
+    private sealed record OriginalServiceResponse<T>(T? Value, bool ServiceAvailable) where T : class;
 }

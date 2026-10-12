@@ -19,10 +19,14 @@
           "Legacy.Maliev.Web/Components/Pages/Contact/ContactPage.razor",
           "Legacy.Maliev.Web/Resources/Components/Pages/Contact/ContactContent.th.resx"
         ],
-        "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs"
+        "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs",
+        "statusProvenance": [
+          "Legacy.Maliev.Web.Application/CareerContracts.cs",
+          "Legacy.Maliev.Web.Infrastructure/CountryClient.cs"
+        ]
       },
-      "assertion": "Empty Countries plus exact empty-key ModelState error on real typed-client transport/503; renderable EN/TH route; original success retained",
-      "disposition": "OPEN Country404 erasure requires Root shared-contract disposition; original treats allnon-success as error while accepted client maps404 to available empty"
+      "assertion": "Empty Countries and exact empty-key ModelState error on transport,503 and404; real EN/TH active/fallback renderer and success empty/nonempty controls; other Country consumers retain404availableempty",
+      "disposition": "Implemented source non-success404 error through Contact-only private provenance; exact-head focused/full/main acceptance pending. No whole-original disposition yet."
     },
     {
       "sourceSha": "8777004f1014707401ee150d548cf08e0923efa0",
@@ -46,6 +50,6 @@
       "disposition": "Await native qualification and Root complete two-path acceptance; existing guard reused without duplicate production change"
     }
   ],
-  "nativeQualification": "Pending hosted exact-head Release/focused/full/format/security/audit/browser/PDF/unchanged coverage and strict original4034 retention; local native NOT RUN admission unavailable",
+  "nativeQualification": "Pending hosted successor Release/focused61/full/format/security/audit/browser/PDF/unchanged coverage and strict prior4034 retention; predecessor focused54P2F in new class, full NOT RUN; local native NOT RUN admission unavailable",
   "wholeOriginalClosure": false
 }
