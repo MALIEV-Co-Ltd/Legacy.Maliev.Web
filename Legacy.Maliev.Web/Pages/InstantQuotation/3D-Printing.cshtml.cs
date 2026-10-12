@@ -71,7 +71,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public string BillingPostalCode { get; set; } = string.Empty;
 
     [BindProperty]
-    [Required]
+    [Required(ErrorMessage = "Please select your country.")]
     [StringLength(50)]
     public string Country { get; set; } = string.Empty;
 

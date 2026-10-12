@@ -27,4 +27,5 @@
   <data name="Thai tax ID must contain exactly 13 digits." xml:space="preserve">
     <value>เลขประจำตัวผู้เสียภาษีไทยต้องมีตัวเลข 13 หลัก</value>
   </data>
+  <data name="Please select your country." xml:space="preserve"><value>กรุณาเลือกประเทศ</value></data>
 </root>

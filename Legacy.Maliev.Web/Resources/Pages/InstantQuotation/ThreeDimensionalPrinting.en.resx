@@ -27,4 +27,5 @@
   <data name="Thai tax ID must contain exactly 13 digits." xml:space="preserve">
     <value>Thai tax ID must contain exactly 13 digits.</value>
   </data>
+  <data name="Please select your country." xml:space="preserve"><value>Please select your country.</value></data>
 </root>
