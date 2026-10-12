@@ -1,8 +1,9 @@
 using System.Text.Json;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class CncOwnedResourceScopeTests
+public sealed class CncOwnedResourceScopeTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData("docker-acquisition")]
@@ -14,6 +15,7 @@ public sealed class CncOwnedResourceScopeTests
         var dll = Environment.GetEnvironmentVariable("MALIEV_CNC_LEASE_PROBE_DLL");
         Assert.True(File.Exists(dll));
         IReadOnlyList<object> receipts = [];
+        var emitted = new List<string>();
         CncOwnedResourceScope.OwnedChild? recovery = null;
         var failure = await Record.ExceptionAsync(() => CncOwnedResourceScope.ExecuteAsync(async scope =>
         {
@@ -32,14 +34,26 @@ public sealed class CncOwnedResourceScopeTests
             }
             await Task.CompletedTask;
             throw new InvalidOperationException("original-body-failure");
-        }, rows => receipts = rows));
-        if (mode != "docker-acquisition")
+        }, rows => receipts = rows, receipt =>
         {
-            Assert.NotNull(recovery);
-            var key = (recovery.Process.Id, recovery.Process.StartTime.ToUniversalTime());
-            try
+            emitted.Add(receipt);
+            output.WriteLine(receipt);
+        }));
+        (int Id, DateTime Birth)? key = null;
+        try
+        {
+            using (var captured = JsonDocument.Parse(Assert.Single(emitted)))
             {
-                Assert.True(CncOwnedResourceScope.RetainedCustody.TryGetValue(key, out var retained));
+                Assert.Equal(nameof(InvalidOperationException), captured.RootElement.GetProperty("primaryFailure").GetString());
+                Assert.True(captured.RootElement.GetProperty("cleanupFailures").GetArrayLength() > 0);
+                Assert.True(captured.RootElement.GetProperty("resources").GetArrayLength() > 0);
+            }
+            Assert.DoesNotContain("original-body-failure", emitted[0], StringComparison.Ordinal);
+            if (mode != "docker-acquisition")
+            {
+                Assert.NotNull(recovery);
+                key = (recovery.Process.Id, recovery.Process.StartTime.ToUniversalTime());
+                Assert.True(CncOwnedResourceScope.RetainedCustody.TryGetValue(key.Value, out var retained));
                 Assert.Same(recovery, retained);
                 using var refusal = JsonDocument.Parse(JsonSerializer.Serialize(receipts[^1]));
                 Assert.Equal("unresolved-process", refusal.RootElement.GetProperty("kind").GetString());
@@ -48,15 +62,23 @@ public sealed class CncOwnedResourceScopeTests
                 if (mode == "reader-settlement") Assert.False(refusal.RootElement.GetProperty("readersSettled").GetBoolean());
                 else Assert.False(refusal.RootElement.GetProperty("terminal").GetBoolean());
             }
-            finally
+        }
+        finally
+        {
+            if (mode != "docker-acquisition" && recovery is not null)
             {
-                // Clear only the injected rejection; re-observe actual PID/birth/executable in recovery.
+                // Clear only injected controls even when receipt capture assertions fail.
                 recovery.RejectIdentity = false;
                 recovery.RejectStop = false;
                 recovery.ReaderRelease?.TrySetResult(true);
                 await recovery.CloseAsync();
             }
-            Assert.False(CncOwnedResourceScope.RetainedCustody.ContainsKey(key));
+        }
+        if (mode != "docker-acquisition")
+        {
+            Assert.NotNull(recovery);
+            Assert.True(key.HasValue);
+            Assert.False(CncOwnedResourceScope.RetainedCustody.ContainsKey(key.GetValueOrDefault()));
             Console.WriteLine(JsonSerializer.Serialize(receipts));
         }
         var original = Assert.IsType<InvalidOperationException>(failure);
@@ -77,13 +99,22 @@ public sealed class CncOwnedResourceScopeTests
         var dll = Environment.GetEnvironmentVariable("MALIEV_CNC_LEASE_PROBE_DLL");
         Assert.True(File.Exists(dll), "Build the bounded resource probe before new helper controls.");
         IReadOnlyList<object> receipts = [];
+        var emitted = new List<string>();
         var failure = await Record.ExceptionAsync(() => CncOwnedResourceScope.ExecuteAsync(async scope =>
         {
             var child = scope.StartChild(dll!, new() { ["MALIEV_CNC_PROBE_MODE"] = mode },
                 mode == "partial-start" ? () => throw new InvalidOperationException("partial-start-primary") : null);
             await child.CompleteAsync(TimeSpan.FromSeconds(mode == "late-writer" ? 1 : 10), CancellationToken.None);
-        }, rows => receipts = rows));
+        }, rows => receipts = rows, receipt =>
+        {
+            emitted.Add(receipt);
+            output.WriteLine(receipt);
+            if (mode == "partial-start") throw new InvalidOperationException("controlled-private-sink-failure");
+        }));
         Assert.NotNull(failure);
+        using (var captured = JsonDocument.Parse(Assert.Single(emitted)))
+            Assert.Equal(failure.GetType().Name, captured.RootElement.GetProperty("primaryFailure").GetString());
+        Assert.DoesNotContain("controlled-private-sink-failure", emitted[0], StringComparison.Ordinal);
         if (mode == "partial-start") Assert.Equal("partial-start-primary", failure.Message);
         else if (mode == "overflow") Assert.IsType<InvalidDataException>(failure);
         else Assert.IsType<TimeoutException>(failure);
