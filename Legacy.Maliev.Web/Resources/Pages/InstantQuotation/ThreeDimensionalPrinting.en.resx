@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="Please enter your email address." xml:space="preserve">
+    <value>Please enter your email address.</value>
+  </data>
+  <data name="Please enter your first name." xml:space="preserve">
+    <value>Please enter your first name.</value>
+  </data>
+  <data name="Please enter your last name." xml:space="preserve">
+    <value>Please enter your last name.</value>
+  </data>
+  <data name="Please enter your mobile number." xml:space="preserve">
+    <value>Please enter your mobile number.</value>
+  </data>
+  <data name="Thai tax ID must contain exactly 13 digits." xml:space="preserve">
+    <value>Thai tax ID must contain exactly 13 digits.</value>
+  </data>
+</root>
