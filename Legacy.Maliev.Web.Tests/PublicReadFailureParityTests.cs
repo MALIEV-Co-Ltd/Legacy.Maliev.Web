@@ -73,6 +73,25 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
     }
 
     [Fact]
+    public async Task ContactComponent_CallerCancellationEscapesWithoutManufacturingIncident()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var context = new DefaultHttpContext { RequestAborted = cancellation.Token };
+        var countries = new CancelledCountries();
+        var component = new Legacy.Maliev.Web.Components.Pages.Contact.ContactPage();
+        var componentType = component.GetType();
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        componentType.GetProperty("HttpContextAccessor", flags)!.SetValue(component, new HttpContextAccessor { HttpContext = context });
+        componentType.GetProperty("CountryClient", flags)!.SetValue(component, countries);
+        var initialize = (Task)componentType.GetMethod("OnInitializedAsync", flags)!.Invoke(component, null)!;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => initialize);
+        Assert.Equal(1, countries.Calls);
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.False(context.Response.Headers.ContainsKey("X-Incident-Id"));
+    }
+
+    [Fact]
     public void PrivateStatus_CannotBeSuppliedThroughJson()
     {
         var result = JsonSerializer.Deserialize<ServiceResponse<string>>(
@@ -223,7 +242,19 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         }
         Assert.Equal(mode == ResponseMode.Unexpected ? HttpStatusCode.InternalServerError : HttpStatusCode.OK, response.StatusCode);
         Assert.DoesNotContain("private upstream detail", html, StringComparison.Ordinal);
-        if (mode != ResponseMode.Unexpected)
+        if (mode == ResponseMode.Unexpected)
+        {
+            Assert.Contains("data-migration-component=\"error-content\"", html, StringComparison.Ordinal);
+            // Existing ErrorContent heading key and authoritative Thai resource value.
+            Assert.Contains(culture == "th" ? "ขออภัย ระบบทำงานผิดพลาด" : "Sorry. Something did not work properly.", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("data-migration-component=\"contact-form-fields\"", html, StringComparison.Ordinal);
+            Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+            var incident = Assert.Single(response.Headers.GetValues("X-Incident-Id"));
+            Assert.True(Guid.TryParseExact(incident, "N", out _));
+            Assert.Contains(incident, html, StringComparison.Ordinal);
+        }
+        else
         {
             Assert.Contains("data-migration-component=\"contact-form-fields\"", html, StringComparison.Ordinal);
             if (mode is ResponseMode.Transport or ResponseMode.Unavailable or ResponseMode.Missing)
@@ -322,6 +353,16 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         Transport,
         Unavailable,
         Unexpected,
+    }
+
+    private sealed class CancelledCountries : ICountryClient
+    {
+        public int Calls { get; private set; }
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromCanceled<ServiceResponse<IReadOnlyList<Country>>>(cancellationToken);
+        }
     }
 
     private sealed class AnonymousCustomer : IContactTrustedCustomerLoader
