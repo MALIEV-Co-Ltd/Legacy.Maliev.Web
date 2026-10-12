@@ -22,6 +22,12 @@ class SourcePolicyTests(unittest.TestCase):
         main = "# owned runner source\n" + stanza("noble noble-updates noble-backports")
         result = policy.configure(main + "\n" + stanza("noble-security"))
         self.assertEqual(main + "\n" + stanza("noble-security").replace(policy.MIRROR, policy.SECURITY), result)
+        for header, separator, footer in [("# runner header\n\n", "\n", ""),
+                                          ("# first header\n\n# second header\n\n", "\n# pocket note\n\n", "\n# trailing note\n")]:
+            with self.subTest(header=header, separator=separator, footer=footer):
+                source = header + main + separator + stanza("noble-security") + footer
+                expected = header + main + separator + stanza("noble-security").replace(policy.MIRROR, policy.SECURITY) + footer
+                self.assertEqual(expected, policy.configure(source))
 
     def test_unexpected_or_mixed_sources_fail_closed(self):
         valid = stanza("noble noble-updates noble-backports noble-security")
@@ -32,7 +38,10 @@ class SourcePolicyTests(unittest.TestCase):
                    valid.replace("noble-security", "noble-security noble-security"),
                    valid.replace("main restricted universe multiverse", "main"),
                    stanza("noble noble-security") + "\n" + stanza("noble-updates noble-backports"),
-                   stanza("noble noble-updates noble-backports")]
+                   stanza("noble noble-updates noble-backports"),
+                   "# comments only\n\n# still no source\n",
+                   "# header\n\n" + valid + "\n" + valid + "\n" + valid,
+                   "# header\n\n" + valid + "\nUnknown: field\n"]
         for source in invalid:
             with self.subTest(source=source), self.assertRaises(ValueError):
                 policy.configure(source)

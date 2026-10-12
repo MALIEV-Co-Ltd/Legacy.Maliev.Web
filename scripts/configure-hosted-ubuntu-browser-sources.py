@@ -14,7 +14,9 @@ MAIN = {"noble", "noble-updates", "noble-backports"}
 
 
 def configure(source):
-    blocks = re.split(r"\n[ \t]*\n", source.replace("\r\n", "\n").strip())
+    sections = re.split(r"\n[ \t]*\n", source.replace("\r\n", "\n").strip())
+    blocks = [section for section in sections
+              if any(line.strip() and not line.lstrip().startswith("#") for line in section.splitlines())]
     if len(blocks) not in (1, 2):
         raise ValueError("Unexpected hosted Ubuntu stanza count")
     parsed = []
@@ -48,7 +50,12 @@ def configure(source):
         return re.sub(r"(?m)^" + re.escape(name) + r":[ \t]+.*$", name + ": " + value, block)
 
     result = []
-    for block, fields, suites in parsed:
+    stanzas = iter(parsed)
+    for section in sections:
+        if not any(line.strip() and not line.lstrip().startswith("#") for line in section.splitlines()):
+            result.append(section)
+            continue
+        block, fields, suites = next(stanzas)
         if "noble-security" not in suites:
             result.append(block)
             continue
