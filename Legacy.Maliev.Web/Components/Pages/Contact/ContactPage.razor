@@ -99,7 +99,7 @@
         var countries = await CountryClient.GetCountriesAsync(context.RequestAborted);
         var countryValues = countries.Value ?? [];
         var trustedCustomer = await TrustedCustomerLoader.LoadAsync(context, countryValues, context.RequestAborted);
-        var serviceAvailable = countries.ServiceAvailable;
+        var serviceAvailable = countries.ServiceAvailable && countries.UpstreamStatus != System.Net.HttpStatusCode.NotFound;
         var errors = serviceAvailable
             ? new Dictionary<string, IReadOnlyList<string>>()
             : new Dictionary<string, IReadOnlyList<string>>
