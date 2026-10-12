@@ -56,7 +56,7 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         var expectedOldHashWithCurrentType = unchecked(original.GetHashCode()
             + (typeHashDifference * -1521134295 * -1521134295));
         Assert.Equal(expectedOldHashWithCurrentType, provenance.GetHashCode());
-        Assert.True(new HashSet<ServiceResponse<string>> { baseline }.Contains(provenance));
+        Assert.Contains(provenance, new HashSet<ServiceResponse<string>> { baseline });
         var (actualValue, actualAvailable) = provenance;
         Assert.Equal(value, actualValue);
         Assert.Equal(available, actualAvailable);
