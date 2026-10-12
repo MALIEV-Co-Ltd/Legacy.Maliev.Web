@@ -5,6 +5,7 @@ using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Layout;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
