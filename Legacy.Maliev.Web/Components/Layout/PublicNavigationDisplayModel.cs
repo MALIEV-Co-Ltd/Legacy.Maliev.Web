@@ -25,7 +25,7 @@ public sealed record PublicNavigationDisplayModel(
             .GetRequiredService<IOptions<RequestLocalizationOptions>>()
             .Value;
         var currentCulture = context.Features.Get<IRequestCultureFeature>()
-            ?.RequestCulture.UICulture.Name ?? "th";
+            ?.RequestCulture.UICulture.Name ?? CultureInfo.CurrentUICulture.Name;
         var cultures = (localization.SupportedUICultures ?? Array.Empty<CultureInfo>())
             .Select(culture => new PublicNavigationCultureOption(
                 culture.Name,
