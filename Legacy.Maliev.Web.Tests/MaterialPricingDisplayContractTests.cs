@@ -458,6 +458,117 @@ public sealed class MaterialPricingDisplayContractTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new InstantQuotationMaterialPriceDisplaySnapshot(0));
     }
 
+    [Fact]
+    public async Task VerifiedUploadCompletions_ArePromotedAfterHeldPricingReleasesStateGate()
+    {
+        var uploads = new TwoUploadBoundary();
+        await using var fixture = await Fixture.CreateAsync(uploadClient: uploads);
+        var pending = fixture.Pricing.Arm();
+        var digest = new string('a', 64);
+        var claim = new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
+            Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+            12, 1, true, false, false, 1);
+        InstantQuotationWorkflowUploadFile File(string name) => new(name, "model/stl", 4, claim,
+            _ => Task.FromResult<Stream>(new MemoryStream([1, 2, 3, 4], writable: false)));
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var run = fixture.Workflow.UploadAsync([File("completion-a.stl"), File("completion-b.stl")], lifetime.Token);
+        Exception? primaryFailure = null;
+        try
+        {
+            uploads.First.TrySetResult();
+            await pending.Entered.Task.WaitAsync(lifetime.Token);
+            uploads.Second.TrySetResult();
+            await uploads.SecondReturned.Task.WaitAsync(lifetime.Token);
+            Assert.False(run.IsCompleted);
+            var held = (await fixture.Store.GetAsync(fixture.SessionId, Owner, lifetime.Token))!;
+            Assert.Equal(2, held.Parts.Count);
+            Assert.Equal(2, fixture.Workflow.Parts.Count);
+            Assert.Contains(held.Parts, part => part.DisplayFileName == "completion-a.stl");
+            Assert.DoesNotContain(held.Parts, part => part.DisplayFileName == "completion-b.stl");
+            Assert.Null(held.QuoteAuthorization);
+            Assert.Null(fixture.Workflow.OrderQuote);
+            Assert.True(pending.ObserverRoute);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                stage = "pricing-held", persistedParts = held.Parts.Select(part => part.PartId).ToArray(),
+                coordinatorParts = fixture.Workflow.Parts.Select(part => part.PartId).ToArray(),
+                secondServiceReturned = uploads.SecondReturned.Task.IsCompletedSuccessfully,
+                authorizationPresent = held.QuoteAuthorization is not null, runSettled = run.IsCompleted,
+            }));
+            pending.Release.TrySetResult();
+            await run.WaitAsync(lifetime.Token);
+            var settled = (await fixture.Store.GetAsync(fixture.SessionId, Owner, lifetime.Token))!;
+            Assert.Equal(3, settled.Parts.Count);
+            Assert.Equal(settled.Parts.Select(part => part.PartId), fixture.Workflow.Parts.Select(part => part.PartId));
+            Assert.Equal(new[] { "controlled.stl", "completion-a.stl", "completion-b.stl" },
+                settled.Parts.Select(part => part.DisplayFileName));
+            Assert.Equal(3, fixture.Workflow.OrderQuote!.Parts.Count);
+            Assert.NotNull(settled.QuoteAuthorization);
+            Assert.True(fixture.Workflow.AuthoritativeQuoteRevision > 1);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                stage = "pricing-released", persistedParts = settled.Parts.Select(part => part.PartId).ToArray(),
+                coordinatorParts = fixture.Workflow.Parts.Select(part => part.PartId).ToArray(),
+                authorizationPresent = settled.QuoteAuthorization is not null, runSettled = run.IsCompleted,
+            }));
+        }
+        catch (Exception failure) { primaryFailure = failure; throw; }
+        finally
+        {
+            pending.Release.TrySetResult();
+            uploads.First.TrySetResult();
+            uploads.Second.TrySetResult();
+            lifetime.Cancel();
+            // Every test-owned hold is released and the coordinator's existing cancellation
+            // waits settle this task. Join the actual task before the await-using fixture closes.
+            try { await run; }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+            catch (Exception cleanupFailure) when (primaryFailure is not null)
+            {
+                primaryFailure.Data["DiscriminatorCleanupFailureCategory"] = cleanupFailure.GetType().Name;
+            }
+            finally
+            {
+                try
+                {
+                    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        stage = "cleanup", runSettled = run.IsCompleted,
+                        runStatus = run.Status.ToString(), holdsReleased = pending.Release.Task.IsCompleted
+                            && uploads.First.Task.IsCompleted && uploads.Second.Task.IsCompleted,
+                    }));
+                }
+                catch (Exception) { /* Secondary diagnostic sinks cannot replace the primary failure. */ }
+            }
+        }
+    }
+
+    private sealed class TwoUploadBoundary : IInstantQuotationUploadClient
+    {
+        public TaskCompletionSource First { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Second { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource SecondReturned { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity,
+            Stream content, string fileName, string contentType, long contentLength,
+            InstantQuotationGeometryClaim geometryClaim, string operationId, CancellationToken cancellationToken)
+        {
+            var second = fileName == "completion-b.stl";
+            await (second ? Second.Task : First.Task).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = InstantQuotationUploadResult.Succeeded(operationId,
+                new InstantQuotationUploadReference(second ? "discriminator-b" : "discriminator-a"), geometryClaim.Sha256);
+            if (second) SecondReturned.TrySetResult();
+            return result;
+        }
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
+            InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The discriminator must retain both admitted uploads.");
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity,
+            int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
+            string operationId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The discriminator cannot finalize an order.");
+    }
+
     private const string Owner = "material-display-fixture-owner";
     private static readonly Guid PartId = Guid.Parse("55555555-5555-5555-5555-555555555555");
     private sealed class Pending
@@ -529,21 +640,21 @@ public sealed class MaterialPricingDisplayContractTests
         public InstantQuotationWorkflowCoordinator Workflow { get; }
         public Guid PartId { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
         public string SessionId { get; private set; } = "";
-        private Fixture(TimeProvider? clock)
+        private Fixture(TimeProvider? clock, IInstantQuotationUploadClient? uploadClient)
         {
             factory = new Factory(clock);
             scope = factory.Services.CreateAsyncScope();
             Store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
             Pricing = new(scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
             Workflow = new(Store,
-                scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
+                uploadClient ?? scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
                 scope.ServiceProvider.GetRequiredService<IInstantQuotationPricingService>(), Owner,
                 quoteTicketService: scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>(),
                 authoritativePricingService: Pricing);
         }
-        public static async Task<Fixture> CreateAsync(bool initialize = true, TimeProvider? clock = null, int partCount = 1)
+        public static async Task<Fixture> CreateAsync(bool initialize = true, TimeProvider? clock = null, int partCount = 1, IInstantQuotationUploadClient? uploadClient = null)
         {
-            var fixture = new Fixture(clock);
+            var fixture = new Fixture(clock, uploadClient);
             try
             {
                 var reference = new InstantQuotationUploadReference("66666666-6666-6666-6666-666666666666");

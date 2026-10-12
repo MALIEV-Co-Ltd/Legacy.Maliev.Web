@@ -130,7 +130,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~MaterialCardPresentationCatalogTests|FullyQualifiedName~MaterialPricingDisplayRendererContractTests|FullyQualifiedName~MaterialPricingDisplayBrowserTests"
+          --filter "FullyQualifiedName~MaterialCardPresentationCatalogTests|FullyQualifiedName~MaterialPricingDisplayRendererContractTests|FullyQualifiedName~MaterialPricingDisplayBrowserTests|FullyQualifiedName~VerifiedUploadCompletions_ArePromotedAfterHeldPricingReleasesStateGate"
           --logger trx --results-directory ./material-card-test-results
       - name: Verify regressions reject exact pre-fix pricing source and restore patched HEAD
         env:
