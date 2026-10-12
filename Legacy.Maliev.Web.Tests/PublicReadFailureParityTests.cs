@@ -403,11 +403,13 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
             public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
             public bool IsEnabled(LogLevel logLevel) => category.StartsWith("Microsoft.AspNetCore.Components.Endpoints", StringComparison.Ordinal)
                 || category.StartsWith("Microsoft.AspNetCore.Diagnostics", StringComparison.Ordinal)
-                || category.StartsWith("Microsoft.AspNetCore.Mvc", StringComparison.Ordinal);
+                || category == "Legacy.Maliev.Web.Middleware.ErrorIncidentMiddleware"
+                || category == "Maliev.Aspire.ServiceDefaults.Middleware.ExceptionHandlingMiddleware";
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
                 Func<TState, Exception?, string> formatter)
             {
-                if (IsEnabled(logLevel) && Interlocked.Increment(ref owner.count) <= 64)
+                if (IsEnabled(logLevel) && (logLevel >= LogLevel.Warning || exception is not null)
+                    && Interlocked.Increment(ref owner.count) <= 64)
                 {
                     owner.events.Enqueue(new BoundaryEvent(category, eventId.Id, eventId.Name, exception?.GetType().Name));
                 }
