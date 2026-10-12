@@ -492,10 +492,12 @@ public sealed class MaterialPricingDisplayContractTests(ITestOutputHelper output
             Assert.True(pending.ObserverRoute);
             output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
-                stage = "pricing-held", persistedParts = held.Parts.Select(part => part.PartId).ToArray(),
+                stage = "pricing-held",
+                persistedParts = held.Parts.Select(part => part.PartId).ToArray(),
                 coordinatorParts = fixture.Workflow.Parts.Select(part => part.PartId).ToArray(),
                 secondServiceReturned = uploads.SecondReturned.Task.IsCompletedSuccessfully,
-                authorizationPresent = held.QuoteAuthorization is not null, runSettled = run.IsCompleted,
+                authorizationPresent = held.QuoteAuthorization is not null,
+                runSettled = run.IsCompleted,
             }));
             pending.Release.TrySetResult();
             await run.WaitAsync(lifetime.Token);
@@ -509,9 +511,11 @@ public sealed class MaterialPricingDisplayContractTests(ITestOutputHelper output
             Assert.True(fixture.Workflow.AuthoritativeQuoteRevision > 1);
             output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
             {
-                stage = "pricing-released", persistedParts = settled.Parts.Select(part => part.PartId).ToArray(),
+                stage = "pricing-released",
+                persistedParts = settled.Parts.Select(part => part.PartId).ToArray(),
                 coordinatorParts = fixture.Workflow.Parts.Select(part => part.PartId).ToArray(),
-                authorizationPresent = settled.QuoteAuthorization is not null, runSettled = run.IsCompleted,
+                authorizationPresent = settled.QuoteAuthorization is not null,
+                runSettled = run.IsCompleted,
             }));
         }
         catch (Exception failure) { primaryFailure = failure; throw; }
@@ -535,8 +539,10 @@ public sealed class MaterialPricingDisplayContractTests(ITestOutputHelper output
                 {
                     output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
                     {
-                        stage = "cleanup", runSettled = run.IsCompleted,
-                        runStatus = run.Status.ToString(), holdsReleased = pending.Release.Task.IsCompleted
+                        stage = "cleanup",
+                        runSettled = run.IsCompleted,
+                        runStatus = run.Status.ToString(),
+                        holdsReleased = pending.Release.Task.IsCompleted
                             && uploads.First.Task.IsCompleted && uploads.Second.Task.IsCompleted,
                     }));
                 }
