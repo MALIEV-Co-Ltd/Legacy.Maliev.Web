@@ -211,7 +211,7 @@ public sealed class Index(
         CountryServiceAvailable = result.ServiceAvailable;
         if (!result.ServiceAvailable)
         {
-            ModelState.AddModelError(string.Empty, "Could not retrieve countries from the server.");
+            ModelState.AddModelError(string.Empty, "Could not retrieve countries from the server");
         }
     }
 

@@ -104,7 +104,7 @@
             ? new Dictionary<string, IReadOnlyList<string>>()
             : new Dictionary<string, IReadOnlyList<string>>
             {
-                [string.Empty] = ["Could not retrieve countries from the server."]
+                [string.Empty] = [Localizer["Could not retrieve countries from the server"].Value]
             };
         if (trustedCustomer.IsAuthenticated && trustedCustomer.Customer is null)
         {
