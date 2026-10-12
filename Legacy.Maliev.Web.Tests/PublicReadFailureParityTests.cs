@@ -409,7 +409,8 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
                                 null, null, "Nonthaburi", false, null, null, new CareerLevel(1, "Engineer", null, null, null))),
                     },
                 };
-            })) { BaseAddress = new Uri("https://upstream.invalid/") };
+            }))
+            { BaseAddress = new Uri("https://upstream.invalid/") };
             Country = new CountryClient(this, NullLogger<CountryClient>.Instance);
             Career = new CareerClient(this, NullLogger<CareerClient>.Instance);
         }
