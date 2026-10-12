@@ -151,8 +151,11 @@ internal sealed class BillingInitialProbeDiagnostics(string culture, int width, 
 
     private bool Matches(HttpContext context)
     {
-        try { return HttpMethods.IsGet(context.Request.Method) && context.Request.Path == (summary ? "/instantquotation/3d-printing" : "/Account/Login")
-            && context.Request.QueryString.Value == (summary ? culture switch { "en" => "?culture=en", "th" => "?culture=th", _ => null } : "?culture=en"); }
+        try
+        {
+            return HttpMethods.IsGet(context.Request.Method) && context.Request.Path == (summary ? "/instantquotation/3d-printing" : "/Account/Login")
+            && context.Request.QueryString.Value == (summary ? culture switch { "en" => "?culture=en", "th" => "?culture=th", _ => null } : "?culture=en");
+        }
         catch (Exception) { return false; }
     }
 

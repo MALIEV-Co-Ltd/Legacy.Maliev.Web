@@ -148,10 +148,14 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
             {
                 description = JsonSerializer.Serialize(new
                 {
-                    phase = "initial-worker-readiness", observation = description,
-                    browserConnected = browser.IsConnected, pageClosed = page.IsClosed,
-                    pageErrorCount = Math.Min(pageErrors.Count, 64), consoleErrorCount = Math.Min(consoleErrors.Count, 64),
-                    uploadCount = Math.Min(transport.UploadCount, 64), readCount = Math.Min(transport.ReadCount, 64),
+                    phase = "initial-worker-readiness",
+                    observation = description,
+                    browserConnected = browser.IsConnected,
+                    pageClosed = page.IsClosed,
+                    pageErrorCount = Math.Min(pageErrors.Count, 64),
+                    consoleErrorCount = Math.Min(consoleErrors.Count, 64),
+                    uploadCount = Math.Min(transport.UploadCount, 64),
+                    readCount = Math.Min(transport.ReadCount, 64),
                 });
                 original.Data["InitialWallWorkerReadiness"] = description;
                 output.WriteLine("initial-wall-worker-readiness " + description);
