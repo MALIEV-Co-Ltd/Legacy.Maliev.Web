@@ -88,6 +88,7 @@ public sealed class CncOwnedResourceScopeTests
         else if (mode == "overflow") Assert.IsType<InvalidDataException>(failure);
         else Assert.IsType<TimeoutException>(failure);
         using var json = JsonDocument.Parse(JsonSerializer.Serialize(Assert.Single(receipts)));
+        Assert.Equal("process", json.RootElement.GetProperty("kind").GetString());
         Assert.True(json.RootElement.GetProperty("terminal").GetBoolean());
         Assert.True(json.RootElement.GetProperty("readersSettled").GetBoolean());
         Assert.True(json.RootElement.GetProperty("pid").GetInt32() > 0);
