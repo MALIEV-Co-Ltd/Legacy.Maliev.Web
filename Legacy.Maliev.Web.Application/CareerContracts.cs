@@ -47,7 +47,35 @@ public sealed record CareerListing(
     bool ServiceAvailable);
 
 public sealed record ServiceResponse<T>(T? Value, bool ServiceAvailable)
-    where T : class;
+    where T : class
+{
+    /// <summary>In-process provenance; null retains the existing availability contract.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public System.Net.HttpStatusCode? UpstreamStatus { get; init; }
+
+    public bool Equals(ServiceResponse<T>? other) => other is not null
+        && EqualityComparer<T?>.Default.Equals(Value, other.Value)
+        && ServiceAvailable == other.ServiceAvailable;
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            var hash = EqualityComparer<Type>.Default.GetHashCode(typeof(ServiceResponse<T>));
+            hash = (hash * -1521134295) + (Value is null ? 0 : EqualityComparer<T>.Default.GetHashCode(Value));
+            return (hash * -1521134295) + EqualityComparer<bool>.Default.GetHashCode(ServiceAvailable);
+        }
+    }
+
+    private bool PrintMembers(System.Text.StringBuilder builder)
+    {
+        builder.Append("Value = ");
+        builder.Append(Value);
+        builder.Append(", ServiceAvailable = ");
+        builder.Append(ServiceAvailable);
+        return true;
+    }
+}
 
 public interface ICareerClient
 {
