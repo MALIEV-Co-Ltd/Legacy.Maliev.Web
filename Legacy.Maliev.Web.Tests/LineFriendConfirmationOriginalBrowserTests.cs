@@ -50,7 +50,8 @@ public sealed class LineFriendConfirmationOriginalBrowserTests(ITestOutputHelper
             await page.WaitForFunctionAsync("() => document.body.dataset.lineBridgeReady === 'true'");
             Assert.Equal(0, await page.EvaluateAsync<int>("() => (window.dataLayer || []).filter(x => x && x.event === 'line_friend_confirmed').length"));
             await page.Locator("#cookieConsent [data-consent-action='accept']").ClickAsync();
-            var events = await page.EvaluateAsync<JsonElement>("() => (window.dataLayer || []).filter(x => x && x.event === 'line_friend_confirmed')");
+            using var eventDocument = JsonDocument.Parse(await page.EvaluateAsync<string>("() => JSON.stringify((window.dataLayer || []).filter(x => x && x.event === 'line_friend_confirmed'))"));
+            var events = eventDocument.RootElement;
             Assert.Equal(expectedCount, events.GetArrayLength());
             if (friendFlag)
             {
@@ -77,6 +78,19 @@ public sealed class LineFriendConfirmationOriginalBrowserTests(ITestOutputHelper
 
         }
     }
+    [Fact]
+    public void BrowserJsonText_PreservesAndRejectsRealExtraMetadata()
+    {
+        using var document = JsonDocument.Parse("""
+            [{"$id":"controlled","event":"line_friend_confirmed","channel":"line","destination":"line_oa","conversion_tier":"secondary"}]
+            """);
+        var emitted = document.RootElement.EnumerateArray().Single();
+        Assert.Equal("controlled", emitted.GetProperty("$id").GetString());
+        Assert.Throws<Xunit.Sdk.EqualException>(() => Assert.Equal(
+            new[] { "channel", "conversion_tier", "destination", "event" },
+            emitted.EnumerateObject().Select(property => property.Name).Order().ToArray()));
+    }
+
     private sealed class LineFriendHost(string contentRoot) : TestingWebApplicationFactory(contentRoot)
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
