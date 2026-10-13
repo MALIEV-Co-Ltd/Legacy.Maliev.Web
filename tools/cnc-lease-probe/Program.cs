@@ -1,4 +1,10 @@
 var mode = Environment.GetEnvironmentVariable("MALIEV_CNC_PROBE_MODE");
+if (mode == "natural-exit")
+{
+    var release = await Console.In.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(10));
+    if (release != "release-owned-natural-exit") throw new InvalidOperationException("Controlled natural-exit release missing.");
+    return;
+}
 if (mode == "overflow")
 {
     var block = new byte[4096];
