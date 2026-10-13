@@ -21,7 +21,6 @@ public sealed class LineFriendConfirmationOriginalBrowserTests(ITestOutputHelper
     {
         using var custody = LineFriendBrowserCleanup.Reserve();
         WebApplicationFactory<Program>? factory = null;
-        TestingWebApplicationFactory? root = null;
         HttpClient? client = null;
         IPlaywright? playwright = null;
         IBrowser? browser = null;
@@ -29,8 +28,7 @@ public sealed class LineFriendConfirmationOriginalBrowserTests(ITestOutputHelper
         Exception? primary = null;
         try
         {
-            root = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
-            factory = root.WithWebHostBuilder(builder => builder.UseSetting($"{LineLiffOptions.SectionName}:LiffId", "2000000000-AbCd_1234"));
+            factory = new LineFriendHost(BrowserHostIdentityVerifier.SourceProjectDirectory());
             var listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
             var port = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -73,11 +71,18 @@ public sealed class LineFriendConfirmationOriginalBrowserTests(ITestOutputHelper
                     new("browser", () => browser?.CloseAsync() ?? Task.CompletedTask, ["context"]),
                     new("playwright", () => { playwright?.Dispose(); return Task.CompletedTask; }, ["browser"]),
                     new("client", () => { client?.Dispose(); return Task.CompletedTask; }),
-                    new("factory", () => factory?.DisposeAsync().AsTask() ?? Task.CompletedTask, ["context", "browser", "client"]),
-                    new("root", () => root?.DisposeAsync().AsTask() ?? Task.CompletedTask, ["factory"])
+                    new("factory", () => factory?.DisposeAsync().AsTask() ?? Task.CompletedTask, ["context", "browser", "client"])
                 ], primary, TimeSpan.FromSeconds(10),
                 receipts => output.WriteLine("line-friend-cleanup: " + JsonSerializer.Serialize(receipts)));
 
+        }
+    }
+    private sealed class LineFriendHost(string contentRoot) : TestingWebApplicationFactory(contentRoot)
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.UseSetting($"{LineLiffOptions.SectionName}:LiffId", "2000000000-AbCd_1234");
         }
     }
 }
