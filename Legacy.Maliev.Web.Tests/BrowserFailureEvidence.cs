@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.Playwright;
 
@@ -12,6 +13,10 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
     private readonly IPage page;
     private readonly object gate = new();
     private readonly Stopwatch clock = Stopwatch.StartNew();
+    private readonly DateTimeOffset clockOriginUtc = DateTimeOffset.UtcNow;
+    private readonly List<object> awaitEvents = [];
+    private string? activeAwait;
+    private bool awaitTruncated;
     private readonly List<Entry> events = [];
     private readonly List<IWebSocket> sockets = [];
     private readonly List<Subscription> subscriptions = [];
@@ -50,7 +55,14 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
 
     private void OnConsole(object? sender, IConsoleMessage message)
     {
-        if (message.Type == "error") Record("console", Category(message.Text));
+        if (message.Type != "error") return;
+        DateTimeOffset? browserEmittedUtc = null;
+        var text = message.Text;
+        if (text.Length >= 26 && text[0] == '[' && text[25] == ']'
+            && DateTimeOffset.TryParseExact(text.Substring(1, 24), "yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
+            browserEmittedUtc = parsed;
+        Record("console", Category(text), browserEmittedUtc: browserEmittedUtc);
     }
     private void OnPageError(object? sender, string error) => Record("page-error", Category(error));
     private void OnRequest(object? sender, IRequest request)
@@ -90,13 +102,42 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
     internal static string Category(string text) => text.Contains("timeout", StringComparison.OrdinalIgnoreCase)
         ? "timeout" : text.Contains("disconnect", StringComparison.OrdinalIgnoreCase) ? "disconnect" : "other";
 
-    private void Record(string kind, string category, int? status = null)
+    internal void AwaitBoundary(string fixedOperation, bool completed)
+    {
+        // Source-only proposal: fixed operation names, no customer or transport payloads.
+        if (fixedOperation is not ("initial-screenshot" or "initial-geometry" or "initial-write"
+            or "first-focused-screenshot" or "first-focused-geometry" or "first-focused-write"
+            or "second-focused-screenshot" or "second-focused-geometry" or "second-focused-write"
+            or "first-keyboard" or "second-keyboard" or "review" or "customer-input"))
+            return;
+        try
+        {
+            lock (gate)
+            {
+                if (disposed) return;
+                if (awaitEvents.Count >= 32) { awaitTruncated = true; return; }
+                if (!completed) activeAwait = fixedOperation;
+                awaitEvents.Add(new
+                {
+                    Operation = fixedOperation,
+                    Completed = completed,
+                    Milliseconds = Math.Min(clock.ElapsedMilliseconds, 86_400_000),
+                    Utc = DateTimeOffset.UtcNow,
+                });
+                if (completed && activeAwait == fixedOperation) activeAwait = null;
+            }
+        }
+        catch { /* Best-effort marker must not replace the original awaited operation. */ }
+    }
+
+    private void Record(string kind, string category, int? status = null, DateTimeOffset? browserEmittedUtc = null)
     {
         lock (gate)
         {
             if (disposed) return;
             if (events.Count >= 32) { truncated = true; return; }
-            events.Add(new(stage, Math.Min(clock.ElapsedMilliseconds, 86_400_000), kind, category, status));
+            events.Add(new(stage, Math.Min(clock.ElapsedMilliseconds, 86_400_000), kind, category, status,
+                DateTimeOffset.UtcNow, browserEmittedUtc, activeAwait));
         }
     }
 
@@ -121,7 +162,16 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
         try
         {
             string json;
-            lock (gate) json = JsonSerializer.Serialize(new { Events = events.ToArray(), Truncated = truncated, Observation = observation });
+            lock (gate) json = JsonSerializer.Serialize(new
+            {
+                ClockOriginUtc = clockOriginUtc,
+                ClockDomain = "managed-callback-arrival",
+                Events = events.ToArray(),
+                Truncated = truncated,
+                AwaitEvents = awaitEvents.ToArray(),
+                AwaitTruncated = awaitTruncated,
+                Observation = observation,
+            });
             original.Data[DataKey] = json;
             emit(json);
         }
@@ -310,5 +360,6 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
     {
         internal Action Remove { get; } = remove;
     }
-    private sealed record Entry(string Stage, long Milliseconds, string Kind, string Category, int? Status);
+    private sealed record Entry(string Stage, long Milliseconds, string Kind, string Category, int? Status,
+        DateTimeOffset CallbackUtc, DateTimeOffset? BrowserEmittedUtc, string? ActiveAwait);
 }

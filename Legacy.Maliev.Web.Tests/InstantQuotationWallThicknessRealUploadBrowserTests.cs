@@ -20,8 +20,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     {
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
+        var comparisonObservation = new MaterialCompletionObservation();
         await using var factory = new RealUploadTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing, comparisonObservation);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
@@ -90,7 +91,22 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(protectedSession.Parts.Single().Geometry.Sha256, receipt.UploadSha256);
             Assert.True(receipt.MotionSeconds > 0);
             Assert.Equal(0, await page.Locator("[data-workflow-price-unavailable]").CountAsync());
-            var petgComparison = await page.Locator("[data-workflow-material-price='PETG'] strong").InnerTextAsync();
+            string petgComparison;
+            try
+            {
+                petgComparison = await page.Locator("[data-workflow-material-price='PETG'] strong").InnerTextAsync();
+            }
+            catch (TimeoutException original)
+            {
+                try
+                {
+                    var description = comparisonObservation.Describe();
+                    original.Data["PetgComparisonServiceObservation"] = description;
+                    output.WriteLine("[petg-comparison-services] " + description);
+                }
+                catch { /* Fixed secondary metadata cannot replace the original price timeout. */ }
+                throw;
+            }
             Assert.DoesNotContain("฿0", petgComparison, StringComparison.Ordinal);
             var pricingCallsBeforePhysicalCheck = pricing.CallCount;
 
@@ -102,7 +118,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     .GetAttributeAsync("data-physical-analysis-failure"));
             Assert.Equal(pricingCallsBeforePhysicalCheck, pricing.CallCount);
 
-            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+            await MaterialCardBrowserActions.SelectAsync(page, "ABS");
             await page.Locator("[data-physical-analysis-result='ready']")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
             Assert.Equal(0, await page.Locator("[data-physical-analysis-result='ready']").CountAsync());
@@ -361,7 +377,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                                     configurationPartId: quantity?.id?.replace(/^quantity-/, ''),
                                     workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
                                     isRepricing: !!document.querySelector('[data-pricing-loading-status]'),
-                                    material: configuration?.querySelector('select[name="material"]')?.value,
+                                    material: configuration?.querySelector('[data-material-selector] [aria-checked="true"]')?.dataset.materialKey,
                                     quantity: quantity?.value,
                                     durationPresent: !!duration,
                                     unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]')
@@ -375,7 +391,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 var beforeMaterialChange = await completionStore.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
                 Assert.NotNull(beforeMaterialChange);
                 observation.BeginEdit();
-                await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+                await MaterialCardBrowserActions.SelectAsync(page, "ABS");
                 // Completion includes optional comparison callbacks under the pricing owner's
                 // existing 33-second absolute budget, not merely its 30-second selected phase.
                 using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(33)))
@@ -556,8 +572,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Contains(warningTitle, warning, StringComparison.Ordinal);
             Assert.Contains(fdmLimit, warning, StringComparison.Ordinal);
 
-            var material = page.Locator("[data-workflow-material-picker] select[name='material']");
-            await material.SelectOptionAsync("ABS");
+
+            await MaterialCardBrowserActions.SelectAsync(page, "ABS");
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
             await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
 
@@ -604,7 +620,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(pricingCalls, pricing.CallCount);
             await page.Locator("[data-review-back]").ClickAsync();
 
-            await material.SelectOptionAsync("M68");
+            await MaterialCardBrowserActions.SelectAsync(page, "M68");
             try
             {
                 await page.WaitForFunctionAsync("() => !document.querySelector('[data-dfm-code=thin-wall]')");
@@ -623,7 +639,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     output.WriteLine($"[dfm-resin-authority] authorizationPresent={observed?.QuoteAuthorization is not null}; singlePartPresent={observedPart is not null}; materialMatched={observedPart?.Configuration.MaterialKey == "M68"}; uploadCount={Math.Min(upload.VerifiedUploads, 2)}; pageErrorCount={Math.Min(pageErrors.Count, 10)}");
                     var rendered = await page.EvaluateAsync<string>("""
                         limits => JSON.stringify({
-                            materialMatched: document.querySelector('[data-workflow-configuration] [data-workflow-material-picker] select[name="material"]')?.value === 'M68',
+                            materialMatched: document.querySelector('[data-workflow-configuration] [data-material-selector] [aria-checked="true"]')?.dataset.materialKey === 'M68',
                             reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
                             pricingLoading: !!document.querySelector('[data-pricing-loading-status]'),
                             thinWallPresent: !!document.querySelector('[data-dfm-code=thin-wall]'),
@@ -710,7 +726,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             await page.SetInputFilesAsync("#instant-quote-files", path);
             await page.Locator("[data-workflow-part]").WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
             await page.WaitForFunctionAsync("() => !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)')");
-            await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+            await MaterialCardBrowserActions.SelectAsync(page, "ABS");
             await page.Locator("[data-workflow-dfm-part]").WaitForAsync();
 
             Assert.Equal(0, await page.Locator("[data-dfm-code='thin-wall']").CountAsync());
@@ -867,7 +883,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 Assert.True(mesh.IsReady);
                 Assert.Equal(expectedHash, mesh.UploadSha256);
                 Assert.Equal(12, mesh.Mesh!.Triangles.Count);
-                await page.Locator("[data-workflow-material-picker] select[name='material']").SelectOptionAsync("ABS");
+                await MaterialCardBrowserActions.SelectAsync(page, "ABS");
                 InstantQuotationSessionState? lastMaterialChangeState = null;
                 using (var completionDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
                 {

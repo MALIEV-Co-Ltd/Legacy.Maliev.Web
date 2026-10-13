@@ -1,4 +1,5 @@
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Application.Pricing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -6,6 +7,59 @@ namespace Legacy.Maliev.Web.Tests;
 /// <summary>Real diagnostic decorator forwarding; no pricing/manufacturing acceptance claim.</summary>
 public sealed class MaterialCompletionObservationForwardingTests
 {
+    [Theory]
+    [InlineData(InstantQuotationMaterialPricingStatus.Pending, "petgPending=1")]
+    [InlineData(InstantQuotationMaterialPricingStatus.Completed, "petgCompleted=1")]
+    [InlineData(InstantQuotationMaterialPricingStatus.Unavailable, "petgUnavailable=1")]
+    public async Task PetgObservationRetainsStatusOnlyAfterActualCallbackForwarding(
+        InstantQuotationMaterialPricingStatus status, string expected)
+    {
+        using var fixture = new Fixture(false, "PETG", status);
+        using var caller = new CancellationTokenSource();
+        var calls = 0;
+        var result = await fixture.Service.QuoteAsync(fixture.Session, "synthetic-owner", true,
+            (frame, token) =>
+            {
+                Assert.Same(fixture.Frame, frame);
+                Assert.Equal(caller.Token, token);
+                Assert.Equal(status == InstantQuotationMaterialPricingStatus.Completed ? (double?)1 : null, frame.UnitPrice);
+                calls++;
+                return ValueTask.CompletedTask;
+            }, caller.Token);
+        Assert.Same(fixture.Quote, result);
+        Assert.Equal(1, calls);
+        Assert.Contains(expected, fixture.Observation.Describe());
+        Assert.Contains("petgCallbackReturned=1", fixture.Observation.Describe());
+        fixture.Observation.BeginEdit();
+        Assert.Contains("petgCallbackReturned=0", fixture.Observation.Describe());
+        Assert.Contains("returnedQuoteHasPetg=unknown", fixture.Observation.Describe());
+    }
+
+    [Fact]
+    public async Task PetgCallbackFailureRetainsOriginalWithoutClaimingDeliveryOrQuote()
+    {
+        using var fixture = new Fixture(false, "PETG");
+        var original = new IOException("controlled observer failure");
+        var failure = await Assert.ThrowsAsync<IOException>(() => fixture.Service.QuoteAsync(
+            fixture.Session, "synthetic-owner", true, (_, _) => throw original, default));
+        Assert.Same(original, failure);
+        Assert.Contains("petgCompleted=1", fixture.Observation.Describe());
+        Assert.Contains("petgCallbackReturned=0", fixture.Observation.Describe());
+        Assert.Contains("returnedQuoteHasPetg=unknown", fixture.Observation.Describe());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReturnedQuoteMembershipDoesNotSubstituteForProgressDelivery(bool includePetg)
+    {
+        using var fixture = new Fixture(false, "PLA", includePetg: includePetg);
+        await fixture.Service.QuoteAsync(fixture.Session, "synthetic-owner", true,
+            (_, _) => ValueTask.CompletedTask, default);
+        Assert.Contains($"returnedQuoteHasPetg={includePetg}", fixture.Observation.Describe());
+        Assert.Contains("petgCallbackReturned=0", fixture.Observation.Describe());
+    }
+
     [Theory]
     [InlineData(false, true)]
     [InlineData(true, true)]
@@ -160,7 +214,9 @@ public sealed class MaterialCompletionObservationForwardingTests
         public ForwardingPricing Inner { get; }
         public IInstantQuotationAuthoritativePricingService Service { get; }
 
-        public Fixture(bool selected)
+        public Fixture(bool selected, string? comparisonKey = null,
+            InstantQuotationMaterialPricingStatus status = InstantQuotationMaterialPricingStatus.Completed,
+            bool includePetg = false)
         {
             var partId = Guid.Parse("12345678-1234-1234-1234-123456789abc");
             // Same minimal public DTO fixture shape as SelectedPrintTimeTimeoutDiagnosticsTests.
@@ -169,7 +225,14 @@ public sealed class MaterialCompletionObservationForwardingTests
                 new InstantQuotationPartConfiguration("ABS", "White", 1));
             Session = new("synthetic-session", "synthetic-submission", new([part]),
                 DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(1));
-            Frame = new(partId, selected ? "ABS" : "PLA", InstantQuotationMaterialPricingStatus.Completed, 1);
+            Frame = new(partId, selected ? "ABS" : comparisonKey ?? "PLA", status,
+                status == InstantQuotationMaterialPricingStatus.Completed ? 1 : null);
+            if (includePetg)
+                Quote = Quote with
+                {
+                    Parts = [new(partId, "ABS", "White", 1, PrintProcess.Fdm,
+                        1, 1, 1, 1, 1, 1, 1, false, 0, 0, [], BuildPreference.Standard, [new("PETG", 1)])]
+                };
             Inner = new(Frame, Quote);
             var services = new ServiceCollection();
             services.AddSingleton<IInstantQuotationAuthoritativePricingService>(Inner);
