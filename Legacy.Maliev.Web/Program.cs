@@ -218,6 +218,9 @@ builder.Services.AddRazorPages(options =>
             "/Account/ChangeEmailConfirmation",
             model => model.Selectors.Clear());
         options.Conventions.AddPageRouteModelConvention(
+            "/Contact/Line",
+            model => model.Selectors.Clear());
+        options.Conventions.AddPageRouteModelConvention(
             "/Contact/Index",
             model =>
             {

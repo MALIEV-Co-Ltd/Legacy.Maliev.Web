@@ -1,0 +1,21 @@
+@page "/contact/line"
+@using System.Globalization
+@using Legacy.Maliev.Web.Components.Pages.Contact
+@using Legacy.Maliev.Web.Infrastructure
+@using Microsoft.Extensions.Options
+@inject IOptions<LineLiffOptions> LineLiffOptions
+@{
+    var thai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    ViewData["Title"] = thai ? "เพิ่มเพื่อน MALIEV บน LINE Official Account" : "Add MALIEV on LINE Official Account";
+    ViewData["Description"] = thai
+        ? "เปิด LINE Official Account ของ MALIEV และยืนยันการเป็นเพื่อนก่อนเริ่มพูดคุยเรื่องงานผลิต"
+        : "Open MALIEV's LINE Official Account and confirm friendship before starting a manufacturing conversation.";
+    ViewData["Robots"] = "noindex,follow";
+}
+@section Head {
+    @if (LineLiffOptions.Value.IsEnabled)
+    {
+        <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    }
+}
+<component type="typeof(LineContactPage)" render-mode="Static" />
