@@ -701,9 +701,12 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         }
         public async Task DrainAsync(Task actual, Action cancel, Action release, CancellationToken caller)
         {
-            try { await MaterialPricingTestCleanup.DrainQuoteAsync(actual, cancel, release, caller,
+            try
+            {
+                await MaterialPricingTestCleanup.DrainQuoteAsync(actual, cancel, release, caller,
                 PrimaryFailure, cleanup.Add, CleanupRemaining(),
-                taskKind: diagnostics.OwnedTasks.Contains(actual) ? "quote" : "boundary"); }
+                taskKind: diagnostics.OwnedTasks.Contains(actual) ? "quote" : "boundary");
+            }
             finally
             {
                 drained.Add(actual);
@@ -734,9 +737,12 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             {
                 foreach (var actual in group.Tasks().Distinct().Where(task => !drained.Contains(task)))
                 {
-                    try { await MaterialPricingTestCleanup.DrainQuoteAsync(actual, () => { }, () => { }, default,
+                    try
+                    {
+                        await MaterialPricingTestCleanup.DrainQuoteAsync(actual, () => { }, () => { }, default,
                         PrimaryFailure, cleanup.Add, CleanupRemaining(),
-                        expectedTerminalFailure: expectedFailures.Contains(actual), taskKind: group.Kind); }
+                        expectedTerminalFailure: expectedFailures.Contains(actual), taskKind: group.Kind);
+                    }
                     catch (Exception exception) { failure ??= exception; }
                     finally { drained.Add(actual); }
                 }
