@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -1015,6 +1016,8 @@ public sealed class CareerSearchKestrelContractTests(CncNativeBrowserFixture fix
         Assert.True(get.Headers.CacheControl?.NoStore == true);
         using var document = System.Text.Json.JsonDocument.Parse(await get.Content.ReadAsStringAsync());
         Assert.Equal(System.Text.Json.JsonValueKind.Array, document.RootElement.ValueKind);
+        var offer = Assert.Single(document.RootElement.EnumerateArray().ToArray());
+        Assert.Equal(1, offer.GetProperty("id").GetInt32());
 
         using var request = new HttpRequestMessage(HttpMethod.Head, route);
         using var head = await client.SendAsync(request);
@@ -1022,5 +1025,38 @@ public sealed class CareerSearchKestrelContractTests(CncNativeBrowserFixture fix
         Assert.Equal(get.Content.Headers.ContentType?.ToString(), head.Content.Headers.ContentType?.ToString());
         Assert.True(head.Headers.CacheControl?.NoStore == true);
         Assert.Empty(await head.Content.ReadAsByteArrayAsync());
+    }
+}
+
+internal sealed class CareerSearchKestrelTransportHandler(Uri careerBaseAddress) : HttpMessageHandler
+{
+    private readonly Uri jobsEndpoint = new(careerBaseAddress, "Jobs");
+
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Assert.Equal(HttpMethod.Get, request.Method);
+        var uri = Assert.IsType<Uri>(request.RequestUri);
+        Assert.True(uri.Scheme == jobsEndpoint.Scheme
+            && uri.Authority == jobsEndpoint.Authority
+            && uri.AbsolutePath == jobsEndpoint.AbsolutePath,
+            "Career search must use the configured Jobs endpoint.");
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        Assert.Equal(new[] { "index", "search", "size", "sort" },
+            query.Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray());
+        Assert.True(query["sort"].Count == 1 && query["sort"][0] == "JobId_Ascending");
+        Assert.True(query["search"].Count == 1 && query["search"][0] == string.Empty);
+        Assert.True(query["index"].Count == 1 && query["index"][0] == "1");
+        Assert.True(query["size"].Count == 1 && query["size"][0] == "25");
+
+        var page = new CareerOfferPage(
+            [new CareerOffer(1, 1, "Career fixture offer", null, null, null, null, null,
+                false, null, null, new CareerLevel(1, "Fixture level", null, null, null))],
+            1, 1, 1, false, false);
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(page)
+        });
     }
 }
