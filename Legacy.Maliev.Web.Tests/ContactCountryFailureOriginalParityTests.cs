@@ -332,7 +332,8 @@ public sealed class ContactCountryFailureOriginalParityTests : IClassFixture<Tes
                         Content = JsonContent.Create(new[] { new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null) }),
                     },
                 };
-            })) { BaseAddress = new Uri("https://upstream.invalid/") };
+            }))
+            { BaseAddress = new Uri("https://upstream.invalid/") };
             Country = new CountryClient(this, NullLogger<CountryClient>.Instance);
         }
 
