@@ -191,8 +191,8 @@ public sealed partial class InstantQuotationSubmissionEndpointTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("retry", result.RootElement.GetProperty("outcome").GetString());
-        Assert.Equal(["TaxBranchCode"], result.RootElement.GetProperty("invalidFields")
-            .EnumerateArray().Select(value => value.GetString()).ToArray());
+        Assert.Equal("TaxBranchCode", Assert.Single(result.RootElement.GetProperty("invalidFields")
+            .EnumerateArray().Select(value => value.GetString())));
         Assert.Empty(service.Calls);
     }
 
