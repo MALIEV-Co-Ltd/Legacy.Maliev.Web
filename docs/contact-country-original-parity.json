@@ -1,0 +1,20 @@
+{
+  "original": "18c9f126bbbb2aab33b9b46f069f6d6225348053",
+  "parents": [
+    "1e8da789aa371f5fca2e9ed4437ba26bbec27b22"
+  ],
+  "fullChangedPaths": [
+    "Maliev.Web.Tests/ContactCountryFailureTests.cs",
+    "Maliev.Web/Pages/Contact/Index.cshtml.cs"
+  ],
+  "originalPacketSHA256": "3427ec21bb7274066f96f7ebdd4e844c104d7f7ccd58df543cf1a4288a694f3a",
+  "originalTestBlob": "df21679be8c3731747c712a25152369f459ab1f7",
+  "originalTestSHA256": "85ed32ce6f4e4e05da0788bbbf6c24649305dfeb74f8d2446fdcfa4a47e2b4c7",
+  "baseMain": "f843f75adb89fc8b810ff14775dc5125537cc736",
+  "wholeOriginalClosure": false,
+  "behavior": "Empty countries + exact empty-key error on transport503404 through direct PageModel and real EN/TH active/fallback routes; nonempty/empty successful responses preserved; other Country consumers404availableempty; caller cancellation escapes; unexpected active500 safely rendered with existing incident/ErrorContent",
+  "sourceOnly": "Extraction of previously reviewed source; no native build/focus/full/static/browser execution yet; all exact-head/protected-main gates required",
+  "scope": "Contact original18c9 only; no original877 Career closure/production behavior edits; no package/SDK/CNC/financial/global error policy changes",
+  "caseForecast": 37,
+  "acceptance": "NOT ACCEPTED; future exact head/full/raw prior roster required"
+}
