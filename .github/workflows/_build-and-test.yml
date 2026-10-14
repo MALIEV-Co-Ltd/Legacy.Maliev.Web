@@ -2,6 +2,11 @@ name: Build and test
 
 on:
   workflow_call:
+    inputs:
+      candidate_head:
+        description: Exact reviewed caller source commit; event merge identity is retained separately.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,14 +18,44 @@ jobs:
     env:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
-      MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      MALIEV_BILLING_CANDIDATE_HEAD: ${{ inputs.candidate_head }}
+      MALIEV_VALIDATION_CANDIDATE_HEAD: ${{ inputs.candidate_head }}
+      MALIEV_SOURCE_CUSTODY_DIR: maliev-web-source-custody-${{ github.run_id }}-${{ github.run_attempt }}
       MALIEV_BROWSER_EVIDENCE_DIR: ${{ github.workspace }}/sidebar-navigation-test-results
     steps:
       - name: Check out Web
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ inputs.candidate_head }}
           fetch-depth: 2
           persist-credentials: false
+      - name: Verify exact caller source and retain event identities separately
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = $env:MALIEV_VALIDATION_CANDIDATE_HEAD
+          if ($expected -cnotmatch '^[0-9a-f]{40}$') { throw 'Full candidate source identity required.' }
+          $actual = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $expected) { throw 'Actual Web checkout differs from candidate head.' }
+          $tree = (git rev-parse 'HEAD^{tree}').Trim()
+          if ($LASTEXITCODE -ne 0 -or $tree -cnotmatch '^[0-9a-f]{40}$') { throw 'Actual Web tree unavailable.' }
+          if ((git status --porcelain) -or $LASTEXITCODE -ne 0) { throw 'Candidate source must be clean.' }
+          $event = Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH | ConvertFrom-Json -Depth 64
+          $directory = Join-Path $env:RUNNER_TEMP $env:MALIEV_SOURCE_CUSTODY_DIR
+          if (Test-Path -LiteralPath $directory) { throw 'Fresh source custody directory required.' }
+          New-Item -ItemType Directory -Path $directory | Out-Null
+          [ordered]@{
+            schemaVersion = 1
+            expectedCandidateHead = $expected
+            actualSourceHead = $actual
+            actualTree = $tree
+            eventSha = $env:GITHUB_SHA
+            eventPullRequestHead = $event.pull_request.head.sha
+            workflowSha = $env:GITHUB_WORKFLOW_SHA
+            runId = $env:GITHUB_RUN_ID
+            runAttempt = $env:GITHUB_RUN_ATTEMPT
+            runtimeAcceptance = $false
+          } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $directory 'source-head.json') -Encoding utf8NoBOM
       - name: Check out Legacy.Maliev.ServiceDefaults
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -145,7 +180,7 @@ jobs:
         with:
           name: pricing-regression-parent-control-${{ github.sha }}
           path: pricing-regression-parent-control/**
-          retention-days: 7
+          retention-days: 14
           if-no-files-found: error
       - name: Verify accepted publisher, original nine meshes and pricing callback budgets
         run: >-
@@ -436,5 +471,13 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
             tests/web-fx-generated-inclusive.runsettings
-          retention-days: 7
+          retention-days: 14
+          if-no-files-found: error
+      - name: Retain exact source custody independently of test outcome
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-source-custody-${{ inputs.candidate_head }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/${{ env.MALIEV_SOURCE_CUSTODY_DIR }}/source-head.json
+          retention-days: 14
           if-no-files-found: error
