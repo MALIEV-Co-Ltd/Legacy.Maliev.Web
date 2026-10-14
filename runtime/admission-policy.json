@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "status": "PROPOSAL_ROOT_AUTHORITY_MISSING",
+  "owner": "01a1009c-7d2d-7fc3-a239-2b1d9600a7a5",
+  "issuer": "019fc21e-50f0-7112-834f-9fb3b35b9dfe",
+  "approvedPermitSha256": null,
+  "reviewedFiles": {
+    "run_focus.py": null,
+    "verify_custody.py": null,
+    "verify_focus_trx.py": null,
+    "expected-cases.json": null,
+    "custody-manifest.json": null,
+    ".github/workflows/web-real-upload-focused.yml": null
+  },
+  "base": "66d220af825a6d4829d1b97512e21b6486a08c87",
+  "correctionPatchSha256": "854464bef9731d68e0d734d60a33800ec3d4a882b1569c90161004507fb53e76",
+  "memoryAvailableKiB": 4194304,
+  "memoryMaxBytes": 3221225472,
+  "swapMaxBytes": 0,
+  "cpuQuotaPercent": 100,
+  "tasksMax": 512,
+  "leaseSeconds": 2100,
+  "phaseSeconds": 1200,
+  "reserveSeconds": 40,
+  "logMaxBytes": 16777216,
+  "expectedExecutions": {"failed-boundaries": 3, "preservation-controls": 56},
+  "scope": "single-corrected-real-upload-attempt-no-full-suite-no-producer-hosts"
+}
