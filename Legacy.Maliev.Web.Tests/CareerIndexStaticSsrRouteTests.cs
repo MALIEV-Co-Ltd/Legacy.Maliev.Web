@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -1025,6 +1026,19 @@ public sealed class CareerSearchKestrelContractTests(CncNativeBrowserFixture fix
         Assert.Equal(get.Content.Headers.ContentType?.ToString(), head.Content.Headers.ContentType?.ToString());
         Assert.True(head.Headers.CacheControl?.NoStore == true);
         Assert.Empty(await head.Content.ReadAsByteArrayAsync());
+    }
+}
+
+internal sealed class CareerSearchKestrelWebApplicationFactory(string contentRoot)
+    : TestingWebApplicationFactory(contentRoot)
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.ConfigureServices(services => services.AddHttpClient("careers")
+            .ConfigurePrimaryHttpMessageHandler(provider => new CareerSearchKestrelTransportHandler(
+                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ServiceEndpoints>>()
+                    .Value.Career)));
     }
 }
 

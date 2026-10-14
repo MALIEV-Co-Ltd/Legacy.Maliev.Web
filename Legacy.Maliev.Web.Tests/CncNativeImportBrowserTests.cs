@@ -3,7 +3,6 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -224,12 +223,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
     {
         int port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
-        factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
-            .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-                services.AddHttpClient("careers")
-                    .ConfigurePrimaryHttpMessageHandler(provider => new CareerSearchKestrelTransportHandler(
-                        provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Legacy.Maliev.Web.Application.ServiceEndpoints>>()
-                            .Value.Career))));
+        factory = new CareerSearchKestrelWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
         hostClient = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
