@@ -117,11 +117,11 @@ internal sealed class CncOwnedResourceScope
             || mounts.Any(mount => mount is null || mount.Type == "bind"))
             throw new InvalidOperationException("Disposable provider ownership/caps inspection failed.");
     }
-    internal OwnedChild StartChild(string dll, Dictionary<string, string> environment, Action? afterStart = null)
+    internal OwnedChild StartChild(string dll, Dictionary<string, string> environment, Action? afterStart = null, bool redirectStandardInput = false)
     {
         var child = new OwnedChild(this);
         children.Add(child); // Register before any start/identity/reader step can fail.
-        child.Start(dll, environment, afterStart);
+        child.Start(dll, environment, afterStart, redirectStandardInput);
         return child;
     }
     internal sealed class OwnedChild(CncOwnedResourceScope scope)
@@ -137,12 +137,13 @@ internal sealed class CncOwnedResourceScope
         private DateTime start;
         private string? executable;
         private int pid;
+        private Microsoft.Win32.SafeHandles.SafeProcessHandle? ownedHandle;
         private bool started, closed;
         private long stdoutBytes, stderrBytes;
         private string? budgetFailure;
-        internal void Start(string dll, Dictionary<string, string> environment, Action? afterStart)
+        internal void Start(string dll, Dictionary<string, string> environment, Action? afterStart, bool redirectStandardInput)
         {
-            var info = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            var info = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = redirectStandardInput };
             info.ArgumentList.Add(dll);
             foreach (var entry in environment) info.Environment[entry.Key] = entry.Value;
             info.Environment["DOTNET_GCHeapHardLimit"] = "0x10000000";
@@ -152,7 +153,7 @@ internal sealed class CncOwnedResourceScope
             pid = Process.Id;
             start = Process.StartTime.ToUniversalTime();
             executable = Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
-            _ = Process.SafeHandle; // Retain handle through terminal observation and reader settlement.
+            ownedHandle = Process.SafeHandle; // Retain handle through terminal observation and reader settlement.
             stdout = ReadAndSettle(Process.StandardOutput.BaseStream, true);
             stderr = ReadBounded(Process.StandardError.BaseStream, false);
             monitor = Monitor();
@@ -189,9 +190,14 @@ internal sealed class CncOwnedResourceScope
         {
             while (!Process.HasExited)
             {
-                Process.Refresh();
-                if (DateTimeOffset.UtcNow >= scope.Expires || Process.WorkingSet64 > 536870912
-                    || Process.TotalProcessorTime > TimeSpan.FromSeconds(60))
+                var overBudget = false;
+                if (!OwnedProcessMetricObservation.TryRead(Process, ownedHandle!, pid, () =>
+                {
+                    Process.Refresh();
+                    overBudget = DateTimeOffset.UtcNow >= scope.Expires || Process.WorkingSet64 > 536870912
+                        || Process.TotalProcessorTime > TimeSpan.FromSeconds(60);
+                })) return;
+                if (overBudget)
                 {
                     budgetFailure = "finite-process-budget";
                     await StopExact();
