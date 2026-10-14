@@ -35,6 +35,12 @@ internal static class CareerSearchCompatibilityEndpoint
             : 1;
         var client = context.RequestServices.GetRequiredService<ICareerClient>();
         var offers = await client.GetOffersAsync(sort, search, string.IsNullOrEmpty(search) ? index : 1, size, context.RequestAborted);
+        if (HttpMethods.IsHead(context.Request.Method))
+        {
+            context.Response.ContentType = "application/json; charset=utf-8";
+            return;
+        }
+
         await Results.Json((offers.Value?.Items ?? [])
             .Where(offer => offer.IsFilled == false)
             .ToArray()).ExecuteAsync(context);
