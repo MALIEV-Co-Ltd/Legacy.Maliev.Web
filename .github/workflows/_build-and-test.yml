@@ -253,6 +253,16 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~CareerIndexStaticSsrRouteTests|FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerDetailStaticSsrRouteTests|FullyQualifiedName~CareerSearchKestrelContractTests"
           --logger trx --results-directory ./career-consumer-test-results
+      - name: Preserve successful Career focus and original oracle before the full suite
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: career-focused-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
+          retention-days: 7
+          if-no-files-found: error
       - name: Verify localized account posts and rendered service SEO contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
