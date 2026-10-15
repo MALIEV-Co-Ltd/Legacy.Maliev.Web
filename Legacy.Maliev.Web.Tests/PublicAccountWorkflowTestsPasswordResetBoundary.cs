@@ -248,12 +248,12 @@ public sealed class PublicAccountWorkflowTestsPasswordResetBoundary(TestingWebAp
 
     private sealed record ResponseObservation(HttpStatusCode Status, Uri? Location, string Body, bool NoStore, string? ReferrerPolicy);
     private sealed class OutcomeBoundary(PasswordResetCompletionOutcome outcome)
-        : ResetPasswordLegacyBoundary, ICustomerAuthenticationClient
+        : ResetPasswordLegacyBoundary, IPasswordResetCompletionClient
     {
         internal new Exception? Failure { get; set; }
         internal int TypedCalls { get; private set; }
         internal (string Email, string Token, string Password) LastTypedArguments { get; private set; }
-        Task<PasswordResetCompletionOutcome> ICustomerAuthenticationClient.CompletePasswordResetOutcomeAsync(
+        Task<PasswordResetCompletionOutcome> IPasswordResetCompletionClient.CompletePasswordResetOutcomeAsync(
             string email, string token, string password, CancellationToken cancellationToken)
         {
             TypedCalls++;

@@ -239,6 +239,20 @@ public sealed class PublicAccountWorkflowTestsPasswordResetClient
         }
     }
 
+    [Fact]
+    public void LegacyPublicContract_RemainsConstructibleByDispatchProxy()
+    {
+        var proxy = System.Reflection.DispatchProxy.Create<ICustomerAuthenticationClient, ResetContractProxy>();
+        Assert.IsAssignableFrom<ICustomerAuthenticationClient>(proxy);
+    }
+
+    /// <summary>Public proxy base required by the runtime-generated implementation assembly.</summary>
+    public class ResetContractProxy : System.Reflection.DispatchProxy
+    {
+        protected override object? Invoke(System.Reflection.MethodInfo? targetMethod, object?[]? args) =>
+            throw new InvalidOperationException("The construction regression must not invoke an account operation.");
+    }
+
     private static async Task AssertWireAndDisposal(ClientFixture fixture)
     {
         Assert.Equal(1, fixture.Handler.Calls);

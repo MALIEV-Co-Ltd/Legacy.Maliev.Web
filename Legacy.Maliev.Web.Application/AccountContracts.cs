@@ -98,6 +98,35 @@ internal enum PasswordResetCompletionOutcome
     UnexpectedResponse,
 }
 
+internal interface IPasswordResetCompletionClient
+{
+    Task<PasswordResetCompletionOutcome> CompletePasswordResetOutcomeAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken);
+}
+
+internal static class PasswordResetCompletionExtensions
+{
+    internal static async Task<PasswordResetCompletionOutcome> CompletePasswordResetOutcomeAsync(
+        this ICustomerAuthenticationClient client,
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        if (client is IPasswordResetCompletionClient completion)
+        {
+            return await completion.CompletePasswordResetOutcomeAsync(email, token, password, cancellationToken);
+        }
+
+        return await client.CompletePasswordResetAsync(email, token, password, cancellationToken)
+            ? PasswordResetCompletionOutcome.Completed
+            : PasswordResetCompletionOutcome.UnclassifiedFailure;
+    }
+}
+
 public interface ICustomerAuthenticationClient
 {
     Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(
@@ -162,15 +191,6 @@ public interface ICustomerAuthenticationClient
         string token,
         string password,
         CancellationToken cancellationToken);
-
-    internal async Task<PasswordResetCompletionOutcome> CompletePasswordResetOutcomeAsync(
-        string email,
-        string token,
-        string password,
-        CancellationToken cancellationToken) =>
-        await CompletePasswordResetAsync(email, token, password, cancellationToken)
-            ? PasswordResetCompletionOutcome.Completed
-            : PasswordResetCompletionOutcome.UnclassifiedFailure;
 
     Task<bool> CompleteInitialPasswordAsync(
         string email,

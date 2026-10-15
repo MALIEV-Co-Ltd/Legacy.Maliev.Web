@@ -12,7 +12,7 @@ namespace Legacy.Maliev.Web.Infrastructure;
 internal sealed class CustomerAuthenticationClient(
     IHttpClientFactory clientFactory,
     IServiceAccessTokenProvider serviceTokenProvider,
-    ILogger<CustomerAuthenticationClient> logger) : ICustomerAuthenticationClient
+    ILogger<CustomerAuthenticationClient> logger) : ICustomerAuthenticationClient, IPasswordResetCompletionClient
 {
     public async Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(string accessToken, int expectedCustomerId, CancellationToken cancellationToken)
     {
@@ -366,7 +366,7 @@ internal sealed class CustomerAuthenticationClient(
             new CompletePasswordResetRequest(email, token, password),
             cancellationToken);
 
-    async Task<PasswordResetCompletionOutcome> ICustomerAuthenticationClient.CompletePasswordResetOutcomeAsync(
+    async Task<PasswordResetCompletionOutcome> IPasswordResetCompletionClient.CompletePasswordResetOutcomeAsync(
         string email,
         string token,
         string password,
