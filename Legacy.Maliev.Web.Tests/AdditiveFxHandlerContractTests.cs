@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -23,6 +24,56 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
         from handler in new[] { "GetEstimate", "GetOrderTotal" }
         from failure in new[] { "missing", "zero", "negative", "malformed", "overflow", "wrong-base", "invalid-json", "unauthorized", "forbidden", "unavailable", "timeout" }
         select new object[] { active, handler, failure };
+
+    public static IEnumerable<object[]> LowQuantityOrderCases =>
+        from active in new[] { true, false }
+        from culture in new[] { "en", "th" }
+        from fixture in new[]
+        {
+            (Quantity: 1, Subtotal: 1010m, BeforeVat: 1110m, Vat: 77.70m, Total: 1187.70m),
+            (Quantity: 5, Subtotal: 4750m, BeforeVat: 4850m, Vat: 339.50m, Total: 5189.50m),
+            (Quantity: 10, Subtotal: 7300m, BeforeVat: 7400m, Vat: 518m, Total: 7918m),
+            (Quantity: 20, Subtotal: 14400m, BeforeVat: 14500m, Vat: 1015m, Total: 15515m),
+            (Quantity: 50, Subtotal: 31500m, BeforeVat: 31600m, Vat: 2212m, Total: 33812m),
+        }
+        select new object[]
+        {
+            active, culture, fixture.Quantity, fixture.Subtotal, fixture.BeforeVat, fixture.Vat, fixture.Total,
+        };
+
+    [Theory]
+    [MemberData(nameof(LowQuantityOrderCases))]
+    public async Task OrderTotal_FrozenLowQuantitySubtotals_ReturnsLiteralDomesticMoney(
+        bool active, string culture, int fixtureQuantity, decimal frozenSubtotal,
+        decimal expectedBeforeVat, decimal expectedVat, decimal expectedTotal)
+    {
+        // Quantity labels the independent controlled fixture only. GetOrderTotal consumes
+        // the frozen subtotal; this does not establish physical quote generation over HTTP.
+        using var transport = new CatalogTransport(_ => throw new InvalidOperationException("THB totals must not call Catalog."));
+        await using var application = Configure(active, transport, token: null);
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync(Route("GetOrderTotal", "THB", culture,
+            processes: "fdm", subtotals: frozenSubtotal.ToString(CultureInfo.InvariantCulture)));
+
+        Assert.True(response.IsSuccessStatusCode, $"Frozen quantity-{fixtureQuantity} HTTP total failed.");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var result = json.RootElement;
+        Assert.True(result.GetProperty("success").GetBoolean());
+        Assert.Equal("THB", result.GetProperty("currency").GetString());
+        Assert.Equal(frozenSubtotal, result.GetProperty("printing").GetDecimal());
+        Assert.Equal(frozenSubtotal, result.GetProperty("itemsSubtotal").GetDecimal());
+        Assert.Equal(300m, result.GetProperty("minimumOrderPrice").GetDecimal());
+        Assert.Equal(0m, result.GetProperty("minimumOrderSurcharge").GetDecimal());
+        Assert.Equal(100m, result.GetProperty("shipping").GetDecimal());
+        Assert.Equal("DomesticPriced", result.GetProperty("shippingState").GetString());
+        Assert.Equal("TH", result.GetProperty("destinationCountryCode").GetString());
+        Assert.Equal(expectedBeforeVat, result.GetProperty("priceBeforeVat").GetDecimal());
+        Assert.Equal(expectedVat, result.GetProperty("vat").GetDecimal());
+        Assert.Equal(expectedTotal, result.GetProperty("finalOrderPrice").GetDecimal());
+        Assert.Empty(transport.Requests);
+    }
 
     [Theory]
     [MemberData(nameof(RenderersAndCultures))]
@@ -215,7 +266,8 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
         BaseAddress = new Uri("https://localhost"),
     });
 
-    private static string Route(string handler, string currency, string culture) => QueryHelpers.AddQueryString(
+    private static string Route(string handler, string currency, string culture,
+        string? processes = null, string? subtotals = null) => QueryHelpers.AddQueryString(
         "/InstantQuotation/3D-Printing",
         new Dictionary<string, string?>
         {
@@ -227,8 +279,8 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
             ["volume"] = "20000",
             ["footprint"] = "400",
             ["quantity"] = "1",
-            ["processes"] = "fdm,resin",
-            ["subtotals"] = "1200,1800",
+            ["processes"] = processes ?? "fdm,resin",
+            ["subtotals"] = subtotals ?? "1200,1800",
             ["totalWeightGrams"] = "500",
             ["totalBoundingCm3"] = "2000",
         });
