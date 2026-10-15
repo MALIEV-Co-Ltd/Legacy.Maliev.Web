@@ -9,6 +9,11 @@ namespace Legacy.Maliev.Web.Tests
     using Microsoft.AspNetCore.DataProtection;
     using System;
     using System.Collections.Generic;
+    using System.IO;
+    using System.Numerics;
+    using System.Security.Cryptography;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Xunit;
 
     /// <summary>Tests the additive quote ticket monetary trust boundary.</summary>
@@ -418,6 +423,116 @@ namespace Legacy.Maliev.Web.Tests
             }, quote, authorization, Now.AddMinutes(1)));
         }
 
+        private const string TicketSessionId = "physical-ticket-session";
+        private const string TicketOwner = "member-1";
+        private static readonly Guid TicketPartId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        private static readonly Guid TicketFileId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        private static readonly byte[] TicketBytes = TicketBinaryBox(8);
+        private static readonly string TicketDigest = Convert.ToHexStringLower(SHA256.HashData(TicketBytes));
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(10)]
+        [InlineData(20)]
+        [InlineData(50)]
+        public async Task FdmTicket_GenuineBoundQuotePreservesMoneyAndRejectsStaleAuthorization(int quantity)
+        {
+            var fixture = PhysicalTicketFixture(quantity);
+            var evidence = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+            Assert.True(evidence.IsReady);
+            Assert.Equal(fixture.Binding, evidence.Binding);
+            var pricing = new InstantQuotationPricingService();
+            var quote = pricing.QuoteWithPhysical(fixture.Store.State.RequestState,
+                new Dictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>
+                {
+                    [(TicketPartId, "PLA")] = evidence,
+                });
+            var line = Assert.Single(quote.Parts);
+            Assert.Equal(PrintProcess.Fdm, line.Process);
+            Assert.Equal(quantity, line.Quantity);
+            var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+            fixture.Store.State = fixture.Store.State with { PhysicalReceipts = [receipt] };
+            var session = fixture.Store.State;
+            var service = CreateService();
+            var authorization = service.Issue(session, quote, Now);
+            var payload = service.UnprotectLine(Assert.Single(authorization.LineTickets), Now);
+            var order = service.UnprotectOrder(authorization.OrderTicket, Now);
+            Assert.True(service.Validate(session, quote, authorization, Now.AddMinutes(1)));
+            Assert.Equal("additive-2026-10-10.v12", payload.PolicyVersion);
+            Assert.Equal(payload.PolicyVersion, order.PolicyVersion);
+            Assert.Equal(PrintProcess.Fdm, payload.Process);
+            Assert.Equal(quantity, payload.Quantity);
+            Assert.Equal(TicketSessionId, payload.SessionId);
+            Assert.Equal(TicketOwner, payload.OwnerIdentity);
+            Assert.Equal(TicketPartId.ToString("D"), payload.PartId);
+            Assert.Equal(TicketFileId.ToString("D"), payload.UploadId);
+            Assert.Equal(TicketDigest, payload.ContentSha256);
+            Assert.Equal("PLA", payload.MaterialKey);
+            Assert.Equal(BuildPreference.Standard, payload.BuildPreference);
+            Assert.Equal(fixture.Binding.ProfileVersion, payload.ProfileVersion);
+            Assert.Equal(receipt.ProfileSha256, payload.ProfileSha256);
+            Assert.Equal(receipt.AnalysisVersion, payload.PhysicalAnalysisVersion);
+            Assert.Equal(receipt.PhysicalSha256, payload.PhysicalSha256);
+            Assert.Equal(Convert.ToDecimal(line.UnitPrice), payload.UnitPriceThb);
+            Assert.Equal(Convert.ToDecimal(line.Subtotal), payload.SubtotalThb);
+            Assert.Equal(payload.UnitPriceThb * quantity, payload.SubtotalThb);
+            Assert.Equal(payload.SubtotalThb, order.ItemsSubtotalThb);
+            Assert.Equal(Convert.ToDecimal(quote.FinalOrderPrice), order.FinalOrderPriceThb);
+            Assert.Equal(order.FinalOrderPriceThb, Assert.Single(order.AllocatedLineTotalsThb));
+            Assert.Equal(Convert.ToDecimal(line.AllocatedOrderTotal), Assert.Single(order.AllocatedLineTotalsThb));
+
+            var part = Assert.Single(session.Parts);
+            Assert.False(service.Validate(session, quote with
+            {
+                Parts = [line with { UnitPrice = line.UnitPrice + 10 }],
+            }, authorization, Now.AddMinutes(1)));
+            Assert.False(service.Validate(session with { OwnerIdentity = "another-owner" }, quote,
+                authorization, Now.AddMinutes(1)));
+            foreach (var changedPart in new[]
+            {
+                part with { PartId = Guid.NewGuid() },
+                part with { PhysicalAnalysisUpload = part.PhysicalAnalysisUpload! with { FileId = Guid.NewGuid() } },
+                part with { Configuration = part.Configuration with { MaterialKey = "ABS" } },
+                part with { Configuration = part.Configuration with { BuildPreference = BuildPreference.Quality } },
+            })
+            {
+                Assert.False(service.Validate(session with
+                {
+                    RequestState = new InstantQuotationOrderState([changedPart]),
+                }, quote, authorization, Now.AddMinutes(1)));
+            }
+
+            Assert.False(service.Validate(session with
+            {
+                PhysicalReceipts = [receipt with { ProfileSha256 = new string('E', 64) }],
+            }, quote, authorization, Now.AddMinutes(1)));
+            fixture.Store.State = session with
+            {
+                UpdatedAt = session.UpdatedAt.AddTicks(1),
+                RequestState = new InstantQuotationOrderState([part with
+                {
+                    Configuration = part.Configuration with { Quantity = quantity + 1 },
+                }]),
+                PhysicalReceipts = [],
+            };
+            var nextBinding = fixture.Binding with { Quantity = quantity + 1 };
+            var nextEvidence = await fixture.Service.AnalyzeAsync(nextBinding, default);
+            Assert.True(nextEvidence.IsReady);
+            var nextQuote = pricing.QuoteWithPhysical(fixture.Store.State.RequestState,
+                new Dictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>
+                {
+                    [(TicketPartId, "PLA")] = nextEvidence,
+                });
+            var nextLine = Assert.Single(nextQuote.Parts);
+            var nextReceipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(nextLine.PhysicalReceipt);
+            fixture.Store.State = fixture.Store.State with { PhysicalReceipts = [nextReceipt] };
+            Assert.NotEqual(receipt, nextReceipt);
+            Assert.False(service.Validate(fixture.Store.State, nextQuote, authorization, Now.AddMinutes(1)));
+            var nextAuthorization = service.Issue(fixture.Store.State, nextQuote, Now);
+            Assert.True(service.Validate(fixture.Store.State, nextQuote, nextAuthorization, Now.AddMinutes(1)));
+        }
+
         private static AdditiveQuoteTicketService CreateService()
         {
             return new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
@@ -497,6 +612,107 @@ namespace Legacy.Maliev.Web.Tests
                 new InstantQuotationOrderState([part]),
                 Now,
                 Now);
+        }
+
+        private static (InstantQuotationBoundPhysicalAnalysisService Service,
+            InstantQuotationPhysicalAnalysisBinding Binding, TicketSessionStore Store, TicketInputReader Reader) PhysicalTicketFixture(int quantity = 1)
+        {
+            var reference = new InstantQuotationUploadReference(TicketFileId.ToString("D"));
+            var claim = new InstantQuotationGeometryClaim(
+                1, TicketDigest, 8, 8, 8, 512, 384,
+                Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+                12, 1, true, false, false, 1);
+            var upload = InstantQuotationUploadResult.Succeeded("operation", reference, TicketDigest);
+            var part = new InstantQuotationPart(
+                TicketPartId, "part.stl", reference,
+                AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
+                new InstantQuotationPartConfiguration("PLA", "Black", quantity),
+                new InstantQuotationPhysicalAnalysisUpload(TicketFileId, "part.stl", "model/stl", TicketBytes.Length, TicketDigest, "clean"));
+            var now = Now;
+            var store = new TicketSessionStore(new InstantQuotationSessionState(
+                TicketSessionId, "submission", new InstantQuotationOrderState([part]), now, now,
+                OwnerIdentity: TicketOwner));
+            var reader = new TicketInputReader();
+            var service = new InstantQuotationBoundPhysicalAnalysisService(
+                store, new InstantQuotationAdmittedMeshService(reader), FdmRuntimeProfileCatalog.LoadEmbedded());
+            var binding = new InstantQuotationPhysicalAnalysisBinding(
+                TicketSessionId, TicketOwner, TicketPartId, TicketFileId, TicketDigest, "PLA", BuildPreference.Standard,
+                quantity, FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion);
+            return (service, binding, store, reader);
+        }
+
+        private static byte[] TicketBinaryBox(float size)
+        {
+            Vector3[] points =
+            [
+                new(0, 0, 0), new(size, 0, 0), new(size, size, 0), new(0, size, 0),
+                new(0, 0, size), new(size, 0, size), new(size, size, size), new(0, size, size),
+            ];
+            int[][] faces =
+            [
+                [0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7],
+                [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5],
+                [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7],
+            ];
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+            writer.Write(new byte[80]);
+            writer.Write((uint)faces.Length);
+            foreach (int[] face in faces)
+            {
+                writer.Write(new byte[12]);
+                foreach (int vertex in face)
+                {
+                    writer.Write(points[vertex].X);
+                    writer.Write(points[vertex].Y);
+                    writer.Write(points[vertex].Z);
+                }
+
+                writer.Write((ushort)0);
+            }
+
+            return stream.ToArray();
+        }
+
+        private sealed class TicketSessionStore(InstantQuotationSessionState state) : IInstantQuotationSessionStore
+        {
+            public InstantQuotationSessionState State { get; set; } = state;
+
+            public int ReadCount { get; private set; }
+
+            public Task<InstantQuotationSessionState?> GetAsync(
+                string sessionId, string? ownerIdentity, CancellationToken cancellationToken)
+            {
+                ReadCount++;
+                return Task.FromResult<InstantQuotationSessionState?>(
+                    sessionId == State.SessionId && ownerIdentity == TicketOwner ? State : null);
+            }
+
+            public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity,
+                InstantQuotationOrderState requestState, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
+            public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity,
+                CancellationToken cancellationToken) => throw new NotSupportedException();
+
+            public Task<bool> RemoveAsync(string sessionId, string? ownerIdentity,
+                CancellationToken cancellationToken) => throw new NotSupportedException();
+        }
+
+        private sealed class TicketInputReader : IInstantQuotationPhysicalAnalysisInputReader
+        {
+            public int ReadCount { get; private set; }
+
+            public Action? OnRead { get; set; }
+
+            public Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(
+                string sessionId, string? ownerIdentity, Guid partId, CancellationToken cancellationToken)
+            {
+                ReadCount++;
+                OnRead?.Invoke();
+                return Task.FromResult(new InstantQuotationPhysicalAnalysisInputResult(
+                    TicketBytes, InstantQuotationPhysicalAnalysisInputFailure.None, TicketFileId, "part.stl", TicketDigest));
+            }
         }
     }
 }
