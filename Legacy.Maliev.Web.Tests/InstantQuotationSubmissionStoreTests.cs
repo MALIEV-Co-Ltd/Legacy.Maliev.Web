@@ -477,7 +477,7 @@ public sealed class InstantQuotationSubmissionStoreTests
         return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
     }
 
-    private sealed class FakeAtomicStorage : IInstantQuotationSubmissionAtomicStorage
+    internal sealed class FakeAtomicStorage : IInstantQuotationSubmissionAtomicStorage
     {
         private readonly Dictionary<string, LeaseEntry> leases = new(StringComparer.Ordinal);
         private readonly Dictionary<string, CheckpointEntry> checkpoints = new(StringComparer.Ordinal);

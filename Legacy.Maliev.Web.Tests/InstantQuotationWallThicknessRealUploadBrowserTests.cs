@@ -11,8 +11,10 @@ using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
+public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
+    private void QuantityPhase(string phase, int quantity) => output.WriteLine($"[fdm-quantity-phase] {phase}; quantity={quantity}");
+
     [Theory]
     [InlineData(320, "th")]
     [InlineData(375, "en")]
@@ -1062,7 +1064,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         string contentRoot,
         HashCheckingUploadClient upload,
         CountingPricingService pricing,
-        MaterialCompletionObservation? observation = null) : TestingWebApplicationFactory(contentRoot)
+        MaterialCompletionObservation? observation = null,
+        Action<IServiceCollection>? configureQuantityDependencies = null) : TestingWebApplicationFactory(contentRoot)
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -1078,6 +1081,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     new BrowserMultiUploadInputReader(upload,
                         provider.GetRequiredService<IInstantQuotationSessionStore>()));
                 observation?.Decorate(services);
+                configureQuantityDependencies?.Invoke(services);
             });
         }
     }
