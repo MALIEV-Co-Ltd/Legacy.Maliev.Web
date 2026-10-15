@@ -186,8 +186,8 @@ public sealed class PublicAccountWorkflowTestsPasswordResetBoundary(TestingWebAp
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         var html = WebUtility.HtmlDecode(await page.Content.ReadAsStringAsync());
         var form = Assert.Single(Regex.Matches(html, "<form[^>]*>[\\s\\S]*?</form>",
-                RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)).Cast<Match>()
-            .Where(candidate => candidate.Value.Contains("handler=ChangePassword", StringComparison.Ordinal)));
+                RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)).Cast<Match>(),
+            candidate => candidate.Value.Contains("handler=ChangePassword", StringComparison.Ordinal));
         var action = Match(form.Value, "formaction=\"(?<value>[^\"]+)\"").Groups["value"].Value;
         var anti = Match(form.Value, "name=\"__RequestVerificationToken\"[^>]*value=\"(?<value>[^\"]+)\"").Groups["value"].Value;
         using var response = await client.PostAsync(action, new FormUrlEncodedContent(new Dictionary<string, string>

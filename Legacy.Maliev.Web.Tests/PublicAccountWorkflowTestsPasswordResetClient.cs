@@ -82,7 +82,7 @@ public sealed class PublicAccountWorkflowTestsPasswordResetClient
             "http-timeout" => new TaskCanceledException(PrivateDetail, new TimeoutException(PrivateDetail)),
             _ => new TimeoutRejectedException(PrivateDetail),
         };
-        fixture.Handler.Send = _ => Task.FromException<HttpResponseMessage>(failure);
+        fixture.Handler.SendResponse = _ => Task.FromException<HttpResponseMessage>(failure);
         Assert.Equal(PasswordResetCompletionOutcome.TransportUnavailable,
             await fixture.Contract.CompletePasswordResetOutcomeAsync(Email, Token, Password, default));
         Assert.Equal(1, fixture.Handler.Calls);
@@ -103,7 +103,7 @@ public sealed class PublicAccountWorkflowTestsPasswordResetClient
             "noncaller-task-cancel" => new TaskCanceledException(PrivateDetail),
             _ => new OperationCanceledException(PrivateDetail),
         };
-        fixture.Handler.Send = _ => Task.FromException<HttpResponseMessage>(failure);
+        fixture.Handler.SendResponse = _ => Task.FromException<HttpResponseMessage>(failure);
         var observed = await Record.ExceptionAsync(() =>
             fixture.Contract.CompletePasswordResetOutcomeAsync(Email, Token, Password, default));
         Assert.Same(failure, observed);
@@ -139,7 +139,7 @@ public sealed class PublicAccountWorkflowTestsPasswordResetClient
     {
         using var cancellation = new CancellationTokenSource();
         using var fixture = new ClientFixture(200);
-        fixture.Handler.Send = token =>
+        fixture.Handler.SendResponse = token =>
         {
             cancellation.Cancel();
             return Task.FromCanceled<HttpResponseMessage>(token);
@@ -304,7 +304,7 @@ public sealed class PublicAccountWorkflowTestsPasswordResetClient
 
     private sealed class ObservingHandler(Func<CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
     {
-        public Func<CancellationToken, Task<HttpResponseMessage>> Send { get; set; } = send;
+        public Func<CancellationToken, Task<HttpResponseMessage>> SendResponse { get; set; } = send;
         public int Calls { get; private set; }
         public HttpRequestMessage? Last { get; private set; }
         public string Body { get; private set; } = "";
@@ -313,7 +313,7 @@ public sealed class PublicAccountWorkflowTestsPasswordResetClient
             Calls++;
             Last = request;
             Body = await request.Content!.ReadAsStringAsync(cancellationToken);
-            return await Send(cancellationToken);
+            return await SendResponse(cancellationToken);
         }
     }
 
