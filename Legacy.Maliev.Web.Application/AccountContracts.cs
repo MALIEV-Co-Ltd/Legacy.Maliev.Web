@@ -85,6 +85,19 @@ public interface ICustomerEmailChangeWorkflow
         CancellationToken cancellationToken);
 }
 
+/// <summary>Reset-only observations; never serialized as a public Auth response.</summary>
+internal enum PasswordResetCompletionOutcome
+{
+    Completed,
+    UnclassifiedFailure,
+    CredentialsUnavailable,
+    TransportUnavailable,
+    AuthenticationRejected,
+    RateLimited,
+    ServiceUnavailable,
+    UnexpectedResponse,
+}
+
 public interface ICustomerAuthenticationClient
 {
     Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(
@@ -149,6 +162,15 @@ public interface ICustomerAuthenticationClient
         string token,
         string password,
         CancellationToken cancellationToken);
+
+    internal async Task<PasswordResetCompletionOutcome> CompletePasswordResetOutcomeAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken) =>
+        await CompletePasswordResetAsync(email, token, password, cancellationToken)
+            ? PasswordResetCompletionOutcome.Completed
+            : PasswordResetCompletionOutcome.UnclassifiedFailure;
 
     Task<bool> CompleteInitialPasswordAsync(
         string email,
