@@ -15,6 +15,7 @@ using Npgsql;
 using StackExchange.Redis;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -24,7 +25,7 @@ public sealed class CncLiteralProducerBoundaryCollection;
 /// <summary>Current CNC client to separately pinned real Program, disposable PostgreSQL and Redis.
 /// RS256 permissions and country lookup are controlled fixtures, not genuine IAM/CountryService acceptance.</summary>
 [Collection("CNC literal producer boundary")]
-public sealed class CncLiteralProducerBoundaryTests
+public sealed class CncLiteralProducerBoundaryTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData("padded", false, false)]
@@ -178,7 +179,7 @@ public sealed class CncLiteralProducerBoundaryTests
             }
             if (rejectCompany || rejectAddress)
                 Assert.Equal("literal-fixture-3", (string?)await redisDb.StringGetAsync("legacy:customer:customer:3"));
-        });
+        }, receiptSink: output.WriteLine);
     }
 
     private static async Task<string> Snapshot(NpgsqlConnection connection, bool originalOnly, CancellationToken token)
