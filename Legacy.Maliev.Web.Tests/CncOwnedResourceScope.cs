@@ -22,7 +22,8 @@ internal sealed class CncOwnedResourceScope
         .WithEndpoint(TestcontainersSettings.OS.DockerEndpointAuthConfig.Endpoint)
         .WithTimeout(TimeSpan.FromSeconds(15)).Build();
     internal bool AcquisitionRejectionControl { get; set; }
-    internal static async Task ExecuteAsync(Func<CncOwnedResourceScope, Task> body, Action<IReadOnlyList<object>>? inspect = null)
+    internal static async Task ExecuteAsync(Func<CncOwnedResourceScope, Task> body,
+        Action<IReadOnlyList<object>>? inspect = null, Action<string>? receiptSink = null)
     {
         var scope = new CncOwnedResourceScope();
         Exception? primary = null;
@@ -91,7 +92,19 @@ internal sealed class CncOwnedResourceScope
             catch (Exception exception) { cleanup.Add("docker-disposal:" + exception.GetType().Name); }
             try { inspect?.Invoke(scope.Receipts); }
             catch (Exception exception) { cleanup.Add(exception.GetType().Name); }
-            try { Console.WriteLine(JsonSerializer.Serialize(new { scope.RunId, scope.Expires, resources = scope.Receipts, cleanupFailures = cleanup, primaryFailure = primary?.GetType().Name })); }
+            try
+            {
+                var receipt = JsonSerializer.Serialize(new
+                {
+                    scope.RunId,
+                    scope.Expires,
+                    resources = scope.Receipts,
+                    cleanupFailures = cleanup,
+                    primaryFailure = primary?.GetType().Name,
+                });
+                if (receiptSink is null) Console.WriteLine(receipt);
+                else receiptSink(receipt);
+            }
             catch (Exception exception) { cleanup.Add("receipt-output:" + exception.GetType().Name); }
         }
         if (primary is not null) ExceptionDispatchInfo.Capture(primary).Throw();
