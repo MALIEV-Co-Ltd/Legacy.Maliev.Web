@@ -180,7 +180,9 @@ public sealed class PublicAccountWorkflowTestsPasswordResetBoundary(TestingWebAp
     {
         var url = QueryHelpers.AddQueryString("/account/resetpassword", new Dictionary<string, string?>
         {
-            ["email"] = Email, ["token"] = Token, ["culture"] = culture,
+            ["email"] = Email,
+            ["token"] = Token,
+            ["culture"] = culture,
         });
         using var page = await client.GetAsync(url);
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
