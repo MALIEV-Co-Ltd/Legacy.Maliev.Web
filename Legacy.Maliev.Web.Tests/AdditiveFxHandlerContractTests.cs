@@ -25,6 +25,55 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
         from failure in new[] { "missing", "zero", "negative", "malformed", "overflow", "wrong-base", "invalid-json", "unauthorized", "forbidden", "unavailable", "timeout" }
         select new object[] { active, handler, failure };
 
+    public static IEnumerable<object[]> LowQuantityAnalyticalEstimateCases =>
+        from active in new[] { true, false }
+        from culture in new[] { "en", "th" }
+        from fixture in new[]
+        {
+            (Quantity: 1, Unit: 360m, Subtotal: 360m, ActiveTier: 1),
+            (Quantity: 5, Unit: 320m, Subtotal: 1600m, ActiveTier: 1),
+            (Quantity: 10, Unit: 250m, Subtotal: 2500m, ActiveTier: 10),
+            (Quantity: 20, Unit: 250m, Subtotal: 5000m, ActiveTier: 10),
+            (Quantity: 50, Unit: 210m, Subtotal: 10500m, ActiveTier: 50),
+        }
+        select new object[] { active, culture, fixture.Quantity, fixture.Unit, fixture.Subtotal, fixture.ActiveTier };
+
+    [Theory]
+    [MemberData(nameof(LowQuantityAnalyticalEstimateCases))]
+    public async Task Estimate_AnalyticalLowQuantityFixture_ReturnsLiteralPolicySnapshot(
+        bool active, string culture, int quantity, decimal unit, decimal subtotal, int activeTier)
+    {
+        // Synthetic analytical fixture:30mm height,400mm2 footprint,8000mm3 volume;
+        // absent profiles select current Standard defaults. This is not physical-receipt pricing.
+        using var transport = new CatalogTransport(_ => throw new InvalidOperationException("THB must not query Catalog."));
+        await using var application = Configure(active, transport, token: null);
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync(Route("GetEstimate", "THB", culture,
+            quantity: quantity.ToString(CultureInfo.InvariantCulture), volume: "8000"));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var result = json.RootElement;
+        Assert.True(result.GetProperty("success").GetBoolean());
+        Assert.Equal("THB", result.GetProperty("currency").GetString());
+        Assert.Equal("fdm", result.GetProperty("process").GetString());
+        Assert.Equal(unit, result.GetProperty("unitPrice").GetDecimal());
+        Assert.Equal(subtotal, result.GetProperty("subtotal").GetDecimal());
+        Assert.Equal(subtotal, result.GetProperty("subtotalThb").GetDecimal());
+        Assert.Equal(4.25m, result.GetProperty("weightGrams").GetDecimal());
+        Assert.Equal(4.2m, result.GetProperty("materialPerUnit").GetDecimal());
+        Assert.Equal(25m, result.GetProperty("printTimeMinutes").GetDecimal());
+        Assert.Equal(12m, result.GetProperty("boundingCm3").GetDecimal());
+        Assert.False(result.GetProperty("technicalFilamentMinimumApplied").GetBoolean());
+        Assert.Equal(0m, result.GetProperty("technicalFilamentMinimumPrice").GetDecimal());
+        Assert.Equal(0m, result.GetProperty("technicalFilamentMinimumAdjustment").GetDecimal());
+        Assert.Equal(activeTier, Assert.Single(result.GetProperty("tiers").EnumerateArray()
+            .Where(tier => tier.GetProperty("active").GetBoolean())
+            .Select(tier => tier.GetProperty("minQuantity").GetInt32())));
+        // A sample tier shows its own sample-quantity price, not quantity5's amortized setup.
+        Assert.Empty(transport.Requests);
+    }
+
     public static IEnumerable<object[]> LowQuantityOrderCases =>
         from active in new[] { true, false }
         from culture in new[] { "en", "th" }
@@ -267,7 +316,8 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
     });
 
     private static string Route(string handler, string currency, string culture,
-        string? processes = null, string? subtotals = null) => QueryHelpers.AddQueryString(
+        string? processes = null, string? subtotals = null,
+        string? quantity = null, string? volume = null) => QueryHelpers.AddQueryString(
         "/InstantQuotation/3D-Printing",
         new Dictionary<string, string?>
         {
@@ -276,9 +326,9 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
             ["culture"] = culture,
             ["material"] = "PLA",
             ["dimensionZ"] = "30",
-            ["volume"] = "20000",
+            ["volume"] = volume ?? "20000",
             ["footprint"] = "400",
-            ["quantity"] = "1",
+            ["quantity"] = quantity ?? "1",
             ["processes"] = processes ?? "fdm,resin",
             ["subtotals"] = subtotals ?? "1200,1800",
             ["totalWeightGrams"] = "500",
