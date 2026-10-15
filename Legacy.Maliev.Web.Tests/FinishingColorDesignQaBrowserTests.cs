@@ -3,7 +3,7 @@ using Microsoft.Playwright;
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(PublicContactBrowserCollection.Name)]
-public sealed class FinishingColorDesignQaBrowserTests(PublicContactBrowserFixture fixture)
+public sealed class FinishingColorDesignQaBrowserTests(PublicContactBrowserFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
 {
     [Theory]
     [InlineData("en", 1360, false)]
@@ -154,7 +154,22 @@ public sealed class FinishingColorDesignQaBrowserTests(PublicContactBrowserFixtu
 
     private async Task OpenMatcherAsync(IPage page, string culture)
     {
-        var response = await page.GotoAsync(new Uri(fixture.Origin, $"/services/finishing-and-color?culture={culture}").ToString());
+        var evidence = new FinishingNavigationEvidence(page, fixture.Origin);
+        IResponse? response;
+        try
+        {
+            response = await page.GotoAsync(new Uri(fixture.Origin, $"/services/finishing-and-color?culture={culture}").ToString());
+        }
+        catch
+        {
+            evidence.Dispose();
+            evidence.Report(output.WriteLine);
+            throw;
+        }
+        finally
+        {
+            evidence.Dispose();
+        }
         Assert.NotNull(response);
         Assert.True(response.Ok);
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
