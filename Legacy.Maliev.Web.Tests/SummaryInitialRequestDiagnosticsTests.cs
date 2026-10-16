@@ -114,7 +114,8 @@ public sealed class SummaryInitialRequestDiagnosticsTests
         var accessor = new HttpContextAccessor { HttpContext = context };
         var sentinel = new object();
         var calls = 0;
-        probe.Configure(app => app.Run(async _ =>
+
+        async Task ObserveOperationAsync(HttpContext _)
         {
             Task<object> Operation(CancellationToken token)
             {
@@ -129,7 +130,9 @@ public sealed class SummaryInitialRequestDiagnosticsTests
                 SummaryInitialRequestDiagnostics.Stage.SessionCreateFailed,
                 () => Operation(cancellation.Token));
             Assert.Same(sentinel, result);
-        }))(builder);
+        }
+
+        probe.Configure(app => app.Run(ObserveOperationAsync))(builder);
 
         await builder.Build()(context);
 
@@ -147,7 +150,8 @@ public sealed class SummaryInitialRequestDiagnosticsTests
         var accessor = new HttpContextAccessor { HttpContext = context };
         var sentinel = new IOException("private-dependency-failure");
         var calls = 0;
-        probe.Configure(app => app.Run(async _ =>
+
+        async Task ObserveOperationAsync(HttpContext _)
         {
             var actual = await Assert.ThrowsAsync<IOException>(() => probe.ForwardAsync<object>(accessor,
                 SummaryInitialRequestDiagnostics.Stage.CountryEntered,
@@ -155,7 +159,9 @@ public sealed class SummaryInitialRequestDiagnosticsTests
                 SummaryInitialRequestDiagnostics.Stage.CountryFailed,
                 () => { calls++; return Task.FromException<object>(sentinel); }));
             Assert.Same(sentinel, actual);
-        }))(builder);
+        }
+
+        probe.Configure(app => app.Run(ObserveOperationAsync))(builder);
 
         await builder.Build()(context);
 
