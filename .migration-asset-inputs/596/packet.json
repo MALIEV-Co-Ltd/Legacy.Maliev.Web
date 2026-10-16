@@ -1,0 +1,972 @@
+{
+  "schema": 1,
+  "issue": 596,
+  "disposition": "INDEPENDENT SOURCE GO; NOT PUBLISHED; ALL NATIVE VALIDATION NOT RUN",
+  "repository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "exactBase": "fc3bebeacbcb4f9932c09973a8d4913104b67b68",
+  "sourceRepository": "MALIEV-Co-Ltd/maliev-web",
+  "sources": [
+    {
+      "sha": "e1edc6de1537712f52c016318e311c8dd3819e5c",
+      "parents": [
+        "20ffaee0de3c26a15011f6ab682cf77591ac3964"
+      ],
+      "files": [
+        {
+          "path": "Maliev.Web.Tests/KnowledgePageMigrationSourceTests.cs",
+          "blob": "77bdf30d83b1be089c7d32ef7b2e44492e46bea3",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Guidelines.cshtml",
+          "blob": "bb23421efed2e639bd9cc5c4f03efef40ca866a7",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Index.cshtml",
+          "blob": "30d097dd24e4d5963419dc8382cfbe251b76c3ab",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Printing.cshtml",
+          "blob": "5efbd00748c2143a4acce9f2d6a60882c94f4229",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Scanning.cshtml",
+          "blob": "c1c2957942c6900426f1d4663563541f07f667db",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/CNC-Machining.cshtml",
+          "blob": "90f0a318a3a8005a89be1a28a82e4a5885af74b6",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/Index.cshtml",
+          "blob": "9929f5be61f8a60ffc9047eb88f231fa47e6c014",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Workflow.cshtml",
+          "blob": "62c20e06329c01f28812ab7b188e88dbcfca7f99",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Guidelines.th.resx",
+          "blob": "9ad7eed910c50a79dd1bd6b9d1d9865c975fdb70",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Index.th.resx",
+          "blob": "8452cf54b256f4e4c7bacc1ad2509d43ebdaad6b",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Printing.th.resx",
+          "blob": "34781134decacc06aee05c7594042f0c61cbfe00",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Scanning.th.resx",
+          "blob": "25da31e91c0afef140ccfd9424e8ae64e263a57c",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/CNC-Machining.th.resx",
+          "blob": "601383cde29eb5a7e0e853d6e3776a199b22c8e2",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/Index.th.resx",
+          "blob": "3bb9332d2f2dc30efacfc9cd22becb3255cd0913",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Workflow.th.resx",
+          "blob": "c98c5e0bdc80d23d07abf0f70f00c97b6b29a3cc",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+          "blob": "cc65568285c3c519cc2dc1411310a418b2840763",
+          "status": "added"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/cnc-corner-clearance.svg",
+          "blob": "2234ca7b5497fd584ea73bcea836ba2b73ab1b45",
+          "status": "added"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/cnc-wall-stiffness.svg",
+          "blob": "f22982c9b91ecc5c711528ebe51529dc7e5440e2",
+          "status": "added"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-center-guides.md",
+          "blob": "da172611e0dc1c9e4453929475d220d160f991cc",
+          "status": "added"
+        }
+      ]
+    },
+    {
+      "sha": "20ffaee0de3c26a15011f6ab682cf77591ac3964",
+      "parents": [
+        "f2d28a1d984a6cf5429ad26760765f918cc9c69e"
+      ],
+      "files": [
+        {
+          "path": "Maliev.Web.Tests/KnowledgeCenterBrowserTests.cs",
+          "blob": "7705eace82392bce6128dd9aa963345777df1dc0",
+          "status": "added"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",
+          "blob": "77e89bab8f1ecf3d6d1932f0096e9335caa4cb33",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+          "blob": "9bc4321e88007c456a6a9eb1cdb0534deea50f76",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+          "blob": "f94d8a22b5cc508739e771df49067eaf14697888",
+          "status": "modified"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/js/knowledge-navigation.js",
+          "blob": "b35170240b7834de03055cd27b199b7435eedb5f",
+          "status": "added"
+        }
+      ]
+    },
+    {
+      "sha": "a23e9dc155ab6b8eb4794b0c4ac5231e66da8e6f",
+      "parents": [
+        "f981dce7682606b1c13f04b271163447f3f2709e"
+      ],
+      "files": [
+        {
+          "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+          "blob": "a522113933cc172f29f358676f31da49cd57a7b9",
+          "status": "modified"
+        }
+      ]
+    }
+  ],
+  "patch": {
+    "blob": "27ecc65338527d8714c527d1ba9e398e809ea8f8",
+    "readbackExact": true,
+    "characters": 264842,
+    "format": "unified diff with3linescontext;44paths; actual git apply--check NOT RUN for this remote-only packet"
+  },
+  "inverse": {
+    "blob": "fcc25059c5ed59717454e75d65e5b6b33c3c0b70",
+    "format": "unified reverse diff, newpathsdeleted; byte reconstruction performed inJS, git apply NOT RUN"
+  },
+  "files": [
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/KnowledgeIndexContent.razor",
+      "sha": "e27cba726ac13ef4acb65bc9e827d60f8445812c",
+      "baseSha": "6101403500d50161780afe33d6120c0189072a1f",
+      "bytes": 5213
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeIndexContent.th.resx",
+      "sha": "86c5ed40773537aadfbbc27f730b850efec99d64",
+      "baseSha": "8984f7873bd9ef8087cc74bc7c2ecfceca49dfb7",
+      "bytes": 18330
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/KnowledgeIndexPage.razor",
+      "sha": "554a207985953ee47828bbddadab27af23fa16ff",
+      "baseSha": "d044a6efc944810377cd5a39ab1914d106329c56",
+      "bytes": 4647
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Index.cshtml",
+      "sha": "3d78d55d3da2ea1efb14009cbd50ffd2bbbe68cb",
+      "baseSha": "1cabdd8a09044b4704f6abc7811f7c6fc95312c4",
+      "bytes": 434
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/GuidelinesContent.razor",
+      "sha": "3d4ec812197d83d50085a6508750d2222a26dce7",
+      "baseSha": "480bce32dbbce646928935effc5889ade81b4069",
+      "bytes": 4759
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/GuidelinesContent.th.resx",
+      "sha": "37c1287e0073b1ba9b9d95344c76876a0df40aa0",
+      "baseSha": "e24bf7954f155099220fde27a920f953c2af7196",
+      "bytes": 19362
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/GuidelinesPage.razor",
+      "sha": "7a384953470d813235ee23a5912847140babf383",
+      "baseSha": "f0b9a36c8d9bb5d1586a963a5e294cbbea8fe328",
+      "bytes": 4762
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Guidelines.cshtml",
+      "sha": "0a0726d51e125d986c834150b4b49dbfef0628e6",
+      "baseSha": "4e214ed6623586fdf1f201a5ef2580a89b276c29",
+      "bytes": 697
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/WorkflowContent.razor",
+      "sha": "78b8769cb7da7cc82d55c949ee72b949276c1fe7",
+      "baseSha": "625a8ad9d1d52aa5dce5b221642be16d1c357b55",
+      "bytes": 4243
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/WorkflowContent.th.resx",
+      "sha": "c17b09f42f52dfaea18b4a7f44f4e64fc520505b",
+      "baseSha": "2bf4981e5b4117044cb1fedd72ceef77e78944e4",
+      "bytes": 18848
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/SpecificationsIndexContent.razor",
+      "sha": "b87f04a37f2a5d21e904737c4d5b346891e21500",
+      "baseSha": "83df67721404794c57265413e16a8c7302f8c4e0",
+      "bytes": 3955
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/SpecificationsIndexContent.th.resx",
+      "sha": "b48762a208e2d81e6ce2c37ab3d731cb5d72b20a",
+      "baseSha": "5641f4921ab66c4ecf1325ac236a725a4bef9bee",
+      "bytes": 15368
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/SpecificationsIndexPage.razor",
+      "sha": "01a9b07cf8f5ede1865ba13c62f38aaeefa6aace",
+      "baseSha": "a281e41225049b12c464424791f68e7e44c64fc5",
+      "bytes": 6487
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Specifications/Index.cshtml",
+      "sha": "5b7ceef160c7cc70a3401e42da3db01b6667fe17",
+      "baseSha": "23a3fb9b6527ad1a610dd686b701ff7ea3d57e82",
+      "bytes": 473
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalPrintingContent.razor",
+      "sha": "7d529ea298954aff59596209289d4d1e036c6115",
+      "baseSha": "1aa6e2920f8bc7c87732fa0874bc7e645e34b0fe",
+      "bytes": 6628
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/ThreeDimensionalPrintingContent.th.resx",
+      "sha": "1de383510d6228f74afd4a131096caa74b9f6a90",
+      "baseSha": "628016bec412a52d38e0c7f9061d071be0fedd5b",
+      "bytes": 23596
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalScanningContent.razor",
+      "sha": "308f3c5a6bf88cea5a217d5f01811e0965665f9e",
+      "baseSha": "902b21ba4db259444eb07d01d92312e2088544f2",
+      "bytes": 6885
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/ThreeDimensionalScanningContent.th.resx",
+      "sha": "ab62ad1ee65dccb383ef8c47c32fe4a974356ead",
+      "baseSha": "8effe786ac65cc3a87e00a2af831faba992d717c",
+      "bytes": 24848
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/CncMachiningContent.razor",
+      "sha": "d3c9a78c7d5c9fbc460352d256e77a91c2ebecf1",
+      "baseSha": "cef378ccb3b6d32ac9ce571765c552d0310955b7",
+      "bytes": 29663
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/CncMachiningContent.th.resx",
+      "sha": "ec0e0a432f97bf986f771a11d0a6674b2e37f42f",
+      "baseSha": "58069ea18f7b59230881f0ecd90da8942141744a",
+      "bytes": 79464
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+      "sha": "cc65568285c3c519cc2dc1411310a418b2840763",
+      "baseSha": null,
+      "bytes": 799
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/cnc-corner-clearance.svg",
+      "sha": "2234ca7b5497fd584ea73bcea836ba2b73ab1b45",
+      "baseSha": null,
+      "bytes": 926
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/cnc-wall-stiffness.svg",
+      "sha": "f22982c9b91ecc5c711528ebe51529dc7e5440e2",
+      "baseSha": null,
+      "bytes": 688
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/css/application-shell.css",
+      "sha": "8e6e6a12144e1afd026d3fa2de8275588cb8b57d",
+      "baseSha": "5e4fcd172c6345ea4aec7aa78e87b6a3f7ab2243",
+      "bytes": 42560
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",
+      "sha": "6f0ce2f6160ca1ca49d5bbd49afe9f5d5b7759b6",
+      "baseSha": "6a447e9710f278835e1756f8443ca6c5db64bf90",
+      "bytes": 3031
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+      "sha": "9bc4321e88007c456a6a9eb1cdb0534deea50f76",
+      "baseSha": "15b2ad49d13b939d487d5af104a2fa1f8227c83b",
+      "bytes": 3264
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/knowledge-navigation.js",
+      "sha": "b35170240b7834de03055cd27b199b7435eedb5f",
+      "baseSha": null,
+      "bytes": 3555
+    },
+    {
+      "path": "Legacy.Maliev.Web/assets/route-knowledge.js",
+      "sha": "e8fcba7d2ce66dc96a0444d5ceb6fffba4cdeb5c",
+      "baseSha": null,
+      "bytes": 56
+    },
+    {
+      "path": "Legacy.Maliev.Web/build-assets.mjs",
+      "sha": "a7e4bf602966368412eb72f7e02b312b82f31808",
+      "baseSha": "b7c5ee52f50eba0f0b098a12406fe0eb27bfe749",
+      "bytes": 5953
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Layout/PublicRouteAssets.cs",
+      "sha": "4238b49f55ed9ba8484bc16dfa97c0bda28bf977",
+      "baseSha": "fd9435022f6aad02237f48f441dfa9eb5f3e90ba",
+      "bytes": 3166
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgesIndexStaticSsrRouteTests.cs",
+      "sha": "cf2f70e499ec209471623fd24419f453dcd4255a",
+      "baseSha": "691ea67ab9ff797f4ad187c95aeb66630f6712a0",
+      "bytes": 11373
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeGuidelinesStaticSsrRouteTests.cs",
+      "sha": "9c0f252966d11cea948bfd4eea12eea91f2272d4",
+      "baseSha": "ea0e2d21ddcc97a399f3c4eccf8098ba1b457e87",
+      "bytes": 13545
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/WorkflowPage.razor",
+      "sha": "94eb563bf06033da6c2932bc43b7f843d451b217",
+      "baseSha": "014431954b06e99a44eceb3c49f0dc6eb04d1b3f",
+      "bytes": 6428
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/WorkflowStaticSsrRouteTests.cs",
+      "sha": "0298a3c3f226f9a3ee849cf383df2f0c750dc27c",
+      "baseSha": "99598d98eed4fb86813ce4ee86378a94fa0c6ee5",
+      "bytes": 17628
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SpecificationsIndexStaticSsrRouteTests.cs",
+      "sha": "7cceb6acbbe24ad82e56b7dffb5c1dd18a267afd",
+      "baseSha": "80aed6d14be6dbc260f302cf066ba08329e9da3a",
+      "bytes": 15752
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalPrintingSpecificationPage.razor",
+      "sha": "be3f6c813a5852b604641769fa0bc6457f200576",
+      "baseSha": "8bd444a48145158af613f05101b09d9a03720894",
+      "bytes": 6706
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalPrintingStaticSsrRouteTests.cs",
+      "sha": "2f147c4ce47e2452a66e48b887a804d36bc0a7c3",
+      "baseSha": "f50ad950ff5557c1c00834e576f6f48b1eaf3cfc",
+      "bytes": 20368
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalScanningSpecificationPage.razor",
+      "sha": "9fed69677b88fb2cfa7c9b358dc42c09357d6849",
+      "baseSha": "62881c1040023309fe69c423cade2462407ea590",
+      "bytes": 6723
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalScanningStaticSsrRouteTests.cs",
+      "sha": "21160b3c54e9b75f404c26acf80d72a317b213e3",
+      "baseSha": "f9a571e5414bc6cc3df32743170d1d788b047cb1",
+      "bytes": 23525
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/CncMachiningSpecificationPage.razor",
+      "sha": "8d9f3a5f08c0f130b2ed5076ff47d7830d36159e",
+      "baseSha": "2e713ab77f63edb0e150dfc07f222c1ecc164d41",
+      "bytes": 5991
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeCncMachiningStaticSsrRouteTests.cs",
+      "sha": "84ce704e5c62c824dc051f6b4bb55c5099e190f9",
+      "baseSha": "d45a5d142f364f3ea373af105a3392b6cd69ba95",
+      "bytes": 19498
+    },
+    {
+      "path": ".github/workflows/_build-and-test.yml",
+      "sha": "117b7e9ef384bc8936b683c69b2be988e625d4f6",
+      "baseSha": "f6a618a224af063a6e9f857d0dcbea788a1d740f",
+      "bytes": 29153
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeCenterGuidesBrowserTests.cs",
+      "sha": "e98e926b313f3bdfc3ba0cadee62cee30fbb7687",
+      "baseSha": null,
+      "bytes": 13941
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeGuideBundleRouteTests.cs",
+      "sha": "b2794bee97f6c32375067607d028d06c377b3ce4",
+      "baseSha": null,
+      "bytes": 7213
+    }
+  ],
+  "readback": {
+    "files": 44,
+    "allExact": true,
+    "all44PreimagesMatchImmutableBase": true,
+    "verification": "GitHub exactref file content equals retainedpre; unreferencedblob readback content equals exactcachedpost. No invented localSHA256 seal."
+  },
+  "contracts": {
+    "routes": 7,
+    "cultures": [
+      "en",
+      "th"
+    ],
+    "renderers": [
+      "activeBlazorStaticSSR",
+      "retainedRazor"
+    ],
+    "preserved": [
+      "all7featureflag rollbackroutes",
+      "canonical/alternatelang/socialmetadata",
+      "Guidelines4stepHowTo+4oldfragmentaliases",
+      "Workflow5existingstepmarkers",
+      "referenceURLs andillustrativeengineeringunits",
+      "existingfonts/packages/SDKroles/gates/thresholds"
+    ],
+    "assetPipeline": "route-knowledge.js esbuild entry+existingGetScriptsselector+existingretainedpartial; genericreleasevalidatorconsumesrouteScriptsmanifest",
+    "sourceLiteralParity": [
+      {
+        "source": "Index",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      },
+      {
+        "source": "Guidelines",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      },
+      {
+        "source": "Workflow",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      },
+      {
+        "source": "Specifications/Index",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      },
+      {
+        "source": "Specifications/3D-Printing",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      },
+      {
+        "source": "Specifications/3D-Scanning",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      },
+      {
+        "source": "Specifications/CNC-Machining",
+        "missingLiteralKeys": [],
+        "missingReferences": []
+      }
+    ],
+    "thaiSpellingAdaptations": [
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeIndexContent.th.resx",
+        "key": "Use these concise guides to prepare your project and understand what happens after you request a quotation.",
+        "source": "<data name=\"Use these concise guides to prepare your project and understand what happens after you request a quotation.\" xml:space=\"preserve\"><value>ใช้คู่มือฉบับย่อเพื่อเตรียมโปรเจ็คและเข้าใจขั้นตอนหลังขอใบเสนอราคา</value></data>",
+        "target": "<data name=\"Use these concise guides to prepare your project and understand what happens after you request a quotation.\" xml:space=\"preserve\"><value>ใช้คู่มือฉบับย่อเพื่อเตรียมโปรเจกต์และเข้าใจขั้นตอนหลังขอใบเสนอราคา</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeIndexContent.th.resx",
+        "key": "Project guidelines",
+        "source": "<data name=\"Project guidelines\" xml:space=\"preserve\"><value>แนวทางเตรียมโปรเจ็ค</value></data>",
+        "target": "<data name=\"Project guidelines\" xml:space=\"preserve\"><value>แนวทางเตรียมโปรเจกต์</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeIndexContent.th.resx",
+        "key": "How projects move forward",
+        "source": "<data name=\"How projects move forward\" xml:space=\"preserve\"><value>ขั้นตอนดำเนินโปรเจ็ค</value></data>",
+        "target": "<data name=\"How projects move forward\" xml:space=\"preserve\"><value>ขั้นตอนดำเนินโปรเจกต์</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/GuidelinesContent.th.resx",
+        "key": "Project guidelines | MALIEV",
+        "source": "<data name=\"Project guidelines | MALIEV\" xml:space=\"preserve\"><value>แนวทางเตรียมโปรเจ็ค | MALIEV</value></data>",
+        "target": "<data name=\"Project guidelines | MALIEV\" xml:space=\"preserve\"><value>แนวทางเตรียมโปรเจกต์ | MALIEV</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/GuidelinesContent.th.resx",
+        "key": "Prepare your project",
+        "source": "<data name=\"Prepare your project\" xml:space=\"preserve\"><value>เตรียมโปรเจ็ค</value></data>",
+        "target": "<data name=\"Prepare your project\" xml:space=\"preserve\"><value>เตรียมโปรเจกต์</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/GuidelinesContent.th.resx",
+        "key": "Request our mutual NDA before sharing confidential project information when your organization requires it.",
+        "source": "<data name=\"Request our mutual NDA before sharing confidential project information when your organization requires it.\" xml:space=\"preserve\"><value>ขอสัญญาปกปิดความลับก่อนส่งข้อมูลโปรเจ็ค เมื่อองค์กรของคุณต้องการ</value></data>",
+        "target": "<data name=\"Request our mutual NDA before sharing confidential project information when your organization requires it.\" xml:space=\"preserve\"><value>ขอสัญญาปกปิดความลับก่อนส่งข้อมูลโปรเจกต์ เมื่อองค์กรของคุณต้องการ</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/WorkflowContent.th.resx",
+        "key": "Project workflow",
+        "source": "<data name=\"Project workflow\" xml:space=\"preserve\"><value>ขั้นตอนโปรเจ็ค</value></data>",
+        "target": "<data name=\"Project workflow\" xml:space=\"preserve\"><value>ขั้นตอนโปรเจกต์</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/WorkflowContent.th.resx",
+        "key": "The exact checks vary by process and part complexity, but every project follows the same accountable path.",
+        "source": "<data name=\"The exact checks vary by process and part complexity, but every project follows the same accountable path.\" xml:space=\"preserve\"><value>รายละเอียดการตรวจสอบขึ้นกับกระบวนการและความซับซ้อน แต่ทุกโปรเจ็คมีขั้นตอนที่ติดตามได้</value></data>",
+        "target": "<data name=\"The exact checks vary by process and part complexity, but every project follows the same accountable path.\" xml:space=\"preserve\"><value>รายละเอียดการตรวจสอบขึ้นกับกระบวนการและความซับซ้อน แต่ทุกโปรเจกต์มีขั้นตอนที่ติดตามได้</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      },
+      {
+        "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/WorkflowContent.th.resx",
+        "key": "Completed parts are packed for collection or shipment, with available project documents attached.",
+        "source": "<data name=\"Completed parts are packed for collection or shipment, with available project documents attached.\" xml:space=\"preserve\"><value>ชิ้นงานที่เสร็จแล้วจะบรรจุเพื่อรับหรือจัดส่ง พร้อมเอกสารโปรเจ็คที่มี</value></data>",
+        "target": "<data name=\"Completed parts are packed for collection or shipment, with available project documents attached.\" xml:space=\"preserve\"><value>ชิ้นงานที่เสร็จแล้วจะบรรจุเพื่อรับหรือจัดส่ง พร้อมเอกสารโปรเจกต์ที่มี</value></data>",
+        "reason": "Preserve existing approved Thai spelling gate"
+      }
+    ],
+    "scopeExclusions": [
+      "CNCquotation/pricing/CAD/providerexecution",
+      "Home/About/contactconversionproductedits",
+      "Root549diagnostics604cleanup605contact606custody",
+      "deploy/data/credentials/fonts/packages/thresholds"
+    ]
+  },
+  "corrections": {
+    "guidelines": "firstEN/THtheory6values6parameters",
+    "sections": "CNC12,Printing4,Scanning4docs-sectionassertions",
+    "browser": "copyrightfilename,visiblearrowfilter,percasepublicownedfixture,finitePlaywrightdefaults+nestedfinally,sourceprojectabsolutescreenshotdirectorymatchingartifact",
+    "workflow": "existingKnowledgefocusadds2classes+existingartifactaddsnewPNGpath;afterremovingtheseadditionsallbasebytesidentical"
+  },
+  "staticChecks": {
+    "theoryArity": [
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgesIndexStaticSsrRouteTests.cs",
+        "method": "KnowledgesRoute_RendersCompleteLocalizedStaticDocument",
+        "params": 5,
+        "rows": [
+          5,
+          5
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgesIndexStaticSsrRouteTests.cs",
+        "method": "KnowledgesRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeGuidelinesStaticSsrRouteTests.cs",
+        "method": "GuidelinesRoute_RendersCompleteLocalizedAccessibleStaticDocument",
+        "params": 6,
+        "rows": [
+          6,
+          6
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeGuidelinesStaticSsrRouteTests.cs",
+        "method": "GuidelinesRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeGuidelinesStaticSsrRouteTests.cs",
+        "method": "GuidelinesRoute_EmitsLocalizedValidHowToStructuredData",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/WorkflowStaticSsrRouteTests.cs",
+        "method": "WorkflowRoute_RendersCompleteLocalizedStaticDocument",
+        "params": 7,
+        "rows": [
+          7,
+          7
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/WorkflowStaticSsrRouteTests.cs",
+        "method": "WorkflowRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/WorkflowStaticSsrRouteTests.cs",
+        "method": "WorkflowRoute_EmitsWebPageAndBreadcrumbStructuredData",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/SpecificationsIndexStaticSsrRouteTests.cs",
+        "method": "SpecificationsIndexRoute_RendersCompleteLocalizedStaticDocument",
+        "params": 8,
+        "rows": [
+          8,
+          8
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/SpecificationsIndexStaticSsrRouteTests.cs",
+        "method": "SpecificationsIndexRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/SpecificationsIndexStaticSsrRouteTests.cs",
+        "method": "SpecificationsIndexRoute_EmitsWebPageAndBreadcrumbStructuredData",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalPrintingStaticSsrRouteTests.cs",
+        "method": "ThreeDimensionalPrintingSpecificationRoute_RendersCompleteLocalizedAccessibleDocument",
+        "params": 9,
+        "rows": [
+          9,
+          9
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalPrintingStaticSsrRouteTests.cs",
+        "method": "ThreeDimensionalPrintingSpecificationRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalPrintingStaticSsrRouteTests.cs",
+        "method": "ThreeDimensionalPrintingSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema",
+        "params": 5,
+        "rows": [
+          5,
+          5
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalScanningStaticSsrRouteTests.cs",
+        "method": "ThreeDimensionalScanningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument",
+        "params": 12,
+        "rows": [
+          12,
+          12
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalScanningStaticSsrRouteTests.cs",
+        "method": "ThreeDimensionalScanningSpecificationRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalScanningStaticSsrRouteTests.cs",
+        "method": "ThreeDimensionalScanningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema",
+        "params": 5,
+        "rows": [
+          5,
+          5
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeCncMachiningStaticSsrRouteTests.cs",
+        "method": "CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument",
+        "params": 12,
+        "rows": [
+          12,
+          12
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeCncMachiningStaticSsrRouteTests.cs",
+        "method": "CncMachiningSpecificationRoute_PreservesCanonicalAndLocalizedAlternates",
+        "params": 4,
+        "rows": [
+          4,
+          4
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeCncMachiningStaticSsrRouteTests.cs",
+        "method": "CncMachiningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema",
+        "params": 5,
+        "rows": [
+          5,
+          5
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeCenterGuidesBrowserTests.cs",
+        "method": "Guides_HaveReadableActionsAndResponsiveContent",
+        "params": 2,
+        "rows": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "pass": true
+      },
+      {
+        "path": "Legacy.Maliev.Web.Tests/KnowledgeGuideBundleRouteTests.cs",
+        "method": "DiagramsAreServedWithExactSourceBytes",
+        "params": 2,
+        "rows": [
+          2,
+          2,
+          2
+        ],
+        "pass": true
+      }
+    ],
+    "localizedKeyCoverage": [
+      {
+        "source": "Index",
+        "visibleKeys": 36,
+        "uniqueKeys": 36,
+        "thaiEntries": 46,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 0,
+        "ids": [
+          "cnc-guides",
+          "project-guides",
+          "before-sending",
+          "knowledge-next"
+        ]
+      },
+      {
+        "source": "Guidelines",
+        "visibleKeys": 34,
+        "uniqueKeys": 33,
+        "thaiEntries": 44,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 0,
+        "ids": [
+          "files",
+          "guideline-files",
+          "requirements",
+          "guideline-result",
+          "guideline-requirements",
+          "confidentiality",
+          "guideline-confidentiality"
+        ]
+      },
+      {
+        "source": "Workflow",
+        "visibleKeys": 24,
+        "uniqueKeys": 23,
+        "thaiEntries": 36,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 0,
+        "ids": [
+          "review",
+          "approval",
+          "delivery"
+        ]
+      },
+      {
+        "source": "Specifications/Index",
+        "visibleKeys": 32,
+        "uniqueKeys": 29,
+        "thaiEntries": 36,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 0,
+        "ids": [
+          "compare-inputs",
+          "other-processes"
+        ]
+      },
+      {
+        "source": "Specifications/3D-Printing",
+        "visibleKeys": 43,
+        "uniqueKeys": 42,
+        "thaiEntries": 50,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 4,
+        "ids": [
+          "geometry",
+          "process",
+          "fit",
+          "finish"
+        ]
+      },
+      {
+        "source": "Specifications/3D-Scanning",
+        "visibleKeys": 45,
+        "uniqueKeys": 44,
+        "thaiEntries": 52,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 3,
+        "ids": [
+          "deliverables",
+          "measurement",
+          "preparation",
+          "request"
+        ]
+      },
+      {
+        "source": "Specifications/CNC-Machining",
+        "visibleKeys": 130,
+        "uniqueKeys": 118,
+        "thaiEntries": 126,
+        "duplicateThai": 0,
+        "missing": [],
+        "references": 19,
+        "ids": [
+          "files",
+          "thin-walls",
+          "radii-pockets",
+          "size-fixturing",
+          "warpage",
+          "chatter",
+          "holes-threads",
+          "tolerances",
+          "axes",
+          "edm",
+          "grinding",
+          "finishing"
+        ]
+      }
+    ],
+    "newDiffTrailingWhitespace": 0,
+    "all44DiffReconstruction": "PASS beforeandafterlinecontent reconstructed",
+    "workflow": {
+      "onlyIntendedAdditions": true,
+      "existingNamedStepsPreserved": true,
+      "noNewJobs": true,
+      "focusClassesAdded": 2
+    },
+    "priorGuardedChecks": "7RESXparsedunique/missingkeys0/forbiddenspelling0;3SVGXMLparse+exactsourceblobs;trackedgitdiff--checkPASS beforelater4test/workflowcorrections",
+    "notClaimed": "No current44pathgitapply/format/XMLreexecution/native/browser/Actions acceptance"
+  },
+  "authoredNewCaseForecast": {
+    "activeRetainedHTTP": 28,
+    "exactSVGHTTP": 3,
+    "browserLocaleViewport": 4,
+    "browserFacts": 2,
+    "total": 37,
+    "executionCredit": false,
+    "existingTheoryMethodsAndRowCounts": "retained; sourcecopyarguments intentionallysuperseded"
+  },
+  "review": {
+    "reviewer": "/root/review_460_terminal_dom",
+    "disposition": "SOURCE GO",
+    "findings": 0,
+    "scope": "Earlier37pathsreview;7correctedblobs+fc3workflowbaseindependentlyreadbackremotely. Primaryverifiedall44blobreadbacks.",
+    "limits": "No nativechecks/currentnew44gitapply; reviewer did not independentlyacquireoriginalbytes"
+  },
+  "requiredHostedValidation": [
+    "Release0warnings0errors",
+    "existingKnowledgeSidebarclasses+newKnowledgeGuideBundleRouteTests+KnowledgeCenterGuidesBrowserTests",
+    "allrelevantexisting7SSRtests",
+    "fullsuite",
+    "format/static/security/contracts/browser",
+    "unchangedgeneratedinclusivecoverage",
+    "protectedreview/mergechecks andexactmainaftermerge"
+  ],
+  "integrationCaution": "Exactbasefc3only. Root549candidate246/653 haslaterchangesinworkflow/PublicRouteAssets. Do not overwrite differingpreimages; rebaseadditivehooks preservingallcurrentgates/contactLINEmapping ifintegratingthere. Rootsolepublisher/CIcollector.",
+  "localState": {
+    "worktree": "B:/maliev-legacy/.worktrees/web-knowledge-sidebar-20261005",
+    "branch": "codex/knowledge-guides-596-20261016",
+    "preservedPaths": 43,
+    "localWIPUntouched": true,
+    "localWIPStaleRelativeToRemotePacket": "fourtestcorrections+workflow+browserformat/screenshotonlyexistcached/remotepacket, notsilentlywrittenlocal",
+    "guardRefusalKiB": 3067500,
+    "requiredKiB": 3145728,
+    "localReadsAfterRefusal": 0
+  },
+  "resources": {
+    "helpers": [],
+    "containers": [],
+    "browserWorkers": [],
+    "ports": [],
+    "volumes": [],
+    "reviewerLeaseReleased": true
+  },
+  "publication": "Unreferencedblobs only; no branch,commit,PR,CIqueue,deployment orsourceclosureclaim."
+}

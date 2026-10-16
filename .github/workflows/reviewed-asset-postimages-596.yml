@@ -1,0 +1,55 @@
+name: Reviewed Web 596 asset postimages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/reviewed-asset-postimages-596.yml'
+      - 'scripts/build-reviewed-asset-postimages-596.mjs'
+      - '.migration-asset-inputs/596/packet.json'
+      - '.migration-asset-inputs/596/reviewed.patch'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewed-web-596-assets-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Legacy.Maliev.Web/package-lock.json
+      - name: Verify immutable input and apply in ephemeral workspace
+        env:
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/build-reviewed-asset-postimages-596.mjs prepare
+      - name: Install locked ordinary Node dependencies
+        working-directory: Legacy.Maliev.Web
+        run: npm ci --os=linux --ignore-scripts --no-audit --no-fund
+      - name: Build all public assets
+        working-directory: Legacy.Maliev.Web
+        run: npm run build
+      - name: Seal full generated inventory
+        env:
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/build-reviewed-asset-postimages-596.mjs collect
+      - name: Upload review artifact only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: reviewed-web-596-postimages-${{ github.event.pull_request.head.sha }}
+          path: asset-postimages-596/
+          if-no-files-found: error
+          retention-days: 7
