@@ -65,6 +65,46 @@ class Guards(unittest.TestCase):
             with self.assertRaises(ValueError):
                 packaged.accepted_receipt(dict(receipt, **override), 'a' * 40)
 
+    def test_packaged_payload_and_copy_inputs_require_actual_image_proof(self):
+        from fnmatch import fnmatchcase
+        import yaml
+        workflow = yaml.safe_load((path.parents[1] / '.github/workflows/web-packaged-image.yml').read_text())
+        events = workflow.get('on', workflow.get(True))
+        self.assertNotIn('push', events)  # Caller identity is the existing PR head, not a new push role.
+        selectors = events['pull_request']['paths']
+        # This caller currently uses positive exact paths and directory globs only.
+        self.assertFalse(any(selector.startswith('!') for selector in selectors))
+        for changed in (
+            'Legacy.Maliev.Web/wwwroot/dist/app.min.js',
+            'Legacy.Maliev.Web/wwwroot/dist/site.min.css',
+            'Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json',
+            'Legacy.Maliev.Web/wwwroot/dist/assets/fa-solid-900-EFITDVWS.woff2',
+            'Legacy.Maliev.Web/wwwroot/lib/outfit/outfit-latin-400-normal.woff2',
+            'Legacy.Maliev.Web/wwwroot/lib/ibm-plex/NotoSansThai-Regular.woff2',
+            '.dockerignore',
+            'Legacy.Maliev.Web/Legacy.Maliev.Web.csproj',
+        ):
+            with self.subTest(changed=changed):
+                self.assertTrue(any(fnmatchcase(changed, selector) for selector in selectors),
+                                'Packaged payload/copy input must enroll the existing actual-image gate')
+
+    def test_packaged_input_enrollment_stays_bounded_to_owned_payloads(self):
+        from fnmatch import fnmatchcase
+        import yaml
+        workflow = yaml.safe_load((path.parents[1] / '.github/workflows/web-packaged-image.yml').read_text())
+        events = workflow.get('on', workflow.get(True))
+        selectors = events['pull_request']['paths']
+        for changed in (
+            'README.md',
+            'docs/asset-proof.md',
+            'Legacy.Maliev.Web/wwwroot/distinct/app.min.js',
+            'Legacy.Maliev.Web/wwwroot/lib/outfit-other/font.woff2',
+        ):
+            with self.subTest(changed=changed):
+                self.assertFalse(any(fnmatchcase(changed, selector) for selector in selectors),
+                                 'Do not broaden the actual-image job to unrelated or lookalike paths')
+
+
 
 if __name__ == '__main__':
     unittest.main()
