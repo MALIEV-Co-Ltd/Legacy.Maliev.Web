@@ -15,9 +15,29 @@ using Microsoft.Extensions.Localization;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Controlled public Web reset form; no Auth producer, credential write or original-source qualification.</summary>
-public sealed class PublicAccountWorkflowTestsPasswordResetBoundary(TestingWebApplicationFactory factory)
-    : IClassFixture<TestingWebApplicationFactory>
+public sealed class PublicAccountWorkflowTestsPasswordResetBoundary : IAsyncLifetime
 {
+    private OwnedWebSurfaceParent? ownedParent = new();
+    private OwnedWebSurfaceParent factory => ownedParent ?? throw new ObjectDisposedException(nameof(PublicAccountWorkflowTestsPasswordResetBoundary));
+    internal OwnedWebSurfaceParent LifetimeParent => factory;
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
+    {
+        var parent = ownedParent;
+        try
+        {
+            if (parent is not null) await parent.DisposeAsync();
+        }
+        finally { ownedParent = null; }
+    }
+
+    internal WebApplicationFactory<Program> CreateLifetimeChild() =>
+        Configure(new ResetPasswordLegacyBoundary { Result = true });
+
+    internal static HttpClient CreateLifetimeClient(WebApplicationFactory<Program> application) => Client(application);
+
     private const string Email = PublicAccountWorkflowTestsPasswordResetClient.Email;
     private const string Token = PublicAccountWorkflowTestsPasswordResetClient.Token;
     private const string Password = PublicAccountWorkflowTestsPasswordResetClient.Password;

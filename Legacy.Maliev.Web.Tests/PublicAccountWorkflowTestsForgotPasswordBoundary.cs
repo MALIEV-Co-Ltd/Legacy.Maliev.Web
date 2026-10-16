@@ -18,9 +18,30 @@ using Microsoft.Extensions.Logging;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Controlled Web boundaries only; no Auth or notification provider qualification.</summary>
-public sealed class PublicAccountWorkflowTestsForgotPasswordBoundary(TestingWebApplicationFactory factory)
-    : IClassFixture<TestingWebApplicationFactory>
+public sealed class PublicAccountWorkflowTestsForgotPasswordBoundary : IAsyncLifetime
 {
+    private OwnedWebSurfaceParent? ownedParent = new();
+    private OwnedWebSurfaceParent factory => ownedParent ?? throw new ObjectDisposedException(nameof(PublicAccountWorkflowTestsForgotPasswordBoundary));
+    internal OwnedWebSurfaceParent LifetimeParent => factory;
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
+    {
+        var parent = ownedParent;
+        try
+        {
+            if (parent is not null) await parent.DisposeAsync();
+        }
+        finally { ownedParent = null; }
+    }
+
+    internal WebApplicationFactory<Program> CreateLifetimeChild() =>
+        Configure(new AccountBoundary(new CustomerActionChallenge(false, null, true, true)),
+            new NotificationBoundary(_ => Task.FromResult(new NotificationResult(true, true, true))), new CapturedLogger());
+
+    internal static HttpClient CreateLifetimeClient(WebApplicationFactory<Program> application) => Client(application);
+
     private const string Email = "forgot-boundary@example.invalid";
     private const string Token = "private-reset-token-boundary";
     private const string PasswordProbe = "private-password-boundary";
