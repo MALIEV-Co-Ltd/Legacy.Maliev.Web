@@ -142,17 +142,15 @@ public sealed class MaterialPricingDisplayBrowserTests
             await Assertions.Expect(selected.Locator("[data-material-card-price]"))
                 .ToHaveAttributeAsync("data-price-status", "pending");
             var during = await scroller.EvaluateAsync<double[]>(geometry, false);
-            Assert.True(during[0] >= original[0] - 1,
-                "Repricing may minimally repair a growing card but must not jump back to its category heading. "
-                + System.Text.Json.JsonSerializer.Serialize(new { Original = original, During = during }));
+            AssertManualCardScrollPreserved(original, during,
+                "Repricing may minimally repair a growing card but must not jump back to its category heading.");
             await AssertSelectedCardVisibleAsync(scroller);
         }
         finally { gate.Release.TrySetResult(); }
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         var after = await scroller.EvaluateAsync<double[]>(geometry, false);
-        Assert.True(after[0] >= original[0] - 1,
-            "The final price must not jump a deliberately positioned card back to its heading. "
-            + System.Text.Json.JsonSerializer.Serialize(new { Original = original, After = after }));
+        AssertManualCardScrollPreserved(original, after,
+            "The final price must not jump a deliberately positioned card back to its heading.");
         await AssertSelectedCardVisibleAsync(scroller);
         Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
     }
@@ -193,6 +191,61 @@ public sealed class MaterialPricingDisplayBrowserTests
             }
             """);
         Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+    }
+
+    [Fact]
+    public void ManualScrollGeometry_RebasesObservedShrinkButRejectsHeadingJumpClippingAndSelectionLoss()
+    {
+        double[] original = [1507, 1961, 384, 887.328125, 1271.328125, 903.703125, 997.0625,
+            878.90625, 895.703125, 0, 0, 1, 2684];
+        double[] current = [1329, 1730, 384, -7.671875, 376.328125, 9.28125, 90.046875,
+            -15.515625, 1.28125, 0, 0, 1, 2741.9];
+        Assert.True(current[1] - current[2] < original[0] - 1,
+            "The original absolute-scroll assertion is impossible after this observed content shrink.");
+        AssertManualCardScrollPreserved(original, current, "Observed anchored layout shrink");
+        AssertManualCardScrollPreserved(original, original, "Unchanged layout");
+
+        var headingReveal = (double[])current.Clone();
+        headingReveal[0] -= 9;
+        foreach (var index in new[] { 5, 6, 7, 8 }) headingReveal[index] += 9;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, headingReveal, "True heading reveal"));
+
+        var downwardJump = (double[])original.Clone();
+        downwardJump[0] -= 1.5;
+        foreach (var index in new[] { 5, 6, 7, 8 }) downwardJump[index] += 1.5;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, downwardJump, "Downward jump exceeds the unchanged one-pixel bound"));
+
+        var clippedTop = (double[])current.Clone();
+        clippedTop[5] = clippedTop[3] - 2;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, clippedTop, "Clipped selected-card top"));
+
+        var clippedBottom = (double[])current.Clone();
+        clippedBottom[6] = clippedBottom[4] + 2;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, clippedBottom, "Clipped selected-card bottom"));
+
+        var lostSelection = (double[])current.Clone();
+        lostSelection[11] = 0;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, lostSelection, "Selection lost"));
+    }
+
+    private static void AssertManualCardScrollPreserved(double[] original, double[] current, string message)
+    {
+        var originalCardTop = original[5] - original[3];
+        var currentCardTop = current[5] - current[3];
+        // Rebase scroll coordinates when rows above the selected card change height.
+        // This is exactly currentCardTop <= originalCardTop + 1, not a larger tolerance.
+        var contentOffsetDelta = (current[0] + currentCardTop) - (original[0] + originalCardTop);
+        var rebasedOriginal = original[0] + contentOffsetDelta;
+        Assert.True(current[0] >= rebasedOriginal - 1,
+            message + " " + System.Text.Json.JsonSerializer.Serialize(new { Original = original, Current = current }));
+        Assert.True(current[5] >= current[3] - 1 && current[6] <= current[4] + 1,
+            "The selected material must remain fully visible within its own scroller.");
+        Assert.Equal(1d, current[11]);
     }
 
     private static async Task AssertSelectedCardVisibleAsync(ILocator scroller)
