@@ -48,6 +48,14 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
                 var opener = page.Locator("[data-workspace-open]");
                 await opener.FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
+                await page.WaitForFunctionAsync("""
+                    () => {
+                        const drawer = document.querySelector('#knowledge-navigation');
+                        return !!drawer && drawer.classList.contains('is-open') && !drawer.inert
+                            && document.querySelector('[data-workspace-open]')?.getAttribute('aria-expanded') === 'true'
+                            && document.activeElement === drawer.querySelector('[data-workspace-close]');
+                    }
+                    """);
                 Assert.Equal("true", await opener.GetAttributeAsync("aria-expanded"));
                 Assert.True(await sidebar.EvaluateAsync<bool>("element => element.classList.contains('is-open')"));
                 Assert.True(await sidebar.Locator("[data-workspace-close]").EvaluateAsync<bool>(
@@ -56,6 +64,14 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
                 Assert.Equal("false", await opener.GetAttributeAsync("aria-expanded"));
                 Assert.True(await opener.EvaluateAsync<bool>("element => document.activeElement === element"));
                 await page.Keyboard.PressAsync("Enter");
+                await page.WaitForFunctionAsync("""
+                    () => {
+                        const drawer = document.querySelector('#knowledge-navigation');
+                        return !!drawer && drawer.classList.contains('is-open') && !drawer.inert
+                            && document.querySelector('[data-workspace-open]')?.getAttribute('aria-expanded') === 'true'
+                            && document.activeElement === drawer.querySelector('[data-workspace-close]');
+                    }
+                    """);
                 await page.WaitForFunctionAsync("""
                     () => {
                         const bounds = document.querySelector('#knowledge-navigation')?.getBoundingClientRect();
