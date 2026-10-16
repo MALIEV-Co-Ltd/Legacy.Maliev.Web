@@ -89,6 +89,17 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
             {
                 await page.Locator("[data-workspace-open]").FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
+                // open() hands focus to Close on its next animation frame.
+                // Await that handoff before focusing the destination link, or the
+                // pending frame can overwrite the explicit keyboard target.
+                await page.WaitForFunctionAsync("""
+                    () => {
+                        const drawer = document.querySelector('#knowledge-navigation');
+                        return !!drawer && drawer.classList.contains('is-open') && !drawer.inert
+                            && document.querySelector('[data-workspace-open]')?.getAttribute('aria-expanded') === 'true'
+                            && document.activeElement === drawer.querySelector('[data-workspace-close]');
+                    }
+                    """);
             }
             var specificationsLink = page.Locator("#knowledge-navigation").GetByRole(AriaRole.Link,
                 new LocatorGetByRoleOptions

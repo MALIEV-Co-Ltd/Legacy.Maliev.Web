@@ -16,7 +16,7 @@
     <meta name="description" content="@description" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="documentLinks" />
-    <KnowledgeGuidelinesStructuredData CanonicalUrl="documentLinks.CanonicalUrl" />
+    <KnowledgeGuidelinesStructuredData CanonicalUrl="@documentLinks.CanonicalUrl" />
 </HeadContent>
 <div class="docs-page" data-migration-route-owner="blazor-static-ssr">
     <div class="workspace-shell docs-shell">
