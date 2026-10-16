@@ -29,6 +29,7 @@ public sealed class LineContactNormalizationBrowserTests(PublicContactBrowserFix
     [InlineData("https://line.me/ti/p/%40maliev/extra")]
     [InlineData("https://example.test/ti/p/@maliev")]
     [InlineData("https://line.me/ti/p/%zz")]
+    [InlineData("https://line.me/ti/p/%40%4Daliev")]
     public async Task RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic(string destination)
     {
         await using var context = await NewContext();
@@ -70,9 +71,18 @@ public sealed class LineContactNormalizationBrowserTests(PublicContactBrowserFix
     private async Task<IBrowserContext> NewContext()
     {
         var context = await fixture.Browser.NewContextAsync();
-        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
-            == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
-        return context;
+        try
+        {
+            await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
+                == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
+            return context;
+        }
+        catch (Exception original)
+        {
+            try { await context.DisposeAsync(); }
+            catch (Exception cleanup) { OwnedWebSurfaceResources.RecordFailureTypes(original, [cleanup]); }
+            throw;
+        }
     }
 
     private async Task Load(IPage page, string culture)

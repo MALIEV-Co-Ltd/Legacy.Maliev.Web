@@ -186,7 +186,10 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         {
             if (string.IsNullOrWhiteSpace(directory)) return;
             Directory.CreateDirectory(directory);
+            failureEvidence.AwaitBoundary(state + "-screenshot", false);
             await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"sidebar-{culture}-{width}-{state}.png"), FullPage = true });
+            failureEvidence.AwaitBoundary(state + "-screenshot", true);
+            failureEvidence.AwaitBoundary(state + "-geometry", false);
             var geometry = await rail.EvaluateAsync<JsonElement>("""
                 rail => ({ viewport:innerWidth, document:document.documentElement.scrollWidth,
                   rail:{client:rail.clientWidth,scroll:rail.scrollWidth},
@@ -195,7 +198,10 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                     bounds:card.getBoundingClientRect().toJSON(),
                     buttons:[...card.querySelectorAll('button')].map(button=>({text:button.textContent,bounds:button.getBoundingClientRect().toJSON()}))})) })
                 """);
+            failureEvidence.AwaitBoundary(state + "-geometry", true);
+            failureEvidence.AwaitBoundary(state + "-write", false);
             await File.WriteAllTextAsync(Path.Combine(directory, $"sidebar-{culture}-{width}-{state}.json"), geometry.GetRawText());
+            failureEvidence.AwaitBoundary(state + "-write", true);
         }
         await rail.ScrollIntoViewIfNeededAsync();
         await Capture("initial");
@@ -223,6 +229,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 """), "Every rendered line of the full part name must fit its card and rail.");
             var view = card.Locator("button").First;
             var remove = card.Locator("button").Last;
+            var keyboardOperation = name == names[0] ? "first-keyboard" : "second-keyboard";
+            failureEvidence.AwaitBoundary(keyboardOperation, false);
             await view.FocusAsync();
             Assert.True(await view.EvaluateAsync<bool>("""
                 button => { const r=button.getBoundingClientRect();
@@ -238,12 +246,14 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                   return r.width>=44 && r.height>=44 && style.outlineStyle!=='none'
                     && button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)); }
                 """), "The focused Remove action must be exposed, usable, and visibly focused.");
+            failureEvidence.AwaitBoundary(keyboardOperation, true);
             await Capture(name == names[0] ? "first-focused" : "second-focused");
         }
         // Historical inputs have no live FileService deletion capability. Test Remove reachability,
         // and exercise real View/Review/Customer transitions without claiming upload deletion proof.
         Assert.Equal(names, (await store.GetAsync(sessionId, null, default))!.Parts.Select(part => part.DisplayFileName));
         failureEvidence.Stage("Review");
+        failureEvidence.AwaitBoundary("review", false);
         await review.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(2);
@@ -254,7 +264,9 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await Assertions.Expect(continueButton).ToBeFocusedAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(page.Locator("[data-workflow-customer-details]")).ToBeFocusedAsync();
+        failureEvidence.AwaitBoundary("review", true);
         failureEvidence.Stage("CustomerInput");
+        failureEvidence.AwaitBoundary("customer-input", false);
         var firstName = page.Locator("input[name='FirstName']");
         var longName = culture == "th" ? "ชื่อลูกค้าทดสอบสำหรับตรวจสอบความกว้างของแบบฟอร์ม" : "LongCustomerNameForResponsiveLayoutVerification";
         await firstName.FillAsync(longName);
@@ -263,6 +275,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
         if (!string.IsNullOrWhiteSpace(directory))
             await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"sidebar-{culture}-{width}-customer.png"), FullPage = true });
+        failureEvidence.AwaitBoundary("customer-input", true);
         try
         {
             Assert.Empty(errors);

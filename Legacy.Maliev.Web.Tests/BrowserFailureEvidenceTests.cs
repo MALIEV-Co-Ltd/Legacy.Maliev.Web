@@ -425,6 +425,208 @@ public sealed class BrowserFailureEvidenceTests
         Assert.False(original.Data.Contains(BrowserFailureEvidence.RecoveryKey));
     }
 
+    [Theory]
+    [InlineData("[2026-10-12T12:12:22.981Z] private filename /ticket timeout", true)]
+    [InlineData("[2026-13-12T12:12:22.981Z] private filename /ticket timeout", false)]
+    [InlineData("private filename /ticket timeout", false)]
+    public async Task ConsoleTimingRetainsOnlyValidatedUtcPrefixAndCategoricalDelivery(string text, bool valid)
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var message = DispatchProxy.Create<IConsoleMessage, EventProxy>();
+        ((EventProxy)(object)message).Text = text;
+        using var evidence = new BrowserFailureEvidence(page);
+        ((EventProxy)(object)page).Raise("Console", message);
+        var output = new List<string>();
+        await evidence.AttachAsync(new TimeoutException("primary"),
+            () => Task.FromResult("{\"workflow\":\"configured\"}"), output.Add);
+        var json = Assert.Single(output);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        Assert.Equal("managed-callback-arrival", root.GetProperty("ClockDomain").GetString());
+        Assert.Equal(TimeSpan.Zero, root.GetProperty("ClockOriginUtc").GetDateTimeOffset().Offset);
+        var item = Assert.Single(root.GetProperty("Events").EnumerateArray());
+        Assert.Equal("timeout", item.GetProperty("Category").GetString());
+        Assert.Equal(TimeSpan.Zero, item.GetProperty("CallbackUtc").GetDateTimeOffset().Offset);
+        Assert.True(item.GetProperty("Milliseconds").GetInt64() >= 0);
+        var emitted = item.GetProperty("BrowserEmittedUtc");
+        if (valid)
+            Assert.Equal(new DateTimeOffset(2026, 10, 12, 12, 12, 22, TimeSpan.Zero).AddMilliseconds(981),
+                emitted.GetDateTimeOffset());
+        else
+            Assert.Equal(JsonValueKind.Null, emitted.ValueKind);
+        Assert.DoesNotContain("private", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("/ticket", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AwaitMarkersRejectUnknownNamesAndClearCompletedOperation()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        using var evidence = new BrowserFailureEvidence(page);
+        evidence.AwaitBoundary("private customer filename", false);
+        proxy.Raise("PageError", "private disconnect");
+        evidence.AwaitBoundary("first-keyboard", false);
+        proxy.Raise("PageError", "private disconnect");
+        evidence.AwaitBoundary("first-keyboard", true);
+        proxy.Raise("PageError", "private disconnect");
+        var output = new List<string>();
+        await evidence.AttachAsync(new TimeoutException("primary"),
+            () => Task.FromResult("{\"workflow\":\"configured\"}"), output.Add);
+        var json = Assert.Single(output);
+        using var document = JsonDocument.Parse(json);
+        var events = document.RootElement.GetProperty("Events").EnumerateArray().ToArray();
+        Assert.Equal(JsonValueKind.Null, events[0].GetProperty("ActiveAwait").ValueKind);
+        Assert.Equal("first-keyboard", events[1].GetProperty("ActiveAwait").GetString());
+        Assert.Equal(JsonValueKind.Null, events[2].GetProperty("ActiveAwait").ValueKind);
+        var markers = document.RootElement.GetProperty("AwaitEvents").EnumerateArray().ToArray();
+        Assert.Equal(2, markers.Length);
+        Assert.All(markers, item => Assert.Equal("first-keyboard", item.GetProperty("Operation").GetString()));
+        Assert.False(markers[0].GetProperty("Completed").GetBoolean());
+        Assert.True(markers[1].GetProperty("Completed").GetBoolean());
+        Assert.DoesNotContain("private", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AwaitMarkersHaveIndependentFixedCapWithoutWeakeningEventLimit()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        using var evidence = new BrowserFailureEvidence(page);
+        for (var index = 0; index < 20; index++)
+        {
+            evidence.AwaitBoundary("initial-screenshot", false);
+            evidence.AwaitBoundary("initial-screenshot", true);
+        }
+        var proxy = (EventProxy)(object)page;
+        for (var index = 0; index < 40; index++) proxy.Raise("PageError", "private disconnect");
+        var output = new List<string>();
+        await evidence.AttachAsync(new TimeoutException("primary"),
+            () => Task.FromResult("{\"workflow\":\"configured\"}"), output.Add);
+        using var document = JsonDocument.Parse(Assert.Single(output));
+        Assert.Equal(32, document.RootElement.GetProperty("AwaitEvents").GetArrayLength());
+        Assert.True(document.RootElement.GetProperty("AwaitTruncated").GetBoolean());
+        Assert.Equal(32, document.RootElement.GetProperty("Events").GetArrayLength());
+        Assert.True(document.RootElement.GetProperty("Truncated").GetBoolean());
+    }
+
+    [Fact]
+    public void FinishingNavigation_OnlyFixedPublicCategoriesLeaveTheCollector()
+    {
+        var origin = new Uri("http://127.0.0.1:1234");
+        Assert.Equal("/services/finishing-and-color", FinishingNavigationEvidence.Classify(origin,
+            "http://127.0.0.1:1234/services/finishing-and-color?private=secret"));
+        Assert.Equal("/dist/site.min.css", FinishingNavigationEvidence.Classify(origin,
+            "http://127.0.0.1:1234/dist/site.min.css?private=secret"));
+        Assert.Equal("<other>", FinishingNavigationEvidence.Classify(origin,
+            "http://127.0.0.1:1234/customer/private-file?token=secret"));
+        Assert.Equal("<third-party>", FinishingNavigationEvidence.Classify(origin,
+            "https://external.invalid/private-file?token=secret"));
+        Assert.Equal("<other>", FinishingNavigationEvidence.Classify(origin, "not a private URI"));
+    }
+
+    [Fact]
+    public void FinishingNavigation_RequestStorageCountersAndOutputAreBounded()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        using var evidence = new FinishingNavigationEvidence(page, new Uri("http://127.0.0.1:1234"));
+        for (var index = 0; index < 10020; index++)
+        {
+            evidence.RecordRequest(new object(), "private-type", "http://127.0.0.1:1234/private?token=secret", false);
+        }
+        var output = new List<string>();
+        evidence.Report(output.Add);
+        var json = Assert.Single(output);
+        Assert.True(json.Length <= 8192);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(32, document.RootElement.GetProperty("Pending").GetArrayLength());
+        Assert.True(document.RootElement.GetProperty("Truncated").GetBoolean());
+        Assert.Equal(9999, document.RootElement.GetProperty("Started").GetInt32());
+        Assert.DoesNotContain("private", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("?", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FinishingNavigation_LifecycleAndFaultsPreservePrimaryAndDetachDelegates()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        var evidence = new FinishingNavigationEvidence(page, new Uri("http://127.0.0.1:1234"));
+        proxy.Raise("DOMContentLoaded", page);
+        proxy.Raise("Load", page);
+        var output = new List<string>();
+        evidence.Report(output.Add);
+        using (var document = JsonDocument.Parse(Assert.Single(output)))
+        {
+            Assert.True(document.RootElement.GetProperty("DomContentLoaded").GetBoolean());
+            Assert.True(document.RootElement.GetProperty("Loaded").GetBoolean());
+        }
+        proxy.ThrowRemove = "Request";
+        proxy.RemoveFailures = 1;
+        var original = new TimeoutException("primary");
+        var actual = Record.Exception((Action)(() =>
+        {
+            try { throw original; }
+            catch
+            {
+                evidence.Report(_ => throw new InvalidOperationException("private-sink"));
+                throw;
+            }
+            finally { evidence.Dispose(); }
+        }));
+        Assert.Same(original, actual);
+        evidence.Dispose();
+        Assert.Empty(proxy.Handlers);
+
+        var failedPage = DispatchProxy.Create<IPage, EventProxy>();
+        var failedProxy = (EventProxy)(object)failedPage;
+        failedProxy.ThrowAdd = "Response";
+        failedProxy.ThrowAfterAdd = true;
+        using var failed = new FinishingNavigationEvidence(failedPage, new Uri("http://127.0.0.1:1234"));
+        Assert.Empty(failedProxy.Handlers);
+    }
+
+    [Fact]
+    public void FinishingNavigation_NewMainRequestCannotReuseThePreviousResponseOrCompletion()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        using var evidence = new FinishingNavigationEvidence(page, new Uri("http://127.0.0.1:1234"));
+        var output = new List<string>();
+        evidence.Report(output.Add);
+        using (var beforeRequest = JsonDocument.Parse(output[^1]))
+        {
+            Assert.Equal(JsonValueKind.Null, beforeRequest.RootElement.GetProperty("MainResponseStatus").ValueKind);
+            Assert.Equal(JsonValueKind.Null, beforeRequest.RootElement.GetProperty("MainResponseElapsedMs").ValueKind);
+            Assert.False(beforeRequest.RootElement.GetProperty("MainDocumentFinished").GetBoolean());
+        }
+        var first = DispatchProxy.Create<IRequest, EventProxy>();
+        evidence.RecordRequest(first, "document", "http://127.0.0.1:1234/services/finishing-and-color", true);
+        var response = DispatchProxy.Create<IResponse, EventProxy>();
+        var responseProxy = (EventProxy)(object)response;
+        responseProxy.ResponseRequest = first;
+        responseProxy.ResponseStatus = 302;
+        proxy.Raise("Response", response);
+        proxy.Raise("RequestFinished", first);
+        evidence.Report(output.Add);
+        using (var firstResponse = JsonDocument.Parse(output[^1]))
+        {
+            Assert.Equal(302, firstResponse.RootElement.GetProperty("MainResponseStatus").GetInt32());
+            Assert.Equal(JsonValueKind.Number, firstResponse.RootElement.GetProperty("MainResponseElapsedMs").ValueKind);
+            Assert.True(firstResponse.RootElement.GetProperty("MainDocumentFinished").GetBoolean());
+        }
+        var second = DispatchProxy.Create<IRequest, EventProxy>();
+        evidence.RecordRequest(second, "document", "http://127.0.0.1:1234/services/finishing-and-color", true);
+        // A late old-generation response/completion must not repopulate the new generation.
+        proxy.Raise("Response", response);
+        proxy.Raise("RequestFinished", first);
+        evidence.Report(output.Add);
+        using var secondRequest = JsonDocument.Parse(output[^1]);
+        Assert.Equal(JsonValueKind.Null, secondRequest.RootElement.GetProperty("MainResponseStatus").ValueKind);
+        Assert.Equal(JsonValueKind.Null, secondRequest.RootElement.GetProperty("MainResponseElapsedMs").ValueKind);
+        Assert.False(secondRequest.RootElement.GetProperty("MainDocumentFinished").GetBoolean());
+    }
+
     // No browser or SDK process is created: only interface event accessors are emulated.
     public class EventProxy : DispatchProxy
     {
@@ -432,6 +634,8 @@ public sealed class BrowserFailureEvidenceTests
         internal int Adds;
         internal int Removes;
         internal string Url = "https://example.test/_blazor";
+        internal string Text = "private timeout";
+        internal string Type = "error";
         internal string? ThrowAdd;
         internal bool ThrowAfterAdd;
         internal string? ThrowRemove;
@@ -439,6 +643,8 @@ public sealed class BrowserFailureEvidenceTests
         internal bool ThrowAfterRemove;
         internal Func<Task> OnClose = () => Task.CompletedTask;
         internal int CloseCalls;
+        internal IRequest? ResponseRequest;
+        internal int ResponseStatus = 200;
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             var name = targetMethod!.Name;
@@ -465,7 +671,11 @@ public sealed class BrowserFailureEvidenceTests
                 if (fail) throw new InvalidOperationException("private-remove-fault");
                 return null;
             }
+            if (name == "get_Request") return ResponseRequest;
+            if (name == "get_Status") return ResponseStatus;
             if (name == "get_Url") return Url;
+            if (name == "get_Text") return Text;
+            if (name == "get_Type") return Type;
             if (name == "CloseAsync")
             {
                 CloseCalls++;

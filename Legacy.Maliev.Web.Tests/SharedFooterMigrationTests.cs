@@ -91,8 +91,8 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
             $"href=\"{SocialNetworks.Messenger}\" target=\"_blank\" rel=\"noopener noreferrer\"",
             source,
             StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Contact MALIEV through Messenger\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("href=\"https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"aria-label=\"{(culture == "th" ? "ติดต่อ MALIEV ผ่าน Messenger" : "Contact MALIEV through Messenger")}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"{SocialNetworks.Facebook}\"", source, StringComparison.Ordinal);
         Assert.Contains("target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         Assert.True(
             source.IndexOf($"href=\"{SocialNetworks.Line}\"", StringComparison.Ordinal) <

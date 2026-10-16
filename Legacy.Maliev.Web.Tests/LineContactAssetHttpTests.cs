@@ -5,9 +5,22 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class LineContactAssetHttpTests(TestingWebApplicationFactory factory)
-    : IClassFixture<TestingWebApplicationFactory>
+public sealed class LineContactAssetHttpTests : IAsyncLifetime
 {
+    private OwnedWebSurfaceParent? ownedParent = new();
+    private OwnedWebSurfaceParent factory => ownedParent ?? throw new ObjectDisposedException(nameof(LineContactAssetHttpTests));
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
+    {
+        var parent = ownedParent;
+        try
+        {
+            if (parent is not null) await parent.DisposeAsync();
+        }
+        finally { ownedParent = null; }
+    }
     [Theory]
     [InlineData("/contact/line")]
     [InlineData("/CONTACT/LINE/")]

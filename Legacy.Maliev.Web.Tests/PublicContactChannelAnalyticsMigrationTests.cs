@@ -3,13 +3,21 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<TestingWebApplicationFactory>
+public sealed class PublicContactChannelAnalyticsMigrationTests : IAsyncLifetime
 {
-    private readonly WebApplicationFactory<Program> factory;
+    private OwnedWebSurfaceParent? ownedParent = new();
+    private OwnedWebSurfaceParent factory => ownedParent ?? throw new ObjectDisposedException(nameof(PublicContactChannelAnalyticsMigrationTests));
 
-    public PublicContactChannelAnalyticsMigrationTests(TestingWebApplicationFactory factory)
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
     {
-        this.factory = factory;
+        var parent = ownedParent;
+        try
+        {
+            if (parent is not null) await parent.DisposeAsync();
+        }
+        finally { ownedParent = null; }
     }
 
     [Fact]
