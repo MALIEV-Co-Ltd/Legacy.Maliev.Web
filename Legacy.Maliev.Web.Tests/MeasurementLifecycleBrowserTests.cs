@@ -186,8 +186,10 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
 
     private static async Task AssertSingleContactDiagnosticAsync(IPage page)
     {
-        var events = await page.EvaluateAsync<JsonElement>(
-            "() => dataLayer.filter(item => item.event === 'maliev_contact_submitted')");
+        var eventsJson = await page.EvaluateAsync<string>(
+            "() => JSON.stringify(dataLayer.filter(item => item.event === 'maliev_contact_submitted'))");
+        using var document = JsonDocument.Parse(eventsJson);
+        var events = document.RootElement;
         Assert.Equal(JsonValueKind.Array, events.ValueKind);
         Assert.Equal(1, events.GetArrayLength());
         var diagnostic = events[0];
