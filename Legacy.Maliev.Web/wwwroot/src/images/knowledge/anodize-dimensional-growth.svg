@@ -1,9 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" fill="none">
-  <rect width="720" height="280" fill="#f4f7fb"/>
-  <rect x="70" y="75" width="240" height="130" fill="#dce4ee" stroke="#6c83a0" stroke-width="2"/>
-  <rect x="430" y="65" width="240" height="150" fill="#eaf2ff" stroke="#075de8" stroke-width="2"/>
-  <rect x="430" y="85" width="240" height="110" fill="#dce4ee"/>
-  <g stroke="#6c83a0" stroke-dasharray="5 5" stroke-width="2"><path d="M400 75H690M400 205H690"/></g>
-  <g fill="#111f33" font-family="sans-serif" font-size="19"><text x="100" y="40">D</text><text x="480" y="40">D + 0.020 mm</text><text x="95" y="250">t = 0</text><text x="440" y="250">t = 20 µm; g = 10 µm</text></g>
-  <path d="M335 140H405M395 130L405 140L395 150" stroke="#075de8" stroke-width="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" role="img" aria-labelledby="title desc">
+<title id="title">Illustrative anodize penetration and outward growth</title>
+<desc id="desc">Original external size D is bounded by dashed reference lines. On each coated surface total oxide thickness t spans the new outer boundary to the remaining metal. Outward growth g spans the new outer boundary to the original surface. Assuming t equals 20 micrometres and g equals 10 micrometres per surface, the external size increases by 0.020 millimetres. Not to scale; pretreatment removal is excluded.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#075de8"/></marker></defs>
+<rect width="720" height="280" fill="#f4f7fb"/>
+<rect x="55" y="80" width="200" height="120" fill="#dce4ee" stroke="#071b31" stroke-width="2"/>
+<rect x="360" y="60" width="200" height="160" fill="#eaf2ff" stroke="#075de8" stroke-width="2"/>
+<rect x="360" y="100" width="200" height="80" fill="#dce4ee" stroke="#071b31" stroke-width="1.5"/>
+<path d="M340 80H701M340 200H581" fill="none" stroke="#6c83a0" stroke-width="1.5" stroke-dasharray="7 4 2 4"/>
+<path d="M568 60H701M568 100H623" fill="none" stroke="#6c83a0" stroke-width="1.5"/>
+<path d="M610 60V100" fill="none" stroke="#075de8" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/><path d="M677 60V80" fill="none" stroke="#075de8" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<path d="M285 35H331" fill="none" stroke="#075de8" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M47 80H16M47 200H16M352 60H317M352 220H317" stroke="#6c83a0" stroke-width="1.5"/><path d="M27 80V200" stroke="#075de8" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/><path d="M330 60V220" stroke="#075de8" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/><text x="17" y="145" fill="#111f33" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" transform="rotate(-90 17 145)">D</text><text x="318" y="140" fill="#111f33" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" transform="rotate(-90 318 140)">D + 0.020 mm</text><g fill="#111f33" font-family="Arial, sans-serif" font-size="19"><text x="155" y="39" text-anchor="middle">UNCOATED</text><text x="460" y="39" text-anchor="middle">COATED</text><text x="627" y="88">t</text><text x="691" y="76">g</text><text x="155" y="246" text-anchor="middle">t = 0</text><text x="487" y="246" text-anchor="middle">t = 20 µm; g = 10 µm per surface</text><text x="360" y="270" font-size="13" text-anchor="middle">ILLUSTRATIVE ASSUMPTION · NOT TO SCALE · PRETREATMENT REMOVAL EXCLUDED</text></g>
 </svg>
