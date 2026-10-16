@@ -117,7 +117,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~BrowserFailureEvidenceTests"
+          --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests"
           --logger trx --results-directory ./browser-failure-evidence-test-results
       - name: Verify all ten sidebar culture and viewport browser cases
         run: >-
