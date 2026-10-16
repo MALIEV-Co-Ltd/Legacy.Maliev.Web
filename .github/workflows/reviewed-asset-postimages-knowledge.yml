@@ -1,0 +1,92 @@
+name: Reviewed Web Knowledge public asset postimages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/reviewed-asset-postimages-knowledge.yml'
+      - 'scripts/build-reviewed-asset-postimages-knowledge.mjs'
+      - '.migration-asset-inputs/knowledge/packet.json'
+      - '.migration-asset-inputs/knowledge/validate-custody.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewed-web-knowledge-assets-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact metadata-only candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: base
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Set up pinned ordinary Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: base/Legacy.Maliev.Web/package-lock.json
+      - name: Verify exact inputs and materialize temporary Knowledge source
+        working-directory: base
+        env:
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git hash-object scripts/build-reviewed-asset-postimages-knowledge.mjs)" = "7e4d6d30a2d7244769a3a68f0201af8b65bde261"
+          node scripts/build-reviewed-asset-postimages-knowledge.mjs prepare
+      - name: Verify company and knowledge byte custody and synthetic controls
+        working-directory: base
+        run: |
+          set -euo pipefail
+          python3 -B tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee asset-postimages-knowledge/company-controls-normal.log
+          python3 -B -O tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee asset-postimages-knowledge/company-controls-optimized.log
+          python3 -B scripts/verify_company_release_assets.py | tee asset-postimages-knowledge/company-custody-normal.json
+          python3 -B -O scripts/verify_company_release_assets.py | tee asset-postimages-knowledge/company-custody-optimized.json
+          python3 -B tests/KnowledgeAssetIntake.Tests.py 2>&1 | tee asset-postimages-knowledge/knowledge-controls-normal.log
+          python3 -B -O tests/KnowledgeAssetIntake.Tests.py 2>&1 | tee asset-postimages-knowledge/knowledge-controls-optimized.log
+          python3 -B .migration-asset-inputs/knowledge/validate-custody.py | tee asset-postimages-knowledge/knowledge-custody-normal.json
+          python3 -B -O .migration-asset-inputs/knowledge/validate-custody.py | tee asset-postimages-knowledge/knowledge-custody-optimized.json
+      - name: Install locked ordinary Node dependencies without lifecycle scripts
+        working-directory: base/Legacy.Maliev.Web
+        run: npm ci --os=linux --ignore-scripts --no-audit --no-fund
+      - name: Build public assets
+        working-directory: base/Legacy.Maliev.Web
+        run: npm run build
+      - name: Run bounded reviewed public Node and Knowledge search tests
+        working-directory: base/Legacy.Maliev.Web
+        run: |
+          set -euo pipefail
+          node --test \
+            tests/home-hero-callouts.test.cjs \
+            tests/home-hero-carousel.test.cjs \
+            tests/material-card-selector.test.mjs \
+            tests/release-asset-validator.test.mjs \
+            ../Legacy.Maliev.Web.Tests/JavaScript/knowledge-search.test.cjs 2>&1 | tee ../asset-postimages-knowledge/node-tests.log
+      - name: Seal full generated inventory and emit bounded public postimages
+        working-directory: base
+        env:
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/build-reviewed-asset-postimages-knowledge.mjs collect
+      - name: Upload review artifact only
+        id: knowledge_postimages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: reviewed-web-knowledge-postimages-${{ github.event.pull_request.head.sha }}
+          path: base/asset-postimages-knowledge/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Emit immutable artifact digest
+        env:
+          ARTIFACT_DIGEST: ${{ steps.knowledge_postimages.outputs.artifact-digest }}
+        run: |
+          test -n "$ARTIFACT_DIGEST"
+          printf 'PUBLIC_ASSET_KNOWLEDGE_ARCHIVE_SHA256 %s\n' "$ARTIFACT_DIGEST"

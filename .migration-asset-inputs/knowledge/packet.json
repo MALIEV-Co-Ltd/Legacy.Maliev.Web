@@ -1,0 +1,1626 @@
+{
+  "schema": "web-knowledge.inert-object-overlay.v1",
+  "repository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "exactSourceBase": "ce2a005bae0a7b915f4feb6daf350c81285c1e8f",
+  "sourceCommit": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+  "assemblyBlob": "8e09db01dabfe3f1e83b8f3d00467cf70ff3b9f7",
+  "assetManifestBlob": "af0639089ef33a8c7539da4074c2c0705dba7b10",
+  "custodyValidatorBlob": "f211d83819370fb13e6ea8ed61946f0da904d334",
+  "packageLockGitBlob": "8c392b351e1c1da0e11807ad7fb9ef79514d0c86",
+  "packageGitBlob": "ed8002f1e8025533a1dd9d7989a617f6fa4bbeae",
+  "buildScriptGitBlob": "1b07bc941b06b7593f1bd03c7ec80900f32e9fbf",
+  "rows": [
+    {
+      "path": "docs/migration/knowledge-612-613-614-source-ledger.v1.json",
+      "preimage": null,
+      "postimage": "28b811ce3f6deeb7ad377ef6b90511cbcdf57af8",
+      "kind": "reviewed-source",
+      "bytes": 91104
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-diagram-captions.json",
+      "preimage": null,
+      "postimage": "d4656e473875655da527905e7a4ad670312fda34",
+      "bytes": 22629,
+      "sha256": "314fea3752b36140138dcb525d889c8c86852adf3147a238a52c88558f3717e8",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-fact-audit.md",
+      "preimage": null,
+      "postimage": "253d94e832e81cb2e1925a31cec580aa602b2c42",
+      "bytes": 13886,
+      "sha256": "60ddc4c5442ae19456a38c7270c46698c1ab85d9e8bccac4b4eefedb61b5aa9c",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-format-error.md",
+      "preimage": null,
+      "postimage": "40e9f93286224fc5f9d0260f8e3bf40153764724",
+      "bytes": 4532,
+      "sha256": "4b66ed8ff39807e455a051d7fe423313460fefef2df708f2af20c370b26c0f86",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-photo-prompts.json",
+      "preimage": null,
+      "postimage": "310e9e472a0e4b96ab647463c8afd55875e92420",
+      "bytes": 24652,
+      "sha256": "d39587fff2cf84b716055924a3445ef76bd0efd1209a9de0084879551dca1181",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-reading-images.json",
+      "preimage": null,
+      "postimage": "6e187a6fbeb86929a2dac4ec85862225587d0193",
+      "bytes": 4039,
+      "sha256": "f8659d59a48d4ab887c01029e7db2c980f882bf159ebc852180242571c1a5486",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-reading-layout.md",
+      "preimage": null,
+      "postimage": "8a3f6cb923ab30422da1dc087b07a72e5b18da16",
+      "bytes": 7086,
+      "sha256": "3f1c3e32e459d80eb3e996864128d630658d05ae8ca6b987f057cb0214760ed3",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-search-and-hover.md",
+      "preimage": null,
+      "postimage": "439929828950e9b4ddc9c58b416bcc238489c6af",
+      "bytes": 5573,
+      "sha256": "fd574c16413383e916e29c1a17b41320abe95467711dfc4ab8f2cf7928db6c44",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-visual-corrections.md",
+      "preimage": null,
+      "postimage": "4633827aeb6c66e16003ebe396d4090fb7ece00d",
+      "bytes": 8357,
+      "sha256": "dbdf7ce45c25c9cbdf833a561aca215549944e971012e84add08a178774e8ecc",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-visuals.md",
+      "preimage": null,
+      "postimage": "e5d0034bfb5fcbbc06a8d96ede7aa30cc9cbd449",
+      "bytes": 5852,
+      "sha256": "294e4eab1ef1d95a969eeb948da2f05fd6f3e2af5c5956f2948b0ad24ee11a93",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-manufacturing-knowledge-library.md",
+      "preimage": null,
+      "postimage": "eb99f3abc3001183cbeb93f19b63b0ffba9d66ed",
+      "bytes": 6380,
+      "sha256": "f39cd86d1af929e52852baad02f3892348ee75e88bb79c5dd11fe8f859eae390",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770cb580/source-provenance/2026-10-17-knowledge-production-release.md",
+      "preimage": null,
+      "postimage": "b645ea88d537cb55c771e5076c2ca9547586b171",
+      "bytes": 4003,
+      "sha256": "9c077f7ada2cf4e90f5c37b7734aa3ef8e010d882e916717cf10679cf487504d",
+      "kind": "provenance"
+    },
+    {
+      "path": "docs/migration/knowledge-770-source-intake.v1.json",
+      "preimage": null,
+      "postimage": "f1247781f96b4e2c57639b4c3da8528914fde1f0",
+      "kind": "reviewed-source",
+      "bytes": 245041
+    },
+    {
+      "path": "docs/migration/knowledge-assets.v1.json",
+      "preimage": null,
+      "postimage": "af0639089ef33a8c7539da4074c2c0705dba7b10",
+      "bytes": 47103,
+      "sha256": "1752bb655c8ca0df39cf1aea12a0d51627ce2e1ebe5d2b939d0663638b523e49",
+      "kind": "measured-custody-manifest"
+    },
+    {
+      "path": "docs/migration/knowledge-source-intake.v1.json",
+      "preimage": null,
+      "postimage": "5fd485eaecf9ef343e588ce2b737088d8bddd778",
+      "kind": "reviewed-source",
+      "bytes": 42662
+    },
+    {
+      "path": "docs/migration/knowledge-visual-source-export.md",
+      "preimage": null,
+      "postimage": "0f48a49c9bb5d53fc2de64d26647de7f2d067b76",
+      "kind": "reviewed-source",
+      "bytes": 6672
+    },
+    {
+      "path": ".github/workflows/_build-and-test.yml",
+      "preimage": "d01da5fc3b0c0c755525879645c13a0dad0cdc15",
+      "postimage": "47dc232a97acb1497307e1aebc5fccf4131dff0a",
+      "kind": "reviewed-source",
+      "bytes": 30620
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/CNC/Cutting-Tools.cshtml",
+      "preimage": null,
+      "postimage": "e0db0261d6c42982bf96fe02e80f7f0b331bce41",
+      "kind": "reviewed-source",
+      "bytes": 475
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/CNC/Feeds-and-Speeds.cshtml",
+      "preimage": null,
+      "postimage": "87dd8e4f1cff628e4bf2c8f20787c4dab457c212",
+      "kind": "reviewed-source",
+      "bytes": 481
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.cshtml",
+      "preimage": null,
+      "postimage": "91f9d4c8318f9ca3b04e337c49390e603671035c",
+      "kind": "reviewed-source",
+      "bytes": 510
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.cshtml",
+      "preimage": null,
+      "postimage": "7f92d00e7b0b95c8e1c11c06ba4c47821bb1fc27",
+      "kind": "reviewed-source",
+      "bytes": 464
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/CNC/Machining-Processes.cshtml",
+      "preimage": null,
+      "postimage": "fe16b73930c4310f37fbdac449c4b5fb2f255e85",
+      "kind": "reviewed-source",
+      "bytes": 467
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Finishing/Heat-Treatment.cshtml",
+      "preimage": null,
+      "postimage": "f99a9edc14050ffe701dc052ffd7f4ae717019fb",
+      "kind": "reviewed-source",
+      "bytes": 460
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Finishing/Surface-Finishes.cshtml",
+      "preimage": null,
+      "postimage": "7932c66dc62edeea17a907dc9237dda17ae3adf6",
+      "kind": "reviewed-source",
+      "bytes": 464
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Index.cshtml",
+      "preimage": "3d78d55d3da2ea1efb14009cbd50ffd2bbbe68cb",
+      "postimage": "23ffb22e955f6c3f42749891de9b35169b225f7a",
+      "kind": "reviewed-source",
+      "bytes": 470
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Inspection/Measuring-Parts.cshtml",
+      "preimage": null,
+      "postimage": "09579c8af49ac3b084dd8ac1e66e6a89fa748720",
+      "kind": "reviewed-source",
+      "bytes": 452
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Manufacturing/Process-Selection.cshtml",
+      "preimage": null,
+      "postimage": "c88ced68b0955830bdcdb24be6df21bd6d46234c",
+      "kind": "reviewed-source",
+      "bytes": 471
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Materials/Engineering-Plastics.cshtml",
+      "preimage": null,
+      "postimage": "1105db994ec74f89e8d6e153240f4a9ccc36d666",
+      "kind": "reviewed-source",
+      "bytes": 470
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Materials/Metals.cshtml",
+      "preimage": null,
+      "postimage": "82535091e3391263b5f90aaab2665c40c7576a79",
+      "kind": "reviewed-source",
+      "bytes": 452
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Materials/Selection.cshtml",
+      "preimage": null,
+      "postimage": "4f971614355cc8d30bc518c23ecb6490f30da934",
+      "kind": "reviewed-source",
+      "bytes": 438
+    },
+    {
+      "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+      "preimage": "799b59dc66d7d7c1640513e9887b20771f6847a0",
+      "postimage": "b7c711cc0568ab2fe4e2781c83d8bf2bd4cc59c3",
+      "kind": "reviewed-source",
+      "bytes": 247
+    },
+    {
+      "path": "Legacy.Maliev.Web/assets/route-knowledge.js",
+      "preimage": "e8fcba7d2ce66dc96a0444d5ceb6fffba4cdeb5c",
+      "postimage": "71b7686ea887a3ccfbfd1a37d7f7fa544346e2df",
+      "kind": "reviewed-source",
+      "bytes": 108
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncCuttingToolsContent.razor",
+      "preimage": null,
+      "postimage": "c6ee2d87b962d142c63a280a987e5a24e7de405e",
+      "kind": "reviewed-source",
+      "bytes": 11108
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncCuttingToolsPage.razor",
+      "preimage": null,
+      "postimage": "cfd5867ba5438a311bdcbf4a2f70f7cd0a5105bd",
+      "kind": "reviewed-source",
+      "bytes": 1246
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncFeedsAndSpeedsContent.razor",
+      "preimage": null,
+      "postimage": "5e1792cecf000890e4838d63209ac90f546f1dcb",
+      "kind": "reviewed-source",
+      "bytes": 11272
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncFeedsAndSpeedsPage.razor",
+      "preimage": null,
+      "postimage": "fabc1de9e50bd633e0f8b31cd0dd5309bd19cf5d",
+      "kind": "reviewed-source",
+      "bytes": 1258
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncGeometryAndWorkholdingContent.razor",
+      "preimage": null,
+      "postimage": "80449596541303bed152e7ac25b7ebbb35f780cd",
+      "kind": "reviewed-source",
+      "bytes": 12826
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncGeometryAndWorkholdingPage.razor",
+      "preimage": null,
+      "postimage": "b23e2fd4d61fde2ad36e0e2d00ed7e3eda7294f7",
+      "kind": "reviewed-source",
+      "bytes": 1303
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncHolesAndTolerancesContent.razor",
+      "preimage": null,
+      "postimage": "95be24d285380265f2155fca3d138e5cfda02ec7",
+      "kind": "reviewed-source",
+      "bytes": 6551
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncHolesAndTolerancesPage.razor",
+      "preimage": null,
+      "postimage": "7e4fc95d982872d75304302bbf977958b962e341",
+      "kind": "reviewed-source",
+      "bytes": 1249
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncMachiningProcessesContent.razor",
+      "preimage": null,
+      "postimage": "5adf184cc61ec0675d18809b6b8d3683360752e8",
+      "kind": "reviewed-source",
+      "bytes": 9598
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/CncMachiningProcessesPage.razor",
+      "preimage": null,
+      "postimage": "9a56c507ef1a366139492c267f1d92085fbb03ad",
+      "kind": "reviewed-source",
+      "bytes": 1250
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/FinishingHeatTreatmentContent.razor",
+      "preimage": null,
+      "postimage": "bc3433f0547acab4b9ec90abbee65491281d9241",
+      "kind": "reviewed-source",
+      "bytes": 9838
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/FinishingHeatTreatmentPage.razor",
+      "preimage": null,
+      "postimage": "0b774eb8f61cb4aca1b8755d22afbbe08256134e",
+      "kind": "reviewed-source",
+      "bytes": 1245
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/FinishingSurfaceFinishesContent.razor",
+      "preimage": null,
+      "postimage": "45aaaef8cd91284945d4f94ff6deabd480c8802e",
+      "kind": "reviewed-source",
+      "bytes": 6067
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/FinishingSurfaceFinishesPage.razor",
+      "preimage": null,
+      "postimage": "d3828781edb1c12e35cb6d16af0d2e535693150e",
+      "kind": "reviewed-source",
+      "bytes": 1253
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/GuidelinesContent.razor",
+      "preimage": "3d4ec812197d83d50085a6508750d2222a26dce7",
+      "postimage": "32a45bb2d88377047275601362094e4f0a50bcd5",
+      "kind": "reviewed-source",
+      "bytes": 6236
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/GuidelinesPage.razor",
+      "preimage": "a809eed3f92f23e897c864954db42eb852d3874f",
+      "postimage": "b2ddd7921c632dd3179dd1038c216aba94954ecd",
+      "kind": "reviewed-source",
+      "bytes": 1201
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/InspectionMeasuringPartsContent.razor",
+      "preimage": null,
+      "postimage": "2f3cd84661c2d8741e6583c3f098c2a9ac696d6b",
+      "kind": "reviewed-source",
+      "bytes": 11064
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/InspectionMeasuringPartsPage.razor",
+      "preimage": null,
+      "postimage": "351d52af89b8628c769497f3278b4ae8e50f7538",
+      "kind": "reviewed-source",
+      "bytes": 1241
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/KnowledgeIndexContent.razor",
+      "preimage": "e27cba726ac13ef4acb65bc9e827d60f8445812c",
+      "postimage": "36d9dd54c2e395a98498af16adf6f74315585e55",
+      "kind": "reviewed-source",
+      "bytes": 9600
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/KnowledgeIndexPage.razor",
+      "preimage": "554a207985953ee47828bbddadab27af23fa16ff",
+      "postimage": "f8b3b6c3509272928531059189555a4aba81e6dd",
+      "kind": "reviewed-source",
+      "bytes": 1116
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/KnowledgeNavigation.razor",
+      "preimage": null,
+      "postimage": "34555cad6aef759b5b529c5d8b05ec3fc986e845",
+      "kind": "reviewed-source",
+      "bytes": 6249
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/KnowledgeShell.razor",
+      "preimage": null,
+      "postimage": "0afdfa894b7ad0e5a73f14b3fcf2fa85b7d498da",
+      "kind": "reviewed-source",
+      "bytes": 1025
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/ManufacturingProcessSelectionContent.razor",
+      "preimage": null,
+      "postimage": "b369d7e5a1f2d04fe3fe432279bbb939b0e9dd6a",
+      "kind": "reviewed-source",
+      "bytes": 9382
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/ManufacturingProcessSelectionPage.razor",
+      "preimage": null,
+      "postimage": "e9caba38b5ac56e63d7c7c7265a15963772275db",
+      "kind": "reviewed-source",
+      "bytes": 1270
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/MaterialsEngineeringPlasticsContent.razor",
+      "preimage": null,
+      "postimage": "d61c033c097bf199caaec30ea600a66c9faf19a8",
+      "kind": "reviewed-source",
+      "bytes": 9815
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/MaterialsEngineeringPlasticsPage.razor",
+      "preimage": null,
+      "postimage": "2f6f4dffd670fa5763d5fcca83753685f1d7c667",
+      "kind": "reviewed-source",
+      "bytes": 1267
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/MaterialsMetalsContent.razor",
+      "preimage": null,
+      "postimage": "a360ed31da8b1a8fd0336225925c1638d529642b",
+      "kind": "reviewed-source",
+      "bytes": 9282
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/MaterialsMetalsPage.razor",
+      "preimage": null,
+      "postimage": "15f8dfd41313c58ee9ce98ff344c3fe55bf103bc",
+      "kind": "reviewed-source",
+      "bytes": 1221
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/MaterialsSelectionContent.razor",
+      "preimage": null,
+      "postimage": "4cae3d7ab56044da538cbe9779ed1ad7f0cc97f0",
+      "kind": "reviewed-source",
+      "bytes": 9055
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/MaterialsSelectionPage.razor",
+      "preimage": null,
+      "postimage": "31c2c275f6ecd37f81c5a4312318594f620cf941",
+      "kind": "reviewed-source",
+      "bytes": 1213
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/CncMachiningContent.razor",
+      "preimage": "d3c9a78c7d5c9fbc460352d256e77a91c2ebecf1",
+      "postimage": "d434b029a3821fb8016e62949e514dc73cf8747d",
+      "kind": "reviewed-source",
+      "bytes": 8095
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/CncMachiningSpecificationPage.razor",
+      "preimage": "8d9f3a5f08c0f130b2ed5076ff47d7830d36159e",
+      "postimage": "4a2222ba15566efd046a5a383dfde87301d472cc",
+      "kind": "reviewed-source",
+      "bytes": 3187
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/SpecificationsIndexContent.razor",
+      "preimage": "b87f04a37f2a5d21e904737c4d5b346891e21500",
+      "postimage": "608afee8c36c2d3f4869c15aa52737d77a54246a",
+      "kind": "reviewed-source",
+      "bytes": 5569
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/SpecificationsIndexPage.razor",
+      "preimage": "01a9b07cf8f5ede1865ba13c62f38aaeefa6aace",
+      "postimage": "bc45d58b3c65dc1097908819ee4bcffc16da69ba",
+      "kind": "reviewed-source",
+      "bytes": 2988
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalPrintingContent.razor",
+      "preimage": "7d529ea298954aff59596209289d4d1e036c6115",
+      "postimage": "e0df19d8d7c0c24c08eba69ee65727c9724a0a10",
+      "kind": "reviewed-source",
+      "bytes": 8363
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalPrintingSpecificationPage.razor",
+      "preimage": "be3f6c813a5852b604641769fa0bc6457f200576",
+      "postimage": "7a315e89d3792cfda2860580eeaa0d437af4d073",
+      "kind": "reviewed-source",
+      "bytes": 3213
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalScanningContent.razor",
+      "preimage": "308f3c5a6bf88cea5a217d5f01811e0965665f9e",
+      "postimage": "cd8cd1f2ad977ef70c4ba2de81ceda81e298d8d8",
+      "kind": "reviewed-source",
+      "bytes": 8887
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/Specifications/ThreeDimensionalScanningSpecificationPage.razor",
+      "preimage": "9fed69677b88fb2cfa7c9b358dc42c09357d6849",
+      "postimage": "9bc57990c3176e1c5a1035fd1b8104772a68dd7e",
+      "kind": "reviewed-source",
+      "bytes": 3230
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/WorkflowContent.razor",
+      "preimage": "78b8769cb7da7cc82d55c949ee72b949276c1fe7",
+      "postimage": "89f248be7d2bd7512bcc8459261bdbfeb0d7e315",
+      "kind": "reviewed-source",
+      "bytes": 5575
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Knowledges/WorkflowPage.razor",
+      "preimage": "94eb563bf06033da6c2932bc43b7f843d451b217",
+      "postimage": "5ce3db4d3b23f07fe940ec61c68fffaee1dfbb38",
+      "kind": "reviewed-source",
+      "bytes": 2864
+    },
+    {
+      "path": "Legacy.Maliev.Web/Pages/PublicSearchRouteCatalog.cs",
+      "preimage": "3bd13bc0e868b3f69ee6bfb6981877c198181e0a",
+      "postimage": "d884f8aaecb01d2b88f2f96bf1ce301610ec7284",
+      "kind": "reviewed-source",
+      "bytes": 8698
+    },
+    {
+      "path": "Legacy.Maliev.Web/Program.cs",
+      "preimage": "32cb67b0616f92d6cd01a5a843c2a432bd8b0188",
+      "postimage": "0b5cdcf93aef7329aeaae7a257b5401a84d8f36e",
+      "kind": "reviewed-source",
+      "bytes": 30400
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/CncCuttingToolsContent.th.resx",
+      "preimage": null,
+      "postimage": "d1218c36b197d511e0e3e41fc7b7135a7ace4833",
+      "kind": "reviewed-source",
+      "bytes": 24853
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/CncFeedsAndSpeedsContent.th.resx",
+      "preimage": null,
+      "postimage": "993329b98ee77dd2974f181934420c65baa062d4",
+      "kind": "reviewed-source",
+      "bytes": 24987
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/CncGeometryAndWorkholdingContent.th.resx",
+      "preimage": null,
+      "postimage": "34bec36e81aa2c16563800eb7288414ae309cea0",
+      "kind": "reviewed-source",
+      "bytes": 32223
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/CncHolesAndTolerancesContent.th.resx",
+      "preimage": null,
+      "postimage": "e5a28faef7feb7c4c89ca78319f55976a8880684",
+      "kind": "reviewed-source",
+      "bytes": 16661
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/CncMachiningProcessesContent.th.resx",
+      "preimage": null,
+      "postimage": "10f009030c6b932ab6796bfbd92cd6e15318611e",
+      "kind": "reviewed-source",
+      "bytes": 24012
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/FinishingHeatTreatmentContent.th.resx",
+      "preimage": null,
+      "postimage": "27e69d8349913909de9b62b7bf526f202ba348ca",
+      "kind": "reviewed-source",
+      "bytes": 22088
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/FinishingSurfaceFinishesContent.th.resx",
+      "preimage": null,
+      "postimage": "8a1bc948a7bedbd38f8282ea886069bd09ceb3ec",
+      "kind": "reviewed-source",
+      "bytes": 15798
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/GuidelinesContent.th.resx",
+      "preimage": "37c1287e0073b1ba9b9d95344c76876a0df40aa0",
+      "postimage": "ecbc47fcef337b1db061f2989178fec2c193616e",
+      "kind": "reviewed-source",
+      "bytes": 21199
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/InspectionMeasuringPartsContent.th.resx",
+      "preimage": null,
+      "postimage": "e4b3004c3a2e8fce795e26682faab54c07f9a0d0",
+      "kind": "reviewed-source",
+      "bytes": 25622
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeIndexContent.th.resx",
+      "preimage": "86c5ed40773537aadfbbc27f730b850efec99d64",
+      "postimage": "159ef6f0181de3ff92937b3a8813113f00b41181",
+      "kind": "reviewed-source",
+      "bytes": 30167
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeNavigation.th.resx",
+      "preimage": null,
+      "postimage": "6b6f427114a464eea72f77f5a092e029a4fa8b9b",
+      "kind": "reviewed-source",
+      "bytes": 7246
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/KnowledgeShell.th.resx",
+      "preimage": null,
+      "postimage": "c4893d085aa817e9577a1714f76efd9553002e12",
+      "kind": "reviewed-source",
+      "bytes": 379
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/ManufacturingProcessSelectionContent.th.resx",
+      "preimage": null,
+      "postimage": "761d013ee43583cdb50e4aa9226b445f3cd05d5f",
+      "kind": "reviewed-source",
+      "bytes": 22127
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/MaterialsEngineeringPlasticsContent.th.resx",
+      "preimage": null,
+      "postimage": "f1b6c13863ac3ab46c6cec77cf9858383b0d6a61",
+      "kind": "reviewed-source",
+      "bytes": 21303
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/MaterialsMetalsContent.th.resx",
+      "preimage": null,
+      "postimage": "ccb434606ad28250b835e20d7ae4aa575aab21d7",
+      "kind": "reviewed-source",
+      "bytes": 21620
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/MaterialsSelectionContent.th.resx",
+      "preimage": null,
+      "postimage": "8ba3330534aefe053273e9c680dd37c7e905cef9",
+      "kind": "reviewed-source",
+      "bytes": 21418
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/CncMachiningContent.th.resx",
+      "preimage": "ec0e0a432f97bf986f771a11d0a6674b2e37f42f",
+      "postimage": "e63744b83efbdc9f6088b715058ce838ff90ebcb",
+      "kind": "reviewed-source",
+      "bytes": 83615
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/SpecificationsIndexContent.th.resx",
+      "preimage": "b48762a208e2d81e6ce2c37ab3d731cb5d72b20a",
+      "postimage": "e70dc0c35086630d516ba1a6801b4d71d882df89",
+      "kind": "reviewed-source",
+      "bytes": 17607
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/ThreeDimensionalPrintingContent.th.resx",
+      "preimage": "1de383510d6228f74afd4a131096caa74b9f6a90",
+      "postimage": "dc1874d8cf4ba051ed2b28cacea43d8d695e6bc4",
+      "kind": "reviewed-source",
+      "bytes": 26024
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/Specifications/ThreeDimensionalScanningContent.th.resx",
+      "preimage": "ab62ad1ee65dccb383ef8c47c32fe4a974356ead",
+      "postimage": "809c9aaf039eec75e89219269b66ec6bd27178d9",
+      "kind": "reviewed-source",
+      "bytes": 27874
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Knowledges/WorkflowContent.th.resx",
+      "preimage": "c17b09f42f52dfaea18b4a7f44f4e64fc520505b",
+      "postimage": "277baa258db815700628a3f5ba4a6b805dd75c55",
+      "kind": "reviewed-source",
+      "bytes": 20882
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/BlazorHostFoundationTests.cs",
+      "preimage": "f01cdee05c989cef4ee87b3bad5c46a9e19a7c7a",
+      "postimage": "349d48d245ba5d916db6de281405623cd843907e",
+      "kind": "reviewed-source",
+      "bytes": 7343
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/CncMachiningStaticSsrRouteTests.cs",
+      "preimage": "a579e30c464950b32836346fd3b3386dd1324ade",
+      "postimage": "6c99bd3810b73d59a8057d1619466fbb716f1cbd",
+      "kind": "reviewed-source",
+      "bytes": 27897
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/CustomManufacturingStaticSsrRouteTests.cs",
+      "preimage": "cf6e74378265f5022e8329e385a76785510de7cd",
+      "postimage": "6d4f1874bce218979c371f66cb8b0870cc2c6140",
+      "kind": "reviewed-source",
+      "bytes": 18995
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/JavaScript/knowledge-search.test.cjs",
+      "preimage": null,
+      "postimage": "10d2fbfdc9614ac0b8dabed38c46f3978a770a61",
+      "kind": "reviewed-source",
+      "bytes": 5338
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeCncMachiningStaticSsrRouteTests.cs",
+      "preimage": "84ce704e5c62c824dc051f6b4bb55c5099e190f9",
+      "postimage": "7ba65d1b4f309d0a90e2fc427d8d511422ab1894",
+      "kind": "reviewed-source",
+      "bytes": 23565
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeGroupedNavigationBrowserTests.cs",
+      "preimage": null,
+      "postimage": "159b4b6a827590536e0446dba7943da5733c6208",
+      "kind": "reviewed-source",
+      "bytes": 11114
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeGuideBundleRouteTests.cs",
+      "preimage": "7538892871ecc4e6c89960b42ba399c5d7ed9276",
+      "postimage": "ec901200c36552d0f4e5772a8860f894b0612167",
+      "kind": "reviewed-source",
+      "bytes": 12525
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeReadingLayoutBrowserTests.cs",
+      "preimage": null,
+      "postimage": "15d39b82728c8c72b09f524225f6074b51de4c40",
+      "kind": "reviewed-source",
+      "bytes": 8777
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeSearchBrowserTests.cs",
+      "preimage": null,
+      "postimage": "2c4dd64629ce313674b1780e2d65c8318edd2983",
+      "kind": "reviewed-source",
+      "bytes": 16432
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeSidebarBrowserTests.cs",
+      "preimage": "7c2b5ba544feda62b668b24d234cfb71ba4da11e",
+      "postimage": "c6154ab3c16138b80089d346406ef97e20b3d559",
+      "kind": "reviewed-source",
+      "bytes": 10932
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeSidebarRouteTests.cs",
+      "preimage": "1316982dc4dffa043b8fbd7737abdb3067ede1e6",
+      "postimage": "f123555714ac14a02b4f2b2a72754dff25988730",
+      "kind": "reviewed-source",
+      "bytes": 5490
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgesIndexStaticSsrRouteTests.cs",
+      "preimage": "cf2f70e499ec209471623fd24419f453dcd4255a",
+      "postimage": "3a08a45b80efe77546ae78af9d4a227c093f0dd9",
+      "kind": "reviewed-source",
+      "bytes": 11928
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalPrintingStaticSsrRouteTests.cs",
+      "preimage": "2f147c4ce47e2452a66e48b887a804d36bc0a7c3",
+      "postimage": "dfa63a564b60adcfd2b4c9467e05d65a0c7f0275",
+      "kind": "reviewed-source",
+      "bytes": 21777
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeThreeDimensionalScanningStaticSsrRouteTests.cs",
+      "preimage": "21160b3c54e9b75f404c26acf80d72a317b213e3",
+      "postimage": "6af08593abcf121a1667613baf6a83cdb1688063",
+      "kind": "reviewed-source",
+      "bytes": 25518
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/KnowledgeVisualAssetDeliveryTests.cs",
+      "preimage": null,
+      "postimage": "35f2303dbc744ab9855b059ea246a32076cf9977",
+      "kind": "reviewed-source",
+      "bytes": 7441
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SeoBusinessContractParityTests.cs",
+      "preimage": "693e4569950c0c3914d5ac3784b97bc02314c3c5",
+      "postimage": "69f055f03e11baa1c5e2760d997aee9e74b11bd2",
+      "kind": "reviewed-source",
+      "bytes": 13502
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/ServicesStaticSsrRouteTests.cs",
+      "preimage": "46bba994a3172c0a62216aff5d1523b7bacd46b8",
+      "postimage": "8abe8bd5340de95a8a1cf89bb75a32eb05611ed1",
+      "kind": "reviewed-source",
+      "bytes": 14734
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SpecificationsIndexStaticSsrRouteTests.cs",
+      "preimage": "7cceb6acbbe24ad82e56b7dffb5c1dd18a267afd",
+      "postimage": "2b89d6d09609d485212635eadc9b034b160adab7",
+      "kind": "reviewed-source",
+      "bytes": 16159
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/ThreeDimensionalPrintingStaticSsrRouteTests.cs",
+      "preimage": "2f325537a676ca5a9028d85846b1e35fe62ef755",
+      "postimage": "03defcec0c96e5364ebf40a60f8fb72958214eb1",
+      "kind": "reviewed-source",
+      "bytes": 21483
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/ThreeDimensionalScanningStaticSsrRouteTests.cs",
+      "preimage": "1a8809fc2072b57d683cf3b9ac0456bd6e6c02a5",
+      "postimage": "1ffbb053552658b910d83b903ed2bf25543db0ad",
+      "kind": "reviewed-source",
+      "bytes": 22506
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/WorkflowStaticSsrRouteTests.cs",
+      "preimage": "0298a3c3f226f9a3ee849cf383df2f0c750dc27c",
+      "postimage": "f5968caf8c6f0d9af38b8d0fc61f5d4b0efb936e",
+      "kind": "reviewed-source",
+      "bytes": 19476
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/css/application-shell.css",
+      "preimage": "7c59aaaaf4e498d34868c127809bc796381a50c9",
+      "postimage": "21169b1cd0b241dcf1cd4fbc1833130442769753",
+      "kind": "reviewed-source",
+      "bytes": 49609
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/knowledge-navigation.js",
+      "preimage": "b35170240b7834de03055cd27b199b7435eedb5f",
+      "postimage": "d46bf53b3e30b186dab15d4b3c1c21c278cbda8e",
+      "kind": "reviewed-source",
+      "bytes": 5304
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/knowledge-search.js",
+      "preimage": null,
+      "postimage": "4e02cc1a82a760e7a793374cca4f0d2f93a7f700",
+      "kind": "reviewed-source",
+      "bytes": 11715
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+      "preimage": "cc65568285c3c519cc2dc1411310a418b2840763",
+      "postimage": "190a6756bdae3ea76d0117eb36f401361826a408",
+      "bytes": 2802,
+      "sha256": "44424727d2e0cc7e906257d62999a578c13ee9754a6d24f63e0fc6c0cef61b14",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/chatter-small.webp",
+      "preimage": null,
+      "postimage": "bd8e3effb27290b5103f0c5efed9665cd984b46e",
+      "bytes": 66438,
+      "sha256": "15ee0609dc3b0e281a1f29d29cae04807ef5761c857a65b2537e1450b932f19a",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/chatter.webp",
+      "preimage": null,
+      "postimage": "66f847c61544eb01cf6c1068735994ff2bfd59c9",
+      "bytes": 248222,
+      "sha256": "ed814d547f22581a48e8652e9164d864e2283839293213f218e34c31430985cd",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview-small.webp",
+      "preimage": null,
+      "postimage": "49a863c6abe53a9cb31cc9fdd0f74754d2b895b6",
+      "bytes": 55324,
+      "sha256": "2b32d09b601c6d61f73fcbff1f07646d3d18bedc7563254e2ac8d001984f908f",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview.webp",
+      "preimage": null,
+      "postimage": "2cf4e9d5b90bd70d468482fc3c404b726d54c98d",
+      "bytes": 241966,
+      "sha256": "ba5894777059c093b7132ae709745319fb9192b2e003e0c99d7865a2c8d161b0",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools-small.webp",
+      "preimage": null,
+      "postimage": "cf8cadda595d1d5a9a712fa7e0f7da60a9a7aab6",
+      "bytes": 48858,
+      "sha256": "3afd695cc56a576cd82c56117d8127cba7d6bd8002fadc5e9d1c06582af32b66",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools.webp",
+      "preimage": null,
+      "postimage": "dc5ea85de92301eadee8b03b3937ab81f888a165",
+      "bytes": 151226,
+      "sha256": "e9140c890b4e8c45790caf9f4044a21596b6473a3fd9cab703e6bb1422e316ac",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection-small.webp",
+      "preimage": null,
+      "postimage": "0298b0482052ad9e5d88fdf72ef183bfad18af9a",
+      "bytes": 79424,
+      "sha256": "a7ab5077ecb7b6ce29a3381d1ee3a1bb135fd78f10dfd6bc20c98a2756a41025",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection.webp",
+      "preimage": null,
+      "postimage": "018c11396b8316f3d7de6d8c9fc3c845540185e3",
+      "bytes": 289356,
+      "sha256": "0675191c303f983f3a0b951fd56195d7266552bd0b624844d86add1e43d977f8",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics-small.webp",
+      "preimage": null,
+      "postimage": "34150108666546d4f48f41cf6e0a24b62bc9db63",
+      "bytes": 29992,
+      "sha256": "0434f48829746ab3fb54532def591a4317b1a48e64e5b42b5c49a5282778cda1",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics.webp",
+      "preimage": null,
+      "postimage": "76dae672b01ca888da2d6b04964d541b3902eba4",
+      "bytes": 102262,
+      "sha256": "9b48ef47071d4492e7afe743909689615c8a2a7bdb7dd42efc691d9d72c6bfea",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow-small.webp",
+      "preimage": null,
+      "postimage": "3f76dec13d38296b4334a67771ddbab52e7f4ab7",
+      "bytes": 39244,
+      "sha256": "bd1822df12a714b3c435670ec22e2becd34aeb7a345c3792835c92d402eb817d",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow.webp",
+      "preimage": null,
+      "postimage": "54c97fe9ce334fa68406218277f8def74d0e77e5",
+      "bytes": 108596,
+      "sha256": "c65a6024c390a897d474534e99ee8bf098786b5b06c961a87585ded519137a1b",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds-small.webp",
+      "preimage": null,
+      "postimage": "1a940bb85534549a81cdf2bc01a0aa532af7f821",
+      "bytes": 46638,
+      "sha256": "5223eec8571535d00d763fe9df4ad18c55bc00018bb69f1bb72eb4c49c5bf958",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds.webp",
+      "preimage": null,
+      "postimage": "c5554058c8e197775466c28935ca7a755eaec461",
+      "bytes": 156194,
+      "sha256": "058b5b36a3ac23516d7dfc2442814af00cb01ea2ac497b392b387006542a21b0",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment-small.webp",
+      "preimage": null,
+      "postimage": "1b1c4e98d9ee9367f0d03f5bc7119862343daa11",
+      "bytes": 47534,
+      "sha256": "aa00afbb51b3fbb3e29bd4d7dbe849d5319cd7059357d6747218d752097b56d6",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment.webp",
+      "preimage": null,
+      "postimage": "96668ab1fda0850391e0e607c3bba4d2693fa7fe",
+      "bytes": 123652,
+      "sha256": "d747937cacaa9bc22220fc42b214e91b0f405f98a137027a59ef58b403d7e804",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances-small.webp",
+      "preimage": null,
+      "postimage": "e4ffb773c6fe377e4af402ab66e1e8b0bb9c9848",
+      "bytes": 56182,
+      "sha256": "79022e7e4054dcce4d13fae1568508a84f8f1fcf341a1b1cc783c0559f12124d",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances.webp",
+      "preimage": null,
+      "postimage": "4a48ee8cc096cbc12eaab60d4c577557ffdef44d",
+      "bytes": 177930,
+      "sha256": "c7c3178458273951849a0069f7969b90c12c0714630c482b8e6048f1585ac92e",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/library-small.webp",
+      "preimage": null,
+      "postimage": "00eb843e3d8e3ab750e25e8e0aee66af738a3770",
+      "bytes": 65204,
+      "sha256": "f975eb559a945840c9bc4e8e8b887d4ec11b71d00de5cfed7db53728de8190d7",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/library.webp",
+      "preimage": null,
+      "postimage": "e0419ad1b748534d7fd62fe317218af365eac3f3",
+      "bytes": 225042,
+      "sha256": "244671b3bd691b1d2472ff17e0251713241041de76fe31085be03fc892ec9d18",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection-small.webp",
+      "preimage": null,
+      "postimage": "ecf8f2b7ddc39077edddc440360d6993fe099707",
+      "bytes": 43904,
+      "sha256": "b8212b6950e562e4a1b31d66ceb2f86cc8312b5c03e0a794eba08413e58554ba",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection.webp",
+      "preimage": null,
+      "postimage": "dc61cd0e69aaa9e84c000bb8c6d04e380c487a5a",
+      "bytes": 147360,
+      "sha256": "5d08816e87bbe3cd1a05b429d204fe540187eaf4a8f2636a4115231a2486e443",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/metals-small.webp",
+      "preimage": null,
+      "postimage": "c5a7633348dbb313c054f8f857484845db117e52",
+      "bytes": 45578,
+      "sha256": "50f25d73de6fc72dd0f12f54ed183f2ee205efb6e0c7a19b5e163fa404cb8229",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/metals.webp",
+      "preimage": null,
+      "postimage": "6bebf53b05c99228683760bd458ad670e275fac9",
+      "bytes": 156334,
+      "sha256": "cd54a42ace319f73cd0575b6cdb4cdf2254dcf03939df042d2039f6f5b66216b",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis-small.webp",
+      "preimage": null,
+      "postimage": "6cd0bbc8d7513a07b7b3894da1e0f2feb75ee40c",
+      "bytes": 30480,
+      "sha256": "27b8f76861ef3dfb1ab27034ca6c1b8aab37175e093a55a13f4abddc994ed81d",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis.webp",
+      "preimage": null,
+      "postimage": "9eeddeb3fb172532e697d83ef282c18e0b0d72ab",
+      "bytes": 98868,
+      "sha256": "0e389a7e3d3142ace62fc42221da1a00342cf5304d31def30e09db6676654345",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/printing-small.webp",
+      "preimage": null,
+      "postimage": "757122343ffc52c4b9aa5763fd36a2344d9ad563",
+      "bytes": 33486,
+      "sha256": "3145a3c1bddccfdbfa9107ad154a9dc2974e7e611e7d6ef20aa6a3b666a55e92",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/printing.webp",
+      "preimage": null,
+      "postimage": "051d6e00ab3a11e9fb3133b69d1e1f07b638bc88",
+      "bytes": 119110,
+      "sha256": "ef979dba985b46bd1b30d338c8c88ddfa3e215008a3c9c6df54000731f3271f7",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection-small.webp",
+      "preimage": null,
+      "postimage": "6fc9e23b69a566f4d50cf6d73ed083243dbd0b6a",
+      "bytes": 38226,
+      "sha256": "4bff1c2c3c9b4760e1b3a20ac5ed3b00ce8bea389c958e77f6711447d2960b63",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection.webp",
+      "preimage": null,
+      "postimage": "623bb42f005866788e454767fdfb57b406186325",
+      "bytes": 134064,
+      "sha256": "6e5c102e559cdb87e79b9b07fe62c59a83fed4a21fd637768b621bf37fa300ec",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files-small.webp",
+      "preimage": null,
+      "postimage": "5d15ff2391cd3a513e9e9c62f63bcd9d7fb621ea",
+      "bytes": 29032,
+      "sha256": "cce46bc7c48d57b751335559317166e0d26fa2cbf3f09bd713e6ed8894129231",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files.webp",
+      "preimage": null,
+      "postimage": "7aa3a64d15095cce97b2fe4207f0e58cb39f5e26",
+      "bytes": 79948,
+      "sha256": "38f0ab23333512b4b8306899ae743fb2df723ef52bad092c81853dbd1892b9a7",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/scanning-small.webp",
+      "preimage": null,
+      "postimage": "9f2acd15f01c829e08af54d9157e2b2b62cae4d4",
+      "bytes": 36564,
+      "sha256": "dc14701d6eeb6248aced07ce62e73db935884e315d4f1506d26e3ccbc26a4e0e",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/scanning.webp",
+      "preimage": null,
+      "postimage": "39feb4239a039fe5bd13ed9f496bdeda18659e46",
+      "bytes": 112734,
+      "sha256": "4aa689c48b102e9fa055e0d3a938ee0e83146e91c0bcae125a94d8ad1e193d7c",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides-small.webp",
+      "preimage": null,
+      "postimage": "d12a43a9549a4eb9734f9035eaab3aaa9956cf57",
+      "bytes": 43352,
+      "sha256": "41247583d52578c10ef532a5a3bb6589dbf66bdcf1af786129c6e1c874c3469f",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides.webp",
+      "preimage": null,
+      "postimage": "e2eac24c4dcb28b1b9bda4c3b014fdbfd5f8f13d",
+      "bytes": 142896,
+      "sha256": "ae086f8ed89800a19116964f81fe95adc6297a3792ef270dd033af3a56da850a",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes-small.webp",
+      "preimage": null,
+      "postimage": "996dd603c133c64d6ea0c291d59fa5624db9d7f5",
+      "bytes": 20868,
+      "sha256": "c158b0377b31edc47f8773412eac917a4fb6a90e3dea3fd28dbb5d04218c7b7b",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes.webp",
+      "preimage": null,
+      "postimage": "0c55ece68f358c77f57b4b8ca7d89258d57bdfab",
+      "bytes": 70376,
+      "sha256": "42b3373e40d0f260e0205f10da016c6385621108d6015990a28bb1a32c5f5976",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/warpage-small.webp",
+      "preimage": null,
+      "postimage": "f8c2271c14cca635f5864129bcb404bb6d97eb91",
+      "bytes": 39462,
+      "sha256": "9861602650ff3259a239c4d7af5101e9e10fccb10077edbcd6739ce8c0e8223d",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/warpage.webp",
+      "preimage": null,
+      "postimage": "ed5e23ca9b8d5f44db6205a5123835553af7431c",
+      "bytes": 139502,
+      "sha256": "c40ac68a003f6bef5a01a90a3180b7dd254caac038647ac9789df57e5921368a",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/workholding-small.webp",
+      "preimage": null,
+      "postimage": "b53fa04ea8e5273a1aaf9685c69e8ccab15cf83d",
+      "bytes": 35304,
+      "sha256": "e183c041a8bd078f1b2ccfc9ce434d12e9fd2c64cb7f49faf8b3016c61732886",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/workholding.webp",
+      "preimage": null,
+      "postimage": "59cd08027593a020498fd667ef7a25620b91a0bf",
+      "bytes": 128386,
+      "sha256": "58a1ccacc9465c8c5afd7c33b9084e375265308c7a70a70350946d5013771add",
+      "kind": "webp"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-cnc-preparation.svg",
+      "preimage": null,
+      "postimage": "d9fee4db56638dc242419f9c4dcb81b0f391b734",
+      "bytes": 3829,
+      "sha256": "724e0d2956a2cbda8f84bdfad16d8c263d5c2cb99f6361cd12acbed0c857b9d3",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-cutting-tool-reach.svg",
+      "preimage": null,
+      "postimage": "23046a19cff12c1674892c4063146a4319a5e1e5",
+      "bytes": 2995,
+      "sha256": "f4cb46604bbe72d966ac224559b54602978401730cbc560787a6ec012d346f28",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-feeds-speeds.svg",
+      "preimage": null,
+      "postimage": "41ccf1e9f5417e511535eb96200406932136df31",
+      "bytes": 2576,
+      "sha256": "9e98e7fbb2ba68758beaff23c022c6509e11011ae82f631c8e512160cab05250",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-hole-depths.svg",
+      "preimage": null,
+      "postimage": "61ed15230758fc1824f5697b9f07f62fb8c2c5b4",
+      "bytes": 5041,
+      "sha256": "44e56db895d4771291ad0e3bf5a65621f7c3a64b41e63ade259ed9c972819867",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-machining-access.svg",
+      "preimage": null,
+      "postimage": "4da62a319cb71b2702909f046b14391f3db2222f",
+      "bytes": 3236,
+      "sha256": "bff49c89b73c95935c33dbb5e3fb49fb4f9b15a023eb91d1a089c2dc6d727166",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-material-criteria.svg",
+      "preimage": null,
+      "postimage": "2e329bf64624671a81f99f79979c76254e5355ee",
+      "bytes": 4300,
+      "sha256": "3e064803d71377412e7555c5f9709bc5630f3fc312fc17981705f3df72a1d853",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-metal-designation.svg",
+      "preimage": null,
+      "postimage": "d7c3f33ed118f69353205495c3988cbdd5cc171e",
+      "bytes": 2266,
+      "sha256": "a0cd55b3d3f81881bf5192aa95fc4b6544a0dc5a0adad3f8e02a3eb5ce27a38e",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-polymer-creep.svg",
+      "preimage": null,
+      "postimage": "bf7318e313cdfb0d7774b96ce6a9a6d04deb0c5c",
+      "bytes": 1985,
+      "sha256": "7cb5b53bb352f441b5fd9a7dfe444554390a45a6ec302c77b185fafaf7c131ac",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-print-orientation.svg",
+      "preimage": null,
+      "postimage": "488a03af97f7d2f09607b09c135f7297710442cf",
+      "bytes": 3711,
+      "sha256": "7203838c920bc53fe65d80c327adeef51de7533bd794044eae6415a321932516",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-process-routes.svg",
+      "preimage": null,
+      "postimage": "f68e77865a172928c1741a64ba4c1d2b4155aede",
+      "bytes": 2829,
+      "sha256": "1e0f47a42962faa602913c2bd2a6da99c482dfc9ef7eb0fd6bd39c08a76c916c",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-quotation-package.svg",
+      "preimage": null,
+      "postimage": "f93ad604fba57ff9f79265ddc7af5e48d2ec15b7",
+      "bytes": 3293,
+      "sha256": "9b184a7dd4f33df76916f98eb879934d57e97c88ccd6ab2980628387054b25ee",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-review-loop.svg",
+      "preimage": null,
+      "postimage": "d4fab4ed787906251b1a15ee0f22d6e629d777c5",
+      "bytes": 3190,
+      "sha256": "47b841a1f51e81e6f298a0103200f137b5290ccabed04b101bac04f5a63d69c4",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-scan-to-cad.svg",
+      "preimage": null,
+      "postimage": "9f7f00c287d6e1e0f82a30ba481cefc919159339",
+      "bytes": 3505,
+      "sha256": "30164113a966e10a0b98b6b1af6f5df88d968e23b5ac535ab7f7890e93a6f3cd",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-service-inputs.svg",
+      "preimage": null,
+      "postimage": "7aeb07d58101f0ba2963e305669e2a0cc6956b43",
+      "bytes": 3096,
+      "sha256": "58be18fe4d1be67cc89717c22bde5a307b349ed6b0baa121261d78b3e0805aed",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-thermal-measurement.svg",
+      "preimage": null,
+      "postimage": "3352a9cde32d439b013691b55545d40559b0666b",
+      "bytes": 1887,
+      "sha256": "2ca13899f4dc041ed4b5d885712852ffa5ae1d02982a888ed76144c1d0abf36e",
+      "kind": "svg"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-treatment-allowance.svg",
+      "preimage": null,
+      "postimage": "a49380b786525a7c84713b8eb2994418809953fc",
+      "bytes": 2031,
+      "sha256": "04683907c1b2747d38db03c3b69a7f1ab0f0157f16dba2fcbd11c267e7a39c00",
+      "kind": "svg"
+    },
+    {
+      "path": "scripts/stage_knowledge_assets.py",
+      "preimage": null,
+      "postimage": "d0d50098830610c9b6925fac4d4a42303be8bf91",
+      "kind": "reviewed-source",
+      "bytes": 10382
+    },
+    {
+      "path": "tests/KnowledgeAssetIntake.Tests.py",
+      "preimage": null,
+      "postimage": "1680ad23b207cfa8af0014fffb8d6260577fa147",
+      "kind": "reviewed-source",
+      "bytes": 6536
+    },
+    {
+      "path": "tests/ProductionSeoVerifier.psm1",
+      "preimage": "e90b7e8f95776fdee99b9194871923d50b3d7fbd",
+      "postimage": "b7b23d2ddd9ad657ac057c5d8d6c56362754aeec",
+      "kind": "reviewed-source",
+      "bytes": 37429
+    },
+    {
+      "path": "tests/ProductionSeoVerifier.Tests.ps1",
+      "preimage": "a3d86a633cd20e98a157eddc33ac1aae6b936bc9",
+      "postimage": "a2975faa2adf1fe7ade1b0a475c56398bbbd86b1",
+      "kind": "reviewed-source",
+      "bytes": 29675
+    }
+  ],
+  "existingGenerated": [
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/app.min.js",
+      "blob": "3cb82c89550198dbb15f0b834309abffd7ab1a12",
+      "bytes": 14279
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json",
+      "blob": "91acbd914a2344e155958499d90bb91d66056b10",
+      "bytes": 833
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-brands-400-LA6RBN2H.woff2",
+      "blob": "e5b3ce081207a202aac7407af74696f458887c2a",
+      "bytes": 115420
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-regular-400-NCGHE5NP.woff2",
+      "blob": "d470bd17584b271e1069a6435db5128a8a69f2b7",
+      "bytes": 19512
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-solid-900-EFITDVWS.woff2",
+      "blob": "3ffbb19eb1453bc16ad20e7d57febed054e30ff5",
+      "bytes": 119488
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-v4compatibility-4GXT74DT.woff2",
+      "blob": "971a2b327340c891949b29e53cb519c67173e30b",
+      "bytes": 4168
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-BXXLFHTJ.woff2",
+      "blob": "b7386c8164a953547cb960712276918674fa219c",
+      "bytes": 9112
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-HJOYPAAW.woff",
+      "blob": "4933fe4bf093ae4f1defe0907372bfc7561f79dc",
+      "bytes": 11316
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-DA26WOS3.woff",
+      "blob": "a3e79dec4e3c5c3c021b508e9c473c96a618e7dd",
+      "bytes": 11460
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-NLQVN6TL.woff2",
+      "blob": "09fdeab3f7f3f7d0d5ba243f1459f8b9b1df9abe",
+      "bytes": 9224
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-FTSWGG55.woff",
+      "blob": "e61b50c40b5c06e3d12e4936f4cd7df8f7ad5a28",
+      "bytes": 11444
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-Q4NFZHYH.woff2",
+      "blob": "32a6baa3bd52eb6184b4f79b6f72a2e8a1c5ad79",
+      "bytes": 9220
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-MJX636HN.woff",
+      "blob": "eb2dc3005e3ddc5c4904f4fe47e044bfbbd9ccc6",
+      "bytes": 18232
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-WPZHQ72E.woff2",
+      "blob": "2c401f59f92b53a2d43643a81a4dcb6a35c6947b",
+      "bytes": 14032
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-5NAIAZI7.woff",
+      "blob": "4a072aa2329b707f5600098a7983c586843699ce",
+      "bytes": 17688
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-PXR3PSSK.woff2",
+      "blob": "264ce74280afa9bce3b16dbdd77a42754ba52986",
+      "bytes": 13528
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-7I4OGWZG.woff2",
+      "blob": "aa32da2408ba303cef78ff1c3dc36cbf88983ef1",
+      "bytes": 14140
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-SAVBCENJ.woff",
+      "blob": "87b8e187f0431a4c523be6191b66e31c50e0359b",
+      "bytes": 18412
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/cnc-quotation.min.js",
+      "blob": "9c83def5963192f411fd82783b5e303e4c20ce8a",
+      "bytes": 122674
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-viewer.mjs",
+      "blob": "58726b50c904bcb525a42df092b5fbae9e6c981b",
+      "bytes": 695800
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs",
+      "blob": "50e4cf2eb644574c2a803e3d446156f208cbf9b0",
+      "bytes": 24036
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-about.css",
+      "blob": "42d0d14d6eba0c0ad1d929252f5c42f2be2ca430",
+      "bytes": 8220
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-error.css",
+      "blob": "a3f908a270bfa026757822f1a16e7b3f28700715",
+      "bytes": 3737
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-error.js",
+      "blob": "074f8749bae9309d53ac7cd7922eb1f61d7c53b8",
+      "bytes": 5634
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.css",
+      "blob": "a6cea382dfd78cb28e67ecd0d4b926123f03d5f3",
+      "bytes": 24347
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.js",
+      "blob": "865411e77ea4d0db6eb40de52c0e38cfa580da64",
+      "bytes": 5122
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.css",
+      "blob": "345f27e33b6fa13a1d479abcfe422f6af160f712",
+      "bytes": 13642
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.js",
+      "blob": "e00d8b24e91a3ff50d61bebd310bf967149923fc",
+      "bytes": 5081
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css",
+      "blob": "1afdfb26c0844e36402f196fb1c1969d1db9f39a",
+      "bytes": 35240
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js",
+      "blob": "007a3eb32db02ff56d13937a45472c50ea662b70",
+      "bytes": 26527
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-knowledge.js",
+      "blob": "7542949b6633934ce8627f7b949dd44d34b916b2",
+      "bytes": 1851
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-member-order.js",
+      "blob": "cfaf2f9efd3f1eebe97820cfb2b92736e4609926",
+      "bytes": 1115
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-cnc.js",
+      "blob": "9ae53d446541d609b37a2831acafbccdfef62247",
+      "bytes": 4026
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-finder.js",
+      "blob": "f67c173bb30d6d6a4b2575f1b0eb310e8c537f61",
+      "bytes": 24690
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-finishing.js",
+      "blob": "e1f06cb141700e92b248ca4d54e42157e2183024",
+      "bytes": 851773
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js",
+      "blob": "2344c3cd2b96c3f5d34f16dfc0c220f56022e51d",
+      "bytes": 16226
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-scanning.js",
+      "blob": "60672f0b3c42d97e6ac7710501cac5cb646c176b",
+      "bytes": 7517
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js",
+      "blob": "6956a4a4636d8d0c43ab3cd90216320f8f1e283c",
+      "bytes": 3258
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-services-index.css",
+      "blob": "4ac6142e3f5c5f7bf369ef007dc5737d350597eb",
+      "bytes": 99231
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/route-services.css",
+      "blob": "2742d0a7fc1ee9d4690961b1958c579fa12d8aa5",
+      "bytes": 89150
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/site.min.css",
+      "blob": "db82c3734b7b24e1eb562fc052a845683c277650",
+      "bytes": 381079
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/dist/vendor.min.js",
+      "blob": "13743ebb61b209f28e1c5805c9a09b33e92055b3",
+      "bytes": 81462
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/LICENSE",
+      "blob": "5303437e406ed22d8cb0b4c12398870792a25878",
+      "bytes": 1081
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/OBJLoader.js",
+      "blob": "93e8ba1cc564f55d2074a443588357a6a747c0d2",
+      "bytes": 21560
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/OrbitControls.js",
+      "blob": "0873097102ca98527d3f2b5132a57b0b9d62ce07",
+      "bytes": 26375
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/STLLoader.js",
+      "blob": "5c50fc2db0065b928e3aaa7e74d9414fdc5c2c18",
+      "bytes": 9847
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/three.js",
+      "blob": "d855ea0aeea1afb894cc8e0c6c6a2b2f3c15aa96",
+      "bytes": 1154893
+    }
+  ],
+  "custodyFiles": [
+    [
+      "docs/migration/company-release-assets.v1.json",
+      "6b55e8dd05e009b34fcaeadfd1164a88fd189ed3"
+    ],
+    [
+      "scripts/verify_company_release_assets.py",
+      "e1ae5e1f4c7f33e26d585a2d0f885f46e94958e6"
+    ],
+    [
+      "tests/CompanyReleaseAssetValidator.Tests.py",
+      "4828674b4db33f0a94ea58bb805552b0b91eab78"
+    ]
+  ],
+  "scope": "Ephemeral read-only Git-object acquisition, Node build, synthetic Python/Node and byte/SVG custody only. No .NET/browser/HTTP/image decode/provider/release/wholeSHA acceptance.",
+  "claims": {
+    "wholeSourceCommitAccepted": false,
+    "fullSuiteAccepted": false,
+    "assetDeliveryAccepted": false,
+    "generatedOutputCount": "DISCOVER_AND_SEAL_NOT_FORECAST"
+  },
+  "provenance": {
+    "priorGeneratorHead": "33d83120ec7e8b7b3649dfd3ea6847e229ec9c59",
+    "priorWorkflowBlob": "95f77ba8b979715e28717a7369ce46d208cdade8",
+    "priorScriptBlob": "87f17777ed831e810601cfdf1502c13cc2958aba",
+    "priorRun": "38937700910",
+    "sourceHistoryCommits": 10,
+    "pathOccurrences": 201
+  },
+  "inputTotalBytes": 5942967
+}
