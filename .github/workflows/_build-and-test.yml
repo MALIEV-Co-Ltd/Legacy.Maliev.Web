@@ -7,8 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  validate:
-    name: validate
+  focused:
+    name: focused
     runs-on: ubuntu-latest
     env:
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
@@ -90,7 +90,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~Legacy.Maliev.Web.Tests.WebSurfaceOwnedLifetimeTests|FullyQualifiedName~Legacy.Maliev.Web.Tests.AccountBoundaryOwnedLifetimeTests"
+          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~Legacy.Maliev.Web.Tests.WebSurfaceOwnedLifetimeTests|FullyQualifiedName~Legacy.Maliev.Web.Tests.AccountBoundaryOwnedLifetimeTests"
           --logger trx --results-directory ./websurface-owned-lifetime-test-results
       - name: Verify exact owned-resource refusal and cleanup controls
         run: >-
@@ -524,24 +524,6 @@ jobs:
           path: focused-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}/
           retention-days: 7
           if-no-files-found: error
-      - name: Validate .NET solution
-        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
-        with:
-          solution: Legacy.Maliev.Web.slnx
-          use-local-maliev-dependencies: 'true'
-      - name: Gate raw generated-inclusive Web coverage
-        if: always()
-        shell: pwsh
-        run: |
-          ./tests/WebFxRawCoverage.Tests.ps1
-          ./tests/Test-WebFxRawCoverage.ps1 -ResultsRoot ./Legacy.Maliev.Web.Tests/TestResults
-      - name: Verify full-suite preliminary PDF structure and exact-byte manifests
-        timeout-minutes: 1
-        shell: bash
-        run: >-
-          "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
-          --root ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof
-          --receipt ./preliminary-pdf-full-proof/parser-receipt.json
       - name: Remove only the owned preliminary PDF verification runtime
         if: always()
         timeout-minutes: 1
@@ -566,8 +548,357 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
+          name: web-focused-native-${{ github.sha }}
+          path: |
+            Legacy.Maliev.Web.Tests/TestResults/**/*.trx
+            Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
+            Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
+            ticket-test-results/**/*.trx
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
+            websurface-owned-lifetime-test-results/**/*.trx
+            line-contact-candidate-test-results/**/*.trx
+            cnc-resource-test-results/**/*.trx
+            cnc-literal-producer-test-results/**/*.trx
+            sidebar-navigation-test-results/sidebar-*-initial-navigation-timeout.json
+            sidebar-focused-test-results/**/*.trx
+            publisher-mesh-test-results/**/*.trx
+            physical-result-test-results/**/*.trx
+            quotation-response-test-results/**/*.trx
+            knowledge-navigation-test-results/**/*.trx
+            home-process-test-results/**/*.trx
+            service-gallery-test-results/**/*.trx
+            authenticated-profile-test-results/**/*.trx
+            material-identity-test-results/**/*.trx
+            material-progress-test-results/**/*.trx
+            material-card-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-diagnostics/*.json
+            signed-link-test-results/**/*.trx
+            startup-security-test-results/**/*.trx
+            startup-image-acquisition/dockerhub-quota.json
+            scanning-comparison-test-results/**/*.trx
+            preliminary-duration-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/scanning-comparison-screenshots/*.png
+            localized-account-seo-test-results/**/*.trx
+            localized-inquiry-test-results/**/*.trx
+            preliminary-dfm-test-results/**/*.trx
+            preliminary-pdf-test-results/**/*.trx
+            preliminary-pdf-test-results/pdf/*.pdf
+            preliminary-pdf-test-results/pdf/*.json
+            preliminary-pdf-test-results/parser-receipt.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.pdf
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.json
+            preliminary-pdf-full-proof/parser-receipt.json
+            thai-lookup-test-results/**/*.trx
+            billing-persistence-test-results/**/*.trx
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/initial-readiness/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.png
+            Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
+            Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
+            Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
+            tests/web-fx-generated-inclusive.runsettings
+          retention-days: 7
+          if-no-files-found: error
+
+  validate:
+    name: validate
+    needs: focused
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
+      MALIEV_WEB_STARTUP_PROOF: hosted-owned
+      MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      MALIEV_BROWSER_EVIDENCE_DIR: ${{ github.workspace }}/sidebar-navigation-test-results
+    steps:
+      - name: Require successful focused validation
+        id: focused_guard
+        shell: bash
+        env:
+          FOCUSED_RESULT: ${{ needs.focused.result }}
+        run: |
+          if [[ "$FOCUSED_RESULT" != "success" ]]; then
+            echo 'Focused validation did not succeed; full validation is rejected.' >&2
+            exit 1
+          fi
+      - name: Check out Web
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Check out Legacy.Maliev.ServiceDefaults
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 4ffba0639620e7e923d331317f3f28501526b573
+          path: .dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - name: Check out Legacy.Maliev.CompatibilityContracts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: .dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - name: Verify offline Search Console cohort reporter
+        shell: pwsh
+        run: ./tests/SearchConsoleCohortReport.Tests.ps1
+      - name: Set up original Career oracle runtime
+        timeout-minutes: 5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+      - name: Build original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet build acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --disable-build-servers -warnaserror
+          -p:UseSharedCompilation=false -nodeReuse:false
+      - name: Verify original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet test acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --no-build --no-restore --disable-build-servers
+          -p:UseSharedCompilation=false -nodeReuse:false
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --logger trx --results-directory ./career-original-materialization-test-results
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Legacy.Maliev.Web/package-lock.json
+      - name: Build deterministic browser assets
+        working-directory: Legacy.Maliev.Web
+        run: npm run ci
+      - name: Verify committed browser assets
+        run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
+      - name: Verify frozen source-parity manifest
+        shell: pwsh
+        run: ./scripts/verify-complete-source-history-parity.ps1 -ManifestOnly
+      - name: Build exact-pinned disposable profile boundary services
+        shell: pwsh
+        run: ./scripts/prepare-profile-producer-boundary.ps1
+      - name: Build exact-pinned disposable member authentication proof
+        shell: pwsh
+        run: ./scripts/prepare-member-auth-indexing-proof.ps1
+      - name: Build exact-pinned Catalog for member billing persistence proof
+        shell: pwsh
+        run: ./scripts/prepare-billing-catalog-proof.ps1
+      - name: Build exact-pinned disposable SCB payment boundary service
+        shell: pwsh
+        run: ./scripts/prepare-scb-payment-boundary.ps1
+      - name: Build browser acceptance host
+        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Install pinned Chromium browser
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          # Use the signed official HTTPS archive after the hosted Azure mirror stalled.
+          test -s /etc/apt/apt-mirrors.txt
+          python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Retain original Redis image cache or registry quota snapshot before startup
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 ./startup-image-acquisition
+          python3 -B scripts/probe-startup-dockerhub-quota.py \
+            --receipt ./startup-image-acquisition/dockerhub-quota.json --check-local-cache
+      - name: Prepare isolated hash-pinned preliminary PDF verification runtime
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import sys; print("PDF verifier Python", sys.version.split()[0]); sys.exit(0 if sys.version_info >= (3, 11) else "Preliminary PDF proof requires Python >=3.11")'
+          proof_runner_root="$(realpath -- "$RUNNER_TEMP")"
+          proof_directory="$(mktemp -d "$proof_runner_root/maliev-web-pdf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-XXXXXX")"
+          cleanup_failed_pdf_setup() {
+            proof_setup_status="$?"
+            trap - EXIT
+            if [[ "$proof_setup_status" -eq 0 ]]; then return; fi
+            set +e
+            proof_cleanup_path="$(realpath -- "$proof_directory")"
+            if [[ "$proof_cleanup_path" != "$proof_directory" || "$(dirname -- "$proof_cleanup_path")" != "$proof_runner_root" ]]; then
+              echo 'Refusing early cleanup outside owned temporary root.' >&2
+              exit "$proof_setup_status"
+            fi
+            case "$(basename -- "$proof_cleanup_path")" in
+              "maliev-web-pdf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-"*) ;;
+              *) echo 'Refusing early cleanup for unknown temporary prefix.' >&2; exit "$proof_setup_status" ;;
+            esac
+            if [[ -f "$proof_cleanup_path/.maliev-web-pdf-owned" && ! -L "$proof_cleanup_path/.maliev-web-pdf-owned" ]] &&
+               [[ "$(cat -- "$proof_cleanup_path/.maliev-web-pdf-owned")" == "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}" ]]; then
+              rm -rf -- "$proof_cleanup_path"
+            else
+              # Exact mktemp ownership permits only empty-directory removal without a marker.
+              rmdir -- "$proof_cleanup_path" || echo 'Early cleanup refused: directory is nonempty or ownership marker is uncertain.' >&2
+            fi
+            if [[ -e "$proof_cleanup_path" || -L "$proof_cleanup_path" ]]; then
+              echo 'Owned PDF setup directory remains after cleanup attempt.' >&2
+            fi
+            exit "$proof_setup_status"
+          }
+          trap cleanup_failed_pdf_setup EXIT
+          printf '%s:%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$proof_directory/.maliev-web-pdf-owned"
+          printf 'WEB_PRELIMINARY_PDF_VENV=%s\n' "$proof_directory" >> "$GITHUB_ENV"
+          python3 -m venv "$proof_directory"
+          "$proof_directory/bin/python" -m pip install \
+            --disable-pip-version-check --no-input --require-hashes \
+            --only-binary=:all: --no-deps --timeout 30 --retries 1 \
+            --requirement tests/preliminary-pdf-requirements.txt
+      - name: Verify preliminary PDF parser rejection controls
+        timeout-minutes: 1
+        shell: bash
+        run: '"$WEB_PRELIMINARY_PDF_VENV/bin/python" tests/PreliminaryPdfProofGuardTests.py'
+      - name: Validate .NET solution
+        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
+        with:
+          solution: Legacy.Maliev.Web.slnx
+          use-local-maliev-dependencies: 'true'
+      - name: Gate raw generated-inclusive Web coverage
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: pwsh
+        run: |
+          ./tests/WebFxRawCoverage.Tests.ps1
+          ./tests/Test-WebFxRawCoverage.ps1 -ResultsRoot ./Legacy.Maliev.Web.Tests/TestResults
+      - name: Verify full-suite preliminary PDF structure and exact-byte manifests
+        timeout-minutes: 1
+        shell: bash
+        run: >-
+          "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
+          --root ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof
+          --receipt ./preliminary-pdf-full-proof/parser-receipt.json
+      - name: Retain exact full-suite revision and result identity
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: bash
+        env:
+          FULL_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          FULL_EVENT_SHA: ${{ github.sha }}
+          FULL_RUN_ID: ${{ github.run_id }}
+          FULL_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, itertools, json, os, re, subprocess, xml.etree.ElementTree as ET
+          from pathlib import Path
+          root = Path.cwd()
+          def git(ref):
+              return subprocess.check_output(['git', 'rev-parse', ref], timeout=10, text=True).strip()
+          identity = {key: os.environ['FULL_' + key.upper()] for key in ['candidate_sha', 'event_sha', 'run_id', 'attempt']}
+          checked_head, checked_tree = git('HEAD'), git('HEAD^{tree}')
+          if not all(re.fullmatch('[0-9a-f]{40}', value) for value in
+                     [identity['candidate_sha'], identity['event_sha'], checked_head, checked_tree]):
+              raise RuntimeError('Invalid full-suite revision identity')
+          if checked_head != identity['event_sha']:
+              raise RuntimeError('Full-suite checkout differs from the original workflow event')
+          if not all(re.fullmatch('[1-9][0-9]{0,19}', identity[key]) for key in ['run_id', 'attempt']):
+              raise RuntimeError('Invalid full-suite run identity')
+          source_bytes = [0]
+          def record(path):
+              if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(root.resolve()):
+                  raise RuntimeError('Invalid full-suite evidence file')
+              limit = 64 * 1024 * 1024
+              before = path.stat()
+              if not 0 < before.st_size <= min(limit, 128 * 1024 * 1024 - source_bytes[0]):
+                  raise RuntimeError('Full-suite evidence exceeds bounded receipt')
+              descriptor = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+              with os.fdopen(descriptor, 'rb') as stream:
+                  opened = os.fstat(stream.fileno())
+                  identity = lambda info: (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+                  if identity(opened) != identity(before):
+                      raise RuntimeError('Full-suite evidence changed before receipt')
+                  data = stream.read(limit + 1)
+                  if not len(data) == before.st_size or identity(os.fstat(stream.fileno())) != identity(before):
+                      raise RuntimeError('Full-suite evidence changed during receipt')
+              if path.is_symlink() or identity(path.stat()) != identity(before):
+                  raise RuntimeError('Full-suite evidence changed after receipt')
+              source_bytes[0] += len(data)
+              return ({'path': path.relative_to(root).as_posix(), 'bytes': len(data),
+                       'sha256': hashlib.sha256(data).hexdigest()}, data)
+          assembly_directory = root / 'Legacy.Maliev.Web.Tests/bin/Release/net10.0'
+          names = ['Legacy.Maliev.Web.Tests.dll', 'Legacy.Maliev.Web.dll',
+                   'Legacy.Maliev.Web.Application.dll', 'Legacy.Maliev.Web.Infrastructure.dll']
+          binaries = [record(assembly_directory / name)[0] for name in names]
+          reports = []
+          namespace = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          paths = list(itertools.islice((root / 'Legacy.Maliev.Web.Tests/TestResults').rglob('*.trx'), 17))
+          if not 0 < len(paths) <= 16:
+              raise RuntimeError('Full-suite TRX metadata report bound exceeded')
+          allowed_counters = {'total', 'executed', 'passed', 'failed', 'error', 'timeout', 'aborted',
+                              'inconclusive', 'passedButRunAborted', 'notRunnable', 'notExecuted',
+                              'disconnected', 'warning', 'completed', 'inProgress', 'pending'}
+          allowed_outcomes = {'Completed', 'Passed', 'Failed', 'Error', 'Timeout', 'Aborted',
+                              'Inconclusive', 'PassedButRunAborted', 'NotRunnable', 'NotExecuted',
+                              'Disconnected', 'Warning', 'InProgress', 'Pending'}
+          for path in sorted(paths):
+              entry, data = record(path)
+              if b'<!DOCTYPE' in data.upper() or b'<!ENTITY' in data.upper():
+                  raise RuntimeError('Invalid full-suite TRX document')
+              document = ET.fromstring(data)
+              summary = document.find('t:ResultSummary', namespace)
+              counters = summary.find('t:Counters', namespace) if summary is not None else None
+              if counters is None:
+                  raise RuntimeError('Full-suite TRX counters missing')
+              if summary.get('outcome') not in allowed_outcomes:
+                  raise RuntimeError('Full-suite TRX outcome metadata rejected')
+              if not counters.attrib or not set(counters.attrib).issubset(allowed_counters):
+                  raise RuntimeError('Full-suite TRX counter metadata rejected')
+              values = {}
+              for key, value in counters.attrib.items():
+                  if not re.fullmatch('[0-9]{1,10}', value) or int(value) > 2147483647:
+                      raise RuntimeError('Full-suite TRX counter value metadata rejected')
+                  values[key] = int(value)
+              entry['outcome'] = summary.get('outcome')
+              entry['counters'] = values
+              reports.append(entry)
+          if not reports:
+              raise RuntimeError('No full-suite TRX identity to retain')
+          directory = root / 'full-suite-identity'
+          directory.mkdir(exist_ok=False)
+          receipt = {'schema': 'web-full-suite-identity.v1', **identity,
+                     'checked_head': checked_head, 'checked_tree': checked_tree,
+                     'binaries': binaries, 'reports': reports, 'source_bytes': source_bytes[0],
+                     'scope': 'actual unfiltered full-suite TRX identity; no discovery, filtering or coverage aggregation'}
+          encoded = (json.dumps(receipt, sort_keys=True, indent=2) + '\n').encode('utf-8')
+          if len(encoded) > 256 * 1024:
+              raise RuntimeError('Full-suite identity receipt exceeds metadata byte bound')
+          with (directory / 'receipt.json').open('xb') as output:
+              output.write(encoded)
+          PY
+      - name: Remove only the owned preliminary PDF verification runtime
+        if: always() && steps.focused_guard.outcome == 'success'
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${WEB_PRELIMINARY_PDF_VENV:-}" ]]; then exit 0; fi
+          if [[ ! -e "$WEB_PRELIMINARY_PDF_VENV" && ! -L "$WEB_PRELIMINARY_PDF_VENV" ]]; then exit 0; fi
+          proof_runner_root="$(realpath -- "$RUNNER_TEMP")"
+          proof_directory="$(realpath -- "$WEB_PRELIMINARY_PDF_VENV")"
+          [[ "$proof_directory" == "$WEB_PRELIMINARY_PDF_VENV" ]]
+          [[ "$(dirname -- "$proof_directory")" == "$proof_runner_root" ]]
+          case "$(basename -- "$proof_directory")" in
+            "maliev-web-pdf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-"*) ;;
+            *) echo 'Refusing cleanup outside the owned preliminary PDF runtime.' >&2; exit 1 ;;
+          esac
+          [[ -f "$proof_directory/.maliev-web-pdf-owned" && ! -L "$proof_directory/.maliev-web-pdf-owned" ]]
+          [[ "$(cat -- "$proof_directory/.maliev-web-pdf-owned")" == "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}" ]]
+          rm -rf -- "$proof_directory"
+          [[ ! -e "$proof_directory" && ! -L "$proof_directory" ]]
+      - name: Preserve independent focused groups and full raw coverage evidence
+        if: always() && steps.focused_guard.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
           name: web-combined-native-${{ github.sha }}
           path: |
+            full-suite-identity/receipt.json
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
