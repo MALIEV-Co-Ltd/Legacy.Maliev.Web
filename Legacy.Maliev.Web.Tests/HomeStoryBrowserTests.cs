@@ -82,12 +82,50 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture, X
         float RemainingReadinessMilliseconds() => (float)Math.Max(1, 30000 - readinessClock.Elapsed.TotalMilliseconds);
         await page.WaitForFunctionAsync("() => document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'",
             null, new() { Timeout = RemainingReadinessMilliseconds() });
-        // Dismissing the modal does not establish the carousel's real hover/focus pause preconditions.
-        await page.Mouse.MoveAsync(0, 0);
-        await page.Locator("#main-content").FocusAsync(new() { Timeout = RemainingReadinessMilliseconds() });
+        // A viewport coordinate can move under the hero as the document scrolls.
+        // Use the existing fixed skip link through real focus/hover, never click it.
+        async Task ParkPointerOutsideHeroAsync(System.Diagnostics.Stopwatch? sharedBudget = null)
+        {
+            var budget = sharedBudget ?? System.Diagnostics.Stopwatch.StartNew();
+            float RemainingMilliseconds()
+            {
+                var remaining = 30000 - budget.Elapsed.TotalMilliseconds;
+                if (remaining <= 0)
+                    throw new TimeoutException("Home outside-focus precondition exceeded its 30-second budget.");
+                return (float)remaining;
+            }
+
+            var parking = page.Locator(".maliev-skip-link[href='#main-content']");
+            await parking.FocusAsync(new() { Timeout = RemainingMilliseconds() });
+            await parking.HoverAsync(new() { Timeout = RemainingMilliseconds() });
+            await Assertions.Expect(parking).ToBeVisibleAsync(new() { Timeout = RemainingMilliseconds() });
+            await Assertions.Expect(parking).ToBeFocusedAsync(new() { Timeout = RemainingMilliseconds() });
+            await page.WaitForFunctionAsync("""
+                () => {
+                    const parking = document.querySelector(".maliev-skip-link[href='#main-content']");
+                    const root = document.querySelector('[data-home-hero-carousel]');
+                    if (!parking || !root) return false;
+                    const box = parking.getBoundingClientRect();
+                    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+                    return document.activeElement === parking && parking.matches(':hover')
+                        && parking.contains(hit) && !root.contains(hit)
+                        && !root.matches(':hover') && !root.contains(document.activeElement);
+                }
+                """, null, new() { Timeout = RemainingMilliseconds() });
+        }
+
+        await ParkPointerOutsideHeroAsync(readinessClock);
         Assert.True(await page.EvaluateAsync<bool>("!document.hidden"));
         Assert.True(await page.Locator("[data-home-hero-carousel]").EvaluateAsync<bool>(
-            "root => !root.contains(document.elementFromPoint(0, 0)) && !root.matches(':hover') && !root.contains(document.activeElement)",
+            """
+            root => {
+                const parking = document.querySelector(".maliev-skip-link[href='#main-content']");
+                const box = parking.getBoundingClientRect();
+                const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+                return parking.contains(hit) && !root.contains(hit)
+                    && !root.matches(':hover') && !root.contains(document.activeElement);
+            }
+            """,
             null, new() { Timeout = RemainingReadinessMilliseconds() }));
         await page.WaitForFunctionAsync("() => window.__homeClock.count() === 1 && document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'",
             null, new() { Timeout = RemainingReadinessMilliseconds() });
@@ -152,7 +190,7 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture, X
         Assert.Equal(0, await page.EvaluateAsync<int>("window.__homeClock.count()"));
         await page.EvaluateAsync("window.__homeClock.advance(16000)");
         Assert.True(await page.Locator("#home-hero-partnership").IsVisibleAsync());
-        await page.Locator("#main-content").FocusAsync();
+        await ParkPointerOutsideHeroAsync();
         Assert.Equal(1, await page.EvaluateAsync<int>("window.__homeClock.count()"));
         await page.EvaluateAsync("window.__homeClock.advance(7999)");
         Assert.True(await page.Locator("#home-hero-partnership").IsVisibleAsync());
@@ -161,13 +199,13 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture, X
         await toggle.FocusAsync();
         await toggle.PressAsync("Enter");
         Assert.Equal(culture == "th" ? "เล่นสไลด์อัตโนมัติต่อ" : "Resume automatic slides", await toggle.InnerTextAsync());
-        await page.Locator("#main-content").FocusAsync();
+        await ParkPointerOutsideHeroAsync();
         Assert.Equal(0, await page.EvaluateAsync<int>("window.__homeClock.count()"));
         await page.EvaluateAsync("window.__homeClock.advance(24000)");
         Assert.True(await page.Locator("#home-hero-partnership").IsVisibleAsync());
         await toggle.FocusAsync();
         await toggle.PressAsync(" ");
-        await page.Locator("#main-content").FocusAsync();
+        await ParkPointerOutsideHeroAsync();
         Assert.Equal(1, await page.EvaluateAsync<int>("window.__homeClock.count()"));
         await page.EvaluateAsync("window.__homeClock.advance(7999)");
         Assert.True(await page.Locator("#home-hero-partnership").IsVisibleAsync());
