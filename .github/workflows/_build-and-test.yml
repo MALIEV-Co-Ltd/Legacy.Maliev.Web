@@ -400,6 +400,7 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
             ticket-test-results/**/*.trx
             cnc-resource-test-results/**/*.trx
+            quotation-conversion-test-results/**/*.trx
             cnc-literal-producer-test-results/**/*.trx
             sidebar-navigation-test-results/sidebar-*-initial-navigation-timeout.json
             sidebar-focused-test-results/**/*.trx
