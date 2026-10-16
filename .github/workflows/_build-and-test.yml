@@ -199,6 +199,14 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~HomeStaticSsrRouteTests|FullyQualifiedName~HomeStorySsrRouteTests|FullyQualifiedName~HomeStoryBrowserTests"
           --logger trx --results-directory ./home-process-test-results
+      - name: Verify localized About presentation and actual route-scoped enhancements
+        timeout-minutes: 10
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~AboutPageContractTests|FullyQualifiedName~AboutStaticSsrRouteTests|FullyQualifiedName~AboutStoryBrowserTests|FullyQualifiedName~RouteScopedAssetRenderingTests|FullyQualifiedName~SharedFrontendBundleContractTests"
+          --logger trx --results-directory ./about-presentation-test-results
       - name: Verify historical service gallery framing and actual mobile composition
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -418,6 +426,7 @@ jobs:
             quotation-response-test-results/**/*.trx
             knowledge-navigation-test-results/**/*.trx
             home-process-test-results/**/*.trx
+            about-presentation-test-results/**/*.trx
             company-asset-custody-results/**
             service-gallery-test-results/**/*.trx
             authenticated-profile-test-results/**/*.trx

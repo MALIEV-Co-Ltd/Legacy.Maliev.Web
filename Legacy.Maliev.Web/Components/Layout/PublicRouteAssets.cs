@@ -57,6 +57,11 @@ public static class PublicRouteAssets
             return ["route-home.js"];
         }
 
+        if (path == "/about")
+        {
+            return ["route-about.js"];
+        }
+
         if (path == "/knowledges" || path.StartsWith("/knowledges/", StringComparison.OrdinalIgnoreCase))
         {
             return ["route-knowledge.js"];
