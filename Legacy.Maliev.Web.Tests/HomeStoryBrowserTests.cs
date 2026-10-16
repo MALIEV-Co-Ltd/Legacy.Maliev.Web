@@ -3,7 +3,7 @@ using Microsoft.Playwright;
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(PublicContactBrowserCollection.Name)]
-public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
+public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
 {
     [Theory]
     [InlineData("en", 390)]
@@ -94,7 +94,58 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         await page.EvaluateAsync("window.__homeClock.advance(7999)");
         Assert.True(await page.Locator("#home-hero-assembly").IsVisibleAsync());
         await page.EvaluateAsync("window.__homeClock.advance(1)");
-        await page.WaitForFunctionAsync("() => !document.querySelector('#home-hero-partnership').hidden && window.__homeClock.count() === 1");
+        var diagnostics = new HomeClockDiagnosticCapture();
+        EventHandler<IConsoleMessage> capture = (_, message) => diagnostics.Capture(message.Type, message.Text);
+        page.Console += capture;
+        try
+        {
+            await page.WaitForFunctionAsync("""
+                () => {
+                    const root = document.querySelector('[data-home-hero-carousel]');
+                    const clock = window.__homeClock;
+                    const box = root?.getBoundingClientRect();
+                    const animations = document.getAnimations();
+                    const state = {
+                        rootPresent: !!root,
+                        ready: root?.dataset.carouselReady === 'true',
+                        stopped: root?.dataset.carouselReady === 'stopped',
+                        documentHidden: document.hidden,
+                        rootVisible: !!box && box.width > 0 && box.height > 0 && box.bottom > 0 && box.right > 0 && box.top < innerHeight && box.left < innerWidth,
+                        rootHidden: root?.hidden === true,
+                        focus: root?.contains(document.activeElement) === true,
+                        hover: root?.matches(':hover') === true,
+                        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+                        assemblyHidden: document.querySelector('#home-hero-assembly')?.hidden === true,
+                        partnershipHidden: document.querySelector('#home-hero-partnership')?.hidden === true,
+                        journeyHidden: document.querySelector('#home-hero-journey')?.hidden === true,
+                        timers: clock.count(),
+                        scenes: root?.querySelectorAll('[data-hero-scene]').length ?? 0,
+                        animationsRunning: animations.filter(animation => animation.playState === 'running').length,
+                        animationsPaused: animations.filter(animation => animation.playState === 'paused').length,
+                        animationsFinished: animations.filter(animation => animation.playState === 'finished').length,
+                        animationsIdle: animations.filter(animation => animation.playState === 'idle').length,
+                        animationsPending: animations.filter(animation => animation.pending).length
+                    };
+                    const serialized = JSON.stringify(state);
+                    if (clock.diagnosticLast !== serialized && (clock.diagnosticCount ?? 0) < 32) {
+                        clock.diagnosticLast = serialized;
+                        clock.diagnosticCount = (clock.diagnosticCount ?? 0) + 1;
+                        console.debug('HOME_CLOCK_STATE_V1 ' + serialized);
+                    }
+                    return !document.querySelector('#home-hero-partnership').hidden && window.__homeClock.count() === 1;
+                }
+                """);
+        }
+        catch
+        {
+            try { diagnostics.WriteFailure(output); }
+            catch (Exception) { /* Diagnostic output must not replace the primary wait failure. */ }
+            throw;
+        }
+        finally
+        {
+            page.Console -= capture;
+        }
         Assert.False(await page.Locator("#home-hero-assembly").IsVisibleAsync());
         Assert.True(await page.Locator("#home-hero-partnership").IsVisibleAsync());
         await page.Locator("#home-hero-partnership a").First.FocusAsync();
