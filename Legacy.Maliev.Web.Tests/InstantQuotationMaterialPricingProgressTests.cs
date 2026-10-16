@@ -27,11 +27,12 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             var session = await fixture.CreateAsync();
             var frames = new List<InstantQuotationMaterialPricingProgress>();
+            using var cancellation = new CancellationTokenSource();
             Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, cancellation.Token);
             try
             {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
                 Assert.False(run.IsCompleted);
                 var frame = Assert.Single(frames, frame => frame.MaterialKey == "ABS" && frame.Status == status);
                 Assert.Equal(PartId, frame.PartId);
@@ -39,7 +40,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 else Assert.Equal(210, frame.UnitPrice);
             }
             catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
-            finally { await fixture.DrainAsync(run, () => { }, () => fixture.Reader.Release.TrySetResult(), default); }
+            finally { await fixture.DrainAsync(run, cancellation.Cancel, () => fixture.Reader.Release.TrySetResult(), cancellation.Token); }
         }, output, gateRead: 2);
     }
 
