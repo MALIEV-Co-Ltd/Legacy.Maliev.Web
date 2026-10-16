@@ -44,7 +44,7 @@ public sealed class KnowledgeGuideBundleRouteTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($"<html lang=\"{culture}\"", html, StringComparison.Ordinal);
         Assert.Contains($">{(culture == "th" ? thaiHeading : englishHeading)}<", html, StringComparison.Ordinal);
-        Assert.Equal(1, Regex.Matches(html, "<h1\\b", RegexOptions.CultureInvariant).Count);
+        Assert.Single(Regex.Matches(html, "<h1\\b", RegexOptions.CultureInvariant).Cast<Match>());
         Assert.Contains("route-knowledge.js", html, StringComparison.Ordinal);
         foreach (var anchor in anchors.Split('|', StringSplitOptions.RemoveEmptyEntries))
             Assert.Contains($"id=\"{anchor}\"", html, StringComparison.Ordinal);
@@ -60,7 +60,7 @@ public sealed class KnowledgeGuideBundleRouteTests
             var navigation = Regex.Match(html, "<aside[^>]*id=\"knowledge-navigation\"[^>]*>.*?</aside>",
                 RegexOptions.Singleline | RegexOptions.CultureInvariant);
             Assert.True(navigation.Success);
-            Assert.Equal(1, Regex.Matches(navigation.Value, "aria-current=\"page\"").Count);
+            Assert.Single(Regex.Matches(navigation.Value, "aria-current=\"page\"").Cast<Match>());
         }
         if (route == "/knowledges/guidelines")
         {
