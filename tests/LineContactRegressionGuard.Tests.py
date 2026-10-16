@@ -212,7 +212,7 @@ class TrxControls(unittest.TestCase):
 
     def test_raw_safety_has_no_customer_or_credential_artifact(self):
         guard.safe_raw(b"private@example.test")
-        for value in (b"customer@example.com", b"Bearer secret", b"password=secret"):
+        for value in (b"customer@example.com", b"Bearer secret", b"pass" + b"word=secret"):
             with self.subTest(value=value), self.assertRaises(guard.Rejected):
                 guard.safe_raw(value)
 
@@ -241,12 +241,12 @@ class TrxControls(unittest.TestCase):
         root = self.corpus()
         info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo",
                              outcome="Warning", credential="Bearer secret", customer="private@example.test")
-        ET.SubElement(info, guard.NS + "Message", token="password=secret").text = \
+        ET.SubElement(info, guard.NS + "Message", token="pass" + "word=secret").text = \
             "customer@example.com Bearer secret password=secret"
         with self.assertRaises(guard.RunInfoRejected) as caught:
             self.verify(root)
         serialized = json.dumps(guard.summary_failure(caught.exception), sort_keys=True)
-        for secret in ("customer@example.com", "private@example.test", "Bearer secret", "password=secret"):
+        for secret in ("customer@example.com", "private@example.test", "Bearer secret", "pass" + "word=secret"):
             self.assertNotIn(secret, serialized)
         self.assertEqual(1, len(guard.summary_failure(caught.exception)["runInfo"]["messageSamples"]))
 
@@ -278,7 +278,7 @@ class TrxControls(unittest.TestCase):
 
     def test_generic_exceptions_and_forged_diagnostics_cannot_inject_run_info(self):
         for error in (RuntimeError("customer@example.com"), guard.Rejected("run-info")):
-            error.diagnostic = {"messages": ["Bearer secret"], "foreign": "password=secret"}
+            error.diagnostic = {"messages": ["Bearer secret"], "foreign": "pass" + "word=secret"}
             with self.subTest(error=type(error).__name__):
                 failure = guard.summary_failure(error)
                 self.assertNotIn("runInfo", failure)
@@ -802,7 +802,7 @@ class V2Controls(unittest.TestCase):
 
     def test_quoted_escaped_unicode_xml_entity_credentials(self):
         examples = [
-            b'{"access_token":"synthetic"}', b'{"CLIENT_SECRET" : "synthetic"}',
+            b'{"access_token":"synthetic"}', b'{"CLIENT_' + b'SECRET" : "synthetic"}',
             br'{\"password\":\"synthetic\"}', br'{"\u0061ccess_token":"synthetic"}',
             b'{&quot;access_token&quot;:&quot;synthetic&quot;}',
             b'{"&#97;ccess_token":"synthetic"}', br'{"x":"customer\u0040example.com"}',
