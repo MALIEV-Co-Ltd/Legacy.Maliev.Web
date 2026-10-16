@@ -126,6 +126,72 @@ public sealed class LeadAnalyticsEventQueueParityTests
         Assert.Equal("printing", payload.FinderPath);
     }
 
+    [Fact]
+    public void ContactMessage_QueuesDiagnosticAndNeverProjectsQuotationConversion()
+    {
+        var tempData = CreateTempData();
+        Assert.True(LeadAnalyticsEventQueue.TryQueueContactMessage(tempData, 42, out var failure));
+        Assert.Null(failure);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(tempData, out var payload));
+        Assert.NotNull(payload);
+        Assert.Equal("maliev_contact_submitted", payload.Event);
+        Assert.Equal("contact", payload.LeadType);
+        Assert.False(payload.IsPersistedQuotation);
+        Assert.Throws<InvalidOperationException>(() => payload.BuildGenerateLeadConversionEvent());
+        Assert.False(LeadAnalyticsEventQueue.TryConsume(tempData, out _));
+    }
+
+    [Fact]
+    public void LegacyContactReplay_IsConsumedAsDiagnosticRatherThanConversion()
+    {
+        var tempData = CreateTempData();
+        tempData["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(new
+        {
+            @event = "maliev_lead_submitted",
+            lead_type = "contact",
+            service = "general_contact",
+            transaction_id = "message-42",
+            lead_status = "persisted",
+            has_files = false,
+        });
+
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(tempData, out var payload));
+        Assert.NotNull(payload);
+        Assert.Equal("maliev_contact_submitted", payload.Event);
+        Assert.False(payload.IsPersistedQuotation);
+        Assert.Throws<InvalidOperationException>(() => payload.BuildGenerateLeadConversionEvent());
+        Assert.False(LeadAnalyticsEventQueue.TryConsume(tempData, out _));
+    }
+
+    [Theory]
+    [InlineData("manual_quote", "cnc_machining", "request-42", null, true)]
+    [InlineData("instant_3d_quote", "3d_printing", "request-42", null, true)]
+    [InlineData("instant_cnc_quote", "cnc_machining", "request-42", null, true)]
+    [InlineData("contact", "general_contact", "message-42", null, false)]
+    [InlineData("manual_quote", "general_contact", "request-42", null, false)]
+    [InlineData("manual_quote", "cnc_machining", "message-42", null, false)]
+    [InlineData("manual_quote", "cnc_machining", "request-42", "not-a-guid", false)]
+    [InlineData("instant_3d_quote", "3d_scanning", "request-42", null, false)]
+    [InlineData("instant_3d_quote", "3d_printing", "request-0", null, false)]
+    [InlineData("instant_cnc_quote", "cnc_machining", "request-0", null, false)]
+    public void OnlyValidatedPersistedQuotationTuplesCanProjectConversion(
+        string leadType, string service, string transactionId, string? journeyId, bool expected)
+    {
+        var payload = new LeadAnalyticsEvent(
+            leadType, service, transactionId, true, null, null, journeyId);
+        Assert.Equal(expected, payload.IsPersistedQuotation);
+        if (!expected)
+        {
+            Assert.Throws<InvalidOperationException>(() => payload.BuildGenerateLeadConversionEvent());
+            return;
+        }
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(payload.BuildGenerateLeadConversionEvent()));
+        Assert.Equal("generate_lead", document.RootElement.GetProperty("event").GetString());
+        Assert.Equal(leadType, document.RootElement.GetProperty("lead_type").GetString());
+        Assert.Equal(transactionId, document.RootElement.GetProperty("transaction_id").GetString());
+    }
+
     private static TempDataDictionary CreateTempData() =>
         new(new DefaultHttpContext(), new DictionaryTempDataProvider());
 
