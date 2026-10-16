@@ -2,14 +2,81 @@
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <p class="maliev-eyebrow">@Localizer["Prepare your project"]</p>
-    <h1>@Localizer["Quotation request guidelines"]</h1>
-    <p class="docs-lead">@Localizer["Clear files and requirements let our engineers review feasibility, price, and lead time with fewer follow-up questions."]</p>
-    <div class="docs-step-list">
-        <section id="guideline-files"><span aria-hidden="true">1</span><div><h2>@Localizer["Send usable files"]</h2><p>@Localizer["Provide a 3D CAD file when possible. Add a drawing when tolerances, threads, finishes, inspection points, or critical dimensions matter."]</p></div></section>
-        <section id="guideline-result"><span aria-hidden="true">2</span><div><h2>@Localizer["Define the result"]</h2><p>@Localizer["State the process, material, quantity, color or finish, intended use, and required delivery date."]</p></div></section>
-        <section id="guideline-requirements"><span aria-hidden="true">3</span><div><h2>@Localizer["Flag critical requirements"]</h2><p>@Localizer["Identify mating surfaces, cosmetic faces, dimensional priorities, assemblies, and any parts supplied by you."]</p></div></section>
-        <section id="guideline-confidentiality"><span aria-hidden="true">4</span><div><h2>@Localizer["Protect confidential work"]</h2><p>@Localizer["Request our mutual NDA before sharing confidential project information when your organization requires it."]</p><a href="/legal/nondisclosureagreement">@Localizer["View NDA information"]</a></div></section>
-    </div>
+<h1>@Localizer["Quotation request guidelines"]</h1>
+<p class="docs-lead">@Localizer["A useful quotation starts with an identifiable part and a clear definition of success. Use this checklist for CNC machining, 3D printing, scanning, or a project whose manufacturing route is still undecided."]</p>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul>
+<li>
+<a href="#files">@Localizer["Files and revisions"]</a>
+</li>
+<li>
+<a href="#requirements">@Localizer["Define the requirements"]</a>
+</li>
+<li>
+<a href="#confidentiality">@Localizer["Confidential information"]</a>
+</li>
+</ul>
+</nav>
+<section id="files" class="docs-section">
+<span id="guideline-files" aria-hidden="true"></span>
+<h2>@Localizer["Send one clear revision"]</h2>
+<p>@Localizer["Identify each part by name or part number, revision, quantity, and units. Send matching models and drawings together. Mark reference-only files and remove obsolete versions from the submission. For assemblies, include a view showing how the parts fit and identify components supplied by you."]</p>
+<div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Technical guidance table"]">
+<table>
+<thead>
+<tr>
+<th scope="col">@Localizer["Information"]</th>
+<th scope="col">@Localizer["What to include"]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">@Localizer["3D geometry"]</th>
+<td>@Localizer["For solid models, include a STEP/STP export where available. For printing meshes, STL, OBJ, or 3MF may be useful; state the intended units and overall size. Confirm support in the chosen upload route."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Drawing"]</th>
+<td>@Localizer["Add a dimensioned PDF for tolerances, threads, finishes, inspection points, or requirements not captured by geometry. State which document controls each requirement."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Physical sample or idea"]</th>
+<td>@Localizer["Include photographs, approximate dimensions, intended use, and the changes you want. Explain whether an existing sample is worn, damaged, or incomplete."]</td>
+</tr>
+</tbody>
+</table>
+</div>
+<aside class="docs-note">
+<h3>@Localizer["Resolve conflicting files"]</h3>
+<p>@Localizer["If the drawing and model differ, flag the conflict before quotation. Do not rely on file dates alone to identify the approved revision."]</p>
+</aside>
+</section>
+<section id="requirements" class="docs-section">
+<span id="guideline-result" aria-hidden="true"></span>
+<span id="guideline-requirements" aria-hidden="true"></span>
+<h2>@Localizer["Describe the part in use"]</h2>
+<ul class="docs-checklist">
+<li>@Localizer["Material or required behavior; quantity per part; color and finish; requested delivery date and destination."]</li>
+<li>@Localizer["Loads, temperature, outdoor exposure, flexibility, chemical contact, and the expected service environment."]</li>
+<li>@Localizer["Critical dimensions with allowable variation; mating faces; threads and inserts; cosmetic faces; and assembly checks."]</li>
+<li>@Localizer["Required documents or inspection evidence. Ask for these before quotation so the scope and method can be agreed."]</li>
+</ul>
+<p>@Localizer["If you have not chosen a process or material, describe the application and priorities: strength, appearance, cost, weight, or speed. A requested date is a planning input; confirm the agreed schedule in the quotation."]</p>
+</section>
+<section id="confidentiality" class="docs-section">
+<span id="guideline-confidentiality" aria-hidden="true"></span>
+<h2>@Localizer["Arrange confidentiality before sharing"]</h2>
+<p>@Localizer["Review the NDA information and arrange the agreement required by your organization before sending sensitive files or samples. Identify the project and authorized contact. Downloading a template does not itself complete an agreement."]</p>
+<a href="/legal/nondisclosureagreement">@Localizer["View NDA information"]</a>
+</section>
+<section class="docs-next">
+<h2>@Localizer["Prepare your next step"]</h2>
+<p>@Localizer["Have files and requirements ready? Request a reviewed quotation. If the process, material, or deliverable is still unclear, talk to our team first."]</p>
+<div class="maliev-actions">
+<a class="maliev-button" href="/quotation">@Localizer["Request a quotation"]</a>
+<a class="maliev-button maliev-button--secondary" href="/contact">@Localizer["Talk to our team"]</a>
+</div>
+</section>
 </article>
 
 @code {

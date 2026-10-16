@@ -118,16 +118,16 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
         "Understand the MALIEV workflow from file review and quotation to production and delivery.",
         "What happens after you request a quote",
         "Project workflow",
-        "Engineering review",
-        "Delivery")]
+        "1. Review the request and define the scope",
+        "3. Agree checks, documents, and handover")]
     [InlineData(
         "th",
         "ขั้นตอนงานผลิต | MALIEV",
         "เข้าใจขั้นตอนของ MALIEV ตั้งแต่ตรวจไฟล์และเสนอราคา ไปจนถึงผลิตและส่งมอบ",
         "เกิดอะไรขึ้นหลังขอใบเสนอราคา",
         "ขั้นตอนโปรเจกต์",
-        "วิศวกรรมตรวจสอบ",
-        "ส่งมอบ")]
+        "1. ตรวจสอบคำขอและกำหนดขอบเขต",
+        "3. ตกลงการตรวจ เอกสาร และการส่งมอบ")]
     public async Task WorkflowRoute_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,

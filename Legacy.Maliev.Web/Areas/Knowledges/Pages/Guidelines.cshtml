@@ -6,3 +6,7 @@
     ViewData["Description"] = MetadataLocalizer["Information to include when requesting CNC machining, 3D printing, or 3D scanning services."];
 }
 <component type="typeof(GuidelinesContent)" render-mode="Static" />
+
+@section Meta {
+    <component type="typeof(Legacy.Maliev.Web.Components.Pages.Knowledges.KnowledgeGuidelinesStructuredData)" render-mode="Static" param-CanonicalUrl="@(Legacy.Maliev.Web.Components.Layout.PublicDocumentLinksDisplayModel.Create(Context).CanonicalUrl)" />
+}

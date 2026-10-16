@@ -52,6 +52,11 @@ public static class PublicRouteAssets
     public static IReadOnlyList<string> GetScripts(PathString requestPath)
     {
         var path = Normalize(requestPath);
+        if (path == "/knowledges" || path.StartsWith("/knowledges/", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["route-knowledge.js"];
+        }
+
         if (path == "/error")
         {
             return ["route-error.js"];

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" fill="none">
+  <rect width="720" height="280" fill="#f4f7fb"/>
+  <rect x="70" y="75" width="240" height="130" fill="#dce4ee" stroke="#6c83a0" stroke-width="2"/>
+  <rect x="430" y="65" width="240" height="150" fill="#eaf2ff" stroke="#075de8" stroke-width="2"/>
+  <rect x="430" y="85" width="240" height="110" fill="#dce4ee"/>
+  <g stroke="#6c83a0" stroke-dasharray="5 5" stroke-width="2"><path d="M400 75H690M400 205H690"/></g>
+  <g fill="#111f33" font-family="sans-serif" font-size="19"><text x="100" y="40">D</text><text x="480" y="40">D + 0.020 mm</text><text x="95" y="250">t = 0</text><text x="440" y="250">t = 20 µm; g = 10 µm</text></g>
+  <path d="M335 140H405M395 130L405 140L395 150" stroke="#075de8" stroke-width="3"/>
+</svg>

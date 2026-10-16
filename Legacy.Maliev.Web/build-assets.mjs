@@ -82,6 +82,7 @@ await build({
 });
 
 const routeScripts = {
+  'route-knowledge': path.join(assets, 'route-knowledge.js'),
   'route-inquiry': path.join(assets, 'route-inquiry.js'),
   'route-error': path.join(assets, 'route-error.js'),
   'route-instant-quotation': path.join(assets, 'route-instant-quotation.js'),
