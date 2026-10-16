@@ -316,7 +316,7 @@
   <data name="Ideas, drawings or samples" xml:space="preserve"><value>Ideas, drawings or samples</value></data>
   <data name="Share what you have and how the part will be used." xml:space="preserve"><value>Share what you have and how the part will be used.</value></data>
   <data name="Exploded CAD of the handheld sensor enclosure" xml:space="preserve"><value>Exploded CAD of the handheld sensor enclosure</value></data>
-  <data name="3D design" xml:space="preserve"><value>3D design</value></data>
+  <data name="Home.Process.DesignTitle" xml:space="preserve"><value>3D design</value></data>
   <data name="Create or refine CAD from your idea or existing part." xml:space="preserve"><value>Create or refine CAD from your idea or existing part.</value></data>
   <data name="Comparing enclosure prototypes in different materials" xml:space="preserve"><value>Comparing enclosure prototypes in different materials</value></data>
   <data name="Choose the process" xml:space="preserve"><value>Choose the process</value></data>
@@ -348,7 +348,7 @@
   <data name="ABS housing" xml:space="preserve"><value>ABS housing</value></data>
   <data name="SLS printing" xml:space="preserve"><value>SLS printing</value></data>
   <data name="Nylon finger pads" xml:space="preserve"><value>Nylon finger pads</value></data>
-  <data name="CNC machining" xml:space="preserve"><value>CNC machining</value></data>
+  <data name="Home.Hero.CncLabel" xml:space="preserve"><value>CNC machining</value></data>
   <data name="Aluminium base &amp; jaws" xml:space="preserve"><value>Aluminium base &amp; jaws</value></data>
   <data name="Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line" xml:space="preserve"><value>Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line</value></data>
   <data name="Bring the part." xml:space="preserve"><value>Bring the part.</value></data>

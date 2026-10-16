@@ -5,7 +5,7 @@
 @{
     Layout = "_Layout";
     var isThai = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
-    var heroPreload = HomeHeroSelection.GetPreload(HomeHeroSelection.GetVariant(Context, HostEnvironment));
+    var heroPreload = HomeHeroSelection.GetPreload(HomeHeroSelection.GetVariant(Model.HttpContext, HostEnvironment));
     ViewData["Title"] = isThai ? "พัฒนาต้นแบบและวิศวกรรมย้อนกลับ | MALIEV" : "Functional Prototypes & Reverse Engineering | MALIEV";
     ViewData["Description"] = isThai ? "จากไอเดียและชิ้นงานตัวอย่าง สู่แบบ CAD และต้นแบบที่ใช้งานได้ ด้วยงานออกแบบ 3 มิติ CNC, 3D Printing, 3D Scanning และการขึ้นรูปที่เหมาะกับงาน โดย MALIEV นนทบุรี" : "Turn ideas and existing parts into CAD and functional prototypes with MALIEV in Nonthaburi, Thailand. 3D design, CNC machining, 3D printing, 3D scanning and suitable molding processes.";
     ViewData["Keywords"] = isThai ? "พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ, ชิ้นส่วนทดแทน" : "functional prototypes, reverse engineering Thailand, 3D design, CNC machining, 3D printing, 3D scanning, replacement parts";

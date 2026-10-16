@@ -34,6 +34,7 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains("Results.LocalRedirect", program, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(HomeContent)\"", fallback, StringComparison.Ordinal);
+        Assert.Contains("HomeHeroSelection.GetVariant(Model.HttpContext, HostEnvironment)", fallback, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -249,6 +250,29 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
             Assert.Contains("class=\"landing-step-photo\"", steps[index].Value, StringComparison.Ordinal);
             Assert.Contains("width=\"1200\" height=\"800\" loading=\"lazy\" decoding=\"async\"", steps[index].Value, StringComparison.Ordinal);
         }
+    }
+
+    [Theory]
+    [InlineData("HomeContent.resx", "3D Design", "CNC Machining", "3D design", "CNC machining")]
+    [InlineData("HomeContent.th.resx", "ออกแบบ 3 มิติ", "งาน CNC ตามแบบ", "ออกแบบ 3 มิติ", "กัด CNC")]
+    public void HomeResources_UseUniqueCaseInsensitiveKeysAndKeepSceneSpecificCopy(
+        string file, string serviceDesign, string serviceCnc, string processDesign, string heroCnc)
+    {
+        var path = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources",
+            "Components", "Pages", "Home", file);
+        var root = System.Xml.Linq.XDocument.Load(path).Root;
+        Assert.NotNull(root);
+        var entries = root.Elements("data").ToArray();
+        Assert.NotEmpty(entries);
+        Assert.All(entries.GroupBy(entry => entry.Attribute("name")?.Value
+                ?? throw new InvalidDataException("A Home resource key is required."), StringComparer.OrdinalIgnoreCase),
+            group => Assert.Single(group));
+        string? Value(string key) => entries.Single(entry => (string?)entry.Attribute("name") == key)
+            .Element("value")?.Value;
+        Assert.Equal(serviceDesign, Value("3D Design"));
+        Assert.Equal(serviceCnc, Value("CNC Machining"));
+        Assert.Equal(processDesign, Value("Home.Process.DesignTitle"));
+        Assert.Equal(heroCnc, Value("Home.Hero.CncLabel"));
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(

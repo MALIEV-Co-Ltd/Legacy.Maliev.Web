@@ -316,7 +316,7 @@
   <data name="Ideas, drawings or samples" xml:space="preserve"><value>ไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง</value></data>
   <data name="Share what you have and how the part will be used." xml:space="preserve"><value>ส่งสิ่งที่คุณมี พร้อมการใช้งานของชิ้นงาน</value></data>
   <data name="Exploded CAD of the handheld sensor enclosure" xml:space="preserve"><value>แบบ CAD แยกชิ้นส่วนตัวเรือนอุปกรณ์เซนเซอร์แบบมือถือ</value></data>
-  <data name="3D design" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
+  <data name="Home.Process.DesignTitle" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
   <data name="Create or refine CAD from your idea or existing part." xml:space="preserve"><value>สร้างหรือปรับแบบ CAD จากไอเดียหรือชิ้นงานเดิม</value></data>
   <data name="Comparing enclosure prototypes in different materials" xml:space="preserve"><value>เปรียบเทียบต้นแบบตัวเรือนในวัสดุต่างกัน</value></data>
   <data name="Choose the process" xml:space="preserve"><value>เลือกกระบวนการผลิต</value></data>
@@ -348,7 +348,7 @@
   <data name="ABS housing" xml:space="preserve"><value>ตัวเรือน ABS</value></data>
   <data name="SLS printing" xml:space="preserve"><value>พิมพ์ SLS</value></data>
   <data name="Nylon finger pads" xml:space="preserve"><value>แผ่นสัมผัสนิ้วจับไนลอน</value></data>
-  <data name="CNC machining" xml:space="preserve"><value>กัด CNC</value></data>
+  <data name="Home.Hero.CncLabel" xml:space="preserve"><value>กัด CNC</value></data>
   <data name="Aluminium base &amp; jaws" xml:space="preserve"><value>ฐานและปากจับอะลูมิเนียม</value></data>
   <data name="Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line" xml:space="preserve"><value>ภาพประกอบลูกค้าและวิศวกร MALIEV ชาวไทยร่วมตรวจสอบขายึดกล้องบนสายการผลิตขวด</value></data>
   <data name="Bring the part." xml:space="preserve"><value>นำชิ้นงานมา</value></data>
