@@ -26,7 +26,12 @@ const maxBytes = 256 * 1024 * 1024;
 function fail(message) { throw new Error(message); }
 function command(exe, args) {
   const result = spawnSync(exe, args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, windowsHide: true });
-  if (result.error || result.status !== 0) fail('command failed: ' + exe + ' ' + args.slice(0, 3).join(' '));
+  if (result.error || result.status !== 0) {
+    // Print only a bounded diagnostic. Never print stdout or the patch contents.
+    const diagnostic = Buffer.from(result.stderr || '').subarray(0, 8192).toString('utf8').replaceAll('\0', '');
+    fail('command failed: ' + exe + ' ' + args.slice(0, 3).join(' ') +
+      ' (exit ' + String(result.status) + ') stderr=' + diagnostic);
+  }
   return result.stdout.trimEnd();
 }
 function sha256(bytes) { return createHash('sha256').update(bytes).digest('hex'); }
@@ -76,10 +81,18 @@ function sameSet(actual, expected) {
   if (a.length !== e.length || a.some((value, i) => value !== e[i])) fail('unexpected path set');
 }
 function verifyInputs() {
-  if (command('git', ['rev-parse', 'HEAD^']) !== base) fail('candidate parent is not reviewed base');
   const head = command('git', ['rev-parse', 'HEAD']);
+  const firstMetadataHead = '0373344c9a21d49665e3ab6bf656f1c309a6fb6e';
+  if (command('git', ['merge-base', base, head]) !== base)
+    fail('candidate does not descend from reviewed base');
+  if (head === firstMetadataHead) {
+    if (command('git', ['rev-parse', 'HEAD^']) !== base) fail('first metadata commit parent changed');
+  } else if (command('git', ['rev-parse', 'HEAD^']) !== firstMetadataHead ||
+             command('git', ['rev-parse', 'HEAD^^']) !== base) {
+    fail('candidate is not the reviewed metadata-only second commit');
+  }
   if (process.env.REVIEWED_HEAD_SHA !== head) fail('workflow is not running the exact PR head');
-  sameSet(command('git', ['diff', '--name-only', 'HEAD^', 'HEAD']).split('\n').filter(Boolean), metadataPaths);
+  sameSet(command('git', ['diff', '--name-only', base, head]).split('\n').filter(Boolean), metadataPaths);
   sameSet(statusPaths(), []);
   const packetBytes = regular(packetPath);
   const patchBytes = regular(patchPath);
