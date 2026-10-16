@@ -27,11 +27,12 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             var session = await fixture.CreateAsync();
             var frames = new List<InstantQuotationMaterialPricingProgress>();
+            using var cancellation = new CancellationTokenSource();
             Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, cancellation.Token);
             try
             {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
                 Assert.False(run.IsCompleted);
                 var frame = Assert.Single(frames, frame => frame.MaterialKey == "ABS" && frame.Status == status);
                 Assert.Equal(PartId, frame.PartId);
@@ -39,7 +40,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 else Assert.Equal(210, frame.UnitPrice);
             }
             catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
-            finally { await fixture.DrainAsync(run, () => { }, () => fixture.Reader.Release.TrySetResult(), default); }
+            finally { await fixture.DrainAsync(run, cancellation.Cancel, () => fixture.Reader.Release.TrySetResult(), cancellation.Token); }
         }, output, gateRead: 2);
     }
 
@@ -563,12 +564,15 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         await Fixture.RunAsync(async fixture =>
         {
             var session = await fixture.CreateAsync(materialKey: "M68");
-            var expected = await fixture.Service.QuoteAsync(session, Owner, includeComparisons, default);
             var frames = new List<InstantQuotationMaterialPricingProgress>();
             var quote = await fixture.Service.QuoteAsync(session, Owner, includeComparisons,
                 (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
             Assert.NotNull(quote);
-            Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
+            if (!includeComparisons)
+            {
+                var expected = await fixture.Service.QuoteAsync(session, Owner, false, default);
+                Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
+            }
             if (!includeComparisons) Assert.Equal(0, fixture.Reader.ReadCount);
             else Assert.True(fixture.Reader.ReadCount > 0);
             Assert.Null(Assert.Single(quote.Parts).PhysicalReceipt);
@@ -588,6 +592,52 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 Assert.True(frames.IndexOf(completed) < frames.IndexOf(comparison));
             }
         }, output);
+    }
+
+    [Fact]
+    public async Task ResinSelected_UnavailableOptionalFdmReads_PreserveWholeQuoteAcrossOverloads()
+    {
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync(materialKey: "M68");
+            var expected = await fixture.Service.QuoteAsync(session, Owner, true, default);
+            Assert.NotNull(expected);
+            var plainReadCount = fixture.Reader.ReadCount;
+            Assert.True(plainReadCount > 0);
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            Assert.NotNull(quote);
+            Assert.True(fixture.Reader.ReadCount > plainReadCount);
+            // Equality is deliberately tested with unavailable optional FDM evidence,
+            // not independently deadline-limited successful physical comparisons.
+            Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
+            var line = Assert.Single(quote.Parts);
+            Assert.Null(line.PhysicalReceipt);
+            var selected = Assert.Single(frames, frame => frame.MaterialKey == "M68"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+            Assert.Equal(line.UnitPrice, selected.UnitPrice);
+            var fdmCards = line.MaterialPrices
+                .Where(card => PricingCatalog.ResolveMaterial(card.MaterialKey)!.Process == PrintProcess.Fdm)
+                .ToArray();
+            Assert.NotEmpty(fdmCards);
+            Assert.All(fdmCards, card =>
+            {
+                Assert.Null(card.UnitPrice);
+                Assert.Null(card.PhysicalReceipt);
+            });
+            var attemptedFdm = frames.Where(frame => frame.Status == InstantQuotationMaterialPricingStatus.Pending
+                && PricingCatalog.ResolveMaterial(frame.MaterialKey)!.Process == PrintProcess.Fdm).ToArray();
+            Assert.NotEmpty(attemptedFdm);
+            Assert.All(attemptedFdm, attempted =>
+            {
+                var unavailable = Assert.Single(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+                Assert.Null(unavailable.UnitPrice);
+            });
+            Assert.DoesNotContain(frames, frame => frame.Status == InstantQuotationMaterialPricingStatus.Completed
+                && PricingCatalog.ResolveMaterial(frame.MaterialKey)!.Process == PrintProcess.Fdm);
+        }, output, failSelected: true);
     }
 
     [Fact]
