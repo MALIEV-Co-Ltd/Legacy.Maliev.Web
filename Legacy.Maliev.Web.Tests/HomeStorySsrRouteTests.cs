@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class HomeStorySsrRouteTests(TestingWebApplicationFactory factory) : IClassFixture<TestingWebApplicationFactory>
+public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture fixture) : IClassFixture<StartupDataProtectionMigrationFixture>
 {
     [Theory]
     [InlineData("en", true)]
@@ -14,8 +14,9 @@ public sealed class HomeStorySsrRouteTests(TestingWebApplicationFactory factory)
     [InlineData("th", false)]
     public async Task HomeStories_RenderThreeCrawlableScenesAndCulturePreservingLinks(string culture, bool active)
     {
-        using var host = factory.WithWebHostBuilder(builder => builder
-            .UseEnvironment("Production").UseSetting("BlazorRouting:Home", active ? "true" : "false"));
+        await using var ownedHost = fixture.CreateFactory("Production");
+        await using var host = ownedHost.WithWebHostBuilder(builder => builder
+            .UseSetting("BlazorRouting:Home", active ? "true" : "false"));
         using var client = host.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
@@ -57,7 +58,7 @@ public sealed class HomeStorySsrRouteTests(TestingWebApplicationFactory factory)
     [InlineData("journey", "camera-bracket-sketch-v6.webp", false)]
     public async Task DevelopmentPreview_IsAllowlistedAndPreloadsItsActualHero(string hero, string image, bool hasPrimaryContact)
     {
-        using var host = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+        await using var host = fixture.CreateFactory("Development");
         using var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/?culture=en&hero={hero}&preview=1"));
         Assert.Contains("Hero previews", html, StringComparison.Ordinal);
@@ -72,7 +73,7 @@ public sealed class HomeStorySsrRouteTests(TestingWebApplicationFactory factory)
     [InlineData("partnership", "0")]
     public async Task InvalidDevelopmentPreview_FallsBackToProductionCarousel(string hero, string preview)
     {
-        using var host = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+        await using var host = fixture.CreateFactory("Development");
         using var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         var html = await client.GetStringAsync($"/?culture=en&hero={hero}&preview={preview}");
         Assert.Contains("data-home-hero-carousel", html, StringComparison.Ordinal);

@@ -21,7 +21,10 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await page.WaitForFunctionAsync("document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'");
+        var consent = page.Locator("#cookieConsent");
+        await consent.Locator("[data-consent-action='reject']").ClickAsync();
+        Assert.Equal(0, await consent.CountAsync());
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'");
         Assert.Equal(1, await page.Locator("h1").CountAsync());
         Assert.Equal(3, await page.Locator("[data-hero-scene]").CountAsync());
         Assert.True(await page.Locator("#home-hero-assembly").IsVisibleAsync());
@@ -36,7 +39,7 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         await page.Keyboard.PressAsync("Tab");
         Assert.True(await page.EvaluateAsync<bool>("document.querySelector('#home-hero-assembly').contains(document.activeElement)"));
         Assert.Equal(4, await page.Locator("#landing-process img.landing-step-photo").CountAsync());
-        await page.WaitForFunctionAsync("Array.from(document.querySelectorAll('#home-hero-assembly img')).every(image => image.complete && image.naturalWidth > 0)");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('#home-hero-assembly img')).every(image => image.complete && image.naturalWidth > 0)");
         Assert.True(await page.Locator(".hero-tech-leaders path").EvaluateAllAsync<bool>("paths => paths.length === 4 && paths.every(path => /^M[-.0-9 ]+ L[.0-9 ]+$/.test(path.getAttribute('d')))"));
     }
 
@@ -72,11 +75,14 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await page.WaitForFunctionAsync("window.__homeClock.count() === 1 && document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'");
+        var consent = page.Locator("#cookieConsent");
+        await consent.Locator("[data-consent-action='reject']").ClickAsync();
+        Assert.Equal(0, await consent.CountAsync());
+        await page.WaitForFunctionAsync("() => window.__homeClock.count() === 1 && document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'");
         await page.EvaluateAsync("window.__homeClock.advance(7999)");
         Assert.True(await page.Locator("#home-hero-assembly").IsVisibleAsync());
         await page.EvaluateAsync("window.__homeClock.advance(1)");
-        await page.WaitForFunctionAsync("!document.querySelector('#home-hero-partnership').hidden && window.__homeClock.count() === 1");
+        await page.WaitForFunctionAsync("() => !document.querySelector('#home-hero-partnership').hidden && window.__homeClock.count() === 1");
         Assert.False(await page.Locator("#home-hero-assembly").IsVisibleAsync());
         Assert.True(await page.Locator("#home-hero-partnership").IsVisibleAsync());
         await page.Locator("#home-hero-partnership a").First.FocusAsync();
