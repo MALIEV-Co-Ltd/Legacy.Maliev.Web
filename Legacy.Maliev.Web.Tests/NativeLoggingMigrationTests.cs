@@ -15,7 +15,7 @@ public sealed class NativeLoggingMigrationTests
 
         var files = projects
             .SelectMany(project => EnumerateProductionInventory(Path.Combine(root, project)))
-            .Concat(Directory.EnumerateFiles(root, "Dockerfile*"))
+            .Concat(EnumerateRootContainerRecipes(root))
             .Where(IsRuntimeInventoryFile)
             .ToArray();
 
@@ -75,12 +75,45 @@ public sealed class NativeLoggingMigrationTests
     [InlineData("logging.config", true)]
     [InlineData("Dockerfile", true)]
     [InlineData("Dockerfile.bff", true)]
+    [InlineData("dockerfile.compat", true)]
     [InlineData("notes.md", false)]
     [InlineData("bundle.js", false)]
     public void RuntimeInventoryFileSelection_PreservesSourceContract(string name, bool expected)
     {
         Assert.Equal(expected, IsRuntimeInventoryFile(name));
     }
+
+    [Fact]
+    public void RootContainerInventory_IncludesLowercaseRecipesButNotOtherFilesOrNestedTrees()
+    {
+        var root = Directory.CreateTempSubdirectory("legacy-web-container-inventory-");
+        try
+        {
+            File.WriteAllText(Path.Combine(root.FullName, "Dockerfile"), "# Synthetic inventory fixture");
+            File.WriteAllText(Path.Combine(root.FullName, "dockerfile.compat"), "# Synthetic inventory fixture");
+            File.WriteAllText(Path.Combine(root.FullName, "notes.cs"), "// Synthetic inventory fixture");
+            var nested = Directory.CreateDirectory(Path.Combine(root.FullName, "nested"));
+            File.WriteAllText(Path.Combine(nested.FullName, "Dockerfile"), "# Synthetic inventory fixture");
+
+            var actual = EnumerateRootContainerRecipes(root.FullName)
+                .Select(path => Path.GetRelativePath(root.FullName, path))
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.Equal(["Dockerfile", "dockerfile.compat"], actual);
+        }
+        finally
+        {
+            var temporaryParent = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.GetTempPath()))
+                + Path.DirectorySeparatorChar;
+            Assert.StartsWith(temporaryParent, Path.GetFullPath(root.FullName), StringComparison.OrdinalIgnoreCase);
+            root.Delete(recursive: true);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRootContainerRecipes(string root) =>
+        Directory.EnumerateFiles(root).Where(path =>
+            Path.GetFileName(path).StartsWith("Dockerfile", StringComparison.OrdinalIgnoreCase));
 
     private static IEnumerable<string> EnumerateProductionInventory(string root, Action<string>? visited = null)
     {
