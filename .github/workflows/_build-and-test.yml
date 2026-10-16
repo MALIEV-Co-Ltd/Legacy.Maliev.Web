@@ -105,6 +105,15 @@ jobs:
           pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Verify focused TRX rejection controls
         run: python3 -B tests/FocusedWebTrxGate.Tests.py
+      - name: Verify immutable company asset custody and rejection controls
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p company-asset-custody-results
+          python3 -B tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee company-asset-custody-results/normal.log
+          python3 -B -O tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee company-asset-custody-results/optimized.log
+          python3 -B scripts/verify_company_release_assets.py | tee company-asset-custody-results/custody.json
       - name: Verify bounded browser failure evidence controls
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -401,6 +410,7 @@ jobs:
             quotation-response-test-results/**/*.trx
             knowledge-navigation-test-results/**/*.trx
             home-process-test-results/**/*.trx
+            company-asset-custody-results/**
             service-gallery-test-results/**/*.trx
             authenticated-profile-test-results/**/*.trx
             material-identity-test-results/**/*.trx
