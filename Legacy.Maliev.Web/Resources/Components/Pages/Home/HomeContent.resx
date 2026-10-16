@@ -286,4 +286,86 @@
   <data name="Photos or sample" xml:space="preserve"><value>Photos or sample</value></data>
   <data name="Reference images or a physical part" xml:space="preserve"><value>Reference images or a physical part</value></data>
   <data name="No files yet" xml:space="preserve"><value>No files yet</value></data>
+  <data name="Assembly" xml:space="preserve"><value>Assembly</value></data>
+  <data name="Partnership" xml:space="preserve"><value>Partnership</value></data>
+  <data name="Sketch to production" xml:space="preserve"><value>Sketch to production</value></data>
+  <data name="What MALIEV helps you develop" xml:space="preserve"><value>What MALIEV helps you develop</value></data>
+  <data name="Functional prototypes" xml:space="preserve"><value>Functional prototypes</value></data>
+  <data name="Make a part to test and refine." xml:space="preserve"><value>Make a part to test and refine.</value></data>
+  <data name="Reverse engineering" xml:space="preserve"><value>Reverse engineering</value></data>
+  <data name="Reconstruct CAD from an existing part." xml:space="preserve"><value>Reconstruct CAD from an existing part.</value></data>
+  <data name="Replacement parts" xml:space="preserve"><value>Replacement parts</value></data>
+  <data name="Develop replacements around the application." xml:space="preserve"><value>Develop replacements around the application.</value></data>
+  <data name="Product development" xml:space="preserve"><value>Product development</value></data>
+  <data name="Improve a design and build the next version." xml:space="preserve"><value>Improve a design and build the next version.</value></data>
+  <data name="From design to the finished part." xml:space="preserve"><value>From design to the finished part.</value></data>
+  <data name="Choose the right process for your prototype, replacement part or product." xml:space="preserve"><value>Choose the right process for your prototype, replacement part or product.</value></data>
+  <data name="Source-based image of a machined aluminium housing sample" xml:space="preserve"><value>Source-based image of a machined aluminium housing sample</value></data>
+  <data name="Source-based image of a machined folding-handle sample" xml:space="preserve"><value>Source-based image of a machined folding-handle sample</value></data>
+  <data name="Source-based image of a PLA-CF printed bracket sample" xml:space="preserve"><value>Source-based image of a PLA-CF printed bracket sample</value></data>
+  <data name="Instant 3D-print pricing" xml:space="preserve"><value>Instant 3D-print pricing</value></data>
+  <data name="Process illustration of handheld 3D scanning of a technical metal housing" xml:space="preserve"><value>Process illustration of handheld 3D scanning of a technical metal housing</value></data>
+  <data name="Process illustration" xml:space="preserve"><value>Process illustration</value></data>
+  <data name="Capture the shape of existing parts for reverse engineering and CAD reconstruction." xml:space="preserve"><value>Capture the shape of existing parts for reverse engineering and CAD reconstruction.</value></data>
+  <data name="CAD geometry screenshot from the existing cleared part example" xml:space="preserve"><value>CAD geometry screenshot from the existing cleared part example</value></data>
+  <data name="Process illustration of a detailed silicone owl sculpture beside its opened two-part rigid printed mold" xml:space="preserve"><value>Process illustration of a detailed silicone owl sculpture beside its opened two-part rigid printed mold</value></data>
+  <data name="Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application." xml:space="preserve"><value>Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application.</value></data>
+  <data name="Start with a project review" xml:space="preserve"><value>Start with a project review</value></data>
+  <data name="From your starting point to a working part." xml:space="preserve"><value>From your starting point to a working part.</value></data>
+  <data name="Illustrative handheld sensor enclosure brief and sketches" xml:space="preserve"><value>Illustrative handheld sensor enclosure brief and sketches</value></data>
+  <data name="Ideas, drawings or samples" xml:space="preserve"><value>Ideas, drawings or samples</value></data>
+  <data name="Share what you have and how the part will be used." xml:space="preserve"><value>Share what you have and how the part will be used.</value></data>
+  <data name="Exploded CAD of the handheld sensor enclosure" xml:space="preserve"><value>Exploded CAD of the handheld sensor enclosure</value></data>
+  <data name="3D design" xml:space="preserve"><value>3D design</value></data>
+  <data name="Create or refine CAD from your idea or existing part." xml:space="preserve"><value>Create or refine CAD from your idea or existing part.</value></data>
+  <data name="Comparing enclosure prototypes in different materials" xml:space="preserve"><value>Comparing enclosure prototypes in different materials</value></data>
+  <data name="Choose the process" xml:space="preserve"><value>Choose the process</value></data>
+  <data name="Review material, geometry and quantity together." xml:space="preserve"><value>Review material, geometry and quantity together.</value></data>
+  <data name="Inspecting the assembled enclosure and its matching rear shell" xml:space="preserve"><value>Inspecting the assembled enclosure and its matching rear shell</value></data>
+  <data name="Build and inspect" xml:space="preserve"><value>Build and inspect</value></data>
+  <data name="Build and inspect against the agreed requirements." xml:space="preserve"><value>Build and inspect against the agreed requirements.</value></data>
+  <data name="Have an idea, drawing or sample part?" xml:space="preserve"><value>Have an idea, drawing or sample part?</value></data>
+  <data name="Talk to us to review a development and manufacturing approach." xml:space="preserve"><value>Talk to us to review a development and manufacturing approach.</value></data>
+  <data name="Discuss your project" xml:space="preserve"><value>Discuss your project</value></data>
+  <data name="Illustrative gripper assembly combining CNC aluminium, FDM plastic housing, nylon fingers and a resin sensor cover" xml:space="preserve"><value>Illustrative gripper assembly combining CNC aluminium, FDM plastic housing, nylon fingers and a resin sensor cover</value></data>
+  <data name="carousel" xml:space="preserve"><value>carousel</value></data>
+  <data name="Explore how MALIEV develops parts" xml:space="preserve"><value>Explore how MALIEV develops parts</value></data>
+  <data name="slide" xml:space="preserve"><value>slide</value></data>
+  <data name="Hero design previews" xml:space="preserve"><value>Hero design previews</value></data>
+  <data name="Hero previews" xml:space="preserve"><value>Hero previews</value></data>
+  <data name="Current layout" xml:space="preserve"><value>Current layout</value></data>
+  <data name="Custom parts." xml:space="preserve"><value>Custom parts.</value></data>
+  <data name="From CAD to assembly." xml:space="preserve"><value>From CAD to assembly.</value></data>
+  <data name="CNC machining, 3D printing, scanning and design in Nonthaburi, Thailand. Bring a drawing, an existing part or a project brief." xml:space="preserve"><value>CNC machining, 3D printing, scanning and design in Nonthaburi, Thailand. Bring a drawing, an existing part or a project brief.</value></data>
+  <data name="Discuss your part" xml:space="preserve"><value>Discuss your part</value></data>
+  <data name="Price a 3D print" xml:space="preserve"><value>Price a 3D print</value></data>
+  <data name="Machined aluminium. Printed plastic, nylon and resin. One assembly." xml:space="preserve"><value>Machined aluminium. Printed plastic, nylon and resin. One assembly.</value></data>
+  <data name="Manufacturing technologies used in this illustrative assembly" xml:space="preserve"><value>Manufacturing technologies used in this illustrative assembly</value></data>
+  <data name="Illustrative gripper combining machined aluminium, orange FDM housing, ivory nylon fingers and an amber resin cover" xml:space="preserve"><value>Illustrative gripper combining machined aluminium, orange FDM housing, ivory nylon fingers and an amber resin cover</value></data>
+  <data name="SLA printing" xml:space="preserve"><value>SLA printing</value></data>
+  <data name="Resin sensor cover" xml:space="preserve"><value>Resin sensor cover</value></data>
+  <data name="FDM printing" xml:space="preserve"><value>FDM printing</value></data>
+  <data name="ABS housing" xml:space="preserve"><value>ABS housing</value></data>
+  <data name="SLS printing" xml:space="preserve"><value>SLS printing</value></data>
+  <data name="Nylon finger pads" xml:space="preserve"><value>Nylon finger pads</value></data>
+  <data name="CNC machining" xml:space="preserve"><value>CNC machining</value></data>
+  <data name="Aluminium base &amp; jaws" xml:space="preserve"><value>Aluminium base &amp; jaws</value></data>
+  <data name="Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line" xml:space="preserve"><value>Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line</value></data>
+  <data name="Bring the part." xml:space="preserve"><value>Bring the part.</value></data>
+  <data name="Talk to an engineer." xml:space="preserve"><value>Talk to an engineer.</value></data>
+  <data name="Work through the dimensions, material and manufacturing route with MALIEV. From a first prototype to parts ready for your application." xml:space="preserve"><value>Work through the dimensions, material and manufacturing route with MALIEV. From a first prototype to parts ready for your application.</value></data>
+  <data name="How we work" xml:space="preserve"><value>How we work</value></data>
+  <data name="A sketch becomes" xml:space="preserve"><value>A sketch becomes</value></data>
+  <data name="a working part." xml:space="preserve"><value>a working part.</value></data>
+  <data name="Develop the CAD. Compare prototypes. Prepare production. Follow one camera bracket through the decisions that shape the finished part." xml:space="preserve"><value>Develop the CAD. Compare prototypes. Prepare production. Follow one camera bracket through the decisions that shape the finished part.</value></data>
+  <data name="Illustrative bracket development from sketch to CNC production" xml:space="preserve"><value>Illustrative bracket development from sketch to CNC production</value></data>
+  <data name="Customer sketch of bracket alternatives and the bottle to inspect" xml:space="preserve"><value>Customer sketch of bracket alternatives and the bottle to inspect</value></data>
+  <data name="Bracket CAD developed alongside the customer sketch" xml:space="preserve"><value>Bracket CAD developed alongside the customer sketch</value></data>
+  <data name="Printed bracket prototypes for comparing fit and geometry" xml:space="preserve"><value>Printed bracket prototypes for comparing fit and geometry</value></data>
+  <data name="Repeat batch of aluminium brackets at the CNC machine" xml:space="preserve"><value>Repeat batch of aluminium brackets at the CNC machine</value></data>
+  <data name="Start with your idea" xml:space="preserve"><value>Start with your idea</value></data>
+  <data name="See the complete journey" xml:space="preserve"><value>See the complete journey</value></data>
+  <data name="Pause automatic slides" xml:space="preserve"><value>Pause automatic slides</value></data>
+  <data name="Resume automatic slides" xml:space="preserve"><value>Resume automatic slides</value></data>
+  <data name="Automatic slides paused" xml:space="preserve"><value>Automatic slides paused</value></data>
 </root>

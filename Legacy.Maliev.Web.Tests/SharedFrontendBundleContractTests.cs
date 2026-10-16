@@ -27,6 +27,7 @@ public sealed class SharedFrontendBundleContractTests
         Assert.DoesNotContain("finish-color-matcher", scripts, StringComparison.Ordinal);
         Assert.DoesNotContain("instant-quotation.js", scripts, StringComparison.Ordinal);
         Assert.DoesNotContain("member-order-form.js", scripts, StringComparison.Ordinal);
+        Assert.DoesNotContain("home-hero", scripts, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -43,6 +44,7 @@ public sealed class SharedFrontendBundleContractTests
     }
 
     [Theory]
+    [InlineData("/", "route-home.js")]
     [InlineData("/Contact", "route-inquiry.js")]
     [InlineData("/Quotation", "route-inquiry.js")]
     [InlineData("/services", "route-service-finder.js")]
@@ -78,6 +80,7 @@ public sealed class SharedFrontendBundleContractTests
             "route-about.css", "route-home.css", "route-inquiry.css",
             "route-instant-quotation.css", "route-services.css", "route-services-index.css",
             "route-inquiry.js", "route-instant-quotation.js", "route-member-order.js",
+            "route-home.js",
             "route-service-cnc.js", "route-service-finder.js", "route-service-finishing.js", "route-service-printing.js",
             "route-service-scanning.js", "route-service-toc.js",
         };

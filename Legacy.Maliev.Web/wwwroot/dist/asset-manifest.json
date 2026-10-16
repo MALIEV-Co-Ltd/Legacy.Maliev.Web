@@ -4,6 +4,7 @@
     "app.min.js"
   ],
   "routeScripts": [
+    "route-home.js",
     "route-knowledge.js",
     "route-inquiry.js",
     "route-error.js",

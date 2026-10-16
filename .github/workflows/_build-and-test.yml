@@ -197,7 +197,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~HomeStaticSsrRouteTests"
+          --filter "FullyQualifiedName~HomeStaticSsrRouteTests|FullyQualifiedName~HomeStorySsrRouteTests|FullyQualifiedName~HomeStoryBrowserTests"
           --logger trx --results-directory ./home-process-test-results
       - name: Verify historical service gallery framing and actual mobile composition
         run: >-

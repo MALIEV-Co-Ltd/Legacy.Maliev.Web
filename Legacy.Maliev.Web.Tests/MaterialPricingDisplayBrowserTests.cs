@@ -97,6 +97,103 @@ public sealed class MaterialPricingDisplayBrowserTests
     }
 
     [Theory]
+    [InlineData("en", 375, ColorScheme.Light)]
+    [InlineData("th", 1280, ColorScheme.Dark)]
+    public async Task SameSelectionRepricePreservesManualCardScrollAndVisibleSelection(string culture, int width, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        var scroller = fixture.Page.Locator("[data-material-card-scroll]");
+        var selected = scroller.Locator("[data-material-key='M68']");
+        var original = await scroller.EvaluateAsync<double>("""
+            node => {
+                const card = node.querySelector('[data-material-key="M68"]');
+                const cardTop = card.getBoundingClientRect().top - node.getBoundingClientRect().top;
+                node.scrollTop += cardTop - 16;
+                return node.scrollTop;
+            }
+            """);
+        await fixture.Page.WaitForFunctionAsync("""
+            () => {
+                const node = document.querySelector('[data-material-card-scroll]');
+                const card = node.querySelector('[data-material-key="M68"]');
+                const list = node.getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                return bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1;
+            }
+            """);
+        var gate = fixture.Control.Arm(2, InstantQuotationMaterialPricingStatus.Pending);
+        try
+        {
+            await fixture.ChangeQuantityAsync(2);
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await Assertions.Expect(selected.Locator("[data-material-card-price]"))
+                .ToHaveAttributeAsync("data-price-status", "pending");
+            var during = await scroller.EvaluateAsync<double>("node => node.scrollTop");
+            Assert.True(during >= original - 1,
+                "Repricing may minimally repair a growing card but must not jump back to its category heading.");
+            await AssertSelectedCardVisibleAsync(scroller);
+        }
+        finally { gate.Release.TrySetResult(); }
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        var after = await scroller.EvaluateAsync<double>("node => node.scrollTop");
+        Assert.True(after >= original - 1,
+            "The final price must not jump a deliberately positioned card back to its heading.");
+        await AssertSelectedCardVisibleAsync(scroller);
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+    }
+
+    [Theory]
+    [InlineData("en", 375, ColorScheme.Light)]
+    [InlineData("th", 1280, ColorScheme.Dark)]
+    public async Task NewSelectionRevealsCategoryHeadingAfterTheRenderedLayout(string culture, int width, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        var scroller = fixture.Page.Locator("[data-material-card-scroll]");
+        var tough = scroller.Locator("[data-material-key='K']");
+        await tough.ClickAsync();
+        await Assertions.Expect(tough).ToHaveAttributeAsync("aria-checked", "true");
+        var standard = scroller.Locator("[data-material-key='M68']");
+        await scroller.EvaluateAsync("node => { node.scrollTop = 0; }");
+        var headingInitiallyVisible = await standard.EvaluateAsync<bool>("""
+            card => {
+                const list = card.closest('[data-material-card-scroll]').getBoundingClientRect();
+                const heading = card.previousElementSibling.getBoundingClientRect();
+                return heading.top >= list.top - 1 && heading.bottom <= list.bottom + 1;
+            }
+            """);
+        Assert.False(headingInitiallyVisible, "The new-selection reveal must do real work.");
+        await standard.EvaluateAsync("element => element.click()"); // Avoid Playwright auto-scrolling the card.
+        await Assertions.Expect(standard).ToHaveAttributeAsync("aria-checked", "true");
+        await fixture.Page.WaitForFunctionAsync("""
+            () => {
+                const node = document.querySelector('[data-material-card-scroll]');
+                const card = node.querySelector('[data-material-key="M68"]');
+                const heading = card.previousElementSibling;
+                const list = node.getBoundingClientRect();
+                const category = heading?.getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                return heading?.matches('[data-material-category]')
+                    && category.top >= list.top - 1 && category.bottom <= list.bottom + 1
+                    && bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1;
+            }
+            """);
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+    }
+
+    private static async Task AssertSelectedCardVisibleAsync(ILocator scroller)
+    {
+        var bounds = await scroller.EvaluateAsync<double[]>("""
+            node => {
+                const list = node.getBoundingClientRect();
+                const card = node.querySelector('[aria-checked="true"]').getBoundingClientRect();
+                return [list.top, list.bottom, card.top, card.bottom];
+            }
+            """);
+        Assert.True(bounds[2] >= bounds[0] - 1 && bounds[3] <= bounds[1] + 1,
+            "The selected material must remain fully visible within its own scroller.");
+    }
+
+    [Theory]
     [InlineData("en", ColorScheme.Light)]
     [InlineData("th", ColorScheme.Dark)]
     public async Task ShortDesktopMaterialCardClickIsNotCoveredBySummaryFooter(string culture, ColorScheme scheme)
