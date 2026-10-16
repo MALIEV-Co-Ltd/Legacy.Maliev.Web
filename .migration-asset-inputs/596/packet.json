@@ -157,13 +157,13 @@
     }
   ],
   "patch": {
-    "blob": "27ecc65338527d8714c527d1ba9e398e809ea8f8",
+    "blob": "52a70c24c6826c2d7893197703794561143bccd2",
     "readbackExact": true,
-    "characters": 264842,
+    "characters": 264840,
     "format": "unified diff with3linescontext;44paths; actual git apply--check NOT RUN for this remote-only packet"
   },
   "inverse": {
-    "blob": "fcc25059c5ed59717454e75d65e5b6b33c3c0b70",
+    "blob": "d7ccbfc5d35f6fe051ef721c0f2b3f8a54fa5525",
     "format": "unified reverse diff, newpathsdeleted; byte reconstruction performed inJS, git apply NOT RUN"
   },
   "files": [
@@ -307,9 +307,9 @@
     },
     {
       "path": "Legacy.Maliev.Web/wwwroot/src/app/css/application-shell.css",
-      "sha": "8e6e6a12144e1afd026d3fa2de8275588cb8b57d",
+      "sha": "7c59aaaaf4e498d34868c127809bc796381a50c9",
       "baseSha": "5e4fcd172c6345ea4aec7aa78e87b6a3f7ab2243",
-      "bytes": 42560
+      "bytes": 42559
     },
     {
       "path": "Legacy.Maliev.Web/Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",

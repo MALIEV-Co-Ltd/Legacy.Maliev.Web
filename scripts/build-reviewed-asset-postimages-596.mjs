@@ -8,8 +8,8 @@ import { spawnSync } from 'node:child_process';
 const root = resolve(import.meta.dirname, '..');
 const mode = process.argv[2];
 const base = 'fc3bebeacbcb4f9932c09973a8d4913104b67b68';
-const packetSha = '2d8ca64bb5ca647f36e1ac6a5532758931aa5e25';
-const patchSha = '27ecc65338527d8714c527d1ba9e398e809ea8f8';
+const packetSha = 'cfa4b4c974ae05cead02da86b1b3d90e112418a9';
+const patchSha = '52a70c24c6826c2d7893197703794561143bccd2';
 const lockSha = '8c392b351e1c1da0e11807ad7fb9ef79514d0c86';
 const packetPath = '.migration-asset-inputs/596/packet.json';
 const patchPath = '.migration-asset-inputs/596/reviewed.patch';
@@ -83,13 +83,19 @@ function sameSet(actual, expected) {
 function verifyInputs() {
   const head = command('git', ['rev-parse', 'HEAD']);
   const firstMetadataHead = '0373344c9a21d49665e3ab6bf656f1c309a6fb6e';
+  const secondMetadataHead = 'e5178233a7f031c0cb5ade1af60625a0e3d3b579';
   if (command('git', ['merge-base', base, head]) !== base)
     fail('candidate does not descend from reviewed base');
   if (head === firstMetadataHead) {
     if (command('git', ['rev-parse', 'HEAD^']) !== base) fail('first metadata commit parent changed');
-  } else if (command('git', ['rev-parse', 'HEAD^']) !== firstMetadataHead ||
-             command('git', ['rev-parse', 'HEAD^^']) !== base) {
-    fail('candidate is not the reviewed metadata-only second commit');
+  } else if (head === secondMetadataHead) {
+    if (command('git', ['rev-parse', 'HEAD^']) !== firstMetadataHead ||
+        command('git', ['rev-parse', 'HEAD^^']) !== base)
+      fail('second metadata commit ancestry changed');
+  } else if (command('git', ['rev-parse', 'HEAD^']) !== secondMetadataHead ||
+             command('git', ['rev-parse', 'HEAD^^']) !== firstMetadataHead ||
+             command('git', ['rev-parse', 'HEAD^^^']) !== base) {
+    fail('candidate is not the reviewed metadata-only third commit');
   }
   if (process.env.REVIEWED_HEAD_SHA !== head) fail('workflow is not running the exact PR head');
   sameSet(command('git', ['diff', '--name-only', base, head]).split('\n').filter(Boolean), metadataPaths);
