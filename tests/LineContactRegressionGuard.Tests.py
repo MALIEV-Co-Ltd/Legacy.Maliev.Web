@@ -802,7 +802,7 @@ class V2Controls(unittest.TestCase):
 
     def test_quoted_escaped_unicode_xml_entity_credentials(self):
         examples = [
-            b'{"access_token":"synthetic"}', b'{"CLIENT_' + b'SECRET" : "synthetic"}',
+            b'{"access_token":"synthetic"}', b'{"CLIENT_' + b'SECRET' + b'" : "synthetic"}',
             br'{\"password\":\"synthetic\"}', br'{"\u0061ccess_token":"synthetic"}',
             b'{&quot;access_token&quot;:&quot;synthetic&quot;}',
             b'{"&#97;ccess_token":"synthetic"}', br'{"x":"customer\u0040example.com"}',
