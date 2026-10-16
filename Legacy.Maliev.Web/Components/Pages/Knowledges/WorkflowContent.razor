@@ -1,9 +1,12 @@
 @inject IStringLocalizer<WorkflowContent> Localizer
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["Project workflow"]</p>
 <h1>@Localizer["What happens after you request a quote"]</h1>
 <p class="docs-lead">@Localizer["Use this guide to understand the decisions and information needed as a project moves from inquiry to delivery. The agreed quotation defines the actual scope, deliverables, and schedule for your project."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/engineering-workflow.webp" srcset="/src/images/knowledge/photos/engineering-workflow-small.webp 768w, /src/images/knowledge/photos/engineering-workflow.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["Two Thai engineers review a metal valve body and a polymer fit-check prototype."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Use review and fit checks to resolve requirements before releasing the production revision. Illustrative image."]</figcaption>
+</figure>
 <nav class="docs-toc" aria-label="@Localizer["On this page"]">
 <strong>@Localizer["On this page"]</strong>
 <ul>
@@ -18,12 +21,12 @@
 </li>
 </ul>
 </nav>
-<section id="review" class="docs-section" data-workflow-step="engineering-review">
+<section id="review" class="docs-section">
 <h2>@Localizer["1. Review the request and define the scope"]</h2>
 <p>@Localizer["The starting point is a complete set of files, the intended use, material requirements, quantity, and target date. Missing dimensions, unclear revisions, or inaccessible scan features can require clarification before the scope can be priced. If you need advice, say which decisions are still open."]</p>
-<p data-workflow-step="quotation">@Localizer["Check the proposed quotation against the same part list and revision you submitted. Review what is included and excluded, any design assumptions, finish requirements, delivery arrangements, and the schedule. Clarify open questions before approving the work."]</p>
+<p>@Localizer["Check the proposed quotation against the same part list and revision you submitted. Review what is included and excluded, any design assumptions, finish requirements, delivery arrangements, and the schedule. Clarify open questions before approving the work."]</p>
 </section>
-<section id="approval" class="docs-section" data-workflow-step="production-preparation">
+<section id="approval" class="docs-section">
 <h2>@Localizer["2. Confirm approval and control changes"]</h2>
 <ul class="docs-checklist">
 <li>@Localizer["Confirm the approved file revision, material, quantity, and finish in the same project conversation. Identify who can approve engineering changes."]</li>
@@ -34,11 +37,17 @@
 <h3>@Localizer["Example: changing a mating hole"]</h3>
 <p>@Localizer["A hole diameter change can affect the model, drawing, tool choice, and inspection requirement. Send the updated documents together and identify the old revision being replaced, rather than sending a screenshot with an untracked instruction."]</p>
 </aside>
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A four-stage review chain with a return loop from prototype to review."]">
+        <img src="/src/images/knowledge/visual-review-loop.svg" alt="@Localizer["A four-stage review chain with a return loop from prototype to review."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: define the design. 2: review requirements and open questions. 3: evaluate a prototype when included in the agreed scope. 4: approve the identified revision. A change returns to review; production approval does not follow automatically from making a prototype."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-review-loop.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
 </section>
-<section id="delivery" class="docs-section" data-workflow-step="production-inspection">
+<section id="delivery" class="docs-section">
 <h2>@Localizer["3. Agree checks, documents, and handover"]</h2>
 <p>@Localizer["Discuss acceptance criteria before production. Identify the dimensions or functions that decide whether the part is suitable, and request any inspection report, material document, or assembly check in the quotation. The method and extent of inspection must match the agreed scope; not every project includes a detailed dimensional report."]</p>
-<p data-workflow-step="delivery">@Localizer["Before handover, confirm the collection or shipping address, receiving contact, packaging needs, and agreed documents. For scanning or design projects, confirm the file formats, coordinate system or units, and required software compatibility. Keep the approved revision and quotation with the delivered files or parts for future repeat orders."]</p>
+<p>@Localizer["Before handover, confirm the collection or shipping address, receiving contact, packaging needs, and agreed documents. For scanning or design projects, confirm the file formats, coordinate system or units, and required software compatibility. Keep the approved revision and quotation with the delivered files or parts for future repeat orders."]</p>
 </section>
 <section class="docs-next">
 <h2>@Localizer["Prepare your next step"]</h2>

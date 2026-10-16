@@ -1810,35 +1810,51 @@ html.privacy-consent-open {
 }
 
 .docs-toc {
-    padding: 1.1rem 1.25rem;
-    border: 1px solid var(--maliev-line);
-    border-radius: var(--maliev-radius);
-    background: var(--maliev-canvas);
+    margin-block: 1.5rem 2rem;
+    padding-block: 1.25rem;
+    border-block: 1px solid var(--maliev-line);
 }
 
 .docs-toc h2,
 .docs-toc > strong {
     display: block;
-    margin-bottom: .6rem;
+    margin: 0 0 .75rem;
     font-size: 1rem;
+    line-height: 1.5;
+    color: var(--maliev-navy);
 }
 
 .docs-toc ul {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-    gap: .15rem 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.docs-toc a {
-    display: inline-flex;
+.docs-toc li + li {
+    border-top: 1px solid var(--maliev-line);
+}
+
+.docs-content .knowledge-document .docs-toc li > a {
+    display: flex;
+    width: 100%;
     min-height: 44px;
     align-items: center;
-    padding-block: .35rem;
-    text-decoration: underline;
+    padding: .65rem .75rem;
+    color: var(--maliev-ink);
+    line-height: 1.6;
+    text-decoration: none;
+    transition: background-color 180ms ease;
 }
+
+.docs-content .knowledge-document .docs-toc li > a:hover,
+.docs-content .knowledge-document .docs-toc li > a:focus-visible {
+    background-color: #f0f1f3;
+    color: var(--maliev-blue);
+}
+
 
 .docs-note,
 .docs-example {
@@ -1990,4 +2006,308 @@ a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
 .arrow-link-label {
     text-decoration: underline;
     text-underline-offset: .25em;
+}
+
+/* Manufacturing library: topic groups remain native keyboard-operable disclosures. */
+.knowledge-nav-group + .knowledge-nav-group {
+    border-top: 1px solid var(--maliev-line);
+}
+
+.knowledge-nav-group > summary {
+    min-height: 48px;
+    padding: .85rem 1rem;
+    color: var(--maliev-ink);
+    font-size: .9rem;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.knowledge-nav-group > summary::marker {
+    color: var(--maliev-blue-dark);
+}
+
+.knowledge-nav-group > summary:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: -3px;
+}
+
+.knowledge-section-links {
+    margin: 0 .7rem .5rem 1rem;
+    padding-left: .8rem;
+    border-left: 2px solid var(--maliev-line);
+    list-style: none;
+}
+
+.knowledge-section-links a {
+    display: block;
+    padding: .45rem .3rem;
+    color: var(--maliev-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+.knowledge-section-links a:hover {
+    color: var(--maliev-blue-dark);
+    text-decoration: underline;
+}
+
+.knowledge-section-links a:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 1px;
+}
+
+.knowledge-directory-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 0 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.knowledge-directory-list li {
+    min-width: 0;
+    border-bottom: 1px solid var(--maliev-line);
+}
+
+.docs-content .knowledge-directory-list li > a {
+    display: grid;
+    gap: .35rem;
+    min-height: 44px;
+    padding: 1rem .2rem;
+    text-decoration: none;
+    background-color: transparent;
+    transition: background-color 180ms ease;
+}
+
+.knowledge-directory-list strong {
+    color: var(--maliev-ink);
+    font-size: 1.05rem;
+}
+
+.knowledge-directory-list span {
+    color: var(--maliev-muted);
+    font-size: .92rem;
+    line-height: 1.7;
+}
+
+.docs-content .knowledge-directory-list li > a:hover,
+.docs-content .knowledge-directory-list li > a:focus-visible {
+    background-color: #f0f1f3;
+}
+
+.docs-content .knowledge-directory-list li > a:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 2px;
+}
+
+
+.knowledge-legacy-anchor {
+    display: block;
+    scroll-margin-top: 6rem;
+}
+
+/* Knowledge imagery: photographs frame the subject; diagrams preserve precise labels. */
+.knowledge-photo,
+.knowledge-diagram {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+}
+
+.knowledge-photo img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+.docs-content .knowledge-directory-list li > a {
+    grid-template-columns: clamp(6rem, 10vw, 8rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.knowledge-directory-list img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: .5rem;
+}
+
+.knowledge-directory-list .knowledge-directory-copy {
+    display: grid;
+    gap: .35rem;
+}
+
+.knowledge-diagram-viewport {
+    overflow-x: auto;
+    border: 1px solid var(--maliev-line);
+    border-radius: var(--maliev-radius);
+    background: #f4f7fb;
+}
+
+.knowledge-diagram-viewport:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 2px;
+}
+
+.knowledge-diagram-viewport img {
+    min-width: 48rem;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+}
+
+.knowledge-diagram-link {
+    display: inline-block;
+    margin-inline-start: .4em;
+}
+
+
+.knowledge-search {
+    padding: 1rem;
+    border-bottom: 1px solid var(--maliev-line);
+}
+
+.knowledge-search[hidden],
+.knowledge-search [hidden],
+[data-knowledge-browse][hidden] {
+    display: none;
+}
+
+.knowledge-search label {
+    display: block;
+    margin-bottom: .5rem;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+.knowledge-search-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .25rem;
+}
+
+.knowledge-search input {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    padding: .55rem .65rem;
+    border: 1px solid var(--maliev-line);
+    border-radius: .4rem;
+    background: #fff;
+    color: var(--maliev-ink);
+    font: inherit;
+    font-size: 1rem;
+}
+
+.knowledge-search input::-webkit-search-cancel-button {
+    display: none;
+}
+
+.knowledge-search-clear,
+.knowledge-search-retry {
+    min-height: 44px;
+    padding: .5rem .65rem;
+    border: 1px solid var(--maliev-line);
+    border-radius: .4rem;
+    background: #fff;
+    color: var(--maliev-ink);
+    font: inherit;
+    cursor: pointer;
+}
+
+.knowledge-search-clear {
+    width: 44px;
+}
+
+.knowledge-search-hint,
+.knowledge-search-status {
+    margin: .5rem 0 0;
+    color: var(--maliev-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.knowledge-search-retry {
+    margin-top: .6rem;
+}
+
+.knowledge-search-results {
+    margin: .75rem 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--maliev-line);
+}
+
+.knowledge-search-results li {
+    border-bottom: 1px solid var(--maliev-line);
+}
+
+.knowledge-search-results a {
+    display: block;
+    padding: .75rem .35rem;
+    color: var(--maliev-ink);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    transition: background-color 180ms ease;
+}
+
+.knowledge-search-results strong {
+    display: block;
+    font-size: .9rem;
+}
+
+.knowledge-search-article {
+    display: block;
+    margin-top: .25rem;
+    color: var(--maliev-muted);
+    font-size: .75rem;
+}
+
+.knowledge-search-results p {
+    margin: .35rem 0 0;
+    color: var(--maliev-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.knowledge-search-results a:hover,
+.knowledge-search-clear:hover,
+.knowledge-search-retry:hover {
+    background-color: #f0f1f3;
+}
+
+.knowledge-search input:focus-visible,
+.knowledge-search button:focus-visible,
+.knowledge-search-results a:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .docs-content .knowledge-directory-list li > a,
+    .knowledge-search-results a,
+    .docs-content .knowledge-document .docs-toc li > a { transition: none; }
+}
+
+/* Native contents remain available when scripting is unavailable. Only the enhanced
+   Knowledge drawer becomes modal; other workspace shells retain their rules. */
+@media (max-width: 71.99rem) {
+    .workspace-sidebar--knowledge:not([data-navigation-ready="true"]) {
+        position: static;
+        inset: auto;
+        width: 100%;
+        transform: none;
+        overflow: visible;
+        box-shadow: none;
+    }
+    .docs-shell:not(:has([data-navigation-ready="true"])) .workspace-drawer-toggle,
+    .workspace-sidebar--knowledge:not([data-navigation-ready="true"]) .workspace-drawer-close {
+        display: none;
+    }
 }

@@ -1,9 +1,12 @@
 @inject IStringLocalizer<GuidelinesContent> Localizer
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["Prepare your project"]</p>
 <h1>@Localizer["Quotation request guidelines"]</h1>
 <p class="docs-lead">@Localizer["A useful quotation starts with an identifiable part and a clear definition of success. Use this checklist for CNC machining, 3D printing, scanning, or a project whose manufacturing route is still undecided."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/quotation-files.webp" srcset="/src/images/knowledge/photos/quotation-files-small.webp 768w, /src/images/knowledge/photos/quotation-files.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["An engineer compares a flanged coupling with its CAD model and drawing."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Prepare the model, drawing and part requirements together. Illustrative image."]</figcaption>
+</figure>
 <nav class="docs-toc" aria-label="@Localizer["On this page"]">
 <strong>@Localizer["On this page"]</strong>
 <ul>
@@ -50,10 +53,15 @@
 <h3>@Localizer["Resolve conflicting files"]</h3>
 <p>@Localizer["If the drawing and model differ, flag the conflict before quotation. Do not rely on file dates alone to identify the approved revision."]</p>
 </aside>
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A CAD model, dimensioned drawing and four parts all identify revision 02."]">
+        <img src="/src/images/knowledge/visual-quotation-package.svg" alt="@Localizer["A CAD model, dimensioned drawing and four parts all identify revision 02."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: the model defines nominal geometry. 2: the matching drawing adds an illustrative 60 ±0.10 mm dimension. 3: identify quantity and revision for each part; the four-part REV 02 batch is an example, not a minimum order. This is not a complete production drawing."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-quotation-package.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
 </section>
 <section id="requirements" class="docs-section">
-<span id="guideline-result" aria-hidden="true"></span>
-<span id="guideline-requirements" aria-hidden="true"></span>
+<span id="guideline-result" aria-hidden="true"></span><span id="guideline-requirements" aria-hidden="true"></span>
 <h2>@Localizer["Describe the part in use"]</h2>
 <ul class="docs-checklist">
 <li>@Localizer["Material or required behavior; quantity per part; color and finish; requested delivery date and destination."]</li>

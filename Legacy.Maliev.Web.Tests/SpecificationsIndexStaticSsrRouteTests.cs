@@ -46,7 +46,7 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
         "Service specifications | MALIEV",
         "Compare the information needed for CNC machining, 3D printing, and 3D scanning before requesting a quotation.",
         "Manufacturing preparation guides",
-        "Technical guidance",
+        "Start with the result you need, then prepare the files and requirements that let an engineer choose a suitable process.",
         "CNC machining",
         "3D printing",
         "3D scanning")]
@@ -55,7 +55,7 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
         "ข้อแนะนำเฉพาะบริการ | MALIEV",
         "เปรียบเทียบข้อมูลที่ควรเตรียมก่อนขอราคางาน CNC พิมพ์ 3 มิติ และสแกน 3 มิติ",
         "คู่มือเตรียมงานผลิต",
-        "คำแนะนำทางเทคนิค",
+        "เริ่มจากผลลัพธ์ที่ต้องการ แล้วเตรียมไฟล์และข้อกำหนดเพื่อให้วิศวกรเลือกกระบวนการที่เหมาะสม",
         "งาน CNC",
         "งานพิมพ์ 3 มิติ",
         "งานสแกน 3 มิติ")]
@@ -64,7 +64,7 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
         string title,
         string description,
         string heading,
-        string eyebrow,
+        string lead,
         string cnc,
         string printing,
         string scanning)
@@ -81,7 +81,7 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains($">{cnc}<", source, StringComparison.Ordinal);
         Assert.Contains($">{printing}<", source, StringComparison.Ordinal);
         Assert.Contains($">{scanning}<", source, StringComparison.Ordinal);
@@ -107,11 +107,11 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
         Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
         Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
-        Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/3d-printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/guidelines?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/workflow?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/cnc-machining?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/3d-printing?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/3d-scanning?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("new WOW", source, StringComparison.Ordinal);

@@ -13,13 +13,25 @@ public sealed class KnowledgeGuideBundleRouteTests
 {
     public static IEnumerable<object[]> SourceDocuments()
     {
-        yield return new object[] { "/knowledges", "BlazorRouting:KnowledgesIndex", "Knowledge center", "ศูนย์ความรู้", "cnc-guides|project-guides|before-sending|knowledge-next" };
+        yield return new object[] { "/knowledges", "BlazorRouting:KnowledgesIndex", "Manufacturing knowledge library", "คลังความรู้ด้านการผลิต", "cnc-guides|project-guides|before-sending|knowledge-next" };
         yield return new object[] { "/knowledges/guidelines", "BlazorRouting:KnowledgesGuidelines", "Quotation request guidelines", "แนวทางขอใบเสนอราคา", "files|requirements|confidentiality" };
         yield return new object[] { "/knowledges/workflow", "BlazorRouting:KnowledgesWorkflow", "What happens after you request a quote", "เกิดอะไรขึ้นหลังขอใบเสนอราคา", "review|approval|delivery" };
         yield return new object[] { "/knowledges/specifications", "BlazorRouting:KnowledgesSpecifications", "Manufacturing preparation guides", "คู่มือเตรียมงานผลิต", "compare-inputs|other-processes" };
         yield return new object[] { "/knowledges/specifications/3d-printing", "BlazorRouting:KnowledgesSpecifications3DPrinting", "Prepare a model for 3D printing", "เตรียมโมเดลสำหรับพิมพ์ 3 มิติ", "geometry|process|fit|finish" };
         yield return new object[] { "/knowledges/specifications/3d-scanning", "BlazorRouting:KnowledgesSpecifications3DScanning", "Prepare a part for 3D scanning", "เตรียมชิ้นงานสำหรับสแกน 3 มิติ", "deliverables|measurement|preparation|request" };
         yield return new object[] { "/knowledges/specifications/cnc-machining", "BlazorRouting:KnowledgesSpecificationsCncMachining", "Design decisions that make CNC parts easier to manufacture", "ออกแบบชิ้นงาน CNC ให้ผลิตได้ตรงความต้องการ", "files|thin-walls|radii-pockets|size-fixturing|warpage|chatter|holes-threads|tolerances|axes|edm|grinding|finishing" };
+        yield return new object[] { "/knowledges/cnc/cutting-tools", "BlazorRouting:KnowledgesIndex", "CNC cutting tools: select the whole cutting system", "เครื่องมือตัด CNC: เลือกให้เหมาะทั้งระบบการตัด", "selection|substrate|geometry|flutes|holding|ballnose|direction|coolant-wear" };
+        yield return new object[] { "/knowledges/cnc/feeds-and-speeds", "BlazorRouting:KnowledgesIndex", "CNC feeds and speeds: calculate, then verify", "อัตราป้อนและความเร็วตัด CNC: คำนวณแล้วตรวจสอบ", "starting-data|units|milling|engagement|drilling|turning|trial" };
+        yield return new object[] { "/knowledges/cnc/geometry-and-workholding", "BlazorRouting:KnowledgesIndex", "Geometry, rigidity and workholding", "รูปทรง ความแข็งแกร่ง และการจับยึด", "thin-walls|radii-pockets|size-fixturing|warpage|chatter" };
+        yield return new object[] { "/knowledges/cnc/holes-and-tolerances", "BlazorRouting:KnowledgesIndex", "Holes, threads and tolerances", "รู เกลียว และค่าความคลาดเคลื่อน", "holes-threads|tolerances" };
+        yield return new object[] { "/knowledges/cnc/machining-processes", "BlazorRouting:KnowledgesIndex", "3-axis, 5-axis, EDM and grinding", "3 แกน 5 แกน EDM และการเจียร", "axes|edm|grinding" };
+        yield return new object[] { "/knowledges/finishing/heat-treatment", "BlazorRouting:KnowledgesIndex", "Plan heat treatment before final machining", "วางแผนอบชุบก่อนตัดเฉือนขั้นสุดท้าย", "purpose|surface|sequence|acceptance" };
+        yield return new object[] { "/knowledges/finishing/surface-finishes", "BlazorRouting:KnowledgesIndex", "Surface finishes and coatings", "ผิวงานและการเคลือบ", "finishing" };
+        yield return new object[] { "/knowledges/inspection/measuring-parts", "BlazorRouting:KnowledgesIndex", "Measure the requirement, not just the number", "วัดให้ตรงข้อกำหนด ไม่ใช่แค่อ่านตัวเลข", "tools|uncertainty|setup|temperature|report" };
+        yield return new object[] { "/knowledges/manufacturing/process-selection", "BlazorRouting:KnowledgesIndex", "Choose the process around the part", "เลือกกระบวนการให้เหมาะกับชิ้นงาน", "requirements|routes|economics|example|handoff" };
+        yield return new object[] { "/knowledges/materials/engineering-plastics", "BlazorRouting:KnowledgesIndex", "Engineering plastics: match the grade to the environment", "พลาสติกวิศวกรรม: เลือกเกรดให้ตรงสภาพใช้งาน", "pom-pa|peek-ptfe|pc-abs|comparison|route" };
+        yield return new object[] { "/knowledges/materials/metals", "BlazorRouting:KnowledgesIndex", "Metals: choose the grade and its condition", "โลหะ: เลือกทั้งเกรดและสภาพวัสดุ", "aluminium|stainless|steels|comparison" };
+        yield return new object[] { "/knowledges/materials/selection", "BlazorRouting:KnowledgesIndex", "Choose a material around the job it must do", "เลือกวัสดุจากหน้าที่ที่ชิ้นส่วนต้องทำ", "requirements|environment|specification|worksheet|release" };
     }
 
     public static IEnumerable<object[]> Documents =>
@@ -53,6 +65,9 @@ public sealed class KnowledgeGuideBundleRouteTests
         Assert.DoesNotContain("fonts.googleapis.com", html, StringComparison.OrdinalIgnoreCase);
         var canonical = "https://www.maliev.com" + route + (culture == "en" ? "?culture=en" : "");
         Assert.Contains($"rel=\"canonical\" href=\"{canonical}\"", html, StringComparison.Ordinal);
+        Assert.Contains($"rel=\"alternate\" href=\"https://www.maliev.com{route}?culture=en\" hreflang=\"en\"", html, StringComparison.Ordinal);
+        Assert.Contains($"rel=\"alternate\" href=\"https://www.maliev.com{route}\" hreflang=\"th\"", html, StringComparison.Ordinal);
+        Assert.Contains($"rel=\"alternate\" href=\"https://www.maliev.com{route}\" hreflang=\"x-default\"", html, StringComparison.Ordinal);
         foreach (var link in Regex.Matches(html, "<link[^>]*(?:canonical|hreflang)[^>]*>").Cast<Match>())
             Assert.DoesNotContain("tracking=excluded", link.Value, StringComparison.Ordinal);
         if (retained)
@@ -80,16 +95,22 @@ public sealed class KnowledgeGuideBundleRouteTests
                 Assert.DoesNotContain("tracking=excluded", stepUrl, StringComparison.Ordinal);
             }
         }
+        if (route == "/knowledges/cnc/geometry-and-workholding")
+        {
+            Assert.Contains("/src/images/knowledge/cnc-wall-stiffness.svg", html, StringComparison.Ordinal);
+            Assert.Contains("/src/images/knowledge/cnc-corner-clearance.svg", html, StringComparison.Ordinal);
+        }
+        if (route == "/knowledges/finishing/surface-finishes")
+            Assert.Contains("/src/images/knowledge/anodize-dimensional-growth.svg", html, StringComparison.Ordinal);
         if (route.EndsWith("cnc-machining", StringComparison.Ordinal))
         {
-            Assert.Equal(3, Regex.Matches(html, "<img[^>]*src=\"[^\"]*/src/images/knowledge/").Count);
-            Assert.Contains(culture == "th" ? "ทบทวนแหล่งอ้างอิงทางเทคนิค: 16 ตุลาคม 2569" :
-                "Technical references reviewed: 16 October 2026.", html, StringComparison.Ordinal);
+            Assert.Equal(2, Regex.Matches(html, "<img[^>]*src=\"[^\"]*/src/images/knowledge/").Count);
+            Assert.Contains("/src/images/knowledge/visual-cnc-preparation.svg", html, StringComparison.Ordinal);
         }
     }
 
     [Theory]
-    [InlineData("anodize-dimensional-growth.svg", "6f58db52fb840f0edcb5276a35a766cee64c8f850a0a97692f7e9cd24843a142")]
+    [InlineData("anodize-dimensional-growth.svg", "44424727d2e0cc7e906257d62999a578c13ee9754a6d24f63e0fc6c0cef61b14")]
     [InlineData("cnc-corner-clearance.svg", "743ba8f3edacaa001f716f3251f8d4cec0914685111481cc6e134549daca8844")]
     [InlineData("cnc-wall-stiffness.svg", "041d4f9d6ce93905fd213ecdfab047e4ebae54093ac0b542fc0efb056f34c201")]
     public async Task DiagramsAreServedWithExactSourceBytes(string file, string expectedSha256)

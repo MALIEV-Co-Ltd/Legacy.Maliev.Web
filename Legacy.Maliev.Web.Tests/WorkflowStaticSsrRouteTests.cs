@@ -63,22 +63,34 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -117,7 +129,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
         "Manufacturing workflow | MALIEV",
         "Understand the MALIEV workflow from file review and quotation to production and delivery.",
         "What happens after you request a quote",
-        "Project workflow",
+        "Use this guide to understand the decisions and information needed as a project moves from inquiry to delivery. The agreed quotation defines the actual scope, deliverables, and schedule for your project.",
         "1. Review the request and define the scope",
         "3. Agree checks, documents, and handover")]
     [InlineData(
@@ -125,7 +137,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
         "ขั้นตอนงานผลิต | MALIEV",
         "เข้าใจขั้นตอนของ MALIEV ตั้งแต่ตรวจไฟล์และเสนอราคา ไปจนถึงผลิตและส่งมอบ",
         "เกิดอะไรขึ้นหลังขอใบเสนอราคา",
-        "ขั้นตอนโปรเจกต์",
+        "คู่มือนี้ช่วยอธิบายการตัดสินใจและข้อมูลที่ต้องใช้ตั้งแต่ส่งคำขอจนถึงส่งมอบ ขอบเขต รายการส่งมอบ และกำหนดการจริงของโครงการให้ยึดตามใบเสนอราคาที่ตกลงกัน",
         "1. ตรวจสอบคำขอและกำหนดขอบเขต",
         "3. ตกลงการตรวจ เอกสาร และการส่งมอบ")]
     public async Task WorkflowRoute_RendersCompleteLocalizedStaticDocument(
@@ -133,7 +145,7 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
         string title,
         string description,
         string heading,
-        string eyebrow,
+        string lead,
         string firstStep,
         string finalStep)
     {
@@ -149,10 +161,15 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{finalStep}<", source, StringComparison.Ordinal);
-        Assert.Equal(5, Regex.Matches(source, "<section[^>]*data-workflow-step", RegexOptions.CultureInvariant).Count);
+        Assert.Contains(culture == "th" ? "2. ยืนยันการอนุมัติและควบคุมการเปลี่ยนแปลง" : "2. Confirm approval and control changes", source, StringComparison.Ordinal);
+        Assert.Equal(3, Regex.Matches(source, "<section[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
+        Assert.Contains("id=\"review\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"approval\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"delivery\"", source, StringComparison.Ordinal);
+        Assert.Contains("src=\"/src/images/knowledge/visual-review-loop.svg\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -169,9 +186,9 @@ public sealed partial class WorkflowStaticSsrRouteTests : IClassFixture<TestingW
         Assert.Contains("aria-expanded=\"false\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/guidelines?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/workflow?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/cnc-machining?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("wow.js", source, StringComparison.OrdinalIgnoreCase);
