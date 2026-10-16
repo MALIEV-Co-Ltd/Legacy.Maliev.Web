@@ -55,6 +55,13 @@ public sealed class KnowledgeGuideBundleRouteTests
         Assert.Contains($"rel=\"canonical\" href=\"{canonical}\"", html, StringComparison.Ordinal);
         foreach (var link in Regex.Matches(html, "<link[^>]*(?:canonical|hreflang)[^>]*>").Cast<Match>())
             Assert.DoesNotContain("tracking=excluded", link.Value, StringComparison.Ordinal);
+        if (retained)
+        {
+            var navigation = Regex.Match(html, "<aside[^>]*id=\"knowledge-navigation\"[^>]*>.*?</aside>",
+                RegexOptions.Singleline | RegexOptions.CultureInvariant);
+            Assert.True(navigation.Success);
+            Assert.Equal(1, Regex.Matches(navigation.Value, "aria-current=\"page\"").Count);
+        }
         if (route == "/knowledges/guidelines")
         {
             foreach (var alias in new[] { "guideline-files", "guideline-result", "guideline-requirements", "guideline-confidentiality" })
@@ -63,7 +70,15 @@ public sealed class KnowledgeGuideBundleRouteTests
                 RegexOptions.Singleline | RegexOptions.CultureInvariant);
             Assert.True(match.Success);
             using var document = JsonDocument.Parse(match.Groups["json"].Value);
+            Assert.Equal(canonical, document.RootElement.GetProperty("url").GetString());
             Assert.Equal(4, document.RootElement.GetProperty("step").GetArrayLength());
+            foreach (var step in document.RootElement.GetProperty("step").EnumerateArray())
+            {
+                var stepUrl = step.GetProperty("url").GetString();
+                Assert.NotNull(stepUrl);
+                Assert.StartsWith(canonical + "#guideline-", stepUrl, StringComparison.Ordinal);
+                Assert.DoesNotContain("tracking=excluded", stepUrl, StringComparison.Ordinal);
+            }
         }
         if (route.EndsWith("cnc-machining", StringComparison.Ordinal))
         {

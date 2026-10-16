@@ -1,6 +1,6 @@
 @{
-    string currentPage = ViewContext.RouteData.Values["page"]?.ToString();
-    string CurrentPage(string page) => string.Equals(currentPage, page, System.StringComparison.OrdinalIgnoreCase) ? "page" : null;
+    string? currentPage = ViewContext.RouteData.Values["page"]?.ToString();
+    string? CurrentPage(string page) => string.Equals(currentPage, page, System.StringComparison.OrdinalIgnoreCase) ? "page" : null;
 }
 <aside id="knowledge-navigation" class="workspace-sidebar workspace-sidebar--knowledge" aria-label="@Localizer["Knowledge center"]">
     <div class="workspace-sidebar__header">

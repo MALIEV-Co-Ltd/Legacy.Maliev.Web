@@ -8,5 +8,5 @@
 <component type="typeof(GuidelinesContent)" render-mode="Static" />
 
 @section Meta {
-    <component type="typeof(Legacy.Maliev.Web.Components.Pages.Knowledges.KnowledgeGuidelinesStructuredData)" render-mode="Static" param-CanonicalUrl="@(Legacy.Maliev.Web.Components.Layout.PublicDocumentLinksDisplayModel.Create(Context).CanonicalUrl)" />
+    <component type="typeof(Legacy.Maliev.Web.Components.Pages.Knowledges.KnowledgeGuidelinesStructuredData)" render-mode="Static" param-CanonicalUrl="@(Legacy.Maliev.Web.Components.Layout.PublicDocumentLinksDisplayModel.Create(Model.HttpContext).CanonicalUrl)" />
 }
