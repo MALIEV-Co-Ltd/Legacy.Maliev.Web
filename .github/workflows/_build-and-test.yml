@@ -78,7 +78,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~LeadAnalyticsEventQueueParityTests|FullyQualifiedName~PublicGoogleTagManagerMigrationTests"
+          --filter "FullyQualifiedName~LeadAnalyticsEventQueueParityTests|FullyQualifiedName~PublicGoogleTagManagerMigrationTests|FullyQualifiedName~PublicContactRenderedScriptsTests"
           --logger trx --results-directory ./quotation-conversion-test-results
       - name: Verify literal CNC profile writes through the exact composed producer
         run: >-
