@@ -496,7 +496,7 @@ public sealed class MaterialPricingDisplayBrowserTests
                     """);
                 return fixture;
             }
-            catch { await fixture.DisposeAsync(); throw; }
+            catch (Exception primary) { await fixture.DisposeAsync(primary); throw; }
         }
         public async Task ChangeQuantityAsync(int quantity)
         {
@@ -534,17 +534,34 @@ public sealed class MaterialPricingDisplayBrowserTests
                     AcceptedQuantity = Assert.Single((await StoredAsync()).Parts).Configuration.Quantity,
                 }));
         }
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync() => DisposeAsync(null);
+
+        private async ValueTask DisposeAsync(Exception? primary)
         {
-            Control.ReleaseAll();
-            foreach (var gate in Control.Gates.Where(candidate => candidate.Claimed != 0))
-                await gate.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            foreach (var gate in Control.Gates.Where(candidate => Volatile.Read(ref candidate.AuthorizationClaimed) != 0))
-                await gate.AuthorizationFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            if (context is not null) await context.DisposeAsync();
-            if (browser is not null) await browser.DisposeAsync();
-            playwright?.Dispose();
-            await Factory.DisposeAsync();
+            var releases = new List<Func<ValueTask>>
+            {
+                () => { Control.ReleaseAll(); return ValueTask.CompletedTask; },
+            };
+            foreach (var gate in Control.Gates)
+            {
+                releases.Add(async () =>
+                {
+                    if (gate.Claimed != 0) await gate.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                });
+            }
+            foreach (var gate in Control.Gates)
+            {
+                releases.Add(async () =>
+                {
+                    if (Volatile.Read(ref gate.AuthorizationClaimed) != 0)
+                        await gate.AuthorizationFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                });
+            }
+            releases.Add(async () => { if (context is not null) await context.DisposeAsync(); });
+            releases.Add(async () => { if (browser is not null) await browser.DisposeAsync(); });
+            releases.Add(() => { playwright?.Dispose(); return ValueTask.CompletedTask; });
+            releases.Add(() => Factory.DisposeAsync());
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary, releases.ToArray());
         }
     }
 }
