@@ -59,7 +59,8 @@ def classify_baseline_notices(nodes, frozen):
         if (len(children) != 1 or children[0].tag != NS + "Text" or children[0].attrib
                 or len(children[0]) != 0 or children[0].text is None
                 or (node.text is not None and node.text.strip())
-                or (children[0].tail is not None and children[0].tail.strip())):
+                or (children[0].tail is not None and children[0].tail.strip())
+                or (node.tail is not None and node.tail.strip())):
             counts["malformedCount"] += 1
             continue
         match = RUN_INFO_FAILURE_LINE.fullmatch(children[0].text)
@@ -322,9 +323,9 @@ def verify_trx(raw, frozen, phase, assembly, source_root):
     expected = {k: 0 for k in COUNTERS}
     expected.update(total=len(rows), executed=len(rows), failed=expected_failed, passed=len(rows)-expected_failed)
     require(counts == expected and summary.get("outcome") == ("Failed" if expected_failed else "Completed"), "phase-counters")
-    run_info_nodes = root.findall(".//" + NS + "RunInfo")
-    if run_info_nodes:
-        raise RunInfoRejected(run_info_nodes, frozen if phase == "baseline" else None)
+    run_info_nodes = [node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "RunInfo"]
+    if run_info_nodes and phase == "green":
+        raise RunInfoRejected(run_info_nodes)
     require(len(root.findall(".//" + NS + "ErrorInfo")) == expected_failed, "error-corpus")
     groups = []
     for container, child in (("Results", "UnitTestResult"), ("TestDefinitions", "UnitTest"), ("TestEntries", "TestEntry")):
@@ -371,6 +372,24 @@ def verify_trx(raw, frozen, phase, assembly, source_root):
             require(not errors, "passing-error")
         identities[name] = result.get("testId")
     require(actual == set(rows), "case-roster")
+    if run_info_nodes:
+        containers = summary.findall(NS + "RunInfos")
+        official = (len(containers) == 1 and len(root.findall(".//" + NS + "RunInfos")) == 1
+                    and not containers[0].attrib
+                    and (containers[0].text is None or not containers[0].text.strip())
+                    and (containers[0].tail is None or not containers[0].tail.strip())
+                    and len(containers[0]) == len(run_info_nodes)
+                    and all(node.tag == NS + "RunInfo" and node in containers[0]
+                            for node in run_info_nodes)
+                    and all(set(node.attrib) <= {"computerName", "outcome", "timestamp"}
+                            and node.get("outcome") == "Error" for node in run_info_nodes))
+        notices = classify_baseline_notices(run_info_nodes, frozen)
+        qualified = (len(run_info_nodes) == 10 and notices["matchedNoticeCount"] == 10
+                     and notices["uniqueExpectedCount"] == 10
+                     and all(notices[key] == 0 for key in ("duplicateCount", "missingExpectedCount",
+                                                             "unexpectedCount", "wrongOutcomeCount", "malformedCount")))
+        if not (official and qualified):
+            raise RunInfoRejected(run_info_nodes, frozen)
     return {"phase": phase, "counts": counts, "identities": identities, "trxSha256": digest(raw)}
 
 

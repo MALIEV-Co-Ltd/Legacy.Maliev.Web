@@ -75,6 +75,15 @@ class TrxControls(unittest.TestCase):
     def verify(self, root, phase="baseline"):
         return guard.verify_trx(ET.tostring(root, encoding="utf-8"), FROZEN, phase, self.assembly, self.root)
 
+    def qualified_run_infos(self, root):
+        container = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfos")
+        names = [row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed"]
+        self.assertEqual(10, len(names))
+        for name in names:
+            info = ET.SubElement(container, guard.NS + "RunInfo", outcome="Error")
+            ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:01:02.03]     " + name + " [FAIL]"
+        return container
+
     def test_exact_19_negative_and_22_positive_share_case_ids(self):
         baseline, green = self.verify(self.corpus()), self.verify(self.corpus("green"), "green")
         self.assertEqual(19, len(baseline["identities"]))
@@ -281,20 +290,94 @@ class TrxControls(unittest.TestCase):
         caught.exception.diagnostic["messageSamples"] = ["Bearer secret"]
         self.assertNotIn("runInfo", guard.summary_failure(caught.exception))
 
-    def test_baseline_run_info_exact_ten_notice_bijection_is_diagnostic_only(self):
+    def test_baseline_run_info_exact_ten_notice_bijection_passes_after_rows(self):
         root = self.corpus()
-        summary = root.find(guard.NS + "ResultSummary")
-        names = [row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed"]
-        self.assertEqual(10, len(names))
-        for name in names:
-            info = ET.SubElement(summary, guard.NS + "RunInfo", outcome="Error")
-            ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:01:02.03]     " + name + " [FAIL]"
-        with self.assertRaises(guard.RunInfoRejected) as caught:
-            self.verify(root)
-        self.assertEqual({"matchedNoticeCount": 10, "uniqueExpectedCount": 10,
-                          "duplicateCount": 0, "missingExpectedCount": 0,
-                          "unexpectedCount": 0, "wrongOutcomeCount": 0, "malformedCount": 0},
-                         guard.summary_failure(caught.exception)["runInfo"]["baselineNotices"])
+        self.qualified_run_infos(root)
+        proof = self.verify(root)
+        self.assertEqual("baseline", proof["phase"])
+        self.assertEqual(19, len(proof["identities"]))
+
+    def test_qualified_baseline_notices_never_bypass_case_or_frame_validation(self):
+        for mutation, category in (("case", "case-name"), ("outcome", "case-outcome"),
+                                   ("message", "error-message"), ("frame", "error-origin")):
+            root = self.corpus()
+            self.qualified_run_infos(root)
+            if mutation == "case":
+                root.find(".//" + guard.NS + "UnitTestResult").set("testName", "Other.Case")
+            elif mutation == "outcome":
+                root.find(".//" + guard.NS + "UnitTestResult").set("outcome", "Passed")
+            elif mutation == "message":
+                root.find(".//" + guard.NS + "Message").text = "fixture startup failed"
+            else:
+                frame = root.find(".//" + guard.NS + "StackTrace")
+                frame.text = frame.text.replace(":line 29", ":line 290")
+            with self.subTest(mutation=mutation), self.assertRaises(guard.Rejected) as caught:
+                self.verify(root)
+            self.assertEqual(category, str(caught.exception))
+
+    def test_qualified_baseline_rejects_ninth_and_tenth_unsampled_notice_drift(self):
+        for index, mutation in ((8, "unexpected"), (9, "unexpected"), (9, "duplicate"),
+                                (9, "wrong-outcome"), (9, "nested")):
+            root = self.corpus()
+            infos = list(self.qualified_run_infos(root))
+            if mutation == "unexpected":
+                infos[index].find(guard.NS + "Text").text = "[xUnit.net 00:01:02.03]     Other.Case [FAIL]"
+            elif mutation == "duplicate":
+                infos[index].find(guard.NS + "Text").text = infos[0].find(guard.NS + "Text").text
+            elif mutation == "wrong-outcome":
+                infos[index].set("outcome", "Warning")
+            else:
+                ET.SubElement(infos[index].find(guard.NS + "Text"), guard.NS + "Nested")
+            with self.subTest(index=index, mutation=mutation), self.assertRaises(guard.RunInfoRejected):
+                self.verify(root)
+
+    def test_qualified_baseline_rejects_missing_extra_and_unapproved_attributes(self):
+        for mutation in ("missing", "extra", "unknown-attribute", "wrong-container",
+                         "direct-child", "foreign-text", "container-attribute", "foreign-element"):
+            root = self.corpus()
+            container = self.qualified_run_infos(root)
+            if mutation == "missing":
+                container.remove(container[-1])
+            elif mutation == "extra":
+                info = ET.SubElement(container, guard.NS + "RunInfo", outcome="Error")
+                ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:01:02.03]     Other.Case [FAIL]"
+            elif mutation == "unknown-attribute":
+                container[-1].set("customer", "private@example.test")
+            elif mutation == "wrong-container":
+                container.tag = guard.NS + "OtherContainer"
+            elif mutation == "direct-child":
+                moved = container[-1]
+                container.remove(moved)
+                root.find(guard.NS + "ResultSummary").append(moved)
+            elif mutation == "foreign-text":
+                container[-1].tail = "unowned message"
+            elif mutation == "container-attribute":
+                container.set("customer", "private@example.test")
+            else:
+                ET.SubElement(container, guard.NS + "Other")
+            with self.subTest(mutation=mutation), self.assertRaises(guard.RunInfoRejected):
+                self.verify(root)
+
+    def test_qualified_baseline_allows_only_nonidentity_run_info_metadata(self):
+        root = self.corpus()
+        container = self.qualified_run_infos(root)
+        container[0].set("computerName", "build-host")
+        container[0].set("timestamp", "2026-10-16T00:00:00.0000000Z")
+        self.assertEqual(19, len(self.verify(root)["identities"]))
+
+    def test_green_run_info_remains_immediate_rejection_even_when_notices_match(self):
+        root = self.corpus("green")
+        self.qualified_run_infos(root)
+        root.find(".//" + guard.NS + "UnitTestResult").set("testName", "Other.Case")
+        with self.assertRaises(guard.RunInfoRejected):
+            self.verify(root, "green")
+
+    def test_foreign_namespace_run_info_is_never_silently_ignored(self):
+        for tag in ("RunInfo", "{urn:foreign}RunInfo"):
+            root = self.corpus()
+            ET.SubElement(root.find(guard.NS + "ResultSummary"), tag, outcome="Error")
+            with self.subTest(tag=tag), self.assertRaises(guard.RunInfoRejected):
+                self.verify(root)
 
     def test_baseline_run_info_duplicate_and_missing_are_counted_without_acceptance(self):
         root = self.corpus()
