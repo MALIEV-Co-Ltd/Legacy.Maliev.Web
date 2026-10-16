@@ -9,7 +9,7 @@
     <VSTestResultsDirectory>$(MSBuildProjectDirectory)/TestResults</VSTestResultsDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" Version="10.1.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
     <PackageReference Include="Microsoft.Playwright" Version="1.61.0" />
