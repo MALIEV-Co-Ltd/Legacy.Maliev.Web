@@ -84,6 +84,7 @@ function verifyInputs() {
   const head = command('git', ['rev-parse', 'HEAD']);
   const firstMetadataHead = '0373344c9a21d49665e3ab6bf656f1c309a6fb6e';
   const secondMetadataHead = 'e5178233a7f031c0cb5ade1af60625a0e3d3b579';
+  const thirdMetadataHead = 'cc5de3d1e4ccba251d4fb7a176855bde515b730f';
   if (command('git', ['merge-base', base, head]) !== base)
     fail('candidate does not descend from reviewed base');
   if (head === firstMetadataHead) {
@@ -92,10 +93,16 @@ function verifyInputs() {
     if (command('git', ['rev-parse', 'HEAD^']) !== firstMetadataHead ||
         command('git', ['rev-parse', 'HEAD^^']) !== base)
       fail('second metadata commit ancestry changed');
-  } else if (command('git', ['rev-parse', 'HEAD^']) !== secondMetadataHead ||
-             command('git', ['rev-parse', 'HEAD^^']) !== firstMetadataHead ||
-             command('git', ['rev-parse', 'HEAD^^^']) !== base) {
-    fail('candidate is not the reviewed metadata-only third commit');
+  } else if (head === thirdMetadataHead) {
+    if (command('git', ['rev-parse', 'HEAD^']) !== secondMetadataHead ||
+        command('git', ['rev-parse', 'HEAD^^']) !== firstMetadataHead ||
+        command('git', ['rev-parse', 'HEAD^^^']) !== base)
+      fail('third metadata commit ancestry changed');
+  } else if (command('git', ['rev-parse', 'HEAD^']) !== thirdMetadataHead ||
+             command('git', ['rev-parse', 'HEAD^^']) !== secondMetadataHead ||
+             command('git', ['rev-parse', 'HEAD^^^']) !== firstMetadataHead ||
+             command('git', ['rev-parse', 'HEAD^^^^']) !== base) {
+    fail('candidate is not the reviewed metadata-only fourth commit');
   }
   if (process.env.REVIEWED_HEAD_SHA !== head) fail('workflow is not running the exact PR head');
   sameSet(command('git', ['diff', '--name-only', base, head]).split('\n').filter(Boolean), metadataPaths);
@@ -222,6 +229,49 @@ function collect() {
     acceptance: 'UNVALIDATED REVIEW ARTIFACT; NO COMMIT OR MERGE'
   };
   writeFileSync(join(destination, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+  // Transport only the three reviewed, public #596 dist postimages through
+  // bounded hosted logs. This is not a replacement for the full sealed artifact.
+  const publicPaths = [
+    'Legacy.Maliev.Web/wwwroot/dist/site.min.css',
+    'Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json',
+    'Legacy.Maliev.Web/wwwroot/dist/route-knowledge.js'
+  ];
+  const records = [];
+  const addRecord = record => records.push('PUBLIC_ASSET_596_V1 ' + JSON.stringify(record) + '\n');
+  addRecord({
+    kind: 'binding', schema: 1, base, head: binding.head,
+    packetGitBlob: packetSha, patchGitBlob: patchSha,
+    runId: manifest.runId, runAttempt: manifest.runAttempt,
+    generatedFileCount: manifest.generatedFileCount,
+    generatedTotalBytes: manifest.generatedTotalBytes,
+    publicPaths
+  });
+  for (const path of publicPaths) {
+    const sealed = files.find(file => file.path === path);
+    if (!sealed) fail('public postimage not in sealed inventory');
+    const artifactPath = outputPath + '/' + path;
+    const bytes = regular(artifactPath);
+    if (bytes.length !== sealed.bytes || sha256(bytes) !== sealed.sha256 ||
+        gitBlob(bytes) !== sealed.gitBlob)
+      fail('public artifact copy differs from sealed generated file');
+    if (bytes.length > 1024 * 1024) fail('public log file exceeds 1 MiB');
+    const encoded = bytes.toString('base64');
+    const chunkLength = 16384;
+    const parts = Math.ceil(encoded.length / chunkLength);
+    for (let index = 0; index < parts; index++) {
+      addRecord({
+        kind: 'chunk', path, gitBlob: sealed.gitBlob,
+        sha256: sealed.sha256, bytes: sealed.bytes,
+        partIndex: index, partCount: parts,
+        base64: encoded.slice(index * chunkLength, (index + 1) * chunkLength)
+      });
+    }
+  }
+  addRecord({ kind: 'complete', schema: 1, head: binding.head, publicFileCount: publicPaths.length });
+  const logBytes = records.reduce((sum, line) => sum + Buffer.byteLength(line, 'utf8'), 0);
+  if (logBytes > 2 * 1024 * 1024) fail('bounded public transport exceeds 2 MiB');
+  for (const record of records) process.stdout.write(record);
 }
 if (mode === 'prepare') prepare();
 else if (mode === 'collect') collect();
