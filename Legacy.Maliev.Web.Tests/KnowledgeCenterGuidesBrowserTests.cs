@@ -65,7 +65,7 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                 await SaveScreenshotAsync(page, $"knowledge-index-{culture}-{width}.png");
             }
 
-            if (path.EndsWith("cnc-machining", StringComparison.Ordinal) && await page.Locator(".docs-figure").CountAsync() > 0)
+            if (path.EndsWith("cnc-machining", StringComparison.Ordinal))
             {
                 foreach (ILocator image in await page.Locator(".docs-figure img").AllAsync())
                 {
@@ -75,7 +75,10 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                     Assert.True(await image.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
                 }
 
-                await page.Locator("#radii-pockets .docs-figure").ScrollIntoViewIfNeededAsync();
+                var diagram = page.Locator("#files .docs-figure.knowledge-diagram");
+                Assert.Equal("/src/images/knowledge/visual-cnc-preparation.svg",
+                    await diagram.Locator("img").GetAttributeAsync("src"));
+                await diagram.ScrollIntoViewIfNeededAsync();
                 await SaveScreenshotAsync(page, $"knowledge-cnc-{culture}-{width}.png");
             }
         }
@@ -104,8 +107,14 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                 while(node) { yield {tag:node.tagName,id:node.id,inert:node.inert}; node=node.parentElement; } })()) })");
         Assert.True(await close.EvaluateAsync<bool>("element => document.activeElement === element"), focusState);
         Assert.True(await page.Locator("#knowledge-content").EvaluateAsync<bool>("element => element.inert"));
+        var finalGroup = page.Locator("#knowledge-navigation details.knowledge-nav-group").Last;
+        var finalSummary = finalGroup.Locator("summary");
+        Assert.Equal("Finishing and inspection", (await finalSummary.InnerTextAsync()).Trim());
+        Assert.False(await finalGroup.EvaluateAsync<bool>("element => element.open"));
+        Assert.True(await finalSummary.IsVisibleAsync());
+        Assert.False(await finalGroup.Locator("a").Last.IsVisibleAsync());
         await page.Keyboard.PressAsync("Shift+Tab");
-        Assert.True(await page.Locator("#knowledge-navigation a").Last.EvaluateAsync<bool>("element => document.activeElement === element"));
+        Assert.True(await finalSummary.EvaluateAsync<bool>("element => document.activeElement === element"));
         await page.Keyboard.PressAsync("Tab");
         Assert.True(await close.EvaluateAsync<bool>("element => document.activeElement === element"));
         await page.Keyboard.PressAsync("Escape");

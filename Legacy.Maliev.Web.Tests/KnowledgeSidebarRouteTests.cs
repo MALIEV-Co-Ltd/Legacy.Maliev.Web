@@ -55,8 +55,8 @@ public sealed partial class KnowledgeSidebarRouteTests(TestingWebApplicationFact
         Assert.Contains("data-knowledge-search hidden", sidebar, StringComparison.Ordinal);
         AssertLink(sidebar, "/knowledges", culture == "th" ? "ศูนย์ความรู้" : "Knowledge center");
         AssertLink(sidebar, "/knowledges/specifications", culture == "th" ? "เตรียมงานสำหรับแต่ละบริการ" : "Service preparation guides");
-        Assert.Equal(1, Regex.Matches(sidebar, """<details\b[^>]*\bopen(?:\s|=|>)""", RegexOptions.CultureInvariant).Count);
-        Assert.Equal(1, Regex.Matches(sidebar, "aria-current=\"page\"", RegexOptions.CultureInvariant).Count);
+        Assert.Single(Regex.Matches(sidebar, """<details\b[^>]*\bopen(?:\s|=|>)""", RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Single(Regex.Matches(sidebar, "aria-current=\"page\"", RegexOptions.CultureInvariant).Cast<Match>());
         var current = Regex.Match(sidebar, "<a\\b(?=[^>]*aria-current=\"page\")[^>]*href=\"(?<href>[^\"]+)\"", RegexOptions.CultureInvariant);
         Assert.True(current.Success);
         Assert.Equal(route, current.Groups["href"].Value.Split('?')[0], ignoreCase: true);
