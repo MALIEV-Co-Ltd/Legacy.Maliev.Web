@@ -104,14 +104,27 @@ public sealed class MaterialPricingDisplayBrowserTests
         await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
         var scroller = fixture.Page.Locator("[data-material-card-scroll]");
         var selected = scroller.Locator("[data-material-key='M68']");
-        var original = await scroller.EvaluateAsync<double>("""
-            node => {
+        const string geometry = """
+            (node, position) => {
                 const card = node.querySelector('[data-material-key="M68"]');
-                const cardTop = card.getBoundingClientRect().top - node.getBoundingClientRect().top;
-                node.scrollTop += cardTop - 16;
-                return node.scrollTop;
+                if (position) {
+                    const cardTop = card.getBoundingClientRect().top - node.getBoundingClientRect().top;
+                    node.scrollTop += cardTop - 16;
+                }
+                const list = node.getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                const heading = card.previousElementSibling;
+                const category = heading?.matches('[data-material-category]') ? heading.getBoundingClientRect() : null;
+                return [node.scrollTop, node.scrollHeight, node.clientHeight,
+                    list.top, list.bottom, bounds.top, bounds.bottom,
+                    category?.top ?? -1, category?.bottom ?? -1,
+                    node.ownerDocument.defaultView.scrollY,
+                    node.ownerDocument.activeElement === node.ownerDocument.querySelector('input[name="quantity"]') ? 1 : 0,
+                    card.getAttribute('aria-checked') === 'true' ? 1 : 0,
+                    node.ownerDocument.defaultView.performance.now()];
             }
-            """);
+            """;
+        var original = await scroller.EvaluateAsync<double[]>(geometry, true);
         await fixture.Page.WaitForFunctionAsync("""
             () => {
                 const node = document.querySelector('[data-material-card-scroll]');
@@ -128,16 +141,18 @@ public sealed class MaterialPricingDisplayBrowserTests
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             await Assertions.Expect(selected.Locator("[data-material-card-price]"))
                 .ToHaveAttributeAsync("data-price-status", "pending");
-            var during = await scroller.EvaluateAsync<double>("node => node.scrollTop");
-            Assert.True(during >= original - 1,
-                "Repricing may minimally repair a growing card but must not jump back to its category heading.");
+            var during = await scroller.EvaluateAsync<double[]>(geometry, false);
+            Assert.True(during[0] >= original[0] - 1,
+                "Repricing may minimally repair a growing card but must not jump back to its category heading. "
+                + System.Text.Json.JsonSerializer.Serialize(new { Original = original, During = during }));
             await AssertSelectedCardVisibleAsync(scroller);
         }
         finally { gate.Release.TrySetResult(); }
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
-        var after = await scroller.EvaluateAsync<double>("node => node.scrollTop");
-        Assert.True(after >= original - 1,
-            "The final price must not jump a deliberately positioned card back to its heading.");
+        var after = await scroller.EvaluateAsync<double[]>(geometry, false);
+        Assert.True(after[0] >= original[0] - 1,
+            "The final price must not jump a deliberately positioned card back to its heading. "
+            + System.Text.Json.JsonSerializer.Serialize(new { Original = original, After = after }));
         await AssertSelectedCardVisibleAsync(scroller);
         Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
     }
