@@ -78,7 +78,19 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         var consent = page.Locator("#cookieConsent");
         await consent.Locator("[data-consent-action='reject']").ClickAsync();
         Assert.Equal(0, await consent.CountAsync());
-        await page.WaitForFunctionAsync("() => window.__homeClock.count() === 1 && document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'");
+        var readinessClock = System.Diagnostics.Stopwatch.StartNew();
+        float RemainingReadinessMilliseconds() => (float)Math.Max(1, 30000 - readinessClock.Elapsed.TotalMilliseconds);
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'",
+            null, new() { Timeout = RemainingReadinessMilliseconds() });
+        // Dismissing the modal does not establish the carousel's real hover/focus pause preconditions.
+        await page.Mouse.MoveAsync(0, 0);
+        await page.Locator("#main-content").FocusAsync(new() { Timeout = RemainingReadinessMilliseconds() });
+        Assert.True(await page.EvaluateAsync<bool>("!document.hidden"));
+        Assert.True(await page.Locator("[data-home-hero-carousel]").EvaluateAsync<bool>(
+            "root => !root.contains(document.elementFromPoint(0, 0)) && !root.matches(':hover') && !root.contains(document.activeElement)",
+            null, new() { Timeout = RemainingReadinessMilliseconds() }));
+        await page.WaitForFunctionAsync("() => window.__homeClock.count() === 1 && document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'",
+            null, new() { Timeout = RemainingReadinessMilliseconds() });
         await page.EvaluateAsync("window.__homeClock.advance(7999)");
         Assert.True(await page.Locator("#home-hero-assembly").IsVisibleAsync());
         await page.EvaluateAsync("window.__homeClock.advance(1)");
