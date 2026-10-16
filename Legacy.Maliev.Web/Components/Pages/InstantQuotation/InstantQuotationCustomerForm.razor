@@ -94,14 +94,14 @@
             @FieldError("TaxNumber")
         </div>
         <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="instant-company-lookup" Surface="instant-company" AntiforgeryFieldName="@Model.AntiforgeryFieldName" />
-        <div>
+        <div data-instant-tax-branch-field>
             <label for="instant-quote-tax-branch">@Localizer["Tax invoice issued to"]</label>
             <select id="instant-quote-tax-branch" name="TaxBranch" disabled="@Model.IsLocked("TaxBranch")">
                 <option value="head-office" selected="@(Model.TaxBranch == "head-office")">@Localizer["Head office"]</option>
                 <option value="branch" selected="@(Model.TaxBranch == "branch")">@Localizer["Branch"]</option>
             </select>
         </div>
-        <div>
+        <div data-instant-tax-branch-code-field>
             <label for="instant-quote-tax-branch-code">@Localizer["Branch code"]</label>
             <input id="instant-quote-tax-branch-code" name="TaxBranchCode" value="@Model.TaxBranchCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" aria-invalid="@AriaInvalid("TaxBranchCode")" aria-describedby="@ErrorId("TaxBranchCode")" readonly="@Model.IsLocked("TaxBranchCode")" aria-readonly="@(Model.IsLocked("TaxBranchCode") ? "true" : null)" />
             @FieldError("TaxBranchCode")

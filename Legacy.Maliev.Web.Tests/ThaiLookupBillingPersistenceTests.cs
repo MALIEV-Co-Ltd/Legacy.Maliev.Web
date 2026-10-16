@@ -172,7 +172,12 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                 var context = await resources.AcquireHostAsync(() => browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = width, Height = 850 } }), value => value.DisposeAsync());
                 var page = await resources.AcquireHostAsync(context.NewPageAsync, value => value.DisposeAsync());
                 var route = "/Member/Account/Manage/Address?culture=" + culture;
-                await page.GotoAsync(new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)).ToString());
+                await InitialBillingLoginNavigation.NavigateAsync(
+                    new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)),
+                    async (target, timeout) =>
+                    {
+                        await resources.OwnOperation(() => page.GotoAsync(target.AbsoluteUri, new() { Timeout = timeout }));
+                    });
                 await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
                 await page.Locator("#Email").FillAsync("member-crawl@example.test");
                 try { await page.Locator("#Password").FillAsync(authority.Password); }

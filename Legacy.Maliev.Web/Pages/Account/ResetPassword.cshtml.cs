@@ -84,13 +84,26 @@ public sealed class ResetPassword(
             return Page();
         }
 
-        if (!await authenticationClient.CompletePasswordResetAsync(
-            Email,
-            Token,
-            Password,
-            cancellationToken))
+        PasswordResetCompletionOutcome outcome;
+        try
         {
-            ModelState.AddModelError(string.Empty, "The password reset link is invalid or expired.");
+            outcome = await authenticationClient.CompletePasswordResetOutcomeAsync(
+                Email,
+                Token,
+                Password,
+                cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // No provider response, credential, or exception detail belongs in the rendered error.
+            outcome = PasswordResetCompletionOutcome.UnexpectedResponse;
+        }
+        if (outcome != PasswordResetCompletionOutcome.Completed)
+        {
+            ModelState.AddModelError(string.Empty,
+                outcome == PasswordResetCompletionOutcome.UnclassifiedFailure
+                    ? "We couldn’t reset your password. Please check your details or request a new reset link."
+                    : "We couldn’t reset your password right now. Please try again later.");
             return Page();
         }
 

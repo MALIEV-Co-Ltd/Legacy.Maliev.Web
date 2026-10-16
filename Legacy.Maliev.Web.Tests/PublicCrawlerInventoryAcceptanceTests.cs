@@ -291,6 +291,19 @@ public sealed class PublicCrawlerInventoryFixture : TestingWebApplicationFactory
 
     private sealed class Careers : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public Task<CareerListing> GetListingAsync(CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken) =>
             Task.FromResult(new CareerListing([], CareerOfferPage.Empty(pageIndex), true));
         public Task<ServiceResponse<CareerOffer>> GetOfferAsync(int offerId, CancellationToken cancellationToken) =>

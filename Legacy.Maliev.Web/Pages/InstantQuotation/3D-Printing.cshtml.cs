@@ -43,7 +43,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public string? Company { get; set; }
 
     [BindProperty]
-    [StringLength(256)]
+    [StringLength(256, ErrorMessage = "Building or organization name must be 256 characters or fewer.")]
     public string? BillingBuilding { get; set; }
 
     [BindProperty]
@@ -119,7 +119,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
     public bool ShipToBillingAddress { get; set; } = true;
 
     [BindProperty]
-    [StringLength(256)]
+    [StringLength(256, ErrorMessage = "Building or organization name must be 256 characters or fewer.")]
     public string? ShippingBuilding { get; set; }
 
     [BindProperty]
@@ -238,8 +238,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
                 StoreRejected(InstantQuotationProblemCategory.DependencyUnavailable);
                 return TerminalOrRedirect(wantsJson);
             }
-            Company = NormalizeOptionalCustomerText(Company);
-            TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
+            NormalizeOptionalCustomerFields();
             prepared = await profilePreparation.PrepareAsync(trustedSession!, trustedOwner, PostedProfile(), Description, cancellationToken);
             if (prepared.Customer is null)
             {
@@ -479,18 +478,23 @@ public sealed class ThreeDimensionalPrinting : PageModel
         ? new JsonResult(new { outcome = "terminal", redirectUrl = "/InstantQuotation/3D-Printing" })
         : LocalRedirect("/InstantQuotation/3D-Printing");
 
-    private JsonResult RetryJson() => new(new
+    private JsonResult RetryJson()
     {
-        outcome = "retry",
-        errors = ModelState.Values.SelectMany(static state => state.Errors)
-            .Select(static error => error.ErrorMessage)
-            .Where(static message => !string.IsNullOrWhiteSpace(message))
-            .ToArray(),
-        invalidFields = ModelState.Keys
-            .Where(key => ControlledValidationFields.Contains(key) && ModelState[key]?.Errors.Count > 0)
-            .Order(StringComparer.Ordinal)
-            .ToArray(),
-    });
+        var localizer = HttpContext.RequestServices?.GetService<Microsoft.Extensions.Localization.IStringLocalizer<ThreeDimensionalPrintingEstimateContent>>();
+        return new JsonResult(new
+        {
+            outcome = "retry",
+            errors = ModelState.Values.SelectMany(static state => state.Errors)
+                .Select(static error => error.ErrorMessage)
+                .Where(static message => !string.IsNullOrWhiteSpace(message))
+                .Select(message => localizer is null ? message : localizer[message].Value)
+                .ToArray(),
+            invalidFields = ModelState.Keys
+                .Where(key => ControlledValidationFields.Contains(key) && ModelState[key]?.Errors.Count > 0)
+                .Order(StringComparer.Ordinal)
+                .ToArray(),
+        });
+    }
 
     private static bool IsValidSessionIdentity(string? value) =>
         value is { Length: 64 } && value.All(Uri.IsHexDigit);
@@ -503,8 +507,14 @@ public sealed class ThreeDimensionalPrinting : PageModel
         Company = NormalizeOptionalCustomerText(Company);
         TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
         TaxBranchCode = NormalizeOptionalCustomerText(TaxBranchCode);
+        if (TaxNumber is null)
+        {
+            TaxBranch = string.Empty;
+            TaxBranchCode = null;
+        }
         RevalidateOptionalCustomerField(nameof(Company));
         RevalidateOptionalCustomerField(nameof(TaxNumber));
+        RevalidateOptionalCustomerField(nameof(TaxBranch));
         RevalidateOptionalCustomerField(nameof(TaxBranchCode));
     }
 
