@@ -281,6 +281,114 @@ class TrxControls(unittest.TestCase):
         caught.exception.diagnostic["messageSamples"] = ["Bearer secret"]
         self.assertNotIn("runInfo", guard.summary_failure(caught.exception))
 
+    def test_baseline_run_info_exact_ten_notice_bijection_is_diagnostic_only(self):
+        root = self.corpus()
+        summary = root.find(guard.NS + "ResultSummary")
+        names = [row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed"]
+        self.assertEqual(10, len(names))
+        for name in names:
+            info = ET.SubElement(summary, guard.NS + "RunInfo", outcome="Error")
+            ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:01:02.03]     " + name + " [FAIL]"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        self.assertEqual({"matchedNoticeCount": 10, "uniqueExpectedCount": 10,
+                          "duplicateCount": 0, "missingExpectedCount": 0,
+                          "unexpectedCount": 0, "wrongOutcomeCount": 0, "malformedCount": 0},
+                         guard.summary_failure(caught.exception)["runInfo"]["baselineNotices"])
+
+    def test_baseline_run_info_duplicate_and_missing_are_counted_without_acceptance(self):
+        root = self.corpus()
+        name = next(row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed")
+        for _ in range(2):
+            info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo", outcome="Error")
+            ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 01:02:03.04]     " + name + " [FAIL]"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        actual = guard.summary_failure(caught.exception)["runInfo"]["baselineNotices"]
+        self.assertEqual((2, 1, 1, 9), (actual["matchedNoticeCount"], actual["uniqueExpectedCount"],
+                                      actual["duplicateCount"], actual["missingExpectedCount"]))
+
+    def test_baseline_run_info_unexpected_wrong_outcome_and_malformed_are_distinct(self):
+        root = self.corpus()
+        summary = root.find(guard.NS + "ResultSummary")
+        known = next(row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed")
+        cases = (("Error", "Other.UnfrozenCase", True), ("Warning", known, True),
+                 ("Error", known, False))
+        for outcome, name, simple in cases:
+            info = ET.SubElement(summary, guard.NS + "RunInfo", outcome=outcome)
+            text = ET.SubElement(info, guard.NS + "Text")
+            text.text = "[xUnit.net 00:00:00.00]     " + name + " [FAIL]"
+            if not simple:
+                ET.SubElement(text, guard.NS + "Nested").text = "secret"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        actual = guard.summary_failure(caught.exception)["runInfo"]["baselineNotices"]
+        self.assertEqual((0, 0, 0, 10, 1, 1, 1), tuple(actual[key] for key in
+                         ("matchedNoticeCount", "uniqueExpectedCount", "duplicateCount", "missingExpectedCount",
+                          "unexpectedCount", "wrongOutcomeCount", "malformedCount")))
+
+    def test_baseline_run_info_rejects_malformed_prefix_suffix_and_child_shape(self):
+        name = next(row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed")
+        for message in ("[xUnit.net 00:00:00.00]    " + name + " [FAIL]",
+                        "[xUnit.net 00:00:00.00]     " + name + " [FAIL] extra",
+                        "[xUnit.net 00:00:60.00]     " + name + " [FAIL]",
+                        "prefix [xUnit.net 00:00:00.00]     " + name + " [FAIL]",
+                        "[xUnit.net 00:00:00.00]     " + name + " [FAIL]\n"):
+            root = self.corpus()
+            info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo", outcome="Error")
+            ET.SubElement(info, guard.NS + "Text").text = message
+            with self.subTest(message=message), self.assertRaises(guard.RunInfoRejected) as caught:
+                self.verify(root)
+            self.assertEqual(1, guard.summary_failure(caught.exception)["runInfo"]
+                             ["baselineNotices"]["malformedCount"])
+        root = self.corpus()
+        info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo", outcome="Error")
+        ET.SubElement(info, "Text").text = "[xUnit.net 00:00:00.00]     " + name + " [FAIL]"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        self.assertEqual(1, guard.summary_failure(caught.exception)["runInfo"]["baselineNotices"]["malformedCount"])
+        root = self.corpus()
+        info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo", outcome="Error")
+        info.text = "unowned plaintext"
+        ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:00:00.00]     " + name + " [FAIL]"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        self.assertEqual(1, guard.summary_failure(caught.exception)["runInfo"]["baselineNotices"]["malformedCount"])
+
+    def test_baseline_run_info_escaped_display_name_contract_is_exact(self):
+        self.assertEqual("A\\r\\n\\t\\0B", guard.escape_reporter_name("A\r\n\t\0B"))
+        self.assertEqual("เพิ่มเพื่อน MALIEV", guard.escape_reporter_name("เพิ่มเพื่อน MALIEV"))
+
+    def test_green_run_info_does_not_claim_baseline_correspondence(self):
+        root = self.corpus("green")
+        info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo", outcome="Error")
+        ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:00:00.00]     Other.Case [FAIL]"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root, "green")
+        self.assertNotIn("baselineNotices", guard.summary_failure(caught.exception)["runInfo"])
+
+    def test_run_info_classifier_never_emits_names_or_message_plaintext(self):
+        root = self.corpus()
+        name = next(row["name"] for row in FROZEN["rows"] if row["baseline"] == "Failed")
+        info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo",
+                             outcome="Error", customer="private@example.test")
+        ET.SubElement(info, guard.NS + "Text").text = "[xUnit.net 00:00:00.00]     " + name + " [FAIL]"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        serialized = json.dumps(guard.summary_failure(caught.exception), ensure_ascii=False)
+        for secret in (name, "private@example.test", "[xUnit.net", " [FAIL]"):
+            self.assertNotIn(secret, serialized)
+
+    def test_run_info_forged_classifier_counters_are_not_copied(self):
+        root = self.corpus()
+        ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo")
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        caught.exception.diagnostic["baselineNotices"] = {"matchedNoticeCount": "secret"}
+        self.assertNotIn("runInfo", guard.summary_failure(caught.exception))
+        caught.exception.diagnostic["baselineNotices"] = None
+        self.assertNotIn("runInfo", guard.summary_failure(caught.exception))
+
 
 class SourceAndLifecycle(unittest.TestCase):
     def setUp(self):

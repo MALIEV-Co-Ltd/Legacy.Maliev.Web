@@ -39,12 +39,51 @@ class Rejected(RuntimeError):
 
 RUN_INFO_OUTCOMES = ("Error", "Warning", "Information")
 RUN_INFO_SAMPLE_LIMIT = 8
+RUN_INFO_NOTICE_KEYS = ("matchedNoticeCount", "uniqueExpectedCount", "duplicateCount",
+                        "missingExpectedCount", "unexpectedCount", "wrongOutcomeCount", "malformedCount")
+RUN_INFO_FAILURE_LINE = re.compile(
+    r"\[xUnit\.net (?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{2}\]     (.+) \[FAIL\]")
+
+
+def escape_reporter_name(name):
+    """Mirror the pinned xUnit reporter's display-name escaping, not TRX testName."""
+    return name.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t").replace("\0", "\\0")
+
+
+def classify_baseline_notices(nodes, frozen):
+    expected = {escape_reporter_name(row["name"]) for row in frozen["rows"] if row["baseline"] == "Failed"}
+    counts = {key: 0 for key in RUN_INFO_NOTICE_KEYS}
+    seen = set()
+    for node in nodes:
+        children = list(node)
+        if (len(children) != 1 or children[0].tag != NS + "Text" or children[0].attrib
+                or len(children[0]) != 0 or children[0].text is None
+                or (node.text is not None and node.text.strip())
+                or (children[0].tail is not None and children[0].tail.strip())):
+            counts["malformedCount"] += 1
+            continue
+        match = RUN_INFO_FAILURE_LINE.fullmatch(children[0].text)
+        if match is None:
+            counts["malformedCount"] += 1
+        elif node.get("outcome") != "Error":
+            counts["wrongOutcomeCount"] += 1
+        elif match.group(1) not in expected:
+            counts["unexpectedCount"] += 1
+        else:
+            counts["matchedNoticeCount"] += 1
+            if match.group(1) in seen:
+                counts["duplicateCount"] += 1
+            else:
+                seen.add(match.group(1))
+    counts["uniqueExpectedCount"] = len(seen)
+    counts["missingExpectedCount"] = len(expected) - len(seen)
+    return counts
 
 
 class RunInfoRejected(Rejected):
     """Reject RunInfo while retaining only fixed, non-reversible diagnostics."""
 
-    def __init__(self, nodes):
+    def __init__(self, nodes, baseline_frozen=None):
         outcomes = {key: 0 for key in (*RUN_INFO_OUTCOMES, "unknown")}
         messages = []
         for index, node in enumerate(nodes):
@@ -61,6 +100,8 @@ class RunInfoRejected(Rejected):
         self.diagnostic = {"totalNodeCount": len(nodes), "outcomeCounts": outcomes,
                            "messageSamples": messages,
                            "omittedCount": max(0, len(nodes) - RUN_INFO_SAMPLE_LIMIT)}
+        if baseline_frozen is not None:
+            self.diagnostic["baselineNotices"] = classify_baseline_notices(nodes, baseline_frozen)
         super().__init__("run-info")
 
 
@@ -221,8 +262,8 @@ def summary_failure(error):
     if type(error) is RunInfoRejected:
         failure = {"type": "RunInfoRejected", "category": "run-info"}
         diagnostic = error.diagnostic
-        if type(diagnostic) is dict and set(diagnostic) == {
-                "totalNodeCount", "outcomeCounts", "messageSamples", "omittedCount"}:
+        base_keys = {"totalNodeCount", "outcomeCounts", "messageSamples", "omittedCount"}
+        if type(diagnostic) is dict and set(diagnostic) in (base_keys, base_keys | {"baselineNotices"}):
             total, outcomes, messages, omitted = (diagnostic[key] for key in
                                                    ("totalNodeCount", "outcomeCounts", "messageSamples", "omittedCount"))
             if (type(total) is int and total > 0 and type(omitted) is int
@@ -236,10 +277,24 @@ def summary_failure(error):
                             and re.fullmatch("[0-9a-f]{64}", message["sha256"])
                             and type(message["utf8Length"]) is int and message["utf8Length"] >= 0
                             for message in messages)):
-                failure["runInfo"] = {"totalNodeCount": total,
-                                      "outcomeCounts": {key: outcomes[key] for key in (*RUN_INFO_OUTCOMES, "unknown")},
-                                      "messageSamples": [{"sha256": item["sha256"], "utf8Length": item["utf8Length"]}
-                                                         for item in messages], "omittedCount": omitted}
+                has_notices = "baselineNotices" in diagnostic
+                notice_counts = diagnostic.get("baselineNotices")
+                valid_notices = not has_notices or (
+                    type(notice_counts) is dict and set(notice_counts) == set(RUN_INFO_NOTICE_KEYS)
+                    and all(type(value) is int and value >= 0 for value in notice_counts.values())
+                    and notice_counts["matchedNoticeCount"] ==
+                    notice_counts["uniqueExpectedCount"] + notice_counts["duplicateCount"]
+                    and notice_counts["uniqueExpectedCount"] + notice_counts["missingExpectedCount"] == 10
+                    and notice_counts["matchedNoticeCount"] + notice_counts["unexpectedCount"]
+                    + notice_counts["wrongOutcomeCount"] + notice_counts["malformedCount"] == total)
+                if valid_notices:
+                    failure["runInfo"] = {"totalNodeCount": total,
+                                          "outcomeCounts": {key: outcomes[key] for key in (*RUN_INFO_OUTCOMES, "unknown")},
+                                          "messageSamples": [{"sha256": item["sha256"], "utf8Length": item["utf8Length"]}
+                                                             for item in messages], "omittedCount": omitted}
+                    if has_notices:
+                        failure["runInfo"]["baselineNotices"] = {key: notice_counts[key]
+                                                                    for key in RUN_INFO_NOTICE_KEYS}
         return failure
     return {"type": type(error).__name__,
             "category": str(error) if isinstance(error, Rejected) and str(error) in SAFE_CATEGORIES else None}
@@ -269,7 +324,7 @@ def verify_trx(raw, frozen, phase, assembly, source_root):
     require(counts == expected and summary.get("outcome") == ("Failed" if expected_failed else "Completed"), "phase-counters")
     run_info_nodes = root.findall(".//" + NS + "RunInfo")
     if run_info_nodes:
-        raise RunInfoRejected(run_info_nodes)
+        raise RunInfoRejected(run_info_nodes, frozen if phase == "baseline" else None)
     require(len(root.findall(".//" + NS + "ErrorInfo")) == expected_failed, "error-corpus")
     groups = []
     for container, child in (("Results", "UnitTestResult"), ("TestDefinitions", "UnitTest"), ("TestEntries", "TestEntry")):
