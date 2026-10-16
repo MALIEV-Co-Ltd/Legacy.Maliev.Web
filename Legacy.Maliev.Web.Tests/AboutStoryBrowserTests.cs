@@ -44,7 +44,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         Assert.Equal("true", await page.Locator("[data-capability-index='0']").GetAttributeAsync("aria-pressed"));
         Assert.True(await page.Locator("[data-capability-index='0']").EvaluateAsync<bool>(
             "button => document.activeElement === button"));
-        Assert.True((await page.Locator("[data-capability-status]").InnerTextAsync()).StartsWith("1 / 6", StringComparison.Ordinal));
+        Assert.StartsWith("1 / 6", await page.Locator("[data-capability-status]").InnerTextAsync(), StringComparison.Ordinal);
 
         var lastWorkpiece = page.Locator("[data-workpiece-index='3']");
         await lastWorkpiece.FocusAsync();
