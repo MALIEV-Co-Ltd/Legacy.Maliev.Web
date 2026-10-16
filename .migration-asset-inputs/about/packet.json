@@ -1,0 +1,208 @@
+{
+  "schema": "web-about.inert-source-overlay.v1",
+  "repository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "exactSourceBase": "7b5ed742df5ff7ea37d2632b7e5b25d59012d593",
+  "sourceCommit": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+  "sourceParent": "72472c1721efc53cad01df35d0340fd74fffab76",
+  "reviewedPackets": {
+    "markup": "6e0bf66d061b586996546c43f351f201ed6f3503",
+    "behavior": "09ea46a9bb8886fc900b08db594e925f9509fbfb"
+  },
+  "patch": {
+    "gitBlob": "f540898e8e74295bab9a5f016fb4d7b041ea2306",
+    "path": ".migration-asset-inputs/about/reviewed.patch",
+    "paths": 25
+  },
+  "packageLockGitBlob": "8c392b351e1c1da0e11807ad7fb9ef79514d0c86",
+  "custody": {
+    "manifestGitBlob": "6b55e8dd05e009b34fcaeadfd1164a88fd189ed3",
+    "validatorGitBlob": "e1ae5e1f4c7f33e26d585a2d0f885f46e94958e6",
+    "testGitBlob": "4828674b4db33f0a94ea58bb805552b0b91eab78",
+    "assetCount": 59,
+    "totalBytes": 3947803
+  },
+  "rows": [
+    {
+      "path": "Legacy.Maliev.Web/assets/route-about.css",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "923bd93cf42e5b088e82c0d8ec71f4557ee72024",
+      "postimageGitBlob": "ef6f21867be4984ca599b4560e86ccc4ca36c8a3",
+      "postimageBytes": 158
+    },
+    {
+      "path": "Legacy.Maliev.Web/assets/route-about.js",
+      "ownership": "Root-reserved integration",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "2d4c1df7b95e5449ff2d4d2512418f22bb449750",
+      "postimageBytes": 190
+    },
+    {
+      "path": "Legacy.Maliev.Web/build-assets.mjs",
+      "ownership": "Root-reserved integration",
+      "preimageGitBlob": "1b07bc941b06b7593f1bd03c7ec80900f32e9fbf",
+      "postimageGitBlob": "ff025b4744ff51aafae57848cb73e948ff8667f8",
+      "postimageBytes": 6059
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Layout/PublicRouteAssets.cs",
+      "ownership": "Root-reserved integration",
+      "preimageGitBlob": "c3a0276cba0a9d88f4a7f98987ee90a7e02165b5",
+      "postimageGitBlob": "bd4e23e5582d98e0ee94790dbd72fe8cd545f239",
+      "postimageBytes": 3340
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/About/AboutContent.razor",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "196f28e0ad98d43f3ce27cc31aafe14717a4fcb6",
+      "postimageGitBlob": "b27b1e79b0de436fa8f88d1f94ecb9416a13d6b5",
+      "postimageBytes": 38893
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/About/AboutPage.razor",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "d7f164b46631806689e894d2cdfedc56b94aa684",
+      "postimageGitBlob": "64cd195dc222547e3b6b98123557699e97946638",
+      "postimageBytes": 2142
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/About/AboutWorkpieceGallery.razor",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "fc24dd81cdbc7ddac8514016f7c8db9b4db6d1a2",
+      "postimageBytes": 2601
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/About/CorporateCustomers.razor",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "6c3f49a3c232f2f9b1a32fead5675420ebc4ae59",
+      "postimageBytes": 11819
+    },
+    {
+      "path": "Legacy.Maliev.Web/package.json",
+      "ownership": "Root-reserved integration",
+      "preimageGitBlob": "ed8002f1e8025533a1dd9d7989a617f6fa4bbeae",
+      "postimageGitBlob": "3f663a5cef977cf68074f86ce0e17a483d26a6a9",
+      "postimageBytes": 1985
+    },
+    {
+      "path": "Legacy.Maliev.Web/Pages/About/Index.cshtml",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "7bdf3ef17c2950f15adafe1e64a9ad680600aa3a",
+      "postimageGitBlob": "b7f642f027b505223a96a2ec2b4083d25c8c0070",
+      "postimageBytes": 1688
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/About/AboutContent.resx",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "a7286240bfe9054f4bf8c60b91d59a70bf54045b",
+      "postimageBytes": 27820
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/About/AboutContent.th.resx",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "9c0bd0559aff4612ad90f3c8a03e62fa5335061e",
+      "postimageGitBlob": "f034ec9d9b878fe3155c7af4c7e4e3b84142b708",
+      "postimageBytes": 39494
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/AboutPageContractTests.cs",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "510944dc2246691df5f77c237e5bfd16d954e472",
+      "postimageGitBlob": "e1055b218cd5415b79671bd2a3a60d40997a1110",
+      "postimageBytes": 6167
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/AboutStaticSsrRouteTests.cs",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": "8ef0b9619506d092b0214e44903ee5f147287cf2",
+      "postimageGitBlob": "7ecd32c2d56dd0d7eac5c0eaba8cffcad07698b4",
+      "postimageBytes": 4100
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/AboutStoryBrowserTests.cs",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "d8c521e155413032e05e84b905cb1df3c810c842",
+      "postimageBytes": 9238
+    },
+    {
+      "path": "Legacy.Maliev.Web/tests/company-profile-capabilities.test.cjs",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "8050d1ea041d9f4586686d12389b04957364c50b",
+      "postimageBytes": 9629
+    },
+    {
+      "path": "Legacy.Maliev.Web/tests/company-profile-presentation.test.cjs",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "06cbdeb93f7ba70ebe31aad91f59974c12823220",
+      "postimageBytes": 12844
+    },
+    {
+      "path": "Legacy.Maliev.Web/tests/company-profile-workpieces.test.cjs",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "9dec582a150fa6a4d4fcd7b5564f1b492eabca10",
+      "postimageBytes": 7697
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/RouteScopedAssetRenderingTests.cs",
+      "ownership": "Root-reserved integration",
+      "preimageGitBlob": "cf1af6ef87c82420ea1cbf0e199451a9399ec61a",
+      "postimageGitBlob": "810f06218cdec6f4869388e3edabc49cd7f5a0b0",
+      "postimageBytes": 1955
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SharedFrontendBundleContractTests.cs",
+      "ownership": "Root-reserved integration",
+      "preimageGitBlob": "b9258b74b0b7cce69211989af0c2d9a4c666a340",
+      "postimageGitBlob": "9b910a4b370ef4e66b65da7a60b89346cb0643c8",
+      "postimageBytes": 5384
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/css/company-profile.css",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "3ae99db69fb793884d43e4fe1154b7d88276e12f",
+      "postimageBytes": 18378
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/css/corporate-customers.css",
+      "ownership": "About markup/localization",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "2d9b8612736a1b79b75b7d4f79676c8a3f1ea644",
+      "postimageBytes": 1750
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/company-profile-capabilities.js",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "3ebb347158444de71a5e41ae9fd619cf8ad07fc3",
+      "postimageBytes": 5865
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/company-profile-presentation.js",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "0ee3da7ceed4577c537beeba1880e3c41800db9f",
+      "postimageBytes": 8652
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/company-profile-workpieces.js",
+      "ownership": "About behavior/tests",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "d223a23f9e06f452bf5ff433ab5017b52e00288c",
+      "postimageBytes": 5329
+    }
+  ],
+  "authoredForecast": {
+    "reviewedNodeBaseline": 83,
+    "aboutNode": 40,
+    "total": 123,
+    "actual": "NOT RUN"
+  },
+  "scope": "Ephemeral hosted public asset generation only. No runtime commit, deployment, CI gate waiver, C# browser/Release acceptance, or whole-source SHA closure."
+}
