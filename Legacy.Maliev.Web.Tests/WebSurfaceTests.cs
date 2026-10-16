@@ -2629,7 +2629,13 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
+        var publicFooter = Assert.Single(Regex.Matches(
+            source,
+            "<footer\\b[^>]*\\bdata-migration-component=\"public-footer\"[^>]*>.*?</footer>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("href=\"https://www.facebook.com/maliev.manufacturing/\"", publicFooter.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://www.facebook.com", source.Remove(publicFooter.Index, publicFooter.Length), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("facebook.com/tr", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb:app_id", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
