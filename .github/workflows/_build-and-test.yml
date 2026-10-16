@@ -656,35 +656,75 @@ jobs:
           --phase 1
       - name: Stop the exact live qualification step
         cancel: live_checkpoint
-      - name: Verify managed cancellation released the live worker before cleanup
+      - name: Require cancelled outer live context and successful completed baseline
         shell: bash
         env:
-          RESOURCE_CHECKPOINT_SCOPE: qualification-live
-        run: >-
-          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
-          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
-      - name: Verify the completed worker was released before cleanup
-        shell: bash
-        env:
-          RESOURCE_CHECKPOINT_SCOPE: qualification-complete
-        run: >-
-          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
-          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
-      - name: Verify completed qualification ownership released
-        if: always()
+          LIVE_OUTCOME: ${{ steps.live_checkpoint.outcome }}
+          LIVE_CONCLUSION: ${{ steps.live_checkpoint.conclusion }}
+          COMPLETED_OUTCOME: ${{ steps.completed_checkpoint.outcome }}
+        run: |
+          python3 - <<'PY'
+          import os
+          if (os.environ['LIVE_OUTCOME'], os.environ['LIVE_CONCLUSION'], os.environ['COMPLETED_OUTCOME']) != ('cancelled', 'cancelled', 'success'):
+              raise RuntimeError('Hosted outer cancellation state was not qualified')
+          PY
+      - name: Require exact-owner cleanup of the completed qualification worker
         shell: bash
         env:
           RESOURCE_CHECKPOINT_SCOPE: qualification-complete
         run: >-
           exec python3 -B scripts/hosted-validation-resource-checkpoint.py cleanup
           --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
-      - name: Verify live qualification ownership released
-        if: always()
+      - name: Require exact-owner cleanup of the live qualification worker
         shell: bash
         env:
           RESOURCE_CHECKPOINT_SCOPE: qualification-live
         run: >-
           exec python3 -B scripts/hosted-validation-resource-checkpoint.py cleanup
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Independently verify the completed qualification worker released
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-complete
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Independently verify the live qualification worker released
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-live
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Require final completed composite quiescence and final-ledger release
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-complete
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py quiescence
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Require final live composite quiescence and final-ledger release
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-live
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py quiescence
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Emergency exact-owner cleanup of the completed qualification worker
+        if: always()
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-complete
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py emergency-cleanup
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Emergency exact-owner cleanup of the live qualification worker
+        if: always()
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-live
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py emergency-cleanup
           --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
       - name: Preserve feature qualification cleanup receipts
         if: always()
@@ -693,7 +733,13 @@ jobs:
           name: web-validation-resource-qualification-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
           path: |
             ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-complete/cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-complete/emergency-cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-complete/quiescence.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-complete/verification.json
             ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-live/cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-live/emergency-cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-live/quiescence.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-live/verification.json
           retention-days: 7
           if-no-files-found: error
 
@@ -997,20 +1043,61 @@ jobs:
           [[ ! -e "$proof_directory" && ! -L "$proof_directory" ]]
       - name: Stop the owned resource checkpoint step
         cancel: resource_checkpoints
-      - name: Verify the owned resource checkpoint process exited
-        env:
-          RESOURCE_CHECKPOINT_SCOPE: full
+      - name: Require the outer resource collector cancellation or natural completion
         if: always() && steps.focused_guard.outcome == 'success'
         shell: bash
+        env:
+          COLLECTOR_OUTCOME: ${{ steps.resource_checkpoints.outcome }}
+          COLLECTOR_CONCLUSION: ${{ steps.resource_checkpoints.conclusion }}
+        run: |
+          python3 - <<'PY'
+          import os
+          outcome = os.environ['COLLECTOR_OUTCOME']
+          if outcome not in ('cancelled', 'success') or os.environ['COLLECTOR_CONCLUSION'] != outcome:
+              raise RuntimeError('Hosted outer resource collector state was not accepted')
+          PY
+      - name: Require exact-owner cleanup of the full resource checkpoint worker
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: full
         run: >-
           exec python3 -B scripts/hosted-validation-resource-checkpoint.py cleanup
-          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-full"
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Independently verify the full resource checkpoint worker released
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: full
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Require final full composite quiescence and final-ledger release
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: full
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py quiescence
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Emergency exact-owner cleanup of the full resource checkpoint worker
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: full
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py emergency-cleanup
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
       - name: Preserve resource checkpoint cleanup receipt
         if: always() && steps.focused_guard.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: web-validation-resource-cleanup-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
-          path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/cleanup.json
+          path: |
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/emergency-cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/quiescence.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/verification.json
           retention-days: 7
           if-no-files-found: error
       - name: Preserve independent focused groups and full raw coverage evidence

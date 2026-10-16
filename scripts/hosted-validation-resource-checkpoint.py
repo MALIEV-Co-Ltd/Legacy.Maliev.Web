@@ -270,7 +270,8 @@ def stop_exact(ledger, inspect, open_handle, send, wait, close):
     finally:
         close(handle)
 
-def cleanup(path):
+def cleanup(path, receipt_name="cleanup.json"):
+    require(receipt_name in ("cleanup.json", "emergency-cleanup.json"))
     identity = owner()
     directory(path, identity)
     ledger_path = path / "worker.json"
@@ -283,7 +284,7 @@ def cleanup(path):
     outcome = stop_exact(ledger, proc_identity, lambda pid: os.pidfd_open(pid),
                          lambda handle, sig: signal.pidfd_send_signal(handle, sig),
                          lambda handle, seconds: bool(select.select([handle], [], [], seconds)[0]), os.close)
-    write_new(path / "cleanup.json", {"schema": "web-hosted-resource-cleanup.v1", "owner": identity, "outcome": outcome})
+    write_new(path / receipt_name, {"schema": "web-hosted-resource-cleanup.v1", "owner": identity, "outcome": outcome})
 
 def wait_worker(path, phase):
     identity = owner()
@@ -305,7 +306,6 @@ def wait_worker(path, phase):
 def verify_released(path):
     identity = owner()
     directory(path, identity)
-    require(identity["GITHUB_JOB"] == "resource_checkpoint_qualification")
     ledger_path = path / "worker.json"
     require(ledger_path.is_file() and not ledger_path.is_symlink())
     ledger = json.loads(bounded_read(ledger_path))
@@ -319,11 +319,82 @@ def verify_released(path):
         except FileNotFoundError:
             return
         time.sleep(0.1)
-    raise RuntimeError("Managed cancellation left the exact qualification worker running")
+    raise RuntimeError("Required cancellation and exact-owner cleanup left the exact checkpoint worker running")
+
+def validate_upload_manifest(manifest, scope):
+    require(isinstance(manifest, list) and len(manifest) == 13)
+    skipped = False
+    for phase, item in enumerate(manifest):
+        require(isinstance(item, dict) and set(item) == {"phase", "outcome", "artifact_id"})
+        require(item["phase"] == phase and item["outcome"] in ("success", "skipped"))
+        require(isinstance(item["artifact_id"], str))
+        if item["outcome"] == "success":
+            require(not skipped and integer(item["artifact_id"]) > 0)
+        else:
+            skipped = True
+            require(item["artifact_id"] == "")
+        if phase == 0:
+            require(item["outcome"] == "success")
+        if scope != "full" and phase > 0:
+            require(item["outcome"] == "skipped")
+
+def final_ledger(path, identity):
+    source = path / "worker.json"
+    require(source.is_file() and not source.is_symlink())
+    ledger = json.loads(bounded_read(source))
+    require(ledger["owner"] == identity and isinstance(ledger["pid"], int) and ledger["pid"] > 1)
+    require(ledger["state"] in ("running", "exited") and 0 <= ledger["phase"] <= 12)
+    return ledger
+
+def terminal(path):
+    identity = owner()
+    directory(path, identity)
+    manifest = [{"phase": phase,
+                 "outcome": os.environ["RESOURCE_UPLOAD_" + str(phase).zfill(2) + "_OUTCOME"],
+                 "artifact_id": os.environ["RESOURCE_UPLOAD_" + str(phase).zfill(2) + "_ID"]}
+                for phase in range(13)]
+    validate_upload_manifest(manifest, identity["RESOURCE_CHECKPOINT_SCOPE"])
+    if identity["RESOURCE_CHECKPOINT_SCOPE"] != "full":
+        require(not (path / "sample-01.json").exists())
+    value = {"schema": "web-hosted-resource-quiescence.v1", "owner": identity,
+             "worker": final_ledger(path, identity), "uploads": manifest,
+             "scope": "last inner composite step; preceding upload actions returned; no later upload step"}
+    require(not (path / "quiescence.json").exists())
+    atomic(path / "quiescence.json", value)
+
+def verify_quiescence(path):
+    identity = owner()
+    directory(path, identity)
+    deadline = time.monotonic() + 15
+    receipt_path = path / "quiescence.json"
+    while not receipt_path.is_file():
+        require(not receipt_path.is_symlink() and time.monotonic() < deadline)
+        time.sleep(0.1)
+    require(not receipt_path.is_symlink())
+    receipt = json.loads(bounded_read(receipt_path, MAX_RECEIPT))
+    require(receipt["schema"] == "web-hosted-resource-quiescence.v1" and receipt["owner"] == identity)
+    validate_upload_manifest(receipt["uploads"], identity["RESOURCE_CHECKPOINT_SCOPE"])
+    ledger = final_ledger(path, identity)
+    require(receipt["worker"] == ledger)
+    cleanup_path = path / "cleanup.json"
+    require(cleanup_path.is_file() and not cleanup_path.is_symlink())
+    cleaned = json.loads(bounded_read(cleanup_path))
+    require(cleaned["schema"] == "web-hosted-resource-cleanup.v1" and cleaned["owner"] == identity)
+    require(cleaned["outcome"] in ("stopped", "exited", "exited-pid-reused", "absent"))
+    if identity["RESOURCE_CHECKPOINT_SCOPE"] != "full":
+        require(not (path / "sample-01.json").exists())
+    expected = {key: ledger[key] for key in ("pid", "start_ticks", "exe_device", "exe_inode")}
+    try:
+        require(proc_identity(ledger["pid"]) != expected)
+    except FileNotFoundError:
+        pass
+    write_new(path / "verification.json", {"schema": "web-hosted-resource-stop-verification.v1",
+              "owner": identity, "worker": expected, "uploads": receipt["uploads"],
+              "scope": "required exact-owner cleanup, final composite quiescence and independent final-ledger release"})
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("sample", "cleanup", "wait", "released"))
+    parser.add_argument("mode", choices=("sample", "cleanup", "wait", "released", "terminal", "quiescence", "emergency-cleanup"))
     parser.add_argument("--directory", required=True, type=Path)
     parser.add_argument("--phase", type=int, default=0)
     args = parser.parse_args()
@@ -333,5 +404,11 @@ if __name__ == "__main__":
         cleanup(args.directory)
     elif args.mode == "wait":
         wait_worker(args.directory, args.phase)
-    else:
+    elif args.mode == "released":
         verify_released(args.directory)
+    elif args.mode == "terminal":
+        terminal(args.directory)
+    elif args.mode == "quiescence":
+        verify_quiescence(args.directory)
+    else:
+        cleanup(args.directory, "emergency-cleanup.json")

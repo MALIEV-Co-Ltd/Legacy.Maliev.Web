@@ -244,3 +244,37 @@ runs:
         path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-12.json
         retention-days: 7
         if-no-files-found: error
+    - name: Record final inner composite quiescence and exact upload identities
+      if: always()
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+        RESOURCE_UPLOAD_00_OUTCOME: ${{ steps.upload00.outcome }}
+        RESOURCE_UPLOAD_00_ID: ${{ steps.upload00.outputs.artifact-id }}
+        RESOURCE_UPLOAD_01_OUTCOME: ${{ steps.upload01.outcome }}
+        RESOURCE_UPLOAD_01_ID: ${{ steps.upload01.outputs.artifact-id }}
+        RESOURCE_UPLOAD_02_OUTCOME: ${{ steps.upload02.outcome }}
+        RESOURCE_UPLOAD_02_ID: ${{ steps.upload02.outputs.artifact-id }}
+        RESOURCE_UPLOAD_03_OUTCOME: ${{ steps.upload03.outcome }}
+        RESOURCE_UPLOAD_03_ID: ${{ steps.upload03.outputs.artifact-id }}
+        RESOURCE_UPLOAD_04_OUTCOME: ${{ steps.upload04.outcome }}
+        RESOURCE_UPLOAD_04_ID: ${{ steps.upload04.outputs.artifact-id }}
+        RESOURCE_UPLOAD_05_OUTCOME: ${{ steps.upload05.outcome }}
+        RESOURCE_UPLOAD_05_ID: ${{ steps.upload05.outputs.artifact-id }}
+        RESOURCE_UPLOAD_06_OUTCOME: ${{ steps.upload06.outcome }}
+        RESOURCE_UPLOAD_06_ID: ${{ steps.upload06.outputs.artifact-id }}
+        RESOURCE_UPLOAD_07_OUTCOME: ${{ steps.upload07.outcome }}
+        RESOURCE_UPLOAD_07_ID: ${{ steps.upload07.outputs.artifact-id }}
+        RESOURCE_UPLOAD_08_OUTCOME: ${{ steps.upload08.outcome }}
+        RESOURCE_UPLOAD_08_ID: ${{ steps.upload08.outputs.artifact-id }}
+        RESOURCE_UPLOAD_09_OUTCOME: ${{ steps.upload09.outcome }}
+        RESOURCE_UPLOAD_09_ID: ${{ steps.upload09.outputs.artifact-id }}
+        RESOURCE_UPLOAD_10_OUTCOME: ${{ steps.upload10.outcome }}
+        RESOURCE_UPLOAD_10_ID: ${{ steps.upload10.outputs.artifact-id }}
+        RESOURCE_UPLOAD_11_OUTCOME: ${{ steps.upload11.outcome }}
+        RESOURCE_UPLOAD_11_ID: ${{ steps.upload11.outputs.artifact-id }}
+        RESOURCE_UPLOAD_12_OUTCOME: ${{ steps.upload12.outcome }}
+        RESOURCE_UPLOAD_12_ID: ${{ steps.upload12.outputs.artifact-id }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py terminal
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
