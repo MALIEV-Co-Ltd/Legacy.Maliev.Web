@@ -37,6 +37,33 @@ class Rejected(RuntimeError):
     """A bounded proof prerequisite or result was rejected."""
 
 
+RUN_INFO_OUTCOMES = ("Error", "Warning", "Information")
+RUN_INFO_SAMPLE_LIMIT = 8
+
+
+class RunInfoRejected(Rejected):
+    """Reject RunInfo while retaining only fixed, non-reversible diagnostics."""
+
+    def __init__(self, nodes):
+        outcomes = {key: 0 for key in (*RUN_INFO_OUTCOMES, "unknown")}
+        messages = []
+        for index, node in enumerate(nodes):
+            outcome = node.get("outcome")
+            outcomes[outcome if outcome in RUN_INFO_OUTCOMES else "unknown"] += 1
+            if index < RUN_INFO_SAMPLE_LIMIT:
+                hashed = hashlib.sha256()
+                length = 0
+                for text in node.itertext():
+                    encoded = text.encode("utf-8")
+                    hashed.update(encoded)
+                    length += len(encoded)
+                messages.append({"sha256": hashed.hexdigest(), "utf8Length": length})
+        self.diagnostic = {"totalNodeCount": len(nodes), "outcomeCounts": outcomes,
+                           "messageSamples": messages,
+                           "omittedCount": max(0, len(nodes) - RUN_INFO_SAMPLE_LIMIT)}
+        super().__init__("run-info")
+
+
 def require(ok, category):
     if not ok:
         raise Rejected(category)
@@ -191,6 +218,29 @@ SAFE_CATEGORIES = frozenset(["absence","admission-custody","after","api","ascii"
 def summary_failure(error):
     if isinstance(error, ProofFailure):
         return error.summary
+    if type(error) is RunInfoRejected:
+        failure = {"type": "RunInfoRejected", "category": "run-info"}
+        diagnostic = error.diagnostic
+        if type(diagnostic) is dict and set(diagnostic) == {
+                "totalNodeCount", "outcomeCounts", "messageSamples", "omittedCount"}:
+            total, outcomes, messages, omitted = (diagnostic[key] for key in
+                                                   ("totalNodeCount", "outcomeCounts", "messageSamples", "omittedCount"))
+            if (type(total) is int and total > 0 and type(omitted) is int
+                    and omitted == max(0, total - RUN_INFO_SAMPLE_LIMIT)
+                    and type(outcomes) is dict and set(outcomes) == {*RUN_INFO_OUTCOMES, "unknown"}
+                    and all(type(value) is int and value >= 0 for value in outcomes.values())
+                    and sum(outcomes.values()) == total and type(messages) is list
+                    and len(messages) == min(total, RUN_INFO_SAMPLE_LIMIT)
+                    and all(type(message) is dict and set(message) == {"sha256", "utf8Length"}
+                            and type(message["sha256"]) is str
+                            and re.fullmatch("[0-9a-f]{64}", message["sha256"])
+                            and type(message["utf8Length"]) is int and message["utf8Length"] >= 0
+                            for message in messages)):
+                failure["runInfo"] = {"totalNodeCount": total,
+                                      "outcomeCounts": {key: outcomes[key] for key in (*RUN_INFO_OUTCOMES, "unknown")},
+                                      "messageSamples": [{"sha256": item["sha256"], "utf8Length": item["utf8Length"]}
+                                                         for item in messages], "omittedCount": omitted}
+        return failure
     return {"type": type(error).__name__,
             "category": str(error) if isinstance(error, Rejected) and str(error) in SAFE_CATEGORIES else None}
 
@@ -217,7 +267,9 @@ def verify_trx(raw, frozen, phase, assembly, source_root):
     expected = {k: 0 for k in COUNTERS}
     expected.update(total=len(rows), executed=len(rows), failed=expected_failed, passed=len(rows)-expected_failed)
     require(counts == expected and summary.get("outcome") == ("Failed" if expected_failed else "Completed"), "phase-counters")
-    require(not summary.findall(".//" + NS + "RunInfo") and not root.findall(".//" + NS + "RunInfo"), "run-info")
+    run_info_nodes = root.findall(".//" + NS + "RunInfo")
+    if run_info_nodes:
+        raise RunInfoRejected(run_info_nodes)
     require(len(root.findall(".//" + NS + "ErrorInfo")) == expected_failed, "error-corpus")
     groups = []
     for container, child in (("Results", "UnitTestResult"), ("TestDefinitions", "UnitTest"), ("TestEntries", "TestEntry")):

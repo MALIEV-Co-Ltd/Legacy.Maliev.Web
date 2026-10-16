@@ -1,5 +1,6 @@
 """Authored fail-closed controls. Run both normally and with -O in hosted CI."""
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -205,6 +206,80 @@ class TrxControls(unittest.TestCase):
         for value in (b"customer@example.com", b"Bearer secret", b"password=secret"):
             with self.subTest(value=value), self.assertRaises(guard.Rejected):
                 guard.safe_raw(value)
+
+    def test_empty_run_info_rejects_baseline_and_green_with_fixed_diagnostic(self):
+        for phase in ("baseline", "green"):
+            root = self.corpus(phase)
+            ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo")
+            with self.subTest(phase=phase), self.assertRaises(guard.RunInfoRejected) as caught:
+                self.verify(root, phase)
+            failure = guard.summary_failure(caught.exception)
+            self.assertEqual("run-info", failure["category"])
+            self.assertEqual(1, failure["runInfo"]["totalNodeCount"])
+            self.assertEqual(0, failure["runInfo"]["omittedCount"])
+
+    def test_run_info_counts_only_fixed_known_and_unknown_outcomes(self):
+        root = self.corpus()
+        summary = root.find(guard.NS + "ResultSummary")
+        for outcome in ("Error", "Warning", "Information", "private@example.test"):
+            ET.SubElement(summary, guard.NS + "RunInfo", outcome=outcome)
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        self.assertEqual({"Error": 1, "Warning": 1, "Information": 1, "unknown": 1},
+                         guard.summary_failure(caught.exception)["runInfo"]["outcomeCounts"])
+
+    def test_run_info_diagnostic_never_serializes_sensitive_text_or_attributes(self):
+        root = self.corpus()
+        info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo",
+                             outcome="Warning", credential="Bearer secret", customer="private@example.test")
+        ET.SubElement(info, guard.NS + "Message", token="password=secret").text = \
+            "customer@example.com Bearer secret password=secret"
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        serialized = json.dumps(guard.summary_failure(caught.exception), sort_keys=True)
+        for secret in ("customer@example.com", "private@example.test", "Bearer secret", "password=secret"):
+            self.assertNotIn(secret, serialized)
+        self.assertEqual(1, len(guard.summary_failure(caught.exception)["runInfo"]["messageSamples"]))
+
+    def test_run_info_message_samples_stop_at_eight_and_count_omitted(self):
+        root = self.corpus()
+        summary = root.find(guard.NS + "ResultSummary")
+        for index in range(11):
+            info = ET.SubElement(summary, guard.NS + "RunInfo", outcome="Warning")
+            ET.SubElement(info, guard.NS + "Message").text = "message " + str(index)
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        diagnostic = guard.summary_failure(caught.exception)["runInfo"]
+        self.assertEqual(11, diagnostic["totalNodeCount"])
+        self.assertEqual(11, diagnostic["outcomeCounts"]["Warning"])
+        self.assertEqual(8, len(diagnostic["messageSamples"]))
+        self.assertEqual(3, diagnostic["omittedCount"])
+
+    def test_run_info_hashes_decoded_unicode_entity_bytes_not_raw_xml(self):
+        root = self.corpus()
+        info = ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo", outcome="Error")
+        ET.SubElement(info, guard.NS + "Message").text = "ไทย&"
+        raw = ET.tostring(root, encoding="utf-8").replace(
+            "ไทย".encode("utf-8"), b"&#x0E44;&#x0E17;&#x0E22;")
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            guard.verify_trx(raw, FROZEN, "baseline", self.assembly, self.root)
+        message = guard.summary_failure(caught.exception)["runInfo"]["messageSamples"][0]
+        self.assertEqual(hashlib.sha256("ไทย&".encode("utf-8")).hexdigest(), message["sha256"])
+        self.assertEqual(len("ไทย&".encode("utf-8")), message["utf8Length"])
+
+    def test_generic_exceptions_and_forged_diagnostics_cannot_inject_run_info(self):
+        for error in (RuntimeError("customer@example.com"), guard.Rejected("run-info")):
+            error.diagnostic = {"messages": ["Bearer secret"], "foreign": "password=secret"}
+            with self.subTest(error=type(error).__name__):
+                failure = guard.summary_failure(error)
+                self.assertNotIn("runInfo", failure)
+                self.assertNotIn("Bearer secret", json.dumps(failure))
+        root = self.corpus()
+        ET.SubElement(root.find(guard.NS + "ResultSummary"), guard.NS + "RunInfo")
+        with self.assertRaises(guard.RunInfoRejected) as caught:
+            self.verify(root)
+        caught.exception.diagnostic["messageSamples"] = ["Bearer secret"]
+        self.assertNotIn("runInfo", guard.summary_failure(caught.exception))
 
 
 class SourceAndLifecycle(unittest.TestCase):
