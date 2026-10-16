@@ -1,0 +1,647 @@
+{
+  "schema": "web599600.inert-source-overlay.v1",
+  "repository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "exactSourceBase": "6fb9850658e8b9a345182dd9b16e6bffeb01aa0a",
+  "status": "UNREFERENCED REVIEW-ONLY EPHEMERAL GENERATION INPUT; NO ACTIVE RUNTIME COMMIT; ALL HOSTED/NATIVE CHECKS NOT RUN",
+  "patch": {
+    "gitBlob": "edd93958766884c54b1cda6670bbb1578b44108d",
+    "characters": 341309,
+    "format": "30 full-file unified hunks; exact 6fb source preimages; no added trailing whitespace; git apply NOT RUN"
+  },
+  "sourceCommits": [
+    {
+      "sha": "cb176a6a8944b0f05e2128ef83174be5f5df9a43",
+      "parent": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+      "owner": "599 Home presentation"
+    },
+    {
+      "sha": "ce57f9b8991c31ae05ea63a7f275654eb677ee7a",
+      "parent": "cb176a6a8944b0f05e2128ef83174be5f5df9a43",
+      "owner": "599 Home presentation"
+    },
+    {
+      "sha": "f2d28a1d984a6cf5429ad26760765f918cc9c69e",
+      "parent": "ce57f9b8991c31ae05ea63a7f275654eb677ee7a",
+      "owner": "600 selected-card visibility"
+    },
+    {
+      "sha": "72472c1721efc53cad01df35d0340fd74fffab76",
+      "parent": "a23e9dc155ab6b8eb4794b0c4ac5231e66da8e6f",
+      "owner": "600 observed browser visibility waits"
+    }
+  ],
+  "rows": [
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeContent.razor",
+      "preimageGitBlob": "0265db8a154df50b54e85faed2ae487d9c117af1",
+      "postimageGitBlob": "ace551c9eb2b7105641268714788c548e703c3fc",
+      "postimageBytes": 12908,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeHero.razor",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "53252f586b706ffb888f66fc2c74cdc1db5d5e0d",
+      "postimageBytes": 1521,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeHeroScene.razor",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "e05c722c6304b22248397d43eceb5164b7b489c9",
+      "postimageBytes": 8376,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeHeroSelection.cs",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "7f04b5688d3c42f9c014253ad250fa245581b8af",
+      "postimageBytes": 1332,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/Home/HomePage.razor",
+      "preimageGitBlob": "3944f0d844b155a6983a1afbc2a8ba0a44009f62",
+      "postimageGitBlob": "a1a38551f573bbe901b4c0c812c36566eba1b563",
+      "postimageBytes": 2249,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Pages/Index.cshtml",
+      "preimageGitBlob": "8f6d9b8774f94748fec680d67a5cc9d75bdb0c48",
+      "postimageGitBlob": "47f91738c2de76dbb73db9f514fe4b1e885af8a2",
+      "postimageBytes": 1733,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Home/HomeContent.resx",
+      "preimageGitBlob": "42283ce98ac5377c1d6e64fc6616f8915a290605",
+      "postimageGitBlob": "664e51410386be887cadc9fdcae0e6d310d20b8a",
+      "postimageBytes": 33720,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Resources/Components/Pages/Home/HomeContent.th.resx",
+      "preimageGitBlob": "1cdd54ee209d313d2207020955a7c8a1ba244faa",
+      "postimageGitBlob": "98d3ccd57589d4a34dba5a2a8dd59f3d7087c997",
+      "postimageBytes": 46129,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/tests/home-hero-callouts.test.cjs",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "03663c20fd3d7138149208208a4bc7115f9a5919",
+      "postimageBytes": 5898,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/tests/home-hero-carousel.test.cjs",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "409aacb834a41fda9e4a3534f6e7a8a42e2dc0d0",
+      "postimageBytes": 12236,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/HomeStaticSsrRouteTests.cs",
+      "preimageGitBlob": "39a341f2e97c36d61482155a6d7dc39deb0ceed3",
+      "postimageGitBlob": "4fff769dcb65c1008908909ec2dc05221175cbd8",
+      "postimageBytes": 19543,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/HomeStoryBrowserTests.cs",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "1b000381f7b79af52b811de5ca74b18cdc10cc99",
+      "postimageBytes": 8146,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/HomeStorySsrRouteTests.cs",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "6dad6cce16e4503ab375fcbc4109ea267cef6530",
+      "postimageBytes": 5305,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SeoBusinessContractParityTests.cs",
+      "preimageGitBlob": "c45b50214a78bae508522c8b755c6cdbfef489b1",
+      "postimageGitBlob": "693e4569950c0c3914d5ac3784b97bc02314c3c5",
+      "postimageBytes": 11668,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/css/home-hero-variants.css",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "155d492d323de3c32e3294a14fb348a8fc1b64e6",
+      "postimageBytes": 8369,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/css/landing.css",
+      "preimageGitBlob": "be1d87850625d56460c327decb9bf01df59332ff",
+      "postimageGitBlob": "a781acdff946be7e3b942366c25dd9099dc2a76b",
+      "postimageBytes": 20546,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/home-hero-callouts.js",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "95269b1414e2fcd887162839a9ad7053f681c4e0",
+      "postimageBytes": 2400,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/home-hero-carousel.js",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "4fed1e8ccf57cff80d18ac257daae1b02256d243",
+      "postimageBytes": 7331,
+      "owner": "599-home"
+    },
+    {
+      "path": "Legacy.Maliev.Web/assets/route-home.js",
+      "preimageGitBlob": null,
+      "postimageGitBlob": "9f544fce0b9f574e74ef9721ef0b5048f6660221",
+      "postimageBytes": 108,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web/assets/route-home.css",
+      "preimageGitBlob": "b89fe487cc220471e42b8a45b5c8ded67358a0df",
+      "postimageGitBlob": "052a33d5ca35d2e62d396cba2fd5ca451f87e2d6",
+      "postimageBytes": 103,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web/build-assets.mjs",
+      "preimageGitBlob": "a7e4bf602966368412eb72f7e02b312b82f31808",
+      "postimageGitBlob": "1b07bc941b06b7593f1bd03c7ec80900f32e9fbf",
+      "postimageBytes": 6005,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Layout/PublicRouteAssets.cs",
+      "preimageGitBlob": "4238b49f55ed9ba8484bc16dfa97c0bda28bf977",
+      "postimageGitBlob": "c3a0276cba0a9d88f4a7f98987ee90a7e02165b5",
+      "postimageBytes": 3250,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web/package.json",
+      "preimageGitBlob": "28e31831836227a905f4c2a15958c25aaddfe244",
+      "postimageGitBlob": "ed8002f1e8025533a1dd9d7989a617f6fa4bbeae",
+      "postimageBytes": 1855,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/RouteScopedAssetRenderingTests.cs",
+      "preimageGitBlob": "6e534f25c6b5c3c45154d95943b62db134ca655a",
+      "postimageGitBlob": "cf1af6ef87c82420ea1cbf0e199451a9399ec61a",
+      "postimageBytes": 1943,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/SharedFrontendBundleContractTests.cs",
+      "preimageGitBlob": "6231274ae2e6d4a23f304a07d86b766409fc3fb9",
+      "postimageGitBlob": "b9258b74b0b7cce69211989af0c2d9a4c666a340",
+      "postimageBytes": 4891,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": ".github/workflows/_build-and-test.yml",
+      "preimageGitBlob": "7488d2c1bbcdd35ead0928360e216a282777d07f",
+      "postimageGitBlob": "9dc15448432887116b234d283984846c31a69196",
+      "postimageBytes": 29288,
+      "owner": "599-pipeline"
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/app/js/instant-quotation/material-card-selector.mjs",
+      "preimageGitBlob": "ef9683b44d89274e2abd7082deb7845ccad573a6",
+      "postimageGitBlob": "9545abe2de8541effab2073fa0fc931b4dbceaf4",
+      "postimageBytes": 6557,
+      "owner": "600"
+    },
+    {
+      "path": "Legacy.Maliev.Web/tests/material-card-selector.test.mjs",
+      "preimageGitBlob": "557375588bd27da1f63d07fa4aeaab95173f9b49",
+      "postimageGitBlob": "13e75ae2dd118c826df2053036eb63dc1ef641cc",
+      "postimageBytes": 9684,
+      "owner": "600"
+    },
+    {
+      "path": "Legacy.Maliev.Web/Components/Pages/InstantQuotation/InstantQuotationMaterialSelector.razor",
+      "preimageGitBlob": "3ff4757fa5ba0c5b78e0bdab22f42a881f584566",
+      "postimageGitBlob": "4cedb8713a298dfc2e410b4cb241bfa4bc633f57",
+      "postimageBytes": 7840,
+      "owner": "600"
+    },
+    {
+      "path": "Legacy.Maliev.Web.Tests/MaterialPricingDisplayBrowserTests.cs",
+      "preimageGitBlob": "9fd25f8fc6d816994f7419e85bd91d54fde2f7b0",
+      "postimageGitBlob": "705b0defbb827da0ae01ce944d3ade344e70bfde",
+      "postimageBytes": 42451,
+      "owner": "600"
+    }
+  ],
+  "dependency598": {
+    "status": "EPHEMERAL GENERATION MAY STAGE EXACT REVIEWED #606 INPUT; ACTIVE PUBLICATION STILL REQUIRES ACCEPTED #598 DEPENDENCY",
+    "custodyInventoryGitBlob": "52aff828aa62d269054b8fa2619d92e3d30f26d9",
+    "assetCount": 59,
+    "assets": [
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/aeon-fantasy.svg",
+        "gitBlob": "1628fa693987cd9ca3e65662b8191cc3acb1c6d2",
+        "bytes": 68761,
+        "sha256": "c59715898f7587672c55bc563d28c554134b6fe53b347441388e9b7242630935"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/air-liquide.svg",
+        "gitBlob": "906c9f8fc9fca956aa167d05804fe00a30db02c9",
+        "bytes": 3373,
+        "sha256": "1d14ac4be72ff4807aeccb908d6054f7b8f06ef99ef2fd11fd3cb8688e1b4e42"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/bangchak.svg",
+        "gitBlob": "286fa352aedffec2f6b8260c0b49d31c99b26e16",
+        "bytes": 10484,
+        "sha256": "cc3ae44a668627c20d18ef9594fd572e903f939beffa29d1130100b98c401998"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/bem.svg",
+        "gitBlob": "14b084f1ee496d84dd9af132e944b5720474f33d",
+        "bytes": 7506,
+        "sha256": "76f20526c63d363bcb2c3a8e0aae8bd5cc9b0eca29222d26c62c5a3728fc3d1c"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+        "gitBlob": "bd72b4b00d8d65848241919f517eb692eaa886f4",
+        "bytes": 9426,
+        "sha256": "8796dce4263902d6633810f0e510f66636ebecf6ad6f7e0bc644a9f3557f9f68"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+        "gitBlob": "1aed2161ba8f692ef2a523adb12f96b71e84fc69",
+        "bytes": 8209,
+        "sha256": "379453f77d9b8eede9bcf8151372cf632193ba4b9287eceb86fcb11f5616501b"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/grohe.svg",
+        "gitBlob": "9372c470e37afe833e04033c7312a699e29e2793",
+        "bytes": 2792,
+        "sha256": "ccbbb8be82912bdb26cd0d291a17163faac0cb378e4600674ef8e9343e9103d5"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+        "gitBlob": "63e658b3739da162d41c61ff16ba7f8a5b3aea65",
+        "bytes": 4559,
+        "sha256": "7abfb51c3ce6ebc058cc0e0d854beddd83743f41b70a800aac9913c97236fe96"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+        "gitBlob": "9bc957bdd8b1d79ad91487b560f76f18c2ebd85a",
+        "bytes": 2802,
+        "sha256": "82963050c2b450c166a2e6f98c16dd2a41e50a9a5da8dd1353998b810856546f"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.png",
+        "gitBlob": "1d6dd48ac11b710ec0f219bb2c87089a69987f03",
+        "bytes": 2539,
+        "sha256": "3e3572e43a10e72ac4071893c30fd019f470fa84b31ea02dc25c6bee34eb9b47"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kumwell.webp",
+        "gitBlob": "741bb11fa620f8a1972dacc75e4b1f28d0f82025",
+        "bytes": 11852,
+        "sha256": "21cbe930a7676c915da510e276ba1bc5677d94a0d5c38a2deeb91c3ee058b567"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/lenso.svg",
+        "gitBlob": "76008173e1ea56c14548635c0241b0d4346abfe9",
+        "bytes": 2750,
+        "sha256": "3451f21ce02902774d116e410c312bc5268023a8237a9f4384f8d8459d80e06a"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/lixil.svg",
+        "gitBlob": "723059aff9c8a67a58ef5935e70bc22013bb5df4",
+        "bytes": 1073,
+        "sha256": "1b6659fa8e22836545dd3ee6ffaeff2b7c289f5d3a29150b27dd71dad5ef0f46"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.png",
+        "gitBlob": "4d6ddca173368afa88b563226c43c4939c4fff7d",
+        "bytes": 7447,
+        "sha256": "42aeb7fb11e9aacf799d9d38cf9a23204e242378e3f370faea8d01d026f64253"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.png",
+        "gitBlob": "531c23eb7188f44b6c0ce94da12207c271f3bd0a",
+        "bytes": 22572,
+        "sha256": "96d6de2772333c670d0a022cbd7239f763b9280a01936b5aefa20925d43e5a15"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+        "gitBlob": "69544724a554792184b5f39d4835a6e702d4ce0c",
+        "bytes": 39709,
+        "sha256": "56fd7fabf3cdc29f8f64419dcb3b394f466e67bd1289e0684c9627e4f4d53dce"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+        "gitBlob": "70266937619a2e576a31788d07de41987746012f",
+        "bytes": 8051,
+        "sha256": "c761ad949ef9e2bed73b99a1bd3886ee3576260daa5b00db6d47a0a66c1d7fa8"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/murata.svg",
+        "gitBlob": "80f04b8c96c1c642c584e4670ba9ab21d8268e40",
+        "bytes": 8154,
+        "sha256": "89eea0e216896afaa944b1731a51843329ddaaf7c1e7382c2a48d2984a0acaae"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.png",
+        "gitBlob": "7e58f285ae59caac385d907beff3bfa4e0f61f58",
+        "bytes": 1925,
+        "sha256": "2f89895cda9d845705cd87e9467d3fda719f1d41cc00f720193ea9ebb4e75591"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/pttep.svg",
+        "gitBlob": "37aefad58b38854b70339fe94faf9a4c906faeea",
+        "bytes": 6270,
+        "sha256": "ea4c76270d8bbc1e0bdec58e846242f98f21dc7a8c948e664c6d43765ddefab8"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.png",
+        "gitBlob": "a2a15c062fd2570efff342b5003a11e4af2d3841",
+        "bytes": 22718,
+        "sha256": "a800ec46765bafee5692624f8c7f8c6efd6d6a818784b740c21fcffafa4fcf76"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/siam-motors.svg",
+        "gitBlob": "af72d16b7e1608d7de6d95420578b83d23951748",
+        "bytes": 4518,
+        "sha256": "ac01a6c392c6596eadddf4049984eaa83f28498ef2122a8169aeaae1056f878c"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/siemens-mobility.svg",
+        "gitBlob": "c07e468152f10f3aae247c3817ac8bbe92c71bf7",
+        "bytes": 1382,
+        "sha256": "6a2ed4b37e8937a053072b06cca0e8cd4024edde804ebff03f14b0315da71033"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+        "gitBlob": "4b72a122cab586f746c110ebad99f8d24acc26de",
+        "bytes": 38923,
+        "sha256": "5ef06d8d337f72b9c03904cf080c7615183345adafe9357c64ca97d12b26e753"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+        "gitBlob": "94019818b17505ddfa0b54c58d0ea34d4b7e2fbf",
+        "bytes": 3415,
+        "sha256": "d5226d3b69e8cd84bc8380ed3b2e5888aafdf4af682e0baf9e9a8faabe83096c"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+        "gitBlob": "e4110763d9a1e99b7d0cc58c4d11fd89c4646f78",
+        "bytes": 3403,
+        "sha256": "2222f2166ac130ae80a202edd5e823b2d19a4caef5a7ae4e080462f550676088"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+        "gitBlob": "221d22c268dd45d3841b81d6b546d28e824aa802",
+        "bytes": 35071,
+        "sha256": "dc1fbb9e8dbfdbdedbe4637ae7860f76bedad30189751c3a183042ef2f33f9a5"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+        "gitBlob": "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30",
+        "bytes": 6809,
+        "sha256": "2c0265a1bad345f534ed3fd86659608e223ce9cf19ea789fa72fcb6156746dfc"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+        "gitBlob": "6d25ffb99bd420f594f5b091b9817e0789a7f879",
+        "bytes": 6041,
+        "sha256": "e3f5687098b53f137e4ed9bac25bba62deba91404fea50a0b360c92d186e9535"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+        "gitBlob": "2f84b3389a5333b2227e655b24ff4f5e52bd074f",
+        "bytes": 7399,
+        "sha256": "75e7f962223eca5f3a4405adef091249c26d034d02b7c9aa59802ea765bdb1db"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/about-customer-partnership.webp",
+        "gitBlob": "319b8565392b3420ee44b64a9fd60fd21d193fa1",
+        "bytes": 129392,
+        "sha256": "ee4a064d4687cf98c14e118f292763b5f297e9cdc6146a1d1fc7e484a2db1301"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-cad-v5.webp",
+        "gitBlob": "0d4f2807b9bbe5ff348473cbbe4a75486bf2312e",
+        "bytes": 97398,
+        "sha256": "84c2950d026b00ab35adada7a1c9fda8bfd1e5aa6320dcf26e25399b123d5a85"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-deployment.webp",
+        "gitBlob": "00f3fb90b23c3d448f6588b9f5b40b0c8ba3c201",
+        "bytes": 159202,
+        "sha256": "4960be27ec1c390808fe02aa42c34bdbb2d2f071ed1171412e731a02db18beef"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-production-v5.webp",
+        "gitBlob": "1857b2f909ca085e451c701c6c6e8406c2349843",
+        "bytes": 140428,
+        "sha256": "4c73cc66aa05fbaa432963e280f79659fd9565dc640168ce527ded92b97868af"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-prototypes-v4.webp",
+        "gitBlob": "a88e2c0b3ea0074f2ae1c540e4f3b7026e50eb26",
+        "bytes": 117774,
+        "sha256": "8e8c06571c5a2f018d3b9c2b1675748495dfff2af467f7a69be0101fb2f251cd"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-sketch-v6.webp",
+        "gitBlob": "73056abd985e57b91e624be97f3c66511bb7b21f",
+        "bytes": 91428,
+        "sha256": "f6e37e664e248eefb285387d2f19635ebf43e44c25debc41c5bd1c503dca987e"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-bracket.webp",
+        "gitBlob": "710449855cb6f1a6c3d46313bf192950559e4597",
+        "bytes": 122640,
+        "sha256": "24cc2d0dd716975a8cd0452066ec87c93c8eaad3ab4b151ebb494f75afadbe59"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-housing-v2.webp",
+        "gitBlob": "d12e92416d8b750ae0ace51b9061b36a40ee9009",
+        "bytes": 160146,
+        "sha256": "acfcffaf740fb5f37dd1c9d3db8d81221527388e4569290a2e6d96933722ed1b"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-fusion-cam.webp",
+        "gitBlob": "04317e89e577cc122371a4908bb81dd6f294ab87",
+        "bytes": 146066,
+        "sha256": "010ebdbcec4141712198a56d79fea6080a0f63e7e0e9f87c652bf01d520a254e"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-vf2-machining.webp",
+        "gitBlob": "2ea7500a2818fbcec45950d351184c86c0a8fe6c",
+        "bytes": 136816,
+        "sha256": "d15945f209ba605001c8857bfbef55c124cbfae1f6b386f138c06bef2aab3e82"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-cad.webp",
+        "gitBlob": "d042da37d4e2d6d568e9aa9e66d6510c5a14806c",
+        "bytes": 79830,
+        "sha256": "ee4e2251fa0b99b950259dd30207b403ebd88f9968b64f31e27c9ded5b95e290"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-revisions.webp",
+        "gitBlob": "62838be9900159c8a2a9e51e9a297a8bf6a30661",
+        "bytes": 72852,
+        "sha256": "7e4698adb858d20be6c09c0f6bf4c6a753021056bc169b69f3aa78b55a473331"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-sketch.webp",
+        "gitBlob": "630944c202aca5685661ef4dd7051e04f30346ce",
+        "bytes": 135502,
+        "sha256": "fb645e34f1516909d5fc879d294f4c38aa9d95c6d191fee6ccd15e8a3489ec5e"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-injection-batch.webp",
+        "gitBlob": "10fdb5f459ed8a5d857ce6e094ca4093b66530eb",
+        "bytes": 132752,
+        "sha256": "2c628e4b08a0f496ee9dfbe72da366615a88b3af2bb9a0a7ea3722ed41d5704d"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-injection-concept.webp",
+        "gitBlob": "bb5e25823d1fd3b77e05c6d412f5406af57860eb",
+        "bytes": 109136,
+        "sha256": "0fad8aaef0b061cca66e0cf43340d35e54e115be63ec076b37d07d9b6f6260a1"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-scan-cad-grey-v2.webp",
+        "gitBlob": "3dac4d3af1cb1634def97c60670afa43167933f1",
+        "bytes": 153954,
+        "sha256": "d8d116b98c71be501adc4724c2311cbe1b1da9e78bbe5885111f231a89cc4c58"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-scan-capture.webp",
+        "gitBlob": "8f21abd2839fb2fd9098cd0c37346cdafce6be93",
+        "bytes": 140976,
+        "sha256": "afbe669b263f91d3011e2c0eb362704c169524c130a1e80a86e80b75073c347a"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-silicone-concept.webp",
+        "gitBlob": "6ff2efbf7f3f12669636a0f417dd12a55ca8c820",
+        "bytes": 104650,
+        "sha256": "f5236d181c525b19d2d17aac0e745441e5ee560cae6ec3619562be7682886ed5"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-silicone-pour.webp",
+        "gitBlob": "67130dcfa1509236141c0284f1266c863352f540",
+        "bytes": 98562,
+        "sha256": "73e9f7c427a35f7bef2b6fb3a06f4426bd51170b2ce060816158e8d0e4cdb2f0"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-cad.webp",
+        "gitBlob": "cc32a604d1c1522cf53e055b317c66220213d34d",
+        "bytes": 83056,
+        "sha256": "c023c1240c6ea2097f949bd4739c67ca71fba9277846adc7e4a8c4f8698dc346"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-inspection.webp",
+        "gitBlob": "0fb3c88dc02707f30af6060808cb856fdc283cbf",
+        "bytes": 152208,
+        "sha256": "b057896fd3d5f565889ebae550732dbecc50c5afa9ada39cae2059a92f9e724c"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-prototypes.webp",
+        "gitBlob": "f608582a7a0da67d9f38beea6101561c933e6b52",
+        "bytes": 142400,
+        "sha256": "4e977fe989d5865d0f7922c976d07c5c3da922efae12c7996ac4b5f70619aad4"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-sketch.webp",
+        "gitBlob": "eb8108139e3074fe10768cb078de82eb4bbf5d72",
+        "bytes": 137722,
+        "sha256": "cdbdbe0d5d44334383621b25223b899ab3ce3bc8e538dd92e52ae32a303b99f6"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/profile-hybrid-gripper-cutout.webp",
+        "gitBlob": "f1c3e10743fb90b4532b5a81f76e83f5c29681a7",
+        "bytes": 136366,
+        "sha256": "2dbd349c17d56201b57633dc95b2c091409be7a1e45e1fd2ff81853deaa3b80a"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-engineering-worn-part.webp",
+        "gitBlob": "9c6a793678745434cbef0d57ceefee3630fb5841",
+        "bytes": 177352,
+        "sha256": "b588bc2aa3c9c8768aefa1acdaed72b0436371baaff381c581be5078c77e692a"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-adapter.webp",
+        "gitBlob": "b20111e8ddfd6f8afd885686f4f69cea577796a8",
+        "bytes": 105252,
+        "sha256": "4bcf731434d78132824c22045081fcd6641ca20697057456c2b50818f384c231"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-machinery.webp",
+        "gitBlob": "a0b627027a179f0e32cd19ab12e16bcd3053ae70",
+        "bytes": 135390,
+        "sha256": "b38ade2e691e535e1e7c77d72d28ce9c5d3384837000ab46be48a214470f8259"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-sculpture.webp",
+        "gitBlob": "58b9080625f3ca75735a28538e2d5b45c3f91dc7",
+        "bytes": 93928,
+        "sha256": "cff216adea93dd8bfe5832b11160bfa398de12fc8dd3901b0b8269675829706a"
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/silicone-owl-sculpture-casting.webp",
+        "gitBlob": "f381c702f8c7daf1cac334dc1df7b4b1d1bd9d24",
+        "bytes": 94692,
+        "sha256": "0f98be43043ecbf65f73c232be880df11c35450a74e17c843e4a06e126b5fec7"
+      }
+    ],
+    "requirement": "For review-only hosted generation, checkout exact #606 head 92a52e5ab1e21820bd0adef7a0ca5b2509d68380 separately, verify and stage all 59 path/blob/byte/SHA256 assets plus pinned manifest/validator/tests in the temporary 6fb checkout, execute custody tests and verifier normally and with python -O, then apply exact 30-source patch. Do not commit or publish this temporary materialization. Final active publication/merge must retain accepted #598 dependency and normal validation gates.",
+    "reviewSourceHead": "92a52e5ab1e21820bd0adef7a0ca5b2509d68380",
+    "custodyFiles": [
+      {
+        "path": "docs/migration/company-release-assets.v1.json",
+        "gitBlob": "6b55e8dd05e009b34fcaeadfd1164a88fd189ed3"
+      },
+      {
+        "path": "scripts/verify_company_release_assets.py",
+        "gitBlob": "e1ae5e1f4c7f33e26d585a2d0f885f46e94958e6"
+      },
+      {
+        "path": "tests/CompanyReleaseAssetValidator.Tests.py",
+        "gitBlob": "4828674b4db33f0a94ea58bb805552b0b91eab78"
+      }
+    ]
+  },
+  "integration": {
+    "requirement": "Review-only ephemeral generation may stage exact 606 inputs before #598 acceptance without an active runtime commit. Final active publication requires accepted #598 dependency, reobserved protected parent and all 30 preimages, reviewed generated postimages, and unchanged normal hosted gates; never publish missing-runtime source-only.",
+    "preserve": [
+      "608 knowledge source/dist and route-knowledge selector",
+      "604 owned-resource cleanup/browser preimage",
+      "549 detachment browser hunks if merged before final source application",
+      "existing CNC and pricing gates"
+    ],
+    "generatedMinimum": [
+      "Legacy.Maliev.Web/wwwroot/dist/route-home.js",
+      "Legacy.Maliev.Web/wwwroot/dist/route-home.css",
+      "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs",
+      "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json"
+    ],
+    "generatedPolicy": "Inspect full dist and src/vendor/three inventory; do not assume only four outputs change. Normal npm run ci committed-dist gate unchanged."
+  },
+  "validation": {
+    "sourceReadback": "30 exact source preimage blobs verified at corrected 6fb; 30 postimage blobs verified or newly created; 30 hunk line counts pure checked",
+    "gitApply": "NOT RUN",
+    "node": "NOT RUN",
+    "releaseBuild": "NOT RUN",
+    "focusedTests": "NOT RUN",
+    "fullSuite": "NOT RUN",
+    "browser": "NOT RUN"
+  }
+}

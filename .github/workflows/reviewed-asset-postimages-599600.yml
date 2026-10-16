@@ -1,0 +1,77 @@
+name: Reviewed Web 599 and 600 public asset postimages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/reviewed-asset-postimages-599600.yml'
+      - 'scripts/build-reviewed-asset-postimages-599600.mjs'
+      - '.migration-asset-inputs/599600/packet.json'
+      - '.migration-asset-inputs/599600/reviewed.patch'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewed-web-599600-assets-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact metadata-only candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: base
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Checkout exact reviewed 606 asset inputs separately
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 92a52e5ab1e21820bd0adef7a0ca5b2509d68380
+          path: assets
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up pinned ordinary Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: base/Legacy.Maliev.Web/package-lock.json
+      - name: Verify exact inputs and materialize temporary source
+        working-directory: base
+        env:
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/build-reviewed-asset-postimages-599600.mjs prepare
+      - name: Validate reviewed 606 custody normally and with optimized Python
+        working-directory: base
+        run: |
+          python3 -B tests/CompanyReleaseAssetValidator.Tests.py
+          python3 -B -O tests/CompanyReleaseAssetValidator.Tests.py
+          python3 -B scripts/verify_company_release_assets.py
+          python3 -B -O scripts/verify_company_release_assets.py
+      - name: Install locked ordinary Node dependencies without lifecycle scripts
+        working-directory: base/Legacy.Maliev.Web
+        run: npm ci --os=linux --ignore-scripts --no-audit --no-fund
+      - name: Build public assets
+        working-directory: base/Legacy.Maliev.Web
+        run: npm run build
+      - name: Run focused Home and selected-material module tests
+        working-directory: base/Legacy.Maliev.Web
+        run: node --test tests/home-hero-callouts.test.cjs tests/home-hero-carousel.test.cjs tests/material-card-selector.test.mjs tests/release-asset-validator.test.mjs
+      - name: Seal full generated inventory and emit bounded public postimages
+        working-directory: base
+        env:
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/build-reviewed-asset-postimages-599600.mjs collect
+      - name: Upload review artifact only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: reviewed-web-599600-postimages-${{ github.event.pull_request.head.sha }}
+          path: base/asset-postimages-599600/
+          if-no-files-found: error
+          retention-days: 7
