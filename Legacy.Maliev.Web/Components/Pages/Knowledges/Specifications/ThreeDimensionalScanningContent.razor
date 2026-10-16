@@ -1,9 +1,12 @@
 @inject IStringLocalizer<ThreeDimensionalScanningContent> Localizer
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["3D scanning preparation"]</p>
 <h1>@Localizer["Prepare a part for 3D scanning"]</h1>
 <p class="docs-lead">@Localizer["Start with the decision the scan must support: visual reference, a replacement part, editable CAD, or comparison against a reference. These goals require different preparation and deliverables. Define the output and critical features before sending the physical part."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/scanning.webp" srcset="/src/images/knowledge/photos/scanning-small.webp 768w, /src/images/knowledge/photos/scanning.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A Thai technician scans a cast pump housing with a handheld structured-light scanner."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Agree what is measured, what is reconstructed and whether delivery is mesh or CAD. Illustrative image."]</figcaption>
+</figure>
 <nav class="docs-toc" aria-label="@Localizer["On this page"]">
 <strong>@Localizer["On this page"]</strong>
 <ul>
@@ -51,13 +54,21 @@
 <p>
 <a href="https://www.artec3d.com/3d-scanning-solutions/reverse-engineering">@Localizer["Artec: scanning and reverse-engineering workflows"]</a>
 </p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A point and triangle representation is compared with a clean CAD profile and reconstructed internal feature, separated by a workflow arrow."]">
+        <img src="/src/images/knowledge/visual-scan-to-cad.svg" alt="@Localizer["A point and triangle representation is compared with a clean CAD profile and reconstructed internal feature, separated by a workflow arrow."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: sampled surface points and triangles. 2: a reconstructed CAD interpretation. Clean edges or reconstructed features are not proof of measured coverage or accuracy. Confirm missing areas, nominal dimensions, assumptions, and the required deliverable with the engineer."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-scan-to-cad.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
 </section>
 <section id="measurement" class="docs-section">
 <h2>@Localizer["Do not confuse detail with measurement accuracy"]</h2>
-<p>@Localizer["Resolution describes captured detail or spacing of data points; accuracy concerns closeness to a reference value. Repeatability concerns consistency across repeated measurements. A dense mesh or a smooth screen image does not establish that a critical dimension is within tolerance."]</p>
+<p>@Localizer["A scanner’s stated resolution may describe resolvable surface detail or point spacing; check the supplier’s definition. Accuracy concerns closeness to the true value of the measured quantity. Repeatability compares measurements over a short period with the same procedure, operators, system, location and operating conditions. A dense mesh or a smooth screen image does not establish that a critical dimension is within tolerance."]</p>
 <p>@Localizer["State which features need measurement, the allowable variation, and the reference or datum to use. Part size, surface condition, access, alignment, and processing affect the measurement plan. Request feasibility review for the actual part rather than treating a scanner specification as a guarantee for every feature."]</p>
 <p>
 <a href="https://www.artec3d.com/learning-center/accuracy-precision-resolution">@Localizer["Artec: accuracy, precision, and resolution explained"]</a>
+<p class="docs-source"><a href="https://jcgm.bipm.org/vim/en/2.13.html">@Localizer["JCGM VIM: measurement accuracy"]</a> · <a href="https://jcgm.bipm.org/vim/en/2.20.html">@Localizer["JCGM VIM: repeatability conditions"]</a></p>
 </p>
 </section>
 <section id="preparation" class="docs-section">

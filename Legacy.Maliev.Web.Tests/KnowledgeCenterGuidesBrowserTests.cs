@@ -3,7 +3,10 @@
 // </copyright>
 
 using System.Text.Json;
+using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -62,7 +65,7 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                 await SaveScreenshotAsync(page, $"knowledge-index-{culture}-{width}.png");
             }
 
-            if (path.EndsWith("cnc-machining", StringComparison.Ordinal) && await page.Locator(".docs-figure").CountAsync() > 0)
+            if (path.EndsWith("cnc-machining", StringComparison.Ordinal))
             {
                 foreach (ILocator image in await page.Locator(".docs-figure img").AllAsync())
                 {
@@ -72,7 +75,10 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                     Assert.True(await image.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
                 }
 
-                await page.Locator("#radii-pockets .docs-figure").ScrollIntoViewIfNeededAsync();
+                var diagram = page.Locator("#files .docs-figure.knowledge-diagram");
+                Assert.Equal("/src/images/knowledge/visual-cnc-preparation.svg",
+                    await diagram.Locator("img").GetAttributeAsync("src"));
+                await diagram.ScrollIntoViewIfNeededAsync();
                 await SaveScreenshotAsync(page, $"knowledge-cnc-{culture}-{width}.png");
             }
         }
@@ -101,8 +107,14 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                 while(node) { yield {tag:node.tagName,id:node.id,inert:node.inert}; node=node.parentElement; } })()) })");
         Assert.True(await close.EvaluateAsync<bool>("element => document.activeElement === element"), focusState);
         Assert.True(await page.Locator("#knowledge-content").EvaluateAsync<bool>("element => element.inert"));
+        var finalGroup = page.Locator("#knowledge-navigation details.knowledge-nav-group").Last;
+        var finalSummary = finalGroup.Locator("summary");
+        Assert.Equal("Finishing and inspection", (await finalSummary.InnerTextAsync()).Trim());
+        Assert.False(await finalGroup.EvaluateAsync<bool>("element => element.open"));
+        Assert.True(await finalSummary.IsVisibleAsync());
+        Assert.False(await finalGroup.Locator("a").Last.IsVisibleAsync());
         await page.Keyboard.PressAsync("Shift+Tab");
-        Assert.True(await page.Locator("#knowledge-navigation a").Last.EvaluateAsync<bool>("element => document.activeElement === element"));
+        Assert.True(await finalSummary.EvaluateAsync<bool>("element => document.activeElement === element"));
         await page.Keyboard.PressAsync("Tab");
         Assert.True(await close.EvaluateAsync<bool>("element => document.activeElement === element"));
         await page.Keyboard.PressAsync("Escape");
@@ -124,7 +136,19 @@ public sealed class KnowledgeCenterGuidesBrowserTests
         var count = 0;
         foreach (var route in new[] { "/", "/about", "/account/login", "/account/signup", "/contact", "/services" })
         {
-            await fixture.Page.GotoAsync(fixture.Origin + route + "?culture=en");
+            // This checks rendered CSS, not completion of unrelated page subresources.
+            var response = await fixture.Page.GotoAsync(fixture.Origin + route + "?culture=en",
+                new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+            Assert.NotNull(response);
+            Assert.Equal(200, response.Status);
+            Assert.Equal("en", await fixture.Page.Locator("html").GetAttributeAsync("lang"));
+            await fixture.Page.WaitForFunctionAsync("""
+                () => {
+                    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+                    return styles.some(link => new URL(link.href).pathname === '/dist/site.min.css')
+                        && styles.every(link => link.sheet !== null);
+                }
+                """);
             await RejectOptionalCookiesAsync(fixture.Page);
             foreach (var link in await fixture.Page.Locator("a:has([class*='fa-arrow-'], svg[data-icon^='arrow-'])").AllAsync())
             {
@@ -185,9 +209,32 @@ public sealed class KnowledgeCenterGuidesBrowserTests
         }
     }
 
+    // The shared-arrow check visits Contact for presentation only. Keep its
+    // server-side country lookup deterministic, as the contact browser fixture does.
+    private sealed class PublicKnowledgeTestingWebApplicationFactory(string contentRoot)
+        : TestingWebApplicationFactory(contentRoot)
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        }
+    }
+
+    private sealed class StubCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+    }
+
     private sealed class PublicKnowledgeFixture : IAsyncDisposable
     {
-        private readonly TestingWebApplicationFactory factory = new(BrowserHostIdentityVerifier.SourceProjectDirectory());
+        private readonly TestingWebApplicationFactory factory = new PublicKnowledgeTestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         private IPlaywright? playwright;
         private IBrowser? browser;
         public IBrowserContext Context { get; private set; } = null!;

@@ -1,30 +1,15 @@
 @inject IStringLocalizer<CncMachiningContent> Localizer
-@inject Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider AssetVersions
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["CNC machining preparation"]</p>
     <p class="maliev-eyebrow">@Localizer["CNC machining design guide"]</p>
     <h1>@Localizer["Design decisions that make CNC parts easier to manufacture"]</h1>
     <p class="docs-lead">@Localizer["A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/cnc-overview.webp" srcset="/src/images/knowledge/photos/cnc-overview-small.webp 768w, /src/images/knowledge/photos/cnc-overview.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["An end mill cuts a shallow pocket in an aluminium block held in a machine vise."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Review the functional faces, tool access and workholding as one machining plan. Illustrative image."]</figcaption>
+</figure>
     <p>@Localizer["Start with how the part must work: where it locates, what it carries, which surfaces mate, and what must be inspected. Then choose geometry and requirements that support that function. This guide explains common machining tradeoffs so you can prepare a clear quotation package and discuss useful changes before production."]</p>
     <aside class="docs-note">@Localizer["All dimensions and calculations below are illustrative design examples, not MALIEV capability limits or acceptance criteria. Feasibility, production route, inspection and any specialist process must be confirmed for the actual material, geometry, quantity and drawing revision. Agree the applicable standard and edition wherever a standard governs acceptance."]</aside>
-    <nav class="docs-toc" aria-label="@Localizer["On this page"]">
-        <h2>@Localizer["In this guide"]</h2>
-        <ul>
-            <li><a href="#files">@Localizer["Files and quotation checklist"]</a></li>
-            <li><a href="#thin-walls">@Localizer["Thin walls and floors: consider support as well as thickness"]</a></li>
-            <li><a href="#radii-pockets">@Localizer["Internal radii and pockets: leave room for the cutter"]</a></li>
-            <li><a href="#size-fixturing">@Localizer["Part size and fixturing: plan how the work is held"]</a></li>
-            <li><a href="#warpage">@Localizer["Warpage and residual stress: define the free condition"]</a></li>
-            <li><a href="#chatter">@Localizer["Chatter and tool reach: avoid unnecessary slenderness"]</a></li>
-            <li><a href="#holes-threads">@Localizer["Holes and threads: specify the usable feature"]</a></li>
-            <li><a href="#tolerances">@Localizer["Tolerances, datums and inspection: describe the assembly"]</a></li>
-            <li><a href="#axes">@Localizer["3-axis, indexed 3+2 or simultaneous 5-axis?"]</a></li>
-            <li><a href="#edm">@Localizer["Wire EDM and sinker EDM: different access problems"]</a></li>
-            <li><a href="#grinding">@Localizer["Grinding: specify the surface that needs it"]</a></li>
-            <li><a href="#finishing">@Localizer["Finishing and anodizing: design the final condition"]</a></li>
-        </ul>
-    </nav>
     <section class="docs-section" id="files">
         <h2>@Localizer["Files and quotation checklist"]</h2>
         <p>@Localizer["Supply a solid CAD model such as STEP and a readable dimensioned drawing for each part. Identify units, part number and revision consistently across both files. A model describes nominal shape; it does not reliably communicate every thread, fit, cosmetic requirement or inspection condition. If model and drawing disagree, identify which requirement governs before machining begins."]</p>
@@ -38,130 +23,48 @@
         </ul>
         <aside class="docs-example">@Localizer["Illustrative example: a housing may need a controlled bearing bore and mounting face without assigning the same tight tolerance to every exterior dimension. Explain which features locate the bearing and how the housing mounts, then review the drawing around those relationships."]</aside>
         <p class="docs-source"><a href="https://www.asme.org/codes-standards/find-codes-standards/dimensioning-and-tolerancing">@Localizer["ASME: communicating drawing requirements with GD&T"]</a></p>
+    <figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Model, critical requirements and a supported machining setup are considered together."]">
+        <img src="/src/images/knowledge/visual-cnc-preparation.svg" alt="@Localizer["Model, critical requirements and a supported machining setup are considered together."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: communicate nominal shape. 2: identify functional dimensions, datums, threads and finish requirements. 3: review how the stock is supported and how the cutter reaches the feature. This schematic is a planning concept, not a production fixture design."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-cnc-preparation.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+    <section class="docs-section" id="topic-geometry">
+        <span class="knowledge-legacy-anchor" id="thin-walls" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="radii-pockets" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="size-fixturing" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="warpage" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="chatter" aria-hidden="true"></span>
+        <h2>@Localizer["Geometry, rigidity and workholding"]</h2>
+        <p>@Localizer["Consider tool access and how the part is supported throughout the cut, not only the final shape. These design reviews connect thin features and deep pockets to fixturing, distortion and vibration."]</p>
+        <p><a href="/knowledges/cnc/geometry-and-workholding">@Localizer["Continue reading"]</a></p>
     </section>
-    <section class="docs-section" id="thin-walls">
-        <h2>@Localizer["Thin walls and floors: consider support as well as thickness"]</h2>
-        <p>@Localizer["Wall height, thickness, unsupported length and material all influence how a feature responds during cutting. A tall isolated wall behaves differently from a short wall tied into surrounding ribs. Thin floors can also bend under cutting or clamping loads. There is no single minimum wall thickness that establishes whether every material and geometry can be machined successfully."]</p>
-        <p>@Localizer["Retaining material for support during roughing and approaching the final section in stages can help control deflection. Sandvik describes alternating sides and staged strategies according to wall proportions. These are process-planning approaches, not design acceptance limits. Ask whether a rib, shorter wall, thicker base or temporary support feature is compatible with the part function and final assembly."]</p>
-        <figure class="docs-figure">
-            <img src="@KnowledgeAsset("/src/images/knowledge/cnc-wall-stiffness.svg")" width="720" height="300" loading="lazy" alt="@Localizer["Two 24 mm walls with different thicknesses and height-to-thickness ratios."]" />
-            <figcaption>@Localizer["Illustrative geometry: the same wall height with different thicknesses. The ratios compare designs; they do not set a machining limit."]</figcaption>
-        </figure>
-        <aside class="docs-example">@Localizer["Illustrative example: a 24 mm high wall at 1.5 mm thickness has a height-to-thickness ratio of 16. Increasing thickness to 2 mm reduces the ratio to 12. This helps compare alternatives; it does not establish feasibility. Also state whether wall straightness is required after the clamps are released."]</aside>
-        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/shoulder-milling">@Localizer["Sandvik Coromant: thin deflecting walls and bases"]</a></p>
+    <section class="docs-section" id="topic-holes">
+        <span class="knowledge-legacy-anchor" id="holes-threads" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="tolerances" aria-hidden="true"></span>
+        <h2>@Localizer["Holes, threads and tolerances"]</h2>
+        <p>@Localizer["Specify the feature that the assembly actually needs. Hole depth, full-thread engagement, size, position and inspection conditions describe different requirements."]</p>
+        <p><a href="/knowledges/cnc/holes-and-tolerances">@Localizer["Continue reading"]</a></p>
     </section>
-    <section class="docs-section" id="radii-pockets">
-        <h2>@Localizer["Internal radii and pockets: leave room for the cutter"]</h2>
-        <p>@Localizer["A rotating end mill leaves a radius in an internal vertical corner. Making that radius smaller usually changes the required tool diameter, reach or number of operations. When the cutter nearly fills a corner, engagement increases and the cut can become less stable. Give internal corners the largest radius that still provides clearance for the mating component and preserves required strength."]</p>
-        <p>@Localizer["Review pocket depth, width, floor thickness and corner radius together. A narrow deep pocket can combine poor access, a slender tool and difficult chip removal. Where the function allows, consider a shallower pocket, larger corner radii, an opening through one side or an assembly of simpler components. A square mating tab may instead accept corner reliefs. Any departure from the released drawing needs agreement."]</p>
-        <figure class="docs-figure">
-            <img src="@KnowledgeAsset("/src/images/knowledge/cnc-corner-clearance.svg")" width="720" height="280" loading="lazy" alt="@Localizer["R4 pocket corners with diameter 8 and diameter 6 cutters, showing different tool-centre clearance."]" />
-            <figcaption>@Localizer["Illustrative geometry: at an R4 corner, an 8 mm cutter leaves no centre-path radius; a 6 mm cutter leaves R1. This diagram does not prescribe a cutting strategy."]</figcaption>
-        </figure>
-        <aside class="docs-example">@Localizer["Illustrative example: an R4 corner geometrically accommodates an 8 mm diameter cutter, but a 6 mm cutter leaves a 1 mm radius for its centre path around that corner. That extra path space can help programming; it is not a guarantee of finish, accuracy or machining time."]</aside>
-        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-inside-corners">@Localizer["Sandvik Coromant: cutter engagement inside corners"]</a></p>
-        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-holes-cavities-pockets">@Localizer["Sandvik Coromant: pocketing method selection"]</a></p>
+    <section class="docs-section" id="topic-processes">
+        <span class="knowledge-legacy-anchor" id="axes" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="edm" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="grinding" aria-hidden="true"></span>
+        <h2>@Localizer["3-axis, 5-axis, EDM and grinding"]</h2>
+        <p>@Localizer["Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part."]</p>
+        <p><a href="/knowledges/cnc/machining-processes">@Localizer["Continue reading"]</a></p>
     </section>
-    <section class="docs-section" id="size-fixturing">
-        <h2>@Localizer["Part size and fixturing: plan how the work is held"]</h2>
-        <p>@Localizer["Final length, width and height are only part of a size review. The starting stock, fixture, cutting tool, holder and approach movements also need space. A part fitting within a nominal machine travel does not establish that every surface is reachable. Small parts may need dedicated handling or support just as large parts may need several setups. Identify surfaces that can be used for holding."]</p>
-        <p>@Localizer["Mark faces that cannot carry clamp marks, sacrificial material that may be removed later, and features that must stay related across setups. Ask how the final operation will hold the part once most stock has gone. For rotating fixtures, review the combined moving envelope and tool clearance. Simulation must represent the actual stock, holder and fixture rather than only the finished model."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: a 100 × 60 × 8 mm finished plate may start as thicker stock to provide holding material. The extra thickness is a planning allowance to agree, not an automatic requirement. Confirm how the last face is supported and which features establish the second setup."]</aside>
-        <p class="docs-source"><a href="https://www.autodesk.com/solutions/5-axis-machining">@Localizer["Autodesk: access, setups and collision verification"]</a></p>
+    <section class="docs-section" id="topic-finishes">
+        <span class="knowledge-legacy-anchor" id="finishing" aria-hidden="true"></span>
+        <h2>@Localizer["Surface finishes and coatings"]</h2>
+        <p>@Localizer["Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion."]</p>
+        <p><a href="/knowledges/finishing/surface-finishes">@Localizer["Continue reading"]</a></p>
     </section>
-    <section class="docs-section" id="warpage">
-        <h2>@Localizer["Warpage and residual stress: define the free condition"]</h2>
-        <p>@Localizer["A part can look flat while held and change shape after release. Elastic bending under a clamp is different from distortion associated with residual stress and material removal. Wrought stock can contain residual stress from earlier processing; removing material changes the remaining balance. NIST research on aluminum bars illustrates why stock condition and the location of a part within the stock can matter."]</p>
-        <p>@Localizer["Flag broad thin plates, heavy one-sided pocketing and tight flatness requirements early. Discuss suitable stock condition, staged removal, support and any necessary thermal processing with the manufacturer. These choices have material, schedule and cost implications; no single treatment guarantees a distortion-free part. State whether inspection is in the free condition, on defined supports or under a specified assembly restraint, and agree that condition before setting an acceptance value."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: a 200 mm plate with a 0.05 mm flatness requirement needs a defined inspection condition. A result measured while the plate is pulled against a fixture does not describe its free-state shape. Provide the real mounting arrangement if the assembly intentionally restrains the plate."]</aside>
-        <p class="docs-source"><a href="https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication1006.pdf">@Localizer["NIST: aluminum residual stress and machining distortion, printed pages 34–35"]</a></p>
-    </section>
-    <section class="docs-section" id="chatter">
-        <h2>@Localizer["Chatter and tool reach: avoid unnecessary slenderness"]</h2>
-        <p>@Localizer["Chatter can involve the cutter, holder, machine, workpiece or fixture. It may leave repeated marks and interfere with surface quality or dimensional control. A long slender tool and an unsupported wall create different sources of flexibility. Changing speed alone is not a universal cure. The design contribution is to avoid unnecessary reach, abrupt access restrictions and unsupported features where the function permits."]</p>
-        <p>@Localizer["Ask whether an opening can be enlarged, a deep feature approached from another face, or a narrow detail separated from the main roughing operation. The manufacturer must coordinate tool length, holding, engagement and cutting conditions. Do not prescribe a universal cutting recipe on a drawing. If a surface has a functional texture requirement, identify it explicitly so cosmetic tool marks are not confused with acceptance criteria."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: 40 mm reach with an 8 mm diameter tool is a reach-to-diameter ratio of 5. With a 12 mm tool it is about 3.33, if the opening permits. This compares geometric slenderness only; holder clearance, material and cutting engagement still need review."]</aside>
-        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/vibration">@Localizer["Sandvik Coromant: vibration sources and tool overhang"]</a></p>
-    </section>
-    <section class="docs-section" id="holes-threads">
-        <h2>@Localizer["Holes and threads: specify the usable feature"]</h2>
-        <p>@Localizer["For holes, give diameter, depth, location, fit and surface requirements. Distinguish through holes from blind holes, and usable cylindrical depth from the drill-tip space. Angled entries, angled exits and intersecting holes can affect tool choice and chip removal. A drilled clearance hole and a locating bore serve different functions; explain the assembly need so the production method can be selected accordingly."]</p>
-        <p>@Localizer["For threads, specify the standard, nominal diameter, pitch, tolerance class and minimum full-thread depth. State whether a coating applies inside the thread. Blind-hole drill depth, thread depth and bottom clearance need coordinated planning. Thread milling may be useful near a shoulder or blind bottom, on thin-walled parts or where tap-breakage risk matters. Avoid assuming that a longer thread always creates a better joint; required engagement depends on loads and materials."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: a 4 mm diameter hole 32 mm deep is 8 times its diameter; an 8 mm hole at the same depth is 4 times its diameter. These are different access and chip-removal problems. For a blind M6 × 1 thread requiring 10 mm of full thread, agree the separate drill depth and bottom clearance."]</aside>
-        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/drilling">@Localizer["Sandvik Coromant: hole geometry, quality and drilling choices"]</a></p>
-        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/threading/thread-milling">@Localizer["Sandvik Coromant: thread milling applications"]</a></p>
-    </section>
-    <section class="docs-section" id="tolerances">
-        <h2>@Localizer["Tolerances, datums and inspection: describe the assembly"]</h2>
-        <p>@Localizer["A size tolerance does not describe every relationship that makes an assembly work. A bore can have the correct diameter while its axis is in the wrong position. Choose datum features that represent how the part seats and locates in use, then specify the necessary form, orientation and location controls. Identify the drawing convention and applicable edition so everyone interprets the requirements consistently."]</p>
-        <p>@Localizer["Concentrate demanding requirements on features that need them. Agree the measurement method, access, datum establishment, part condition and reporting before production. Instrument resolution alone does not establish measurement uncertainty. Temperature also matters when tolerances are small: NIST describes the effects of temperature and thermal-expansion uncertainty relative to the 20 °C dimensional reference temperature. State whether acceptance is before or after coating and thermal processing."]</p>
-        <aside class="docs-example">@Localizer["Illustrative calculation: assume a 200 mm length, thermal expansion coefficient of 23 × 10⁻⁶/K and a 5 K temperature difference. Expansion is 200 × 23 × 10⁻⁶ × 5 = 0.023 mm. The coefficient is an assumption for this example, not a certified value for the material supplied."]</aside>
-        <p class="docs-source"><a href="https://www.asme.org/codes-standards/find-codes-standards/dimensioning-and-tolerancing">@Localizer["ASME: dimensioning, datums and geometric tolerancing"]</a></p>
-        <p class="docs-source"><a href="https://www.nist.gov/publications/uncertainties-dimensional-measurements-made-nonstandard-temperatures">@Localizer["NIST: temperature and dimensional measurement uncertainty"]</a></p>
-    </section>
-    <section class="docs-section" id="axes">
-        <h2>@Localizer["3-axis, indexed 3+2 or simultaneous 5-axis?"]</h2>
-        <p>@Localizer["Select a machining approach around feature access and the relationships between surfaces. A three-axis operation moves along the linear axes with a fixed approach orientation for that setup. Additional setups can expose other faces. Indexed 3+2 machining uses rotary axes to establish an orientation, then machines with that orientation fixed. It can suit angled holes and features on several faces without continuous rotary cutting."]</p>
-        <p>@Localizer["Simultaneous five-axis machining changes tool orientation during the cut. This can help with complex continuous surfaces or access that fixed orientations cannot provide efficiently. It also adds motion, programming and collision-verification demands. More axes do not automatically make every part more accurate or economical. Ask which features drive the choice, whether a simpler route is possible and how critical relationships will be retained across setups. Process availability must be confirmed for the project."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: holes sharing a fixed 20° approach may be candidates for an indexed orientation. A curved surface requiring continuously changing tool angles may justify simultaneous motion. Neither example establishes the final route: stock, fixture, holder clearance and machine motion limits still govern access."]</aside>
-        <p class="docs-source"><a href="https://help.autodesk.com/cloudhelp/2020/ENU/INVCAM/files/GUID-1D228659-FDD0-4C72-BBD6-58A875ACC742.htm">@Localizer["Autodesk: positional 3+2 machining"]</a></p>
-        <p class="docs-source"><a href="https://www.autodesk.com/solutions/5-axis-machining">@Localizer["Autodesk: indexed and simultaneous five-axis machining"]</a></p>
-        <div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Machining approach comparison"]">
-            <table>
-                <thead><tr>
-                    <th scope="col">@Localizer["Approach"]</th>
-                    <th scope="col">@Localizer["Tool orientation during cutting"]</th>
-                    <th scope="col">@Localizer["Decision to review"]</th>
-                </tr></thead>
-                <tbody>
-                    <tr><td>@Localizer["3-axis"]</td><td>@Localizer["Fixed for the setup; linear motion creates the surface."]</td><td>@Localizer["Can each required surface be reached with suitable tool support?"]</td></tr>
-                    <tr><td>@Localizer["Indexed 3+2"]</td><td>@Localizer["Rotary axes establish the angle, then orientation stays fixed during the cut."]</td><td>@Localizer["Can a small set of fixed orientations reach the angled features?"]</td></tr>
-                    <tr><td>@Localizer["Simultaneous 5-axis"]</td><td>@Localizer["Orientation changes along the cutting path."]</td><td>@Localizer["Does continuous orientation solve a specific access or surface requirement?"]</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-    <section class="docs-section" id="edm">
-        <h2>@Localizer["Wire EDM and sinker EDM: different access problems"]</h2>
-        <p>@Localizer["Electrical discharge machining removes electrically conductive material through spark erosion. It can be considered for hard materials and details that are difficult to produce with rotating cutters. Wire EDM transports a wire electrode between guides; offsetting the guides can create tapered cuts. Sinker EDM uses a shaped electrode that advances into the workpiece. These tool arrangements create different geometry and access requirements."]</p>
-        <p>@Localizer["As a geometric consequence, a through-profile with a usable wire path is a natural candidate for wire EDM, while a blind cavity can require evaluation of sinker EDM. Review threading access, retained support, flushing and finish requirements. Neither process means perfectly sharp internal corners or freedom from distortion. Ask whether milling plus a specialist finishing operation is more appropriate than routing the entire part through EDM; confirm availability and responsibility in the quotation."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: a closed rectangular opening through a conductive plate needs a wire-entry plan and a permitted corner radius. A similar outline stopping inside the plate is a blind cavity, so it presents a different electrode and access problem. These are process-selection examples, not service commitments."]</aside>
-        <p class="docs-source"><a href="https://www.makino.com/en-us/machine-technology/machining-process/edm">@Localizer["Makino: spark erosion and shaped sinker electrodes"]</a></p>
-        <p class="docs-source"><a href="https://www.makino.com/resources/content-library/article/archive/edm-wire-tutorial/198">@Localizer["Makino: wire guides, taper and machining considerations"]</a></p>
-    </section>
-    <section class="docs-section" id="grinding">
-        <h2>@Localizer["Grinding: specify the surface that needs it"]</h2>
-        <p>@Localizer["Grinding can be considered when selected surfaces need demanding geometric control or surface texture. Distinguish surface roughness from flatness, parallelism, roundness or size: a low roughness value alone does not define those properties. Name the functional surface and its requirements rather than requesting precision grinding everywhere. The route must account for material condition, access, stock allowance and the sequence of any heat treatment."]</p>
-        <p>@Localizer["Norton identifies wheel dressing, grit, coolant, operating parameters and machine condition as contributors to finish. Parameter changes can also introduce thermal damage, so finer appearance should not be treated as proof of an improved process. Ask whether machining alone meets the requirement, which faces need a later operation and how those faces will be inspected. Availability of grinding and any specialist inspection should be confirmed, not inferred from the design guide."]</p>
-        <aside class="docs-example">@Localizer["Illustrative example: a sliding face might require Ra 0.8 µm together with a separate flatness requirement, while a non-mating outside face has a different finish. These are drawing choices to validate against the application, not guaranteed results for a particular material or process."]</aside>
-        <p class="docs-source"><a href="https://www.nortonabrasives.com/en-us/resources/expertise/5-grinding-considerations-improving-surface-finish">@Localizer["Norton Abrasives: grinding finish and thermal tradeoffs"]</a></p>
-    </section>
-    <section class="docs-section" id="finishing">
-        <h2>@Localizer["Finishing and anodizing: design the final condition"]</h2>
-        <p>@Localizer["Specify the coating type, thickness, colour, pretreatment and acceptance condition. Mark cosmetic faces, masking, electrical contacts, threads and mating fits. Brushing or polishing can change edges and dimensions, while an anodized result depends on alloy and prior surface preparation. Agree the required appearance with a sample or reference where it matters, rather than assuming that a colour name defines a complete finish."]</p>
-        <p>@Localizer["Anodic coating thickness includes both converted base material and outward growth. The Aluminum Anodizers Council gives approximately half penetration and half buildup as generally accepted hardcoat guidance; actual pretreatment and coating behaviour need confirmation with the finisher. Do not simply add the full coating thickness to every dimension. Agree whether fits will be masked, compensated before coating or finished afterward, including the consequences for exposed material and protection."]</p>
-<h3>@Localizer["Compare the purpose of the finish"]</h3>
-<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Surface finish selection considerations"]"><table><caption>@Localizer["Discuss the appropriate route and its availability for the actual project."]</caption><thead><tr><th scope="col">@Localizer["Finish"]</th><th scope="col">@Localizer["Purpose and information to agree"]</th></tr></thead><tbody><tr><th scope="row">@Localizer["As-machined and deburred"]</th><td>@Localizer["Retain an appropriate machined surface where appearance is secondary. Define edge breaks and functional surface texture; tool marks and a scratch-free cosmetic finish are different requirements."]</td></tr><tr><th scope="row">@Localizer["Bead blasting"]</th><td>@Localizer["Create a uniform matte texture. Identify cosmetic faces and surfaces to protect, and agree whether blasting precedes another treatment. A uniform appearance does not define dimensional accuracy."]</td></tr><tr><th scope="row">@Localizer["Anodizing for aluminum"]</th><td>@Localizer["Specify alloy, coating type and thickness, color, rack-contact locations, and masked fits. Decide whether dimensions are accepted before or after treatment."]</td></tr><tr><th scope="row">@Localizer["Powder coating or painting"]</th><td>@Localizer["Define appearance, service exposure, coating thickness, and coverage. Identify threads, fits, grounding contacts, and other areas that require masking or a different treatment."]</td></tr></tbody></table></div>
-<p class="docs-source"><a href="https://www.protolabs.com/services/cnc-machining/post-processing/">@Localizer["Protolabs: examples of CNC post-processing methods"]</a></p>
-        <figure class="docs-figure">
-            <img src="@KnowledgeAsset("/src/images/knowledge/anodize-dimensional-growth.svg")" width="720" height="280" loading="lazy" alt="@Localizer["Uncoated and coated sections illustrating assumed hardcoat penetration and outward growth."]" />
-            <figcaption>@Localizer["Schematic, not to scale: t is total coating thickness and g is outward growth per surface. The 20 micrometre hardcoat example assumes g = 10 micrometres and excludes pretreatment removal."]</figcaption>
-        </figure>
-        <aside class="docs-example">@Localizer["Illustrative simplified hardcoat calculation: with a 20 µm total coating and assumed 10 µm outward growth per surface, an outside diameter grows about 20 µm and a coated bore shrinks about 20 µm. This ignores pretreatment removal and process variation; use the agreed finishing allowance for the real part."]</aside>
-        <p class="docs-source"><a href="https://www.anodizing.org/anodizing-reference-guide/">@Localizer["Aluminum Anodizers Council: coating growth and alloy effects"]</a></p>
-        <p class="docs-source"><a href="https://www.anodizing.org/ordering-quotation-guidelines/">@Localizer["Aluminum Anodizers Council: finishing quotation information"]</a></p>
-    </section>
-<p class="docs-reviewed">@Localizer["Technical references reviewed: 16 October 2026."]</p>
-    <aside class="docs-next">
-        <h2>@Localizer["Bring the model and the functional requirements"]</h2>
-        <p>@Localizer["Use the checklist to identify missing information before requesting a quotation. Highlight the features that drive fit, function or inspection so the proposed manufacturing route can be reviewed against the actual job."]</p>
-        <div class="maliev-actions"><a class="maliev-button" href="/quotation?item=CNC-Machining">@Localizer["Request a CNC project review"]</a><a class="maliev-button maliev-button--secondary" href="/services/cnc-machining">@Localizer["View CNC machining service"]</a><a href="#files">@Localizer["Review the quotation checklist"]</a></div>
-    </aside>
+    <aside class="docs-next"><ul><li><a href="/knowledges/cnc/feeds-and-speeds">@Localizer["Learn how to calculate feeds and speeds"]</a></li><li><a href="/knowledges/cnc/cutting-tools">@Localizer["Choose tools for the operation"]</a></li><li><a href="/knowledges/materials/selection">@Localizer["Explore materials and applications"]</a></li></ul></aside>
 </article>
 
 @code {
     [Parameter]
     public string? RouteOwner { get; set; }
-
-    private string KnowledgeAsset(string path) => AssetVersions.AddFileVersionToPath(Microsoft.AspNetCore.Http.PathString.Empty, path);
 }

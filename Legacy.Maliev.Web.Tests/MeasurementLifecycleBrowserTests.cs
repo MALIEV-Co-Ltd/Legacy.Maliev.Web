@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -76,6 +79,70 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
     }
 
+    [Theory]
+    [InlineData("en", 390)]
+    [InlineData("th", 1440)]
+    public async Task PersistedContact_DelayedConsentEmitsOnlyDiagnosticOnceAndReloadDoesNotReplay(
+        string culture, int width)
+    {
+        await using var session = await OpenContactFreshAsync(culture, width);
+        Assert.Equal(-1, await GtmEventIndexAsync(session.Page));
+        Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+
+        await SubmitContactAsync(session, culture);
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        Assert.Equal(0, await CountContactDiagnosticsAsync(session.Page));
+        Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+
+        await session.Page.Locator("#cookieConsent [data-consent-action='accept']")
+            .EvaluateAsync("button => { button.click(); button.click(); }");
+
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        await AssertSingleContactDiagnosticAsync(session.Page);
+        await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await CountContactDiagnosticsAsync(session.Page));
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+    }
+
+    [Theory]
+    [InlineData("en", 1440)]
+    [InlineData("th", 390)]
+    public async Task PersistedContact_PreviouslyGrantedConsentEmitsOnlyDiagnostic(
+        string culture, int width)
+    {
+        await using var session = await OpenContactFreshAsync(culture, width);
+        await session.Page.Locator("#cookieConsent [data-consent-action='accept']").ClickAsync();
+
+        await SubmitContactAsync(session, culture);
+
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        await AssertSingleContactDiagnosticAsync(session.Page);
+        await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await CountContactDiagnosticsAsync(session.Page));
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+    }
+
+    [Theory]
+    [InlineData("en", 390)]
+    [InlineData("th", 1440)]
+    public async Task PersistedContact_RejectedConsentDiscardsDiagnosticWithoutConversion(
+        string culture, int width)
+    {
+        await using var session = await OpenContactFreshAsync(culture, width);
+        await SubmitContactAsync(session, culture);
+        Assert.Equal(0, await CountContactDiagnosticsAsync(session.Page));
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+
+        await session.Page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        Assert.Equal(0, await CountContactDiagnosticsAsync(session.Page));
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await CountContactDiagnosticsAsync(session.Page));
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+    }
+
     [Fact]
     public async Task Reject_DuplicateDispatchDiscardsLeadAndDiagnosticsCannotBecomeConversions()
     {
@@ -114,6 +181,26 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
     private static Task<int> CountLeadEventsAsync(IPage page) => page.EvaluateAsync<int>(
         "() => dataLayer.filter(item => item.event === 'maliev_lead_submitted' || item.event === 'generate_lead').length");
 
+    private static Task<int> CountContactDiagnosticsAsync(IPage page) => page.EvaluateAsync<int>(
+        "() => dataLayer.filter(item => item.event === 'maliev_contact_submitted').length");
+
+    private static async Task AssertSingleContactDiagnosticAsync(IPage page)
+    {
+        var eventsJson = await page.EvaluateAsync<string>(
+            "() => JSON.stringify(dataLayer.filter(item => item.event === 'maliev_contact_submitted'))");
+        using var document = JsonDocument.Parse(eventsJson);
+        var events = document.RootElement;
+        Assert.Equal(JsonValueKind.Array, events.ValueKind);
+        Assert.Equal(1, events.GetArrayLength());
+        var diagnostic = events[0];
+        Assert.Equal(
+            ["event", "service", "submission_status"],
+            diagnostic.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+        Assert.Equal("maliev_contact_submitted", diagnostic.GetProperty("event").GetString());
+        Assert.Equal("general_contact", diagnostic.GetProperty("service").GetString());
+        Assert.Equal("persisted", diagnostic.GetProperty("submission_status").GetString());
+    }
+
     private static Task<string> ConsentStateAsync(IPage page, string command) => page.EvaluateAsync<string>(
         "command => { const entry = dataLayer.find(item => item[0] === 'consent' && item[1] === command); return entry?.[2]?.analytics_storage ?? ''; }",
         command);
@@ -132,6 +219,85 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
     private static Task<int> CountConsentUpdatesAsync(IPage page, string state) => page.EvaluateAsync<int>(
         "state => dataLayer.filter(item => item[0] === 'consent' && item[1] === 'update' && item[2].analytics_storage === state).length",
         state);
+
+    private async Task<BrowserSession> OpenContactFreshAsync(string culture, int width)
+    {
+        var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = 900 },
+        });
+        try
+        {
+            var blockedUrls = new ConcurrentBag<string>();
+            var origin = fixture.Origin.ToString().TrimEnd('/');
+            await context.RouteAsync("**/*", async route =>
+            {
+                if (route.Request.Url.StartsWith(origin + "/", StringComparison.Ordinal))
+                {
+                    await route.ContinueAsync();
+                    return;
+                }
+
+                blockedUrls.Add(route.Request.Url);
+                await route.AbortAsync();
+            });
+            var page = await context.NewPageAsync();
+            await page.GotoAsync(new Uri(fixture.Origin, $"/Contact?culture={culture}").ToString(),
+                new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+            await Assertions.Expect(page.Locator("#contact-us")).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator("#cookieConsent")).ToBeVisibleAsync();
+            return new BrowserSession(context, page, blockedUrls);
+        }
+        catch (Exception primary)
+        {
+            try
+            {
+                await context.DisposeAsync();
+            }
+            catch (Exception cleanup)
+            {
+                primary.Data["ContactContextCleanupFailure"] = cleanup;
+            }
+
+            throw;
+        }
+    }
+
+    private async Task SubmitContactAsync(BrowserSession session, string culture)
+    {
+        var before = fixture.ContactClient.SubmissionCount;
+        var redirectedDocument = new TaskCompletionSource<IPage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnDomContentLoaded(object? sender, IPage page) => redirectedDocument.TrySetResult(page);
+        session.Page.DOMContentLoaded += OnDomContentLoaded;
+        try
+        {
+            var response = await session.Page.RunAndWaitForResponseAsync(
+                () => session.Page.Locator("#contact-us").EvaluateAsync("""
+                    form => {
+                        const fields = {
+                            FirstName: 'Browser',
+                            LastName: 'Contact',
+                            Email: 'synthetic-contact@example.test',
+                            Country: 'Thailand',
+                            Message: 'Synthetic contact measurement test.',
+                            'g-recaptcha-response': 'fixture-token',
+                        };
+                        for (const [name, value] of Object.entries(fields)) form.elements.namedItem(name).value = value;
+                        form.submit();
+                    }
+                    """),
+                candidate => candidate.Request.Method == "POST"
+                    && new Uri(candidate.Url).AbsolutePath.Equals("/Contact", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(302, response.Status);
+            Assert.Same(session.Page, await redirectedDocument.Task.WaitAsync(TimeSpan.FromSeconds(30)));
+            Assert.Equal(before + 1, fixture.ContactClient.SubmissionCount);
+            Assert.EndsWith($"/Contact?culture={culture}", session.Page.Url, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            session.Page.DOMContentLoaded -= OnDomContentLoaded;
+        }
+    }
 
     private async Task<BrowserSession> OpenFreshAsync(int width, bool submitPersistedQuotation = false)
     {
@@ -202,6 +368,7 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
     public IBrowser Browser { get; private set; } = null!;
     public Uri Origin { get; private set; } = null!;
     public RecordingQuotationClient QuotationClient { get; } = new();
+    public RecordingContactClient ContactClient { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -212,7 +379,7 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
         Origin = new Uri($"http://127.0.0.1:{port}");
 
         factory = new MeasurementTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), QuotationClient);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), QuotationClient, ContactClient);
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -240,6 +407,19 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
         }
     }
 
+    public sealed class RecordingContactClient : IContactClient
+    {
+        private int submissionCount;
+        public int SubmissionCount => Volatile.Read(ref submissionCount);
+
+        public Task<ContactSubmissionResult> SubmitAsync(
+            ContactSubmission submission, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref submissionCount);
+            return Task.FromResult(new ContactSubmissionResult(42, true, true));
+        }
+    }
+
     public sealed class RecordingQuotationClient : IQuotationClient
     {
         private int submissionCount;
@@ -253,7 +433,8 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
         }
     }
 
-    private sealed class MeasurementTestingWebApplicationFactory(string contentRoot, RecordingQuotationClient quotationClient)
+    private sealed class MeasurementTestingWebApplicationFactory(
+        string contentRoot, RecordingQuotationClient quotationClient, RecordingContactClient contactClient)
         : TestingWebApplicationFactory(contentRoot)
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -265,6 +446,10 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
                 services.AddSingleton<ICountryClient, StubCountryClient>();
                 services.RemoveAll<IQuotationClient>();
                 services.AddSingleton<IQuotationClient>(quotationClient);
+                services.RemoveAll<IContactClient>();
+                services.AddSingleton<IContactClient>(contactClient);
+                services.RemoveAll<IContactTrustedCustomerLoader>();
+                services.AddSingleton<IContactTrustedCustomerLoader, AnonymousContactCustomerLoader>();
                 services.RemoveAll<IQuotationFileClient>();
                 services.AddSingleton<IQuotationFileClient, StubQuotationFileClient>();
                 services.RemoveAll<IAntiBotVerifier>();
@@ -273,6 +458,13 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
                 services.AddSingleton<INotificationClient, StubNotificationClient>();
             });
         }
+    }
+
+    private sealed class AnonymousContactCustomerLoader : IContactTrustedCustomerLoader
+    {
+        public Task<ContactTrustedCustomerLoadResult> LoadAsync(
+            HttpContext context, IReadOnlyList<Country> countries, CancellationToken cancellationToken) =>
+            Task.FromResult(new ContactTrustedCustomerLoadResult(null, false, true));
     }
 
     private sealed class StubCountryClient : ICountryClient

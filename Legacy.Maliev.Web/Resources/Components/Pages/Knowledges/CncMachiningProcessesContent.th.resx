@@ -1,0 +1,174 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xms-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="assembly">
+            <xs:complexType>
+              <xs:attribute name="alias" type="xsd:string" />
+              <xs:attribute name="name" type="xsd:string" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" ns1:Ordinal="1" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="3-axis, 5-axis, EDM and grinding | MALIEV" xml:space="preserve">
+    <value>3 แกน 5 แกน EDM และการเจียร | MALIEV</value>
+  </data>
+  <data name="Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part." xml:space="preserve">
+    <value>เลือกกระบวนการจากปัญหาการเข้าถึง วัสดุ หรือข้อกำหนดผิวที่ต้องการแก้ไข พิจารณาการใช้หลายกระบวนการร่วมกัน และยืนยันแนวทางสำหรับชิ้นงานจริง</value>
+  </data>
+  <data name="3-axis, 5-axis, EDM and grinding" xml:space="preserve">
+    <value>3 แกน 5 แกน EDM และการเจียร</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>ในบทความนี้</value>
+  </data>
+  <data name="3-axis, indexed 3+2 or simultaneous 5-axis?" xml:space="preserve">
+    <value>3 แกน, 3+2 แบบจัดมุม หรือ 5 แกนพร้อมกัน?</value>
+  </data>
+  <data name="Wire EDM and sinker EDM: different access problems" xml:space="preserve">
+    <value>Wire EDM และ Sinker EDM: การเข้าถึงรูปทรงที่ต่างกัน</value>
+  </data>
+  <data name="Grinding: specify the surface that needs it" xml:space="preserve">
+    <value>การเจียระไน: ระบุผิวที่จำเป็นต้องควบคุม</value>
+  </data>
+  <data name="Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project." xml:space="preserve">
+    <value>ตัวอย่างใช้เพื่ออธิบายหลักการออกแบบ ควรยืนยันวัสดุ รุ่นแบบงาน และกระบวนการที่เสนอสำหรับโครงการจริง</value>
+  </data>
+  <data name="Select a machining approach around feature access and the relationships between surfaces. A three-axis operation moves along the linear axes with a fixed approach orientation for that setup. Additional setups can expose other faces. Indexed 3+2 machining uses rotary axes to establish an orientation, then machines with that orientation fixed. It can suit angled holes and features on several faces without continuous rotary cutting." xml:space="preserve">
+    <value>เลือกแนวทางผลิตจากการเข้าถึงฟีเจอร์และความสัมพันธ์ระหว่างผิว การตัดแบบ 3 แกนเคลื่อนตามแกนเชิงเส้น โดยมีทิศทางเข้ากัดคงที่ในการจับยึดนั้น สามารถเปลี่ยนการจับยึดเพื่อเปิดผิวอื่น ส่วน 3+2 แบบจัดมุมใช้แกนหมุนตั้งทิศทางก่อน แล้วตัดโดยคงทิศทางนั้นไว้ จึงอาจเหมาะกับรูเอียงและฟีเจอร์หลายด้านที่ไม่ต้องหมุนแกนต่อเนื่องขณะตัด</value>
+  </data>
+  <data name="Simultaneous five-axis machining changes tool orientation during the cut. This can help with complex continuous surfaces or access that fixed orientations cannot provide efficiently. It also adds motion, programming and collision-verification demands. More axes do not automatically make every part more accurate or economical. Ask which features drive the choice, whether a simpler route is possible and how critical relationships will be retained across setups. Process availability must be confirmed for the project." xml:space="preserve">
+    <value>การตัด 5 แกนพร้อมกันเปลี่ยนทิศทางเครื่องมือระหว่างตัด ช่วยกับผิวต่อเนื่องซับซ้อนหรือการเข้าถึงที่ทิศทางคงที่ทำได้ไม่สะดวก แต่เพิ่มความซับซ้อนด้านการเคลื่อนที่ โปรแกรม และการตรวจการชน จำนวนแกนมากขึ้นไม่ได้ทำให้ทุกชิ้นแม่นยำหรือประหยัดขึ้นโดยอัตโนมัติ ควรถามว่าฟีเจอร์ใดเป็นตัวกำหนดทางเลือก ใช้วิธีที่ง่ายกว่าได้หรือไม่ และจะรักษาความสัมพันธ์สำคัญเมื่อเปลี่ยนการจับยึดอย่างไร ต้องยืนยันความพร้อมของกระบวนการสำหรับโครงการจริง</value>
+  </data>
+  <data name="Illustrative example: holes sharing a fixed 20° approach may be candidates for an indexed orientation. A curved surface requiring continuously changing tool angles may justify simultaneous motion. Neither example establishes the final route: stock, fixture, holder clearance and machine motion limits still govern access." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: รูที่ใช้ทิศทางเข้ากัด 20° คงที่เหมือนกันอาจเหมาะกับการจัดมุม ส่วนผิวโค้งที่ต้องเปลี่ยนมุมเครื่องมือตลอดอาจมีเหตุผลให้ใช้การเคลื่อนที่พร้อมกัน ตัวอย่างนี้ยังไม่ได้กำหนดวิธีผลิตสุดท้าย เพราะวัตถุดิบ ฟิกซ์เจอร์ ระยะหลบหัวจับ และขีดจำกัดการเคลื่อนที่ยังเป็นเงื่อนไข</value>
+  </data>
+  <data name="Autodesk: positional 3+2 machining" xml:space="preserve">
+    <value>Autodesk: การกัดแบบจัดมุม 3+2</value>
+  </data>
+  <data name="Autodesk: indexed and simultaneous five-axis machining" xml:space="preserve">
+    <value>Autodesk: 5 แกนแบบจัดมุมและแบบพร้อมกัน</value>
+  </data>
+  <data name="Machining approach comparison" xml:space="preserve">
+    <value>ตารางเปรียบเทียบแนวทางการตัด</value>
+  </data>
+  <data name="Approach" xml:space="preserve">
+    <value>แนวทาง</value>
+  </data>
+  <data name="Tool orientation during cutting" xml:space="preserve">
+    <value>ทิศทางเครื่องมือขณะตัด</value>
+  </data>
+  <data name="Decision to review" xml:space="preserve">
+    <value>ประเด็นที่ต้องทบทวน</value>
+  </data>
+  <data name="3-axis" xml:space="preserve">
+    <value>3 แกน</value>
+  </data>
+  <data name="Fixed for the setup; linear motion creates the surface." xml:space="preserve">
+    <value>คงที่ในการจับยึดนั้น ใช้การเคลื่อนที่เชิงเส้นสร้างผิว</value>
+  </data>
+  <data name="Can each required surface be reached with suitable tool support?" xml:space="preserve">
+    <value>เข้าถึงผิวที่ต้องการโดยมีเครื่องมือรองรับอย่างเหมาะสมได้หรือไม่</value>
+  </data>
+  <data name="Indexed 3+2" xml:space="preserve">
+    <value>3+2 แบบจัดมุม</value>
+  </data>
+  <data name="Rotary axes establish the angle, then orientation stays fixed during the cut." xml:space="preserve">
+    <value>แกนหมุนตั้งมุมก่อน แล้วคงทิศทางระหว่างตัด</value>
+  </data>
+  <data name="Can a small set of fixed orientations reach the angled features?" xml:space="preserve">
+    <value>ใช้ทิศทางคงที่จำนวนไม่มากเข้าถึงฟีเจอร์เอียงได้หรือไม่</value>
+  </data>
+  <data name="Simultaneous 5-axis" xml:space="preserve">
+    <value>5 แกนพร้อมกัน</value>
+  </data>
+  <data name="Orientation changes along the cutting path." xml:space="preserve">
+    <value>เปลี่ยนทิศทางตามทางเดินตัด</value>
+  </data>
+  <data name="Does continuous orientation solve a specific access or surface requirement?" xml:space="preserve">
+    <value>การเปลี่ยนทิศทางต่อเนื่องช่วยแก้ข้อกำหนดการเข้าถึงหรือผิวใดโดยเฉพาะ</value>
+  </data>
+  <data name="Electrical discharge machining removes electrically conductive material through spark erosion. It can be considered for hard materials and details that are difficult to produce with rotating cutters. Wire EDM transports a wire electrode between guides; offsetting the guides can create tapered cuts. Sinker EDM uses a shaped electrode that advances into the workpiece. These tool arrangements create different geometry and access requirements." xml:space="preserve">
+    <value>การกัดเซาะด้วยไฟฟ้า หรือ EDM ใช้ประกายไฟกัดเนื้อวัสดุที่นำไฟฟ้า อาจใช้พิจารณาสำหรับวัสดุแข็งและรายละเอียดที่ผลิตด้วยดอกหมุนได้ยาก Wire EDM ส่งลวดอิเล็กโทรดระหว่างไกด์ และเลื่อนไกด์ต่างตำแหน่งเพื่อทำผิวเอียงได้ ส่วน Sinker EDM ใช้อิเล็กโทรดขึ้นรูปเคลื่อนเข้าสู่ชิ้นงาน รูปแบบเครื่องมือที่ต่างกันทำให้ข้อกำหนดรูปทรงและการเข้าถึงต่างกันด้วย</value>
+  </data>
+  <data name="As a geometric consequence, a through-profile with a usable wire path is a natural candidate for wire EDM, while a blind cavity can require evaluation of sinker EDM. Review threading access, retained support, flushing and finish requirements. Neither process means perfectly sharp internal corners or freedom from distortion. Ask whether milling plus a specialist finishing operation is more appropriate than routing the entire part through EDM; confirm availability and responsibility in the quotation." xml:space="preserve">
+    <value>ในเชิงรูปทรง โปรไฟล์ทะลุที่มีทางเดินลวดเหมาะแก่การพิจารณา Wire EDM ส่วนโพรงตันอาจต้องประเมิน Sinker EDM ต้องตรวจทางร้อยลวด ส่วนรองรับที่เหลือ การไหลล้างเศษ และข้อกำหนดผิว ทั้งสองวิธีไม่ได้หมายความว่าจะได้มุมในคมสนิทหรือไม่มีการเปลี่ยนรูป ควรหารือว่าการกัดหลักแล้วเก็บรายละเอียดด้วยกระบวนการเฉพาะเหมาะกว่าทำทั้งชิ้นด้วย EDM หรือไม่ พร้อมยืนยันความพร้อมและผู้รับผิดชอบไว้ในใบเสนอราคา</value>
+  </data>
+  <data name="Illustrative example: a closed rectangular opening through a conductive plate needs a wire-entry plan and a permitted corner radius. A similar outline stopping inside the plate is a blind cavity, so it presents a different electrode and access problem. These are process-selection examples, not service commitments." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: ช่องสี่เหลี่ยมปิดรอบที่ทะลุแผ่นนำไฟฟ้าต้องมีแผนเข้าลวดและรัศมีมุมที่อนุญาต หากเส้นรอบรูปเดียวกันหยุดอยู่ภายในแผ่น จะเป็นโพรงตันที่ต้องพิจารณาอิเล็กโทรดและการเข้าถึงอีกแบบ ตัวอย่างเหล่านี้ใช้เลือกแนวทางผลิต ไม่ใช่คำยืนยันการให้บริการ</value>
+  </data>
+  <data name="Makino: spark erosion and shaped sinker electrodes" xml:space="preserve">
+    <value>Makino: การกัดเซาะด้วยประกายไฟและอิเล็กโทรดขึ้นรูป</value>
+  </data>
+  <data name="Makino: wire guides, taper and machining considerations" xml:space="preserve">
+    <value>Makino: ไกด์ลวด ผิวเอียง และเงื่อนไขการผลิต</value>
+  </data>
+  <data name="Grinding can be considered when selected surfaces need demanding geometric control or surface texture. Distinguish surface roughness from flatness, parallelism, roundness or size: a low roughness value alone does not define those properties. Name the functional surface and its requirements rather than requesting precision grinding everywhere. The route must account for material condition, access, stock allowance and the sequence of any heat treatment." xml:space="preserve">
+    <value>อาจพิจารณาการเจียระไนเมื่อบางผิวต้องควบคุมรูปทรงหรือความหยาบอย่างเข้มงวด ต้องแยกความหยาบออกจากความเรียบ ความขนาน ความกลม หรือขนาด เพราะค่าความหยาบต่ำอย่างเดียวไม่ได้กำหนดคุณสมบัติเหล่านั้น ระบุผิวใช้งานและข้อกำหนดให้ชัด แทนการขอเจียระไนละเอียดทุกผิว โดยต้องวางแผนตามสภาพวัสดุ การเข้าถึง เนื้อเผื่อ และลำดับการอบชุบ</value>
+  </data>
+  <data name="Norton identifies wheel dressing, grit, coolant, operating parameters and machine condition as contributors to finish. Parameter changes can also introduce thermal damage, so finer appearance should not be treated as proof of an improved process. Ask whether machining alone meets the requirement, which faces need a later operation and how those faces will be inspected. Availability of grinding and any specialist inspection should be confirmed, not inferred from the design guide." xml:space="preserve">
+    <value>Norton ระบุว่าการแต่งหิน ขนาดเม็ดขัด น้ำหล่อเย็น พารามิเตอร์ และสภาพเครื่องล้วนมีผลต่อผิว การปรับพารามิเตอร์อาจสร้างความเสียหายจากความร้อนได้ด้วย ผิวที่ดูละเอียดขึ้นจึงไม่ใช่หลักฐานว่ากระบวนการดีขึ้นเสมอ ควรถามว่าการกัดหรืองานกลึงเพียงอย่างเดียวเพียงพอหรือไม่ ผิวใดต้องทำขั้นตอนต่อ และจะตรวจอย่างไร ต้องยืนยันความพร้อมของการเจียระไนและการตรวจเฉพาะทาง ไม่อนุมานจากคู่มือ</value>
+  </data>
+  <data name="Illustrative example: a sliding face might require Ra 0.8 µm together with a separate flatness requirement, while a non-mating outside face has a different finish. These are drawing choices to validate against the application, not guaranteed results for a particular material or process." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: ผิวเลื่อนอาจกำหนด Ra 0.8 µm พร้อมข้อกำหนดความเรียบแยกต่างหาก ขณะที่ผิวภายนอกที่ไม่ประกบกับชิ้นอื่นใช้ข้อกำหนดผิวอีกแบบ ค่านี้เป็นตัวอย่างการระบุแบบที่ต้องตรวจให้เหมาะกับงาน ไม่ใช่ผลที่รับประกันกับวัสดุหรือกระบวนการใด</value>
+  </data>
+  <data name="Norton Abrasives: grinding finish and thermal tradeoffs" xml:space="preserve">
+    <value>Norton Abrasives: ผิวเจียระไนและข้อแลกเปลี่ยนด้านความร้อน</value>
+  </data>
+  <data name="Back to the knowledge library" xml:space="preserve">
+    <value>กลับสู่คลังความรู้</value>
+  </data>
+  <data name="A turbine impeller is held on a tilted rotary table in a five-axis machining setup." xml:space="preserve"><value>ใบพัดถูกจับยึดบนโต๊ะหมุนที่เอียงในชุดงานกัดห้าแกน</value></data>
+  <data name="Additional axes can improve access; the actual route still depends on geometry and verification needs. Illustrative image." xml:space="preserve"><value>แกนเพิ่มเติมช่วยเรื่องการเข้าถึง แต่แนวทางผลิตจริงยังขึ้นอยู่กับรูปทรงและการตรวจสอบ ภาพประกอบ</value></data>
+  <data name="A fixed vertical tool approach beside an angled tool orientation to the same part." xml:space="preserve"><value>ทางเข้าเครื่องมือแนวดิ่งคงที่เทียบกับแนวเอียงสำหรับชิ้นงานเดียวกัน</value></data>
+  <data name="1: three-axis cutting uses linear X, Y and Z motion with a fixed approach orientation for that setup. 2: rotary positioning can expose angled features; indexed 3+2 holds the selected orientation during cutting, while simultaneous five-axis changes it during the cut. The sketch illustrates access only, not greater accuracy or confirmed machine availability." xml:space="preserve"><value>1: การกัดสามแกนเคลื่อนที่เชิงเส้น X, Y และ Z โดยคงทิศทางเข้ากัดในแต่ละการจับงาน 2: การจัดตำแหน่งด้วยแกนหมุนช่วยเข้าถึงส่วนที่เอียง โดย 3+2 คงมุมที่เลือกขณะกัด ส่วนห้าแกนพร้อมกันเปลี่ยนมุมระหว่างกัด ภาพอธิบายการเข้าถึงเท่านั้น ไม่ได้หมายถึงความแม่นยำที่สูงกว่าหรือยืนยันเครื่องจักรที่มีให้บริการ</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+</root>

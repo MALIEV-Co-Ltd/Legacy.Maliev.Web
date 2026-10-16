@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -145,4 +145,9 @@
   <data name="Compare the information needed for CNC machining, 3D printing, and 3D scanning before requesting a quotation." xml:space="preserve"><value>เปรียบเทียบข้อมูลที่ควรเตรียมก่อนขอราคางาน CNC พิมพ์ 3 มิติ และสแกน 3 มิติ</value></data>
   <data name="Manufacturing preparation guides" xml:space="preserve"><value>คู่มือเตรียมงานผลิต</value></data>
   <data name="Start with the result you need, then prepare the files and requirements that let an engineer choose a suitable process." xml:space="preserve"><value>เริ่มจากผลลัพธ์ที่ต้องการ แล้วเตรียมไฟล์และข้อกำหนดเพื่อให้วิศวกรเลือกกระบวนการที่เหมาะสม</value></data>
+  <data name="Turned, milled, printed and cast samples beside engineering drawings." xml:space="preserve"><value>ตัวอย่างงานกลึง กัด พิมพ์ และหล่อ วางข้างแบบงานวิศวกรรม</value></data>
+  <data name="The starting information depends on the part and the intended process. Illustrative image." xml:space="preserve"><value>ข้อมูลเริ่มต้นขึ้นอยู่กับชิ้นงานและกระบวนการที่ต้องการ ภาพประกอบ</value></data>
+  <data name="Three panels distinguish digital geometry, a dimensioned drawing and a physical sample." xml:space="preserve"><value>ภาพสามส่วนแยกข้อมูลจากโมเดลดิจิทัล แบบระบุขนาด และชิ้นงานจริง</value></data>
+  <data name="1: a model communicates nominal geometry and units. 2: a drawing specifies tolerances and requirements that shape alone cannot express. 3: an existing sample reveals actual condition, including wear or damage; it does not automatically establish the original nominal dimensions. Submit the inputs relevant to the required service and identify unresolved differences." xml:space="preserve"><value>1: โมเดลสื่อสารรูปทรงตามแบบและหน่วย 2: แบบระบุค่าความคลาดเคลื่อนและข้อกำหนดที่รูปทรงอย่างเดียวบอกไม่ได้ 3: ชิ้นงานเดิมแสดงสภาพจริง รวมถึงการสึกหรือความเสียหาย แต่ไม่ได้ยืนยันขนาดเดิมตามแบบโดยอัตโนมัติ ส่งข้อมูลให้เหมาะกับบริการและแจ้งจุดที่ยังไม่ตรงกัน</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
 </root>

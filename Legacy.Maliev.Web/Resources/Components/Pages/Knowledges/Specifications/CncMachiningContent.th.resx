@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,7 +117,8 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="CNC machining specifications | MALIEV" xml:space="preserve"><value>ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV</value></data><data name="CNC machining preparation" xml:space="preserve"><value>การเตรียมงาน CNC</value></data><data name="Files and requirements for CNC machining" xml:space="preserve"><value>ไฟล์และข้อกำหนดสำหรับงาน CNC</value></data><data name="A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe." xml:space="preserve"><value>โมเดล solid 3 มิติกำหนดรูปทรงและขนาดพิกัด ส่วนแบบงานสื่อสารข้อกำหนดที่รูปทรงเพียงอย่างเดียวระบุไม่ได้</value></data><data name="Provide the model" xml:space="preserve"><value>ส่งโมเดล</value></data><data name="STEP or another solid CAD format is preferred. Include separate files for each part and identify the revision." xml:space="preserve"><value>ควรใช้ STEP หรือ solid CAD แยกไฟล์แต่ละชิ้นและระบุรีวิชัน</value></data><data name="Add the drawing" xml:space="preserve"><value>แนบแบบงาน</value></data><data name="Call out tolerances, datums, threads, fits, surface finish, heat treatment, coatings, deburring, and inspection requirements." xml:space="preserve"><value>ระบุค่าความคลาดเคลื่อน datum เกลียว fit ผิว การอบชุบ การเคลือบ ลบคม และการตรวจสอบ</value></data><data name="Confirm production details" xml:space="preserve"><value>ยืนยันรายละเอียดการผลิต</value></data><data name="Specify material grade, quantity, repeat-order expectations, supplied components, packaging, and target date." xml:space="preserve"><value>ระบุเกรดวัสดุ จำนวน งานซ้ำ ชิ้นส่วนที่จัดหา บรรจุภัณฑ์ และวันที่ต้องการ</value></data><data name="View CNC machining service" xml:space="preserve"><value>ดูบริการ CNC</value></data>
+  <data name="CNC machining specifications | MALIEV" xml:space="preserve"><value>ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV</value></data>
+  <data name="A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe." xml:space="preserve"><value>โมเดล solid 3 มิติกำหนดรูปทรงและขนาดพิกัด ส่วนแบบงานสื่อสารข้อกำหนดที่รูปทรงเพียงอย่างเดียวระบุไม่ได้</value></data>
   <data name="CNC machining design guide" xml:space="preserve"><value>คู่มือออกแบบชิ้นงานสำหรับการผลิตด้วย CNC</value></data>
   <data name="Design decisions that make CNC parts easier to manufacture" xml:space="preserve"><value>ออกแบบชิ้นงาน CNC ให้ผลิตได้ตรงความต้องการ</value></data>
   <data name="Start with how the part must work: where it locates, what it carries, which surfaces mate, and what must be inspected. Then choose geometry and requirements that support that function. This guide explains common machining tradeoffs so you can prepare a clear quotation package and discuss useful changes before production." xml:space="preserve"><value>เริ่มจากหน้าที่ของชิ้นงานว่าใช้ส่วนใดกำหนดตำแหน่ง รับแรงอย่างไร ผิวใดประกบกัน และต้องตรวจสอบอะไร จากนั้นจึงกำหนดรูปทรงและข้อกำหนดให้สอดคล้องกัน คู่มือนี้อธิบายข้อแลกเปลี่ยนในการผลิต เพื่อช่วยเตรียมข้อมูลขอราคาให้ชัดเจนและหารือเรื่องการปรับแบบก่อนเริ่มผลิต</value></data>
@@ -210,6 +211,7 @@
   <data name="Aluminum Anodizers Council: finishing quotation information" xml:space="preserve"><value>Aluminum Anodizers Council: ข้อมูลสำหรับขอราคางานผิว</value></data>
   <data name="Bring the model and the functional requirements" xml:space="preserve"><value>ส่งโมเดลพร้อมข้อกำหนดการใช้งาน</value></data>
   <data name="Use the checklist to identify missing information before requesting a quotation. Highlight the features that drive fit, function or inspection so the proposed manufacturing route can be reviewed against the actual job." xml:space="preserve"><value>ใช้รายการตรวจสอบเพื่อเตรียมข้อมูลให้ครบก่อนขอราคา เน้นฟีเจอร์ที่สำคัญต่อการสวม การใช้งาน หรือการตรวจสอบ เพื่อประเมินแนวทางผลิตให้ตรงกับงานจริง</value></data>
+  <data name="View CNC machining service" xml:space="preserve"><value>ดูบริการ CNC</value></data>
   <data name="Review the quotation checklist" xml:space="preserve"><value>กลับไปดูรายการข้อมูลขอราคา</value></data>
   <data name="Two 24 mm walls with different thicknesses and height-to-thickness ratios." xml:space="preserve"><value>ผนังสูง 24 มม. สองชิ้นที่มีความหนาและอัตราส่วนความสูงต่อความหนาต่างกัน</value></data>
   <data name="Illustrative geometry: the same wall height with different thicknesses. The ratios compare designs; they do not set a machining limit." xml:space="preserve"><value>ตัวอย่างรูปทรง: ผนังสูงเท่ากันแต่หนาต่างกัน อัตราส่วนนี้ใช้เปรียบเทียบแบบ ไม่ใช่ขีดจำกัดการผลิต</value></data>
@@ -233,4 +235,31 @@
   <data name="Powder coating or painting" xml:space="preserve"><value>พ่นสีฝุ่นหรือทำสี</value></data>
   <data name="Define appearance, service exposure, coating thickness, and coverage. Identify threads, fits, grounding contacts, and other areas that require masking or a different treatment." xml:space="preserve"><value>กำหนดรูปลักษณ์ สภาพใช้งาน ความหนา และบริเวณที่ทำสี ระบุเกลียว ผิวสวม จุดสัมผัสทางไฟฟ้า และบริเวณที่ต้องปิดบังหรือใช้วิธีอื่น</value></data>
   <data name="Protolabs: examples of CNC post-processing methods" xml:space="preserve"><value>Protolabs: ตัวอย่างวิธีตกแต่งหลังงาน CNC</value></data>
+
+<data name="Continue reading" xml:space="preserve">
+    <value>อ่านต่อ</value>
+  </data>
+<data name="Learn how to calculate feeds and speeds" xml:space="preserve">
+    <value>เรียนรู้การคำนวณความเร็วตัดและอัตราป้อน</value>
+  </data>
+<data name="Choose tools for the operation" xml:space="preserve">
+    <value>เลือกเครื่องมือให้เหมาะกับงาน</value>
+  </data>
+<data name="Explore materials and applications" xml:space="preserve">
+    <value>ศึกษาวัสดุและการใช้งาน</value>
+  </data>
+
+<data name="Geometry, rigidity and workholding" xml:space="preserve"><value>รูปทรง ความแข็งแกร่ง และการจับยึด</value></data>
+<data name="Consider tool access and how the part is supported throughout the cut, not only the final shape. These design reviews connect thin features and deep pockets to fixturing, distortion and vibration." xml:space="preserve"><value>พิจารณาทางเข้าของเครื่องมือและการรองรับชิ้นงานตลอดการตัด ควบคู่กับรูปทรงสุดท้าย หัวข้อต่อไปนี้เชื่อมโยงผนังบางและโพรงลึกกับการจับยึด การบิดตัว และการสั่น</value></data>
+<data name="Holes, threads and tolerances" xml:space="preserve"><value>รู เกลียว และค่าความคลาดเคลื่อน</value></data>
+<data name="Specify the feature that the assembly actually needs. Hole depth, full-thread engagement, size, position and inspection conditions describe different requirements." xml:space="preserve"><value>ระบุสิ่งที่จุดประกอบต้องการจริง ความลึกรู ระยะเกลียวเต็ม ขนาด ตำแหน่ง และสภาพขณะตรวจวัด เป็นข้อกำหนดคนละด้านที่ควรกำหนดให้ชัดเจน</value></data>
+<data name="3-axis, 5-axis, EDM and grinding" xml:space="preserve"><value>3 แกน 5 แกน EDM และการเจียร</value></data>
+<data name="Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part." xml:space="preserve"><value>เลือกกระบวนการจากปัญหาการเข้าถึง วัสดุ หรือข้อกำหนดผิวที่ต้องการแก้ไข พิจารณาการใช้หลายกระบวนการร่วมกัน และยืนยันแนวทางสำหรับชิ้นงานจริง</value></data>
+<data name="Surface finishes and coatings" xml:space="preserve"><value>ผิวงานและการเคลือบ</value></data>
+<data name="Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion." xml:space="preserve"><value>วางแผนผิวงานที่จะส่งมอบและขนาดสุดท้ายก่อนผลิต ควรตกลงเรื่องชั้นเคลือบ การเตรียมผิว การปิดผิว และเกณฑ์ความสวยงามร่วมกันตั้งแต่ต้น</value></data>
+  <data name="An end mill cuts a shallow pocket in an aluminium block held in a machine vise." xml:space="preserve"><value>ดอกเอ็นมิลกัดโพรงตื้นบนแท่งอะลูมิเนียมที่จับยึดด้วยปากกาเครื่องจักร</value></data>
+  <data name="Review the functional faces, tool access and workholding as one machining plan. Illustrative image." xml:space="preserve"><value>ทบทวนผิวใช้งาน การเข้าถึงของเครื่องมือตัด และการจับยึดร่วมกันในแผนผลิต ภาพประกอบ</value></data>
+  <data name="Model, critical requirements and a supported machining setup are considered together." xml:space="preserve"><value>พิจารณาโมเดล ข้อกำหนดสำคัญ และการจับยึดขณะกัดร่วมกัน</value></data>
+  <data name="1: communicate nominal shape. 2: identify functional dimensions, datums, threads and finish requirements. 3: review how the stock is supported and how the cutter reaches the feature. This schematic is a planning concept, not a production fixture design." xml:space="preserve"><value>1: สื่อสารรูปทรงตามแบบ 2: ระบุขนาดที่สำคัญต่อการใช้งาน ดาตัม เกลียว และผิวงาน 3: ทบทวนการรองรับชิ้นงานและทางเข้าของเครื่องมือตัด ภาพนี้อธิบายแนวคิดการวางแผน ไม่ใช่แบบฟิกซ์เจอร์สำหรับผลิตจริง</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
 </root>

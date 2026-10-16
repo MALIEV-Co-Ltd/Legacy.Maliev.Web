@@ -1,9 +1,12 @@
 @inject IStringLocalizer<ThreeDimensionalPrintingContent> Localizer
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["3D printing preparation"]</p>
 <h1>@Localizer["Prepare a model for 3D printing"]</h1>
 <p class="docs-lead">@Localizer["A printable model needs more than a clean appearance on screen. Geometry, material, build direction, mating clearances, and finishing determine whether the result suits its intended use. Use this guide to explain the requirements that should be reviewed before quotation."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/printing.webp" srcset="/src/images/knowledge/photos/printing-small.webp 768w, /src/images/knowledge/photos/printing.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["An enclosed FDM printer builds an air duct with layer lines and sacrificial supports."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Build orientation changes support access, surface appearance and layer orientation relative to the applied load. Illustrative image."]</figcaption>
+</figure>
 <nav class="docs-toc" aria-label="@Localizer["On this page"]">
 <strong>@Localizer["On this page"]</strong>
 <ul>
@@ -53,6 +56,13 @@
 <p>
 <a href="https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135">@Localizer["Prusa: geometry, supports, and FFF orientation"]</a>
 </p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["The same L-shaped section is printed in two orientations. Layer planes are perpendicular to the vertical Z build direction; one orientation shows support below an overhang."]">
+        <img src="/src/images/knowledge/visual-print-orientation.svg" alt="@Localizer["The same L-shaped section is printed in two orientations. Layer planes are perpendicular to the vertical Z build direction; one orientation shows support below an overhang."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1 and 2: the same cross-section in two build orientations. Z indicates build direction; blue lines represent layers. 3: schematic support below an overhang. Support needs depend on process, material, geometry, and settings; no angle threshold or strength guarantee is implied."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-print-orientation.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
 </section>
 <section id="fit" class="docs-section">
 <h2>@Localizer["Separate layer height from tolerance"]</h2>
