@@ -281,13 +281,18 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class AuthorizationBoundaryStore(IInstantQuotationSessionStore inner, Control control)
+    private sealed class AuthorizationBoundaryStore(IInstantQuotationSessionStore inner, Control control,
+        SummaryInitialRequestDiagnostics diagnostics, IHttpContextAccessor accessor)
         : IInstantQuotationSessionStore
     {
         public Task<InstantQuotationSessionState> CreateAsync(string? owner, InstantQuotationOrderState request,
-            CancellationToken token) => inner.CreateAsync(owner, request, token);
+            CancellationToken token) => diagnostics.ForwardAsync(accessor, SummaryInitialRequestDiagnostics.Stage.SessionCreateEntered,
+                SummaryInitialRequestDiagnostics.Stage.SessionCreateReturned, SummaryInitialRequestDiagnostics.Stage.SessionCreateFailed,
+                () => inner.CreateAsync(owner, request, token));
         public Task<InstantQuotationSessionState?> GetAsync(string id, string? owner, CancellationToken token)
-            => inner.GetAsync(id, owner, token);
+            => diagnostics.ForwardAsync(accessor, SummaryInitialRequestDiagnostics.Stage.SessionReadEntered,
+                SummaryInitialRequestDiagnostics.Stage.SessionReadReturned, SummaryInitialRequestDiagnostics.Stage.SessionReadFailed,
+                () => inner.GetAsync(id, owner, token));
         public Task<bool> RemoveAsync(string id, string? owner, CancellationToken token)
             => inner.RemoveAsync(id, owner, token);
         public async Task<bool> PutAsync(InstantQuotationSessionState session, string? owner, CancellationToken token)
@@ -312,19 +317,37 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    private sealed class ObservedCountryClient(ICountryClient inner, SummaryInitialRequestDiagnostics diagnostics,
+        IHttpContextAccessor accessor) : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken token) =>
+            diagnostics.ForwardAsync(accessor, SummaryInitialRequestDiagnostics.Stage.CountryEntered,
+                SummaryInitialRequestDiagnostics.Stage.CountryReturned, SummaryInitialRequestDiagnostics.Stage.CountryFailed,
+                () => inner.GetCountriesAsync(token));
+    }
+
+    private sealed class Host(Control control, SummaryInitialRequestDiagnostics diagnostics) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<IStartupFilter>(diagnostics);
+                var originalCountry = services.Single(item => item.ServiceType == typeof(ICountryClient));
+                services.RemoveAll<ICountryClient>();
+                services.Add(new ServiceDescriptor(typeof(ICountryClient), provider =>
+                    new ObservedCountryClient((ICountryClient)(originalCountry.ImplementationInstance
+                        ?? originalCountry.ImplementationFactory?.Invoke(provider)
+                        ?? ActivatorUtilities.CreateInstance(provider, originalCountry.ImplementationType!)), diagnostics,
+                        provider.GetRequiredService<IHttpContextAccessor>()), originalCountry.Lifetime));
                 var originalStore = services.Single(item => item.ServiceType == typeof(IInstantQuotationSessionStore));
                 services.RemoveAll<IInstantQuotationSessionStore>();
                 services.Add(new ServiceDescriptor(typeof(IInstantQuotationSessionStore), provider =>
                     new AuthorizationBoundaryStore((IInstantQuotationSessionStore)(originalStore.ImplementationInstance
                         ?? originalStore.ImplementationFactory?.Invoke(provider)
-                        ?? ActivatorUtilities.CreateInstance(provider, originalStore.ImplementationType!)), control),
+                        ?? ActivatorUtilities.CreateInstance(provider, originalStore.ImplementationType!)), control, diagnostics,
+                        provider.GetRequiredService<IHttpContextAccessor>()),
                     originalStore.Lifetime));
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
@@ -339,6 +362,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
     {
         public Control Control { get; } = new();
         private Host Factory { get; }
+        private readonly SummaryInitialRequestDiagnostics initialRequest = new();
         private IPlaywright? playwright;
         private IBrowser? browser;
         private IBrowserContext? context;
@@ -358,7 +382,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator Breakdown => Page.Locator("[data-workflow-order-summary]");
         public ILocator Duration => Page.Locator("[data-workflow-selected-print-time]");
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
-        private Fixture() => Factory = new(Control);
+        private Fixture() => Factory = new(Control, initialRequest);
 
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
@@ -368,8 +392,10 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 var listener = new TcpListener(IPAddress.Loopback, 0);
                 listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
                 var origin = new Uri($"http://127.0.0.1:{port}");
+                fixture.initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.HostStartInvoked);
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+                fixture.initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.HostStartReturned);
                 fixture.playwright = await Playwright.CreateAsync();
                 fixture.browser = await fixture.playwright.Chromium.LaunchAsync(new() { Headless = true });
                 fixture.context = await fixture.browser.NewContextAsync(new()
@@ -476,7 +502,9 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             Page.Response += onResponse;
             try
             {
+                if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationInvoked);
                 var response = await navigate();
+                if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationReturned);
                 Assert.NotNull(response);
                 Assert.Equal(200, response.Status);
                 // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
@@ -484,6 +512,11 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 await Page.WaitForFunctionAsync(
                     "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
                     options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+            }
+            catch (Exception failure)
+            {
+                if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationFailed, failure: failure);
+                throw;
             }
             finally
             {
@@ -494,18 +527,19 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 timer.Stop();
                 lock (gate)
                 {
-                    output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
+                    SummaryInitialRequestDiagnostics.TryWrite(() => output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
                     {
                         phase,
                         elapsedMilliseconds = timer.ElapsedMilliseconds,
                         documentStatus,
+                        initialServer = phase == "initial" ? initialRequest.StopAndSnapshot() : null,
                         started,
                         finished,
                         failed,
                         omitted,
                         pendingCategories = pending.Values.GroupBy(value => value)
                             .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
-                    }));
+                    })));
                     pending.Clear();
                 }
             }
@@ -581,6 +615,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
 
         public async ValueTask DisposeAsync()
         {
+            SummaryInitialRequestDiagnostics.TryWrite(() => initialRequest.StopAndSnapshot());
             releaseNavigationControl.TrySetResult();
             Task[] pending;
             lock (navigationControlCompletions) pending = navigationControlCompletions.ToArray();
