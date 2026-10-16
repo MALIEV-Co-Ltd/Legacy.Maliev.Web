@@ -97,7 +97,7 @@ public sealed class PublishWorkflowPermissionContractTests
         var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
         var full = ValidationJob(source, "validate");
         Assert.Contains("    name: validate\n", full, StringComparison.Ordinal);
-        Assert.Contains("    needs: focused\n    if: always()\n", full, StringComparison.Ordinal);
+        Assert.Contains("    needs: [focused, resource_checkpoint_qualification]\n    if: always()\n", full, StringComparison.Ordinal);
         var firstStep = full.IndexOf("      - name:", StringComparison.Ordinal);
         var guard = full.IndexOf("      - name: Require successful focused validation", StringComparison.Ordinal);
         var checkout = full.IndexOf("      - name: Check out Web", StringComparison.Ordinal);
@@ -105,7 +105,8 @@ public sealed class PublishWorkflowPermissionContractTests
         Assert.True(guard >= 0 && checkout > guard);
         var body = full[guard..checkout];
         Assert.Contains("FOCUSED_RESULT: $" + "{{ needs.focused.result }}", body, StringComparison.Ordinal);
-        Assert.Contains("if [[ \"$FOCUSED_RESULT\" != \"success\" ]]; then", body, StringComparison.Ordinal);
+        Assert.Contains("if [[ \"$FOCUSED_RESULT\" != \"success\" || \"$RESOURCE_QUALIFICATION_RESULT\" != \"success\" ]]; then", body, StringComparison.Ordinal);
+        Assert.Contains("RESOURCE_QUALIFICATION_RESULT: $" + "{{ needs.resource_checkpoint_qualification.result }}", body, StringComparison.Ordinal);
         Assert.Contains("exit 1", body, StringComparison.Ordinal);
         Assert.DoesNotContain("continue-on-error", source, StringComparison.Ordinal);
     }

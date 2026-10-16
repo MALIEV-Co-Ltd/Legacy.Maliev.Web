@@ -1,0 +1,246 @@
+name: Retain hosted validation resource checkpoints
+description: Read-only bounded resource checkpoints on the current validation runner.
+inputs:
+  mode:
+    description: Full sampling or the exact hosted feature qualification.
+    required: false
+    default: full
+outputs:
+  baseline-artifact-id:
+    description: Artifact identity returned after the baseline was persisted.
+    value: ${{ steps.upload00.outputs.artifact-id }}
+runs:
+  using: composite
+  steps:
+    - name: Sample resource phase 00
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 0
+    - name: Preserve resource phase 00
+      id: upload00
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-00
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-00.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 01
+      if: inputs.mode != 'qualification-complete'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 1
+    - name: Preserve resource phase 01
+      id: upload01
+      if: inputs.mode != 'qualification-complete'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-01
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-01.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 02
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 2
+    - name: Preserve resource phase 02
+      id: upload02
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-02
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-02.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 03
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 3
+    - name: Preserve resource phase 03
+      id: upload03
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-03
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-03.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 04
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 4
+    - name: Preserve resource phase 04
+      id: upload04
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-04
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-04.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 05
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 5
+    - name: Preserve resource phase 05
+      id: upload05
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-05
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-05.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 06
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 6
+    - name: Preserve resource phase 06
+      id: upload06
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-06
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-06.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 07
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 7
+    - name: Preserve resource phase 07
+      id: upload07
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-07
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-07.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 08
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 8
+    - name: Preserve resource phase 08
+      id: upload08
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-08
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-08.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 09
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 9
+    - name: Preserve resource phase 09
+      id: upload09
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-09
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-09.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 10
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 10
+    - name: Preserve resource phase 10
+      id: upload10
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-10
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-10.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 11
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 11
+    - name: Preserve resource phase 11
+      id: upload11
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-11
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-11.json
+        retention-days: 7
+        if-no-files-found: error
+    - name: Sample resource phase 12
+      if: inputs.mode == 'full'
+      shell: bash
+      env:
+        RESOURCE_CHECKPOINT_SCOPE: ${{ inputs.mode }}
+      run: >-
+        exec python3 -B scripts/hosted-validation-resource-checkpoint.py sample
+        --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+        --phase 12
+    - name: Preserve resource phase 12
+      id: upload12
+      if: inputs.mode == 'full'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-${{ inputs.mode }}-12
+        path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.mode }}/sample-12.json
+        retention-days: 7
+        if-no-files-found: error

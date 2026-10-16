@@ -605,9 +605,101 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  resource_checkpoint_qualification:
+    name: resource checkpoint qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out Web
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify hosted resource checkpoint controls
+        shell: bash
+        run: python3 -B tests/HostedValidationResourceCheckpointTests.py
+      - name: Qualify completed background checkpoint and artifact context
+        id: completed_checkpoint
+        background: true
+        uses: ./.github/actions/validation-resource-checkpoints
+        with:
+          mode: qualification-complete
+      - name: Join the completed qualification
+        wait: completed_checkpoint
+      - name: Verify persisted baseline artifact identity
+        shell: bash
+        env:
+          BASELINE_ARTIFACT_ID: ${{ steps.completed_checkpoint.outputs.baseline-artifact-id }}
+        run: |
+          python3 - <<'PY'
+          import os
+          value = os.environ['BASELINE_ARTIFACT_ID']
+          assert value.isascii() and value.isdecimal() and 0 < int(value), 'Hosted background artifact context was not qualified'
+          PY
+      - name: Qualify cancelling a completed checkpoint
+        cancel: completed_checkpoint
+      - name: Qualify live background ownership
+        id: live_checkpoint
+        background: true
+        uses: ./.github/actions/validation-resource-checkpoints
+        with:
+          mode: qualification-live
+      - name: Observe the exact live qualification worker
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-live
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py wait
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+          --phase 1
+      - name: Stop the exact live qualification step
+        cancel: live_checkpoint
+      - name: Verify managed cancellation released the live worker before cleanup
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-live
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Verify the completed worker was released before cleanup
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-complete
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py released
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Verify completed qualification ownership released
+        if: always()
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-complete
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py cleanup
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Verify live qualification ownership released
+        if: always()
+        shell: bash
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: qualification-live
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py cleanup
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"
+      - name: Preserve feature qualification cleanup receipts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-validation-resource-qualification-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-complete/cleanup.json
+            ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-qualification-live/cleanup.json
+          retention-days: 7
+          if-no-files-found: error
+
   validate:
     name: validate
-    needs: focused
+    needs: [focused, resource_checkpoint_qualification]
     if: always()
     runs-on: ubuntu-latest
     env:
@@ -621,9 +713,10 @@ jobs:
         shell: bash
         env:
           FOCUSED_RESULT: ${{ needs.focused.result }}
+          RESOURCE_QUALIFICATION_RESULT: ${{ needs.resource_checkpoint_qualification.result }}
         run: |
-          if [[ "$FOCUSED_RESULT" != "success" ]]; then
-            echo 'Focused validation did not succeed; full validation is rejected.' >&2
+          if [[ "$FOCUSED_RESULT" != "success" || "$RESOURCE_QUALIFICATION_RESULT" != "success" ]]; then
+            echo 'Focused validation or resource checkpoint qualification did not succeed; full validation is rejected.' >&2
             exit 1
           fi
       - name: Check out Web
@@ -758,6 +851,16 @@ jobs:
         timeout-minutes: 1
         shell: bash
         run: '"$WEB_PRELIMINARY_PDF_VENV/bin/python" tests/PreliminaryPdfProofGuardTests.py'
+      - name: Verify hosted resource checkpoint controls
+        shell: bash
+        run: python3 -B tests/HostedValidationResourceCheckpointTests.py
+      - name: Retain bounded resource checkpoints during full validation
+        id: resource_checkpoints
+        background: true
+        timeout-minutes: 125
+        uses: ./.github/actions/validation-resource-checkpoints
+        with:
+          mode: full
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
         with:
@@ -892,6 +995,24 @@ jobs:
           [[ "$(cat -- "$proof_directory/.maliev-web-pdf-owned")" == "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}" ]]
           rm -rf -- "$proof_directory"
           [[ ! -e "$proof_directory" && ! -L "$proof_directory" ]]
+      - name: Stop the owned resource checkpoint step
+        cancel: resource_checkpoints
+      - name: Verify the owned resource checkpoint process exited
+        env:
+          RESOURCE_CHECKPOINT_SCOPE: full
+        if: always() && steps.focused_guard.outcome == 'success'
+        shell: bash
+        run: >-
+          exec python3 -B scripts/hosted-validation-resource-checkpoint.py cleanup
+          --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-full"
+      - name: Preserve resource checkpoint cleanup receipt
+        if: always() && steps.focused_guard.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-validation-resource-cleanup-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/cleanup.json
+          retention-days: 7
+          if-no-files-found: error
       - name: Preserve independent focused groups and full raw coverage evidence
         if: always() && steps.focused_guard.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
