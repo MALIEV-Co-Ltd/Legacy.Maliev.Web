@@ -4,9 +4,9 @@
 @{
 
     var requestCulture = Context.Features.Get<IRequestCultureFeature>();
-    var currentCulture = requestCulture?.RequestCulture.UICulture.Name ?? "th";
+    var currentCulture = requestCulture?.RequestCulture.UICulture.Name ?? CultureInfo.CurrentUICulture.Name;
     var supportedCultures = localizationOptions.Value.SupportedUICultures ?? Array.Empty<CultureInfo>();
-    var cultureItems = supportedCultures.Select(c => new SelectListItem { Value = c.Name, Text = c.DisplayName, Selected = c.Name == currentCulture }).ToList();
+    var cultureItems = supportedCultures.Select(c => new SelectListItem { Value = c.Name, Text = c.DisplayName, Selected = string.Equals(c.Name, currentCulture, StringComparison.OrdinalIgnoreCase) }).ToList();
     var returnUrl = string.IsNullOrEmpty(Context.Request.Path) ? "~/" : $"~{Context.Request.Path.Value}";
 }
 

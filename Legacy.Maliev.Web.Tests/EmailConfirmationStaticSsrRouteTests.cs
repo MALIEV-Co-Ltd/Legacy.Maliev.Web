@@ -1,21 +1,13 @@
 using System.Net;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
+public sealed class EmailConfirmationStaticSsrRouteTests
 {
-    private readonly WebApplicationFactory<Program> factory;
-
-    public EmailConfirmationStaticSsrRouteTests(TestingWebApplicationFactory factory)
-    {
-        this.factory = factory;
-    }
-
     public static IEnumerable<object?[]> MissingEmailCases()
     {
         foreach (var enabled in new[] { true, false })
@@ -35,12 +27,8 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
     public async Task MissingEmail_RendersLocalizedInvalidRequestWithoutAuthentication(bool enabled, string culture, string? email)
     {
         var authentication = new RecordingAuthenticationClient(false);
-        await using var host = ConfirmationHost(enabled, authentication);
-        using var client = host.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost"),
-        });
+        using var host = ConfirmationHost(enabled, authentication);
+        var client = host.Client;
         var url = $"/account/emailconfirmation?culture={culture}&token=confirmation-token";
         if (email is not null) url += "&email=" + Uri.EscapeDataString(email);
         using var response = await client.GetAsync(url);
@@ -65,12 +53,8 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
     public async Task ValidInput_PreservesAuthenticationResultAndExactArguments(bool enabled, bool accepted)
     {
         var authentication = new RecordingAuthenticationClient(accepted);
-        await using var host = ConfirmationHost(enabled, authentication);
-        using var client = host.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost"),
-        });
+        using var host = ConfirmationHost(enabled, authentication);
+        var client = host.Client;
         using var response = await client.GetAsync("/account/emailconfirmation?culture=en&email=user%40example.test&token=confirmation-token");
         Assert.Equal(1, authentication.Calls);
         Assert.Equal("user@example.test", authentication.Email);
@@ -87,8 +71,28 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
         }
     }
 
-    private WebApplicationFactory<Program> ConfirmationHost(bool enabled, RecordingAuthenticationClient authentication) =>
-        factory.WithWebHostBuilder(builder =>
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task MissingEmailAndToken_RendersLocalizedInvalidResultWithoutAuthentication(bool enabled, string culture)
+    {
+        var authentication = new RecordingAuthenticationClient(false);
+        using var host = ConfirmationHost(enabled, authentication);
+        using var response = await host.Client.GetAsync($"/account/emailconfirmation?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+        Assert.Equal(0, authentication.Calls);
+        Assert.Contains(culture == "th" ? "ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว" : "The confirmation link is invalid or expired.", source, StringComparison.Ordinal);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+    }
+
+    private static OwnedWebSurfaceHost ConfirmationHost(bool enabled, RecordingAuthenticationClient authentication) =>
+        OwnedWebSurfaceHost.Create(builder =>
         {
             builder.UseSetting("BlazorRouting:EmailConfirmation", enabled.ToString());
             builder.ConfigureServices(services =>
@@ -145,10 +149,8 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
     [Fact]
     public async Task DisabledEmailConfirmationRoute_UsesTheRetainedRazorFallback()
     {
-        await using var fallbackFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:EmailConfirmation", "false"));
-        using var client = fallbackFactory.CreateClient(
-            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
-        var source = await client.GetStringAsync(
+        using var host = OwnedWebSurfaceHost.Create(builder => builder.UseSetting("BlazorRouting:EmailConfirmation", "false"));
+        var source = await host.Client.GetStringAsync(
             "/account/emailconfirmation?email=user%40example.com&token=invalid-token&culture=en");
 
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);

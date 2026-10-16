@@ -509,6 +509,124 @@ public sealed class BrowserFailureEvidenceTests
         Assert.True(document.RootElement.GetProperty("Truncated").GetBoolean());
     }
 
+    [Fact]
+    public void FinishingNavigation_OnlyFixedPublicCategoriesLeaveTheCollector()
+    {
+        var origin = new Uri("http://127.0.0.1:1234");
+        Assert.Equal("/services/finishing-and-color", FinishingNavigationEvidence.Classify(origin,
+            "http://127.0.0.1:1234/services/finishing-and-color?private=secret"));
+        Assert.Equal("/dist/site.min.css", FinishingNavigationEvidence.Classify(origin,
+            "http://127.0.0.1:1234/dist/site.min.css?private=secret"));
+        Assert.Equal("<other>", FinishingNavigationEvidence.Classify(origin,
+            "http://127.0.0.1:1234/customer/private-file?token=secret"));
+        Assert.Equal("<third-party>", FinishingNavigationEvidence.Classify(origin,
+            "https://external.invalid/private-file?token=secret"));
+        Assert.Equal("<other>", FinishingNavigationEvidence.Classify(origin, "not a private URI"));
+    }
+
+    [Fact]
+    public void FinishingNavigation_RequestStorageCountersAndOutputAreBounded()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        using var evidence = new FinishingNavigationEvidence(page, new Uri("http://127.0.0.1:1234"));
+        for (var index = 0; index < 10020; index++)
+        {
+            evidence.RecordRequest(new object(), "private-type", "http://127.0.0.1:1234/private?token=secret", false);
+        }
+        var output = new List<string>();
+        evidence.Report(output.Add);
+        var json = Assert.Single(output);
+        Assert.True(json.Length <= 8192);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(32, document.RootElement.GetProperty("Pending").GetArrayLength());
+        Assert.True(document.RootElement.GetProperty("Truncated").GetBoolean());
+        Assert.Equal(9999, document.RootElement.GetProperty("Started").GetInt32());
+        Assert.DoesNotContain("private", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("?", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FinishingNavigation_LifecycleAndFaultsPreservePrimaryAndDetachDelegates()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        var evidence = new FinishingNavigationEvidence(page, new Uri("http://127.0.0.1:1234"));
+        proxy.Raise("DOMContentLoaded", page);
+        proxy.Raise("Load", page);
+        var output = new List<string>();
+        evidence.Report(output.Add);
+        using (var document = JsonDocument.Parse(Assert.Single(output)))
+        {
+            Assert.True(document.RootElement.GetProperty("DomContentLoaded").GetBoolean());
+            Assert.True(document.RootElement.GetProperty("Loaded").GetBoolean());
+        }
+        proxy.ThrowRemove = "Request";
+        proxy.RemoveFailures = 1;
+        var original = new TimeoutException("primary");
+        var actual = Record.Exception((Action)(() =>
+        {
+            try { throw original; }
+            catch
+            {
+                evidence.Report(_ => throw new InvalidOperationException("private-sink"));
+                throw;
+            }
+            finally { evidence.Dispose(); }
+        }));
+        Assert.Same(original, actual);
+        evidence.Dispose();
+        Assert.Empty(proxy.Handlers);
+
+        var failedPage = DispatchProxy.Create<IPage, EventProxy>();
+        var failedProxy = (EventProxy)(object)failedPage;
+        failedProxy.ThrowAdd = "Response";
+        failedProxy.ThrowAfterAdd = true;
+        using var failed = new FinishingNavigationEvidence(failedPage, new Uri("http://127.0.0.1:1234"));
+        Assert.Empty(failedProxy.Handlers);
+    }
+
+    [Fact]
+    public void FinishingNavigation_NewMainRequestCannotReuseThePreviousResponseOrCompletion()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        using var evidence = new FinishingNavigationEvidence(page, new Uri("http://127.0.0.1:1234"));
+        var output = new List<string>();
+        evidence.Report(output.Add);
+        using (var beforeRequest = JsonDocument.Parse(output[^1]))
+        {
+            Assert.Equal(JsonValueKind.Null, beforeRequest.RootElement.GetProperty("MainResponseStatus").ValueKind);
+            Assert.Equal(JsonValueKind.Null, beforeRequest.RootElement.GetProperty("MainResponseElapsedMs").ValueKind);
+            Assert.False(beforeRequest.RootElement.GetProperty("MainDocumentFinished").GetBoolean());
+        }
+        var first = DispatchProxy.Create<IRequest, EventProxy>();
+        evidence.RecordRequest(first, "document", "http://127.0.0.1:1234/services/finishing-and-color", true);
+        var response = DispatchProxy.Create<IResponse, EventProxy>();
+        var responseProxy = (EventProxy)(object)response;
+        responseProxy.ResponseRequest = first;
+        responseProxy.ResponseStatus = 302;
+        proxy.Raise("Response", response);
+        proxy.Raise("RequestFinished", first);
+        evidence.Report(output.Add);
+        using (var firstResponse = JsonDocument.Parse(output[^1]))
+        {
+            Assert.Equal(302, firstResponse.RootElement.GetProperty("MainResponseStatus").GetInt32());
+            Assert.Equal(JsonValueKind.Number, firstResponse.RootElement.GetProperty("MainResponseElapsedMs").ValueKind);
+            Assert.True(firstResponse.RootElement.GetProperty("MainDocumentFinished").GetBoolean());
+        }
+        var second = DispatchProxy.Create<IRequest, EventProxy>();
+        evidence.RecordRequest(second, "document", "http://127.0.0.1:1234/services/finishing-and-color", true);
+        // A late old-generation response/completion must not repopulate the new generation.
+        proxy.Raise("Response", response);
+        proxy.Raise("RequestFinished", first);
+        evidence.Report(output.Add);
+        using var secondRequest = JsonDocument.Parse(output[^1]);
+        Assert.Equal(JsonValueKind.Null, secondRequest.RootElement.GetProperty("MainResponseStatus").ValueKind);
+        Assert.Equal(JsonValueKind.Null, secondRequest.RootElement.GetProperty("MainResponseElapsedMs").ValueKind);
+        Assert.False(secondRequest.RootElement.GetProperty("MainDocumentFinished").GetBoolean());
+    }
+
     // No browser or SDK process is created: only interface event accessors are emulated.
     public class EventProxy : DispatchProxy
     {
@@ -525,6 +643,8 @@ public sealed class BrowserFailureEvidenceTests
         internal bool ThrowAfterRemove;
         internal Func<Task> OnClose = () => Task.CompletedTask;
         internal int CloseCalls;
+        internal IRequest? ResponseRequest;
+        internal int ResponseStatus = 200;
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             var name = targetMethod!.Name;
@@ -551,6 +671,8 @@ public sealed class BrowserFailureEvidenceTests
                 if (fail) throw new InvalidOperationException("private-remove-fault");
                 return null;
             }
+            if (name == "get_Request") return ResponseRequest;
+            if (name == "get_Status") return ResponseStatus;
             if (name == "get_Url") return Url;
             if (name == "get_Text") return Text;
             if (name == "get_Type") return Type;
