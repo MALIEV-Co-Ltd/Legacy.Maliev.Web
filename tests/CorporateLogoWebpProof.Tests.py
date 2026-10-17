@@ -345,6 +345,83 @@ class CorporateLogoProofControls(unittest.TestCase):
                 proof.require_static_lossless_webp(animated)
 
 
+    def gif_with_xmp(self, image, packet):
+        baseline = encoded(image, "GIF")
+        extension = b"\x21\xff\x0bXMP DataXMP" + packet + proof.GIF_XMP_TRAILER
+        return baseline[:-1] + extension + baseline[-1:]
+
+    def test_raw_gif_xmp_is_retained_despite_codec_info_blindspot(self):
+        packet = b'<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/">retained</x:xmpmeta><?xpacket end="w"?>'
+        with Image.new("RGB", (2, 2), "#123456") as image, tempfile.TemporaryDirectory() as temp:
+            source = self.gif_with_xmp(image, packet)
+            self.assertEqual(packet, proof.gif_raw_xmp(source))
+            with Image.open(io.BytesIO(source)) as decoded:
+                decoded.load()
+                self.assertNotIn("xmp", decoded.info)
+            target = Path(temp) / "proof.webp"
+            metadata, derived = proof.convert_static(source, target)
+            self.assertEqual(proof.sha256(packet), metadata["xmp_sha256"])
+            self.assertEqual(metadata["xmp_sha256"], derived["xmp_sha256"])
+            with Image.open(target) as decoded:
+                decoded.load()
+                self.assertEqual(packet, decoded.info["xmp"])
+
+    def test_encoder_cannot_drop_raw_gif_xmp(self):
+        packet = b'<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/">retain</x:xmpmeta><?xpacket end="w"?>'
+        with Image.new("RGB", (2, 2), "#123456") as image, tempfile.TemporaryDirectory() as temp:
+            source = self.gif_with_xmp(image, packet)
+            missing = encoded(image, "WEBP", lossless=True, exact=True)
+            with mock.patch.object(Image.Image, "save", lambda self, path, **kwargs: Path(path).write_bytes(missing)):
+                with self.assertRaisesRegex(ValueError, "derived-xmp"):
+                    proof.convert_static(source, Path(temp) / "proof.webp")
+
+    def test_raw_gif_xmp_rejects_malformed_duplicate_and_incomplete_containers(self):
+        packet = b'<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/">test</x:xmpmeta><?xpacket end="w"?>'
+        with Image.new("RGB", (2, 2), "red") as image:
+            source = self.gif_with_xmp(image, packet)
+            extension = b"\x21\xff\x0bXMP DataXMP" + packet + proof.GIF_XMP_TRAILER
+            changed = bytearray(source)
+            changed[-3] ^= 1
+            for value in (source[:-1], source + b"extra", bytes(changed),
+                          source[:-1] + extension + source[-1:], b"GIF89a", source[:20]):
+                with self.subTest(size=len(value)), self.assertRaises(ValueError):
+                    proof.gif_raw_xmp(value)
+
+    def test_reviewed_metadata_pins_cover_exactly_all_eighteen_original_sources(self):
+        import json
+        inputs = json.loads((ROOT / "tests/corporate-logo-webp-inputs.json").read_text(encoding="utf-8"))
+        self.assertEqual(18, len(proof.REVIEWED_SOURCE_METADATA))
+        self.assertEqual({row["source_git_blob"] for row in inputs["assets"]},
+                         set(proof.REVIEWED_SOURCE_METADATA))
+        self.assertEqual("68a156909ed175fbf2170fbffafc478f3a2747cd240b5adabd3b8f9e8730f747",
+                         proof.REVIEWED_SOURCE_METADATA["9bc957bdd8b1d79ad91487b560f76f18c2ebd85a"]["xmp"])
+
+    def test_source_metadata_binding_rejects_empty_decoder_fields_and_changed_packet(self):
+        data = b"synthetic original binding control"
+        pins = {proof.git_blob(data): {"icc": None, "exif": None, "xmp": proof.sha256(b"must remain")}}
+        with mock.patch.dict(proof.REVIEWED_SOURCE_METADATA, pins):
+            proof.require_reviewed_metadata(data, b"", b"", b"must remain")
+            for packet in (b"", b"changed"):
+                with self.subTest(packet=packet), self.assertRaisesRegex(ValueError, "reviewed-source-metadata-binding"):
+                    proof.require_reviewed_metadata(data, b"", b"", packet)
+
+    def test_encoder_cannot_drop_nonorientation_exif(self):
+        with Image.new("RGB", (2, 2), "#123456") as image, tempfile.TemporaryDirectory() as temp:
+            exif = Image.Exif()
+            exif[270] = "description must remain"
+            source = encoded(image, "JPEG", exif=exif)
+            with Image.open(io.BytesIO(source)) as original, original.convert("RGBA") as rgba:
+                missing = encoded(rgba, "WEBP", lossless=True, exact=True)
+            with mock.patch.object(Image.Image, "save", lambda self, path, **kwargs: Path(path).write_bytes(missing)):
+                with self.assertRaisesRegex(ValueError, "derived-exif"):
+                    proof.convert_static(source, Path(temp) / "proof.webp")
+
+    def test_exif_container_prefix_normalizes_without_losing_tiff_bytes(self):
+        tiff = b"II\x2a\x00exact opaque TIFF payload"
+        self.assertEqual(tiff, proof.normalized_exif(b"Exif\x00\x00" + tiff))
+        self.assertEqual(tiff, proof.normalized_exif(tiff))
+
+
 if __name__ == "__main__":
     if os.environ.get("LOGO_WEBP_VENV"):
         proof.owned_process_ledger("controls", 95)

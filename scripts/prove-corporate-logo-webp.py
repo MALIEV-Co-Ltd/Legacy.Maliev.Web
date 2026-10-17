@@ -398,6 +398,181 @@ def require_supported_png(data):
     return header, None
 
 
+
+# Independently audited original containers, bound to all eighteen exact source blobs.
+# Hashes cover ICC bytes, normalized TIFF EXIF bytes and opaque XMP packet bytes.
+REVIEWED_SOURCE_METADATA = {
+    "a2a15c062fd2570efff342b5003a11e4af2d3841": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "70266937619a2e576a31788d07de41987746012f": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "1aed2161ba8f692ef2a523adb12f96b71e84fc69": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "69544724a554792184b5f39d4835a6e702d4ce0c": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "1d6dd48ac11b710ec0f219bb2c87089a69987f03": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "7e58f285ae59caac385d907beff3bfa4e0f61f58": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "9bc957bdd8b1d79ad91487b560f76f18c2ebd85a": {
+        "icc": None,
+        "exif": None,
+        "xmp": "68a156909ed175fbf2170fbffafc478f3a2747cd240b5adabd3b8f9e8730f747"
+    },
+    "4d6ddca173368afa88b563226c43c4939c4fff7d": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "e4110763d9a1e99b7d0cc58c4d11fd89c4646f78": {
+        "icc": None,
+        "exif": None,
+        "xmp": "e6547672b91e705fcb5caca2ba3b30257450c5d407aafab4a9a9b2b53948426b"
+    },
+    "2f84b3389a5333b2227e655b24ff4f5e52bd074f": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "94019818b17505ddfa0b54c58d0ea34d4b7e2fbf": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "4b72a122cab586f746c110ebad99f8d24acc26de": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "531c23eb7188f44b6c0ce94da12207c271f3bd0a": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "221d22c268dd45d3841b81d6b546d28e824aa802": {
+        "icc": "2b3aa1645779a9e634744faf9b01e9102b0c9b88fd6deced7934df86b949af7e",
+        "exif": "da6a3fe58677f0675bc7cc100259fdaad00dfb9c5dadf389c6c7c556bb87977c",
+        "xmp": "3c61604e6a1c945b0f8035dd3369fa482a01826ca5eeb60bd18f5932bef7d7a6"
+    },
+    "63e658b3739da162d41c61ff16ba7f8a5b3aea65": {
+        "icc": None,
+        "exif": None,
+        "xmp": "092bcb45c4625a2d7d338716afec99543833c1dfd714b5b8e2830867b1dc940d"
+    },
+    "bd72b4b00d8d65848241919f517eb692eaa886f4": {
+        "icc": None,
+        "exif": None,
+        "xmp": None
+    },
+    "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30": {
+        "icc": "RAW_PNG_ICC",
+        "exif": None,
+        "xmp": None
+    },
+    "6d25ffb99bd420f594f5b091b9817e0789a7f879": {
+        "icc": None,
+        "exif": None,
+        "xmp": "2356ee01a95e670bce30019a34bae3f29da74c98e8c28ace9ef991bf12b5cd87"
+    }
+}
+GIF_XMP_TRAILER = b"\x01" + bytes(range(255, -1, -1)) + b"\x00"
+
+
+def normalized_exif(data):
+    return data[6:] if data.startswith(b"Exif\x00\x00") else data
+
+
+def gif_raw_xmp(data):
+    """Read Adobe XMP-in-GIF raw packet, retaining its non-subblocked bytes."""
+    require(13 <= len(data) <= MAX_SOURCE_BYTES and data[:6] in (b"GIF87a", b"GIF89a"),
+            "source-gif-header")
+    offset = 13 + (3 * (2 ** ((data[10] & 7) + 1)) if data[10] & 128 else 0)
+    require(offset <= len(data), "source-gif-color-table")
+    frames, blocks, packet = 0, 0, None
+
+    def skip_subblocks(position):
+        count = 0
+        while True:
+            require(position < len(data) and count < 4096, "source-gif-subblock-bound")
+            size = data[position]
+            position += 1
+            if size == 0:
+                return position
+            require(position + size <= len(data), "source-gif-subblock-size")
+            position += size
+            count += 1
+
+    while offset < len(data):
+        require(blocks < 4096, "source-gif-block-bound")
+        blocks += 1
+        kind = data[offset]
+        offset += 1
+        if kind == 0x3b:
+            require(offset == len(data), "source-gif-trailing-data")
+            require(frames == 1, "unsupported-animation")
+            return packet or b""
+        if kind == 0x2c:
+            require(offset + 9 <= len(data), "source-gif-frame-header")
+            packed = data[offset + 8]
+            offset += 9
+            if packed & 128:
+                offset += 3 * (2 ** ((packed & 7) + 1))
+            require(offset < len(data) and 2 <= data[offset] <= 8, "source-gif-frame-data")
+            offset = skip_subblocks(offset + 1)
+            frames += 1
+            require(frames <= 1, "unsupported-animation")
+        elif kind == 0x21:
+            require(offset < len(data), "source-gif-extension")
+            label = data[offset]
+            offset += 1
+            start = offset
+            end = skip_subblocks(start)
+            if label == 0xff:
+                require(start + 12 <= len(data) and data[start] == 11, "source-gif-application")
+                identifier = data[start + 1:start + 12]
+                if identifier == b"XMP DataXMP":
+                    require(packet is None, "source-gif-duplicate-xmp")
+                    payload = data[start + 12:end]
+                    require(payload.endswith(GIF_XMP_TRAILER), "source-gif-xmp-trailer")
+                    packet = payload[:-len(GIF_XMP_TRAILER)]
+                    require(0 < len(packet) <= 262_144, "source-gif-xmp-bound")
+            offset = end
+        else:
+            raise ValueError("source-gif-block-kind")
+    raise ValueError("source-gif-missing-trailer")
+
+
+def require_reviewed_metadata(data, icc, exif, xmp):
+    expected = REVIEWED_SOURCE_METADATA.get(git_blob(data))
+    if expected is None:
+        return
+    actual = {"icc": icc, "exif": normalized_exif(exif), "xmp": xmp}
+    for name, value in actual.items():
+        pin = expected[name]
+        if pin == "RAW_PNG_ICC":
+            require(value and value == decode_png_icc(data), "reviewed-source-icc-preservation")
+        else:
+            require((sha256(value) if value else None) == pin, "reviewed-source-metadata-binding")
+
+
 def inspect_static(data):
     png_header, color_policy = require_supported_png(data)
     with Image.open(io.BytesIO(data), formats=("PNG", "JPEG", "GIF")) as image:
@@ -422,6 +597,11 @@ def inspect_static(data):
         if isinstance(xmp, str):
             xmp = xmp.encode("utf-8")
         require(isinstance(xmp, bytes) and len(xmp) <= 262_144, "xmp-bound")
+        if image.format == "GIF":
+            raw_xmp = gif_raw_xmp(data)
+            require(not xmp or xmp == raw_xmp, "source-gif-codec-xmp-mismatch")
+            xmp = raw_xmp
+        require_reviewed_metadata(data, icc, exif, xmp)
         source_icc = icc
         disposition = {"kind": "SOURCE_ICC_BYTES_UNCHANGED", "source_git_blob": git_blob(data)}
         if color_policy == "PNG_SRGB_INTENT0_TO_PINNED_SRGB2014_ICC":
@@ -446,6 +626,8 @@ def inspect_static(data):
             "format": image.format, "source_mode": image.mode, "width": image.width, "height": image.height,
             "frames": frames, "loop": None, "durations_ms": [0], "orientation": orientation,
             "icc_sha256": sha256(source_icc), "derived_icc_sha256": sha256(icc),
+            "exif_sha256": sha256(normalized_exif(exif)), "exif_bytes": len(normalized_exif(exif)),
+            "xmp_sha256": sha256(xmp), "xmp_bytes": len(xmp),
             "metadataDisposition": disposition, "decoded_rgba_sha256": sha256(pixels),
             "alpha_sha256": sha256(rgba.getchannel("A").tobytes()),
         }, rgba, {"icc_profile": icc, "exif": exif, "xmp": xmp}
@@ -485,14 +667,20 @@ def convert_static(data, target):
         # Pillow exposes a decoder loop default even for static files; absence of ANIM/ANMF
         # chunks above, rather than that synthetic info field, proves no timing/loop data.
         require(decoded.size == (source["width"], source["height"]), "derived-dimensions")
+        decoded.load()
         require(decoded.info.get("icc_profile", b"") == metadata["icc_profile"], "derived-icc")
+        require(normalized_exif(decoded.info.get("exif", b"")) == normalized_exif(metadata["exif"]),
+                "derived-exif")
         require(decoded.getexif().get(274, 1) == source["orientation"], "derived-orientation")
         require(decoded.info.get("xmp", b"") == metadata["xmp"], "derived-xmp")
         with decoded.convert("RGBA") as pixels:
             require(sha256(pixels.tobytes()) == source["decoded_rgba_sha256"], "derived-pixel-equivalence")
             require(sha256(pixels.getchannel("A").tobytes()) == source["alpha_sha256"], "derived-alpha-equivalence")
     return source, {"sha256": sha256(result), "git_blob": git_blob(result), "bytes": len(result),
-                    "icc_sha256": sha256(metadata["icc_profile"]), "metadataDisposition": source["metadataDisposition"]}
+                    "icc_sha256": sha256(metadata["icc_profile"]),
+                    "exif_sha256": sha256(normalized_exif(metadata["exif"])),
+                    "xmp_sha256": sha256(metadata["xmp"]),
+                    "metadataDisposition": source["metadataDisposition"]}
 
 
 def contact_sheet(root, assets, payload):
@@ -564,6 +752,8 @@ def main():
                 and len({asset["derived_path"] for asset in assets}) == 18, "unique-assets")
         receipt.update(input_sha256=sha256(raw_manifest), input_git_blob=git_blob(raw_manifest),
                        source_candidate=manifest["source_candidate"], asset_count=18)
+        require({asset["source_git_blob"] for asset in assets} == set(REVIEWED_SOURCE_METADATA),
+                "reviewed-source-metadata-coverage")
         inventory, rejected = [], []
         for asset in assets:
             data = read_source(root, asset)
@@ -592,7 +782,7 @@ def main():
                 require(metadata["decoded_rgba_sha256"] == source_row["decoded_rgba_sha256"], "source-reread-identity")
                 total += derived["bytes"]
                 require(total <= MAX_TOTAL_DERIVED, "total-derived-bound")
-                result.append(dict(source_row, derived=derived, equivalence="EXACT_RGBA_ALPHA_DIMENSIONS_ORIENTATION_XMP_WITH_EXPLICIT_ICC_DISPOSITION"))
+                result.append(dict(source_row, derived=derived, equivalence="EXACT_RGBA_ALPHA_DIMENSIONS_ORIENTATION_NORMALIZED_EXIF_XMP_WITH_EXPLICIT_ICC_DISPOSITION"))
             profile_directory = payload / "color-profile-proof"
             profile_directory.mkdir()
             (profile_directory / "sRGB2014.icc").write_bytes(load_srgb_profile())
