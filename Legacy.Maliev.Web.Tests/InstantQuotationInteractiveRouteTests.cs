@@ -15,14 +15,38 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationInteractiveRouteTests : IDisposable
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
+    private readonly OwnedWebSurfaceResources resources = new();
+    private WebApplicationFactory<Program>? ownedParent;
+    private WebApplicationFactory<Program>? ownedFactory;
     private readonly HttpClient client;
 
-    public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
+    internal WebApplicationFactory<Program> LifetimeParent =>
+        ownedParent ?? throw new ObjectDisposedException(nameof(InstantQuotationInteractiveRouteTests));
+
+    internal WebApplicationFactory<Program> LifetimeFactory =>
+        ownedFactory ?? throw new ObjectDisposedException(nameof(InstantQuotationInteractiveRouteTests));
+
+    internal HttpClient LifetimeClient => ownedParent is not null
+        ? client : throw new ObjectDisposedException(nameof(InstantQuotationInteractiveRouteTests));
+
+    internal int RemainingOwnedResources => resources.Count;
+
+    public InstantQuotationInteractiveRouteTests()
+        : this(null)
     {
-        client = factory.WithWebHostBuilder(builder =>
+    }
+
+    internal InstantQuotationInteractiveRouteTests(
+        Action<WebApplicationFactory<Program>, WebApplicationFactory<Program>>? beforeClient)
+    {
+        try
+        {
+            ownedParent = resources.Own(new WebApplicationFactory<Program>());
+            var factory = ownedParent;
+            ownedFactory = resources.Own(factory.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Testing");
                 builder.UseSetting("Recaptcha:ProjectId", "test-project");
@@ -32,12 +56,32 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
                     services.RemoveAll<ICountryClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
                 });
-            })
-            .CreateClient(new WebApplicationFactoryClientOptions
+            }));
+            beforeClient?.Invoke(ownedParent, ownedFactory);
+            client = resources.Own(ownedFactory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 BaseAddress = new Uri("https://localhost"),
-            });
+            }));
+        }
+        catch (Exception original)
+        {
+            resources.ReleasePreserving(original);
+            throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            resources.Dispose();
+        }
+        finally
+        {
+            ownedParent = null;
+            ownedFactory = null;
+        }
     }
 
     [Fact]

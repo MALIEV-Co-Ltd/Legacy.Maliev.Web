@@ -3,13 +3,21 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<TestingWebApplicationFactory>
+public sealed class PublicContactChannelAnalyticsMigrationTests : IAsyncLifetime
 {
-    private readonly WebApplicationFactory<Program> factory;
+    private OwnedWebSurfaceParent? ownedParent = new();
+    private OwnedWebSurfaceParent factory => ownedParent ?? throw new ObjectDisposedException(nameof(PublicContactChannelAnalyticsMigrationTests));
 
-    public PublicContactChannelAnalyticsMigrationTests(TestingWebApplicationFactory factory)
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
     {
-        this.factory = factory;
+        var parent = ownedParent;
+        try
+        {
+            if (parent is not null) await parent.DisposeAsync();
+        }
+        finally { ownedParent = null; }
     }
 
     [Fact]
@@ -68,7 +76,7 @@ public sealed class PublicContactChannelAnalyticsMigrationTests : IClassFixture<
         Assert.DoesNotContain("eventName: 'facebook_click'", source, StringComparison.Ordinal);
         Assert.Contains("event: contact.eventName", source, StringComparison.Ordinal);
         Assert.Contains("event: 'maliev_review_link_click'", source, StringComparison.Ordinal);
-        Assert.Contains("path === '/ti/p/@maliev'", source, StringComparison.Ordinal);
+        Assert.Contains("normalizeLineToken(url) === 'maliev'", source, StringComparison.Ordinal);
         Assert.DoesNotContain("path === '/ti/p/@@maliev'", source, StringComparison.Ordinal);
         Assert.Contains("event.preventDefault()", source, StringComparison.Ordinal);
         Assert.Contains("window.setTimeout", source, StringComparison.Ordinal);

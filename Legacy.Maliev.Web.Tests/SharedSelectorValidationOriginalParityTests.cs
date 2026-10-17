@@ -9,6 +9,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -141,6 +147,85 @@ public sealed class SharedSelectorValidationOriginalParityTests(TestingWebApplic
         Assert.Equal(culture == "th" ? "กรุณาเลือกประเทศ" : "Please select your country", error.Groups["text"].Value.Trim());
         Assert.Equal(0, boundary.Submissions);
         Assert.Equal(0, boundary.AntiBotChecks);
+    }
+
+    [Theory]
+    [InlineData("en", "th", null, false, "en")]
+    [InlineData("th", "en", null, false, "th")]
+    [InlineData("th", "en", "en", false, "en")]
+    [InlineData("en", "th", "th", false, "th")]
+    [InlineData("en", "th", "en", true, "EN")]
+    [InlineData("th", "en", "th", true, "TH")]
+    [InlineData("en", "th", null, true, "EN")]
+    [InlineData("fr", "en", null, false, null)]
+    public async Task RetainedFooter_ActualRazorPartialPreservesOriginalCultureAndPlainSelect(
+        string uiCulture, string culture, string? featureCulture, bool upperNames, string? expected)
+    {
+        // Qualifies the retained partial only; default live-footer delivery is a separate obligation.
+        await using var parent = new OwnedWebSurfaceParent();
+        await using var host = parent.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Home", "false");
+            builder.ConfigureServices(services => services.PostConfigure<RequestLocalizationOptions>(options =>
+                options.SupportedUICultures = upperNames
+                    ? [new UpperCulture("en"), new UpperCulture("th")]
+                    : [CultureInfo.GetCultureInfo("en"), CultureInfo.GetCultureInfo("th")]));
+        });
+        using var scope = host.Services.CreateScope();
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("localhost");
+        context.Request.Path = "/contact";
+        if (featureCulture is not null)
+            context.Features.Set<IRequestCultureFeature>(new RequestCultureFeature(new RequestCulture(featureCulture), null));
+        var previousUi = CultureInfo.CurrentUICulture;
+        var previous = CultureInfo.CurrentCulture;
+        var accessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+        var previousContext = accessor.HttpContext;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            accessor.HttpContext = context;
+            var endpoint = scope.ServiceProvider.GetRequiredService<EndpointDataSource>().Endpoints
+                .OfType<RouteEndpoint>()
+                .Where(endpoint => endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.RazorPages.PageActionDescriptor>()?.ViewEnginePath == "/Index")
+                .OrderBy(endpoint => endpoint.RoutePattern.RawText, StringComparer.Ordinal)
+                .First();
+            var descriptor = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.RazorPages.PageActionDescriptor>(
+                endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.RazorPages.PageActionDescriptor>());
+            var routeData = new RouteData();
+            foreach (var value in descriptor.RouteValues) routeData.Values[value.Key] = value.Value;
+            context.Request.RouteValues = routeData.Values;
+            context.SetEndpoint(endpoint);
+            var action = new ActionContext(context, routeData, descriptor);
+            var view = scope.ServiceProvider.GetRequiredService<IRazorViewEngine>()
+                .GetView(null, "/Pages/Shared/_SelectLanguageFooterPartial.cshtml", false);
+            Assert.True(view.Success, string.Join(";", view.SearchedLocations ?? []));
+            var resolved = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ViewEngines.IView>(view.View);
+            using var writer = new StringWriter(CultureInfo.InvariantCulture);
+            var viewContext = new ViewContext(action, resolved,
+                new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary()),
+                scope.ServiceProvider.GetRequiredService<ITempDataDictionaryFactory>().GetTempData(context),
+                writer, new HtmlHelperOptions());
+            await resolved.RenderAsync(viewContext);
+            var html = WebUtility.HtmlDecode(writer.ToString());
+            var selector = Regex.Match(html, "<select[^>]*name=\"culture\"[^>]*>", RegexOptions.CultureInvariant);
+            Assert.True(selector.Success);
+            Assert.DoesNotContain("data-val-required", selector.Value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotMatch("\\srequired(?:\\s|=|>)", selector.Value);
+            var selected = Regex.Matches(html, "<option[^>]*selected[^>]*>", RegexOptions.CultureInvariant);
+            if (expected is null) Assert.Empty(selected);
+            else Assert.Contains($"value=\"{expected}\"", Assert.Single(selected.Cast<Match>()).Value, StringComparison.Ordinal);
+            Assert.NotEmpty(Token(html));
+            Assert.Contains("handler=SetLanguage", html, StringComparison.Ordinal);
+        }
+        finally
+        {
+            accessor.HttpContext = previousContext;
+            CultureInfo.CurrentUICulture = previousUi;
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 
     private WebApplicationFactory<Program> Host(PublicBoundary boundary, bool enabled) => factory.WithWebHostBuilder(builder =>

@@ -94,7 +94,13 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", content, StringComparison.OrdinalIgnoreCase);
+        var publicFooter = Assert.Single(Regex.Matches(
+            content,
+            "<footer\\b[^>]*\\bdata-migration-component=\"public-footer\"[^>]*>.*?</footer>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("href=\"https://www.facebook.com/maliev.manufacturing/\"", publicFooter.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://www.facebook.com", content.Remove(publicFooter.Index, publicFooter.Length), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("facebook.com/tr", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connect.facebook.net", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb:app_id", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);

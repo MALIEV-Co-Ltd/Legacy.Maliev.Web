@@ -91,6 +91,87 @@ public sealed class PublishWorkflowPermissionContractTests
         }
     }
 
+    [Fact]
+    public void ValidationWorkflow_RequiredCheckFailsWhenFocusedValidationDidNotSucceed()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
+        var full = ValidationJob(source, "validate");
+        Assert.Contains("    name: validate\n", full, StringComparison.Ordinal);
+        Assert.Contains("    needs: [focused, resource_checkpoint_qualification]\n    if: always()\n", full, StringComparison.Ordinal);
+        var firstStep = full.IndexOf("      - name:", StringComparison.Ordinal);
+        var guard = full.IndexOf("      - name: Require successful focused validation", StringComparison.Ordinal);
+        var checkout = full.IndexOf("      - name: Check out Web", StringComparison.Ordinal);
+        Assert.Equal(firstStep, guard);
+        Assert.True(guard >= 0 && checkout > guard);
+        var body = full[guard..checkout];
+        Assert.Contains("FOCUSED_RESULT: $" + "{{ needs.focused.result }}", body, StringComparison.Ordinal);
+        Assert.Contains("if [[ \"$FOCUSED_RESULT\" != \"success\" || \"$RESOURCE_QUALIFICATION_RESULT\" != \"success\" ]]; then", body, StringComparison.Ordinal);
+        Assert.Contains("RESOURCE_QUALIFICATION_RESULT: $" + "{{ needs.resource_checkpoint_qualification.result }}", body, StringComparison.Ordinal);
+        Assert.Contains("exit 1", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("continue-on-error", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ValidationWorkflow_FreshRunnerRetainsTheUnfilteredCompositeAndRawCoverage()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
+        var full = ValidationJob(source, "validate");
+        var focused = ValidationJob(source, "focused");
+        const string action = "MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617";
+        Assert.Contains(action, full, StringComparison.Ordinal);
+        Assert.DoesNotContain(action, focused, StringComparison.Ordinal);
+        Assert.Contains("solution: Legacy.Maliev.Web.slnx", full, StringComparison.Ordinal);
+        Assert.Contains("use-local-maliev-dependencies: 'true'", full, StringComparison.Ordinal);
+        Assert.DoesNotContain("--filter", full, StringComparison.Ordinal);
+        Assert.DoesNotContain("--list-tests", full, StringComparison.Ordinal);
+        Assert.Contains("./tests/WebFxRawCoverage.Tests.ps1", full, StringComparison.Ordinal);
+        Assert.Contains("./tests/Test-WebFxRawCoverage.ps1 -ResultsRoot ./Legacy.Maliev.Web.Tests/TestResults", full, StringComparison.Ordinal);
+        Assert.DoesNotContain("-MinimumLinePercent", full, StringComparison.Ordinal);
+        foreach (var job in new[] { focused, full })
+        {
+            Assert.Contains("runs-on: ubuntu-latest", job, StringComparison.Ordinal);
+            Assert.Contains("prepare-profile-producer-boundary.ps1", job, StringComparison.Ordinal);
+            Assert.Contains("prepare-member-auth-indexing-proof.ps1", job, StringComparison.Ordinal);
+            Assert.Contains("prepare-billing-catalog-proof.ps1", job, StringComparison.Ordinal);
+            Assert.Contains("prepare-scb-payment-boundary.ps1", job, StringComparison.Ordinal);
+            Assert.Contains("playwright.ps1 install --with-deps chromium", job, StringComparison.Ordinal);
+            Assert.Contains("probe-startup-dockerhub-quota.py", job, StringComparison.Ordinal);
+            Assert.Contains("--require-hashes", job, StringComparison.Ordinal);
+            Assert.Contains("Remove only the owned preliminary PDF verification runtime\n        if: always()", job, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void ValidationWorkflow_KeepsSeparateArtifactsAndOriginalEventCheckout()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
+        var full = ValidationJob(source, "validate");
+        var focused = ValidationJob(source, "focused");
+        const string combined = "name: web-combined-native-$" + "{{ github.sha }}";
+        const string focus = "name: web-focused-native-$" + "{{ github.sha }}";
+        Assert.Contains(combined, full, StringComparison.Ordinal);
+        Assert.DoesNotContain(combined, focused, StringComparison.Ordinal);
+        Assert.Contains(focus, focused, StringComparison.Ordinal);
+        Assert.DoesNotContain(focus, full, StringComparison.Ordinal);
+        Assert.Contains("full-suite-identity/receipt.json", full, StringComparison.Ordinal);
+        foreach (var job in new[] { focused, full })
+        {
+            var checkout = Regex.Match(job,
+                @"(?ms)^      - name: Check out Web\r?\n(?<body>.*?)(?=^      - name:|\z)");
+            Assert.True(checkout.Success);
+            Assert.DoesNotContain("ref:", checkout.Groups["body"].Value, StringComparison.Ordinal);
+            Assert.Contains("persist-credentials: false", checkout.Groups["body"].Value, StringComparison.Ordinal);
+        }
+    }
+
+    private static string ValidationJob(string source, string name)
+    {
+        Assert.Matches(@"(?m)^jobs:\r?$", source);
+        var matches = Regex.Matches(source,
+            @"(?ms)^  " + Regex.Escape(name) + @":\r?\n(?<body>.*?)(?=^  [A-Za-z0-9_-]+:\s*\r?$|\z)");
+        return Assert.Single(matches.Cast<Match>()).Groups["body"].Value;
+    }
+
     private static string FindRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

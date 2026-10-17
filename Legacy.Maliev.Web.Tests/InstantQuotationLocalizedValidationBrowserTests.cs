@@ -81,7 +81,48 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
                 FullPage = true,
             });
         }
-        await page.Locator(".instant-quote__validation-summary a[href='#instant-quote-taxnumber']").Last.ClickAsync();
+        var taxLink = page.Locator(".instant-quote__validation-summary a[href='#instant-quote-taxnumber']").Last;
+        var linkState = await taxLink.EvaluateAsync<bool[]>("""
+            anchor => [
+                anchor.isConnected,
+                anchor.getAttribute('href') === '#instant-quote-taxnumber',
+                !!anchor.closest('.instant-quote__workflow')?.querySelector('#instant-quote-taxnumber')
+            ]
+            """);
+        Assert.True(linkState[0], "The validation-summary anchor must be connected.");
+        Assert.True(linkState[1], "The validation-summary anchor must target the tax field.");
+        Assert.True(linkState[2], "The validation-summary target must exist in the same workflow.");
+        await page.EvaluateAsync("""
+            () => {
+                window.__taxValidationNavigation = { hashChanges: 0, popStates: 0 };
+                window.addEventListener('hashchange', () => {
+                    const observation = window.__taxValidationNavigation;
+                    if (observation) observation.hashChanges = Math.min(2, observation.hashChanges + 1);
+                }, { once: true });
+                window.addEventListener('popstate', () => {
+                    const observation = window.__taxValidationNavigation;
+                    if (observation) observation.popStates = Math.min(2, observation.popStates + 1);
+                }, { once: true });
+            }
+            """);
+        await taxLink.ClickAsync();
+        try
+        {
+            await page.WaitForFunctionAsync("() => location.hash === '#instant-quote-taxnumber'");
+        }
+        catch (Exception error) when (error is TimeoutException or PlaywrightException)
+        {
+            var navigation = await page.EvaluateAsync<int[]>("""
+                () => [
+                    window.__taxValidationNavigation?.hashChanges ?? -1,
+                    window.__taxValidationNavigation?.popStates ?? -1,
+                    location.hash === '#instant-quote-taxnumber' ? 1 : 0
+                ]
+                """);
+            throw new InvalidOperationException($"Tax summary navigation did not reach its exact target; " +
+                $"hashChanges={navigation[0]}, popStates={navigation[1]}, expectedHash={navigation[2]}, " +
+                $"failureType={error.GetType().Name}.", error);
+        }
         Assert.Equal("#instant-quote-taxnumber", await page.EvaluateAsync<string>("() => location.hash"));
     }
 

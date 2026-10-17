@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -140,6 +141,41 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    public async Task BothSocialMediaRenderers_KeepExactVerifiedOrganizationAndLocalBusinessProfiles(
+        string culture, bool enabled)
+    {
+        using var host = OwnedWebSurfaceHost.Create(builder =>
+            builder.UseSetting("BlazorRouting:SocialMedia", enabled ? "true" : "false"));
+        using var response = await host.Client.GetAsync($"/about/socialmedia?culture={culture}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Contains($"<html lang=\"{culture}\"", source, StringComparison.Ordinal);
+        Assert.Equal(enabled,
+            source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var schemas = ExtractSchemas(source);
+        try
+        {
+            Assert.Equal(2, schemas.Count);
+            foreach (var type in new[] { "Organization", "LocalBusiness" })
+            {
+                Assert.True(schemas.ContainsKey(type), $"Missing public business schema: {type}");
+                AssertSocialLinks(schemas[type].RootElement.GetProperty("sameAs"));
+            }
+        }
+        finally
+        {
+            foreach (var schema in schemas.Values)
+            {
+                schema.Dispose();
+            }
+        }
+    }
+
     private static Dictionary<string, JsonDocument> ExtractSchemas(string source) => Regex.Matches(
             source,
             "<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>[\\s\\S]*?)</script>",
@@ -162,6 +198,7 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         Assert.Equal(
             new[]
             {
+                SocialNetworks.Facebook,
                 SocialNetworks.Instagram,
                 SocialNetworks.Line,
                 SocialNetworks.YouTube,
@@ -169,9 +206,6 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
                 SocialNetworks.Threads
             },
             sameAs.EnumerateArray().Select(link => link.GetString()));
-        Assert.DoesNotContain(
-            sameAs.EnumerateArray(),
-            link => link.GetString()?.Contains("facebook", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static string FindRepositoryRoot()

@@ -15,7 +15,8 @@ public sealed class PublicContactChannelsParityTests
         Assert.Contains("https://wa.me/66898950690", networks, StringComparison.Ordinal);
         Assert.Contains("MessengerChat = Messenger", networks, StringComparison.Ordinal);
         Assert.Contains("SocialNetworks.WhatsApp", socialLinks, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Contact MALIEV through WhatsApp\"", socialLinks, StringComparison.Ordinal);
+        Assert.Contains("@inject Microsoft.Extensions.Localization.IStringLocalizer<SocialLinks> Localizer", socialLinks, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@Localizer[\"Contact MALIEV on WhatsApp\"]\"", socialLinks, StringComparison.Ordinal);
         Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", socialLinks, StringComparison.Ordinal);
         Assert.Contains("href=\"/contact#contact-us\"", contact, StringComparison.Ordinal);
         Assert.Contains("class=\"contact-channel-actions\"", contact, StringComparison.Ordinal);

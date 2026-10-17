@@ -1,0 +1,252 @@
+{
+  "schema": "web-line-contact-regression.v1",
+  "repository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "baselineCommit": "f843f75adb89fc8b810ff14775dc5125537cc736",
+  "assembly": "Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll",
+  "sources": {
+    "baseline": {
+      "Legacy.Maliev.Web/Components/Analytics/PublicContactChannelAnalytics.razor": "5bf4416d437b1f5cad835a697166d0e08cac7fdfaad779f5ec930dcffe4782a5",
+      "Legacy.Maliev.Web/Components/Layout/PublicRouteAssets.cs": "dbbf686c048b81874304366d28ec92e5fcc0bc7dd93f2f75545ce5ec069e6517"
+    },
+    "candidate": {
+      "Legacy.Maliev.Web/Components/Analytics/PublicContactChannelAnalytics.razor": "25426350f4164f99075659258bc04273dcabf1df9049984f36356e89e83841b1",
+      "Legacy.Maliev.Web/Components/Layout/PublicRouteAssets.cs": "4fc7858e00ac7b3987467482b5da80707f670329e0656c71f360cf58ae834278",
+      "Legacy.Maliev.Web.Tests/LineContactAssetHttpTests.cs": "9c2dde49e01302e64afecbfa43d3c0d66ac3eb639f2c3bf75a5018d65c10c066",
+      "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs": "8403a47d06120e3e89ce6b30fd217c40b8d563df7c7a016abef37a1abb5fdac5",
+      "Legacy.Maliev.Web.Tests/PublicContactChannelAnalyticsMigrationTests.cs": "42d21b78bf2aea713d3945efc79591829bfcd5a14b6adddd68b1f0c40fd104f9"
+    }
+  },
+  "rows": [
+    {
+      "name": "Legacy.Maliev.Web.Tests.PublicContactChannelAnalyticsMigrationTests.SharedLayouts_UseDisplayOnlyStaticContactAnalyticsComponent",
+      "class": "Legacy.Maliev.Web.Tests.PublicContactChannelAnalyticsMigrationTests",
+      "method": "SharedLayouts_UseDisplayOnlyStaticContactAnalyticsComponent",
+      "baseline": null,
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.PublicContactChannelAnalyticsMigrationTests.PublicRoute_RendersCompleteConsentSafeContactAnalyticsContract(culture: \"en\")",
+      "class": "Legacy.Maliev.Web.Tests.PublicContactChannelAnalyticsMigrationTests",
+      "method": "PublicRoute_RendersCompleteConsentSafeContactAnalyticsContract",
+      "baseline": null,
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.PublicContactChannelAnalyticsMigrationTests.PublicRoute_RendersCompleteConsentSafeContactAnalyticsContract(culture: \"th\")",
+      "class": "Legacy.Maliev.Web.Tests.PublicContactChannelAnalyticsMigrationTests",
+      "method": "PublicRoute_RendersCompleteConsentSafeContactAnalyticsContract",
+      "baseline": null,
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests.FriendshipRoute_SelectsSourceInquiryAssets(route: \"/contact/line\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests",
+      "method": "FriendshipRoute_SelectsSourceInquiryAssets",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Contains\\(\\) Failure: Item not found in collection",
+        "originMethod": "FriendshipRoute_SelectsSourceInquiryAssets",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactAssetHttpTests.cs",
+        "line": 29
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests.FriendshipRoute_SelectsSourceInquiryAssets(route: \"/CONTACT/LINE/\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests",
+      "method": "FriendshipRoute_SelectsSourceInquiryAssets",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Contains\\(\\) Failure: Item not found in collection",
+        "originMethod": "FriendshipRoute_SelectsSourceInquiryAssets",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactAssetHttpTests.cs",
+        "line": 29
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests.RealLineRoute_ServesOwnedInquiryAssetsAndKeepsNoindexFallback(culture: \"en\", heading: \"Add MALIEV on LINE\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests",
+      "method": "RealLineRoute_ServesOwnedInquiryAssetsAndKeepsNoindexFallback",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^The live LINE route must select its source inquiry stylesheet\\.",
+        "originMethod": "RealLineRoute_ServesOwnedInquiryAssetsAndKeepsNoindexFallback",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactAssetHttpTests.cs",
+        "line": 49
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests.RealLineRoute_ServesOwnedInquiryAssetsAndKeepsNoindexFallback(culture: \"th\", heading: \"เพิ่มเพื่อน MALIEV บน LINE\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactAssetHttpTests",
+      "method": "RealLineRoute_ServesOwnedInquiryAssetsAndKeepsNoindexFallback",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^The live LINE route must select its source inquiry stylesheet\\.",
+        "originMethod": "RealLineRoute_ServesOwnedInquiryAssetsAndKeepsNoindexFallback",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactAssetHttpTests.cs",
+        "line": 49
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload(destination: \"https://line.me/ti/p/@maliev\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload(destination: \"https://line.me/ti/p/%40maliev\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Single\\(\\) Failure: The collection was empty",
+        "originMethod": "AssertLineDiagnostic",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs",
+        "line": 109
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload(destination: \"https://line.me/ti/p/@@maliev\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Single\\(\\) Failure: The collection was empty",
+        "originMethod": "AssertLineDiagnostic",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs",
+        "line": 109
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload(destination: \"https://line.me/ti/p/%40%40maliev\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Single\\(\\) Failure: The collection was empty",
+        "originMethod": "AssertLineDiagnostic",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs",
+        "line": 109
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload(destination: \"https://www.line.me/TI/P/%40MaLiEv/?source=contact\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Single\\(\\) Failure: The collection was empty",
+        "originMethod": "AssertLineDiagnostic",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs",
+        "line": 109
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload(destination: \"/contact/line\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_OwnedLineLinksEmitOnlyDiagnosticChannelPayload",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic(destination: \"https://line.me/ti/p/@someone_else\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic(destination: \"https://line.me/ti/p/%40maliev/extra\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic(destination: \"https://example.test/ti/p/@maliev\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic(destination: \"https://line.me/ti/p/%zz\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic(destination: \"https://line.me/ti/p/%40%4Daliev\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_UnownedOrMalformedLinksDoNotEmitLineDiagnostic",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion(culture: \"en\", decision: \"reject\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion(culture: \"th\", decision: \"reject\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion",
+      "baseline": "Passed",
+      "green": "Passed",
+      "failure": null
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion(culture: \"en\", decision: \"accept\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Equal\\(\\) Failure: Values differ[\\s\\S]*Expected: 1[\\s\\S]*Actual:   0",
+        "originMethod": "RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs",
+        "line": 63
+      }
+    },
+    {
+      "name": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests.RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion(culture: \"th\", decision: \"accept\")",
+      "class": "Legacy.Maliev.Web.Tests.LineContactNormalizationBrowserTests",
+      "method": "RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion",
+      "baseline": "Failed",
+      "green": "Passed",
+      "failure": {
+        "messagePattern": "^Assert\\.Equal\\(\\) Failure: Values differ[\\s\\S]*Expected: 1[\\s\\S]*Actual:   0",
+        "originMethod": "RealClassifier_ConsentDecisionControlsQueuedLineClicksWithoutFriendOrLeadPromotion",
+        "sourcePath": "Legacy.Maliev.Web.Tests/LineContactNormalizationBrowserTests.cs",
+        "line": 63
+      }
+    }
+  ],
+  "claims": {
+    "fullSuiteAcceptance": false,
+    "providerFriendshipAcceptance": false,
+    "wholeOriginalSourceShaClosure": false
+  }
+}
