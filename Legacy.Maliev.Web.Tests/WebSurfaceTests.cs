@@ -2270,8 +2270,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "Precision. Speed. Reliability.", "Manufacturing Services for Prototypes and Production Parts", "Why customers work with MALIEV")]
-    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
+    [InlineData("en", "Custom parts.", "From CAD to assembly.", "What MALIEV helps you develop")]
+    [InlineData("th", "ชิ้นส่วนสั่งผลิต", "จาก CAD ถึงงานประกอบ", "สิ่งที่ MALIEV ช่วยพัฒนาให้คุณ")]
     public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
         string culture,
         string eyebrow,
@@ -2287,11 +2287,11 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(valueLabel, decodedSource, StringComparison.Ordinal);
-        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/InstantQuotation/3D-Printing?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/CNC-Machining?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/3D-Printing?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/3D-Scanning?culture={culture}\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
@@ -3749,7 +3749,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(27, routes.Length);
+        Assert.Equal(39, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.DoesNotContain(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));

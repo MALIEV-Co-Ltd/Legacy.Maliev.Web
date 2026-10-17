@@ -50,6 +50,67 @@ ROSTERS = {'fdm': {'Legacy.Maliev.Web.Tests.FdmOriginalServiceEligibilityBoundar
  'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 10}}}
 
 
+ROSTERS["migration-consumers"] = {
+    "Legacy.Maliev.Web.Tests.PublicCrawlerInventoryAcceptanceTests": {
+        "SourceInventory_ActualEnglishAndThaiDocumentsKeepTheirDiscoveryContract": 54,
+        "RetainedThreePublicLayouts_KeepTheSameHttpDiscoveryContract": 6,
+        "SourceCommercialPages_RenderIndependentIntentAndDirectQuotationAnchors": 20,
+        "AdditiveNoWeaponsRoute_DoesNotReplaceAnyHistoricalInventoryDocument": 2,
+        "PublicInventoryAcceptance_DoesNotRelaxPrivateAndCredentialUtilities": 4
+    },
+    "Legacy.Maliev.Web.Tests.SitemapResponseCachingHttpTests": {
+        "Public_sitemap_declares_source_one_hour_public_cache_lifetime": 2,
+        "Public_sitemap_keeps_exact_canonical_inventory_localized_alternates_and_private_exclusions": 2,
+        "Public_sitemap_xml_is_identical_across_cultures_and_caller_cookie_input": 1
+    },
+    "Legacy.Maliev.Web.Tests.KnowledgeGuidelinesStaticSsrRouteTests": {
+        "Host_DeclaresTheGuidelinesStaticSsrPageAndKeepsTheRazorRollbackSource": 1,
+        "GuidelinesRoute_RendersCompleteLocalizedAccessibleStaticDocument": 2,
+        "GuidelinesRoute_PreservesCanonicalAndLocalizedAlternates": 2,
+        "GuidelinesRoute_EmitsLocalizedValidHowToStructuredData": 2,
+        "AcceptedConsent_PreservesTheGtmBodyContainerOnTheGuidelinesRoute": 1,
+        "DisabledGuidelinesRoute_UsesTheRetainedRazorFallbackAtTheCanonicalUrl": 1
+    },
+    "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests": {
+        "Host_DeclaresTheCncMachiningSpecificationPageAndKeepsTheRazorRollbackSource": 1,
+        "CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument": 2,
+        "SourceFinalSurfaceFinishesRoute_PreservesTheRelocatedAnodizingDetail": 2,
+        "CncMachiningSpecificationRoute_PreservesCanonicalAndLocalizedAlternates": 2,
+        "CncMachiningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema": 2,
+        "AcceptedConsent_PreservesTheGtmBodyContainerOnTheCncMachiningSpecificationRoute": 1,
+        "DisabledCncMachiningSpecificationRoute_UsesTheRetainedRazorFallback": 1
+    },
+    "Legacy.Maliev.Web.Tests.PublicCopyParityTests": {
+        "CareerDirectoryKeepsThePostA40ResponsiveAndCloudflareSafeMarkup": 1,
+        "LegalDocumentsExposeTheLocalizedEffectiveDateAndCompleteTocAnchors": 1,
+        "KnowledgeAndInquirySurfacesKeepLocalizedProjectCopyAndProgressiveEnhancementMarkers": 1
+    },
+    "Legacy.Maliev.Web.Tests.AssetDeliveryContractTests": {
+        "RazorPartials_ReferenceNegotiatedAssetsInsteadOfGzipFiles": 1,
+        "GeneratedProductionAsset_IsPresentAndNonEmpty": 4,
+        "CncQuotationRuntimeAsset_IsPresentAndNonEmpty": 11,
+        "ObsoleteAnimationDependencies_AreAbsentFromSourceAndBundles": 1,
+        "ObsoleteJqueryValidationStack_IsAbsentFromSourceAndBundles": 1,
+        "KnowledgeActionLinks_KeepAccessibleButtonTextContrast": 1,
+        "InstantQuotationAssets_AreBundledAndKeepPricingOnServerEndpoints": 1
+    },
+    "Legacy.Maliev.Web.Tests.PublicWebpImageContractTests": {
+        "SourceDerivedWebpAssets_MatchCommit6509356": 1,
+        "PublicRuntimeSources_ReferenceOnlyWebpRasterImages": 1,
+        "PublicWebpReferences_ResolveToCommittedAssets": 1
+    },
+    "Legacy.Maliev.Web.Tests.AboutPageContractTests": {
+        "About_RendersLocalizedSourceStoryAndAccessibleControls": 2,
+        "About_PreservesOrderedIllustrativeProjectAndEngineeringLimits": 1,
+        "About_PreservesExactCustomerRosterAndCorrectedArtwork": 2
+    },
+    "Legacy.Maliev.Web.Tests.WebSurfaceTests": {
+        "HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity": 2,
+        "AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration": 2,
+        "Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates": 1
+    }
+}
+
 def verify(path, suite, assembly):
     root = ET.parse(path).getroot()
     def one(parent, name):
@@ -59,7 +120,18 @@ def verify(path, suite, assembly):
         return rows[0]
     if root.tag != NS + "TestRun":
         raise ValueError("Exact native TRX namespace required")
+    # Every qualified structural element must occur only at its native direct location.
+    if len(list(root.iter(NS + "TestRun"))) != 1:
+        raise ValueError("Nested TRX runs are forbidden")
+    for name in ("ResultSummary", "Results", "TestDefinitions", "TestEntries"):
+        direct = root.findall(NS + name)
+        if len(direct) != 1 or list(root.iter(NS + name)) != direct:
+            raise ValueError("Exactly one global/direct TRX " + name + " required")
     summary = one(root, "ResultSummary")
+    if list(root.iter(NS + "Counters")) != summary.findall(NS + "Counters"):
+        raise ValueError("Unexpected nested or extra TRX counters")
+    if any(row.tag.rsplit("}", 1)[-1] in ("RunInfo", "ErrorInfo") for row in root.iter()):
+        raise ValueError("TRX infrastructure errors and run notices are forbidden")
     counters = one(summary, "Counters")
     if set(counters.attrib) != FIELDS or any(not re.fullmatch(r"0|[1-9][0-9]*", v) for v in counters.attrib.values()):
         raise ValueError("All 16 canonical TRX counters required")
@@ -75,6 +147,8 @@ def verify(path, suite, assembly):
         container = one(root, name)
         if len(container) != total or any(row.tag != NS + child for row in container):
             raise ValueError("Exact result/definition/entry rows required")
+        if list(root.iter(NS + child)) != list(container):
+            raise ValueError("Unexpected nested or extra TRX " + child)
         groups.append(list(container))
     results, definitions, entries = groups
     def ids(rows, key):
@@ -88,6 +162,10 @@ def verify(path, suite, assembly):
         raise ValueError("Execution identity mismatch")
     if {(r.attrib["testId"], r.attrib["executionId"]) for r in results} != {(r.attrib["testId"], r.attrib["executionId"]) for r in entries}:
         raise ValueError("Execution entry association mismatch")
+    for name in ("TestMethod", "Execution"):
+        direct = [one(row, name) for row in definitions]
+        if list(root.iter(NS + name)) != direct:
+            raise ValueError("Unexpected nested or extra TRX " + name)
     definitions = {row.attrib["id"]: row for row in definitions}
     names = set()
     actual = Counter()

@@ -186,7 +186,7 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
 
     [Theory]
     [InlineData("en", "CNC machining specifications | MALIEV", "Knowledge center", "Service specifications", "CNC machining specifications")]
-    [InlineData("th", "ข้อแนะนำงาน CNC | MALIEV", "ศูนย์ความรู้", "ข้อแนะนำเฉพาะบริการ", "ข้อแนะนำงาน CNC")]
+    [InlineData("th", "ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV", "ศูนย์ความรู้", "ข้อแนะนำเฉพาะบริการ", "ข้อแนะนำงาน CNC")]
     public async Task CncMachiningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema(
         string culture,
         string pageName,

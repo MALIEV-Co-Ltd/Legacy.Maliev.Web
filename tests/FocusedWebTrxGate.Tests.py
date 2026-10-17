@@ -21,7 +21,7 @@ class FocusedGateControls(unittest.TestCase):
         dll.write_bytes(b"Synthetic parser control marker, not a native assembly")
         root = ET.Element(NS + "TestRun")
         summary = ET.SubElement(root, NS + "ResultSummary", outcome="Completed")
-        total = 59 if suite == "fdm" else 10
+        total = sum(sum(methods.values()) for methods in gate.ROSTERS[suite].values())
         ET.SubElement(summary, NS + "Counters", {k: str(total) if k in ("total", "executed", "passed") else "0" for k in FIELDS})
         results = ET.SubElement(root, NS + "Results")
         definitions = ET.SubElement(root, NS + "TestDefinitions")
@@ -56,7 +56,7 @@ class FocusedGateControls(unittest.TestCase):
         self.assertEqual(10, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 10)):
+        for suite, total in (("fdm", 59), ("sidebar", 10), ("migration-consumers", 147)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -104,6 +104,67 @@ class FocusedGateControls(unittest.TestCase):
                     mutate(root)
                     with self.assertRaises(ValueError):
                         self.verify(root, directory, dll, "fdm")
+
+
+    def test_migration_consumer_families_cannot_be_dropped_skipped_or_replaced(self):
+        self.assertEqual(147, sum(sum(methods.values()) for methods in gate.ROSTERS["migration-consumers"].values()))
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, dll = self.fixture(directory, "migration-consumers")
+            for mutation in ("drop", "skip", "replace-family"):
+                with self.subTest(mutation=mutation):
+                    root = copy.deepcopy(baseline)
+                    counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                    if mutation == "drop":
+                        for container in ("Results", "TestDefinitions", "TestEntries"):
+                            parent = root.find(NS + container)
+                            parent.remove(parent[0])
+                        for field in ("total", "executed", "passed"):
+                            counters.set(field, "146")
+                    elif mutation == "skip":
+                        root.find(NS + "Results")[0].set("outcome", "NotExecuted")
+                        counters.set("passed", "146")
+                        counters.set("notExecuted", "1")
+                    else:
+                        root.find(NS + "TestDefinitions")[0].find(NS + "TestMethod").set(
+                            "className", "Legacy.Maliev.Web.Tests.WebSurfaceTests")
+                    with self.assertRaises(ValueError):
+                        self.verify(root, directory, dll, "migration-consumers")
+
+
+    def test_hidden_structural_rows_and_infrastructure_notices_are_rejected(self):
+        for suite in ("fdm", "sidebar", "migration-consumers"):
+            with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp)
+                baseline, dll = self.fixture(directory, suite)
+                mutations = []
+                for name in ("TestRun", "ResultSummary", "Counters", "Results", "TestDefinitions",
+                             "TestEntries", "UnitTestResult", "UnitTest", "TestEntry", "TestMethod", "Execution"):
+                    mutations.append(("nested-" + name, name, False))
+                    mutations.append(("extra-" + name, name, True))
+                for name in ("RunInfo", "ErrorInfo"):
+                    mutations.append(("nested-" + name, name, False))
+                    mutations.append(("direct-" + name, name, True))
+                for label, name, direct in mutations:
+                    with self.subTest(case=label):
+                        root = copy.deepcopy(baseline)
+                        parent = root if direct else ET.SubElement(
+                            root.find(NS + "ResultSummary"), NS + "Output")
+                        row = ET.SubElement(parent, NS + name)
+                        row.set("outcome", "Passed")
+                        row.text = "Unexpected infrastructure notice"
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, suite)
+
+    def test_empty_native_run_infos_and_standard_output_remain_allowed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll = self.fixture(directory, "migration-consumers")
+            summary = root.find(NS + "ResultSummary")
+            ET.SubElement(summary, NS + "RunInfos")
+            output = ET.SubElement(summary, NS + "Output")
+            ET.SubElement(output, NS + "StdOut").text = "Ordinary native test output"
+            self.assertEqual(147, self.verify(root, directory, dll, "migration-consumers")["passed"])
 
     def test_unknown_sidebar_viewport_cannot_replace_required_row(self):
         with tempfile.TemporaryDirectory() as temp:
