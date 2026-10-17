@@ -90,6 +90,98 @@ class CorporateLogoProofControls(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 proof.verified_cgroup_mount(value)
 
+
+    def reviewed_srgb_source(self, image, intent=0, gamma=45455):
+        baseline = encoded(image)
+        return (baseline[:33] + png_chunk(b"sRGB", bytes((intent,)))
+                + png_chunk(b"gAMA", gamma.to_bytes(4, "big")) + baseline[33:])
+
+    def reviewed_policy(self, data, kind):
+        return {proof.git_blob(data): {"kind": kind, "chunks": proof.png_preflight_info(data)["color_order"]}}
+
+    def test_unmodified_pinned_srgb_reference_has_perceptual_intent_and_exact_transfer(self):
+        profile = proof.load_srgb_profile()
+        evidence = proof.verify_srgb_profile(profile)
+        self.assertEqual(proof.SRGB_PROFILE_SHA256, evidence["profile_sha256"])
+        self.assertEqual(0, evidence["rendering_intent"])
+        self.assertFalse(evidence["profile_modified"])
+
+    def test_reference_profile_rejects_changed_intent_colorimetry_curve_and_fixture_pin(self):
+        original = proof.load_srgb_profile()
+        for label, position in (("intent", 67), ("colorimetry", 2747), ("curve", 460), ("adaptation", 2990)):
+            with self.subTest(case=label):
+                changed = bytearray(original)
+                changed[position] ^= 1
+                with self.assertRaises(ValueError):
+                    proof.verify_srgb_profile(bytes(changed))
+        with mock.patch.object(proof, "SRGB_PROFILE_FIXTURE_BLOB", "0" * 40):
+            with self.assertRaisesRegex(ValueError, "srgb-fixture-git-binding"):
+                proof.load_srgb_profile()
+
+    def test_reviewed_srgb_intent_zero_maps_to_explicit_unchanged_reference_profile(self):
+        with Image.new("RGBA", (2, 2), (17, 31, 53, 128)) as image, tempfile.TemporaryDirectory() as temp:
+            source = self.reviewed_srgb_source(image)
+            policy = self.reviewed_policy(source, "PNG_SRGB_INTENT0_TO_PINNED_SRGB2014_ICC")
+            with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, policy):
+                metadata, derived = proof.convert_static(source, Path(temp) / "proof.webp")
+            self.assertEqual(proof.sha256(b""), metadata["icc_sha256"])
+            self.assertEqual(proof.SRGB_PROFILE_SHA256, metadata["derived_icc_sha256"])
+            self.assertEqual(proof.SRGB_PROFILE_SHA256, derived["icc_sha256"])
+            self.assertEqual(0, metadata["metadataDisposition"]["derived_rendering_intent"])
+            self.assertEqual(2, len(metadata["metadataDisposition"]["source_chunks"]))
+
+    def test_other_source_color_intents_and_gamma_remain_rejected(self):
+        with Image.new("RGBA", (2, 2), "red") as image:
+            approved = self.reviewed_srgb_source(image)
+            policy = self.reviewed_policy(approved, "PNG_SRGB_INTENT0_TO_PINNED_SRGB2014_ICC")
+            for intent, gamma in ((1, 45455), (2, 45455), (3, 45455), (0, 50000)):
+                with self.subTest(intent=intent, gamma=gamma):
+                    data = self.reviewed_srgb_source(image, intent, gamma)
+                    with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, policy):
+                        with self.assertRaisesRegex(ValueError, "unsupported-png-color-metadata"):
+                            proof.inspect_static(data)
+            with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, policy):
+                changed = dict(policy[proof.git_blob(approved)])
+                changed["chunks"] = []
+                with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, {proof.git_blob(approved): changed}):
+                    with self.assertRaisesRegex(ValueError, "reviewed-png-color-binding"):
+                        proof.inspect_static(approved)
+
+    def test_reviewed_iccp_precedence_preserves_actual_bytes_and_records_chrm(self):
+        profile = proof.load_srgb_profile()
+        chromaticities = bytes.fromhex("00007a25000080830000f9ff000080e9000075300000ea6000003a980000176f")
+        with Image.new("RGBA", (2, 2), "#335577") as image, tempfile.TemporaryDirectory() as temp:
+            baseline = encoded(image, icc_profile=profile)
+            source = baseline[:33] + png_chunk(b"cHRM", chromaticities) + baseline[33:]
+            policy = self.reviewed_policy(source, "PNG_ICCP_PRESERVED_CHRM_FALLBACK_RECORDED")
+            with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, policy):
+                metadata, derived = proof.convert_static(source, Path(temp) / "proof.webp")
+            self.assertEqual(proof.SRGB_PROFILE_SHA256, metadata["icc_sha256"])
+            self.assertEqual(metadata["icc_sha256"], derived["icc_sha256"])
+            self.assertEqual(profile, proof.decode_png_icc(source))
+            self.assertEqual(2, len(metadata["metadataDisposition"]["source_chunks"]))
+            with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, policy):
+                with mock.patch.object(proof, "decode_png_icc", return_value=b"not-the-actual-profile"):
+                    with self.assertRaisesRegex(ValueError, "reviewed-source-icc-preservation"):
+                        proof.inspect_static(source)
+
+    def test_encoder_cannot_drop_explicit_srgb_mapping_profile(self):
+        with Image.new("RGBA", (2, 2), "red") as image, tempfile.TemporaryDirectory() as temp:
+            source = self.reviewed_srgb_source(image)
+            policy = self.reviewed_policy(source, "PNG_SRGB_INTENT0_TO_PINNED_SRGB2014_ICC")
+            missing_icc = encoded(image, "WEBP", lossless=True, exact=True)
+            with mock.patch.dict(proof.REVIEWED_PNG_COLOR_SOURCES, policy):
+                with mock.patch.object(Image.Image, "save", lambda self, path, **kwargs: Path(path).write_bytes(missing_icc)):
+                    with self.assertRaisesRegex(ValueError, "derived-icc"):
+                        proof.convert_static(source, Path(temp) / "proof.webp")
+
+    def test_production_color_allowlist_is_exactly_the_two_reviewed_source_blobs(self):
+        self.assertEqual({"4d6ddca173368afa88b563226c43c4939c4fff7d",
+                          "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30"},
+                         set(proof.REVIEWED_PNG_COLOR_SOURCES))
+        self.assertEqual("00", proof.REVIEWED_PNG_COLOR_SOURCES[
+            "4d6ddca173368afa88b563226c43c4939c4fff7d"]["chunks"][0]["value_hex"])
+
     def test_lossless_preserves_invisible_rgb_partial_alpha_and_dimensions(self):
         with Image.new("RGBA", (2, 2)) as image, tempfile.TemporaryDirectory() as temp:
             image.putdata([(17, 31, 53, 0), (71, 97, 113, 128), (13, 19, 29, 255), (255, 255, 255, 255)])

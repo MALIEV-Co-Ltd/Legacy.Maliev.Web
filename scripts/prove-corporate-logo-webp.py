@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import hashlib
 import binascii
+import base64
+import math
+import zlib
 import io
 import json
 import os
@@ -28,6 +31,57 @@ EXPECTED_INPUT_BLOB = "9ab07a0b8bbcfa70e5e0b28095f2b864545c48a3"
 WHEEL_NAME = "pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 WHEEL_SHA256 = "42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca"
 
+
+SRGB_PROFILE_FIXTURE_BLOB = "bfdf7053ceb1d56860be5ec550c374b5bba4a109"
+SRGB_PROFILE_LICENSE_BLOB = "8fc8ff030705be99ccc005a9a35c8e0151c70348"
+SRGB_PROFILE_SHA256 = "384b832de3412066743b52a75ee906b6fb9fb8d9e09e936fc2c43223815c6e0a"
+SRGB_PROFILE_GIT_BLOB = "49afbfef10f22a1832590b68369d2f248ea553b9"
+REVIEWED_PNG_COLOR_SOURCES = {
+    "4d6ddca173368afa88b563226c43c4939c4fff7d": {
+        "kind": "PNG_SRGB_INTENT0_TO_PINNED_SRGB2014_ICC",
+        "chunks": [
+            {
+                "kind": "sRGB",
+                "bytes": 1,
+                "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+                "raw_chunk_sha256": "7326c3fbfb5f9a4371ef87da7398e61e8f89fb6f3306ad299c6a52b86942ed49",
+                "value_hex": "00"
+            },
+            {
+                "kind": "gAMA",
+                "bytes": 4,
+                "sha256": "96256bc24f55fcd0b110db9a423c70063b27ea9e62c16789674d212fffa56f27",
+                "raw_chunk_sha256": "38ad77a09221cff71e5ca575333e576de71e0007f4d370083d8005dce15017d5",
+                "value_hex": "0000b18f"
+            }
+        ]
+    },
+    "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30": {
+        "kind": "PNG_ICCP_PRESERVED_CHRM_FALLBACK_RECORDED",
+        "chunks": [
+            {
+                "kind": "iCCP",
+                "bytes": 2639,
+                "sha256": "4f47f046c1eec6e37fe29ea198105f78eda48d40322790cebf9ea7432a3848d7",
+                "raw_chunk_sha256": "873f223a5f811b002bdc0adc3a2fa54fb459f8fef186a50bd6c68ef091219031",
+                "value_hex": None
+            },
+            {
+                "kind": "cHRM",
+                "bytes": 32,
+                "sha256": "e1e3918ef898071bee8c8ffaa8eef779105d57c21079cd208bc368a37f78337f",
+                "raw_chunk_sha256": "e2797bb549c7f7bd0a69314ece3a98ec2da5670b86bbafffe11fe6ec208b16cc",
+                "value_hex": "00007a25000080830000f9ff000080e9000075300000ea6000003a980000176f"
+            }
+        ]
+    }
+}
+SRGB_FIXED_XYZ = {
+    b"rXYZ": (28578, 14581, 912), b"gXYZ": (25241, 46981, 6362),
+    b"bXYZ": (9376, 3972, 46799), b"wtpt": (63190, 65536, 54061),
+}
+SRGB_TRC_SHA256 = "3fbb19a7073a62c8c23de4e9c73cad11a950d78eb42d4686f31e1a7e13913c97"
+SRGB_CHAD_SHA256 = "352e8c2ab137a246762163a2c2fae0fce22d76fcbd5c8208180c1a44dc26c35d"
 
 def owned_process_ledger(purpose, lease_seconds):
     def identity(pid):
@@ -210,11 +264,98 @@ def read_source(root, asset):
     return data
 
 
+def verify_srgb_profile(data):
+    require(len(data) == 3024 and int.from_bytes(data[:4], "big") == len(data), "srgb-profile-size")
+    require(data[8:12] == bytes((2, 0, 0, 0)) and data[12:24] == b"mntrRGB XYZ "
+            and data[36:40] == b"acsp" and int.from_bytes(data[64:68], "big") == 0,
+            "srgb-profile-header-intent")
+    require(tuple(int.from_bytes(data[p:p + 4], "big", signed=True) for p in (68, 72, 76))
+            == SRGB_FIXED_XYZ[b"wtpt"], "srgb-profile-illuminant")
+    count = int.from_bytes(data[128:132], "big")
+    require(count == 16, "srgb-profile-tag-count")
+    tags = {}
+    for index in range(count):
+        start = 132 + index * 12
+        name = data[start:start + 4]
+        offset, size = (int.from_bytes(data[start + n:start + n + 4], "big") for n in (4, 8))
+        require(name not in tags and offset >= 132 + count * 12 and size >= 8
+                and offset + size <= len(data), "srgb-profile-tag-bounds")
+        tags[name] = data[offset:offset + size]
+    require(set(tags) == {b"desc", b"bXYZ", b"bTRC", b"gTRC", b"rTRC", b"dmdd", b"gXYZ", b"lumi",
+                          b"meas", b"bkpt", b"rXYZ", b"tech", b"vued", b"wtpt", b"cprt", b"chad"},
+            "srgb-profile-tag-set")
+    for name, expected in SRGB_FIXED_XYZ.items():
+        tag = tags[name]
+        require(len(tag) == 20 and tag[:8] == b"XYZ " + bytes(4)
+                and tuple(int.from_bytes(tag[p:p + 4], "big", signed=True) for p in (8, 12, 16)) == expected,
+                "srgb-profile-colorimetry")
+    require(sha256(tags[b"chad"]) == SRGB_CHAD_SHA256, "srgb-profile-chromatic-adaptation")
+    curves = [tags[name] for name in (b"rTRC", b"gTRC", b"bTRC")]
+    require(curves[0] == curves[1] == curves[2] and sha256(curves[0]) == SRGB_TRC_SHA256,
+            "srgb-profile-transfer-tag")
+    curve = curves[0]
+    require(curve[:8] == b"curv" + bytes(4) and int.from_bytes(curve[8:12], "big") == 1024
+            and len(curve) == 2060, "srgb-profile-transfer-shape")
+    for index in range(1024):
+        value = index / 1023
+        linear = value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+        sample = int.from_bytes(curve[12 + index * 2:14 + index * 2], "big")
+        require(sample == math.floor(linear * 65535 + 0.5), "srgb-profile-transfer-semantics")
+    require(b"Copyright International Color Consortium, 2015" in tags[b"cprt"], "srgb-profile-copyright")
+    return {"profile_sha256": sha256(data), "profile_git_blob": git_blob(data), "rendering_intent": 0,
+            "colorimetry": "Pinned ICC D50 XYZ primaries and Bradford adaptation tag",
+            "transfer": "All1024samples exactly equal IEC61966-2-1 decoding rounded to unsigned16bit; no tolerance",
+            "version": "ICC2.0", "profile_modified": False}
+
+
+def load_srgb_profile():
+    root = Path(__file__).resolve().parents[1]
+    fixture_path = root / "tests/corporate-logo-webp-srgb-profile.json"
+    license_path = root / "tests/corporate-logo-webp-srgb-profile.LICENSE.txt"
+    for path in (fixture_path, license_path):
+        require(path.is_file() and not path.is_symlink() and path.resolve(strict=True) == path,
+                "srgb-fixture-path")
+    with fixture_path.open("rb") as stream:
+        raw = stream.read(8193)
+    require(len(raw) <= 8192 and git_blob(raw) == SRGB_PROFILE_FIXTURE_BLOB, "srgb-fixture-git-binding")
+    with license_path.open("rb") as stream:
+        notice = stream.read(8193)
+    require(len(notice) <= 8192 and git_blob(notice) == SRGB_PROFILE_LICENSE_BLOB, "srgb-license-git-binding")
+    fixture = json.loads(raw)
+    require(fixture["profile_name"] == "sRGB2014.icc" and fixture["bytes"] == 3024
+            and fixture["sha256"] == SRGB_PROFILE_SHA256 and fixture["git_blob"] == SRGB_PROFILE_GIT_BLOB,
+            "srgb-fixture-schema")
+    data = base64.b64decode(fixture["base64"], validate=True)
+    require(sha256(data) == SRGB_PROFILE_SHA256 and git_blob(data) == SRGB_PROFILE_GIT_BLOB,
+            "srgb-profile-digest")
+    verify_srgb_profile(data)
+    return data
+
+
+def decode_png_icc(data):
+    offset, profiles = 8, []
+    while offset < len(data):
+        size = int.from_bytes(data[offset:offset + 4], "big")
+        if data[offset + 4:offset + 8] == b"iCCP":
+            body = data[offset + 8:offset + 8 + size]
+            name, separator, compressed = body.partition(b"\0")
+            require(separator and 1 <= len(name) <= 79 and len(compressed) > 1
+                    and compressed[0] == 0, "source-png-icc-header")
+            decoder = zlib.decompressobj()
+            profile = decoder.decompress(compressed[1:], 524_289)
+            require(0 < len(profile) <= 524_288 and decoder.eof and not decoder.unconsumed_tail
+                    and not decoder.unused_data, "source-png-icc-decompression")
+            profiles.append(profile)
+        offset += size + 12
+    require(len(profiles) == 1, "source-png-icc-count")
+    return profiles[0]
+
+
 def png_preflight_info(data):
     if not data.startswith(b"\x89PNG\r\n\x1a\n"):
         return
     require(len(data) >= 33 and data[8:16] == b"\0\0\0\rIHDR", "source-png-ihdr")
-    color_chunks = []
+    color_chunks, icc_chunks, color_order = [], [], []
     offset, count, ended = 8, 0, False
     while offset < len(data):
         require(offset + 12 <= len(data) and count < 256, "source-png-chunk-bound")
@@ -224,10 +365,13 @@ def png_preflight_info(data):
         require(end <= len(data), "source-png-chunk-size")
         crc = int.from_bytes(data[end - 4:end], "big")
         require(binascii.crc32(data[offset + 4:end - 4]) & 0xffffffff == crc, "source-png-crc")
-        if kind in (b"gAMA", b"cHRM", b"sRGB", b"cICP", b"mDCV", b"cLLI"):
+        if kind in (b"gAMA", b"cHRM", b"sRGB", b"cICP", b"mDCV", b"cLLI", b"iCCP"):
             value = data[offset + 8:end - 4]
-            color_chunks.append({"kind": kind.decode("ascii"), "bytes": size,
-                                 "sha256": sha256(value), "value_hex": value.hex() if size <= 32 else None})
+            record = {"kind": kind.decode("ascii"), "bytes": size, "sha256": sha256(value),
+                      "raw_chunk_sha256": sha256(data[offset:end]),
+                      "value_hex": value.hex() if size <= 32 else None}
+            (icc_chunks if kind == b"iCCP" else color_chunks).append(record)
+            color_order.append(record)
         require(not (65 <= kind[0] <= 90) or kind in (b"IHDR", b"PLTE", b"IDAT", b"IEND"),
                 "unsupported-png-critical-chunk")
         count += 1
@@ -238,18 +382,24 @@ def png_preflight_info(data):
             break
     require(ended, "source-png-missing-end")
     return {"width": int.from_bytes(data[16:20], "big"), "height": int.from_bytes(data[20:24], "big"),
-            "bit_depth": data[24], "color_type": data[25], "color_chunks": color_chunks}
+            "bit_depth": data[24], "color_type": data[25], "color_chunks": color_chunks,
+            "icc_chunks": icc_chunks, "color_order": color_order}
 
 
 def require_supported_png(data):
     header = png_preflight_info(data)
     if header is not None:
         require(header["bit_depth"] in (1, 2, 4, 8), "unsupported-png-bit-depth")
-        require(not header["color_chunks"], "unsupported-png-color-metadata")
+        if header["color_chunks"]:
+            reviewed = REVIEWED_PNG_COLOR_SOURCES.get(git_blob(data))
+            require(reviewed is not None, "unsupported-png-color-metadata")
+            require(header["color_order"] == reviewed["chunks"], "reviewed-png-color-binding")
+            return header, reviewed["kind"]
+    return header, None
 
 
 def inspect_static(data):
-    require_supported_png(data)
+    png_header, color_policy = require_supported_png(data)
     with Image.open(io.BytesIO(data), formats=("PNG", "JPEG", "GIF")) as image:
         require(image.format in ("PNG", "JPEG", "GIF"), "source-format")
         require(image.mode in ("1", "L", "LA", "P", "RGB", "RGBA"), "unsupported-source-mode")
@@ -272,6 +422,22 @@ def inspect_static(data):
         if isinstance(xmp, str):
             xmp = xmp.encode("utf-8")
         require(isinstance(xmp, bytes) and len(xmp) <= 262_144, "xmp-bound")
+        source_icc = icc
+        disposition = {"kind": "SOURCE_ICC_BYTES_UNCHANGED", "source_git_blob": git_blob(data)}
+        if color_policy == "PNG_SRGB_INTENT0_TO_PINNED_SRGB2014_ICC":
+            require(not icc and not png_header["icc_chunks"], "reviewed-srgb-source-icc")
+            icc = load_srgb_profile()
+            disposition.update(kind=color_policy, source_rendering_intent=0, derived_rendering_intent=0,
+                               profile=verify_srgb_profile(icc),
+                               normative_basis="PNG3 sRGB intent0; unmodified ICC sRGB2014v2 preferredintent0",
+                               source_chunks=png_header["color_order"],
+                               metadata_equivalence="Explicit color-semantic mapping; PNG chunk bytes are retained in proof, not WebP.")
+        elif color_policy == "PNG_ICCP_PRESERVED_CHRM_FALLBACK_RECORDED":
+            require(icc and icc == decode_png_icc(data), "reviewed-source-icc-preservation")
+            disposition.update(kind=color_policy, source_chunks=png_header["color_order"],
+                               normative_basis="PNG3 color precedence: preserved iCCP takes priority over cHRM fallback",
+                               metadata_equivalence="Effective ICC bytes preserved; lower-priority PNG cHRM retained in proof.")
+        disposition.update(source_icc_sha256=sha256(source_icc), derived_icc_sha256=sha256(icc))
         orientation = image.getexif().get(274, 1)
         require(type(orientation) is int and 1 <= orientation <= 8, "orientation-shape")
         rgba = image.convert("RGBA")
@@ -279,7 +445,8 @@ def inspect_static(data):
         return {
             "format": image.format, "source_mode": image.mode, "width": image.width, "height": image.height,
             "frames": frames, "loop": None, "durations_ms": [0], "orientation": orientation,
-            "icc_sha256": sha256(icc), "decoded_rgba_sha256": sha256(pixels),
+            "icc_sha256": sha256(source_icc), "derived_icc_sha256": sha256(icc),
+            "metadataDisposition": disposition, "decoded_rgba_sha256": sha256(pixels),
             "alpha_sha256": sha256(rgba.getchannel("A").tobytes()),
         }, rgba, {"icc_profile": icc, "exif": exif, "xmp": xmp}
 
@@ -324,7 +491,8 @@ def convert_static(data, target):
         with decoded.convert("RGBA") as pixels:
             require(sha256(pixels.tobytes()) == source["decoded_rgba_sha256"], "derived-pixel-equivalence")
             require(sha256(pixels.getchannel("A").tobytes()) == source["alpha_sha256"], "derived-alpha-equivalence")
-    return source, {"sha256": sha256(result), "git_blob": git_blob(result), "bytes": len(result)}
+    return source, {"sha256": sha256(result), "git_blob": git_blob(result), "bytes": len(result),
+                    "icc_sha256": sha256(metadata["icc_profile"]), "metadataDisposition": source["metadataDisposition"]}
 
 
 def contact_sheet(root, assets, payload):
@@ -424,7 +592,12 @@ def main():
                 require(metadata["decoded_rgba_sha256"] == source_row["decoded_rgba_sha256"], "source-reread-identity")
                 total += derived["bytes"]
                 require(total <= MAX_TOTAL_DERIVED, "total-derived-bound")
-                result.append(dict(source_row, derived=derived, equivalence="EXACT_RGBA_ALPHA_DIMENSIONS_ORIENTATION_ICC_XMP"))
+                result.append(dict(source_row, derived=derived, equivalence="EXACT_RGBA_ALPHA_DIMENSIONS_ORIENTATION_XMP_WITH_EXPLICIT_ICC_DISPOSITION"))
+            profile_directory = payload / "color-profile-proof"
+            profile_directory.mkdir()
+            (profile_directory / "sRGB2014.icc").write_bytes(load_srgb_profile())
+            for filename in ("corporate-logo-webp-srgb-profile.json", "corporate-logo-webp-srgb-profile.LICENSE.txt"):
+                (profile_directory / filename).write_bytes((root / "tests" / filename).read_bytes())
             contact_sheet(root, assets, payload)
             qualified = dict(receipt, status="PASS", assets=result, derived_bytes=total,
                              animation_policy="Fail closed; this lane supports only single-frame sources without loop/duration metadata.",
@@ -433,7 +606,7 @@ def main():
             write_json(payload / "manifest.json", qualified)
             write_json(payload / "source-bindings.json", manifest)
             (payload / "README.txt").write_text(
-                "Artifact-only proof. Root must verify exact run/head, all18 source/derived digests, pixel/alpha/ICC/orientation proof and contact sheet before publishing generated bytes.\n",
+                "Artifact-only proof. Root must verify exact run/head, all18 source/derived digests, pixel/alpha/ICC-disposition/orientation proof and contact sheet before publishing generated bytes.\n",
                 encoding="utf-8")
             payload.rename(output / "qualified")
         receipt.update(status="PASS", manifest_sha256=sha256((output / "qualified/manifest.json").read_bytes()),

@@ -8,6 +8,8 @@ on:
       - 'tests/CorporateLogoWebpProof.Tests.py'
       - 'tests/corporate-logo-webp-inputs.json'
       - 'tests/corporate-logo-webp-requirements.txt'
+      - 'tests/corporate-logo-webp-srgb-profile.json'
+      - 'tests/corporate-logo-webp-srgb-profile.LICENSE.txt'
       - 'Legacy.Maliev.Web/wwwroot/src/images/customers/*.png'
       - 'Legacy.Maliev.Web/wwwroot/src/images/customers/*.jpg'
       - 'Legacy.Maliev.Web/wwwroot/src/images/customers/*.gif'
@@ -41,6 +43,8 @@ jobs:
             /tests/CorporateLogoWebpProof.Tests.py
             /tests/corporate-logo-webp-inputs.json
             /tests/corporate-logo-webp-requirements.txt
+            /tests/corporate-logo-webp-srgb-profile.json
+            /tests/corporate-logo-webp-srgb-profile.LICENSE.txt
             /Legacy.Maliev.Web/wwwroot/src/images/customers/
       - name: Prepare one hash-pinned disposable image encoder
         timeout-minutes: 3
