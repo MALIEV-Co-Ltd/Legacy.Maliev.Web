@@ -1,9 +1,11 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -178,6 +180,102 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
+    public static IEnumerable<object[]> OriginalDetailLevelCases()
+    {
+        foreach (var renderer in new[] { true, false })
+        {
+            foreach (var culture in new[] { "en", "th" })
+            {
+                foreach (var mode in new[] { "omitted", "conflicting", "missing", "null-name", "levels404", "levels503" })
+                {
+                    yield return [renderer, culture, mode];
+                }
+            }
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(OriginalDetailLevelCases))]
+    public async Task Detail_ActualTypedClient_ResolvesOriginalSeparateLevelLookup(
+        bool rendererEnabled, string culture, string mode)
+    {
+        using var handler = new DetailSourceHandler(mode);
+        using var upstream = new HttpClient(handler) { BaseAddress = new Uri("http://career-detail-source/") };
+        var typed = new CareerClient(new DetailSourceFactory(upstream), NullLogger<CareerClient>.Instance);
+        await using var routeFactory = CreateFactory(typed, careerRouteEnabled: rendererEnabled);
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync($"/career/view/7?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains($"<html lang=\"{culture}\"", html, StringComparison.Ordinal);
+        Assert.Contains("Source detail offer", html, StringComparison.Ordinal);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Single(handler.Requests, uri => uri.AbsolutePath == "/Jobs/7");
+        Assert.Single(handler.Requests, uri => uri.AbsolutePath == "/jobs/levels");
+        Assert.DoesNotContain("Nested conflicting name", html, StringComparison.Ordinal);
+        if (mode is "omitted" or "conflicting")
+        {
+            Assert.Contains("Independent source level", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("not specified", html, StringComparison.Ordinal);
+        }
+        else if (mode == "null-name")
+        {
+            Assert.DoesNotContain("Independent source level", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("not specified", html, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Contains("not specified", html, StringComparison.Ordinal);
+        }
+    }
+
+    private sealed class DetailSourceFactory(HttpClient client) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            Assert.Equal("careers", name);
+            return client;
+        }
+    }
+
+    private sealed class DetailSourceHandler(string mode) : HttpMessageHandler
+    {
+        public System.Collections.Concurrent.ConcurrentQueue<Uri> Requests { get; } = new();
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri ?? throw new InvalidOperationException("Missing detail URI.");
+            Requests.Enqueue(uri);
+            Assert.Null(request.Headers.Authorization);
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.True(uri.AbsolutePath is "/Jobs/7" or "/jobs/levels");
+            var status = HttpStatusCode.OK;
+            string json;
+            if (uri.AbsolutePath == "/Jobs/7")
+            {
+                var nested = mode == "conflicting"
+                    ? ",\"level\":{\"id\":1,\"name\":\"Nested conflicting name\"}"
+                    : string.Empty;
+                json = "{\"id\":7,\"levelId\":1,\"title\":\"Source detail offer\",\"isFilled\":false" + nested + "}";
+            }
+            else
+            {
+                status = mode == "levels404" ? HttpStatusCode.NotFound
+                    : mode == "levels503" ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK;
+                json = mode is "missing" or "levels404" or "levels503" ? "[]"
+                    : mode == "null-name" ? "[{\"id\":1,\"name\":null}]"
+                    : "[{\"id\":1,\"name\":\"Independent source level\"}]";
+            }
+
+            return Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
     private WebApplicationFactory<Program> CreateFactory(
         ICareerClient careerClient,
         bool careerRouteEnabled = true,
@@ -248,6 +346,16 @@ public sealed class CareerDetailStaticSsrRouteTests : IClassFixture<TestingWebAp
         public List<int> RequestedOfferIds { get; } = [];
 
         public static CareerClientStub Success() => new(CareerResponseMode.Success);
+
+        public Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<CareerLevel>>([Level], true));
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
 
         public Task<CareerListing> GetListingAsync(
             CareerSort sort,
