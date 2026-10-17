@@ -1,0 +1,154 @@
+name: Corporate logo lossless WebP proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/corporate-logo-webp-proof.yml'
+      - 'scripts/prove-corporate-logo-webp.py'
+      - 'tests/CorporateLogoWebpProof.Tests.py'
+      - 'tests/corporate-logo-webp-inputs.json'
+      - 'tests/corporate-logo-webp-requirements.txt'
+      - 'Legacy.Maliev.Web/wwwroot/src/images/customers/*.png'
+      - 'Legacy.Maliev.Web/wwwroot/src/images/customers/*.jpg'
+      - 'Legacy.Maliev.Web/wwwroot/src/images/customers/*.gif'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corporate-logo-webp-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      LOGO_WEBP_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out the exact proposed source
+        timeout-minutes: 1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.LOGO_WEBP_EXPECTED_HEAD }}
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/workflows/corporate-logo-webp-proof.yml
+            /scripts/prove-corporate-logo-webp.py
+            /tests/CorporateLogoWebpProof.Tests.py
+            /tests/corporate-logo-webp-inputs.json
+            /tests/corporate-logo-webp-requirements.txt
+            /Legacy.Maliev.Web/wwwroot/src/images/customers/
+      - name: Prepare one hash-pinned disposable image encoder
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3.12 -c 'import platform,sys; assert sys.version_info[:2] == (3,12) and platform.machine() == "x86_64"'
+          proof_venv="$(mktemp -d "$RUNNER_TEMP/company-logo-webp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-XXXXXX")"
+          printf 'LOGO_WEBP_VENV=%s\n' "$proof_venv" >> "$GITHUB_ENV"
+          PROOF_PATH="$proof_venv" python3.12 - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path(os.environ["PROOF_PATH"])
+          owner = {"run_id": os.environ["GITHUB_RUN_ID"], "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                   "candidate_head": os.environ["LOGO_WEBP_EXPECTED_HEAD"], "purpose": "corporate-logo-webp-proof",
+                   "persistent_data": False, "lease_minutes": 15}
+          (path / "owner.json").write_text(json.dumps(owner), encoding="utf-8")
+          PY
+          python3.12 -m venv "$proof_venv"
+          mkdir "$proof_venv/wheels"
+          "$proof_venv/bin/python" -m pip --isolated download \
+            --disable-pip-version-check --no-input --only-binary=:all: --no-deps --require-hashes \
+            --no-cache-dir --retries 0 --timeout 30 --index-url https://pypi.org/simple \
+            --dest "$proof_venv/wheels" -r tests/corporate-logo-webp-requirements.txt
+          "$proof_venv/bin/python" -m pip --isolated install \
+            --disable-pip-version-check --no-input --only-binary=:all: --no-deps --require-hashes \
+            --no-cache-dir --no-index --find-links "$proof_venv/wheels" \
+            -r tests/corporate-logo-webp-requirements.txt
+      - name: Require conversion equivalence and rejection controls
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 90s "$LOGO_WEBP_VENV/bin/python" -B tests/CorporateLogoWebpProof.Tests.py
+      - name: Prove all eighteen exact-source conversions without changing runtime files
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 300s "$LOGO_WEBP_VENV/bin/python" -B scripts/prove-corporate-logo-webp.py
+      - name: Release only this run's disposable encoder and record absence
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          python3.12 - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          output = Path("company-logo-webp-proof")
+          output.mkdir(exist_ok=True)
+          receipt = {"schema_version": 1, "status": "FAILED", "persistent_data": False}
+          try:
+              configured = os.environ.get("LOGO_WEBP_VENV")
+              if not configured:
+                  receipt.update(status="NOT_CREATED", absent=True)
+              else:
+                  path = Path(configured)
+                  root = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
+                  prefix = "company-logo-webp-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"] + "-"
+                  if path.resolve(strict=True).parent != root or not path.name.startswith(prefix) or path.is_symlink():
+                      raise ValueError("Disposable encoder path is outside the exact owned temporary scope")
+                  owner = json.loads((path / "owner.json").read_text(encoding="utf-8"))
+                  if (owner.get("run_id") != os.environ["GITHUB_RUN_ID"]
+                      or owner.get("run_attempt") != os.environ["GITHUB_RUN_ATTEMPT"]
+                      or owner.get("candidate_head") != os.environ["LOGO_WEBP_EXPECTED_HEAD"]
+                      or owner.get("purpose") != "corporate-logo-webp-proof"
+                      or owner.get("persistent_data") is not False):
+                      raise ValueError("Disposable encoder ownership mismatch")
+                  released = []
+                  for purpose in ("controls", "proof"):
+                      ledger_path = path / (purpose + "-worker.json")
+                      if not ledger_path.is_file():
+                          continue
+                      ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+                      if (ledger.get("purpose") != purpose or ledger.get("run_id") != owner["run_id"]
+                          or ledger.get("run_attempt") != owner["run_attempt"]
+                          or ledger.get("candidate_head") != owner["candidate_head"]
+                          or ledger.get("persistent_data") is not False):
+                          raise ValueError("Foreground worker ledger ownership mismatch")
+                      observations = []
+                      for process in (ledger["worker"], ledger.get("supervisor")):
+                          if process is None:
+                              continue
+                          observed = Path("/proc") / str(process["pid"]) / "stat"
+                          try:
+                              ticks = int(observed.read_text(encoding="utf-8").rsplit(")", 1)[1].split()[19])
+                          except FileNotFoundError:
+                              observations.append({"pid": process["pid"], "owned_process_absent": True})
+                              continue
+                          if ticks == process["start_ticks"]:
+                              raise ValueError("Exact owned foreground worker or timeout supervisor remains")
+                          observations.append({"pid": process["pid"], "owned_process_absent": True, "pid_reused": True})
+                      released.append({"ledger": ledger, "observations": observations})
+                  receipt["released_processes"] = released
+                  shutil.rmtree(path)
+                  if path.exists():
+                      raise ValueError("Disposable encoder still exists")
+                  receipt.update(status="REMOVED", absent=True, owner=owner)
+          finally:
+              (output / "cleanup.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Preserve only the proof package and cleanup receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: company-logo-webp-${{ env.LOGO_WEBP_EXPECTED_HEAD }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            company-logo-webp-proof/
+            company-logo-webp-admission/
+          if-no-files-found: error
+          retention-days: 7
