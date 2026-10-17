@@ -43,28 +43,28 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         "en",
         "CNC machining specifications | MALIEV",
         "A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe.",
-        "Files and requirements for CNC machining",
-        "CNC machining preparation",
-        "Provide the model",
-        "STEP or another solid CAD format is preferred. Include separate files for each part and identify the revision.",
-        "Add the drawing",
-        "Call out tolerances, datums, threads, fits, surface finish, heat treatment, coatings, deburring, and inspection requirements.",
-        "Confirm production details",
-        "Specify material grade, quantity, repeat-order expectations, supplied components, packaging, and target date.",
-        "View CNC machining service")]
+        "Design decisions that make CNC parts easier to manufacture",
+        "CNC machining design guide",
+        "Files and quotation checklist",
+        "Supply a solid CAD model such as STEP and a readable dimensioned drawing for each part. Identify units, part number and revision consistently across both files. A model describes nominal shape; it does not reliably communicate every thread, fit, cosmetic requirement or inspection condition. If model and drawing disagree, identify which requirement governs before machining begins.",
+        "Thin walls and floors: consider support as well as thickness",
+        "Wall height, thickness, unsupported length and material all influence how a feature responds during cutting. A tall isolated wall behaves differently from a short wall tied into surrounding ribs. Thin floors can also bend under cutting or clamping loads. There is no single minimum wall thickness that establishes whether every material and geometry can be machined successfully.",
+        "Internal radii and pockets: leave room for the cutter",
+        "A rotating end mill leaves a radius in an internal vertical corner. Making that radius smaller usually changes the required tool diameter, reach or number of operations. When the cutter nearly fills a corner, engagement increases and the cut can become less stable. Give internal corners the largest radius that still provides clearance for the mating component and preserves required strength.",
+        "Continue reading")]
     [InlineData(
         "th",
-        "ข้อแนะนำงาน CNC | MALIEV",
-        "โมเดล solid 3 มิติกำหนดรูปทรง ส่วนแบบงานใช้สื่อสารข้อกำหนดที่รูปทรงอย่างเดียวระบุไม่ได้",
-        "ไฟล์และข้อกำหนดสำหรับงาน CNC",
-        "การเตรียมงาน CNC",
-        "ส่งโมเดล",
-        "ควรใช้ STEP หรือ solid CAD แยกไฟล์แต่ละชิ้นและระบุรีวิชัน",
-        "แนบแบบงาน",
-        "ระบุค่าความคลาดเคลื่อน datum เกลียว fit ผิว การอบชุบ การเคลือบ ลบคม และการตรวจสอบ",
-        "ยืนยันรายละเอียดการผลิต",
-        "ระบุเกรดวัสดุ จำนวน งานซ้ำ ชิ้นส่วนที่จัดหา บรรจุภัณฑ์ และวันที่ต้องการ",
-        "ดูบริการ CNC")]
+        "ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV",
+        "โมเดล solid 3 มิติกำหนดรูปทรงและขนาดพิกัด ส่วนแบบงานสื่อสารข้อกำหนดที่รูปทรงเพียงอย่างเดียวระบุไม่ได้",
+        "ออกแบบชิ้นงาน CNC ให้ผลิตได้ตรงความต้องการ",
+        "คู่มือออกแบบชิ้นงานสำหรับการผลิตด้วย CNC",
+        "ไฟล์และรายการข้อมูลสำหรับขอราคา",
+        "ส่งโมเดล solid CAD เช่น STEP พร้อมแบบระบุขนาดที่อ่านได้สำหรับชิ้นงานแต่ละรายการ ระบุหน่วย หมายเลขชิ้นงาน และรีวิชันให้ตรงกันทั้งสองไฟล์ โมเดลบอกรูปทรงตามแบบ แต่ไม่สามารถสื่อสารข้อกำหนดเกลียว พิกัดสวม ผิวที่ต้องการความสวยงาม หรือสภาวะการตรวจสอบได้ครบถ้วน หากโมเดลกับแบบไม่ตรงกัน ต้องตกลงว่าจะยึดข้อกำหนดใดก่อนเริ่มผลิต",
+        "ผนังและพื้นบาง: พิจารณาจุดรองรับร่วมกับความหนา",
+        "ความสูง ความหนา ความยาวช่วงที่ไม่มีตัวรองรับ และวัสดุ ล้วนมีผลต่อการตอบสนองของฟีเจอร์ขณะตัด ผนังสูงที่อยู่เดี่ยวมีพฤติกรรมต่างจากผนังเตี้ยที่เชื่อมกับครีบรอบข้าง พื้นบางอาจแอ่นจากแรงตัดหรือแรงจับยึดได้เช่นกัน จึงไม่มีค่าความหนาผนังต่ำสุดค่าเดียวที่ใช้ตัดสินการผลิตได้กับทุกวัสดุและทุกรูปทรง",
+        "รัศมีมุมในและโพรง: เผื่อพื้นที่ให้เครื่องมือตัด",
+        "ดอกเอ็นมิลหมุนตัดจะทิ้งรัศมีไว้ที่มุมในแนวตั้ง การลดรัศมีมักทำให้ต้องเปลี่ยนขนาดดอก ระยะยื่น หรือจำนวนขั้นตอน เมื่อดอกเกือบเต็มมุม พื้นที่สัมผัสตัดจะเพิ่มขึ้นและอาจทำให้การตัดไม่เสถียร ควรกำหนดรัศมีมุมในให้ใหญ่ที่สุดเท่าที่ชิ้นส่วนคู่ประกอบยังสวมได้และยังคงความแข็งแรงตามต้องการ",
+        "อ่านต่อ")]
     public async Task CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
         string title,
@@ -93,13 +93,27 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStepDescription}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{secondStep}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{secondStepDescription}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{thirdStepDescription}<", source, StringComparison.Ordinal);
         Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
-        Assert.Contains("href=\"/services/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(5, Regex.Matches(source, "<section\\b[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
+        Assert.Contains("id=\"thin-walls\"", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"radii-pockets\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/knowledges/cnc/geometry-and-workholding\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/knowledges/cnc/holes-and-tolerances\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/knowledges/cnc/machining-processes\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"/knowledges/finishing/surface-finishes\"", source, StringComparison.Ordinal);
+
+        // The source-final overview links to the detailed article. Preserve the
+        // former wall and corner contract against its actual new HTTP route.
+        using var detailResponse = await client.GetAsync($"/knowledges/cnc/geometry-and-workholding?culture={culture}");
+        var geometry = WebUtility.HtmlDecode(await detailResponse.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
+        Assert.Contains($">{secondStep}<", geometry, StringComparison.Ordinal);
+        Assert.Contains($">{secondStepDescription}<", geometry, StringComparison.Ordinal);
+        Assert.Contains($">{thirdStep}<", geometry, StringComparison.Ordinal);
+        Assert.Contains($">{thirdStepDescription}<", geometry, StringComparison.Ordinal);
+        Assert.Contains("id=\"thin-walls\"", geometry, StringComparison.Ordinal);
+        Assert.Contains("id=\"radii-pockets\"", geometry, StringComparison.Ordinal);
+        Assert.Contains("src=\"/src/images/knowledge/cnc-corner-clearance.svg\"", geometry, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -112,8 +126,10 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         Assert.Contains("name=\"google-site-verification\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"knowledge-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("new WOW", source, StringComparison.Ordinal);
@@ -122,6 +138,31 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         Assert.DoesNotContain("fonts.googleapis.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(
+        "en",
+        "Finishing and anodizing: design the final condition",
+        "Anodic coating thickness includes both converted base material and outward growth. The Aluminum Anodizers Council gives approximately half penetration and half buildup as generally accepted hardcoat guidance; actual pretreatment and coating behaviour need confirmation with the finisher. Do not simply add the full coating thickness to every dimension. Agree whether fits will be masked, compensated before coating or finished afterward, including the consequences for exposed material and protection.")]
+    [InlineData(
+        "th",
+        "การเก็บผิวและอโนไดซ์: ออกแบบตามสภาพสำเร็จ",
+        "ความหนาชั้นอโนไดซ์รวมทั้งเนื้อวัสดุที่เปลี่ยนเป็นออกไซด์และส่วนที่โตออกจากผิวเดิม Aluminum Anodizers Council ให้แนวทางทั่วไปของฮาร์ดโค้ตว่าแทรกเข้าเนื้อประมาณครึ่งหนึ่งและโตออกประมาณครึ่งหนึ่ง แต่ต้องยืนยันผลการเตรียมผิวและการเคลือบจริงกับผู้ทำผิว ไม่ควรบวกความหนาเต็มกับทุกมิติโดยตรง ต้องตกลงว่าจะปิดบังผิวสวม ชดเชยขนาดก่อนเคลือบ หรือเก็บขนาดภายหลัง รวมถึงผลต่อเนื้อโลหะที่เปิดออกและการป้องกันผิว")]
+    public async Task SourceFinalSurfaceFinishesRoute_PreservesTheRelocatedAnodizingDetail(
+        string culture,
+        string heading,
+        string coatingGuidance)
+    {
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/knowledges/finishing/surface-finishes?culture={culture}");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{coatingGuidance}<", source, StringComparison.Ordinal);
+        Assert.Contains("id=\"finishing\"", source, StringComparison.Ordinal);
+        Assert.Contains("src=\"/src/images/knowledge/anodize-dimensional-growth.svg\"", source, StringComparison.Ordinal);
     }
 
     [Theory]
