@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using static Microsoft.Playwright.Assertions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -22,11 +23,10 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await page.WaitForFunctionAsync("""
-            document.querySelector('[data-capability-carousel]')?.dataset.carouselState === 'ready'
-            && document.querySelector('[data-workpiece-gallery]')?.dataset.workpieceReady === 'true'
-            && document.querySelector('main.profile-about')?.dataset.presentationState === 'reduced'
-            """);
+        await Expect(page.Locator("[data-capability-carousel]")).ToHaveAttributeAsync("data-carousel-state", "ready");
+        await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
+        await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "reduced");
+        await DismissConsentAsync(page);
 
         Assert.Equal(6, await page.Locator(".profile-capability-choices button[data-capability-index]").CountAsync());
         Assert.Equal(6, await page.Locator(".profile-capability-slide").CountAsync());
@@ -42,22 +42,18 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         await lastCapability.FocusAsync();
         await page.Keyboard.PressAsync("Home");
         Assert.Equal("true", await page.Locator("[data-capability-index='0']").GetAttributeAsync("aria-pressed"));
-        Assert.True(await page.Locator("[data-capability-index='0']").EvaluateAsync<bool>(
-            "button => document.activeElement === button"));
+        await Expect(page.Locator("[data-capability-index='0']")).ToBeFocusedAsync();
         Assert.StartsWith("1 / 6", await page.Locator("[data-capability-status]").InnerTextAsync(), StringComparison.Ordinal);
 
         var lastWorkpiece = page.Locator("[data-workpiece-index='3']");
         await lastWorkpiece.FocusAsync();
-        Assert.True(await lastWorkpiece.EvaluateAsync<bool>(
-            "button => document.activeElement === button"));
+        await Expect(lastWorkpiece).ToBeFocusedAsync();
         await lastWorkpiece.PressAsync("Enter");
-        await page.WaitForFunctionAsync("""
-            !document.querySelector('#workpiece-photo-3').hidden
-            && document.querySelector('#workpiece-photo-0').hidden
-            """);
+        await Expect(page.Locator("#workpiece-photo-3")).ToHaveJSPropertyAsync("hidden", false);
+        await Expect(page.Locator("#workpiece-photo-0")).ToHaveJSPropertyAsync("hidden", true);
         Assert.Equal("true", await lastWorkpiece.GetAttributeAsync("aria-pressed"));
         Assert.Equal("workpiece-photo-3", await lastWorkpiece.GetAttributeAsync("aria-controls"));
-        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+        Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
     }
 
     [Theory]
@@ -93,16 +89,18 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
             (() => {
                 const set = window.setTimeout.bind(window), clear = window.clearTimeout.bind(window);
                 const timers = new Map(); let now = 0, next = -1;
+                const publishCount = () => document.documentElement?.setAttribute('data-about-test-timer-count', String(timers.size));
                 window.setTimeout = (callback, delay, ...args) => {
                     if (delay !== 6000) return set(callback, delay, ...args);
-                    const id = next--; timers.set(id, { callback: () => callback(...args), due: now + delay }); return id;
+                    const id = next--; timers.set(id, { callback: () => callback(...args), due: now + delay }); publishCount(); return id;
                 };
-                window.clearTimeout = id => { if (!timers.delete(id)) clear(id); };
+                window.clearTimeout = id => { if (!timers.delete(id)) clear(id); publishCount(); };
                 window.__aboutClock = {
                     count: () => timers.size,
                     advance: milliseconds => {
                         now += milliseconds;
                         for (const [id, item] of [...timers]) if (item.due <= now) { timers.delete(id); item.callback(); }
+                        publishCount();
                     }
                 };
             })();
@@ -111,10 +109,9 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await page.WaitForFunctionAsync("""
-            document.querySelector('[data-workpiece-gallery]')?.dataset.workpieceReady === 'true'
-            && document.querySelector('main.profile-about')?.dataset.presentationState === 'ready'
-            """);
+        await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
+        await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "ready");
+        await DismissConsentAsync(page);
         var gallery = page.Locator("[data-workpiece-gallery]");
         await gallery.ScrollIntoViewIfNeededAsync();
         var outside = await gallery.EvaluateAsync<int[]>("gallery => { const r = gallery.getBoundingClientRect(); const corners = [[1, 1], [innerWidth - 1, 1], [1, innerHeight - 1], [innerWidth - 1, innerHeight - 1]]; return corners.find(([x, y]) => x < r.left || x >= r.right || y < r.top || y >= r.bottom) ?? []; }");
@@ -122,35 +119,40 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         await page.Mouse.MoveAsync(outside[0], outside[1]);
         Assert.False(await gallery.EvaluateAsync<bool>(
             "gallery => gallery.matches(':hover') || gallery.contains(document.activeElement)"));
-        await page.WaitForFunctionAsync("window.__aboutClock.count() === 1");
-        await page.EvaluateAsync("window.__aboutClock.advance(5999)");
+        await Expect(page.Locator("html")).ToHaveAttributeAsync("data-about-test-timer-count", "1");
+        await page.EvaluateAsync("() => window.__aboutClock.advance(5999)");
         Assert.True(await page.Locator("#workpiece-photo-0").IsVisibleAsync());
-        await page.EvaluateAsync("window.__aboutClock.advance(1)");
-        await page.WaitForFunctionAsync("""
-            !document.querySelector('#workpiece-photo-1').hidden
-            && document.querySelector('#workpiece-photo-0').hidden
-            && window.__aboutClock.count() === 1
-            """);
+        await page.EvaluateAsync("() => window.__aboutClock.advance(1)");
+        await Expect(page.Locator("#workpiece-photo-1")).ToHaveJSPropertyAsync("hidden", false);
+        await Expect(page.Locator("#workpiece-photo-0")).ToHaveJSPropertyAsync("hidden", true);
+        await Expect(page.Locator("html")).ToHaveAttributeAsync("data-about-test-timer-count", "1");
         Assert.Equal("true", await page.Locator("[data-workpiece-index='1']").GetAttributeAsync("aria-pressed"));
 
         var toggle = page.Locator("[data-workpiece-toggle]");
         await toggle.FocusAsync();
-        Assert.Equal(0, await page.EvaluateAsync<int>("window.__aboutClock.count()"));
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
         await toggle.PressAsync("Enter");
-        Assert.Equal(1, await page.EvaluateAsync<int>("window.__aboutClock.count()"));
+        Assert.Equal(1, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
         await toggle.PressAsync("Enter");
         Assert.Equal("true", await toggle.GetAttributeAsync("data-paused"));
-        Assert.Equal(0, await page.EvaluateAsync<int>("window.__aboutClock.count()"));
-        await page.EvaluateAsync("window.__aboutClock.advance(12000)");
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
+        await page.EvaluateAsync("() => window.__aboutClock.advance(12000)");
         Assert.True(await page.Locator("#workpiece-photo-1").IsVisibleAsync());
-        await page.EvaluateAsync("document.dispatchEvent(new Event('visibilitychange'))");
-        Assert.Equal(0, await page.EvaluateAsync<int>("window.__aboutClock.count()"));
+        await page.EvaluateAsync("() => document.dispatchEvent(new Event('visibilitychange'))");
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
         await toggle.PressAsync("Enter");
         Assert.Equal("false", await toggle.GetAttributeAsync("data-paused"));
-        Assert.Equal(1, await page.EvaluateAsync<int>("window.__aboutClock.count()"));
+        Assert.Equal(1, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
         Assert.Equal("static", await page.Locator("main.profile-about").GetAttributeAsync("data-presentation-state"));
-        await page.EvaluateAsync("window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))");
-        Assert.Equal(0, await page.EvaluateAsync<int>("window.__aboutClock.count()"));
+        await page.EvaluateAsync("() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))");
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
         Assert.Equal("stopped", await page.Locator("[data-workpiece-gallery]").GetAttributeAsync("data-workpiece-ready"));
+    }
+
+    private static async Task DismissConsentAsync(IPage page)
+    {
+        var dialog = page.Locator("#cookieConsent");
+        await dialog.Locator("[data-consent-action='reject']").ClickAsync();
+        await Expect(dialog).ToHaveCountAsync(0);
     }
 }
