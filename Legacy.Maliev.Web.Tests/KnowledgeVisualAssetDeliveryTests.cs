@@ -111,6 +111,25 @@ public sealed class KnowledgeVisualAssetDeliveryTests(ITestOutputHelper output)
 
             Assert.Equal(42, photos);
             Assert.Equal(17, diagrams);
+            var inherited = seed.RootElement.GetProperty("inherited").EnumerateArray().ToArray();
+            Assert.Equal(2, inherited.Length);
+            foreach (var frozen in inherited)
+            {
+                string path = frozen.GetProperty("targetPath").GetString()!;
+                const string prefix = "Legacy.Maliev.Web/wwwroot/";
+                Assert.StartsWith(prefix, path);
+                byte[] disk = await File.ReadAllBytesAsync(Path.Combine(root, path));
+                Assert.Equal(frozen.GetProperty("bytes").GetInt32(), disk.Length);
+                Assert.Equal(frozen.GetProperty("blob").GetString(), GitBlob(disk));
+                using var response = await client.GetAsync("/" + path[prefix.Length..]);
+                Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("image/svg+xml", response.Content.Headers.ContentType?.MediaType);
+                byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+                Assert.Equal(disk.Length, bytes.Length);
+                Assert.Equal(GitBlob(disk), GitBlob(bytes));
+                Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(disk)),
+                    Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            }
             // Public asset identities and numerical dimensions only; no application state or bodies.
             output.WriteLine(JsonSerializer.Serialize(new { schema = 1, photos, diagrams, measurements }));
         }
