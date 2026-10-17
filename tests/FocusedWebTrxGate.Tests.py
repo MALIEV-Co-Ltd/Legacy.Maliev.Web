@@ -14,6 +14,13 @@ spec.loader.exec_module(gate)
 NS = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
 FIELDS = "total executed passed failed error timeout aborted inconclusive passedButRunAborted notRunnable notExecuted disconnected warning completed inProgress pending".split()
 
+# Frozen CNC source8a6bd8313d14457ebc4ba7d4b3e93872baac3bab display cases.
+# Native147TRX reports EN828/TH811 result names and447-unit definitions.
+PINNED_CNC_DISPLAY_CASES = [
+    ("en", "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests.CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(culture: \"en\", title: \"CNC machining specifications | MALIEV\", description: \"A solid 3D model defines nominal geometry; a drawi\"···, heading: \"Design decisions that make CNC parts easier to man\"···, eyebrow: \"CNC machining design guide\", firstStep: \"Files and quotation checklist\", firstStepDescription: \"Supply a solid CAD model such as STEP and a readab\"···, secondStep: \"Thin walls and floors: consider support as well as\"···, secondStepDescription: \"Wall height, thickness, unsupported length and mat\"···, thirdStep: \"Internal radii and pockets: leave room for the cut\"···, thirdStepDescription: \"A rotating end mill leaves a radius in an internal\"···, serviceLink: \"Continue reading\")", "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests.CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(culture: \"en\", title: \"CNC machining specifications | MALIEV\", description: \"A solid 3D model defines nominal geometry; a drawi\"···, heading: \"Design decisions that make CNC parts easier to man\"···, eyebrow: \"CNC machining design guide\", firstStep: \"Files and quotation checklist\", firstStepDescription: \"···"),
+    ("th", "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests.CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(culture: \"th\", title: \"ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV\", description: \"โมเดล solid 3 มิติกำหนดรูปทรงและขนาดพิกัด ส่วนแบบง\"···, heading: \"ออกแบบชิ้นงาน CNC ให้ผลิตได้ตรงความต้องการ\", eyebrow: \"คู่มือออกแบบชิ้นงานสำหรับการผลิตด้วย CNC\", firstStep: \"ไฟล์และรายการข้อมูลสำหรับขอราคา\", firstStepDescription: \"ส่งโมเดล solid CAD เช่น STEP พร้อมแบบระบุขนาดที่อ่\"···, secondStep: \"ผนังและพื้นบาง: พิจารณาจุดรองรับร่วมกับความหนา\", secondStepDescription: \"ความสูง ความหนา ความยาวช่วงที่ไม่มีตัวรองรับ และวั\"···, thirdStep: \"รัศมีมุมในและโพรง: เผื่อพื้นที่ให้เครื่องมือตัด\", thirdStepDescription: \"ดอกเอ็นมิลหมุนตัดจะทิ้งรัศมีไว้ที่มุมในแนวตั้ง การ\"···, serviceLink: \"อ่านต่อ\")", "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests.CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(culture: \"th\", title: \"ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV\", description: \"โมเดล solid 3 มิติกำหนดรูปทรงและขนาดพิกัด ส่วนแบบง\"···, heading: \"ออกแบบชิ้นงาน CNC ให้ผลิตได้ตรงความต้องการ\", eyebrow: \"คู่มือออกแบบชิ้นงานสำหรับการผลิตด้วย CNC\", firstStep: \"ไฟล์และรายการข้อมูลสำหรับขอราคา\", firstStepDescripti···"),
+]
+
 
 class FocusedGateControls(unittest.TestCase):
     def fixture(self, directory, suite):
@@ -177,6 +184,113 @@ class FocusedGateControls(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.verify(root, directory, dll, "sidebar")
 
+
+    def long_native_fixture(self, directory):
+        root, dll = self.fixture(directory, "migration-consumers")
+        definitions = {row.get("id"): row for row in root.find(NS + "TestDefinitions")}
+        rows = []
+        for result in root.find(NS + "Results"):
+            definition = definitions[result.get("testId")]
+            method = definition.find(NS + "TestMethod")
+            if (method.get("className") == "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests"
+                    and method.get("name") == "CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument"):
+                rows.append((result, definition))
+        self.assertEqual(2, len(rows))
+        for (result, definition), (_, full, discovered) in zip(rows, PINNED_CNC_DISPLAY_CASES, strict=True):
+            result.set("testName", full)
+            definition.set("name", discovered)
+        return root, dll, rows
+
+    def test_frozen_long_native_cnc_displays_join_all147_without_changing_identities(self):
+        self.assertEqual([828, 811], [len(full) for _, full, _ in PINNED_CNC_DISPLAY_CASES])
+        self.assertEqual([447, 447], [len(discovered) for _, _, discovered in PINNED_CNC_DISPLAY_CASES])
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll, _ = self.long_native_fixture(directory)
+            self.assertEqual(147, self.verify(root, directory, dll, "migration-consumers")["passed"])
+
+    def test_native_display_uses_exact447_utf16_boundary_and_control_escaping(self):
+        cases = [
+            ("", ""),
+            ("a" * 446, "a" * 446),
+            ("a" * 447, "a" * 447),
+            ("a" * 448, "a" * 444 + "\u00b7" * 3),
+            ("\u0e01" * 448, "\u0e01" * 444 + "\u00b7" * 3),
+            ("\r\n\t", r"\r\n\t"),
+            (r"\r\n\t", r"\r\n\t"),
+            ("\r\n\t" + "a" * 442, r"\r\n\t" + "a" * 438 + "\u00b7" * 3),
+            ("a" * 442 + "\U0001f600" + "bb", "a" * 442 + "\U0001f600" + "bb"),
+            ("a" * 442 + "\U0001f600" + "bbbb", "a" * 442 + "\U0001f600" + "\u00b7" * 3),
+            ("a" * 443 + "\U0001f600" + "bbb", "a" * 443 + "\ud83d" + "\u00b7" * 3),
+        ]
+        for index, (full, expected) in enumerate(cases):
+            with self.subTest(case=index):
+                self.assertEqual(expected, gate.native_definition_display(full))
+
+    def test_long_native_definition_rejects_changed_suffix_prefix_and_arbitrary_shortening(self):
+        _, full, discovered = PINNED_CNC_DISPLAY_CASES[0]
+        mutations = [
+            discovered[:-3] + "...",
+            "X" + discovered[1:],
+            discovered[:443] + "\u00b7" * 3,
+            discovered[:-1],
+            full,
+            full[:300],
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            for index, changed in enumerate(mutations):
+                with self.subTest(case=index):
+                    root, dll, rows = self.long_native_fixture(directory)
+                    rows[0][1].set("name", changed)
+                    with self.assertRaisesRegex(ValueError, "native-definition-display-mismatch"):
+                        self.verify(root, directory, dll, "migration-consumers")
+
+    def test_native_display_mapping_keeps_full_result_name_uniqueness(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll, rows = self.long_native_fixture(directory)
+            rows[1][0].set("testName", rows[0][0].get("testName"))
+            rows[1][1].set("name", rows[0][1].get("name"))
+            with self.assertRaisesRegex(ValueError, "Unknown, duplicate"):
+                self.verify(root, directory, dll, "migration-consumers")
+
+    def test_long_native_displays_keep_method_execution_assembly_and_error_guards(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            for mutation in ("method", "class", "execution", "codebase", "storage", "error"):
+                with self.subTest(case=mutation):
+                    root, dll, rows = self.long_native_fixture(directory)
+                    definition = rows[0][1]
+                    method = definition.find(NS + "TestMethod")
+                    if mutation == "method":
+                        method.set("name", "ForeignMethod")
+                    elif mutation == "class":
+                        method.set("className", "Foreign.Tests")
+                    elif mutation == "execution":
+                        definition.find(NS + "Execution").set("id", str(uuid.uuid4()))
+                    elif mutation == "codebase":
+                        method.set("codeBase", "Foreign.dll")
+                    elif mutation == "storage":
+                        definition.set("storage", "Foreign.dll")
+                    else:
+                        ET.SubElement(root.find(NS + "ResultSummary"), NS + "ErrorInfo")
+                    with self.assertRaises(ValueError):
+                        self.verify(root, directory, dll, "migration-consumers")
+
+
+
+    def test_native_truncation_cannot_hide_duplicate_definition_display_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll, rows = self.long_native_fixture(directory)
+            first = rows[0][0].get("testName")
+            second = first[:-1] + ', extraCase: "distinct")'
+            self.assertNotEqual(first, second)
+            rows[1][0].set("testName", second)
+            rows[1][1].set("name", rows[0][1].get("name"))
+            with self.assertRaisesRegex(ValueError, "native-definition-display-duplicate"):
+                self.verify(root, directory, dll, "migration-consumers")
 
 if __name__ == "__main__":
     unittest.main()

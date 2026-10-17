@@ -111,6 +111,18 @@ ROSTERS["migration-consumers"] = {
     }
 }
 
+
+def native_definition_display(name):
+    # xunit.runner.visualstudio3.1.5 VsDiscoverySink Escape -> Truncate.
+    # Producer commit 1b188a7b0a069d7fc94ae3c0b251f1302b602b63, lines 23,139-152.
+    # Discovery stores this display; VSTest18.8.1 can retain the full execution display.
+    escaped = name.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+    units = escaped.encode("utf-16-le", errors="surrogatepass")
+    if len(units) <= 447 * 2:
+        return escaped
+    return units[:444 * 2].decode("utf-16-le", errors="surrogatepass") + "\u00b7" * 3
+
+
 def verify(path, suite, assembly):
     root = ET.parse(path).getroot()
     def one(parent, name):
@@ -168,6 +180,7 @@ def verify(path, suite, assembly):
             raise ValueError("Unexpected nested or extra TRX " + name)
     definitions = {row.attrib["id"]: row for row in definitions}
     names = set()
+    definition_names = set()
     actual = Counter()
     assembly = str(Path(assembly).resolve())
     for result in results:
@@ -176,8 +189,10 @@ def verify(path, suite, assembly):
         execution = one(definition, "Execution")
         cls, member = method.attrib.get("className"), method.attrib.get("name")
         name = result.attrib.get("testName", "")
+        definition_name = definition.attrib.get("name", "")
+        if definition_name != native_definition_display(name):
+            raise ValueError("native-definition-display-mismatch")
         if (result.attrib.get("outcome") != "Passed" or name in names
-            or definition.attrib.get("name") != name
             or execution.attrib.get("id") != result.attrib["executionId"]
             or cls not in expected or member not in expected[cls]
             or not (name == cls + "." + member or name.startswith(cls + "." + member + "("))
@@ -185,7 +200,10 @@ def verify(path, suite, assembly):
             # Native VSTest emits lowercased storage on Linux; codeBase remains exact case.
             or str(Path(definition.attrib.get("storage", "")).resolve()).casefold() != assembly.casefold()):
             raise ValueError("Unknown, duplicate, failed or mismatched test/definition/execution/assembly")
+        if definition_name in definition_names:
+            raise ValueError("native-definition-display-duplicate")
         names.add(name)
+        definition_names.add(definition_name)
         actual[(cls, member)] += 1
     if actual != Counter({(cls, member): rows for cls, methods in expected.items() for member, rows in methods.items()}):
         raise ValueError("Exact independent class/method row roster required")
