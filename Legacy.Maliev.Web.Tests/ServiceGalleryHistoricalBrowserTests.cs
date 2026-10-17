@@ -1,10 +1,11 @@
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 // Historical gallery geometry only; no CNC engine, upload or quotation behavior.
 [Collection(CncNativeBrowserCollection.Name)]
-public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture fixture)
+public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture fixture, ITestOutputHelper output)
 {
     [Fact]
     public async Task PrintingGallery_ButtonHasReadableContrast_AndExpandedImagesFillVariedTiles()
@@ -19,9 +20,20 @@ public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture
         page.SetDefaultTimeout(30000);
         string origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
 
-        var response = await page.GotoAsync(
-            origin + "/services/3d-printing#printing-part-proof",
-            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        IResponse? response;
+        using (var navigation = new InstantQuotationNavigationFailureDiagnostics(page, new Uri(origin)))
+        {
+            response = await InstantQuotationNavigationFailureDiagnostics.PreserveFailureAsync(
+                () => page.GotoAsync(
+                    origin + "/services/3d-printing#printing-part-proof",
+                    new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 }),
+                () => navigation.WriteFailureAsync(output, new
+                {
+                    Phase = "printing-gallery-initial",
+                    WaitState = "domcontentloaded",
+                    NavigationTimeoutMs = 30000,
+                }));
+        }
         Assert.NotNull(response);
         Assert.True(response.Ok, $"3D-printing service page returned HTTP {response.Status}.");
         await AssertActiveRendererAsync(page);
