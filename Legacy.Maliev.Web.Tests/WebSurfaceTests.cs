@@ -2620,8 +2620,8 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Theory]
-    [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
-    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
+    [InlineData("en", "From concept to a working part.", "Established in 2018", "04 · CNC batch production")]
+    [InlineData("th", "จากไอเดีย สู่ชิ้นงานจริง", "ก่อตั้งในปี 2018", "04 · ผลิตด้วย CNC เป็นชุด")]
     public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration(
         string culture,
         string heading,

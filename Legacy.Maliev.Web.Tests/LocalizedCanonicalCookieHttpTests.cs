@@ -117,7 +117,7 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         Assert.Contains("<html lang=\"en\"", document, StringComparison.Ordinal);
-        Assert.Contains("From a family workshop to connected manufacturing.", document, StringComparison.Ordinal);
+        Assert.Contains("From concept to a working part.", document, StringComparison.Ordinal);
         AssertDocumentLinks(document, "https://www.maliev.com/about?culture=en");
         Assert.DoesNotContain("ref=guide", DocumentLinks(document), StringComparison.Ordinal);
     }
@@ -136,8 +136,8 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         Assert.Contains($"<html lang=\"{language}\"", document, StringComparison.Ordinal);
-        Assert.Contains(language == "en" ? "From a family workshop to connected manufacturing."
-            : "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", document, StringComparison.Ordinal);
+        Assert.Contains(language == "en" ? "From concept to a working part."
+            : "จากไอเดีย สู่ชิ้นงานจริง", document, StringComparison.Ordinal);
         AssertDocumentLinks(document, canonical);
     }
 
