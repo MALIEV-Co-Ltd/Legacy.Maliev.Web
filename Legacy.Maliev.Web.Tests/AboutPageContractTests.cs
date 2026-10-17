@@ -85,9 +85,9 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
         ];
         var actual = Regex.Matches(html, "data-customer=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
         Assert.Equal(expected, actual);
-        Assert.Contains("/src/images/customers/kobelco.gif", html, StringComparison.Ordinal);
-        Assert.Contains("/src/images/customers/yg-1-official-mark.png", html, StringComparison.Ordinal);
-        Assert.Contains("/src/images/customers/tpi-polene-power-emblem.png", html, StringComparison.Ordinal);
+        Assert.Contains("/src/images/customers/kobelco.webp", html, StringComparison.Ordinal);
+        Assert.Contains("/src/images/customers/yg-1-official-mark.webp", html, StringComparison.Ordinal);
+        Assert.Contains("/src/images/customers/tpi-polene-power-emblem.webp", html, StringComparison.Ordinal);
         Assert.DoesNotContain("/src/images/customers/yg-1.png", html, StringComparison.Ordinal);
         Assert.DoesNotContain("/src/images/customers/tpi-polene-power.png", html, StringComparison.Ordinal);
     }
