@@ -33,6 +33,88 @@ class ResourceCheckpointTests(unittest.TestCase):
             self.assertEqual(1, result["fixed_name_counts"]["testhost"])
             self.assertNotIn("private", json.dumps(result))
 
+
+    def test_dotnet_role_projection_never_returns_private_arguments(self):
+        cases = (("dotnet\0format\0private-project\0", "format"),
+                 ("dotnet\0test\0private-project\0", "test"),
+                 ("dotnet\0exec\0--runtimeconfig\0/private/runtime.json\0/private/testhost.dll\0", "testhost"),
+                 ("dotnet\0/private/MSBuild.dll\0/private/secret\0", "msbuild"),
+                 ("dotnet\0exec\0/private/VBCSCompiler.dll\0private-pipe\0", "compiler"),
+                 ("dotnet\0/private/Legacy.Maliev.AuthService.Api.dll\0--private\0", "producer"),
+                 ("dotnet\0/private/customer.dll\0testhost.dll\0", "other"),
+                 ("dotnet\0unknown\0testhost.dll\0", "other"))
+        for raw, expected in cases:
+            with self.subTest(expected=expected):
+                result = checkpoint.dotnet_role(raw)
+                self.assertEqual(expected, result)
+                self.assertNotIn("private", result)
+        for raw in (None, "dotnet\0format", "dotnet\0" + "a\0" * 257):
+            self.assertEqual("unavailable", checkpoint.dotnet_role(raw))
+
+    @staticmethod
+    def process_stat(birth=100, pages=3):
+        tail = ["S"] + ["0"] * 21
+        tail[19], tail[21] = str(birth), str(pages)
+        return "7 (dotnet (private name)) " + " ".join(tail) + "\n"
+
+    def test_rss_parser_keeps_only_birth_and_resident_pages(self):
+        self.assertEqual((100, 3), checkpoint.resident_identity(self.process_stat()))
+        for raw in (None, "", "7 (private) S", self.process_stat(pages=-1),
+                    self.process_stat(birth="private")):
+            self.assertIsNone(checkpoint.resident_identity(raw))
+
+    def test_dotnet_pid_reuse_returns_unavailable_without_identity_or_arguments(self):
+        observations = iter((self.process_stat(), "dotnet\0format\0private\0", self.process_stat(birth=101)))
+        class Source:
+            def read(self, path, maximum=4096):
+                return next(observations)
+        self.assertEqual(("unavailable", None),
+                         checkpoint.dotnet_observation(Source(), Path("/not-read"), 4096))
+
+    def test_dotnet_census_aggregates_fixed_roles_and_rss_only(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for number, command, pages in ((1, "format", 3), (2, "test", 5)):
+                directory = root / str(number)
+                directory.mkdir()
+                (directory / "comm").write_text("dotnet\n")
+                (directory / "stat").write_text(self.process_stat(pages=pages))
+                (directory / "cmdline").write_bytes(("dotnet\0" + command + "\0private-customer\0").encode())
+            with patch.object(checkpoint.os, "sysconf", return_value=4096):
+                result = checkpoint.processes(checkpoint.Inputs(time.monotonic() + 5), root)
+            self.assertEqual(2, result["fixed_name_counts"]["dotnet"])
+            self.assertEqual({"count": 1, "rss_observations": 1, "rss_unavailable": 0, "rss_bytes_sum": 12288},
+                             result["dotnet_roles"]["format"])
+            self.assertEqual(20480, result["dotnet_roles"]["test"]["rss_bytes_sum"])
+            self.assertIsNone(result["dotnet_roles"]["other"]["rss_bytes_sum"])
+            self.assertNotIn("private", json.dumps(result))
+            self.assertNotIn("pid", json.dumps(result))
+            self.assertNotIn(temporary, json.dumps(result))
+
+    def test_unreadable_dotnet_rss_is_unavailable_not_zero(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "1").mkdir()
+            (root / "1/comm").write_text("dotnet\n")
+            result = checkpoint.processes(checkpoint.Inputs(time.monotonic() + 5), root)
+            item = result["dotnet_roles"]["unavailable"]
+            self.assertEqual((1, 0, 1, None),
+                             (item["count"], item["rss_observations"], item["rss_unavailable"], item["rss_bytes_sum"]))
+
+    def test_role_read_budget_is_existing_bounded_input(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "1").mkdir()
+            (root / "1/comm").write_text("dotnet\n")
+            (root / "1/stat").write_text(self.process_stat())
+            (root / "1/cmdline").write_bytes(b"x" * 4097)
+            with patch.object(checkpoint.os, "sysconf", return_value=4096):
+                result = checkpoint.processes(checkpoint.Inputs(time.monotonic() + 5), root)
+            self.assertTrue(result["enumeration_capped"])
+            item = result["dotnet_roles"]["unavailable"]
+            self.assertEqual((1, 1, 0, 12288),
+                             (item["count"], item["rss_observations"], item["rss_unavailable"], item["rss_bytes_sum"]))
+
     def test_process_enumeration_caps_and_reports_incompleteness(self):
         with tempfile.TemporaryDirectory() as temporary, patch.object(checkpoint, "MAX_PROCESSES", 2):
             root = Path(temporary)

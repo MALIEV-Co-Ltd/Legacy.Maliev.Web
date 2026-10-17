@@ -107,9 +107,54 @@ def proc_identity(pid, proc=Path("/proc")):
     return {"pid": pid, "start_ticks": integer(tail[19]),
             "exe_device": executable.st_dev, "exe_inode": executable.st_ino}
 
+
+DOTNET_ROLES = {"format", "test", "testhost", "msbuild", "compiler", "producer", "other", "unavailable"}
+DOTNET_DLL_ROLES = {"dotnet-format.dll": "format", "testhost.dll": "testhost",
+                    "MSBuild.dll": "msbuild", "VBCSCompiler.dll": "compiler",
+                    "Legacy.Maliev.CustomerService.Api.dll": "producer",
+                    "Legacy.Maliev.AuthService.Api.dll": "producer",
+                    "Legacy.Maliev.CatalogService.Api.dll": "producer",
+                    "Legacy.Maliev.AccountingService.Api.dll": "producer"}
+
+def dotnet_role(text):
+    # Classify only fixed tokens. Never return arguments, paths, environment or arbitrary names.
+    if text is None or not text.endswith("\0"):
+        return "unavailable"
+    arguments = text.split("\0")[:-1]
+    if len(arguments) > 256:
+        return "unavailable"
+    if len(arguments) > 1 and arguments[1] in ("format", "test", "msbuild", "vstest"):
+        return {"format": "format", "test": "test", "msbuild": "msbuild", "vstest": "test"}[arguments[1]]
+    if len(arguments) > 1 and (arguments[1] == "exec" or arguments[1].endswith(".dll")):
+        for argument in arguments[1:]:
+            name = argument.rsplit("/", 1)[-1]
+            if name.endswith(".dll"):
+                return DOTNET_DLL_ROLES.get(name, "other")
+    return "other"
+
+def resident_identity(text):
+    if text is None:
+        return None
+    try:
+        tail = text[text.rindex(")") + 2:].split()
+        return integer(tail[19]), integer(tail[21])
+    except (ValueError, IndexError, RuntimeError):
+        return None
+
+def dotnet_observation(source, process, page_size):
+    before = resident_identity(source.read(process / "stat", 4096))
+    role = dotnet_role(source.read(process / "cmdline", 4096))
+    after = resident_identity(source.read(process / "stat", 4096))
+    if before is None or after is None or before[0] != after[0]:
+        return "unavailable", None
+    return role, after[1] * page_size
+
 def processes(source, proc=Path("/proc")):
     counts = {name: 0 for name in sorted(COUNTS)}
     total = scanned = 0
+    roles = {role: {"count": 0, "rss_observations": 0, "rss_unavailable": 0, "rss_bytes_sum": 0}
+             for role in sorted(DOTNET_ROLES)}
+    page_size = os.sysconf("SC_PAGE_SIZE")
     capped = False
     try:
         with os.scandir(proc) as entries:
@@ -128,6 +173,13 @@ def processes(source, proc=Path("/proc")):
                 name = source.read(proc / entry.name / "comm", 128)
                 if name is not None and name.strip() in counts:
                     counts[name.strip()] += 1
+                    if name.strip() == "dotnet":
+                        role, rss = dotnet_observation(source, proc / entry.name, page_size)
+                        item = roles[role]
+                        item["count"] += 1
+                        item["rss_observations" if rss is not None else "rss_unavailable"] += 1
+                        if rss is not None:
+                            item["rss_bytes_sum"] += rss
                 if source.exceeded:
                     capped = True
                     break
@@ -135,7 +187,10 @@ def processes(source, proc=Path("/proc")):
         return {"available": False}
     return {"available": True, "observed_processes": total, "entries_examined": min(scanned, MAX_ENTRIES),
             "enumeration_capped": capped, "fixed_name_counts": counts,
-            "testhost_named_count_is_not_all_dotnet_testhosts": True}
+            "testhost_named_count_is_not_all_dotnet_testhosts": True,
+            "dotnet_roles": {role: {**item, "rss_bytes_sum": item["rss_bytes_sum"] if item["rss_observations"] else None}
+                             for role, item in roles.items()},
+            "rss_scope": "observed RSS sum; shared pages may be counted more than once; incomplete reads remain unavailable"}
 
 def disk(path):
     try:
