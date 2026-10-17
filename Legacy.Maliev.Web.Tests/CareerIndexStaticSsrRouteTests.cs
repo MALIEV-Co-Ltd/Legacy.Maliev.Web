@@ -922,8 +922,16 @@ public sealed class CareerIndexStaticSsrRouteTests(ITestOutputHelper output) : I
                 renderer = rendererEnabled ? "blazor" : "razor",
                 culture = culture is "en" or "th" ? culture : "other",
                 handler = handler is "Search" or "ChangeItemCount" ? handler : "other",
-                size = size switch { "invalid-size" => "malformed", "0" => "zero", "-1" => "negative",
-                    "101" => "above-maximum", "2147483648" => "overflow", "" => "empty", _ => "other" },
+                size = size switch
+                {
+                    "invalid-size" => "malformed",
+                    "0" => "zero",
+                    "-1" => "negative",
+                    "101" => "above-maximum",
+                    "2147483648" => "overflow",
+                    "" => "empty",
+                    _ => "other"
+                },
                 status = Volatile.Read(ref status),
                 route = Volatile.Read(ref route) switch { 1 => "career", 2 => "error", 3 => "other", _ => "unobserved" },
                 reexecuted = Volatile.Read(ref reexecuted) == 1,
