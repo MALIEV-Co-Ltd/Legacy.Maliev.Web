@@ -318,6 +318,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 
     private sealed class Control
     {
+        public MaterialInitialRequestStages InitialStages { get; } = new();
         public ConcurrentQueue<Gate> Gates { get; } = new();
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
         public ConcurrentQueue<(string Stage, int Quantity, bool Canceled)> Timeline { get; } = new();
@@ -410,6 +411,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                control.InitialStages.Register(services);
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
@@ -418,9 +420,9 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 var store = services.Single(item => item.ServiceType == typeof(IInstantQuotationSessionStore));
                 services.RemoveAll<IInstantQuotationSessionStore>();
                 services.Add(new ServiceDescriptor(typeof(IInstantQuotationSessionStore), provider =>
-                    new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
+                    new MaterialInitialRequestStages.Store(new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
                         ?? store.ImplementationFactory?.Invoke(provider)
-                        ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), store.Lifetime));
+                        ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), control.InitialStages), store.Lifetime));
             });
         }
     }
@@ -459,11 +461,24 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 fixture.Page = await fixture.context.NewPageAsync();
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrorCount);
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                using (var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin))
+                try
                 {
+                    using var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin);
                     await initialNavigation.RunAsync(
                         () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
                 }
+                catch
+                {
+                    try
+                    {
+                        fixture.Control.InitialStages.Freeze();
+                        output.WriteLine("material-initial-server-stages "
+                            + System.Text.Json.JsonSerializer.Serialize(fixture.Control.InitialStages.Snapshot()));
+                    }
+                    catch { /* Secondary evidence cannot replace the original navigation failure. */ }
+                    throw;
+                }
+                finally { fixture.Control.InitialStages.Freeze(); }
                 var consent = fixture.Page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await consent.IsVisibleAsync()) await consent.ClickAsync();
                 var cookie = Assert.Single(await fixture.context.CookiesAsync(), candidate => candidate.Name == InstantQuotationSessionIdentityCookie.CookieName);

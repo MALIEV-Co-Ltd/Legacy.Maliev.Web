@@ -37,7 +37,7 @@ public sealed class PublicCrawlerInventoryAcceptanceTests(PublicCrawlerInventory
         // Source acce commercial intent; custom Thai wording is updated by source 25db5545.
         (string Path, string English, string Thai)[] contracts =
         [
-            ("/", "Custom Manufacturing Services", "รับผลิตชิ้นส่วน"),
+            ("/", "Custom Manufacturing", "ผลิตชิ้นงานตามแบบ"),
             ("/services", "Custom part manufacturing", "บริการผลิตชิ้นส่วน"),
             ("/services/custom-manufacturing", "Custom Part Manufacturing", "รับผลิตชิ้นงานตามแบบ"),
             ("/services/3d-design", "3D Design", "รับออกแบบ 3 มิติ"),

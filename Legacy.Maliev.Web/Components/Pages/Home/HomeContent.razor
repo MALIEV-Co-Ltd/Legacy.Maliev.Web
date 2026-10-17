@@ -1,64 +1,48 @@
 @inject IStringLocalizer<HomeContent> Localizer
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment HostEnvironment
 
-<div data-migration-route-owner="@RouteOwner">
-<section class="landing-hero" data-migration-component="home-content" aria-labelledby="landing-hero-title">
-    <div class="landing-container landing-hero-grid">
-        <div class="landing-hero-copy">
-            <p class="landing-eyebrow">@L("Precision. Speed. Reliability.")</p>
-            <h1 id="landing-hero-title">@L("Manufacturing Services for Prototypes and Production Parts")</h1>
-            <p class="landing-hero-lead">@L("CNC machining, 3D printing, and 3D scanning under one roof. From rapid prototypes to end-use parts, we deliver precision manufacturing solutions that help you bring ideas to life faster.")</p>
-            <div class="landing-actions">
-                <a class="landing-button landing-button-primary" href="/InstantQuotation/3D-Printing">@L("Instant 3D Quotation") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
-                <a class="landing-button landing-button-secondary" href="/Services/Index">@L("Find the right service") <i class="fas fa-compass" aria-hidden="true"></i></a>
-            </div>
-            <p class="landing-trust"><i class="fas fa-shield-alt" aria-hidden="true"></i> @L("Secure. Confidential. Trusted by engineers and product teams.")</p>
-        </div>
-        <div class="landing-hero-media" aria-label="@L("CNC machining, 3D printing, and 3D scanning")">
-            <figure class="landing-collage landing-collage-cnc"><img src="/src/images/landing/landing-hero-cnc.webp" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="@L("Precision CNC machining")" /></figure>
-            <figure class="landing-collage landing-collage-print"><img src="/src/images/landing/landing-hero-printing.webp" width="1672" height="941" loading="eager" fetchpriority="low" decoding="async" alt="@L("Industrial 3D printing")" /></figure>
-            <figure class="landing-collage landing-collage-scan"><img src="/src/images/landing/landing-hero-scanning.webp" width="1672" height="941" loading="eager" fetchpriority="low" decoding="async" alt="@L("High-accuracy 3D scanning")" /></figure>
-        </div>
-    </div>
-</section>
+@{
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var heroVariant = HomeHeroSelection.GetVariant(HttpContextAccessor.HttpContext, HostEnvironment);
+}
+<div data-migration-route-owner="@RouteOwner" data-migration-component="home-content">
+<main class="landing-main">
+<HomeHero Variant="@heroVariant" />
 
-<section class="landing-value-wrap" aria-label="@L("Why customers work with MALIEV")">
+<section class="landing-value-wrap" aria-label="@L("What MALIEV helps you develop")">
     <div class="landing-container landing-value-strip">
-        <article><i class="fas fa-bolt" aria-hidden="true"></i><div><h2>@L("Fast & Competitive Quotes")</h2><p>@L("Get an accurate quote in hours, not days.")</p></div></article>
-        <article><i class="fas fa-cube" aria-hidden="true"></i><div><h2>@L("Multiple Manufacturing Methods")</h2><p>@L("CNC machining, 3D printing, and 3D scanning solutions.")</p></div></article>
-        <article><i class="far fa-user" aria-hidden="true"></i><div><h2>@L("Engineering Support")</h2><p>@L("Expert guidance to optimize designs and reduce costs.")</p></div></article>
-        <article><i class="far fa-clock" aria-hidden="true"></i><div><h2>@L("Reliable Lead Times")</h2><p>@L("Clear production schedules you can count on.")</p></div></article>
+        <article><i class="fas fa-cube" aria-hidden="true"></i><div><h2>@L("Functional prototypes")</h2><p>@L("Make a part to test and refine.")</p></div></article>
+        <article><i class="fas fa-drafting-compass" aria-hidden="true"></i><div><h2>@L("Reverse engineering")</h2><p>@L("Reconstruct CAD from an existing part.")</p></div></article>
+        <article><i class="fas fa-cogs" aria-hidden="true"></i><div><h2>@L("Replacement parts")</h2><p>@L("Develop replacements around the application.")</p></div></article>
+        <article><i class="fas fa-lightbulb" aria-hidden="true"></i><div><h2>@L("Product development")</h2><p>@L("Improve a design and build the next version.")</p></div></article>
     </div>
 </section>
 
 <section id="landing-services" class="landing-section" aria-labelledby="landing-services-title">
     <div class="landing-container">
-        <header class="landing-section-heading"><p>@L("Our Services")</p><h2 id="landing-services-title">@L("Precision Manufacturing Solutions")</h2><span>@L("End-to-end services for every stage of product development and production.")</span></header>
+        <header class="landing-section-heading"><p>@L("Our Services")</p><h2 id="landing-services-title">@L("From design to the finished part.")</h2><span>@L("Choose the right process for your prototype, replacement part or product.")</span></header>
         <div class="landing-service-grid">
-            <article class="landing-service-card"><img src="/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@L("Idea sketch, technical drawing, CAD model, and finished machined part")" /><div><span class="landing-card-icon"><i class="fas fa-route" aria-hidden="true"></i></span><h3>@L("Custom Manufacturing")</h3><p>@L("Not sure which process fits? Start with your drawing, sample, material, quantity, and intended use.")</p><a href="/Services/Custom-Manufacturing">@L("Start a project review") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card"><img src="/src/images/landing/landing-service-cnc.webp" alt="@L("CNC-machined metal component")" /><div><span class="landing-card-icon"><i class="fas fa-drafting-compass" aria-hidden="true"></i></span><h3>@L("CNC Machining")</h3><p>@L("High-precision machining for metals and plastics with tight tolerances and excellent surface finishes.")</p><a href="/Services/CNC-Machining">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card"><img src="/src/images/landing/landing-service-printing.webp" alt="@L("Intricate 3D-printed component")" /><div><span class="landing-card-icon"><i class="fas fa-print" aria-hidden="true"></i></span><h3>@L("3D Printing")</h3><p>@L("Fast, flexible additive manufacturing for prototypes and functional parts in a variety of materials.")</p><a href="/Services/3D-Printing">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card"><img src="/src/images/landing/landing-service-scanning.webp" alt="@L("3D scanning a mechanical component")" /><div><span class="landing-card-icon"><i class="fas fa-cubes" aria-hidden="true"></i></span><h3>@L("3D Scanning")</h3><p>@L("High-accuracy scanning for reverse engineering, inspection, and quality control.")</p><a href="/Services/3D-Scanning">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card"><img src="/src/images/services/design/design-workflow.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@L("Designer turning sketches and reference photos into a CAD model")" /><div><span class="landing-card-icon"><i class="fas fa-drafting-compass" aria-hidden="true"></i></span><h3>@L("3D Design")</h3><p>@L("Turn an idea, sketch, or scanned part into a manufacturable 3D design with practical DFM guidance.")</p><a href="/Services/3D-Design">@L("Discuss your design") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card"><img src="/src/images/services/silicone-casting/silicone-casting-workflow.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@L("Silicone poured into a 3D-printed mold")" /><div><span class="landing-card-icon"><i class="fas fa-hand-paper" aria-hidden="true"></i></span><h3>@L("Silicone Casting")</h3><p>@L("Create short-run silicone parts using a 3D-printed mold, with material and finish reviewed for the application.")</p><a href="/Services/Silicone-Casting">@L("Discuss silicone casting") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card landing-service-card--injection"><img src="/src/images/services/injection-molding/pp-injection-molded-component.webp" width="1700" height="925" loading="lazy" decoding="async" alt="@L("Blue polypropylene injection-molded mounting component")" /><div><span class="landing-card-icon"><i class="fas fa-industry" aria-hidden="true"></i></span><h3>@L("Low-volume Injection Molding")</h3><p>@L("Low-volume molding for up to 1,000 parts on our pneumatic machine, with shot weights up to 50 g and plastics melting at no more than 350 °C. Larger runs: consider buying the PIMM machine from shop.maliev.com.")</p><a href="/Services/Low-Volume-Injection-Molding">@L("Discuss injection molding") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
-            <article class="landing-service-card landing-service-card--directory" aria-labelledby="landing-services-directory-title">
-                <a class="landing-service-directory-link landing-service-card--directory-link" href="/Services/Index">
-                    <div class="landing-service-directory-copy"><span class="landing-service-directory-kicker"><i class="fas fa-compass" aria-hidden="true"></i> @L("Explore all services")</span><h3 id="landing-services-directory-title">@L("Need help choosing a process?")</h3><p>@L("Compare every MALIEV service, capability, material, and workflow in one place.")</p><span class="landing-service-directory-cta">@L("View all services") <i class="fas fa-arrow-right" aria-hidden="true"></i></span></div>
-                    <div class="landing-service-directory-preview" aria-hidden="true"><div class="landing-service-directory-preview-header"><span>@L("Quick guide")</span><span>@L("Question 1 of 5")</span></div><ol class="landing-service-directory-progress"><li class="is-active">1</li><li>2</li><li>3</li><li>4</li><li>5</li></ol><div class="landing-service-directory-question"><span class="landing-service-directory-question-eyebrow">@L("Question 1 of 5")</span><strong>@L("Do you have 3D files or drawings?")</strong><div class="landing-service-directory-options"><span class="landing-service-directory-option is-selected"><i class="fas fa-cube" aria-hidden="true"></i><span><strong>@L("3D CAD files")</strong><small>@L("STEP, STL, 3MF or other usable 3D models")</small></span><i class="fas fa-check-circle" aria-hidden="true"></i></span><span class="landing-service-directory-option"><i class="far fa-file-alt" aria-hidden="true"></i><span><strong>@L("2D drawings")</strong><small>@L("PDF, DWG or a dimensioned sketch")</small></span></span><span class="landing-service-directory-option"><i class="far fa-image" aria-hidden="true"></i><span><strong>@L("Photos or sample")</strong><small>@L("Reference images or a physical part")</small></span></span><span class="landing-service-directory-option"><i class="fas fa-lightbulb" aria-hidden="true"></i><span><strong>@L("No files yet")</strong><small>@L("Start with a project review")</small></span></span></div></div></div>
-                </a>
-            </article>
+            <article class="landing-service-card"><img src="/src/images/services/cnc/part-bento-cnc-upright-housing.webp" width="1025" height="1535" loading="lazy" decoding="async" alt="@L("Source-based image of a machined aluminium housing sample")" /><div><h3>@L("Custom Manufacturing")</h3><p>@L("Not sure which process fits? Start with your drawing, sample, material, quantity, and intended use.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/Custom-Manufacturing", culture)">@L("Start a project review") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/services/cnc/part-bento-cnc-folding-handle.webp" alt="@L("Source-based image of a machined folding-handle sample")" /><div><h3>@L("CNC Machining")</h3><p>@L("High-precision machining for metals and plastics with tight tolerances and excellent surface finishes.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/CNC-Machining", culture)">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/services/printing/part-bento-pla-cf-bracket.webp" alt="@L("Source-based image of a PLA-CF printed bracket sample")" /><div><h3>@L("3D Printing")</h3><p>@L("Fast, flexible additive manufacturing for prototypes and functional parts in a variety of materials.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/3D-Printing", culture)">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a class="profile-pricing-link" href="@HomeHeroSelection.LocalizedLink("/InstantQuotation/3D-Printing", culture)">@L("Instant 3D-print pricing") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/services/scanning/workflow/scanning-workflow-capture.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@L("Process illustration of handheld 3D scanning of a technical metal housing")" /><div><h3>@L("3D Scanning")</h3><p class="profile-image-note">@L("Process illustration")</p><p>@L("Capture the shape of existing parts for reverse engineering and CAD reconstruction.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/3D-Scanning", culture)">@L("Learn more") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/services/scanning/proof/cast-housing-cad-1500.webp" width="1500" height="1000" loading="lazy" decoding="async" alt="@L("CAD geometry screenshot from the existing cleared part example")" /><div><h3>@L("3D Design")</h3><p>@L("Turn an idea, sketch, or scanned part into a manufacturable 3D design with practical DFM guidance.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/3D-Design", culture)">@L("Discuss your design") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/landing/silicone-owl-sculpture-casting.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@L("Process illustration of a detailed silicone owl sculpture beside its opened two-part rigid printed mold")" /><div><h3>@L("Silicone Casting")</h3><p class="profile-image-note">@L("Process illustration")</p><p>@L("Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/Silicone-Casting", culture)">@L("Discuss silicone casting") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card landing-service-card--injection"><img src="/src/images/services/injection-molding/pp-injection-molded-component.webp" alt="@L("Blue polypropylene injection-molded mounting component")" width="1700" height="925" loading="lazy" decoding="async" /><div><h3>@L("Low-volume Injection Molding")</h3><p>@L("Low-volume molding for up to 1,000 parts on our pneumatic machine, with shot weights up to 50 g and plastics melting at no more than 350 °C. Larger runs: consider buying the PIMM machine from shop.maliev.com.")</p><a href="@HomeHeroSelection.LocalizedLink("/Services/Low-Volume-Injection-Molding", culture)">@L("Discuss injection molding") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+           <article class="landing-service-card landing-service-card--directory" aria-labelledby="landing-services-directory-title"><a class="landing-service-directory-link landing-service-card--directory-link" href="@HomeHeroSelection.LocalizedLink("/Services/Index", culture)"><div class="landing-service-directory-copy"><span class="landing-service-directory-kicker"><i class="fas fa-compass" aria-hidden="true"></i> @L("Explore all services")</span><h3 id="landing-services-directory-title">@L("Need help choosing a process?")</h3><p>@L("Compare every MALIEV service, capability, material, and workflow in one place.")</p><span class="landing-service-directory-cta">@L("View all services") <i class="fas fa-arrow-right" aria-hidden="true"></i></span></div><div class="landing-service-directory-preview" aria-hidden="true"><div class="landing-service-directory-preview-header"><span>@L("Quick guide")</span><span>@L("Question 1 of 5")</span></div><ol class="landing-service-directory-progress"><li class="is-active">1</li><li>2</li><li>3</li><li>4</li><li>5</li></ol><div class="landing-service-directory-question"><span class="landing-service-directory-question-eyebrow">@L("Question 1 of 5")</span><strong>@L("Do you have 3D files or drawings?")</strong><div class="landing-service-directory-options"><span class="landing-service-directory-option is-selected"><i class="fas fa-cube" aria-hidden="true"></i><span><strong>@L("3D CAD files")</strong><small>@L("STEP, STL, 3MF or other usable 3D models")</small></span><i class="fas fa-check-circle" aria-hidden="true"></i></span><span class="landing-service-directory-option"><i class="far fa-file-alt" aria-hidden="true"></i><span><strong>@L("2D drawings")</strong><small>@L("PDF, DWG or a dimensioned sketch")</small></span></span><span class="landing-service-directory-option"><i class="far fa-image" aria-hidden="true"></i><span><strong>@L("Photos or sample")</strong><small>@L("Reference images or a physical part")</small></span></span><span class="landing-service-directory-option"><i class="fas fa-lightbulb" aria-hidden="true"></i><span><strong>@L("No files yet")</strong><small>@L("Start with a project review")</small></span></span></div></div></div></a></article>
         </div>
     </div>
 </section>
 
 <section id="landing-process" class="landing-section landing-process" aria-labelledby="landing-process-title">
     <div class="landing-container">
-        <header class="landing-section-heading"><p>@L("How It Works")</p><h2 id="landing-process-title">@L("Simple. Fast. Reliable.")</h2></header>
+        <header class="landing-section-heading"><p>@L("How It Works")</p><h2 id="landing-process-title">@L("From your starting point to a working part.")</h2></header>
         <ol class="landing-process-grid">
-            <li><div class="landing-step-icon"><i class="fas fa-upload" aria-hidden="true"></i></div><h3>@L("Upload CAD files")</h3><p>@L("Submit your CAD files and project details through our secure portal.")</p></li>
-            <li><div class="landing-step-icon"><i class="far fa-file-alt" aria-hidden="true"></i></div><h3>@L("Review quotation")</h3><p>@L("Receive a detailed quote with price, lead time, and engineering feedback.")</p></li>
-            <li><div class="landing-step-icon"><i class="far fa-check-circle" aria-hidden="true"></i></div><h3>@L("Confirm order")</h3><p>@L("Approve the quote and we will start manufacturing your parts.")</p></li>
-            <li><div class="landing-step-icon"><i class="fas fa-box" aria-hidden="true"></i></div><h3>@L("Receive parts")</h3><p>@L("Parts are quality-checked and delivered safely to your doorstep.")</p></li>
+            <li><img class="landing-step-photo" src="/src/images/landing/home-enclosure-sketch.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@L("Illustrative handheld sensor enclosure brief and sketches")" /><h3>@L("Ideas, drawings or samples")</h3><p>@L("Share what you have and how the part will be used.")</p></li>
+            <li><img class="landing-step-photo" src="/src/images/landing/home-enclosure-cad.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@L("Exploded CAD of the handheld sensor enclosure")" /><h3>@L("Home.Process.DesignTitle")</h3><p>@L("Create or refine CAD from your idea or existing part.")</p></li>
+            <li><img class="landing-step-photo" src="/src/images/landing/home-enclosure-prototypes.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@L("Comparing enclosure prototypes in different materials")" /><h3>@L("Choose the process")</h3><p>@L("Review material, geometry and quantity together.")</p></li>
+            <li><img class="landing-step-photo" src="/src/images/landing/home-enclosure-inspection.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@L("Inspecting the assembled enclosure and its matching rear shell")" /><h3>@L("Build and inspect")</h3><p>@L("Build and inspect against the agreed requirements.")</p></li>
         </ol>
     </div>
 </section>
@@ -76,17 +60,19 @@
 </section>
 
 <section class="landing-cta-section">
-    <div class="landing-container landing-cta">
-        <div><h2>@L("Ready to bring your ideas to life?")</h2><p>@L("Get a fast, accurate 3D printing estimate for your project today.")</p><div class="landing-actions"><a class="landing-button landing-button-yellow" href="/InstantQuotation/3D-Printing">@L("Instant 3D Quotation") <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a class="landing-button landing-button-light" href="/Contact">@L("Talk to an Expert")</a></div></div>
+    <div class="landing-container landing-cta profile-cutout-cta">
+        <div><h2>@L("Have an idea, drawing or sample part?")</h2><p>@L("Talk to us to review a development and manufacturing approach.")</p><div class="landing-actions"><a class="landing-button landing-button-yellow" href="@HomeHeroSelection.LocalizedLink("/Contact", culture)">@L("Discuss your project") <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a class="landing-button landing-button-light" href="@HomeHeroSelection.LocalizedLink("/InstantQuotation/3D-Printing", culture)">@L("Instant 3D-print pricing")</a></div></div>
         <ul><li><i class="fas fa-check-circle" aria-hidden="true"></i> @L("Fast response")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i> @L("Competitive pricing")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i> @L("Confidential and secure")</li></ul>
-        <img src="/src/images/landing/landing-cta-part.webp" alt="@L("Precision-machined aluminum component")" />
+        <img src="/src/images/landing/profile-hybrid-gripper-cutout.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@L("Illustrative gripper assembly combining CNC aluminium, FDM plastic housing, nylon fingers and a resin sensor cover")" />
     </div>
 </section>
+</main>
+
 </div>
 
 @code {
     [Parameter]
     public string? RouteOwner { get; set; }
 
-    private MarkupString L(string key) => new(Localizer[key].Value);
+    private string L(string key) => Localizer[key].Value;
 }
