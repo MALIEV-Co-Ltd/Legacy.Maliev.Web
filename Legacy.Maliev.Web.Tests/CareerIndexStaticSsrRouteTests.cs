@@ -1,16 +1,21 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class CareerIndexStaticSsrRouteTests : IAsyncLifetime
+public sealed class CareerIndexStaticSsrRouteTests(ITestOutputHelper output) : IAsyncLifetime
 {
     private OwnedWebSurfaceParent? ownedParent = new();
     private OwnedWebSurfaceParent factory => ownedParent ?? throw new ObjectDisposedException(nameof(CareerIndexStaticSsrRouteTests));
@@ -192,13 +197,51 @@ public sealed class CareerIndexStaticSsrRouteTests : IAsyncLifetime
         string handler,
         string size)
     {
+        var observation = new CareerFailureObservation();
         var clientStub = new CapturingCareerClient();
-        await using var routeFactory = CreateFactory(clientStub, careerRouteEnabled: rendererEnabled);
-        using var client = CreateClient(routeFactory);
-        using var response = await client.GetAsync($"/career?culture={culture}&handler={handler}&size={size}");
+        Exception? primaryFailure = null;
+        try
+        {
+            await using var routeFactory = CreateFactory(clientStub, careerRouteEnabled: rendererEnabled, observation: observation);
+            observation.Record(CareerFailureStage.FactoryDerived);
+            using var client = CreateClient(routeFactory);
+            observation.Record(CareerFailureStage.ClientCreated);
+            try
+            {
+                observation.Record(CareerFailureStage.ClientSend);
+                using var response = await client.GetAsync($"/career?culture={culture}&handler={handler}&size={size}");
+                observation.Record(CareerFailureStage.ClientReturned);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Null(clientStub.LastRequest);
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.Null(clientStub.LastRequest);
+                Assert.Equal(0, clientStub.ListingCalls);
+                Assert.Equal(0, clientStub.OffersCalls);
+                observation.Record(CareerFailureStage.AssertionsPassed);
+            }
+            catch (Exception exception)
+            {
+                primaryFailure = exception;
+                observation.RecordFailure(CareerFailureStage.ClientFailed, exception);
+                WriteFailureEvidence(observation, "before-child-cleanup", rendererEnabled, culture, handler, size, output.WriteLine, exception);
+                throw;
+            }
+            finally
+            {
+                observation.Record(CareerFailureStage.RequestScopeExit);
+            }
+        }
+        catch (Exception exception)
+        {
+            primaryFailure = exception;
+            observation.RecordFailure(CareerFailureStage.OuterFailed, exception);
+            throw;
+        }
+        finally
+        {
+            observation.Record(CareerFailureStage.ChildScopeExit);
+            if (primaryFailure is not null)
+                WriteFailureEvidence(observation, "after-child-scope", rendererEnabled, culture, handler, size, output.WriteLine, primaryFailure);
+        }
     }
 
     [Theory]
@@ -772,10 +815,246 @@ public sealed class CareerIndexStaticSsrRouteTests : IAsyncLifetime
         Assert.Null(clientStub.LastRequest);
     }
 
+
+
+    private static void WriteFailureEvidence(
+        CareerFailureObservation observation, string phase, bool rendererEnabled,
+        string culture, string handler, string size, Action<string> write, Exception primary)
+    {
+        try
+        {
+            write(observation.Receipt(phase, rendererEnabled, culture, handler, size));
+        }
+        catch (Exception evidenceFailure)
+        {
+            // Neither the original request/assertion/cleanup failure nor an evidence failure may disappear.
+            throw new AggregateException("Career failure evidence could not be written.", primary, evidenceFailure);
+        }
+    }
+
+    [Fact]
+    public void InvalidHandlerFailureEvidence_EmissionFailureRetainsBothFailures()
+    {
+        var original = new InvalidOperationException("private-original");
+        var outputFailure = new IOException("private-output");
+        var actual = Assert.Throws<AggregateException>(() => WriteFailureEvidence(
+            new CareerFailureObservation(() => 0), "before-child-cleanup", true, "en", "Search", "0",
+            _ => throw outputFailure, original));
+        Assert.Equal(2, actual.InnerExceptions.Count);
+        Assert.Same(original, actual.InnerExceptions[0]);
+        Assert.Same(outputFailure, actual.InnerExceptions[1]);
+    }
+
+    [Fact]
+    public void InvalidHandlerFailureEvidence_SuccessfulEmissionDoesNotSwallowOriginalFailure()
+    {
+        var original = new InvalidOperationException("private-original");
+        var writes = 0;
+        void Fail()
+        {
+            try { throw original; }
+            catch (Exception primary)
+            {
+                WriteFailureEvidence(new CareerFailureObservation(() => 0), "before-child-cleanup",
+                    true, "en", "Search", "0", _ => writes++, primary);
+                throw;
+            }
+        }
+
+        var actual = Assert.Throws<InvalidOperationException>(Fail);
+        Assert.Same(original, actual);
+        Assert.Equal(1, writes);
+    }
+
+    private enum CareerFailureStage
+    {
+        FactoryDerived, ClientCreated, ClientSend, ServerEnter, HeadersObserved,
+        ServerScopeExit, ServerFailed, ResponseCompleted, ClientReturned,
+        ClientFailed, AssertionsPassed, RequestScopeExit, OuterFailed, ChildScopeExit,
+    }
+
+    private sealed class CareerFailureObservation
+    {
+        private readonly long[] stages = Enumerable.Repeat(-1L, Enum.GetValues<CareerFailureStage>().Length).ToArray();
+        private readonly Func<long> elapsed;
+        private int status = -1;
+        private int route;
+        private int reexecuted;
+        private int clientFailure;
+        private int serverFailure;
+
+        internal CareerFailureObservation(Func<long>? elapsedMilliseconds = null)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            elapsed = elapsedMilliseconds ?? (() => stopwatch.ElapsedMilliseconds);
+        }
+
+        internal void Record(CareerFailureStage stage) =>
+            Interlocked.CompareExchange(ref stages[(int)stage], elapsed(), -1);
+
+        internal void RecordFailure(CareerFailureStage stage, Exception exception)
+        {
+            Record(stage);
+            var kind = exception is OperationCanceledException ? 1
+                : exception is HttpRequestException ? 2 : exception is IOException ? 3 : 4;
+            if (stage == CareerFailureStage.ServerFailed) Volatile.Write(ref serverFailure, kind);
+            else Volatile.Write(ref clientFailure, kind);
+        }
+
+        internal void ObserveHeaders(HttpContext context)
+        {
+            Volatile.Write(ref status, context.Response.StatusCode);
+            Volatile.Write(ref route, context.Request.Path.Equals("/Error", StringComparison.OrdinalIgnoreCase)
+                ? 2 : context.Request.Path.Equals("/career", StringComparison.OrdinalIgnoreCase) ? 1 : 3);
+            Volatile.Write(ref reexecuted, context.Features.Get<IStatusCodeReExecuteFeature>() is null ? 0 : 1);
+            Record(CareerFailureStage.HeadersObserved);
+        }
+
+        internal string Receipt(string phase, bool rendererEnabled, string culture, string handler, string size)
+        {
+            var observed = new SortedDictionary<string, long>(StringComparer.Ordinal);
+            foreach (var stage in Enum.GetValues<CareerFailureStage>())
+                observed.Add(stage.ToString(), Volatile.Read(ref stages[(int)stage]));
+            return System.Text.Json.JsonSerializer.Serialize(new
+            {
+                schema = "career-invalid-handler-failure.v1",
+                phase = phase is "before-child-cleanup" or "after-child-scope" ? phase : "other",
+                renderer = rendererEnabled ? "blazor" : "razor",
+                culture = culture is "en" or "th" ? culture : "other",
+                handler = handler is "Search" or "ChangeItemCount" ? handler : "other",
+                size = size switch { "invalid-size" => "malformed", "0" => "zero", "-1" => "negative",
+                    "101" => "above-maximum", "2147483648" => "overflow", "" => "empty", _ => "other" },
+                status = Volatile.Read(ref status),
+                route = Volatile.Read(ref route) switch { 1 => "career", 2 => "error", 3 => "other", _ => "unobserved" },
+                reexecuted = Volatile.Read(ref reexecuted) == 1,
+                parentDisposalObserved = false,
+                clientFailure = Volatile.Read(ref clientFailure),
+                serverFailure = Volatile.Read(ref serverFailure),
+                elapsedMilliseconds = observed,
+            });
+        }
+    }
+
+    private sealed class CareerFailureStartupFilter(CareerFailureObservation observation) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use(async (context, continuation) =>
+            {
+                if (!context.Request.Path.Equals("/career", StringComparison.OrdinalIgnoreCase))
+                {
+                    await continuation();
+                    return;
+                }
+
+                observation.Record(CareerFailureStage.ServerEnter);
+                context.Response.OnStarting(() =>
+                {
+                    observation.ObserveHeaders(context);
+                    return Task.CompletedTask;
+                });
+                context.Response.OnCompleted(() =>
+                {
+                    observation.Record(CareerFailureStage.ResponseCompleted);
+                    return Task.CompletedTask;
+                });
+                try
+                {
+                    await continuation();
+                }
+                catch (Exception exception)
+                {
+                    observation.RecordFailure(CareerFailureStage.ServerFailed, exception);
+                    throw;
+                }
+                finally
+                {
+                    observation.Record(CareerFailureStage.ServerScopeExit);
+                }
+            });
+            next(app);
+        };
+    }
+
+    [Fact]
+    public void InvalidHandlerFailureEvidence_UsesOnlyFixedFieldsAndRetainsFirstStageTime()
+    {
+        long now = 7;
+        var observation = new CareerFailureObservation(() => now);
+        observation.Record(CareerFailureStage.ClientSend);
+        now = 99;
+        observation.Record(CareerFailureStage.ClientSend);
+        observation.RecordFailure(CareerFailureStage.ClientFailed, new IOException("private-exception"));
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/Error";
+        context.Request.QueryString = new QueryString("?token=private-query");
+        context.Response.StatusCode = 400;
+        observation.ObserveHeaders(context);
+
+        var receipt = observation.Receipt("private-phase", true, "private-culture", "private-handler", "private-size");
+        using var document = System.Text.Json.JsonDocument.Parse(receipt);
+        Assert.Equal(7, document.RootElement.GetProperty("elapsedMilliseconds").GetProperty("ClientSend").GetInt64());
+        Assert.Equal(400, document.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal("error", document.RootElement.GetProperty("route").GetString());
+        Assert.Equal(3, document.RootElement.GetProperty("clientFailure").GetInt32());
+        Assert.DoesNotContain("private", receipt, StringComparison.Ordinal);
+        Assert.InRange(receipt.Length, 1, 4096);
+    }
+
+    [Fact]
+    public void InvalidHandlerFailureEvidence_UnobservedStagesAreUnavailable()
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(
+            new CareerFailureObservation(() => 0).Receipt("before-child-cleanup", false, "en", "Search", "0"));
+        Assert.Equal(-1, document.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal("unobserved", document.RootElement.GetProperty("route").GetString());
+        Assert.All(document.RootElement.GetProperty("elapsedMilliseconds").EnumerateObject(),
+            item => Assert.Equal(-1, item.Value.GetInt64()));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InvalidHandlerFailureEvidence_PreservesPipelineResultAndOriginalFailure(bool fail)
+    {
+        var observation = new CareerFailureObservation(() => 10);
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var app = new ApplicationBuilder(services);
+        var expected = new InvalidOperationException("private-original");
+        var calls = 0;
+        new CareerFailureStartupFilter(observation).Configure(builder => builder.Run(_ =>
+        {
+            calls++;
+            return fail ? Task.FromException(expected) : Task.CompletedTask;
+        }))(app);
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/career";
+        context.Response.StatusCode = 400;
+        var body = context.Response.Body;
+        if (fail)
+        {
+            var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => app.Build()(context));
+            Assert.Same(expected, actual);
+        }
+        else
+        {
+            await app.Build()(context);
+        }
+
+        Assert.Equal(1, calls);
+        Assert.Equal(400, context.Response.StatusCode);
+        Assert.Same(body, context.Response.Body);
+        Assert.Empty(context.Response.Headers);
+        using var document = System.Text.Json.JsonDocument.Parse(observation.Receipt("after-child-scope", true, "th", "Search", "101"));
+        Assert.Equal(10, document.RootElement.GetProperty("elapsedMilliseconds").GetProperty("ServerScopeExit").GetInt64());
+        Assert.Equal(fail ? 4 : 0, document.RootElement.GetProperty("serverFailure").GetInt32());
+    }
+
     private WebApplicationFactory<Program> CreateFactory(
         ICareerClient careerClient,
         bool careerRouteEnabled = true,
-        bool hideLocalAspireFixture = false) =>
+        bool hideLocalAspireFixture = false,
+        CareerFailureObservation? observation = null) =>
         factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("BlazorRouting:CareerIndex", careerRouteEnabled.ToString());
@@ -784,6 +1063,8 @@ public sealed class CareerIndexStaticSsrRouteTests : IAsyncLifetime
             {
                 services.RemoveAll<ICareerClient>();
                 services.AddSingleton(careerClient);
+                if (observation is not null)
+                    services.AddSingleton<IStartupFilter>(new CareerFailureStartupFilter(observation));
             });
         });
 
