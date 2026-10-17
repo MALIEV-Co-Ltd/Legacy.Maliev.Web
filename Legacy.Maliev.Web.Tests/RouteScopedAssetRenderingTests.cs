@@ -17,7 +17,7 @@ public sealed class RouteScopedAssetRenderingTests : IClassFixture<TestingWebApp
     }
 
     [Theory]
-    [InlineData("/", "route-home.css", null)]
+    [InlineData("/", "route-home.css", "route-home.js")]
     [InlineData("/services", "route-services-index.css", "route-service-finder.js")]
     [InlineData("/services/3d-printing", "route-services.css", "route-service-printing.js")]
     [InlineData("/services/cnc-machining", "route-services.css", "route-service-cnc.js")]

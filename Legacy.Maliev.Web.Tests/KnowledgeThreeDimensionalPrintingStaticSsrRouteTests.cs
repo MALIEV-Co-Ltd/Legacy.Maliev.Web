@@ -121,9 +121,9 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         "Process, material, orientation, wall thickness, and post-processing all influence strength, appearance, and cost.",
         "Prepare a model for 3D printing",
         "3D printing preparation",
-        "Export clean geometry",
-        "Describe functional needs",
-        "Plan for the process",
+        "Check geometry and scale",
+        "Choose around the application",
+        "Separate layer height from tolerance",
         "View 3D printing service")]
     [InlineData(
         "th",
@@ -131,9 +131,9 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         "กระบวนการ วัสดุ ทิศทาง ความหนาผนัง และการตกแต่ง ล้วนมีผลต่อความแข็งแรง รูปลักษณ์ และราคา",
         "เตรียมโมเดลสำหรับพิมพ์ 3 มิติ",
         "การเตรียมงานพิมพ์ 3 มิติ",
-        "ส่งออกรูปทรงที่สมบูรณ์",
-        "อธิบายการใช้งาน",
-        "ออกแบบให้เหมาะกับกระบวนการ",
+        "ตรวจสอบรูปทรงและสเกล",
+        "เลือกโดยยึดการใช้งาน",
+        "แยกความสูงชั้นพิมพ์จากค่าความคลาดเคลื่อน",
         "ดูบริการพิมพ์ 3 มิติ")]
     public async Task ThreeDimensionalPrintingSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
@@ -163,7 +163,7 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         Assert.Contains($">{secondStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
+        Assert.Equal(4, Regex.Matches(source, "<section\\b[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
         Assert.Contains("href=\"/services/3d-printing\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -182,8 +182,10 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);

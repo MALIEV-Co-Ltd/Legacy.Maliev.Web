@@ -47,6 +47,11 @@ public sealed class SeoBusinessContractParityTests
             Assert.True(PublicPages.TryGetValue(route.Path, out var files), $"Missing source mapping for {route.Path}.");
             var page = Read(files.Page);
             var content = Read(files.Content);
+            if (route.Path == "/")
+            {
+                Assert.Contains("<HomeHero", content, StringComparison.Ordinal);
+                content += Read("Home/HomeHeroScene.razor");
+            }
 
             Assert.Contains("@page", page, StringComparison.Ordinal);
             Assert.Contains("<PageTitle>", page, StringComparison.Ordinal);
@@ -62,7 +67,7 @@ public sealed class SeoBusinessContractParityTests
     {
         var contracts = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            ["/"] = ["รับผลิตชิ้นส่วน", "Custom Manufacturing Services"],
+            ["/"] = ["พัฒนาต้นแบบ", "Functional Prototypes", "วิศวกรรมย้อนกลับ", "Reverse Engineering"],
             ["/services"] = ["บริการผลิตชิ้นส่วน", "Manufacturing services"],
             ["/services/custom-manufacturing"] = ["รับผลิตชิ้นงานตามแบบ", "Custom Part Manufacturing"],
             ["/services/3d-design"] = ["รับออกแบบ 3 มิติ", "3D Design"],

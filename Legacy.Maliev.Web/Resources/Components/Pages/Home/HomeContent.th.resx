@@ -286,4 +286,86 @@
   <data name="Photos or sample" xml:space="preserve"><value>รูปถ่ายหรือตัวอย่าง</value></data>
   <data name="Reference images or a physical part" xml:space="preserve"><value>รูปอ้างอิงหรือชิ้นงานจริง</value></data>
   <data name="No files yet" xml:space="preserve"><value>ยังไม่มีไฟล์</value></data>
+  <data name="Assembly" xml:space="preserve"><value>งานประกอบ</value></data>
+  <data name="Partnership" xml:space="preserve"><value>ร่วมพัฒนางาน</value></data>
+  <data name="Sketch to production" xml:space="preserve"><value>จากภาพร่างสู่การผลิต</value></data>
+  <data name="What MALIEV helps you develop" xml:space="preserve"><value>สิ่งที่ MALIEV ช่วยพัฒนาให้คุณ</value></data>
+  <data name="Functional prototypes" xml:space="preserve"><value>ต้นแบบที่ใช้งานได้</value></data>
+  <data name="Make a part to test and refine." xml:space="preserve"><value>สร้างชิ้นงานเพื่อทดสอบและปรับปรุง</value></data>
+  <data name="Reverse engineering" xml:space="preserve"><value>วิศวกรรมย้อนกลับ</value></data>
+  <data name="Reconstruct CAD from an existing part." xml:space="preserve"><value>สร้างแบบ CAD จากชิ้นงานเดิม</value></data>
+  <data name="Replacement parts" xml:space="preserve"><value>ชิ้นส่วนทดแทน</value></data>
+  <data name="Develop replacements around the application." xml:space="preserve"><value>พัฒนาชิ้นส่วนทดแทนตามการใช้งาน</value></data>
+  <data name="Product development" xml:space="preserve"><value>ต่อยอดผลิตภัณฑ์</value></data>
+  <data name="Improve a design and build the next version." xml:space="preserve"><value>ปรับแบบและสร้างชิ้นงานรุ่นถัดไป</value></data>
+  <data name="From design to the finished part." xml:space="preserve"><value>จากการออกแบบ สู่ชิ้นงานจริง</value></data>
+  <data name="Choose the right process for your prototype, replacement part or product." xml:space="preserve"><value>เลือกกระบวนการให้เหมาะกับต้นแบบ ชิ้นส่วนทดแทน หรือผลิตภัณฑ์ของคุณ</value></data>
+  <data name="Source-based image of a machined aluminium housing sample" xml:space="preserve"><value>ภาพจากชิ้นงานตัวอย่างตัวเรือนอะลูมิเนียม CNC</value></data>
+  <data name="Source-based image of a machined folding-handle sample" xml:space="preserve"><value>ภาพจากชิ้นงานตัวอย่างด้ามพับ CNC</value></data>
+  <data name="Source-based image of a PLA-CF printed bracket sample" xml:space="preserve"><value>ภาพจากชิ้นงานตัวอย่างขายึดพิมพ์ PLA-CF</value></data>
+  <data name="Instant 3D-print pricing" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3D ทันที</value></data>
+  <data name="Process illustration of handheld 3D scanning of a technical metal housing" xml:space="preserve"><value>ภาพประกอบกระบวนการใช้เครื่องสแกน 3 มิติแบบมือถือ เก็บรูปทรงตัวเรือนโลหะ</value></data>
+  <data name="Process illustration" xml:space="preserve"><value>ภาพประกอบกระบวนการ</value></data>
+  <data name="Capture the shape of existing parts for reverse engineering and CAD reconstruction." xml:space="preserve"><value>เก็บข้อมูลรูปทรงชิ้นงานเดิม สำหรับวิศวกรรมย้อนกลับและการสร้างแบบ CAD</value></data>
+  <data name="CAD geometry screenshot from the existing cleared part example" xml:space="preserve"><value>ภาพแบบ CAD จากตัวอย่างชิ้นงานที่อนุญาตไว้แล้ว</value></data>
+  <data name="Process illustration of a detailed silicone owl sculpture beside its opened two-part rigid printed mold" xml:space="preserve"><value>ภาพประกอบประติมากรรมนกฮูกซิลิโคนลวดลายละเอียด พร้อมแม่พิมพ์แข็งพิมพ์ 3 มิติแบบสองชิ้นที่เปิดออก</value></data>
+  <data name="Create short-run silicone parts using a 3D-printed mold, with the material and finish reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน</value></data>
+  <data name="Start with a project review" xml:space="preserve"><value>เริ่มจากการประเมินโปรเจ็ค</value></data>
+  <data name="From your starting point to a working part." xml:space="preserve"><value>จากโจทย์เริ่มต้น สู่ชิ้นงานที่ใช้งานได้</value></data>
+  <data name="Illustrative handheld sensor enclosure brief and sketches" xml:space="preserve"><value>ภาพประกอบโจทย์และภาพร่างตัวเรือนอุปกรณ์เซนเซอร์แบบมือถือ</value></data>
+  <data name="Ideas, drawings or samples" xml:space="preserve"><value>ไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง</value></data>
+  <data name="Share what you have and how the part will be used." xml:space="preserve"><value>ส่งสิ่งที่คุณมี พร้อมการใช้งานของชิ้นงาน</value></data>
+  <data name="Exploded CAD of the handheld sensor enclosure" xml:space="preserve"><value>แบบ CAD แยกชิ้นส่วนตัวเรือนอุปกรณ์เซนเซอร์แบบมือถือ</value></data>
+  <data name="Home.Process.DesignTitle" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
+  <data name="Create or refine CAD from your idea or existing part." xml:space="preserve"><value>สร้างหรือปรับแบบ CAD จากไอเดียหรือชิ้นงานเดิม</value></data>
+  <data name="Comparing enclosure prototypes in different materials" xml:space="preserve"><value>เปรียบเทียบต้นแบบตัวเรือนในวัสดุต่างกัน</value></data>
+  <data name="Choose the process" xml:space="preserve"><value>เลือกกระบวนการผลิต</value></data>
+  <data name="Review material, geometry and quantity together." xml:space="preserve"><value>พิจารณาวัสดุ รูปทรง และจำนวนร่วมกัน</value></data>
+  <data name="Inspecting the assembled enclosure and its matching rear shell" xml:space="preserve"><value>ตรวจวัดตัวเรือนที่ประกอบแล้วพร้อมฝาหลังที่เข้าคู่กัน</value></data>
+  <data name="Build and inspect" xml:space="preserve"><value>ผลิตและตรวจสอบ</value></data>
+  <data name="Build and inspect against the agreed requirements." xml:space="preserve"><value>ผลิตและตรวจสอบตามข้อกำหนดที่ตกลงร่วมกัน</value></data>
+  <data name="Have an idea, drawing or sample part?" xml:space="preserve"><value>มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?</value></data>
+  <data name="Talk to us to review a development and manufacturing approach." xml:space="preserve"><value>คุยกับเราเพื่อประเมินแนวทางพัฒนาและผลิต</value></data>
+  <data name="Discuss your project" xml:space="preserve"><value>ปรึกษาโปรเจกต์ของคุณ</value></data>
+  <data name="Illustrative gripper assembly combining CNC aluminium, FDM plastic housing, nylon fingers and a resin sensor cover" xml:space="preserve"><value>ภาพประกอบชุดกริปเปอร์ที่รวมอะลูมิเนียม CNC ตัวเรือนพลาสติกพิมพ์ FDM นิ้วจับไนลอน และฝาครอบเซนเซอร์เรซิน</value></data>
+  <data name="carousel" xml:space="preserve"><value>ภาพเลื่อน</value></data>
+  <data name="Explore how MALIEV develops parts" xml:space="preserve"><value>การพัฒนาชิ้นงานกับ MALIEV</value></data>
+  <data name="slide" xml:space="preserve"><value>รายการ</value></data>
+  <data name="Hero design previews" xml:space="preserve"><value>ตัวเลือกแบบส่วนแรกของหน้าเว็บ</value></data>
+  <data name="Hero previews" xml:space="preserve"><value>เปรียบเทียบส่วนแรกของหน้า</value></data>
+  <data name="Current layout" xml:space="preserve"><value>แบบปัจจุบัน</value></data>
+  <data name="Custom parts." xml:space="preserve"><value>ชิ้นส่วนสั่งผลิต</value></data>
+  <data name="From CAD to assembly." xml:space="preserve"><value>จาก CAD ถึงงานประกอบ</value></data>
+  <data name="CNC machining, 3D printing, scanning and design in Nonthaburi, Thailand. Bring a drawing, an existing part or a project brief." xml:space="preserve"><value>ออกแบบ สแกน พิมพ์ 3 มิติ และ CNC ที่นนทบุรี เริ่มจากแบบงาน ชิ้นงานเดิม หรือโจทย์ที่คุณต้องการพัฒนา</value></data>
+  <data name="Discuss your part" xml:space="preserve"><value>ปรึกษางานชิ้นส่วน</value></data>
+  <data name="Price a 3D print" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3 มิติ</value></data>
+  <data name="Machined aluminium. Printed plastic, nylon and resin. One assembly." xml:space="preserve"><value>อะลูมิเนียม CNC พลาสติก ไนลอน และเรซินพิมพ์ 3 มิติ ในงานประกอบเดียวกัน</value></data>
+  <data name="Manufacturing technologies used in this illustrative assembly" xml:space="preserve"><value>เทคโนโลยีการผลิตในงานประกอบตัวอย่างนี้</value></data>
+  <data name="Illustrative gripper combining machined aluminium, orange FDM housing, ivory nylon fingers and an amber resin cover" xml:space="preserve"><value>ภาพประกอบกริปเปอร์ที่รวมอะลูมิเนียม CNC ตัวเรือน FDM สีส้ม นิ้วจับไนลอน และฝาครอบเรซินสีอำพัน</value></data>
+  <data name="SLA printing" xml:space="preserve"><value>พิมพ์ SLA</value></data>
+  <data name="Resin sensor cover" xml:space="preserve"><value>ฝาครอบเซนเซอร์เรซิน</value></data>
+  <data name="FDM printing" xml:space="preserve"><value>พิมพ์ FDM</value></data>
+  <data name="ABS housing" xml:space="preserve"><value>ตัวเรือน ABS</value></data>
+  <data name="SLS printing" xml:space="preserve"><value>พิมพ์ SLS</value></data>
+  <data name="Nylon finger pads" xml:space="preserve"><value>แผ่นสัมผัสนิ้วจับไนลอน</value></data>
+  <data name="Home.Hero.CncLabel" xml:space="preserve"><value>กัด CNC</value></data>
+  <data name="Aluminium base &amp; jaws" xml:space="preserve"><value>ฐานและปากจับอะลูมิเนียม</value></data>
+  <data name="Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line" xml:space="preserve"><value>ภาพประกอบลูกค้าและวิศวกร MALIEV ชาวไทยร่วมตรวจสอบขายึดกล้องบนสายการผลิตขวด</value></data>
+  <data name="Bring the part." xml:space="preserve"><value>นำชิ้นงานมา</value></data>
+  <data name="Talk to an engineer." xml:space="preserve"><value>คุยกับวิศวกร</value></data>
+  <data name="Work through the dimensions, material and manufacturing route with MALIEV. From a first prototype to parts ready for your application." xml:space="preserve"><value>คุยเรื่องขนาด วัสดุ และแนวทางผลิตกับ MALIEV ตั้งแต่ต้นแบบแรกจนถึงชิ้นส่วนที่พร้อมนำไปใช้งาน</value></data>
+  <data name="How we work" xml:space="preserve"><value>รู้จักการทำงานของเรา</value></data>
+  <data name="A sketch becomes" xml:space="preserve"><value>จากภาพร่าง</value></data>
+  <data name="a working part." xml:space="preserve"><value>สู่ชิ้นงานที่ใช้งานได้</value></data>
+  <data name="Develop the CAD. Compare prototypes. Prepare production. Follow one camera bracket through the decisions that shape the finished part." xml:space="preserve"><value>พัฒนา CAD เปรียบเทียบต้นแบบ และเตรียมผลิต ดูการพัฒนาขายึดกล้องหนึ่งชิ้น ผ่านการตัดสินใจในแต่ละขั้นตอนจนได้ชิ้นงานสำเร็จ</value></data>
+  <data name="Illustrative bracket development from sketch to CNC production" xml:space="preserve"><value>ภาพประกอบการพัฒนาขายึดจากภาพร่างถึงการผลิต CNC</value></data>
+  <data name="Customer sketch of bracket alternatives and the bottle to inspect" xml:space="preserve"><value>ภาพร่างขายึดหลายแบบและขวดที่ต้องการตรวจสอบ</value></data>
+  <data name="Bracket CAD developed alongside the customer sketch" xml:space="preserve"><value>พัฒนา CAD ขายึดควบคู่กับภาพร่างลูกค้า</value></data>
+  <data name="Printed bracket prototypes for comparing fit and geometry" xml:space="preserve"><value>ต้นแบบขายึดพิมพ์ 3 มิติเพื่อเปรียบเทียบรูปทรงและการประกอบ</value></data>
+  <data name="Repeat batch of aluminium brackets at the CNC machine" xml:space="preserve"><value>ผลิตขายึดอะลูมิเนียมเป็นชุดด้วยเครื่อง CNC</value></data>
+  <data name="Start with your idea" xml:space="preserve"><value>เริ่มจากไอเดียของคุณ</value></data>
+  <data name="See the complete journey" xml:space="preserve"><value>ดูขั้นตอนพัฒนาทั้งหมด</value></data>
+  <data name="Pause automatic slides" xml:space="preserve"><value>หยุดเปลี่ยนสไลด์อัตโนมัติ</value></data>
+  <data name="Resume automatic slides" xml:space="preserve"><value>เล่นสไลด์อัตโนมัติต่อ</value></data>
+  <data name="Automatic slides paused" xml:space="preserve"><value>หยุดการเปลี่ยนสไลด์อัตโนมัติแล้ว</value></data>
 </root>

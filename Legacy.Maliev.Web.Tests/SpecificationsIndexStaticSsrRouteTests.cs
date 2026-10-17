@@ -44,8 +44,8 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
     [InlineData(
         "en",
         "Service specifications | MALIEV",
-        "Choose a process for concise preparation guidance, then use the service page for current materials, pricing, lead-time, and FAQ information.",
-        "Service specifications",
+        "Compare the information needed for CNC machining, 3D printing, and 3D scanning before requesting a quotation.",
+        "Manufacturing preparation guides",
         "Technical guidance",
         "CNC machining",
         "3D printing",
@@ -53,8 +53,8 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
     [InlineData(
         "th",
         "ข้อแนะนำเฉพาะบริการ | MALIEV",
-        "เลือกกระบวนการเพื่อดูแนวทางเตรียมงาน และดูหน้าบริการสำหรับวัสดุ ราคา ระยะเวลา และคำถามที่พบบ่อยล่าสุด",
-        "ข้อแนะนำเฉพาะบริการ",
+        "เปรียบเทียบข้อมูลที่ควรเตรียมก่อนขอราคางาน CNC พิมพ์ 3 มิติ และสแกน 3 มิติ",
+        "คู่มือเตรียมงานผลิต",
         "คำแนะนำทางเทคนิค",
         "งาน CNC",
         "งานพิมพ์ 3 มิติ",
@@ -103,8 +103,10 @@ public sealed partial class SpecificationsIndexStaticSsrRouteTests : IClassFixtu
         Assert.Contains("aria-expanded=\"false\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
