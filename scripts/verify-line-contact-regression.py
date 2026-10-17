@@ -407,17 +407,24 @@ class Session:
         self.forced_kill = False
 
     def process(self, pid):
-        try:
+        def read_stat():
             raw = Path("/proc", str(pid), "stat").read_text()
             require(len(raw) <= 8192, "custody-stat-size")
             fields = raw.rsplit(")", 1)[1].split()
-            row = {"pid": pid, "ppid": int(fields[1]), "pgid": int(fields[2]), "sid": int(fields[3]),
-                   "startTicks": int(fields[19]), "state": fields[0], "executable": None}
+            return {"pid": pid, "ppid": int(fields[1]), "pgid": int(fields[2]), "sid": int(fields[3]),
+                    "startTicks": int(fields[19]), "state": fields[0], "executable": None}
+
+        try:
+            row = read_stat()
             if row["sid"] == self.leader or pid in self.members:
                 try:
                     row["executable"] = os.readlink("/proc/" + str(pid) + "/exe")
                 except FileNotFoundError:
-                    require(row["state"] == "Z", "custody-executable")
+                    # The original stat may predate exit; qualify only a fresh same-generation zombie.
+                    fresh = read_stat()
+                    require(fresh["startTicks"] == row["startTicks"] and fresh["sid"] == row["sid"]
+                            and fresh["pgid"] == row["pgid"] and fresh["state"] == "Z", "custody-executable")
+                    row = fresh
             return row
         except FileNotFoundError:
             return None

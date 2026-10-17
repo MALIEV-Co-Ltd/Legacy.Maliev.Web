@@ -983,5 +983,109 @@ class V3ForcedKillControls(unittest.TestCase):
                 self.assertEqual({}, rows)
 
 
+
+class V4ProcExecutableRaceControls(unittest.TestCase):
+    @staticmethod
+    def stat(state="R", start_ticks=124, sid=42, pgid=99, ppid=42):
+        fields = ["0"] * 20
+        fields[0], fields[1], fields[2], fields[3] = state, str(ppid), str(pgid), str(sid)
+        fields[19] = str(start_ticks)
+        return "43 (owned worker) " + " ".join(fields)
+
+    def session(self):
+        session = guard.Session(42, (42, 42, 123))
+        session.members[43] = {
+            "pid": 43, "ppid": 42, "pgid": 99, "sid": 42, "startTicks": 124,
+            "state": "R", "executable": "/owned/child",
+        }
+        return session
+
+    def test_live_to_zombie_returns_fresh_same_identity_row(self):
+        session = self.session()
+        with patch.object(guard.Path, "read_text", side_effect=[self.stat(), self.stat("Z", ppid=1)]) as read, \
+             patch.object(guard.os, "readlink", side_effect=FileNotFoundError()) as executable, \
+             patch.object(guard.os, "kill") as stop:
+            row = session.process(43)
+        self.assertEqual("Z", row["state"])
+        self.assertEqual(1, row["ppid"])
+        self.assertEqual((124, 42, 99), (row["startTicks"], row["sid"], row["pgid"]))
+        self.assertIsNone(row["executable"])
+        self.assertEqual(2, read.call_count)
+        executable.assert_called_once_with("/proc/43/exe")
+        stop.assert_not_called()
+
+    def test_live_to_reaped_returns_none(self):
+        session = self.session()
+        with patch.object(guard.Path, "read_text", side_effect=[self.stat(), FileNotFoundError()]) as read, \
+             patch.object(guard.os, "readlink", side_effect=FileNotFoundError()) as executable, \
+             patch.object(guard.os, "kill") as stop:
+            self.assertIsNone(session.process(43))
+        self.assertEqual(2, read.call_count)
+        executable.assert_called_once_with("/proc/43/exe")
+        stop.assert_not_called()
+
+    def test_unchanged_live_missing_executable_rejects_without_signal(self):
+        session = self.session()
+        with patch.object(guard.Path, "read_text", side_effect=[self.stat(), self.stat()]) as read, \
+             patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+             patch.object(guard.os, "kill") as stop:
+            with self.assertRaisesRegex(guard.Rejected, "^custody-executable$"):
+                session.send(43, signal.SIGTERM)
+        self.assertEqual(2, read.call_count)
+        stop.assert_not_called()
+
+    def test_changed_identity_rejects_even_fresh_zombie_without_signal(self):
+        for change in ({"start_ticks": 999}, {"sid": 777}, {"pgid": 88}):
+            with self.subTest(change=change):
+                session = self.session()
+                with patch.object(guard.Path, "read_text", side_effect=[self.stat(), self.stat("Z", **change)]) as read, \
+                     patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+                     patch.object(guard.os, "kill") as stop:
+                    with self.assertRaisesRegex(guard.Rejected, "^custody-executable$"):
+                        session.send(43, signal.SIGTERM)
+                self.assertEqual(2, read.call_count)
+                stop.assert_not_called()
+
+    def test_old_zombie_does_not_waive_fresh_live_missing_executable(self):
+        session = self.session()
+        with patch.object(guard.Path, "read_text", side_effect=[self.stat("Z"), self.stat()]), \
+             patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+             patch.object(guard.os, "kill") as stop:
+            with self.assertRaisesRegex(guard.Rejected, "^custody-executable$"):
+                session.send(43, signal.SIGTERM)
+        stop.assert_not_called()
+
+    def test_fresh_stat_size_and_access_fail_closed_without_signal(self):
+        for fresh, error in (("x" * 8193, guard.Rejected), (PermissionError("synthetic"), PermissionError)):
+            with self.subTest(error=error.__name__):
+                session = self.session()
+                with patch.object(guard.Path, "read_text", side_effect=[self.stat(), fresh]), \
+                     patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+                     patch.object(guard.os, "kill") as stop:
+                    with self.assertRaises(error):
+                        session.send(43, signal.SIGTERM)
+                stop.assert_not_called()
+
+    def test_rechecked_zombie_or_reaped_process_is_not_signaled(self):
+        for fresh in (self.stat("Z"), FileNotFoundError()):
+            with self.subTest(reaped=isinstance(fresh, FileNotFoundError)):
+                session = self.session()
+                with patch.object(guard.Path, "read_text", side_effect=[self.stat(), fresh]), \
+                     patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+                     patch.object(guard.os, "kill") as stop:
+                    session.send(43, signal.SIGTERM)
+                stop.assert_not_called()
+
+    def test_readable_executable_uses_one_snapshot_and_existing_exact_pid_signal(self):
+        session = self.session()
+        with patch.object(guard.Path, "read_text", return_value=self.stat()) as read, \
+             patch.object(guard.os, "readlink", return_value="/owned/child") as executable, \
+             patch.object(guard.os, "kill") as stop:
+            session.send(43, signal.SIGTERM)
+        self.assertEqual(1, read.call_count)
+        executable.assert_called_once_with("/proc/43/exe")
+        stop.assert_called_once_with(43, signal.SIGTERM)
+
+
 if __name__ == "__main__":
     unittest.main()
