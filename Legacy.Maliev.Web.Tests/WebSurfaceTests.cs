@@ -2634,7 +2634,33 @@ public sealed class WebSurfaceTests : IDisposable
             "<footer\\b[^>]*\\bdata-migration-component=\"public-footer\"[^>]*>.*?</footer>",
             RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Cast<Match>());
         Assert.Contains("href=\"https://www.facebook.com/maliev.manufacturing/\"", publicFooter.Value, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", source.Remove(publicFooter.Index, publicFooter.Length), StringComparison.OrdinalIgnoreCase);
+        // Static sameAs links identify the business; they do not load a Facebook profile or SDK.
+        var verifiedSchemaTypes = new HashSet<string>(StringComparer.Ordinal);
+        var withoutStaticProfiles = Regex.Replace(
+            source.Remove(publicFooter.Index, publicFooter.Length),
+            """<script\b(?=[^>]*\btype="application/ld\+json")[^>]*>(?<json>.*?)</script>""",
+            match =>
+            {
+                using var schema = JsonDocument.Parse(match.Groups["json"].Value);
+                var root = schema.RootElement;
+                if (root.ValueKind != JsonValueKind.Object
+                    || !root.TryGetProperty("@type", out var type)
+                    || type.ValueKind != JsonValueKind.String
+                    || type.GetString() is not ("Organization" or "LocalBusiness"))
+                {
+                    return match.Value;
+                }
+
+                Assert.True(verifiedSchemaTypes.Add(type.GetString()!));
+                Assert.Single(root.GetProperty("sameAs").EnumerateArray(),
+                    link => link.GetString() == "https://www.facebook.com/maliev.manufacturing/");
+                Assert.Single(Regex.Matches(match.Value, """https://www\.facebook\.com""",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Cast<Match>());
+                return string.Empty;
+            },
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        Assert.Equal(new[] { "LocalBusiness", "Organization" }, verifiedSchemaTypes.Order(StringComparer.Ordinal));
+        Assert.DoesNotContain("https://www.facebook.com", withoutStaticProfiles, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("facebook.com/tr", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb:app_id", source, StringComparison.OrdinalIgnoreCase);
