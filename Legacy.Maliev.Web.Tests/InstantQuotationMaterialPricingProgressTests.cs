@@ -517,9 +517,27 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             var session = await fixture.CreateAsync(partCount: 2);
             var frames = new List<InstantQuotationMaterialPricingProgress>();
+            CancellationToken? selectedObserverToken = null;
+            CancellationToken? comparisonObserverToken = null;
             var quote = await fixture.Service.QuoteAsync(session, Owner, true,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-            Assert.NotNull(quote);
+                (frame, token) =>
+                {
+                    frames.Add(frame);
+                    if (frame.MaterialKey == "ABS") selectedObserverToken = token;
+                    else comparisonObserverToken = token;
+                    return ValueTask.CompletedTask;
+                }, default);
+            try { Assert.NotNull(quote); }
+            catch
+            {
+                try
+                {
+                    fixture.Record("selected-progress-token", TokenState(selectedObserverToken));
+                    fixture.Record("comparison-progress-token", TokenState(comparisonObserverToken));
+                }
+                catch { /* Secondary metadata must preserve the original null-quote failure. */ }
+                throw;
+            }
             Assert.Equal(2, quote.Parts.Count);
             var selected = frames.Where(frame => frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed).ToArray();
             Assert.Equal(2, selected.Length);
@@ -537,6 +555,13 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             }
             Assert.All(frames.Where(frame => frame.Status != InstantQuotationMaterialPricingStatus.Completed),
                 frame => Assert.Null(frame.UnitPrice));
+
+            static string TokenState(CancellationToken? token) => token?.IsCancellationRequested switch
+            {
+                true => "canceled",
+                false => "active",
+                null => "unobserved",
+            };
         }, output);
     }
 
