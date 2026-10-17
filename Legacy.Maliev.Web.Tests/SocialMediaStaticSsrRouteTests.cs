@@ -12,7 +12,10 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         "https://www.tiktok.com/@maliev.marketing",
         "https://www.instagram.com/maliev.manufacturing/",
         "https://www.threads.com/@maliev.manufacturing",
+        "https://www.facebook.com/maliev.manufacturing/",
         "https://line.me/ti/p/@maliev",
+        "https://wa.me/66898950690",
+        "https://m.me/maliev.manufacturing/",
     ];
 
     private readonly WebApplicationFactory<Program> factory;
@@ -122,6 +125,75 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.Contains("<title>Social media | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task SocialCards_PreserveSourceOrderLocalizedNamesAndContactIdentity(bool rendererEnabled, string culture)
+    {
+        using var host = OwnedWebSurfaceHost.Create(builder =>
+            builder.UseSetting("BlazorRouting:SocialMedia", rendererEnabled.ToString()));
+        using var response = await host.Client.GetAsync($"/about/socialmedia?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var cards = Regex.Matches(html,
+            """<a class="maliev-panel social-link-card"(?<attributes>[^>]*)>(?<body>.*?)</a>""",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant).Cast<Match>().ToArray();
+        Assert.Equal(8, cards.Length);
+        var names = new[]
+        {
+            "YouTube", "TikTok", "Instagram", "Threads", "Facebook", "LINE", "WhatsApp", "Messenger",
+        };
+        var descriptions = culture == "th"
+            ? new[]
+            {
+                "วิดีโอกระบวนการและตัวอย่างโครงการ",
+                "วิดีโอการผลิตแบบสั้นและข่าวกระบวนการ",
+                "ชิ้นงาน อุปกรณ์ และข่าวจากเวิร์กช็อปล่าสุด",
+                "บทสนทนาด้านการผลิตและข่าวสารบริษัท",
+                "ข่าวบริษัทและประกาศสำหรับลูกค้า",
+                "แชตกับทีมงานผ่าน LINE Official Account",
+                "ส่งข้อความถึงทีมงานผ่าน WhatsApp",
+                "ส่งข้อความถึงทีมงานผ่าน Facebook Messenger",
+            }
+            : new[]
+            {
+                "Process videos and project demonstrations",
+                "Short manufacturing videos and process updates",
+                "Recent parts, equipment, and workshop updates",
+                "Manufacturing conversations and company updates",
+                "Company news and customer-facing updates",
+                "Chat with our team through LINE Official Account",
+                "Message our team through WhatsApp",
+                "Message our team through Facebook Messenger",
+            };
+        for (var index = 0; index < cards.Length; index++)
+        {
+            var attributes = cards[index].Groups["attributes"].Value;
+            var body = cards[index].Groups["body"].Value;
+            Assert.Contains($"href=\"{SocialDestinations[index]}\"", attributes, StringComparison.Ordinal);
+            Assert.Contains("target=\"_blank\"", attributes, StringComparison.Ordinal);
+            Assert.Contains("rel=\"noopener\"", attributes, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{names[index]}</strong>", body, StringComparison.Ordinal);
+            Assert.Contains($"<span>{descriptions[index]}</span>", body, StringComparison.Ordinal);
+            Assert.Contains("aria-hidden=\"true\"", body, StringComparison.Ordinal);
+        }
+        foreach (var (index, placement) in new[]
+        {
+            (5, "about_line"),
+            (6, "about_whatsapp"),
+            (7, "about_messenger"),
+        })
+        {
+            Assert.Contains($"data-contact-placement=\"{placement}\"", cards[index].Groups["attributes"].Value, StringComparison.Ordinal);
+        }
+        Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", cards[6].Groups["attributes"].Value, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"public-contact-channel-analytics\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("connect.facebook.net", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fbq(", html, StringComparison.OrdinalIgnoreCase);
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(
