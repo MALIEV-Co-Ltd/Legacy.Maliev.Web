@@ -61,7 +61,7 @@ public sealed class KnowledgeLibrarySourceContractTests
         foreach (var reference in references)
         {
             var key = reference.Groups[1].Value;
-            var entry = Assert.Single(entries.Where(candidate => (string?)candidate.Attribute("name") == key));
+            var entry = Assert.Single(entries, candidate => (string?)candidate.Attribute("name") == key);
             Assert.False(string.IsNullOrWhiteSpace(entry.Element("value")?.Value),
                 $"Missing Thai translation in {componentPath}: {key}");
         }
@@ -116,7 +116,7 @@ public sealed class KnowledgeLibrarySourceContractTests
         foreach (var reference in references.Cast<Match>())
         {
             var key = reference.Groups[1].Value;
-            var entry = Assert.Single(entries.Where(candidate => (string?)candidate.Attribute("name") == key));
+            var entry = Assert.Single(entries, candidate => (string?)candidate.Attribute("name") == key);
             Assert.False(string.IsNullOrWhiteSpace(entry.Element("value")?.Value),
                 $"Missing Thai navigation translation: {key}");
         }
