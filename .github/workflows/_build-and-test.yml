@@ -147,6 +147,11 @@ jobs:
           python3 -B tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee company-asset-custody-results/normal.log
           python3 -B -O tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee company-asset-custody-results/optimized.log
           python3 -B scripts/verify_company_release_assets.py | tee company-asset-custody-results/custody.json
+          python3 -B tests/KnowledgeAssetIntake.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-intake-normal.log
+          python3 -B -O tests/KnowledgeAssetIntake.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-intake-optimized.log
+          python3 -B tests/KnowledgeCurrentAsset.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-current-normal.log
+          python3 -B -O tests/KnowledgeCurrentAsset.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-current-optimized.log
+          python3 -B scripts/verify_knowledge_assets.py | tee company-asset-custody-results/knowledge-custody.json
       - name: Verify bounded browser failure evidence controls
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -215,7 +220,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~KnowledgeSidebarRouteTests|FullyQualifiedName~KnowledgeSidebarBrowserTests|FullyQualifiedName~KnowledgeGuideBundleRouteTests|FullyQualifiedName~KnowledgeCenterGuidesBrowserTests|FullyQualifiedName~KnowledgeSearchBrowserTests|FullyQualifiedName~KnowledgeReadingLayoutBrowserTests|FullyQualifiedName~KnowledgeGroupedNavigationBrowserTests|FullyQualifiedName~KnowledgeVisualAssetDeliveryTests"
+          --filter "FullyQualifiedName~KnowledgeSidebarRouteTests|FullyQualifiedName~KnowledgeSidebarBrowserTests|FullyQualifiedName~KnowledgeGuideBundleRouteTests|FullyQualifiedName~KnowledgeCenterGuidesBrowserTests|FullyQualifiedName~KnowledgeSearchBrowserTests|FullyQualifiedName~KnowledgeReadingLayoutBrowserTests|FullyQualifiedName~KnowledgeGroupedNavigationBrowserTests|FullyQualifiedName~KnowledgeVisualAssetDeliveryTests|FullyQualifiedName~KnowledgeLibrarySourceContractTests"
           --logger trx --results-directory ./knowledge-navigation-test-results
       - name: Verify historical service gallery framing and actual mobile composition
         run: >-
