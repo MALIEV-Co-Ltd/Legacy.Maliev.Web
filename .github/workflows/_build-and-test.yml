@@ -41,6 +41,25 @@ jobs:
       - name: Verify offline Search Console cohort reporter
         shell: pwsh
         run: ./tests/SearchConsoleCohortReport.Tests.ps1
+      - name: Set up original Career oracle runtime
+        timeout-minutes: 5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+      - name: Build original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet build acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --disable-build-servers -warnaserror
+          -p:UseSharedCompilation=false -nodeReuse:false
+      - name: Verify original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet test acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --no-build --no-restore --disable-build-servers
+          -p:UseSharedCompilation=false -nodeReuse:false
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --logger trx --results-directory ./career-original-materialization-test-results
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -69,6 +88,13 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify independent WebSurface and account-boundary ownership regressions
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~Legacy.Maliev.Web.Tests.WebSurfaceOwnedLifetimeTests|FullyQualifiedName~Legacy.Maliev.Web.Tests.AccountBoundaryOwnedLifetimeTests"
+          --logger trx --results-directory ./websurface-owned-lifetime-test-results
       - name: Verify exact owned-resource refusal and cleanup controls
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -237,6 +263,23 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~StartupDataProtectionMigrationTests|FullyQualifiedName~RecaptchaConfigurationStartupTests|FullyQualifiedName~RecaptchaEnterpriseVerifierTests|FullyQualifiedName~AppSettingsCredentialBoundaryTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~HealthProcessIdentityContractTests|FullyQualifiedName~CountrySourceFailureObservationTests|FullyQualifiedName~PrivateRequestObservationConsumerTests|FullyQualifiedName~LegacyServiceDefaultsIdentityContractTests|FullyQualifiedName~SharedDiagnosticsContractTests|FullyQualifiedName~ErrorIncidentCorrelationTests"
           --logger trx --results-directory ./startup-security-test-results
+      - name: Verify complete original Career consumer contracts
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CareerIndexStaticSsrRouteTests|FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerDetailStaticSsrRouteTests|FullyQualifiedName~CareerSearchKestrelContractTests"
+          --logger trx --results-directory ./career-consumer-test-results
+      - name: Preserve successful Career focus and original oracle before the full suite
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: career-focused-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
+          retention-days: 7
+          if-no-files-found: error
       - name: Verify localized account posts and rendered service SEO contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -354,6 +397,121 @@ jobs:
           "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
           --root ./preliminary-pdf-test-results/pdf
           --receipt ./preliminary-pdf-test-results/parser-receipt.json
+      - name: Stage bounded focused TRX checkpoint before full validation
+        id: focused_checkpoint_capture
+        if: always()
+        shell: bash
+        env:
+          FOCUSED_EVENT_SHA: ${{ github.sha }}
+          FOCUSED_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          FOCUSED_RUN_ID: ${{ github.run_id }}
+          FOCUSED_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, re, stat, subprocess, time
+          from pathlib import Path
+          DIRECTORIES = ('ticket-test-results', 'websurface-owned-lifetime-test-results', 'cnc-resource-test-results', 'cnc-literal-producer-test-results', 'sidebar-focused-test-results', 'publisher-mesh-test-results', 'physical-result-test-results', 'quotation-response-test-results', 'knowledge-navigation-test-results', 'home-process-test-results', 'service-gallery-test-results', 'authenticated-profile-test-results', 'material-identity-test-results', 'material-progress-test-results', 'material-card-test-results', 'signed-link-test-results', 'startup-security-test-results', 'scanning-comparison-test-results', 'preliminary-duration-test-results', 'localized-account-seo-test-results', 'localized-inquiry-test-results', 'preliminary-dfm-test-results', 'preliminary-pdf-test-results', 'thai-lookup-test-results', 'billing-persistence-test-results')
+          PARSER_RECEIPT = 'preliminary-pdf-test-results/parser-receipt.json'
+          MAX_FILES, MAX_FILE_BYTES, MAX_TOTAL_BYTES = (2000, 32 * 1024 * 1024, 128 * 1024 * 1024)
+
+          def checkpoint(root, identity, checked_head, checked_tree):
+              started = time.monotonic()
+              root = root.resolve(strict=True)
+              if not set(identity) == {'event_sha', 'candidate_sha', 'run_id', 'attempt'}:
+                  raise RuntimeError('Focused evidence checkpoint contract rejected')
+              if not all((re.fullmatch('[0-9a-f]{40}', value) for value in [identity['event_sha'], identity['candidate_sha'], checked_head, checked_tree])):
+                  raise RuntimeError('Focused evidence checkpoint contract rejected')
+              if not all((re.fullmatch('[1-9][0-9]{0,19}', identity[key]) for key in ['run_id', 'attempt'])):
+                  raise RuntimeError('Focused evidence checkpoint contract rejected')
+              destination = root / ('focused-checkpoint-' + identity['run_id'] + '-' + identity['attempt'])
+              destination.mkdir(exist_ok=False)
+              records, total, entries = ([], 0, 0)
+
+              def regular(path, directory=False):
+                  info = path.lstat()
+                  if not (not stat.S_ISLNK(info.st_mode) and (not getattr(info, 'st_file_attributes', 0) & 1024)):
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  if not (stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode)):
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  if not path.resolve(strict=True).is_relative_to(root):
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  return info
+
+              def copy(path):
+                  nonlocal total
+                  if not (time.monotonic() - started < 60 and len(records) < MAX_FILES):
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  info = regular(path)
+                  if not (info.st_size <= MAX_FILE_BYTES and total + info.st_size <= MAX_TOTAL_BYTES):
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  relative = path.relative_to(root)
+                  target = destination / relative
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  digest, length = (hashlib.sha256(), 0)
+                  descriptor = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+                  with os.fdopen(descriptor, 'rb') as source, target.open('xb') as output:
+                      opened = os.fstat(source.fileno())
+                      if not (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns) == (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns):
+                          raise RuntimeError('Focused evidence checkpoint contract rejected')
+                      while (chunk := source.read(1024 * 1024)):
+                          length += len(chunk)
+                          if not (length <= info.st_size and time.monotonic() - started < 60):
+                              raise RuntimeError('Focused evidence checkpoint contract rejected')
+                          digest.update(chunk)
+                          output.write(chunk)
+                      after = os.fstat(source.fileno())
+                      if not (after.st_size, after.st_mtime_ns) == (info.st_size, info.st_mtime_ns):
+                          raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  final = regular(path)
+                  if not (final.st_dev, final.st_ino, final.st_size, final.st_mtime_ns) == (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns):
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  if not length == info.st_size:
+                      raise RuntimeError('Focused evidence checkpoint contract rejected')
+                  total += length
+                  records.append({'path': relative.as_posix(), 'bytes': length, 'sha256': digest.hexdigest()})
+              for name in DIRECTORIES:
+                  directory = root / name
+                  if not directory.exists() and (not directory.is_symlink()):
+                      continue
+                  regular(directory, directory=True)
+                  visited = 0
+                  for current, directories, filenames in os.walk(directory, followlinks=False):
+                      visited += 1
+                      entries += 1 + len(directories) + len(filenames)
+                      if not entries <= MAX_FILES:
+                          raise RuntimeError('Focused evidence checkpoint contract rejected')
+                      if not (visited <= MAX_FILES and time.monotonic() - started < 60):
+                          raise RuntimeError('Focused evidence checkpoint contract rejected')
+                      for child in directories:
+                          regular(Path(current) / child, directory=True)
+                      for name in sorted(filenames):
+                          if name.endswith('.trx'):
+                              copy(Path(current) / name)
+              parser = root / PARSER_RECEIPT
+              if parser.exists() or parser.is_symlink():
+                  regular(parser.parent, directory=True)
+                  copy(parser)
+              if not any((record['path'].endswith('.trx') for record in records)):
+                  raise RuntimeError('No focused TRX retained')
+              receipt = {'schema': 'web-focused-checkpoint.v1', **identity, 'checked_head': checked_head, 'checked_tree': checked_tree, 'files': records, 'total_bytes': total, 'scope': 'pre-full focused evidence only; no full-suite or runner-cause acceptance'}
+              with (destination / 'checkpoint-receipt.json').open('x', encoding='utf-8') as output:
+                  json.dump(receipt, output, sort_keys=True, indent=2)
+              return destination
+          if __name__ == '__main__':
+              identity = {key: os.environ['FOCUSED_' + key.upper()] for key in ['event_sha', 'candidate_sha', 'run_id', 'attempt']}
+
+              def git_value(argument):
+                  return subprocess.check_output(['git', 'rev-parse', argument], timeout=10, text=True).strip()
+              checkpoint(Path.cwd(), identity, git_value('HEAD'), git_value('HEAD^{tree}'))
+          PY
+      - name: Preserve focused TRX checkpoint before full validation
+        if: always() && steps.focused_checkpoint_capture.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-focused-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: focused-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}/
+          retention-days: 7
+          if-no-files-found: error
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
         with:
@@ -402,6 +560,9 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
             ticket-test-results/**/*.trx
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
+            websurface-owned-lifetime-test-results/**/*.trx
             cnc-resource-test-results/**/*.trx
             quotation-conversion-test-results/**/*.trx
             cnc-literal-producer-test-results/**/*.trx

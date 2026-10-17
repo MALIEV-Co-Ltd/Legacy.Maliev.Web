@@ -11,14 +11,16 @@ using Microsoft.Extensions.Configuration;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
+public sealed class WebSurfaceTests : IDisposable
 {
-    private readonly WebApplicationFactory<Program> configuredFactory;
-    private readonly HttpClient client;
+    private readonly OwnedWebSurfaceHost ownedHost;
+    private WebApplicationFactory<Program> configuredFactory => ownedHost.Factory;
+    internal OwnedWebSurfaceHost LifetimeOwner => ownedHost;
+    private HttpClient client => ownedHost.Client;
 
-    public WebSurfaceTests(TestingWebApplicationFactory factory)
+    public WebSurfaceTests()
     {
-        configuredFactory = factory.WithWebHostBuilder(builder =>
+        ownedHost = OwnedWebSurfaceHost.Create(builder =>
             {
                 builder.UseEnvironment("Testing");
                 builder.ConfigureAppConfiguration((_, configuration) =>
@@ -63,11 +65,6 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
                     services.AddSingleton<IAntiBotVerifier, StubAntiBotVerifier>();
                 });
             });
-        client = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost"),
-        });
     }
 
     [Theory]
@@ -2637,7 +2634,13 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
+        var publicFooter = Assert.Single(Regex.Matches(
+            source,
+            "<footer\\b[^>]*\\bdata-migration-component=\"public-footer\"[^>]*>.*?</footer>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("href=\"https://www.facebook.com/maliev.manufacturing/\"", publicFooter.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://www.facebook.com", source.Remove(publicFooter.Index, publicFooter.Length), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("facebook.com/tr", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb:app_id", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
@@ -3853,6 +3856,19 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
             null,
             Level);
 
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public Task<CareerListing> GetListingAsync(
             CareerSort sort,
             string? search,
@@ -3873,6 +3889,19 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
 
     private sealed class ThrowingCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public Task<CareerListing> GetListingAsync(
             CareerSort sort,
             string? search,
@@ -4869,7 +4898,7 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         }
     }
 
-    public void Dispose() => configuredFactory.Dispose();
+    public void Dispose() => ownedHost.Dispose();
 
     private sealed record QuotationListInvocation(
         int CustomerId,
