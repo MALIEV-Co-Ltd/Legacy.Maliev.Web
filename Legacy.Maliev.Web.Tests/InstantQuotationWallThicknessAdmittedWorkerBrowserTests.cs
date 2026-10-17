@@ -126,9 +126,9 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
 
 
         await MaterialCardBrowserActions.SelectAsync(page, "ABS");
-        await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
         try
         {
+            await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
             await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
         }
         catch (TimeoutException original)

@@ -2,11 +2,114 @@ using System.Text.Json;
 using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using LegacyQueue = Legacy.Maliev.Web.Tests.Pre605.LeadAnalyticsEventQueue;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LeadAnalyticsEventQueueParityTests
 {
+    [Fact]
+    public void Pre605ContactProducerAndConsumer_ReproducesLegacyConversion()
+    {
+        var tempData = CreateTempData();
+        Assert.True(LegacyQueue.TryQueueContactMessage(tempData, 42, out var failure));
+        Assert.Null(failure);
+        Assert.True(LegacyQueue.TryConsume(tempData, out var payload));
+        Assert.Equal("maliev_lead_submitted", payload!.Event);
+        using var conversion = JsonDocument.Parse(JsonSerializer.Serialize(payload.BuildGenerateLeadConversionEvent()));
+        Assert.Equal("generate_lead", conversion.RootElement.GetProperty("event").GetString());
+    }
+
+    [Fact]
+    public void CurrentContactProducer_LegacyGetCannotConsumeOrConvert_NewGetConsumesOnce()
+    {
+        var provider = new RoundTripTempDataProvider();
+        var post = new TempDataDictionary(new DefaultHttpContext(), provider);
+        Assert.True(LeadAnalyticsEventQueue.TryQueueContactMessage(post, 42, out var failure));
+        Assert.Null(failure);
+        post.Save();
+
+        var legacyGet = new TempDataDictionary(new DefaultHttpContext(), provider);
+        Assert.False(LegacyQueue.TryConsume(legacyGet, out var legacyPayload));
+        Assert.Null(legacyPayload);
+        legacyGet.Save();
+
+        var currentGet = new TempDataDictionary(new DefaultHttpContext(), provider);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(currentGet, out var payload));
+        Assert.Equal("maliev_contact_submitted", payload!.Event);
+        Assert.False(payload.IsPersistedQuotation);
+        Assert.Throws<InvalidOperationException>(() => payload.BuildGenerateLeadConversionEvent());
+        currentGet.Save();
+        Assert.False(LeadAnalyticsEventQueue.TryConsume(
+            new TempDataDictionary(new DefaultHttpContext(), provider), out _));
+    }
+
+    [Fact]
+    public void LegacyContactProducer_CurrentConsumerConvertsOnlyToDiagnostic()
+    {
+        var tempData = CreateTempData();
+        Assert.True(LegacyQueue.TryQueueContactMessage(tempData, 42, out var failure));
+        Assert.Null(failure);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(tempData, out var payload));
+        Assert.Equal("maliev_contact_submitted", payload!.Event);
+        Assert.False(payload.IsPersistedQuotation);
+        Assert.Throws<InvalidOperationException>(() => payload.BuildGenerateLeadConversionEvent());
+        Assert.False(LeadAnalyticsEventQueue.TryConsume(tempData, out _));
+    }
+
+    [Theory]
+    [InlineData("manual_quote", "cnc_machining")]
+    [InlineData("instant_3d_quote", "3d_printing")]
+    [InlineData("instant_cnc_quote", "cnc_machining")]
+    public void CurrentQuotationProducer_LegacyConsumerPreservesConversion(string leadType, string service)
+    {
+        var tempData = CreateTempData();
+        var journeyId = "11111111-2222-3333-4444-555555555555";
+        var queued = leadType switch
+        {
+            "manual_quote" => LeadAnalyticsEventQueue.TryQueueManualQuotation(tempData, "request-42", true, "cnc-machining", journeyId, out _),
+            "instant_3d_quote" => LeadAnalyticsEventQueue.TryQueueInstantQuotation(tempData, "request-42", true, journeyId, out _),
+            _ => LeadAnalyticsEventQueue.TryQueueInstantCncQuotation(tempData, "request-42", true, journeyId, out _),
+        };
+
+        Assert.True(queued);
+        Assert.True(LegacyQueue.TryConsume(tempData, out var payload));
+        using var conversion = JsonDocument.Parse(JsonSerializer.Serialize(payload!.BuildGenerateLeadConversionEvent()));
+        Assert.Equal("generate_lead", conversion.RootElement.GetProperty("event").GetString());
+        Assert.Equal(leadType, conversion.RootElement.GetProperty("lead_type").GetString());
+        Assert.Equal(service, conversion.RootElement.GetProperty("service").GetString());
+        Assert.Equal("request-42", conversion.RootElement.GetProperty("transaction_id").GetString());
+        Assert.Equal(journeyId, conversion.RootElement.GetProperty("journey_id").GetString());
+        Assert.False(LegacyQueue.TryConsume(tempData, out _));
+    }
+
+    [Theory]
+    [InlineData("manual_quote", "cnc_machining")]
+    [InlineData("instant_3d_quote", "3d_printing")]
+    [InlineData("instant_cnc_quote", "cnc_machining")]
+    public void LegacyQuotationProducer_CurrentConsumerPreservesConversion(string leadType, string service)
+    {
+        var tempData = CreateTempData();
+        var journeyId = "11111111-2222-3333-4444-555555555555";
+        var queued = leadType switch
+        {
+            "manual_quote" => LegacyQueue.TryQueueManualQuotation(tempData, "request-42", true, "cnc-machining", journeyId, out _),
+            "instant_3d_quote" => LegacyQueue.TryQueueInstantQuotation(tempData, "request-42", true, journeyId, out _),
+            _ => LegacyQueue.TryQueueInstantCncQuotation(tempData, "request-42", true, journeyId, out _),
+        };
+
+        Assert.True(queued);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(tempData, out var payload));
+        Assert.True(payload!.IsPersistedQuotation);
+        using var conversion = JsonDocument.Parse(JsonSerializer.Serialize(payload.BuildGenerateLeadConversionEvent()));
+        Assert.Equal("generate_lead", conversion.RootElement.GetProperty("event").GetString());
+        Assert.Equal(leadType, conversion.RootElement.GetProperty("lead_type").GetString());
+        Assert.Equal(service, conversion.RootElement.GetProperty("service").GetString());
+        Assert.Equal("request-42", conversion.RootElement.GetProperty("transaction_id").GetString());
+        Assert.Equal(journeyId, conversion.RootElement.GetProperty("journey_id").GetString());
+        Assert.False(LeadAnalyticsEventQueue.TryConsume(tempData, out _));
+    }
+
     [Fact]
     public void InstantQuotation_QueuesTheExactSourceWireContract()
     {
@@ -194,6 +297,16 @@ public sealed class LeadAnalyticsEventQueueParityTests
 
     private static TempDataDictionary CreateTempData() =>
         new(new DefaultHttpContext(), new DictionaryTempDataProvider());
+
+    private sealed class RoundTripTempDataProvider : ITempDataProvider
+    {
+        private Dictionary<string, object> persisted = new();
+
+        public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>(this.persisted);
+
+        public void SaveTempData(HttpContext context, IDictionary<string, object> values) =>
+            this.persisted = new Dictionary<string, object>(values);
+    }
 
     private sealed class DictionaryTempDataProvider : ITempDataProvider
     {
