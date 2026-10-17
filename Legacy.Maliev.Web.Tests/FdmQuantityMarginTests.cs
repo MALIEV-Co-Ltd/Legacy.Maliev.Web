@@ -18,8 +18,10 @@ namespace Legacy.Maliev.Web.Tests
         /// <summary>Server physical pricing uses each quantity margin exactly once.</summary>
         [Theory]
         [InlineData(1, 0.50)]
+        [InlineData(5, 0.50)]
         [InlineData(9, 0.50)]
         [InlineData(10, 0.35)]
+        [InlineData(20, 0.35)]
         [InlineData(49, 0.35)]
         [InlineData(50, 0.25)]
         [InlineData(99, 0.25)]
@@ -40,8 +42,10 @@ namespace Legacy.Maliev.Web.Tests
         /// <summary>The retained geometry estimate uses each quantity margin once.</summary>
         [Theory]
         [InlineData(1, 0.50)]
+        [InlineData(5, 0.50)]
         [InlineData(9, 0.50)]
         [InlineData(10, 0.35)]
+        [InlineData(20, 0.35)]
         [InlineData(49, 0.35)]
         [InlineData(50, 0.25)]
         [InlineData(99, 0.25)]

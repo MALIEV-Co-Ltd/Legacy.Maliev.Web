@@ -8,6 +8,45 @@ namespace Legacy.Maliev.Web.Tests;
 /// <summary>Literal commercial-policy expectations, not manufacturing calibration evidence.</summary>
 public sealed class AdditiveCommercialEconomicsTests
 {
+    /// <summary>Freezes low-quantity physical-fixture money independently of the production calculator.</summary>
+    [Theory]
+    [InlineData(1, 0.50, 1010, 1010)]
+    [InlineData(5, 0.50, 950, 4750)]
+    [InlineData(10, 0.35, 730, 7300)]
+    [InlineData(20, 0.35, 720, 14400)]
+    [InlineData(50, 0.25, 630, 31500)]
+    public void QuotePhysical_PlaLowQuantity_UsesIndependentLiteralMoney(
+        int quantity, double margin, double expectedUnitPrice, double expectedSubtotal)
+    {
+        // Controlled ledger, not uploaded-mesh calibration: 80000mm3 and 3600s per unit.
+        // Direct cost = 99.2*0.83*1.10 +17 +60*(311097*0.70/43200).
+        // Independent literal money follows margin once, ceil5 manufacturing/min300,
+        // reserve10%, setup39.0625, packaging20, payment/0.97, VAT7%, gross ceil5,
+        // commercial gross minus unrounded VAT rounded to cents, then unit ceil10.
+        var material = PricingCatalog.ResolveMaterial("PLA")!;
+        var physical = Ledger("PLA", quantity, modelMm3: 80_000, supportMm3: 0, seconds: 3_600);
+        var quote = PricingEngine.QuoteFdmSimulation(physical, material, quantity, 80);
+
+        Assert.Equal(80_000d * quantity, physical.TotalDepositedMm3, 6);
+        Assert.Equal(3_600d * quantity, physical.Motion.TotalSeconds, 6);
+        Assert.Equal(60, quote.PrintTimeMinutesPerUnit, 6);
+        Assert.Equal(99.2, quote.MaterialPerUnit, 6);
+        Assert.Equal(99.2, quote.WeightGramsPerUnit, 6);
+        Assert.Equal(410.0250166666667, quote.DirectCostPerUnit, 6);
+        Assert.Equal(margin, PricingCatalog.ResolveTier(quantity).TargetMargin, 6);
+        Assert.Equal(expectedUnitPrice, quote.UnitPrice, 2);
+        Assert.Equal(expectedSubtotal, quote.Subtotal, 2);
+        Assert.Equal(expectedUnitPrice * quantity, quote.Subtotal, 2);
+        Assert.True(quote.UnitPrice > quote.DirectCostPerUnit);
+        Assert.False(quote.TechnicalFilamentMinimumApplied);
+        Assert.Equal(0, quote.TechnicalFilamentMinimumPrice);
+        Assert.Equal(0, quote.TechnicalFilamentMinimumAdjustment);
+        var tier = Assert.Single(quote.Tiers);
+        Assert.True(tier.Active);
+        Assert.Equal(quantity, tier.MinQuantity);
+        Assert.Equal(expectedUnitPrice, tier.UnitPrice, 2);
+    }
+
     [Fact]
     public void QuoteOrder_DryingFloorLine_UsesRoundedPublicMoneyNotStandaloneCalculatorGross()
     {
