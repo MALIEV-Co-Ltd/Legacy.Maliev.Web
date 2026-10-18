@@ -9,6 +9,11 @@ public sealed class ServicePresentationCssParityTests
         var shell = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "application-shell.css"));
         var services = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "service-pages.css"));
 
+        var eyebrowRule = System.Text.RegularExpressions.Regex.Match(
+            services, @"(?m)^\.service-eyebrow\s*\{(?<body>[^}]*)\}");
+        Assert.True(eyebrowRule.Success);
+        Assert.DoesNotContain("font-weight", eyebrowRule.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
+
         Assert.Contains(".service-index-grid", shell, StringComparison.Ordinal);
         Assert.Contains(".service-index-card-media", shell, StringComparison.Ordinal);
         Assert.Contains(".service-section-light-cta", services, StringComparison.Ordinal);

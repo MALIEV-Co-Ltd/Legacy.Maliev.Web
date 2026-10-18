@@ -13,6 +13,8 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         "https://www.instagram.com/maliev.manufacturing/",
         "https://www.threads.com/@maliev.manufacturing",
         "https://line.me/ti/p/@maliev",
+        "https://wa.me/66898950690",
+        "https://m.me/maliev.manufacturing/",
     ];
 
     private readonly WebApplicationFactory<Program> factory;
@@ -76,6 +78,25 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         foreach (var destination in SocialDestinations)
         {
             Assert.Contains($"href=\"{destination}\" target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
+        }
+
+        foreach (var (destination, name, english, thai, placement) in new[]
+        {
+            ("https://wa.me/66898950690", "WhatsApp", "Message our team through WhatsApp", "ส่งข้อความถึงทีมงานผ่าน WhatsApp", "about_whatsapp"),
+            ("https://m.me/maliev.manufacturing/", "Messenger", "Message our team through Facebook Messenger", "ส่งข้อความถึงทีมงานผ่าน Facebook Messenger", "about_messenger")
+        })
+        {
+            var card = Assert.Single(Regex.Matches(
+                source,
+                $"<a class=\"maliev-panel social-link-card\" href=\"{Regex.Escape(destination)}\"[^>]*>[\\s\\S]*?</a>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains($"<strong>{name}</strong>", card.Value, StringComparison.Ordinal);
+            Assert.Contains($"<span>{(culture == "th" ? thai : english)}</span>", card.Value, StringComparison.Ordinal);
+            Assert.Contains($"data-contact-placement=\"{placement}\"", card.Value, StringComparison.Ordinal);
+            if (name == "WhatsApp")
+            {
+                Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", card.Value, StringComparison.Ordinal);
+            }
         }
 
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);

@@ -52,10 +52,52 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         });
         using var client = fallbackFactory.CreateClient(
             new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
-        var source = await client.GetStringAsync("/contact?culture=en");
+        foreach (var culture in new[] { "en", "th" })
+        {
+            using var response = await client.GetAsync($"/contact?culture={culture}");
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+            var panel = Assert.Single(Regex.Matches(
+                source,
+                "<section class=\"inquiry-panel inquiry-panel--accent contact-line-card\">[\\s\\S]*?</section>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            var actions = Assert.Single(Regex.Matches(
+                panel.Value,
+                "<div class=\"contact-channel-actions\"[^>]*>[\\s\\S]*?</div>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains($"aria-label=\"{(culture == "th" ? "ช่องทางแชต" : "Chat channels")}\"", actions.Value, StringComparison.Ordinal);
+            foreach (var (destination, english, thai, placement) in new[]
+            {
+                ("/contact/line", "Open LINE Official Account", "เปิด LINE Official Account", "contact_line"),
+                ("https://wa.me/66898950690", "Message us on WhatsApp", "ส่งข้อความผ่าน WhatsApp", "contact_whatsapp"),
+                ("https://m.me/maliev.manufacturing/", "Open Messenger", "เปิด Messenger", "contact_messenger")
+            })
+            {
+                var anchor = Assert.Single(Regex.Matches(
+                    actions.Value,
+                    $"<a\\b[^>]*\\bhref=\"{Regex.Escape(destination)}\"[^>]*>[\\s\\S]*?</a>",
+                    RegexOptions.CultureInvariant).Cast<Match>());
+                if (placement == "contact_line")
+                {
+                    Assert.DoesNotMatch("\\s(?:target|rel)\\s*=", anchor.Value[..(anchor.Value.IndexOf('>') + 1)]);
+                }
+                else
+                {
+                    Assert.Contains("target=\"_blank\" rel=\"noopener\"", anchor.Value, StringComparison.Ordinal);
+                }
+                Assert.Contains($"data-contact-placement=\"{placement}\"", anchor.Value, StringComparison.Ordinal);
+                Assert.Contains($"<span>{(culture == "th" ? thai : english)}</span>", anchor.Value, StringComparison.Ordinal);
+                if (destination == "https://wa.me/66898950690")
+                {
+                    Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", anchor.Value, StringComparison.Ordinal);
+                }
+            }
+            Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("data-migration-component=\"public-google-tag-manager-body\"", source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
