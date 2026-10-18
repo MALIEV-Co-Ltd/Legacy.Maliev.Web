@@ -117,6 +117,16 @@ public sealed class PublishWorkflowPermissionContractTests
         var source = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
         var full = ValidationJob(source, "validate");
         var focused = ValidationJob(source, "focused");
+        var steps = Regex.Matches(focused, @"(?m)^      - name: (?<name>[^\r\n]+)\r?$")
+            .Cast<Match>().Select(match => match.Groups["name"].Value).ToList();
+        var quotaControls = steps.IndexOf("Verify original registry quota probe rejection controls");
+        var quotaSnapshot = steps.IndexOf("Retain original Redis image cache or registry quota snapshot before startup");
+        var build = steps.IndexOf("Build browser acceptance host");
+        var startup = steps.IndexOf("Verify startup security migration and encrypted Redis environment isolation");
+        var line = steps.IndexOf("Verify exact LINE source baseline and restored candidate");
+        Assert.True(build >= 0 && quotaControls > build && quotaSnapshot > quotaControls);
+        Assert.Equal(quotaSnapshot + 1, startup);
+        Assert.True(line > startup);
         const string action = "MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617";
         Assert.Contains(action, full, StringComparison.Ordinal);
         Assert.DoesNotContain(action, focused, StringComparison.Ordinal);
