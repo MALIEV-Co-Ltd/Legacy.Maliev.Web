@@ -4,6 +4,8 @@ import argparse
 import json
 import os
 import resource
+import re
+import stat
 import select
 import signal
 import time
@@ -248,6 +250,474 @@ def directory(path, identity):
         require(path.is_dir() and path.resolve().parent == temporary)
     return temporary
 
+
+# Diagnostic replay is an observation only. It never decides test acceptance.
+_DIAG_PREFIX = "TestRequestSender.OnExecutionMessageReceived: Received message: "
+_DIAG_SCHEMA = "web-vstest-replay.v1"
+_DIAG_REASONS = {
+    "trace_missing", "unsafe_file", "extra_generation", "generation_gap",
+    "file_truncated", "split_line", "line_cap", "malformed_payload",
+    "invalid_case", "conflicting_id", "unmatched_completion", "active_cap",
+    "input_cap", "time_cap", "state_invalid", "work_cap", "unknown_trace_name",
+}
+_DIAG_FQN = re.compile(r"Legacy\.Maliev\.Web\.Tests\.[A-Za-z_][A-Za-z0-9_]*(?:[.+][A-Za-z_][A-Za-z0-9_]*)+\Z")
+_DIAG_GUID = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
+_DIAG_MARKER = "vstest.diag"
+_DIAG_BACKUP = "vstest.bak.diag"
+
+_DIAG_SIDECAR = re.compile(
+    r"vstest\.(host|datacollector)\.[0-9]{2}-[0-9]{2}-[0-9]{2}_"
+    r"[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{5}_[1-9][0-9]{0,9}(?:\.bak)?\.diag\Z"
+)
+
+def _diag_role(name):
+    if name in (_DIAG_MARKER, _DIAG_BACKUP):
+        return "console"
+    if not isinstance(name, str) or len(name) > 128:
+        return None
+    match = _DIAG_SIDECAR.fullmatch(name)
+    return match.group(1) if match is not None else None
+
+
+def _diag_case(value):
+    if not isinstance(value, dict):
+        return None
+    identifier, fqn = value.get("Id"), value.get("FullyQualifiedName")
+    if not isinstance(identifier, str) or not isinstance(fqn, str):
+        return None
+    identifier = identifier.lower()
+    if not _DIAG_GUID.fullmatch(identifier) or len(fqn) > 384 or not _DIAG_FQN.fullmatch(fqn):
+        return None
+    return {"id": identifier, "fqn": fqn}
+
+def _diag_number(value):
+    return type(value) is int and 0 <= value <= 9223372036854775807
+
+def _diag_json(raw):
+    # Reject excessive nesting before invoking the JSON decoder. Strings and
+    # escapes are counted without retaining a second representation.
+    depth = 0
+    quoted = escaped = False
+    for character in raw:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                quoted = False
+        elif character == '"':
+            quoted = True
+        elif character in "[{":
+            depth += 1
+            require(depth <= 32)
+        elif character in "]}":
+            depth -= 1
+            require(depth >= 0)
+    require(depth == 0 and not quoted)
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            require(key not in result)
+            result[key] = value
+        return result
+    return json.loads(raw, object_pairs_hook=unique)
+
+class VstestDiagnosticReplay:
+    """Bounded projection of observed events, never a current-test verdict."""
+    def __init__(self, owner, persisted=None):
+        self._state = {
+            "schema": _DIAG_SCHEMA, "owner": dict(owner), "cursor": None,
+            "epoch": 0, "ordinal": 0, "reasons": [], "events": [],
+            "pending": [], "history_truncated": False, "seen": False,
+            "discard_line": False, "owned_files": [],
+        }
+        if persisted is not None:
+            self._validate(persisted, owner)
+            self._state = json.loads(json.dumps(persisted))
+
+    @staticmethod
+    def _validate(value, owner):
+        keys = {"schema", "owner", "cursor", "epoch", "ordinal", "reasons",
+                "events", "pending", "history_truncated", "seen",
+                "discard_line", "owned_files"}
+        require(isinstance(value, dict) and set(value) == keys)
+        require(value["schema"] == _DIAG_SCHEMA and value["owner"] == owner)
+        require(_diag_number(value["epoch"]) and _diag_number(value["ordinal"]))
+        require(all(type(value[key]) is bool for key in ("history_truncated", "seen", "discard_line")))
+        require(isinstance(value["reasons"], list) and len(value["reasons"]) <= len(_DIAG_REASONS))
+        require(all(isinstance(reason, str) and reason in _DIAG_REASONS for reason in value["reasons"]))
+        cursor = value["cursor"]
+        if cursor is not None:
+            require(isinstance(cursor, dict) and set(cursor) == {"device", "inode", "offset"})
+            require(all(_diag_number(number) for number in cursor.values()))
+        for key, maximum in (("pending", 128), ("events", 64), ("owned_files", 16)):
+            require(isinstance(value[key], list) and len(value[key]) <= maximum)
+        for item in value["pending"]:
+            require(isinstance(item, dict) and set(item) == {"id", "fqn"})
+            require(_diag_case({"Id": item["id"], "FullyQualifiedName": item["fqn"]}) == item)
+        for event in value["events"]:
+            require(isinstance(event, dict) and set(event) == {"id", "fqn", "kind", "epoch", "ordinal", "offset"})
+            require(_diag_case({"Id": event["id"], "FullyQualifiedName": event["fqn"]}) is not None)
+            require(event["kind"] in ("start", "completion"))
+            require(all(_diag_number(event[key]) for key in ("epoch", "ordinal", "offset")))
+        for item in value["owned_files"]:
+            require(isinstance(item, dict) and set(item) == {"device", "inode"})
+            require(all(_diag_number(number) for number in item.values()))
+        encoded(value)
+
+    def state(self):
+        self._validate(self._state, self._state["owner"])
+        return json.loads(json.dumps(self._state))
+
+    def receipt(self):
+        state = self._state
+        return {
+            "schema": _DIAG_SCHEMA, "history_complete": state["seen"] and not state["reasons"],
+            "history_truncated": state["history_truncated"],
+            "reasons": list(state["reasons"]) if state["seen"] or state["reasons"] else ["trace_missing"],
+            "events": json.loads(json.dumps(state["events"])),
+            "observed_uncompleted": sorted({item["fqn"] for item in state["pending"]}) if not state["reasons"] else [],
+            "scope": "observed starts/completions only; absent completion does not prove current execution or cause",
+        }
+
+    def gap(self, reason):
+        require(reason in _DIAG_REASONS)
+        state = self._state
+        if reason not in state["reasons"]:
+            state["reasons"].append(reason)
+        state["epoch"] += 1
+        state["pending"] = []
+
+    def _event(self, kind, case, offset):
+        state = self._state
+        state["ordinal"] += 1
+        state["events"].append({**case, "kind": kind, "epoch": state["epoch"],
+                                "ordinal": state["ordinal"], "offset": offset})
+        if len(state["events"]) > 64:
+            del state["events"][0]
+            state["history_truncated"] = True
+
+    def _chunk(self, chunk, offset):
+        if not isinstance(chunk, dict):
+            self.gap("malformed_payload")
+            return
+        starts, completed = chunk.get("ActiveTests") or [], chunk.get("NewTestResults") or []
+        if not isinstance(starts, list) or not isinstance(completed, list) or len(starts) + len(completed) > 1024:
+            self.gap("malformed_payload")
+            return
+        for raw in starts:
+            case = _diag_case(raw)
+            if case is None:
+                self.gap("invalid_case")
+                continue
+            previous = next((item for item in self._state["pending"] if item["id"] == case["id"]), None)
+            if previous is not None:
+                if previous != case:
+                    self.gap("conflicting_id")
+                continue
+            if not self._state["reasons"]:
+                if len(self._state["pending"]) >= 128:
+                    self.gap("active_cap")
+                else:
+                    self._state["pending"].append(case)
+            self._event("start", case, offset)
+        for raw in completed:
+            case = _diag_case(raw.get("TestCase")) if isinstance(raw, dict) else None
+            if case is None:
+                self.gap("invalid_case")
+                continue
+            if case not in self._state["pending"]:
+                self.gap("unmatched_completion")
+            else:
+                self._state["pending"].remove(case)
+            self._event("completion", case, offset)
+
+    def _line(self, raw, offset):
+        try:
+            text = raw.decode("utf-8", errors="strict")
+            if _DIAG_PREFIX not in text:
+                return
+            require(text.startswith("TpTrace Verbose:"))
+            payload = _diag_json(text.split(_DIAG_PREFIX, 1)[1])
+            require(isinstance(payload, dict))
+            kind = payload.get("MessageType")
+            if kind == "TestExecution.StatsChange":
+                self._chunk(payload.get("Payload"), offset)
+            elif kind == "TestExecution.Completed":
+                final = payload.get("Payload")
+                require(isinstance(final, dict))
+                if final.get("LastRunTests") is not None:
+                    self._chunk(final["LastRunTests"], offset)
+        except (RuntimeError, ValueError, TypeError, RecursionError, UnicodeError):
+            self.gap("malformed_payload")
+
+    def _open(self, path):
+        require(_diag_role(path.name) is not None)
+        handle = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            item = os.fstat(handle)
+            require(stat.S_ISREG(item.st_mode) and item.st_nlink == 1)
+            identity = {"device": item.st_dev, "inode": item.st_ino}
+            if identity not in self._state["owned_files"]:
+                require(len(self._state["owned_files"]) < 16)
+                self._state["owned_files"].append(identity)
+            return handle, identity, item.st_size
+        except BaseException:
+            os.close(handle)
+            raise
+
+    def _consume(self, path, source, offset):
+        handle, identity, size = self._open(path)
+        try:
+            if size < offset:
+                self.gap("file_truncated")
+                offset = 0
+            if time.monotonic() >= source.deadline:
+                self.gap("time_cap")
+                source.exceeded = True
+                return identity, offset
+            limit = min(65536, source.remaining)
+            if limit <= 0:
+                self.gap("input_cap")
+                source.exceeded = True
+                return identity, offset
+            os.lseek(handle, offset, os.SEEK_SET)
+            raw = os.read(handle, limit)
+            source.remaining -= len(raw)
+            consumed = 0
+            for line in raw.splitlines(keepends=True):
+                if not line.endswith(b"\n"):
+                    if len(line) >= 65536 or self._state["discard_line"]:
+                        self.gap("line_cap")
+                        self._state["discard_line"] = True
+                        consumed += len(line)
+                    # Otherwise reread this same verified inode/offset next poll.
+                    break
+                consumed += len(line)
+                if self._state["discard_line"]:
+                    self._state["discard_line"] = False
+                    continue
+                self._line(line, offset + consumed)
+            next_offset = offset + consumed
+            if source.remaining == 0 and next_offset < size:
+                self.gap("input_cap")
+                source.exceeded = True
+            elif len(raw) == limit and consumed < len(raw) and source.remaining < 65536 and next_offset < size:
+                self.gap("input_cap")
+                source.exceeded = True
+            return identity, next_offset
+        finally:
+            os.close(handle)
+
+    def poll(self, path, source):
+        require(path.name == _DIAG_MARKER)
+        state = self._state
+        try:
+            # Bounded census also records diagnostic sidecar identity for cleanup,
+            # without persisting filenames, command lines or raw log data.
+            count = 0
+            with os.scandir(path.parent) as entries:
+                for entry in entries:
+                    count += 1
+                    if count > MAX_ENTRIES:
+                        self.gap("extra_generation")
+                        return
+                    if entry.name.startswith("vstest") and ".diag" in entry.name:
+                        if _diag_role(entry.name) is None:
+                            self.gap("unknown_trace_name")
+                            continue
+                        handle, _, _ = self._open(Path(entry.path))
+                        os.close(handle)
+            if not path.exists():
+                if state["seen"]:
+                    self.gap("trace_missing")
+                return
+            current = path.lstat()
+            if not stat.S_ISREG(current.st_mode):
+                self.gap("unsafe_file")
+                return
+            current_identity = {"device": current.st_dev, "inode": current.st_ino}
+            cursor = state["cursor"]
+            offset = 0
+            if cursor is not None:
+                old_identity = {key: cursor[key] for key in ("device", "inode")}
+                if current_identity == old_identity:
+                    offset = cursor["offset"]
+                else:
+                    backup = path.with_name(_DIAG_BACKUP)
+                    old = backup.lstat() if backup.exists() else None
+                    if old is not None and stat.S_ISREG(old.st_mode) and {"device": old.st_dev, "inode": old.st_ino} == old_identity:
+                        _, old_offset = self._consume(backup, source, cursor["offset"])
+                        if old_offset < old.st_size:
+                            self.gap("generation_gap")
+                    else:
+                        self.gap("generation_gap")
+                    if state["discard_line"]:
+                        self.gap("split_line")
+                    state["discard_line"] = False
+            identity, offset = self._consume(path, source, offset)
+            state["cursor"] = {**identity, "offset": offset}
+            state["seen"] = True
+        except (OSError, RuntimeError):
+            self.gap("unsafe_file")
+
+
+def diagnostic_tick(replay, trace, source, work):
+    """One existing worker wake; byte budget is shared, work excludes sleeping."""
+    if work >= 10 or time.process_time() >= 15 or source.remaining <= 256 * 1024:
+        reason = "input_cap" if source.remaining <= 256 * 1024 else "work_cap"
+        if reason not in replay.state()["reasons"]:
+            replay.gap(reason)
+        return max(work, 10)
+    started = time.monotonic()
+    source.deadline = started + min(1, 10 - work)
+    # Reserve input capacity for the state and aggregate resource observation.
+    source.remaining -= 256 * 1024
+    try:
+        replay.poll(trace, source)
+    finally:
+        source.remaining += 256 * 1024
+    return work + max(0, time.monotonic() - started)
+
+
+def diagnostic_writers_settled(source, identities, proc=Path("/proc")):
+    """Linux stock net10 writers inherit this UID; never infer from step exit."""
+    try:
+        require(os.name == "posix" and os.geteuid() != 0)
+        require(time.monotonic() < source.deadline and time.process_time() < 15)
+        census = processes(source, proc)
+        require(census.get("available") is True and not census["enumeration_capped"])
+        require(census["fixed_name_counts"]["dotnet"] == 0 and
+                census["fixed_name_counts"]["testhost"] == 0)
+        require(not source.exceeded and source.unavailable == 0)
+        uid = os.geteuid()
+        require(_diag_number(census.get("entries_examined")) and census["entries_examined"] <= MAX_ENTRIES)
+        entries_seen, process_count = census["entries_examined"], 0
+        with os.scandir(proc) as entries:
+            for entry in entries:
+                entries_seen += 1
+                require(entries_seen <= MAX_ENTRIES)
+                require(time.monotonic() < source.deadline and time.process_time() < 15)
+                if not entry.name.isascii() or not entry.name.isdecimal():
+                    continue
+                process_count += 1
+                require(process_count <= MAX_PROCESSES)
+                process = proc / entry.name
+                before = resident_identity(source.read(process / "stat", 4096))
+                status = source.read(process / "status", 16384)
+                require(before is not None and status is not None)
+                uid_rows = [line.split() for line in status.splitlines() if line.startswith("Uid:")]
+                require(len(uid_rows) == 1 and len(uid_rows[0]) == 5)
+                uids = [integer(value) for value in uid_rows[0][1:]]
+                # No custom/elevated host is admitted by this writer contract.
+                require(uid not in uids or all(value == uid for value in uids))
+                if uids[1] == uid and int(entry.name) != os.getpid():
+                    with os.scandir(process / "fd") as descriptors:
+                        for descriptor in descriptors:
+                            entries_seen += 1
+                            require(entries_seen <= MAX_ENTRIES)
+                            require(time.monotonic() < source.deadline and time.process_time() < 15)
+                            require(descriptor.name.isascii() and descriptor.name.isdecimal())
+                            # Stat follows the numeric fd, never reads or emits its
+                            # target path. Even renamed/native holders are caught.
+                            observed = descriptor.stat(follow_symlinks=True)
+                            require({"device": observed.st_dev, "inode": observed.st_ino} not in identities)
+                after = resident_identity(source.read(process / "stat", 4096))
+                require(after is not None and before[0] == after[0])
+        require(not source.exceeded and source.unavailable == 0)
+        return True
+    except (OSError, RuntimeError, ValueError, TypeError, KeyError):
+        return False
+
+class DiagnosticCleanupRejected(RuntimeError):
+    def __init__(self, receipt):
+        super().__init__("Hosted diagnostic cleanup rejected")
+        self.receipt = receipt
+
+def cleanup_diagnostics(path, identity, outcome):
+    """Only after full action terminal and independent collector quiescence."""
+    receipt = {
+        "schema": "web-vstest-cleanup.v1", "owner": dict(identity),
+        "status": "writer_uncertainty", "removed_count": 0,
+        "remaining": "preserved_or_unverified", "partial_cleanup": False,
+        "writer_contract": "ubuntu-net10-stock-same-uid",
+        "retention": {
+            "policy": "ephemeral_hosted_job_teardown",
+            "default_job_timeout_minutes": 360,
+            "observed_job_start_utc": None, "exact_deadline_utc": None,
+            "teardown": "pending_job_end_teardown",
+            "scope": "existing default job timeout policy; runner teardown not observed",
+        },
+    }
+    try:
+        settled = _cleanup_diagnostics(path, identity, outcome, receipt)
+        receipt["status"] = "settled_and_removed" if settled else "not_started_no_raw_files"
+        receipt["remaining"] = "no_recognized_raw_files_observed"
+        return receipt
+    except (OSError, RuntimeError, ValueError, TypeError, RecursionError):
+        receipt["partial_cleanup"] = receipt["removed_count"] > 0
+        raise DiagnosticCleanupRejected(receipt) from None
+
+def _cleanup_diagnostics(path, identity, outcome, receipt):
+    require(outcome in ("success", "failure", "skipped"))
+    directory(path, identity)
+    source = Inputs(time.monotonic() + 30)
+    state_path = path / "diagnostic-replay.json"
+    require(not state_path.is_symlink())
+    if not state_path.exists():
+        examined = 0
+        with os.scandir(path) as entries:
+            for entry in entries:
+                examined += 1
+                require(examined <= MAX_ENTRIES)
+                require(not (entry.name.startswith("vstest") and ".diag" in entry.name))
+        return False
+    raw_state = source.read(state_path, MAX_RECEIPT)
+    require(raw_state is not None)
+    replay = VstestDiagnosticReplay(identity, json.loads(raw_state))
+    owned = replay.state()["owned_files"]
+    pending = []
+    examined = 0
+    with os.scandir(path) as entries:
+        for entry in entries:
+            examined += 1
+            require(examined <= MAX_ENTRIES)
+            if not entry.name.startswith("vstest") or ".diag" not in entry.name:
+                continue
+            require(_diag_role(entry.name) is not None)
+            target = Path(entry.path)
+            handle = os.open(target, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            try:
+                observed = os.fstat(handle)
+                item = {"device": observed.st_dev, "inode": observed.st_ino}
+                require(stat.S_ISREG(observed.st_mode) and observed.st_nlink == 1 and
+                        observed.st_uid == os.geteuid() and item in owned)
+                require(len(pending) < 16)
+                pending.append((target, item))
+            finally:
+                os.close(handle)
+    # Verify ALL candidate identities and the complete bounded writer proof
+    # before the first mutation. Every later unlink gets a fresh proof using
+    # this SAME byte budget/deadline. Late uncertainty can mean partial cleanup.
+    for target, expected in pending:
+        actual = target.lstat()
+        require(stat.S_ISREG(actual.st_mode) and actual.st_nlink == 1 and
+                actual.st_uid == os.geteuid() and
+                {"device": actual.st_dev, "inode": actual.st_ino} == expected)
+    identities = [item for _, item in pending]
+    require(diagnostic_writers_settled(source, identities))
+    for target, expected in pending:
+        require(diagnostic_writers_settled(source, identities))
+        actual = target.lstat()
+        require(stat.S_ISREG(actual.st_mode) and actual.st_nlink == 1 and
+                actual.st_uid == os.geteuid() and
+                {"device": actual.st_dev, "inode": actual.st_ino} == expected)
+        target.unlink()
+        receipt["removed_count"] += 1
+        require(not target.exists() and not target.is_symlink())
+    return True
+
 def sample(path, phase):
     global stopping
     resource.setrlimit(resource.RLIMIT_AS, (256 * 1024 * 1024, 256 * 1024 * 1024))
@@ -272,13 +742,41 @@ def sample(path, phase):
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
     try:
+        source = Inputs(time.monotonic() + 30)
+        replay = None
+        work = 0.0
+        trace = path / _DIAG_MARKER
+        state_path = path / "diagnostic-replay.json"
+        if identity["RESOURCE_CHECKPOINT_SCOPE"] == "full":
+            began = time.monotonic()
+            replay = VstestDiagnosticReplay(identity)
+            if state_path.exists() or state_path.is_symlink():
+                try:
+                    require(not state_path.is_symlink())
+                    raw_state = source.read(state_path, MAX_RECEIPT)
+                    require(raw_state is not None)
+                    replay = VstestDiagnosticReplay(identity, json.loads(raw_state))
+                except (OSError, RuntimeError, ValueError, TypeError, RecursionError):
+                    replay.gap("state_invalid")
+            work = time.monotonic() - began
         while time.monotonic() < expected:
             if stopping or time.time() >= lease["expires"]:
                 return
+            if replay is not None:
+                if work < 10:
+                    work = diagnostic_tick(replay, trace, source, work)
+                    began = time.monotonic()
+                    atomic(state_path, replay.state())
+                    work += max(0, time.monotonic() - began)
             time.sleep(min(1, max(0, expected - time.monotonic())))
         if stopping:
             return
-        source = Inputs(time.monotonic() + 30)
+        if replay is not None:
+            work = diagnostic_tick(replay, trace, source, work)
+            began = time.monotonic()
+            atomic(state_path, replay.state())
+            work += max(0, time.monotonic() - began)
+        source.deadline = time.monotonic() + max(0, 30 - work)
         value = snapshot(Path(os.environ["GITHUB_WORKSPACE"]).resolve(strict=True), temporary, source)
         receipt = {"schema": "web-hosted-resource-checkpoint.v1", "owner": identity,
                    "phase": phase, "elapsed_seconds": round(time.monotonic() - lease["origin"], 3),
@@ -286,6 +784,8 @@ def sample(path, phase):
                    "input_bytes": MAX_INPUT - source.remaining, "unavailable_reads": source.unavailable,
                    "input_or_time_cap_observed": source.exceeded,
                    "scope": "read-only aggregate resource observation; no test acceptance or cause verdict"}
+        if replay is not None:
+            receipt["diagnostic"] = replay.receipt()
         write_new(path / ("sample-" + str(phase).zfill(2) + ".json"), receipt)
     finally:
         ledger["state"] = "exited"
@@ -443,9 +943,19 @@ def verify_quiescence(path):
         require(proc_identity(ledger["pid"]) != expected)
     except FileNotFoundError:
         pass
-    write_new(path / "verification.json", {"schema": "web-hosted-resource-stop-verification.v1",
-              "owner": identity, "worker": expected, "uploads": receipt["uploads"],
-              "scope": "required exact-owner cleanup, final composite quiescence and independent final-ledger release"})
+    verified = {"schema": "web-hosted-resource-stop-verification.v1",
+                "owner": identity, "worker": expected, "uploads": receipt["uploads"],
+                "scope": "required exact-owner cleanup, final composite quiescence and independent final-ledger release"}
+    if identity["RESOURCE_CHECKPOINT_SCOPE"] == "full":
+        try:
+            verified["diagnostic_cleanup"] = cleanup_diagnostics(
+                path, identity, os.environ.get("WEB_FULL_DOTNET_OUTCOME"))
+        except DiagnosticCleanupRejected as error:
+            verified["diagnostic_cleanup"] = error.receipt
+            verified["scope"] = "collector release observed; diagnostic cleanup NOT accepted"
+            write_new(path / "verification.json", verified)
+            raise RuntimeError("Hosted diagnostic cleanup rejected") from None
+    write_new(path / "verification.json", verified)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

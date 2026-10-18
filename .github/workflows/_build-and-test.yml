@@ -914,6 +914,9 @@ jobs:
         with:
           mode: full
       - name: Validate .NET solution
+        id: full_dotnet_validation
+        env:
+          VSTestDiag: ${{ runner.temp }}/web-validation-resources-${{ github.run_id }}-${{ github.run_attempt }}-full/vstest.diag
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
         with:
           solution: Legacy.Maliev.Web.slnx
@@ -1083,6 +1086,7 @@ jobs:
         shell: bash
         env:
           RESOURCE_CHECKPOINT_SCOPE: full
+          WEB_FULL_DOTNET_OUTCOME: ${{ steps.full_dotnet_validation.outcome }}
         run: >-
           exec python3 -B scripts/hosted-validation-resource-checkpoint.py quiescence
           --directory "$RUNNER_TEMP/web-validation-resources-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$RESOURCE_CHECKPOINT_SCOPE"

@@ -831,5 +831,328 @@ class VstestDiagnosticReplayTests(unittest.TestCase):
             self.safe_projection(replay)
 
 
+
+class DiagnosticWorkerIntegrationTests(unittest.TestCase):
+    """Exercise worker budgets and exact-file cleanup without starting helpers."""
+
+    def test_tick_reserves_aggregate_bytes_without_resetting_shared_input_budget(self):
+        class Replay:
+            def __init__(self):
+                self.observed = []
+            def poll(self, path, source):
+                self.observed.append(source.remaining)
+                source.remaining -= 17
+            def state(self):
+                return {"reasons": []}
+            def gap(self, reason):
+                raise AssertionError("Unexpected diagnostic gap")
+        replay = Replay()
+        source = checkpoint.Inputs(time.monotonic() + 30)
+        with patch.object(checkpoint.time, "monotonic", side_effect=[10, 10.25]), \
+             patch.object(checkpoint.time, "process_time", return_value=0):
+            work = checkpoint.diagnostic_tick(replay, Path("/unused/vstest.diag"), source, 0)
+        self.assertEqual([checkpoint.MAX_INPUT - 256 * 1024], replay.observed)
+        self.assertEqual(checkpoint.MAX_INPUT - 17, source.remaining)
+        self.assertEqual(0.25, work)
+        with patch.object(checkpoint.time, "monotonic", side_effect=[11, 11.25]), \
+             patch.object(checkpoint.time, "process_time", return_value=0):
+            checkpoint.diagnostic_tick(replay, Path("/unused/vstest.diag"), source, work)
+        self.assertEqual(checkpoint.MAX_INPUT - 34, source.remaining)
+
+    def test_tick_stops_work_before_cpu_limit_without_new_read_or_budget_reset(self):
+        class Replay:
+            def __init__(self):
+                self.reasons = []
+            def poll(self, path, source):
+                raise AssertionError("Work after CPU guard")
+            def state(self):
+                return {"reasons": self.reasons}
+            def gap(self, reason):
+                self.reasons.append(reason)
+        replay = Replay()
+        source = checkpoint.Inputs(time.monotonic() + 30)
+        source.remaining -= 123
+        with patch.object(checkpoint.time, "process_time", return_value=15):
+            work = checkpoint.diagnostic_tick(replay, Path("/unused/vstest.diag"), source, 0)
+        self.assertGreaterEqual(work, 10)
+        self.assertEqual(["work_cap"], replay.reasons)
+        self.assertEqual(checkpoint.MAX_INPUT - 123, source.remaining)
+
+    def prepare_cleanup(self, root):
+        replay = checkpoint.VstestDiagnosticReplay(dict(VstestDiagnosticReplayTests.OWNER))
+        fixture = VstestDiagnosticReplayTests()
+        trace = root / "vstest.diag"
+        trace.write_bytes(fixture.line(starts=[fixture.case(fixture.ID_A, fixture.A)]))
+        replay.poll(trace, checkpoint.Inputs(time.monotonic() + 30))
+        (root / "diagnostic-replay.json").write_bytes(checkpoint.encoded(replay.state()))
+        return trace
+
+    def test_cleanup_removes_only_observed_regular_files_after_terminal_action(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            trace = self.prepare_cleanup(root)
+            unrelated = root / "required-receipt.json"
+            unrelated.write_text("retained")
+            with patch.object(checkpoint, "directory"), \
+                 patch.object(checkpoint, "diagnostic_writers_settled", return_value=True) as settled:
+                checkpoint.cleanup_diagnostics(root, dict(VstestDiagnosticReplayTests.OWNER), "failure")
+            self.assertEqual(2, settled.call_count)
+            self.assertFalse(trace.exists())
+            self.assertTrue(unrelated.exists())
+            self.assertTrue((root / "diagnostic-replay.json").exists())
+
+    def test_cleanup_preserves_files_when_action_termination_is_uncertain(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            trace = self.prepare_cleanup(root)
+            with patch.object(checkpoint, "directory"):
+                with self.assertRaisesRegex(RuntimeError, "^Hosted diagnostic cleanup rejected$"):
+                    checkpoint.cleanup_diagnostics(root, dict(VstestDiagnosticReplayTests.OWNER), "cancelled")
+            self.assertTrue(trace.exists())
+
+    def test_cleanup_refuses_unobserved_identity_before_deleting_any_recorded_file(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            trace = self.prepare_cleanup(root)
+            unknown = root / "vstest.host.999.diag"
+            unknown.write_text(VstestDiagnosticReplayTests.POISON)
+            with patch.object(checkpoint, "directory"):
+                with self.assertRaisesRegex(RuntimeError, "^Hosted diagnostic cleanup rejected$"):
+                    checkpoint.cleanup_diagnostics(root, dict(VstestDiagnosticReplayTests.OWNER), "success")
+            self.assertTrue(trace.exists())
+            self.assertTrue(unknown.exists())
+
+
+
+class DiagnosticTraceFamilyOwnershipTests(unittest.TestCase):
+    """Unknown diagnostic-looking files must never become cleanup-owned."""
+
+    def test_unknown_prefix_or_guid_fallback_is_never_adopted_then_cleanup_preserves_all(self):
+        fixture = VstestDiagnosticReplayTests()
+        for name in ("vstest.customer-private.diag",
+                     "vstest.bak.diag9c7489f0-f315-4f91-beb1-7a22820bdffc"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                trace = root / "vstest.diag"
+                trace.write_bytes(fixture.line(starts=[fixture.case(fixture.ID_A, fixture.A)]))
+                unknown = root / name
+                unknown.write_text(fixture.POISON)
+                actual = unknown.stat()
+                identity = {"device": actual.st_dev, "inode": actual.st_ino}
+                replay = checkpoint.VstestDiagnosticReplay(dict(fixture.OWNER))
+                replay.poll(trace, checkpoint.Inputs(time.monotonic() + 30))
+                self.assertNotIn(identity, replay.state()["owned_files"])
+                self.assertIn("unknown_trace_name", replay.receipt()["reasons"])
+                fixture.safe_projection(replay)
+                (root / "diagnostic-replay.json").write_bytes(checkpoint.encoded(replay.state()))
+                with patch.object(checkpoint, "directory"):
+                    with self.assertRaisesRegex(RuntimeError, "^Hosted diagnostic cleanup rejected$"):
+                        checkpoint.cleanup_diagnostics(root, dict(fixture.OWNER), "success")
+                self.assertTrue(trace.exists())
+                self.assertTrue(unknown.exists())
+
+    def test_only_exact_stock_console_host_and_datacollector_families_are_owned(self):
+        fixture = VstestDiagnosticReplayTests()
+        names = ("vstest.diag", "vstest.bak.diag",
+                 "vstest.host.26-10-18_00-00-00_12345_7.diag",
+                 "vstest.host.26-10-18_00-00-00_12345_7.bak.diag",
+                 "vstest.datacollector.26-10-18_00-00-00_12345_8.diag",
+                 "vstest.datacollector.26-10-18_00-00-00_12345_8.bak.diag")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in names:
+                (root / name).write_bytes(b"")
+            replay = checkpoint.VstestDiagnosticReplay(dict(fixture.OWNER))
+            replay.poll(root / "vstest.diag", checkpoint.Inputs(time.monotonic() + 30))
+            self.assertEqual(len(names), len(replay.state()["owned_files"]))
+            self.assertNotIn("unknown_trace_name", replay.receipt()["reasons"])
+            fixture.safe_projection(replay)
+
+
+
+class DiagnosticWriterProofTests(unittest.TestCase):
+    """Bounded process/FD evidence and honest zero/partial cleanup receipts."""
+
+    @staticmethod
+    def census():
+        return {"available": True, "enumeration_capped": False,
+                "fixed_name_counts": {"dotnet": 0, "testhost": 0}, "entries_examined": 0}
+
+    def proc_fixture(self, root, holder=None):
+        process = root / "7"
+        process.mkdir()
+        (process / "comm").write_text("renamed-native\n")
+        (process / "stat").write_text(ResourceCheckpointTests.process_stat())
+        uid = str(checkpoint.os.geteuid())
+        (process / "status").write_text("Uid:\t" + "\t".join([uid] * 4) + "\n")
+        descriptors = process / "fd"
+        descriptors.mkdir()
+        if holder is not None:
+            (descriptors / "3").symlink_to(holder)
+        return process
+
+    def test_complete_zero_writer_census_and_closed_fds_allow_positive_proof(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.proc_fixture(root)
+            with patch.object(checkpoint, "processes", return_value=self.census()):
+                self.assertTrue(checkpoint.diagnostic_writers_settled(
+                    checkpoint.Inputs(time.monotonic() + 30), [], root))
+
+    def test_live_dotnet_or_testhost_never_proves_writer_absence(self):
+        for role in ("dotnet", "testhost"):
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as temporary:
+                census = self.census()
+                census["fixed_name_counts"][role] = 1
+                with patch.object(checkpoint, "processes", return_value=census):
+                    self.assertFalse(checkpoint.diagnostic_writers_settled(
+                        checkpoint.Inputs(time.monotonic() + 30), [], Path(temporary)))
+
+    def test_unavailable_capped_or_incomplete_census_preserves_uncertainty(self):
+        for condition in ("unavailable", "enumeration", "input", "unreadable"):
+            with self.subTest(condition=condition), tempfile.TemporaryDirectory() as temporary:
+                census = self.census()
+                source = checkpoint.Inputs(time.monotonic() + 30)
+                if condition == "unavailable":
+                    census["available"] = False
+                elif condition == "enumeration":
+                    census["enumeration_capped"] = True
+                elif condition == "input":
+                    source.exceeded = True
+                else:
+                    source.unavailable = 1
+                with patch.object(checkpoint, "processes", return_value=census):
+                    self.assertFalse(checkpoint.diagnostic_writers_settled(
+                        source, [], Path(temporary)))
+
+    def test_same_uid_renamed_or_native_fd_holder_is_detected_without_readlink(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            trace = root / "private-target"
+            trace.write_text(VstestDiagnosticReplayTests.POISON)
+            actual = trace.stat()
+            identity = {"device": actual.st_dev, "inode": actual.st_ino}
+            proc = root / "proc"
+            proc.mkdir()
+            self.proc_fixture(proc, trace)
+            with patch.object(checkpoint, "processes", return_value=self.census()), \
+                 patch.object(checkpoint.os, "readlink", side_effect=AssertionError("No raw targets")):
+                self.assertFalse(checkpoint.diagnostic_writers_settled(
+                    checkpoint.Inputs(time.monotonic() + 30), [identity], proc))
+
+    def test_pid_birth_change_or_unreadable_status_rejects_fd_proof(self):
+        for changed in ("birth", "status"):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                process = self.proc_fixture(root)
+                source = checkpoint.Inputs(time.monotonic() + 30)
+                original = source.read
+                stat_reads = [0]
+                def read(path, maximum=4096):
+                    if path == process / "stat":
+                        stat_reads[0] += 1
+                        if changed == "birth" and stat_reads[0] > 1:
+                            return ResourceCheckpointTests.process_stat(birth=101)
+                    if changed == "status" and path == process / "status":
+                        return None
+                    return original(path, maximum)
+                source.read = read
+                with patch.object(checkpoint, "processes", return_value=self.census()):
+                    self.assertFalse(checkpoint.diagnostic_writers_settled(source, [], root))
+
+    def test_expired_shared_deadline_prevents_any_process_enumeration(self):
+        source = checkpoint.Inputs(time.monotonic() - 1)
+        with patch.object(checkpoint, "processes") as census:
+            self.assertFalse(checkpoint.diagnostic_writers_settled(source, []))
+            census.assert_not_called()
+
+    def prepare_two_files(self, root):
+        fixture = VstestDiagnosticReplayTests()
+        paths = [root / "vstest.diag", root / "vstest.bak.diag"]
+        for path in paths:
+            path.write_bytes(b"")
+        replay = checkpoint.VstestDiagnosticReplay(dict(fixture.OWNER))
+        replay.poll(paths[0], checkpoint.Inputs(time.monotonic() + 30))
+        (root / "diagnostic-replay.json").write_bytes(checkpoint.encoded(replay.state()))
+        return paths
+
+    def test_writer_uncertainty_before_first_unlink_preserves_all_and_no_false_deadline(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = self.prepare_two_files(root)
+            with patch.object(checkpoint, "directory"), \
+                 patch.object(checkpoint, "diagnostic_writers_settled", side_effect=[True, False]):
+                with self.assertRaises(checkpoint.DiagnosticCleanupRejected) as captured:
+                    checkpoint.cleanup_diagnostics(root, dict(VstestDiagnosticReplayTests.OWNER), "success")
+            self.assertTrue(all(path.exists() for path in paths))
+            receipt = captured.exception.receipt
+            self.assertEqual("writer_uncertainty", receipt["status"])
+            self.assertEqual(0, receipt["removed_count"])
+            self.assertFalse(receipt["partial_cleanup"])
+            self.assertEqual(360, receipt["retention"]["default_job_timeout_minutes"])
+            self.assertIsNone(receipt["retention"]["exact_deadline_utc"])
+            self.assertIsNone(receipt["retention"]["observed_job_start_utc"])
+            self.assertNotIn(VstestDiagnosticReplayTests.POISON, json.dumps(receipt))
+
+    def test_late_writer_uncertainty_reports_partial_cleanup_honestly(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = self.prepare_two_files(root)
+            with patch.object(checkpoint, "directory"), \
+                 patch.object(checkpoint, "diagnostic_writers_settled", side_effect=[True, True, False]):
+                with self.assertRaises(checkpoint.DiagnosticCleanupRejected) as captured:
+                    checkpoint.cleanup_diagnostics(root, dict(VstestDiagnosticReplayTests.OWNER), "failure")
+            self.assertEqual(1, sum(path.exists() for path in paths))
+            receipt = captured.exception.receipt
+            self.assertEqual(1, receipt["removed_count"])
+            self.assertTrue(receipt["partial_cleanup"])
+            self.assertEqual("writer_uncertainty", receipt["status"])
+
+    def test_uncertainty_is_written_to_existing_verification_artifact_then_gate_fails(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = ResourceCheckpointTests()
+            identity, worker, receipt = fixture.prepare_quiescent_receipts(root)
+            identity.update({"GITHUB_JOB": "validate", "RESOURCE_CHECKPOINT_SCOPE": "full"})
+            worker["owner"] = dict(identity)
+            receipt["owner"] = dict(identity)
+            receipt["worker"] = worker
+            (root / "worker.json").write_text(json.dumps(worker))
+            (root / "quiescence.json").write_text(json.dumps(receipt))
+            (root / "cleanup.json").write_text(json.dumps({
+                "schema": "web-hosted-resource-cleanup.v1", "owner": identity, "outcome": "stopped"}))
+            rejected = {"status": "writer_uncertainty", "removed_count": 0, "partial_cleanup": False}
+            with patch.object(checkpoint, "owner", return_value=identity), \
+                 patch.object(checkpoint, "directory"), \
+                 patch.object(checkpoint, "proc_identity", side_effect=FileNotFoundError()), \
+                 patch.object(checkpoint, "cleanup_diagnostics",
+                              side_effect=checkpoint.DiagnosticCleanupRejected(rejected)):
+                with self.assertRaisesRegex(RuntimeError, "^Hosted diagnostic cleanup rejected$"):
+                    checkpoint.verify_quiescence(root)
+            verified = json.loads((root / "verification.json").read_text())
+            self.assertEqual(rejected, verified["diagnostic_cleanup"])
+            self.assertIn("NOT accepted", verified["scope"])
+
+
+    def test_unreadable_or_capped_fd_enumeration_never_proves_writer_absence(self):
+        for condition in ("unreadable", "capped"):
+            with self.subTest(condition=condition), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                process = self.proc_fixture(root)
+                original = checkpoint.os.scandir
+                if condition == "unreadable":
+                    def scan(path):
+                        if path == process / "fd":
+                            raise PermissionError("synthetic private path")
+                        return original(path)
+                    context = patch.object(checkpoint.os, "scandir", side_effect=scan)
+                else:
+                    (process / "fd" / "3").symlink_to(process / "status")
+                    context = patch.object(checkpoint, "MAX_ENTRIES", 1)
+                with context, patch.object(checkpoint, "processes", return_value=self.census()):
+                    self.assertFalse(checkpoint.diagnostic_writers_settled(
+                        checkpoint.Inputs(time.monotonic() + 30), [], root))
+
+
 if __name__ == "__main__":
     unittest.main()
