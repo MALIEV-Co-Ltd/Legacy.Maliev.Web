@@ -109,9 +109,11 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
 
         var organizationContacts = organization.GetProperty("contactPoint").EnumerateArray().ToArray();
         Assert.Equal(2, organizationContacts.Length);
+        Assert.Equal("customer service", organizationContacts[0].GetProperty("contactType").GetString());
+        Assert.Equal("sales", organizationContacts[1].GetProperty("contactType").GetString());
         Assert.Equal("+66898950690", organizationContacts[0].GetProperty("telephone").GetString());
         Assert.Equal("info@maliev.com", organizationContacts[0].GetProperty("email").GetString());
-        Assert.Equal("+66898950690", organizationContacts[1].GetProperty("telephone").GetString());
+        Assert.Equal("+66818030404", organizationContacts[1].GetProperty("telephone").GetString());
         Assert.Equal("manufacturing@maliev.com", organizationContacts[1].GetProperty("email").GetString());
         AssertSocialLinks(organization.GetProperty("sameAs"));
 
@@ -162,6 +164,7 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         Assert.Equal(
             new[]
             {
+                SocialNetworks.Facebook,
                 SocialNetworks.Instagram,
                 SocialNetworks.Line,
                 SocialNetworks.YouTube,
@@ -169,9 +172,6 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
                 SocialNetworks.Threads
             },
             sameAs.EnumerateArray().Select(link => link.GetString()));
-        Assert.DoesNotContain(
-            sameAs.EnumerateArray(),
-            link => link.GetString()?.Contains("facebook", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static string FindRepositoryRoot()
