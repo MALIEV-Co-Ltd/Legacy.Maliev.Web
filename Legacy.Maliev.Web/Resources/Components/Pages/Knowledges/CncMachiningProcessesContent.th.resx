@@ -161,7 +161,7 @@
     <value>ตัวอย่างประกอบ: ผิวเลื่อนอาจกำหนด Ra 0.8 µm พร้อมข้อกำหนดความเรียบแยกต่างหาก ขณะที่ผิวภายนอกที่ไม่ประกบกับชิ้นอื่นใช้ข้อกำหนดผิวอีกแบบ ค่านี้เป็นตัวอย่างการระบุแบบที่ต้องตรวจให้เหมาะกับงาน ไม่ใช่ผลที่รับประกันกับวัสดุหรือกระบวนการใด</value>
   </data>
   <data name="Norton Abrasives: grinding finish and thermal tradeoffs" xml:space="preserve">
-    <value>Norton Abrasives: ผิวเจียระไนและข้อแลกเปลี่ยนด้านความร้อน</value>
+    <value>Norton Abrasives: ผิวเจียระไนและข้อดีและข้อจำกัดด้านความร้อน</value>
   </data>
   <data name="Back to the knowledge library" xml:space="preserve">
     <value>กลับสู่คลังความรู้</value>
