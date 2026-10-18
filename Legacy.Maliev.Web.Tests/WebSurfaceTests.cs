@@ -2374,16 +2374,14 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
     }
 
     [Fact]
-    public async Task ContactLocales_PersistTheSameCanonicalRequestQuotePayload()
+    public async Task ContactLocales_PersistTheSameThreeKeyDiagnostic()
     {
         using var english = await SubmitPersistedContactAsync("en");
         using var thai = await SubmitPersistedContactAsync("th");
 
         Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
-        Assert.Equal("maliev_lead_submitted", english.RootElement.GetProperty("event").GetString());
-        Assert.Equal("contact", english.RootElement.GetProperty("lead_type").GetString());
-        Assert.Equal("general_contact", english.RootElement.GetProperty("service").GetString());
-        Assert.Equal("persisted", english.RootElement.GetProperty("lead_status").GetString());
+        AssertContactDiagnostic(english.RootElement);
+        AssertContactDiagnostic(thai.RootElement);
     }
 
     [Fact]
@@ -2419,9 +2417,16 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         var source = landing.StatusCode == HttpStatusCode.MovedPermanently
             ? await client.GetStringAsync(landing.Headers.Location)
             : await landing.Content.ReadAsStringAsync();
-        Assert.Contains("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
-        Assert.Contains("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+        var payload = Regex.Match(
+            source,
+            @"window\.malievAnalytics\.emit\((\{[^;]+\})\);",
+            RegexOptions.CultureInvariant);
+        Assert.True(payload.Success, "Persisted contact must render its queued diagnostic.");
+        using var document = JsonDocument.Parse(payload.Groups[1].Value);
+        AssertContactDiagnostic(document.RootElement);
+        Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"maliev_contact_submitted\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("private@example.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Private project details", source, StringComparison.Ordinal);
     }
@@ -4198,10 +4203,32 @@ public sealed class WebSurfaceTests : IClassFixture<TestingWebApplicationFactory
         var payload = Regex.Match(source, @"window\.malievAnalytics\.emit\((\{[^;]+\})\);", RegexOptions.CultureInvariant);
         Assert.True(payload.Success, "Persisted inquiry must retain its queued analytics event.");
         using var document = JsonDocument.Parse(payload.Groups[1].Value);
-        Assert.Equal("persisted", document.RootElement.GetProperty("lead_status").GetString());
-        Assert.Equal(route == "contact" ? "message-1" : "request-1", document.RootElement.GetProperty("transaction_id").GetString());
+        if (route == "contact")
+        {
+            AssertContactDiagnostic(document.RootElement);
+            Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal("quotation", route);
+            Assert.Equal("persisted", document.RootElement.GetProperty("lead_status").GetString());
+            Assert.Equal("request-1", document.RootElement.GetProperty("transaction_id").GetString());
+        }
         Assert.DoesNotContain("inquiry-locale@example.com", payload.Value, StringComparison.Ordinal);
         Assert.DoesNotContain("inquiry-probe", payload.Value, StringComparison.Ordinal);
+    }
+
+    private static void AssertContactDiagnostic(JsonElement payload)
+    {
+        Assert.Equal(JsonValueKind.Object, payload.ValueKind);
+        Assert.Equal(3, payload.EnumerateObject().Count());
+        Assert.Equal("maliev_contact_submitted", payload.GetProperty("event").GetString());
+        Assert.Equal("general_contact", payload.GetProperty("service").GetString());
+        Assert.Equal("persisted", payload.GetProperty("submission_status").GetString());
+        Assert.False(payload.TryGetProperty("lead_type", out _));
+        Assert.False(payload.TryGetProperty("lead_status", out _));
+        Assert.False(payload.TryGetProperty("transaction_id", out _));
     }
 
 

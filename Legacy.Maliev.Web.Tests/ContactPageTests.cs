@@ -50,7 +50,7 @@ public sealed class ContactPageTests
         var analyticsPayload = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("913", StringComparison.Ordinal));
         using var analyticsDocument = JsonDocument.Parse(analyticsPayload);
         var analyticsEvent = analyticsDocument.RootElement;
-        Assert.Equal("maliev_lead_submitted", analyticsEvent.GetProperty("event").GetString());
+        Assert.Equal("maliev_contact_submitted", analyticsEvent.GetProperty("event").GetString());
         Assert.Equal("contact", analyticsEvent.GetProperty("lead_type").GetString());
         Assert.Equal("general_contact", analyticsEvent.GetProperty("service").GetString());
         Assert.Equal("message-913", analyticsEvent.GetProperty("transaction_id").GetString());

@@ -77,6 +77,43 @@ public sealed class MaterialPricingDisplayRendererContractTests
         Assert.True(fixture.Tickets.Validate(stored, quote, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
     }
 
+    [Theory]
+    [InlineData("en", "Price unavailable — engineering review required.")]
+    [InlineData("th", "ยังไม่สามารถแสดงราคาได้ ต้องให้วิศวกรตรวจสอบ")]
+    public async Task Renderer_FinalQuoteRestoresComparisonRowsMissingFromPartialProgress(string culture, string unavailable)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, InstantQuotationMaterialPricingStatus.Completed);
+        try
+        {
+            await fixture.Pricing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.AssertNoFinalAuthorityAsync();
+            var partial = await fixture.HtmlAsync();
+            AssertReviewDisabled(partial);
+            Assert.Contains("600.00", WebUtility.HtmlDecode(MaterialRow(partial, "M68")), StringComparison.Ordinal);
+            Assert.DoesNotContain("data-workflow-material-price=\"PETG\"", partial, StringComparison.Ordinal);
+
+            await fixture.CompleteAsync();
+
+            var stored = await fixture.Store.GetAsync(fixture.SessionId, null, default);
+            Assert.NotNull(stored?.QuoteAuthorization);
+            var final = Assert.IsType<InstantQuotationOrderQuote>(fixture.Pricing.FinalQuote);
+            var comparison = Assert.Single(Assert.Single(final.Parts).MaterialPrices, price => price.MaterialKey == "PETG");
+            Assert.Null(comparison.UnitPrice);
+            Assert.True(fixture.Tickets.Validate(stored, final, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
+            var html = await fixture.HtmlAsync();
+            Assert.DoesNotContain("disabled", ReviewButton(html), StringComparison.Ordinal);
+            var row = WebUtility.HtmlDecode(MaterialRow(html, "PETG"));
+            Assert.Contains(unavailable, row, StringComparison.Ordinal);
+            Assert.DoesNotContain("฿0", row, StringComparison.Ordinal);
+            var card = Regex.Match(html,
+                "<span\\b[^>]*data-material-card-price=\"PETG\"[^>]*>.*?</span>", RegexOptions.Singleline);
+            Assert.True(card.Success, "The actual material card must retain the final comparison availability.");
+            Assert.Contains("data-price-status=\"unavailable\"", card.Value, StringComparison.Ordinal);
+            Assert.Contains(unavailable, WebUtility.HtmlDecode(card.Value), StringComparison.Ordinal);
+        }
+        finally { await fixture.CompleteAsync(); }
+    }
+
     private static string MaterialRow(string html, string key)
     {
         var match = Regex.Match(html, $"<li\\b[^>]*data-workflow-material-price=\"{Regex.Escape(key)}\"[^>]*>.*?</li>", RegexOptions.Singleline);

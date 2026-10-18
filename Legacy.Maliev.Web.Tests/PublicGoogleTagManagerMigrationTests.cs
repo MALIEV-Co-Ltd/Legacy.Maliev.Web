@@ -119,6 +119,46 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void QueuedContact_RendersOnlyTheThreeKeyDiagnostic()
+    {
+        var contact = new LeadAnalyticsEvent(
+            "contact", "general_contact", "message-42",
+            hasFiles: false, intent: null, finderPath: null, journeyId: null);
+        var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
+        {
+            ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(contact)
+        });
+        var context = new DefaultHttpContext();
+        var tempDataFactory = new TempDataDictionaryFactory(provider);
+
+        var model = PublicGoogleTagManagerDisplayModel.Create(context, tempDataFactory);
+
+        Assert.Equal(
+            "window.malievAnalytics.emit({\"event\":\"maliev_contact_submitted\",\"service\":\"general_contact\",\"submission_status\":\"persisted\"});",
+            model.QueuedEventScript);
+        Assert.DoesNotContain("generate_lead", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("maliev_lead_submitted", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("message-42", model.QueuedEventScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void QueuedContact_SaveFailureSuppressesDiagnosticWithoutBreakingPage()
+    {
+        var contact = new LeadAnalyticsEvent(
+            "contact", "general_contact", "message-42",
+            hasFiles: false, intent: null, finderPath: null, journeyId: null);
+        var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
+        {
+            ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(contact)
+        }, throwOnSave: true);
+
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            new DefaultHttpContext(), new TempDataDictionaryFactory(provider));
+
+        Assert.Empty(model.QueuedEventScript);
+    }
+
     [Theory]
     [InlineData("accepted")]
     [InlineData("declined")]

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
@@ -79,6 +80,7 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
 {
     private WebApplicationFactory<Program>? factory;
     private IPlaywright? playwright;
+    private PublicContactRenderedScripts? renderedScripts;
 
     public IBrowser Browser { get; private set; } = null!;
     public Uri Origin { get; private set; } = null!;
@@ -88,39 +90,79 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
         (factory ?? throw new InvalidOperationException("The owned host must be initialized."))
             .Services.GetRequiredService<IStringLocalizer<ThreeDimensionalPrintingEstimateContent>>();
 
+    /// <summary>Returns the immutable script captured from the owned public host for this culture.</summary>
+    internal string GetRenderedContactScript(string culture) =>
+        (renderedScripts ?? throw new InvalidOperationException("The owned contact scripts must be captured first."))
+            .Get(culture);
+
     public async Task InitializeAsync()
     {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        Origin = new Uri($"http://127.0.0.1:{port}");
-
-        factory = new PublicContactTestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
-        factory.UseKestrel(port);
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        try
         {
-            AllowAutoRedirect = false,
-            BaseAddress = Origin,
-        });
-        using var response = await client.GetAsync("/contact?culture=en");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            Origin = new Uri($"http://127.0.0.1:{port}");
 
-        playwright = await Playwright.CreateAsync();
-        Browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+            factory = new PublicContactTestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
+            factory.UseKestrel(port);
+            using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+                BaseAddress = Origin,
+            });
+            renderedScripts = await PublicContactRenderedScripts.CaptureAsync(client);
+
+            playwright = await Playwright.CreateAsync();
+            Browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        }
+        catch (Exception initializationFailure)
+        {
+            try
+            {
+                await DisposeAsync();
+            }
+            catch (Exception cleanupFailure)
+            {
+                throw new AggregateException("Contact fixture initialization and cleanup failed.",
+                    initializationFailure, cleanupFailure);
+            }
+
+            throw;
+        }
     }
 
     public async Task DisposeAsync()
     {
-        if (Browser is not null)
-        {
-            await Browser.DisposeAsync();
-        }
+        var ownedBrowser = Browser;
+        var ownedPlaywright = playwright;
+        var ownedFactory = factory;
+        Browser = null!;
+        playwright = null;
+        factory = null;
+        renderedScripts = null;
 
-        playwright?.Dispose();
-        if (factory is not null)
+        try
         {
-            await factory.DisposeAsync();
+            if (ownedBrowser is not null)
+            {
+                await ownedBrowser.DisposeAsync();
+            }
+        }
+        finally
+        {
+            try
+            {
+                ownedPlaywright?.Dispose();
+            }
+            finally
+            {
+                if (ownedFactory is not null)
+                {
+                    await ownedFactory.DisposeAsync();
+                }
+            }
         }
     }
 
@@ -143,6 +185,60 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
         public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
                 [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+    }
+}
+
+internal sealed class PublicContactRenderedScripts
+{
+    private readonly string english;
+    private readonly string thai;
+
+    private PublicContactRenderedScripts(string english, string thai)
+    {
+        this.english = english;
+        this.thai = thai;
+    }
+
+    internal string Get(string culture) => culture switch
+    {
+        "en" => english,
+        "th" => thai,
+        _ => throw new ArgumentOutOfRangeException(nameof(culture), culture, "Only captured public cultures are supported.")
+    };
+
+    internal static async Task<PublicContactRenderedScripts> CaptureAsync(HttpClient client)
+    {
+        var englishScript = await CaptureCultureAsync(client, "en");
+        var thaiScript = await CaptureCultureAsync(client, "th");
+        return new PublicContactRenderedScripts(englishScript, thaiScript);
+    }
+
+    private static async Task<string> CaptureCultureAsync(HttpClient client, string culture)
+    {
+        // Match the existing handler-request ceiling; never retry or extend it.
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var response = await client.GetAsync($"/contact?culture={culture}",
+            HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new InvalidDataException($"The {culture} public contact capture did not return HTTP 200.");
+        }
+
+        var html = await response.Content.ReadAsStringAsync(deadline.Token);
+        if (!Regex.IsMatch(html, $"<html\\b[^>]*\\slang=\"{culture}\"(?:\\s|>)", RegexOptions.CultureInvariant))
+        {
+            throw new InvalidDataException($"The public contact capture did not render culture {culture}.");
+        }
+
+        var matches = Regex.Matches(html,
+            "<script[^>]*data-migration-component=\"public-contact-channel-analytics\"[^>]*>(?<script>[\\s\\S]*?)</script>",
+            RegexOptions.CultureInvariant);
+        if (matches.Count != 1 || string.IsNullOrWhiteSpace(matches[0].Groups["script"].Value))
+        {
+            throw new InvalidDataException($"The {culture} public contact capture must contain one nonblank handler.");
+        }
+
+        return matches[0].Groups["script"].Value;
     }
 }
 

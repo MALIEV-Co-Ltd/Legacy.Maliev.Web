@@ -10,6 +10,20 @@ internal sealed record MaterialPricingQuoteCleanupReceipt(bool ActualTaskSettled
 
 internal static class MaterialPricingTestCleanup
 {
+    public static async ValueTask ReleaseAllAsync(Exception? primary, params Func<ValueTask>[] releases)
+    {
+        var failures = new List<Exception>();
+        foreach (var release in releases)
+        {
+            try { await release(); }
+            catch (Exception exception) { failures.Add(exception); }
+        }
+        if (failures.Count == 0) return;
+        var retained = primary ?? failures[0];
+        retained.Data["MaterialPricingCleanupFailures"] = failures.ToArray();
+        if (primary is null) ExceptionDispatchInfo.Capture(retained).Throw();
+    }
+
     public static void ReleaseAll(params Action[] releases)
     {
         Exception? failure = null;
