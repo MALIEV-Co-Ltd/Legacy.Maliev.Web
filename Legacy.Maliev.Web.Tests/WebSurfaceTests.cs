@@ -4184,7 +4184,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         var summary = Regex.Match(source,
-            "<div class=\"text-danger validation-summary-errors\" role=\"alert\">(?<body>.*?)</div>",
+            "<div class=\"inquiry-validation-summary text-danger validation-summary-errors\" role=\"alert\">(?<body>.*?)</div>",
             RegexOptions.Singleline | RegexOptions.CultureInvariant);
         Assert.True(summary.Success, "The hidden submission error must appear in the visible form alert.");
         Assert.Contains(expected, summary.Groups["body"].Value, StringComparison.Ordinal);
