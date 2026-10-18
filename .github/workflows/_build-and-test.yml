@@ -41,6 +41,25 @@ jobs:
       - name: Verify offline Search Console cohort reporter
         shell: pwsh
         run: ./tests/SearchConsoleCohortReport.Tests.ps1
+      - name: Set up original Career oracle runtime
+        timeout-minutes: 5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+      - name: Build original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet build acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --disable-build-servers -warnaserror
+          -p:UseSharedCompilation=false -nodeReuse:false
+      - name: Verify original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet test acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --no-build --no-restore --disable-build-servers
+          -p:UseSharedCompilation=false -nodeReuse:false
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --logger trx --results-directory ./career-original-materialization-test-results
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -162,14 +181,14 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests|FullyQualifiedName~MaterialInitialRequestStagesTests"
           --logger trx --results-directory ./browser-failure-evidence-test-results
-      - name: Verify all ten sidebar culture and viewport browser cases
+      - name: Verify all twelve sidebar culture and viewport browser cases
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~InstantQuotationSidebarLayoutBrowserTests"
           --logger trx --results-directory ./sidebar-focused-test-results
-      - name: Require exact ten passing sidebar browser rows
+      - name: Require exact twelve passing sidebar browser rows
         run: >-
           python3 -B scripts/verify-focused-web-trx.py
           --directory ./sidebar-focused-test-results --suite sidebar
@@ -285,6 +304,23 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~AboutPageContractTests|FullyQualifiedName~AboutStaticSsrRouteTests|FullyQualifiedName~AboutStoryBrowserTests|FullyQualifiedName~RouteScopedAssetRenderingTests|FullyQualifiedName~SharedFrontendBundleContractTests"
           --logger trx --results-directory ./about-presentation-test-results
+      - name: Verify complete original Career consumer contracts
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CareerIndexStaticSsrRouteTests|FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerDetailStaticSsrRouteTests|FullyQualifiedName~CareerSearchKestrelContractTests"
+          --logger trx --results-directory ./career-consumer-test-results
+      - name: Preserve successful Career focus and original oracle before the full suite
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: career-focused-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
+          retention-days: 7
+          if-no-files-found: error
       - name: Verify localized account posts and rendered service SEO contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -473,6 +509,8 @@ jobs:
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.json
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-diagnostics/*.json
             signed-link-test-results/**/*.trx
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
             startup-security-test-results/**/*.trx
             startup-image-acquisition/dockerhub-quota.json
             scanning-comparison-test-results/**/*.trx

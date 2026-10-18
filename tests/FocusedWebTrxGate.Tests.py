@@ -37,7 +37,7 @@ class FocusedGateControls(unittest.TestCase):
             for method, rows in methods.items():
                 for index in range(rows):
                     if suite == "sidebar":
-                        culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1280)][index]
+                        culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1024, 1280)][index]
                         name = f'{cls}.{method}(culture: "{culture}", width: {width})'
                     else:
                         name = f"{cls}.{method}(syntheticControl: {index})"
@@ -60,10 +60,10 @@ class FocusedGateControls(unittest.TestCase):
             for cls in ("FdmSimulationModelPathsTests", "FdmSimulationSupportTests",
                         "FdmSimulationScenarioTests", "FdmSimulationProfileTests",
                         "FdmOriginalServiceEligibilityBoundaryTests")])
-        self.assertEqual(10, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
+        self.assertEqual(12, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 10), ("migration-consumers", 147)):
+        for suite, total in (("fdm", 59), ("sidebar", 12), ("migration-consumers", 147)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -174,15 +174,19 @@ class FocusedGateControls(unittest.TestCase):
             self.assertEqual(147, self.verify(root, directory, dll, "migration-consumers")["passed"])
 
     def test_unknown_sidebar_viewport_cannot_replace_required_row(self):
-        with tempfile.TemporaryDirectory() as temp:
-            directory = Path(temp)
-            root, dll = self.fixture(directory, "sidebar")
-            result = root.find(NS + "Results")[0]
-            changed = result.get("testName").replace("width: 320", "width: 999")
-            result.set("testName", changed)
-            root.find(NS + "TestDefinitions")[0].set("name", changed)
-            with self.assertRaises(ValueError):
-                self.verify(root, directory, dll, "sidebar")
+        for culture, width in (("en", 320), ("en", 1024), ("th", 1024)):
+            with self.subTest(culture=culture, width=width), tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp)
+                root, dll = self.fixture(directory, "sidebar")
+                result = next(row for row in root.find(NS + "Results")
+                              if f'culture: "{culture}", width: {width})' in row.get("testName"))
+                changed = result.get("testName").replace(f"width: {width}", "width: 999")
+                result.set("testName", changed)
+                definition = next(row for row in root.find(NS + "TestDefinitions")
+                                  if row.get("id") == result.get("testId"))
+                definition.set("name", changed)
+                with self.assertRaises(ValueError):
+                    self.verify(root, directory, dll, "sidebar")
 
 
     def long_native_fixture(self, directory):

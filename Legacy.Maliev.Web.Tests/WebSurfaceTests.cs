@@ -3834,6 +3834,19 @@ public sealed class WebSurfaceTests : IDisposable
 
     private sealed class StubCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         private static readonly CareerLevel Level = new(1, "Engineer", null, null, null);
 
         private static readonly CareerOffer Offer = new(
@@ -3870,6 +3883,19 @@ public sealed class WebSurfaceTests : IDisposable
 
     private sealed class ThrowingCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public Task<CareerListing> GetListingAsync(
             CareerSort sort,
             string? search,

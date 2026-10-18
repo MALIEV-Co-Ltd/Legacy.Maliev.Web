@@ -1,3 +1,4 @@
+using Legacy.Maliev.Web.Pages.Shared;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
 using Legacy.Maliev.Web.Application;
@@ -617,6 +618,9 @@ if (useBlazorRouteHost)
         branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
 }
 app.MapDefaultEndpoints("web");
+app.UseWhen(
+    CareerSearchCompatibilityEndpoint.Matches,
+    branch => branch.Run(CareerSearchCompatibilityEndpoint.HandleAsync));
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))
