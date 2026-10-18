@@ -139,6 +139,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             await fixture.CaptureAsync("completed-frame");
         }
         finally { fixture.Control.ReleaseAll(); }
+        await fixture.Control.Finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         await fixture.AssertFinalAsync(4);
         await fixture.CaptureAsync("final");
