@@ -64,6 +64,23 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
         var styles = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "service-pages.css"));
 
         Assert.Contains("<ServicePageToc />", component, StringComparison.Ordinal);
+        Assert.Contains("Low-Volume Injection Molding for Up to 1,000 Parts", component, StringComparison.Ordinal);
+        Assert.Contains("รับฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้น", component, StringComparison.Ordinal);
+        Assert.Contains("Shot weights up to 50 g", component, StringComparison.Ordinal);
+        Assert.Contains("Plastics melting at no more than 350 °C", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://shop.maliev.com\"", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=low-volume-injection-molding\"", component, StringComparison.Ordinal);
+        Assert.Contains("<ServiceLocation />", component, StringComparison.Ordinal);
+        Assert.Contains("PP (Polypropylene)", component, StringComparison.Ordinal);
+        Assert.Contains("PE (Polyethylene)", component, StringComparison.Ordinal);
+        Assert.Contains("PS / HIPS", component, StringComparison.Ordinal);
+        Assert.Contains("ABS", component, StringComparison.Ordinal);
+        Assert.Contains("POM is excluded from this service", component, StringComparison.Ordinal);
+        Assert.Contains("We can make a mold for the job", component, StringComparison.Ordinal);
+        Assert.Contains("five parts carry more setup and mold cost per part than 1,000 parts", component, StringComparison.Ordinal);
+        Assert.Contains("service-material-grid", component, StringComparison.Ordinal);
+        Assert.Contains("service-note", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ภาพเรนเดอร์สินค้าจริงของเครื่องระบบลมตามรุ่นที่ MALIEV อ้างอิง", component, StringComparison.Ordinal);
         Assert.Contains("service-pricing-section", component, StringComparison.Ordinal);
         Assert.Contains("role=\"note\"", component, StringComparison.Ordinal);
         Assert.Contains("purge/shutdown procedures", component, StringComparison.Ordinal);

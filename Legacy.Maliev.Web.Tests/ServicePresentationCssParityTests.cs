@@ -16,6 +16,9 @@ public sealed class ServicePresentationCssParityTests
 
         Assert.Contains(".service-index-grid", shell, StringComparison.Ordinal);
         Assert.Contains(".service-index-card-media", shell, StringComparison.Ordinal);
+        Assert.Contains("gap: clamp(1.15rem, 2.2vw, 2rem);", shell, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: repeat(3, minmax(0, 1fr));", shell, StringComparison.Ordinal);
+        Assert.Contains("height: clamp(11.5rem, 16vw, 14rem);", shell, StringComparison.Ordinal);
         Assert.Contains(".service-section-light-cta", services, StringComparison.Ordinal);
         Assert.Contains(".service-location-section .service-actions", services, StringComparison.Ordinal);
         Assert.Contains(".injection-gallery-grid", services, StringComparison.Ordinal);
@@ -25,6 +28,8 @@ public sealed class ServicePresentationCssParityTests
         Assert.Contains(".landing-service-card--injection > img { aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% center; padding: 0;", landing, StringComparison.Ordinal);
         Assert.Contains(".landing-section + .landing-section { padding-top: clamp(5.5rem, 8vw, 8rem); }", landing, StringComparison.Ordinal);
         Assert.Contains(".landing-service-card a { display: inline-flex; align-items: center; gap: .6rem;", landing, StringComparison.Ordinal);
+        Assert.Contains(".service-quick { position: relative; z-index: 2; margin-top: -3.5rem; background: transparent; }", services, StringComparison.Ordinal);
+        Assert.Contains(".injection-molding-page .service-quick { margin-top: -3.5rem; }", services, StringComparison.Ordinal);
         Assert.Contains(".injection-hero { min-height: 0; display: grid; align-items: stretch; }", services, StringComparison.Ordinal);
         Assert.Contains(".injection-benefit-grid { align-items: stretch; }", services, StringComparison.Ordinal);
         Assert.Contains("@media (prefers-reduced-motion: reduce)", services, StringComparison.Ordinal);
