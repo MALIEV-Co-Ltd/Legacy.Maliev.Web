@@ -135,9 +135,15 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         AssertAddress(localBusiness.GetProperty("address"));
         Assert.Equal(13.9469417, localBusiness.GetProperty("geo").GetProperty("latitude").GetDouble(), 7);
         Assert.Equal(100.4588118, localBusiness.GetProperty("geo").GetProperty("longitude").GetDouble(), 7);
+        Assert.Single(localBusiness.GetProperty("openingHoursSpecification").EnumerateArray());
         Assert.Equal("09:00", localBusiness.GetProperty("openingHoursSpecification")[0].GetProperty("opens").GetString());
         Assert.Equal("18:00", localBusiness.GetProperty("openingHoursSpecification")[0].GetProperty("closes").GetString());
         Assert.Equal(5, localBusiness.GetProperty("openingHoursSpecification")[0].GetProperty("dayOfWeek").GetArrayLength());
+        var businessDays = localBusiness.GetProperty("openingHoursSpecification")[0]
+            .GetProperty("dayOfWeek").EnumerateArray().Select(day => day.GetString()!).ToArray();
+        Assert.Equal(new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" }, businessDays);
+        Assert.DoesNotContain("Saturday", businessDays);
+        Assert.DoesNotContain("Sunday", businessDays);
         AssertSocialLinks(localBusiness.GetProperty("sameAs"));
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }

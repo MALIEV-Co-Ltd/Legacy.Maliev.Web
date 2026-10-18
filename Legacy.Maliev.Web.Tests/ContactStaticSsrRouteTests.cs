@@ -36,6 +36,17 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         Assert.DoesNotContain("IContactClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("INotificationClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("IAntiBotVerifier", route, StringComparison.Ordinal);
+        foreach (var resourcePath in new[]
+        {
+            Path.Combine(web, "Resources", "Components", "Pages", "Contact", "ContactContent.th.resx"),
+            Path.Combine(web, "Resources", "Components", "Layout", "PublicFooter.th.resx"),
+        })
+        {
+            var resource = File.ReadAllText(resourcePath);
+            Assert.Contains("จันทร์-ศุกร์: 09:00-18:00 น.", resource, StringComparison.Ordinal);
+            Assert.Contains("เสาร์-อาทิตย์: ปิด", resource, StringComparison.Ordinal);
+            Assert.DoesNotContain("10:00-19:00", resource, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -50,6 +61,17 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
                 services.AddSingleton<ICountryClient, StubCountryClient>();
             });
         });
+        await using var activeFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", "true");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
+        using var activeClient = activeFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         using var client = fallbackFactory.CreateClient(
             new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         foreach (var culture in new[] { "en", "th" })
@@ -97,6 +119,30 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
             }
             Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
             Assert.DoesNotContain("data-migration-component=\"public-google-tag-manager-body\"", source, StringComparison.Ordinal);
+            using var activeResponse = await activeClient.GetAsync($"/contact?culture={culture}");
+            var activeSource = WebUtility.HtmlDecode(await activeResponse.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, activeResponse.StatusCode);
+            Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", activeSource, StringComparison.Ordinal);
+            foreach (var rendered in new[] { source, activeSource })
+            {
+                var visit = Assert.Single(Regex.Matches(
+                    rendered,
+                    "<article\\b[^>]*class=\"contact-method-card\"[^>]*>[\\s\\S]*?</article>",
+                    RegexOptions.CultureInvariant).Cast<Match>(),
+                    match => match.Value.Contains("<address>", StringComparison.Ordinal));
+                var footer = Assert.Single(Regex.Matches(
+                    rendered,
+                    "<footer\\b[^>]*data-migration-component=\"public-footer\"[^>]*>[\\s\\S]*?</footer>",
+                    RegexOptions.CultureInvariant).Cast<Match>());
+                foreach (var surface in new[] { visit.Value, footer.Value })
+                {
+                    Assert.Contains(culture == "th" ? "จันทร์-ศุกร์: 09:00-18:00 น." : "Monday-Friday: 09:00-18:00",
+                        surface, StringComparison.Ordinal);
+                    Assert.Contains(culture == "th" ? "เสาร์-อาทิตย์: ปิด" : "Saturday-Sunday: Closed",
+                        surface, StringComparison.Ordinal);
+                    Assert.DoesNotContain("10:00-19:00", surface, StringComparison.Ordinal);
+                }
+            }
         }
     }
 
