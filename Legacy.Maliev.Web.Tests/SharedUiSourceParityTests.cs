@@ -65,6 +65,36 @@ public sealed class SharedUiSourceParityTests
         Assert.Equal("แชตกับทีมงานผ่าน LINE Official Account", lineTranslation);
     }
 
+    [Fact]
+    public void ApplicationAreaShellsPreserveOriginalZoomAndInlineStyleExclusions()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        foreach (var relativePath in new[]
+        {
+            "Areas/Member/Pages/Shared/_LayoutMember.cshtml",
+            "Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",
+            "Components/App.razor"
+        })
+        {
+            var source = File.ReadAllText(Path.Combine(web, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            Assert.DoesNotContain("user-scalable=no", source, StringComparison.Ordinal);
+        }
+
+        foreach (var relativePath in new[]
+        {
+            "Areas/Member/Pages/Shared/_LayoutMember.cshtml",
+            "Areas/Member/Pages/Shared/_MemberNavigation.cshtml",
+            "Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",
+            "Components/Pages/Member/MemberWorkspaceShell.razor",
+            "Components/Pages/Knowledges/KnowledgeShell.razor",
+            "Components/Pages/Knowledges/KnowledgeNavigation.razor"
+        })
+        {
+            var source = File.ReadAllText(Path.Combine(web, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            Assert.DoesNotContain("style=", source, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
