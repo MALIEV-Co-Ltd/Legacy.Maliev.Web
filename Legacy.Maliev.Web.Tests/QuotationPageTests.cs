@@ -135,6 +135,182 @@ public sealed class QuotationPageTests
         Assert.Equal(2, notifications.Messages.Count);
     }
 
+    [Theory]
+    [InlineData(true, 1, false)]
+    [InlineData(true, 2, false)]
+    [InlineData(false, 1, false)]
+    [InlineData(false, 2, false)]
+    [InlineData(true, 2, true)]
+    [InlineData(false, 1, true)]
+    public async Task Post_PersistedRequestKeepsReferenceWhenNotificationThrows(
+        bool synchronousFailure,
+        int failingCall,
+        bool dependencyCancellation)
+    {
+        var quotation = new RecordingQuotationClient(new QuotationRequestResult(713, true, true));
+        var files = new RecordingFileClient(new QuotationFileResult(true, true, true, false));
+        var healthyDelivery = new TaskCompletionSource<NotificationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var bothDeliveriesStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var notifications = new RecordingNotificationClient((call, _) =>
+        {
+            if (call == 2)
+            {
+                bothDeliveriesStarted.TrySetResult(true);
+            }
+
+            if (call != failingCall)
+            {
+                return healthyDelivery.Task;
+            }
+
+            Exception failure = dependencyCancellation
+                ? new OperationCanceledException("private-notification-failure")
+                : new InvalidOperationException("private-notification-failure");
+            if (synchronousFailure)
+            {
+                throw failure;
+            }
+
+            return dependencyCancellation
+                ? Task.FromCanceled<NotificationResult>(new CancellationToken(canceled: true))
+                : Task.FromException<NotificationResult>(failure);
+        });
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        page.Files = [FormFile("model.step", "application/step", "STEP")];
+
+        var pending = page.OnPostSubmitRequestAsync(CancellationToken.None);
+        try
+        {
+            await Task.WhenAny(pending, bothDeliveriesStarted.Task).WaitAsync(TimeSpan.FromSeconds(10));
+            var observedHealthyDelivery = bothDeliveriesStarted.Task.IsCompleted && !pending.IsCompleted;
+            healthyDelivery.TrySetResult(new NotificationResult(true, true, true));
+            var result = await pending.WaitAsync(TimeSpan.FromSeconds(10));
+
+            var redirect = Assert.IsType<RedirectToPageResult>(result);
+            Assert.Equal("Index", redirect.PageName);
+            Assert.Equal(1, quotation.CallCount);
+            Assert.Equal(713, files.RequestId);
+            Assert.Equal(2, notifications.Messages.Count);
+            Assert.True(observedHealthyDelivery);
+            Assert.Contains("#713", page.Notification, StringComparison.Ordinal);
+            Assert.Contains("Do not submit", page.Notification, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("private-notification-failure", page.Notification, StringComparison.Ordinal);
+            var analytics = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("713", StringComparison.Ordinal));
+            using var document = JsonDocument.Parse(analytics);
+            Assert.Equal("maliev_lead_submitted", document.RootElement.GetProperty("event").GetString());
+            Assert.Equal("request-713", document.RootElement.GetProperty("transaction_id").GetString());
+            Assert.True(document.RootElement.GetProperty("has_files").GetBoolean());
+            Assert.DoesNotContain("private-notification-failure", analytics, StringComparison.Ordinal);
+        }
+        finally
+        {
+            healthyDelivery.TrySetResult(new NotificationResult(true, true, true));
+            await pending.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [Theory]
+    [InlineData("synchronous")]
+    [InlineData("asynchronous")]
+    [InlineData("stream")]
+    [InlineData("foreign-cancellation")]
+    public async Task Post_PersistedRequestKeepsQueuedReferenceWhenAttachmentFollowUpThrows(string failureMode)
+    {
+        var quotation = new RecordingQuotationClient(new QuotationRequestResult(713, true, true));
+        var files = new RecordingFileClient(upload: (uploads, _) =>
+        {
+            if (failureMode == "stream")
+            {
+                using var stream = uploads.Single().OpenReadStream();
+                return Task.FromResult(new QuotationFileResult(true, true, true, false));
+            }
+
+            if (failureMode == "foreign-cancellation")
+            {
+                return Task.FromCanceled<QuotationFileResult>(new CancellationToken(canceled: true));
+            }
+
+            var failure = new IOException("private-attachment-failure");
+            if (failureMode == "synchronous")
+            {
+                throw failure;
+            }
+
+            return Task.FromException<QuotationFileResult>(failure);
+        });
+        var notifications = new RecordingNotificationClient();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        page.Files = failureMode == "stream"
+            ? [new StubFormFile("unreadable.step", 4)]
+            : [FormFile("model.step", "application/step", "STEP")];
+
+        var result = await page.OnPostSubmitRequestAsync(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToPageResult>(result);
+        Assert.Equal("Index", redirect.PageName);
+        Assert.Equal(1, quotation.CallCount);
+        Assert.Equal(713, files.RequestId);
+        Assert.Empty(notifications.Messages);
+        Assert.Contains("#713", page.Notification, StringComparison.Ordinal);
+        Assert.Contains("Do not submit", page.Notification, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("private-attachment-failure", page.Notification, StringComparison.Ordinal);
+        var analytics = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("713", StringComparison.Ordinal));
+        using var document = JsonDocument.Parse(analytics);
+        Assert.Equal("request-713", document.RootElement.GetProperty("transaction_id").GetString());
+        Assert.True(document.RootElement.GetProperty("has_files").GetBoolean());
+        Assert.DoesNotContain("private-attachment-failure", analytics, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Post_PersistedRequestPropagatesCancellationDuringAttachmentFollowUp()
+    {
+        using var requestAbort = new CancellationTokenSource();
+        var quotation = new RecordingQuotationClient(new QuotationRequestResult(713, true, true));
+        var files = new RecordingFileClient(upload: (_, cancellationToken) =>
+        {
+            requestAbort.Cancel();
+            return Task.FromCanceled<QuotationFileResult>(cancellationToken);
+        });
+        var notifications = new RecordingNotificationClient();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        page.Files = [FormFile("model.step", "application/step", "STEP")];
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => page.OnPostSubmitRequestAsync(requestAbort.Token));
+
+        Assert.Equal(1, quotation.CallCount);
+        Assert.Empty(notifications.Messages);
+        Assert.Null(page.Notification);
+        Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("request-713", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Post_PersistedRequestPropagatesCancellationAfterBothNotificationsStart()
+    {
+        using var requestAbort = new CancellationTokenSource();
+        var quotation = new RecordingQuotationClient(new QuotationRequestResult(713, true, true));
+        var files = new RecordingFileClient();
+        var notifications = new RecordingNotificationClient((call, cancellationToken) =>
+        {
+            if (call == 1)
+            {
+                requestAbort.Cancel();
+                return Task.FromCanceled<NotificationResult>(cancellationToken);
+            }
+
+            return Task.FromResult(new NotificationResult(true, true, true));
+        });
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => page.OnPostSubmitRequestAsync(requestAbort.Token));
+
+        Assert.Equal(1, quotation.CallCount);
+        Assert.Equal(2, notifications.Messages.Count);
+        Assert.Null(page.Notification);
+        Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("request-713", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Post_CompletedUploadQueuesCompletionAndNormalizesTamperedService()
     {
@@ -239,7 +415,8 @@ public sealed class QuotationPageTests
     }
 
     private sealed class RecordingFileClient(
-        QuotationFileResult? result = null) : IQuotationFileClient
+        QuotationFileResult? result = null,
+        Func<IReadOnlyList<QuotationUpload>, CancellationToken, Task<QuotationFileResult>>? upload = null) : IQuotationFileClient
     {
         public int? RequestId { get; private set; }
         public int UploadCount { get; private set; }
@@ -252,7 +429,8 @@ public sealed class QuotationPageTests
         {
             RequestId = requestId;
             UploadCount = files.Count;
-            return Task.FromResult(result ?? new QuotationFileResult(true, true, true, false));
+            return upload?.Invoke(files, cancellationToken)
+                ?? Task.FromResult(result ?? new QuotationFileResult(true, true, true, false));
         }
     }
 
@@ -305,7 +483,8 @@ public sealed class QuotationPageTests
             throw new InvalidOperationException("Anonymous quotation tests must not update customer data.");
     }
 
-    private sealed class RecordingNotificationClient : INotificationClient
+    private sealed class RecordingNotificationClient(
+        Func<int, CancellationToken, Task<NotificationResult>>? send = null) : INotificationClient
     {
         public List<EmailNotification> Messages { get; } = [];
 
@@ -315,7 +494,8 @@ public sealed class QuotationPageTests
             CancellationToken cancellationToken)
         {
             Messages.Add(notification);
-            return Task.FromResult(new NotificationResult(true, true, true));
+            return send?.Invoke(Messages.Count, cancellationToken)
+                ?? Task.FromResult(new NotificationResult(true, true, true));
         }
     }
 

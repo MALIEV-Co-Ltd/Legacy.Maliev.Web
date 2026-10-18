@@ -69,6 +69,103 @@ public sealed class ContactPageTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, 1, false)]
+    [InlineData(true, 2, false)]
+    [InlineData(false, 1, false)]
+    [InlineData(false, 2, false)]
+    [InlineData(true, 2, true)]
+    [InlineData(false, 1, true)]
+    public async Task Post_PersistedContactKeepsReferenceWhenNotificationThrows(
+        bool synchronousFailure,
+        int failingCall,
+        bool dependencyCancellation)
+    {
+        var contactClient = new RecordingContactClient(new ContactSubmissionResult(913, true, true));
+        var healthyDelivery = new TaskCompletionSource<NotificationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var bothDeliveriesStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var notifications = new RecordingNotificationClient((call, _) =>
+        {
+            if (call == 2)
+            {
+                bothDeliveriesStarted.TrySetResult(true);
+            }
+
+            if (call != failingCall)
+            {
+                return healthyDelivery.Task;
+            }
+
+            Exception failure = dependencyCancellation
+                ? new OperationCanceledException("private-notification-failure")
+                : new InvalidOperationException("private-notification-failure");
+            if (synchronousFailure)
+            {
+                throw failure;
+            }
+
+            return dependencyCancellation
+                ? Task.FromCanceled<NotificationResult>(new CancellationToken(canceled: true))
+                : Task.FromException<NotificationResult>(failure);
+        });
+        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+
+        var pending = page.OnPostSubmitRequestAsync(CancellationToken.None);
+        try
+        {
+            await Task.WhenAny(pending, bothDeliveriesStarted.Task).WaitAsync(TimeSpan.FromSeconds(10));
+            var observedHealthyDelivery = bothDeliveriesStarted.Task.IsCompleted && !pending.IsCompleted;
+            healthyDelivery.TrySetResult(new NotificationResult(true, true, true));
+            var result = await pending.WaitAsync(TimeSpan.FromSeconds(10));
+
+            var redirect = Assert.IsType<RedirectToPageResult>(result);
+            Assert.Equal("Index", redirect.PageName);
+            Assert.Equal("en", redirect.RouteValues!["culture"]);
+            Assert.Equal(1, contactClient.CallCount);
+            Assert.Equal(2, notifications.Messages.Count);
+            Assert.True(observedHealthyDelivery);
+            Assert.Contains("#913", page.Notification, StringComparison.Ordinal);
+            Assert.Contains("Do not submit", page.Notification, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("private-notification-failure", page.Notification, StringComparison.Ordinal);
+            var analytics = Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("913", StringComparison.Ordinal));
+            using var document = JsonDocument.Parse(analytics);
+            Assert.Equal("maliev_contact_submitted", document.RootElement.GetProperty("event").GetString());
+            Assert.Equal("message-913", document.RootElement.GetProperty("transaction_id").GetString());
+            Assert.DoesNotContain("private-notification-failure", analytics, StringComparison.Ordinal);
+        }
+        finally
+        {
+            healthyDelivery.TrySetResult(new NotificationResult(true, true, true));
+            await pending.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [Fact]
+    public async Task Post_PersistedContactPropagatesRequestCancellationAfterBothNotificationsStart()
+    {
+        using var requestAbort = new CancellationTokenSource();
+        var contactClient = new RecordingContactClient(new ContactSubmissionResult(913, true, true));
+        var notifications = new RecordingNotificationClient((call, cancellationToken) =>
+        {
+            if (call == 1)
+            {
+                requestAbort.Cancel();
+                return Task.FromCanceled<NotificationResult>(cancellationToken);
+            }
+
+            return Task.FromResult(new NotificationResult(true, true, true));
+        });
+        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => page.OnPostSubmitRequestAsync(requestAbort.Token));
+
+        Assert.Equal(1, contactClient.CallCount);
+        Assert.Equal(2, notifications.Messages.Count);
+        Assert.Null(page.Notification);
+        Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("message-913", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Post_AuthenticatedCustomerReplacesSpoofedBrowserIdentityWithTrustedProfile()
     {
@@ -208,7 +305,8 @@ public sealed class ContactPageTests
         }
     }
 
-    private sealed class RecordingNotificationClient : INotificationClient
+    private sealed class RecordingNotificationClient(
+        Func<int, CancellationToken, Task<NotificationResult>>? send = null) : INotificationClient
     {
         public List<EmailNotification> Messages { get; } = [];
 
@@ -218,7 +316,8 @@ public sealed class ContactPageTests
             CancellationToken cancellationToken)
         {
             Messages.Add(notification);
-            return Task.FromResult(new NotificationResult(true, true, true));
+            return send?.Invoke(Messages.Count, cancellationToken)
+                ?? Task.FromResult(new NotificationResult(true, true, true));
         }
     }
 
