@@ -63,7 +63,7 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
             "LowVolumeInjectionMoldingContent.razor"));
         var styles = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "service-pages.css"));
 
-        Assert.Contains("service-page-toc", component, StringComparison.Ordinal);
+        Assert.Contains("<ServicePageToc />", component, StringComparison.Ordinal);
         Assert.Contains("service-pricing-section", component, StringComparison.Ordinal);
         Assert.Contains("role=\"note\"", component, StringComparison.Ordinal);
         Assert.Contains("purge/shutdown procedures", component, StringComparison.Ordinal);
@@ -80,6 +80,9 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
             "wwwroot/src/images/services/injection-molding/part-bento-pp-source-derived-640.webp",
             "wwwroot/src/images/services/injection-molding/part-bento-pp-source-derived-1024.webp",
             "wwwroot/src/images/services/injection-molding/part-bento-pp-source-derived.webp",
+            "wwwroot/src/images/services/injection-molding/pimm-50g-hero.webp",
+            "wwwroot/src/images/services/injection-molding/pimm-50g-square.webp",
+            "wwwroot/src/images/services/injection-molding/pimm-50g-cover.webp",
             "wwwroot/src/images/services/injection-molding/pimm-50g-controller.webp",
             "wwwroot/src/images/services/injection-molding/pimm-50g-nozzle.webp",
             "wwwroot/src/images/services/injection-molding/pimm-sample-mold.webp"
