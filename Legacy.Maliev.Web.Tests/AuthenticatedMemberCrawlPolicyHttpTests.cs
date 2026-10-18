@@ -145,6 +145,92 @@ public sealed class AuthenticatedMemberCrawlPolicyHttpTests(MemberAuthorityFixtu
     public async Task ChildEnvironment_HostileAmbientSettingsCannotReachExecutableOrEnableDeployment() =>
         await authority.AssertChildEnvironmentGuard();
 
+    [Theory]
+    [InlineData(false, "EN", "/member?tracking=excluded", "en", "/member?culture=en")]
+    [InlineData(true, "EN", "/member?tracking=excluded", "en", "/member?culture=en")]
+    [InlineData(false, "not-a-culture", "/member?culture=en", "th", "/member")]
+    [InlineData(true, "not-a-culture", "/member?culture=en", "th", "/member")]
+    [InlineData(false, null, "/member", "th", "/member")]
+    [InlineData(true, null, "/member", "th", "/member")]
+    [InlineData(false, "en", "https://attacker.example/path", "en", "~/?culture=en")]
+    [InlineData(true, "en", "https://attacker.example/path", "en", "~/?culture=en")]
+    public async Task NormalLogin_MemberLanguagePostPreservesCultureCookieAndLocalRedirect(
+        bool active, string? culture, string returnUrl, string expectedCulture, string expectedReturn)
+    {
+        await using var parent = authority.Web(false);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:MemberOverview", active.ToString()));
+        using var client = Client(host);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        var lineage = await Login(host, client);
+        var form = await Form(client, "/Account/Logout?culture=en");
+        if (culture is not null) form["culture"] = culture;
+        form["returnUrl"] = returnUrl;
+
+        using var response = await client.PostAsync("/Member?handler=SetLanguage", new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var expectedLocation = expectedReturn.StartsWith("~/", StringComparison.Ordinal)
+            ? expectedReturn[1..] : expectedReturn;
+        Assert.Equal(expectedLocation, response.Headers.Location?.OriginalString);
+        var cookies = response.Headers.GetValues("Set-Cookie").Where(value =>
+            value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)).ToArray();
+        var cookie = Assert.Single(cookies);
+        Assert.Contains($"c%3D{expectedCulture}%7Cuic%3D{expectedCulture}", cookie, StringComparison.Ordinal);
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(await host.Services.GetRequiredService<IAccountSessionStore>()
+            .GetAsync(lineage.WebSessionId, default));
+        await authority.AssertActive(lineage.Session.RefreshToken);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NormalLogin_MemberLanguagePostWithoutAntiforgeryIsRejected(bool active)
+    {
+        await using var parent = authority.Web(false);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:MemberOverview", active.ToString()));
+        using var client = Client(host);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        await Login(host, client);
+
+        using var response = await client.PostAsync("/Member?handler=SetLanguage",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["culture"] = "en",
+                ["returnUrl"] = "/member",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies)
+            && cookies.Any(value => value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnonymousMemberLanguagePostRequiresAuthorization(bool active)
+    {
+        await using var parent = authority.Web(false);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:MemberOverview", active.ToString()));
+        using var client = Client(host);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        var form = await Form(client, "/Account/Login");
+        form["culture"] = "en";
+        form["returnUrl"] = "/member";
+
+        using var response = await client.PostAsync("/Member?handler=SetLanguage", new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account/Login", response.Headers.Location?.AbsolutePath);
+        Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies)
+            && cookies.Any(value => value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)));
+    }
+
     private async Task<Lineage> Login(WebApplicationFactory<Program> host, HttpClient client)
     {
         var form = await Form(client, "/Account/Login");

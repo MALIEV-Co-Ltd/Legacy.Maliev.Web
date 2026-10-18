@@ -2,6 +2,7 @@ using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Member;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -46,5 +47,28 @@ public sealed class Index(
         Notices = loaded.Notices;
         DisplayModel = loaded.DisplayModel;
         return Page();
+    }
+
+    /// <summary>Applies a supported culture to the retained member language POST and redirects locally.</summary>
+    /// <param name="culture">The untrusted language preference.</param>
+    /// <param name="returnUrl">The requested local return path.</param>
+    /// <returns>A safe local redirect with the normalized culture preference.</returns>
+    public IActionResult OnPostSetLanguage(string? culture, string? returnUrl)
+    {
+        culture = CanonicalUrlPolicy.NormalizeSupportedCulture(culture);
+
+        Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+            new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = true
+            });
+
+        return LocalRedirect(CanonicalUrlPolicy.GetLocalizedReturnUrl(returnUrl, culture));
     }
 }
