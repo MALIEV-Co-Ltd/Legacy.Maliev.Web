@@ -1378,10 +1378,6 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         Assert.NotNull(saved);
         Assert.Equal("#123abc", Assert.Single(saved.Parts).Configuration.Color.ToLowerInvariant());
 
-        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
-        await page.WaitForFunctionAsync(
-            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#123abc' && !document.querySelector('[data-pricing-loading-status]')",
-            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
         Assert.Equal("#123abc", (await singleColor.InputValueAsync()).ToLowerInvariant());
         Assert.Equal(1, await custom.CountAsync());
         Assert.Equal(1, upload.VerifiedUploads);
@@ -1512,6 +1508,40 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
         Assert.Equal(beforeMulti, await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src"));
         Assert.Equal("true", await singleReview.GetAttributeAsync("data-selected"));
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#ee1122", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal(2, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+
+        // Browser model bytes live only until reload. Verify real PNG/pixel behavior above,
+        // then verify protected configuration restoration without inventing durable mesh fetch.
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 2 && !document.querySelector('[data-pricing-loading-status]')",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await singleStrip.Locator("button[aria-pressed]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#ee1122' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal("#ee1122", (await singleColor.InputValueAsync()).ToLowerInvariant());
+        Assert.Equal("2", await page.Locator($"#quantity-{singleId}").InputValueAsync());
+        Assert.Equal(1, await custom.CountAsync());
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        await multiStrip.Locator("button[aria-pressed]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.disabled && document.querySelector('#color-' + id)?.value === 'Any'",
+            multiId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.True(await multiColor.IsDisabledAsync());
+        Assert.Equal("Any", await multiColor.InputValueAsync());
+        Assert.Equal("1", await page.Locator($"#quantity-{multiId}").InputValueAsync());
+        Assert.Equal(0, await custom.CountAsync());
+        Assert.Equal("M68 1×", (await multiStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await multiStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
         saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
         Assert.NotNull(saved);
         Assert.Equal("#ee1122", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
