@@ -63,12 +63,19 @@
                     <div>
                         <label for="review-color-@part.PartId">@Localizer["Color"]</label>
                         <select id="review-color-@part.PartId" value="@part.Configuration.Color"
+                                disabled="@(part.Geometry.BodyCount > 1)"
                                 @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))">
-                            @foreach (var color in ColorsForMaterial(part.Configuration.MaterialKey))
+                            @foreach (var color in ColorsForPart(part))
                             {
                                 <option value="@color">@Localizer[color]</option>
                             }
                         </select>
+                        @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
+                        {
+                            <input type="color" aria-label="@Localizer["Color"]"
+                                   value="@(part.Configuration.Color.StartsWith('#') ? part.Configuration.Color : "#000000")"
+                                   @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))" />
+                        }
                     </div>
                     <div>
                         <label for="review-quantity-@part.PartId">@Localizer["Quantity"]</label>
@@ -208,6 +215,16 @@
 
     [Parameter]
     public EventCallback OnContinue { get; set; }
+
+    private IReadOnlyList<string> ColorsForPart(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (part.Geometry.BodyCount > 1) return ["Any"];
+        var colors = ColorsForMaterial(part.Configuration.MaterialKey);
+        return PricingCatalog.IsColorSupported(part.Configuration.MaterialKey, part.Configuration.Color)
+            && !colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
+                ? [.. colors, part.Configuration.Color]
+                : colors;
+    }
 
     private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
 

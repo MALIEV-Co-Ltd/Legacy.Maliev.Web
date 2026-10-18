@@ -385,7 +385,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         EnsureInitialized();
         var material = PricingCatalog.ResolveMaterial(materialKey)
             ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
-        if (!PricingCatalog.IsColorSupported(material.Key, color))
+        if (!PricingCatalog.IsColorSupported(material.Key, color) && color != "Any")
         {
             throw new ArgumentException("The selected color is not supported.", nameof(color));
         }
@@ -402,11 +402,17 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
                 ?? throw new ArgumentException("The part was not found.", nameof(partId));
             var previous = entry.Part!;
+            if (!PricingCatalog.IsColorSupported(material.Key, color)
+                && !(previous.Geometry.BodyCount > 1 && color == "Any"))
+            {
+                throw new ArgumentException("The selected color is not supported.", nameof(color));
+            }
+
             entry.Part = previous with
             {
                 Configuration = new InstantQuotationPartConfiguration(
                     material.Key,
-                    color,
+                    previous.Geometry.BodyCount > 1 ? "Any" : color,
                     quantity,
                     material.Process is PrintProcess.Resin
                         ? BuildPreference.Standard
@@ -706,7 +712,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                         entry.File.FileName,
                         result.UploadReference!,
                         geometry,
-                        new InstantQuotationPartConfiguration("PLA", "Black", 1),
+                        new InstantQuotationPartConfiguration("PLA", geometry.BodyCount > 1 ? "Any" : "Black", 1),
                         result.PhysicalAnalysisUpload);
                     entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
@@ -803,15 +809,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 return false;
             }
 
+            parts = parts.Select(static part =>
+            {
+                var material = PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)
+                    ?? throw new ArgumentException("The selected material is not supported.");
+                if (!PricingCatalog.IsColorSupported(material.Key, part.Configuration.Color)
+                    && !(part.Geometry.BodyCount > 1 && part.Configuration.Color == "Any"))
+                {
+                    throw new ArgumentException("The selected color is not supported.");
+                }
+
+                return part with
+                {
+                    Configuration = part.Configuration with
+                    {
+                        Color = part.Geometry.BodyCount > 1 ? "Any" : part.Configuration.Color,
+                        BuildPreference = material.Process is PrintProcess.Resin
+                            ? BuildPreference.Standard
+                            : part.Configuration.BuildPreference,
+                    },
+                };
+            }).ToArray();
             await WaitForStateGateAsync(cancellationToken);
             try
             {
                 ThrowIfPricingCanceled(cancellationToken);
                 entries.Clear();
-                entries.AddRange(parts.Select(static part => UploadEntry.Restore(
-                    PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin
-                        ? part with { Configuration = part.Configuration with { BuildPreference = BuildPreference.Standard } }
-                        : part)));
+                entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
                 session = existing;
                 OrderQuote = null;
                 if (parts.Length > 0) await PersistAndPriceAsync(cancellationToken);

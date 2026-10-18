@@ -847,13 +847,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var part = Parts.Single(item => item.PartId == partId);
         var material = args.Value?.ToString() ?? part.Configuration.MaterialKey;
         var colors = GetColors(material);
-        var color = colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
-            ? part.Configuration.Color
-            : colors.First();
+        var color = part.Geometry.BodyCount > 1 ? "Any" : colors.First();
         await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async () =>
         {
-            await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), material);
-            await UpdatePartAppearanceAsync(partId, color);
+            var accepted = Parts.SingleOrDefault(item => item.PartId == partId);
+            if (accepted is null) return;
+            await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), accepted.Configuration.MaterialKey);
+            await UpdatePartAppearanceAsync(partId);
         });
     }
 
@@ -867,7 +867,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             part.Configuration.MaterialKey,
             color,
             part.Configuration.Quantity);
-        await UpdatePartAppearanceAsync(partId, color);
+        await UpdatePartAppearanceAsync(partId);
     }
 
     private void OnQuantityInput(Guid partId, ChangeEventArgs args)
@@ -1036,8 +1036,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
-        InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
+    private Task UpdatePartAppearanceAsync(Guid partId)
+    {
+        var accepted = Parts.SingleOrDefault(part => part.PartId == partId);
+        return accepted is null || accepted.Geometry.BodyCount > 1
+            ? Task.CompletedTask
+            : InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), accepted.Configuration.Color);
+    }
 
     private Task SelectReviewPartAsync(Guid partId) => SelectPreviewAsync(partId);
 
@@ -1162,6 +1167,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     }
 
     private IReadOnlyList<string> GetColors(string material) => workflow?.GetColors(material) ?? [];
+
+    private IReadOnlyList<string> GetPartColors(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (part.Geometry.BodyCount > 1) return ["Any"];
+        var colors = GetColors(part.Configuration.MaterialKey);
+        return PricingCatalog.IsColorSupported(part.Configuration.MaterialKey, part.Configuration.Color)
+            && !colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
+                ? [.. colors, part.Configuration.Color]
+                : colors;
+    }
 
     private string UploadStatus(InstantQuotationWorkflowUploadStatus status) => status switch
     {

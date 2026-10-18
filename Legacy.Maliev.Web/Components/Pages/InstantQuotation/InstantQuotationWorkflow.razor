@@ -238,12 +238,19 @@
                     <select id="color-@part.PartId"
                             name="color"
                             value="@part.Configuration.Color"
+                            disabled="@(part.Geometry.BodyCount > 1)"
                             @onchange="args => ChangeColorAsync(part.PartId, args)">
-                        @foreach (var color in GetColors(part.Configuration.MaterialKey))
+                        @foreach (var color in GetPartColors(part))
                         {
                             <option value="@color">@Localizer[color]</option>
                         }
                     </select>
+                    @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
+                    {
+                        <input type="color" aria-label="@Localizer["Color"]"
+                               value="@(part.Configuration.Color.StartsWith('#') ? part.Configuration.Color : "#000000")"
+                               @onchange="args => ChangeColorAsync(part.PartId, args)" />
+                    }
                     <div class="instant-quote__quantity-heading">
                         <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
                         @if (InstantQuotationBulkSavings.Calculate(part, HasUnacceptedConfiguration(part)) is { } savings)
