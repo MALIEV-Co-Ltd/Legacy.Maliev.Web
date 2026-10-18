@@ -69,6 +69,15 @@ public sealed class SharedNavigationMigrationTests : IClassFixture<TestingWebApp
 
         var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "site-entry.css"));
         Assert.Contains("public-navigation.css", styleEntry, StringComparison.Ordinal);
+
+        var navigationCss = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "public-navigation.css"));
+        var thaiNavigation = File.ReadAllText(Path.Combine(web, "Resources", "Components", "Layout", "PublicNavigation.th.resx"));
+        Assert.Contains("@media (min-width: 68rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("@media (max-width: 67.99rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("<value>CNC ตามแบบ</value>", thaiNavigation, StringComparison.Ordinal);
+        Assert.Contains("<value>พิมพ์ 3 มิติ</value>", thaiNavigation, StringComparison.Ordinal);
+        Assert.Contains("<value>สแกน 3 มิติ</value>", thaiNavigation, StringComparison.Ordinal);
+        Assert.Contains("<value>ไปที่ร้านค้าออนไลน์</value>", thaiNavigation, StringComparison.Ordinal);
     }
 
     [Theory]
