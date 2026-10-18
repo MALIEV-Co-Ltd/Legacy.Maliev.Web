@@ -152,7 +152,6 @@ public sealed class Index(
         if (!LeadAnalyticsEventQueue.TryQueueContactMessage(TempData, referenceNumber, out var analyticsFailure))
         {
             logger.LogWarning(
-                analyticsFailure,
                 "Analytics queue failed after contact message {MessageId} was persisted.",
                 referenceNumber);
         }

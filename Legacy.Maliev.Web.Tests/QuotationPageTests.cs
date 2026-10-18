@@ -2,12 +2,14 @@ using Legacy.Maliev.Web.Components.Pages.Quotation;
 using Microsoft.Extensions.Localization;
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using QuotationPage = Legacy.Maliev.Web.Pages.Quotation.Index;
@@ -16,6 +18,72 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class QuotationPageTests
 {
+    [Theory]
+    [InlineData("en", "Thank you. Your quotation request reference is #713.")]
+    [InlineData("th", "ขอบคุณ หมายเลขอ้างอิงคำขอใบเสนอราคาของคุณคือ #713")]
+    public async Task Post_AnalyticsSetterFailureKeepsApiIdentityAcknowledgesAndContinuesAllFollowUps(
+        string culture, string expectedAcknowledgement)
+    {
+        var previousCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var tempData = new LeadAnalyticsEventQueueParityTests.ThrowingTempDataDictionary();
+            var logger = new LeadAnalyticsEventQueueParityTests.RecordingLogger<QuotationPage>();
+            var journeyId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+            var quotation = new RecordingQuotationClient(new QuotationRequestResult(713, true, true)
+            {
+                TransactionId = "request-9713",
+                JourneyId = journeyId,
+            });
+            var files = new RecordingFileClient(upload: (_, _) =>
+            {
+                Assert.Equal(1, tempData.SetterCalls);
+                return Task.FromResult(new QuotationFileResult(true, true, true, false));
+            });
+            var notifications = new RecordingNotificationClient((_, _) =>
+            {
+                Assert.Equal(1, tempData.SetterCalls);
+                Assert.Equal(713, files.RequestId);
+                return Task.FromResult(new NotificationResult(true, true, true));
+            });
+            var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications, logger);
+            page.ServiceContext = "3d-printing";
+            page.Files = [FormFile("model.step", "application/step", "STEP")];
+            page.TempData = tempData;
+
+            var result = await page.OnPostSubmitRequestAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+
+            var redirect = Assert.IsType<RedirectToPageResult>(result);
+            Assert.Equal("Index", redirect.PageName);
+            Assert.Equal(culture, redirect.RouteValues!["culture"]);
+            Assert.Equal(1, quotation.CallCount);
+            Assert.Equal($"legacy-web-quotation-{page.SubmissionId:N}", quotation.IdempotencyKey);
+            Assert.Equal(713, files.RequestId);
+            Assert.Equal(1, files.UploadCount);
+            Assert.Equal(2, notifications.Messages.Count);
+            Assert.Equal(1, tempData.SetterCalls);
+            Assert.Equal(0, tempData.GetterCalls);
+            Assert.Equal(0, tempData.SaveCalls);
+            Assert.True(page.ModelState.IsValid);
+            Assert.Equal(expectedAcknowledgement, page.Notification);
+            Assert.DoesNotContain("private-tempdata-setter-fault", page.Notification, StringComparison.Ordinal);
+            using var attempted = JsonDocument.Parse(Assert.IsType<string>(tempData.AttemptedValue));
+            Assert.Equal("request-9713", attempted.RootElement.GetProperty("transaction_id").GetString());
+            Assert.Equal(journeyId.ToString(), attempted.RootElement.GetProperty("journey_id").GetString());
+            Assert.True(attempted.RootElement.GetProperty("has_files").GetBoolean());
+            var warning = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, warning.Level);
+            Assert.Null(warning.Exception);
+            Assert.Equal("Analytics queue failed after quotation request 713 was persisted.", warning.Message);
+            Assert.DoesNotContain("private-tempdata-setter-fault", warning.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
     [Theory]
     [InlineData("3d-printing", "3d_printing")]
     [InlineData("3D-Scanning", "3d_scanning")]
@@ -336,7 +404,8 @@ public sealed class QuotationPageTests
         RecordingQuotationClient quotationClient,
         RecordingFileClient fileClient,
         IAntiBotVerifier antiBotVerifier,
-        INotificationClient? notificationClient = null)
+        INotificationClient? notificationClient = null,
+        ILogger<QuotationPage>? logger = null)
     {
         var httpContext = new DefaultHttpContext();
         return new QuotationPage(
@@ -355,7 +424,7 @@ public sealed class QuotationPageTests
                 }),
             new StringLocalizer<QuotationContent>(new ResourceManagerStringLocalizerFactory(
                 Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }), NullLoggerFactory.Instance)),
-            NullLogger<QuotationPage>.Instance)
+            logger ?? NullLogger<QuotationPage>.Instance)
         {
             PageContext = new PageContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new MemoryTempDataProvider()),

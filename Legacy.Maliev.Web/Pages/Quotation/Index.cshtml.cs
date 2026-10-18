@@ -312,7 +312,6 @@ public sealed class Index(
         if (!analyticsQueued)
         {
             logger.LogWarning(
-                analyticsFailure,
                 "Analytics queue failed after quotation request {QuotationRequestId} was persisted.",
                 referenceNumber);
         }

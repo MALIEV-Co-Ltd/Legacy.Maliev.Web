@@ -3,11 +3,13 @@ using Microsoft.Extensions.Localization;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
 using System.Text.Json;
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ContactPage = Legacy.Maliev.Web.Pages.Contact.Index;
@@ -16,6 +18,55 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class ContactPageTests
 {
+    [Theory]
+    [InlineData("en", "Thank you for contacting us. Your reference number is #913.")]
+    [InlineData("th", "ขอบคุณที่ติดต่อเรา หมายเลขอ้างอิงของคุณคือ #913")]
+    public async Task Post_AnalyticsSetterFailureStillAcknowledgesPersistedContactAndSendsBothNotifications(
+        string culture, string expectedAcknowledgement)
+    {
+        var previousCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var tempData = new LeadAnalyticsEventQueueParityTests.ThrowingTempDataDictionary();
+            var logger = new LeadAnalyticsEventQueueParityTests.RecordingLogger<ContactPage>();
+            var contact = new RecordingContactClient(new ContactSubmissionResult(913, true, true));
+            var notifications = new RecordingNotificationClient((_, _) =>
+            {
+                Assert.Equal(1, tempData.SetterCalls);
+                return Task.FromResult(new NotificationResult(true, true, true));
+            });
+            var page = CreatePage(contact, new StubAntiBotVerifier(true), notifications, logger: logger);
+            page.TempData = tempData;
+
+            var result = await page.OnPostSubmitRequestAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+
+            var redirect = Assert.IsType<RedirectToPageResult>(result);
+            Assert.Equal("Index", redirect.PageName);
+            Assert.Equal(culture, redirect.RouteValues!["culture"]);
+            Assert.Equal(1, contact.CallCount);
+            Assert.Equal(2, notifications.Messages.Count);
+            Assert.Equal(1, tempData.SetterCalls);
+            Assert.Equal(0, tempData.GetterCalls);
+            Assert.Equal(0, tempData.SaveCalls);
+            Assert.True(page.ModelState.IsValid);
+            Assert.Equal(expectedAcknowledgement, page.Notification);
+            Assert.DoesNotContain("private-tempdata-setter-fault", page.Notification, StringComparison.Ordinal);
+            using var attempted = JsonDocument.Parse(Assert.IsType<string>(tempData.AttemptedValue));
+            Assert.Equal("maliev_contact_submitted", attempted.RootElement.GetProperty("event").GetString());
+            Assert.Equal("message-913", attempted.RootElement.GetProperty("transaction_id").GetString());
+            var warning = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, warning.Level);
+            Assert.Null(warning.Exception);
+            Assert.Equal("Analytics queue failed after contact message 913 was persisted.", warning.Message);
+            Assert.DoesNotContain("private-tempdata-setter-fault", warning.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
     [Fact]
     public async Task Post_InvalidAntiBotTokenNeverCallsContactService()
     {
@@ -222,7 +273,8 @@ public sealed class ContactPageTests
         RecordingContactClient contactClient,
         IAntiBotVerifier antiBotVerifier,
         INotificationClient? notificationClient = null,
-        IContactTrustedCustomerLoader? trustedCustomerLoader = null)
+        IContactTrustedCustomerLoader? trustedCustomerLoader = null,
+        ILogger<ContactPage>? logger = null)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString("?culture=en");
@@ -243,7 +295,7 @@ public sealed class ContactPageTests
             trustedCustomerLoader ?? new StubTrustedCustomerLoader(new(null, false, true)),
             new StringLocalizer<ContactContent>(new ResourceManagerStringLocalizerFactory(
                 Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }), NullLoggerFactory.Instance)),
-            NullLogger<ContactPage>.Instance)
+            logger ?? NullLogger<ContactPage>.Instance)
         {
             PageContext = new PageContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new MemoryTempDataProvider()),
