@@ -85,6 +85,9 @@ public sealed class CareerIndexStaticSsrRouteTests(ITestOutputHelper output) : I
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "<!--email_off-->หากคุณมีข้อสงสัยเกี่ยวกับตำแหน่งงานที่เปิดรับ กรุณาติดต่อสอบถามเข้ามาได้ที่ career@maliev.com<!--/email_off-->"
+            : "<!--email_off-->If you have any questions about the positions, please do not hesitate to contact our contact person directly.<!--/email_off-->", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "ร่วมสร้างงานผลิตที่ใช้งานได้จริงกับ MALIEV" : "Build useful manufacturing work with MALIEV", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "วิศวกรรมและการผลิต" : "Engineering and production", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "ดูแลลูกค้าและโปรเจ็ค" : "Customer and project support", source, StringComparison.Ordinal);
@@ -579,6 +582,7 @@ public sealed class CareerIndexStaticSsrRouteTests(ITestOutputHelper output) : I
         var source = WebUtility.HtmlDecode(await client.GetStringAsync("/career?culture=en"));
 
         Assert.Contains("<title>Career | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<!--email_off-->If you have any questions about the positions, please do not hesitate to contact our contact person directly.<!--/email_off-->", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Equal(new CareerRequest(CareerSort.JobId_Ascending, null, 1, 25), clientStub.LastRequest);
