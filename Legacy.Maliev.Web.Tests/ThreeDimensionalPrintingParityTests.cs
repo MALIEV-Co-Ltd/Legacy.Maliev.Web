@@ -59,6 +59,12 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("ไฟล์เมชอาจต้องซ่อม", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
         Assert.Contains("class=\"service-page-toc\"", source, StringComparison.Ordinal);
         Assert.Equal(6, ServiceCardMediaRegex().Matches(source).Count);
+        Assert.Equal(3, Regex.Matches(
+            Regex.Match(source, "<section id=\"printing-processes\"[\\s\\S]*?</section>").Value,
+            "class=\"service-card service-card-visual\"").Count);
+        Assert.Equal(3, Regex.Matches(
+            Regex.Match(source, "<section id=\"printing-file-guide\"[\\s\\S]*?</section>").Value,
+            "class=\"service-card service-card-visual\"").Count);
         Assert.Equal(8, FaqDetailsRegex().Matches(source).Count);
         Assert.Contains("Shipping within Thailand starts at THB 100", source, StringComparison.Ordinal);
         Assert.Contains("Pickup is available at our Pak Kret workshop by appointment", source, StringComparison.Ordinal);
