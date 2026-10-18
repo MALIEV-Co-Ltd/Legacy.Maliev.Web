@@ -2795,8 +2795,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "Member workspace", "Review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
-    [InlineData("th", "พื้นที่สมาชิก", "ตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    [InlineData("en", "Member workspace", "Sign in to review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
+    [InlineData("th", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โปรเจ็ค และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
     public async Task AccountIndex_RendersLocalizedAnonymousStaticSsrActions(
         string culture,
         string workspaceLabel,
@@ -2834,6 +2834,8 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
         Assert.Contains("Signed in as", source, StringComparison.Ordinal);
+        Assert.Contains(">Review quotations, orders, project files, and account details.<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Sign in to review quotations, orders, project files, and account details.<", source, StringComparison.Ordinal);
         Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Member/Account/Manage/Profile\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/Member/Account/Manage/Address\"", source, StringComparison.OrdinalIgnoreCase);

@@ -1091,6 +1091,10 @@ body {
     line-height: 1.65;
 }
 
+.career-copy {
+    white-space: pre-line;
+}
+
 .career-table-wrapper {
     position: relative;
 }

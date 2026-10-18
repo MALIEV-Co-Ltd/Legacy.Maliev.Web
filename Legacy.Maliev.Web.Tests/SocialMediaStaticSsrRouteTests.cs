@@ -12,6 +12,7 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         "https://www.tiktok.com/@maliev.marketing",
         "https://www.instagram.com/maliev.manufacturing/",
         "https://www.threads.com/@maliev.manufacturing",
+        "https://www.facebook.com/maliev.manufacturing/",
         "https://line.me/ti/p/@maliev",
         "https://wa.me/66898950690",
         "https://m.me/maliev.manufacturing/",
@@ -73,6 +74,10 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "ชมตัวอย่างงานผลิต โปรเจ็คสแกน 3 มิติ ชิ้นงานพิมพ์ และข้อมูลการผลิตที่นำไปใช้ได้จริง"
+            : "See production examples, 3D scanning projects, printed parts, and practical manufacturing updates.", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "วิดีโอกระบวนการและตัวอย่างโปรเจ็ค" : "Process videos and project demonstrations", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Equal(SocialDestinations.Length, Regex.Matches(source, "class=\"maliev-panel social-link-card\"", RegexOptions.CultureInvariant).Count);
         foreach (var destination in SocialDestinations)
@@ -82,6 +87,7 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
 
         foreach (var (destination, name, english, thai, placement) in new[]
         {
+            ("https://www.facebook.com/maliev.manufacturing/", "Facebook", "Company news and customer-facing updates", "ข่าวบริษัทและประกาศสำหรับลูกค้า", string.Empty),
             ("https://wa.me/66898950690", "WhatsApp", "Message our team through WhatsApp", "ส่งข้อความถึงทีมงานผ่าน WhatsApp", "about_whatsapp"),
             ("https://m.me/maliev.manufacturing/", "Messenger", "Message our team through Facebook Messenger", "ส่งข้อความถึงทีมงานผ่าน Facebook Messenger", "about_messenger")
         })
@@ -92,7 +98,10 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
                 RegexOptions.CultureInvariant).Cast<Match>());
             Assert.Contains($"<strong>{name}</strong>", card.Value, StringComparison.Ordinal);
             Assert.Contains($"<span>{(culture == "th" ? thai : english)}</span>", card.Value, StringComparison.Ordinal);
-            Assert.Contains($"data-contact-placement=\"{placement}\"", card.Value, StringComparison.Ordinal);
+            if (placement.Length > 0)
+            {
+                Assert.Contains($"data-contact-placement=\"{placement}\"", card.Value, StringComparison.Ordinal);
+            }
             if (name == "WhatsApp")
             {
                 Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", card.Value, StringComparison.Ordinal);
@@ -141,6 +150,7 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         var source = WebUtility.HtmlDecode(await client.GetStringAsync("/about/socialmedia?culture=en"));
 
         Assert.Contains("<title>Social media | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://www.facebook.com/maliev.manufacturing/\" target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
