@@ -17,6 +17,8 @@ namespace Legacy.Maliev.Web.Pages.Shared
     public static class LeadAnalyticsEventQueue
     {
         private const string TempDataKey = "Maliev.LeadAnalyticsEvent";
+        // Pre-605 consumers treat every event under the legacy key as a conversion.
+        private const string ContactTempDataKey = "Maliev.ContactAnalyticsEvent.v1";
 
         /// <summary>
         /// Attempts to queue a persisted contact-message event without allowing analytics failures to escape.
@@ -207,13 +209,19 @@ namespace Legacy.Maliev.Web.Pages.Shared
         {
             ArgumentNullException.ThrowIfNull(tempData);
 
+            return TryConsume(tempData, ContactTempDataKey, out leadEvent)
+                || TryConsume(tempData, TempDataKey, out leadEvent);
+        }
+
+        private static bool TryConsume(ITempDataDictionary tempData, string key, out LeadAnalyticsEvent? leadEvent)
+        {
             leadEvent = null;
-            if (!tempData.TryGetValue(TempDataKey, out object? value))
+            if (!tempData.TryGetValue(key, out object? value))
             {
                 return false;
             }
 
-            tempData.Remove(TempDataKey);
+            tempData.Remove(key);
             if (value is not string serializedEvent)
             {
                 return false;
@@ -239,7 +247,10 @@ namespace Legacy.Maliev.Web.Pages.Shared
         private static void Queue(ITempDataDictionary tempData, LeadAnalyticsEvent leadEvent)
         {
             ArgumentNullException.ThrowIfNull(tempData);
-            tempData[TempDataKey] = JsonSerializer.Serialize(leadEvent);
+            var key = string.Equals(leadEvent.LeadType, "contact", StringComparison.Ordinal)
+                ? ContactTempDataKey
+                : TempDataKey;
+            tempData[key] = JsonSerializer.Serialize(leadEvent);
         }
 
         private static bool TryQueue(
