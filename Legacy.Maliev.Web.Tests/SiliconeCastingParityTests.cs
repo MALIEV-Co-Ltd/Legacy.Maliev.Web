@@ -44,7 +44,7 @@ public sealed partial class SiliconeCastingParityTests : IClassFixture<TestingWe
             "Services",
             "SiliconeCastingContent.razor"));
 
-        Assert.Contains("service-page-toc", component, StringComparison.Ordinal);
+        Assert.Contains("<ServicePageToc />", component, StringComparison.Ordinal);
         Assert.Contains("silicone-pricing", component, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"silicone-faq-title\"", component, StringComparison.Ordinal);
         Assert.Contains("decoding=\"async\"", component, StringComparison.Ordinal);

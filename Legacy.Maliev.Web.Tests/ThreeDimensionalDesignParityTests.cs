@@ -48,7 +48,7 @@ public sealed partial class ThreeDimensionalDesignParityTests : IClassFixture<Te
             "Services",
             "ThreeDimensionalDesignContent.razor"));
 
-        Assert.Contains("service-page-toc", component, StringComparison.Ordinal);
+        Assert.Contains("<ServicePageToc />", component, StringComparison.Ordinal);
         Assert.Contains("service-split-image", component, StringComparison.Ordinal);
         Assert.Contains("decoding=\"async\"", component, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"design-faq-title\"", component, StringComparison.Ordinal);
