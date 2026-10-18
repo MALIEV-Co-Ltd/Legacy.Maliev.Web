@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -13,6 +14,63 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
     : IClassFixture<TestingWebApplicationFactory>
 {
     private const string EnglishCookie = ".AspNetCore.Culture=c%3Den%7Cuic%3Den";
+
+    [Theory]
+    [InlineData("GET", "https", "www.maliev.com", "/3d-printing", "?utm_source=legacy", "https://www.maliev.com/services/3d-printing?utm_source=legacy")]
+    [InlineData("GET", "https", "www.maliev.com", "/about/", "?ref=footer", "https://www.maliev.com/about?ref=footer")]
+    [InlineData("HEAD", "https", "maliev.com", "/3d-scanning/", "?source=map", "https://www.maliev.com/services/3d-scanning?source=map")]
+    public async Task SourcePublicUrlVariants_RedirectOnceAndPreserveTheirQuery(
+        string method, string scheme, string host, string path, string query, string expectedLocation)
+    {
+        var nextCalled = false;
+        var context = SourceCanonicalContext(method, scheme, host, path, query);
+        var middleware = new global::Legacy.Maliev.Web.CanonicalUrlRedirectMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(StatusCodes.Status301MovedPermanently, context.Response.StatusCode);
+        Assert.Equal(expectedLocation, context.Response.Headers.Location.ToString());
+        Assert.False(nextCalled);
+    }
+
+    [Fact]
+    public async Task SourceCanonicalGetAndMutation_ContinueWithoutRedirect()
+    {
+        var nextCallCount = 0;
+        var middleware = new global::Legacy.Maliev.Web.CanonicalUrlRedirectMiddleware(_ =>
+        {
+            nextCallCount++;
+            return Task.CompletedTask;
+        });
+        var canonical = SourceCanonicalContext(
+            HttpMethods.Get, "https", "www.maliev.com", "/services/3d-printing", "?campaign=search");
+        var mutation = SourceCanonicalContext(
+            HttpMethods.Post, "https", "maliev.com", "/3d-printing/", string.Empty);
+
+        await middleware.InvokeAsync(canonical);
+        await middleware.InvokeAsync(mutation);
+
+        Assert.Equal(2, nextCallCount);
+        Assert.False(canonical.Response.Headers.ContainsKey("Location"));
+        Assert.False(mutation.Response.Headers.ContainsKey("Location"));
+    }
+
+    [Fact]
+    public async Task SourceLocalPreview_NormalizesPathWithoutChangingHost()
+    {
+        var context = SourceCanonicalContext(
+            HttpMethods.Get, "http", "localhost:5000", "/about/", "?preview=true");
+        var middleware = new global::Legacy.Maliev.Web.CanonicalUrlRedirectMiddleware(_ => Task.CompletedTask);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(StatusCodes.Status301MovedPermanently, context.Response.StatusCode);
+        Assert.Equal("/about?preview=true", context.Response.Headers.Location.ToString());
+    }
 
     [Theory]
     [InlineData(true, "GetEstimate")]
@@ -240,6 +298,18 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
         Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DefaultHttpContext SourceCanonicalContext(
+        string method, string scheme, string host, string path, string query)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Method = method;
+        context.Request.Scheme = scheme;
+        context.Request.Host = new HostString(host);
+        context.Request.Path = new PathString(path);
+        context.Request.QueryString = new QueryString(query);
+        return context;
     }
 
     private HttpClient Client(string origin) => factory.CreateClient(new WebApplicationFactoryClientOptions
