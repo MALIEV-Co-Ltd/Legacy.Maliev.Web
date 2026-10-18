@@ -15,6 +15,142 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Theory]
+    [InlineData("desktop", "model/x.stl-ascii")]
+    [InlineData("iphone", "application/sla")]
+    [InlineData("ipad", "application/vnd.ms-pki.stl")]
+    public async Task MobileCadPickerPreservesAllowlistAndRejectsPdfBeforeRealStlUpload(
+        string platform, string contentType)
+    {
+        const string expectedTypes = ".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges,model/stl,application/sla,application/vnd.ms-pki.stl,model/x.stl-binary,model/x.stl-ascii,model/obj,model/3mf,model/gltf-binary,model/gltf+json,model/step,model/iges";
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 },
+            HasTouch = platform != "desktop",
+            IsMobile = platform != "desktop",
+            UserAgent = platform == "iphone"
+                ? "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"
+                : "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
+        });
+        if (platform == "ipad")
+        {
+            await context.AddInitScriptAsync("""
+                Object.defineProperty(navigator, 'platform', { configurable: true, get: () => 'MacIntel' });
+                Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, get: () => 2 });
+                """);
+        }
+        await using var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const zone = document.querySelector('.instant-quote__workflow');
+              const input = document.querySelector('#instant-quote-files');
+              if (!zone || !input || input._blazorInputFileNextFileId === undefined
+                  || input.disabled || zone.getAttribute('aria-busy') === 'true') return false;
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([], 'picker-readiness.stl', { type: 'model/stl' }));
+              const probe = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer });
+              return !zone.dispatchEvent(probe) && probe.defaultPrevented;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var input = page.Locator("#instant-quote-files");
+        if (platform == "desktop")
+        {
+            Assert.Equal(expectedTypes, await input.GetAttributeAsync("accept"));
+        }
+        else
+        {
+            Assert.Null(await input.GetAttributeAsync("accept"));
+            Assert.Equal(expectedTypes, await input.GetAttributeAsync("data-accepted-types"));
+        }
+
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "drawing.pdf",
+            MimeType = "application/pdf",
+            Buffer = System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 unsupported model"),
+        });
+        await page.WaitForFunctionAsync(
+            """
+            () => document.querySelector('[data-workflow-preview-status]')?.textContent
+                .includes('3D preview is unavailable.')
+              && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.Equal(0, upload.StartedUploads);
+        Assert.Equal(0, upload.VerifiedUploads);
+        Assert.Equal(0, upload.FinalizeCalls);
+        Assert.Equal(0, await page.Locator("[data-workflow-part]").CountAsync());
+        Assert.Equal(0, await page.Locator("[data-workflow-review-part]").CountAsync());
+
+        var bytes = WallThicknessParityBrowserFixture.Box(5);
+        var expectedDigest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "mobile-picker.stl",
+            MimeType = contentType,
+            Buffer = bytes,
+        });
+        await page.WaitForFunctionAsync(
+            """
+            () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
+              && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)') !== null
+              && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal(1, upload.StartedUploads);
+        Assert.Equal(1, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+        var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+        await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+        var session = await factory.Services.GetRequiredService<IInstantQuotationSessionStore>()
+            .GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(session);
+        var part = Assert.Single(session.Parts);
+        Assert.Equal(partId, part.PartId);
+        Assert.Equal("mobile-picker.stl", part.DisplayFileName);
+        Assert.Equal(expectedDigest, part.Geometry.Sha256);
+        Assert.NotNull(part.PhysicalAnalysisUpload);
+        Assert.Equal(contentType, part.PhysicalAnalysisUpload.ContentType);
+        Assert.Equal("mobile-picker.stl", part.PhysicalAnalysisUpload.FileName);
+        var original = upload.Read(upload.SessionId, upload.OwnerIdentity, part.PhysicalAnalysisUpload.FileId);
+        Assert.Equal(bytes, original.Content);
+        Assert.NotNull(session.QuoteAuthorization);
+        Assert.Contains(session.PhysicalReceipts!, receipt => receipt.PartId == partId
+            && receipt.UploadSha256 == expectedDigest && receipt.MotionSeconds > 0);
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+        Assert.Equal(1, await page.Locator("[data-workflow-review-part]").CountAsync());
+        Assert.Contains("mobile-picker.stl",
+            await page.Locator("[data-workflow-review-part]").InnerTextAsync(), StringComparison.Ordinal);
+        Assert.Equal(0, upload.FinalizeCalls);
+        Assert.Empty(pageErrors);
+    }
+
+    [Theory]
     [InlineData(320, "th")]
     [InlineData(375, "en")]
     public async Task UploadedPartShowsOnlyPhysicallyVerifiedQuantityAndReviewActionsReachable(int width, string culture)
