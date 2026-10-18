@@ -445,7 +445,7 @@ export function createWorkflowPreviewInterop({
   function renderReviewThumbnails(root) {
     if (!viewer || !root?.querySelectorAll) return 0;
     let rendered = 0;
-    for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id]')) {
+    for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
       let source = null;
       try {
         source = viewer.snapshot?.(image.dataset.partId);

@@ -301,7 +301,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
         }
 
-        if ((VisibleSections.Review || VisibleSections.CustomerDetails) && previewInterop is not null)
+        if ((VisibleSections.Parts || VisibleSections.Review || VisibleSections.CustomerDetails) && previewInterop is not null)
         {
             try
             {

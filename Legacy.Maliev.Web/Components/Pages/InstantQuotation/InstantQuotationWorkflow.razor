@@ -137,6 +137,16 @@
                 <article data-workflow-part data-part-id="@part.PartId">
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4>@part.DisplayFileName</h4>
+                    <img class="instant-quote__review-thumbnail"
+                         data-workflow-thumbnail
+                         data-part-id="@ViewerPartKey(part.PartId)"
+                         src="/src/images/3d-canvas-placeholder.svg"
+                         alt="" />
+                    <div data-workflow-part-summary>
+                        <span data-workflow-summary-configuration>@part.Configuration.MaterialKey @(part.Configuration.Quantity)×</span>
+                        <span data-workflow-summary-unit-price
+                              aria-label="@(Localizer["Unit price"].Value + " " + Money(DisplayQuote(part)?.UnitPrice))">@Money(DisplayQuote(part)?.UnitPrice)</span>
+                    </div>
                     <button type="button"
                             aria-label="@Localizer["View {0}", part.DisplayFileName]"
                             aria-pressed="@IsPreviewSelected(part.PartId).ToString().ToLowerInvariant()"
