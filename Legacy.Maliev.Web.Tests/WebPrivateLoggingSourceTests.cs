@@ -486,7 +486,7 @@ public sealed class WebPrivateLoggingSourceTests
                 Assert.Equal(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
                 Assert.Equal(nonce, Assert.Single(response.Headers.GetValues("X-Maliev-Diagnostic-Id")));
                 Assert.False(response.Headers.Contains("X-Incident-Id"));
-                typedError = Assert.IsType<Maliev.Aspire.ServiceDefaults.Diagnostics.ProductionObservabilityDiagnosticException>(
+                typedError = Assert.IsType<global::Maliev.Aspire.ServiceDefaults.Diagnostics.ProductionObservabilityDiagnosticException>(
                     factory.Capture.Error);
             }
         }
@@ -697,7 +697,7 @@ public sealed class WebPrivateLoggingSourceTests
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
                 Exception? exception, Func<TState, Exception?, string> formatter)
             {
-                if (exception is Maliev.Aspire.ServiceDefaults.Diagnostics.ProductionObservabilityDiagnosticException)
+                if (exception is global::Maliev.Aspire.ServiceDefaults.Diagnostics.ProductionObservabilityDiagnosticException)
                     owner.Error = exception;
             }
         }
