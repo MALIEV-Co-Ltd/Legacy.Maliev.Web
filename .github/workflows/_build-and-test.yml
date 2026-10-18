@@ -100,7 +100,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~CncOwnedResourceScopeTests|FullyQualifiedName~MaterialPricingAsyncCleanupTests"
+          --filter "FullyQualifiedName~CncOwnedResourceScopeTests|FullyQualifiedName~MaterialPricingAsyncCleanupTests|FullyQualifiedName~WebSurfaceOwnedLifetimeTests|FullyQualifiedName~WebSurfaceTests.MemberQuotationDetail_RendersLocalizedOwnedStaticSsr"
           --logger trx --results-directory ./cnc-resource-test-results
       - name: Verify quotation-only conversions and minimal contact diagnostics
         run: >-
