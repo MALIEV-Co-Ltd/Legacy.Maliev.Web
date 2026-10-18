@@ -35,6 +35,13 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(HomeContent)\"", fallback, StringComparison.Ordinal);
         Assert.Contains("HomeHeroSelection.GetVariant(Model.HttpContext, HostEnvironment)", fallback, StringComparison.Ordinal);
+
+        Assert.Contains("aria-labelledby=\"landing-services-directory-title\"", content, StringComparison.Ordinal);
+        Assert.Contains("landing-service-directory-link landing-service-card--directory-link", content, StringComparison.Ordinal);
+        Assert.Contains("landing-service-directory-preview", content, StringComparison.Ordinal);
+        Assert.Contains("landing-service-directory-option", content, StringComparison.Ordinal);
+        Assert.Contains("Do you have 3D files or drawings?", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-directory-finder.png", content, StringComparison.Ordinal);
     }
 
     [Theory]

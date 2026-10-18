@@ -65,6 +65,20 @@ public sealed class ServiceFinderPresentationTests
         Assert.Contains("files-image", script, StringComparison.Ordinal);
         Assert.Contains("aria-current", script, StringComparison.Ordinal);
         Assert.Contains("scrollFinderElement", script, StringComparison.Ordinal);
+
+        Assert.Contains("data-finder-progress-optional", finder, StringComparison.Ordinal);
+        Assert.Contains("data-finder-optional-progress", finder, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)", css, StringComparison.Ordinal);
+        Assert.Contains(".service-finder-progress-optional", css, StringComparison.Ordinal);
+        Assert.Contains(".service-finder-progress li[data-finder-optional-progress]", css, StringComparison.Ordinal);
+        Assert.Contains("function shouldIncludeOptionalStep(step)", script, StringComparison.Ordinal);
+        Assert.Contains("return allSteps.filter(shouldIncludeOptionalStep);", script, StringComparison.Ordinal);
+        Assert.Contains("if (step.hasAttribute('data-finder-optional') && !shouldIncludeOptionalStep(step))", script, StringComparison.Ordinal);
+        Assert.Contains("if (progressOptionalLabel) progressOptionalLabel.hidden = !currentStep || !currentStep.hasAttribute('data-finder-optional');", script, StringComparison.Ordinal);
+        Assert.Contains("direction === 'service-machining'", script, StringComparison.Ordinal);
+        Assert.Contains("workflow === 'workflow-3d-scanning'", script, StringComparison.Ordinal);
+        Assert.Contains("direction === 'service-molding'", script, StringComparison.Ordinal);
+        Assert.Contains("guidanceReason", script, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

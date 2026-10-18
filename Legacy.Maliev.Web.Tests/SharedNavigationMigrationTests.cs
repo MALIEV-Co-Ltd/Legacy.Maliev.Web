@@ -73,6 +73,8 @@ public sealed class SharedNavigationMigrationTests : IClassFixture<TestingWebApp
         var navigationCss = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "public-navigation.css"));
         var thaiNavigation = File.ReadAllText(Path.Combine(web, "Resources", "Components", "Layout", "PublicNavigation.th.resx"));
         Assert.Contains("@media (min-width: 90rem)", navigationCss, StringComparison.Ordinal);
+
+        Assert.Contains(".landing-nav-account .maliev-account-link { display: inline-flex; align-items: center; gap: .6rem; }", navigationCss, StringComparison.Ordinal);
         Assert.Contains("@media (max-width: 89.99rem)", navigationCss, StringComparison.Ordinal);
         Assert.Contains("gap: clamp(1rem, 2vw, 2rem)", navigationCss, StringComparison.Ordinal);
         Assert.Contains(".landing-nav-content { width: 100%; min-width: 0; }", navigationCss, StringComparison.Ordinal);

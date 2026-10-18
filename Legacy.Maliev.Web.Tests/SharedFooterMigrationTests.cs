@@ -47,6 +47,21 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
         Assert.Contains("<SocialLinks />", footer, StringComparison.Ordinal);
         Assert.DoesNotContain("@rendermode", footer, StringComparison.Ordinal);
 
+        Assert.Contains("36/1 Moo 3", footer, StringComparison.Ordinal);
+        Assert.Contains("Nonthaburi 11120", footer, StringComparison.Ordinal);
+        Assert.Contains("0125561001573", footer, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Legal/PrivacyPolicy\"", footer, StringComparison.Ordinal);
+        Assert.DoesNotContain("ISO 9001", footer, StringComparison.OrdinalIgnoreCase);
+        var home = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Home", "HomeContent.razor"));
+        var landing = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "landing.css"));
+        var app = File.ReadAllText(Path.Combine(web, "Components", "App.razor"));
+        var instantLayout = File.ReadAllText(Path.Combine(web, "Pages", "Shared", "_InstantQuotationLayout.cshtml"));
+        Assert.DoesNotContain("ISO 9001", home, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ISO 9001", landing, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@if (!requiresInstantQuotationBootstrap && !isNotFoundError)\n    {\n        <PublicFooter />", app, StringComparison.Ordinal);
+        Assert.Contains("PublicNavigation", instantLayout, StringComparison.Ordinal);
+        Assert.DoesNotContain("PublicFooter", instantLayout, StringComparison.Ordinal);
+
         var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "site-entry.css"));
         Assert.Contains("public-footer.css", styleEntry, StringComparison.Ordinal);
         Assert.DoesNotContain("<style>", footer, StringComparison.OrdinalIgnoreCase);

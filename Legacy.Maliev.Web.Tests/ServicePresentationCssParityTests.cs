@@ -35,6 +35,23 @@ public sealed class ServicePresentationCssParityTests
         Assert.Contains(".landing-service-card--injection > img { aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% center; padding: 0;", landing, StringComparison.Ordinal);
         Assert.Contains(".landing-section + .landing-section { padding-top: clamp(5.5rem, 8vw, 8rem); }", landing, StringComparison.Ordinal);
         Assert.Contains(".landing-service-card a { display: inline-flex; align-items: center; gap: .6rem;", landing, StringComparison.Ordinal);
+
+        Assert.Contains(".landing-service-card--directory { grid-column: span 2;", landing, StringComparison.Ordinal);
+        Assert.Contains("    .landing-service-card--directory { grid-column: auto; }", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-service-card > .landing-service-card--directory-link { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(12rem, .95fr);", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-service-card--directory-link:focus-visible", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-service-directory-preview { container-type: inline-size;", landing, StringComparison.Ordinal);
+        Assert.Contains("@container (min-width: 20rem)", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-service-directory-preview { grid-column: 1; grid-row: 2;", landing, StringComparison.Ordinal);
+        Assert.Matches(@"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.landing-service-directory-cta[^}]*transition:\s*none", landing);
+        var location = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServiceLocation.razor"));
+        Assert.Contains("SocialNetworks.GoogleMaps", location, StringComparison.Ordinal);
+        Assert.Contains("SocialNetworks.Line", location, StringComparison.Ordinal);
+        Assert.Contains("SocialNetworks.WhatsApp", location, StringComparison.Ordinal);
+        Assert.Contains("class=\"fas fa-map-marked-alt\" aria-hidden=\"true\"", location, StringComparison.Ordinal);
+        Assert.Contains("class=\"fab fa-line\" aria-hidden=\"true\"", location, StringComparison.Ordinal);
+        Assert.Contains("class=\"fab fa-whatsapp\" aria-hidden=\"true\"", location, StringComparison.Ordinal);
+        Assert.Contains("class=\"fas fa-file-upload\" aria-hidden=\"true\"", location, StringComparison.Ordinal);
         Assert.Contains(".service-quick { position: relative; z-index: 2; margin-top: -3.5rem; background: transparent; }", services, StringComparison.Ordinal);
         Assert.Contains(".injection-molding-page .service-quick { margin-top: -3.5rem; }", services, StringComparison.Ordinal);
         Assert.Contains(".injection-hero { min-height: 0; display: grid; align-items: stretch; }", services, StringComparison.Ordinal);
