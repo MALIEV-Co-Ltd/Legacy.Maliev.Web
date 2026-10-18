@@ -231,6 +231,12 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         Assert.Contains("ส่ง CAD แบบ 2D ระบุวัสดุและจำนวนเพื่อให้ตรวจสอบก่อนเสนอราคา", content, StringComparison.Ordinal);
         Assert.Contains("CNC machining starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งาน CNC เริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
+        Assert.Contains("14 days", content, StringComparison.Ordinal);
+        Assert.Contains("material sourcing", content, StringComparison.Ordinal);
+        Assert.Contains("programming", content, StringComparison.Ordinal);
+        Assert.Contains("inspection", content, StringComparison.Ordinal);
+        Assert.Contains("Rush orders", content, StringComparison.Ordinal);
+        Assert.Contains("additional markup", content, StringComparison.Ordinal);
         Assert.Contains("What file formats should I send?", content, StringComparison.Ordinal);
         Assert.Contains("อัปโหลด STEP/STP (แนะนำ) หรือ IGES/IGS", content, StringComparison.Ordinal);
         Assert.Contains("id=\"cnc-file-guide\"", content, StringComparison.Ordinal);

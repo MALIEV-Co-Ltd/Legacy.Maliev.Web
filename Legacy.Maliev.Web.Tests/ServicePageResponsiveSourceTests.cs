@@ -47,6 +47,9 @@ public sealed class ServicePageResponsiveSourceTests
     {
         var source = Read("Legacy.Maliev.Web", "Components", "Pages", "Services", fileName);
         Assert.Contains("<ServiceBreadcrumb", source, StringComparison.Ordinal);
+        Assert.True(
+            source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal) < source.IndexOf("<section class=\"service-hero\"", StringComparison.Ordinal),
+            "The service breadcrumb must precede its hero.");
         Assert.Contains("<ServicePageToc />", source, StringComparison.Ordinal);
         Assert.Contains($"ServiceKey=\"{service}\"", source, StringComparison.Ordinal);
     }
@@ -61,6 +64,40 @@ public sealed class ServicePageResponsiveSourceTests
         foreach (var required in new[] { "SS400", "S50C", "SCM", "SKD", "SUS", "POM", "PA6", "Acrylic", "PVC", "PTFE", "One piece", "wood or organic materials" })
         {
             Assert.Contains(required, cnc, StringComparison.Ordinal);
+        }
+
+        var cncCapabilities = System.Text.RegularExpressions.Regex.Match(cnc, "<section id=\"cnc-capabilities\"[\\s\\S]*?</section>").Value;
+        var scanningDecisions = string.Join(Environment.NewLine,
+            new[] { "scanning-deliverables", "scanning-service-modes", "scanning-preparation" }
+                .Select(id => System.Text.RegularExpressions.Regex.Match(scanning, $"<section id=\"{id}\"[\\s\\S]*?</section>").Value));
+        var decisionSections = string.Join(Environment.NewLine, cncCapabilities, scanningDecisions);
+        var cardImages = System.Text.RegularExpressions.Regex.Matches(decisionSections, "<img class=\"service-card-media\"[^>]+>");
+        Assert.Equal(12, cardImages.Count);
+        Assert.Equal(12, System.Text.RegularExpressions.Regex.Matches(decisionSections, "class=\"service-card service-card-visual\"").Count);
+        foreach (System.Text.RegularExpressions.Match image in cardImages)
+        {
+            Assert.Contains("loading=\"lazy\"", image.Value, StringComparison.Ordinal);
+            Assert.Contains("width=\"960\" height=\"640\"", image.Value, StringComparison.Ordinal);
+            Assert.Contains("alt=\"@T(", image.Value, StringComparison.Ordinal);
+        }
+
+        Assert.Equal(6, System.Text.RegularExpressions.Regex.Matches(cncCapabilities, "services/cnc/cards/[^\"']+\\.webp").Count);
+        Assert.Equal(9, System.Text.RegularExpressions.Regex.Matches(scanningDecisions, "services/scanning/cards/[^\"']+\\.webp").Count);
+        foreach (var (page, image) in new[]
+        {
+            (printing, "printing/printing-hero.webp"),
+            (cnc, "cnc/cnc-hero.webp"),
+            (scanning, "scanning/scanning-hero.webp"),
+        })
+        {
+            var hero = System.Text.RegularExpressions.Regex.Match(
+                page,
+                $"<img class=\"service-hero-media\" src=\"/src/images/services/{System.Text.RegularExpressions.Regex.Escape(image)}\"[^>]+>");
+            Assert.True(hero.Success);
+            Assert.Contains("width=\"1672\"", hero.Value, StringComparison.Ordinal);
+            Assert.Contains("height=\"941\"", hero.Value, StringComparison.Ordinal);
+            Assert.Contains("loading=\"eager\"", hero.Value, StringComparison.Ordinal);
+            Assert.Contains("fetchpriority=\"high\"", hero.Value, StringComparison.Ordinal);
         }
 
         var keys = global::Legacy.Maliev.Web.Application.Pricing.PricingCatalog.Materials.Keys;

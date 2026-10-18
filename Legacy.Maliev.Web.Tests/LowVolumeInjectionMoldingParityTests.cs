@@ -81,6 +81,7 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
         Assert.Contains("service-material-grid", component, StringComparison.Ordinal);
         Assert.Contains("service-note", component, StringComparison.Ordinal);
         Assert.DoesNotContain("ภาพเรนเดอร์สินค้าจริงของเครื่องระบบลมตามรุ่นที่ MALIEV อ้างอิง", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("injection-service-hero-wide.png", component, StringComparison.Ordinal);
         Assert.Contains("service-pricing-section", component, StringComparison.Ordinal);
         Assert.Contains("role=\"note\"", component, StringComparison.Ordinal);
         Assert.Contains("purge/shutdown procedures", component, StringComparison.Ordinal);

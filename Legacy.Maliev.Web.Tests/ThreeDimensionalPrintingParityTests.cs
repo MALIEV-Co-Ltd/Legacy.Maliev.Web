@@ -178,6 +178,11 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
             "js",
             "material-comparison.js"));
 
+        Assert.Contains("1 day", component, StringComparison.Ordinal);
+        Assert.Contains("7 days", component, StringComparison.Ordinal);
+        Assert.Contains("14 days", component, StringComparison.Ordinal);
+        Assert.Contains("tool steel", component, StringComparison.Ordinal);
+        Assert.Contains("stainless steel", component, StringComparison.Ordinal);
         Assert.Contains("id=\"material-comparison\"", component, StringComparison.Ordinal);
         Assert.Contains("id=\"material-search\"", component, StringComparison.Ordinal);
         Assert.Contains("id=\"material-process\"", component, StringComparison.Ordinal);
@@ -190,9 +195,37 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("material-comparison.js", appEntry, StringComparison.Ordinal);
         Assert.Contains("data-material-row", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("data-material-empty", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("id=\"material-result-count\"", component, StringComparison.Ordinal);
+        Assert.Contains("data-material-empty", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Material\", \"วัสดุ\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Process\", \"กระบวนการ\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Best for\", \"เหมาะกับ\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Advantages\", \"ข้อดี\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Watch-outs\", \"ข้อควรทราบ\")", component, StringComparison.Ordinal);
+        Assert.Contains("material-search", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("material-process", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("material-reset", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("material-result-count", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("search.addEventListener(\"input\", applyFilters);", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("process.addEventListener(\"change\", applyFilters);", comparisonScript, StringComparison.Ordinal);
+        var resetHandler = Regex.Match(
+            comparisonScript,
+            "reset\\.addEventListener\\(\"click\", \\(\\) => \\{(?<body>[\\s\\S]*?)\\n        \\}\\);");
+        Assert.True(resetHandler.Success);
+        Assert.Contains("search.value = \"\";", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("process.value = \"all\";", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("applyFilters();", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("search.focus();", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        var filtering = Regex.Match(comparisonScript, @"function applyFilters\(\) \{(?<body>[\s\S]*?)\n    \}");
+        Assert.True(filtering.Success);
+        Assert.Contains("row.hidden = !isVisible;", filtering.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("empty.hidden = visibleCount !== 0;", filtering.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("count.textContent = countTemplate.replace(\"{0}\", visibleCount.toString());", filtering.Groups["body"].Value, StringComparison.Ordinal);
         Assert.Contains("data-material-details-url", component, StringComparison.Ordinal);
         Assert.Contains("material_detail_viewed", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing", component, StringComparison.Ordinal);
+        Assert.DoesNotMatch(@"<i\s", Regex.Match(component, "<section id=\"printing-processes\"[\\s\\S]*?</section>").Value);
+        Assert.DoesNotMatch(@"<i\s", Regex.Match(component, "<section id=\"printing-file-guide\"[\\s\\S]*?</section>").Value);
         var quickFacts = component.IndexOf("<section class=\"service-quick\">", StringComparison.Ordinal);
         var inPageToc = component.IndexOf("<nav class=\"service-page-toc\" aria-label=", StringComparison.Ordinal);
         var quoteGuide = component.IndexOf("<section id=\"printing-quote-guide\"", StringComparison.Ordinal);
@@ -232,6 +265,16 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
             var path = Path.Combine(root, "Legacy.Maliev.Web", relativePath.Replace('/', Path.DirectorySeparatorChar));
             Assert.True(File.Exists(path), $"Expected printing asset '{path}'.");
             Assert.True(new FileInfo(path).Length > 0, $"Expected printing asset '{path}' to be non-empty.");
+            if (relativePath is
+                "wwwroot/src/images/services/printing/printing-fdm-application.webp" or
+                "wwwroot/src/images/services/printing/printing-file-manifold-check.webp" or
+                "wwwroot/src/images/services/printing/printing-file-orientation-support.webp" or
+                "wwwroot/src/images/services/printing/printing-file-wall-clearance.webp" or
+                "wwwroot/src/images/services/printing/printing-industrial-application.webp" or
+                "wwwroot/src/images/services/printing/printing-resin-application.webp")
+            {
+                Assert.True(new FileInfo(path).Length > 10000, $"Expected source process/file asset '{path}' to exceed 10000 bytes.");
+            }
         }
     }
 
