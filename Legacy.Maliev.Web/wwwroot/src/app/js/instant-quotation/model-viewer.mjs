@@ -871,3 +871,5 @@ function quantize(value) {
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
+
+export { createEmptyScene } from './empty-scene.mjs';

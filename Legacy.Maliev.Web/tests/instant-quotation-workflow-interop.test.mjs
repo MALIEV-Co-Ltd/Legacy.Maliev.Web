@@ -826,3 +826,12 @@ test('whole-workflow drop bindings move with the bound input and release on disp
     assert.deepEqual(failedInput.files, []);
   } finally { failed.interop.dispose(); }
 });
+
+test('empty decoration shares the viewer entry owner instead of the workflow entry', async () => {
+  const viewer = await import('../wwwroot/src/app/js/instant-quotation/model-viewer.mjs');
+  const workflow = await import('../wwwroot/src/app/js/instant-quotation/workflow-interop.mjs');
+  const emptyScene = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  assert.equal(typeof viewer.createEmptyScene, 'function');
+  assert.equal(viewer.createEmptyScene, emptyScene.createEmptyScene);
+  assert.equal(Object.hasOwn(workflow, 'createEmptyScene'), false);
+});

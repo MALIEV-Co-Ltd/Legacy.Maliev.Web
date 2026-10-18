@@ -24,7 +24,7 @@
 
         try
         {
-            var imported = await JS.InvokeAsync<IJSObjectReference>("import", "/dist/instant-quotation-workflow.mjs");
+            var imported = await JS.InvokeAsync<IJSObjectReference>("import", "/dist/instant-quotation-viewer.mjs");
             if (disposed)
             {
                 await imported.DisposeAsync();
