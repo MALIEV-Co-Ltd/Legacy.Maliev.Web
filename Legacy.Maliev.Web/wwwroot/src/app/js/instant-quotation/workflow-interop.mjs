@@ -620,3 +620,4 @@ function guardResource(resource, guarded, disposed) {
   }
 }
 export { createMaterialCardSelector } from './material-card-selector.mjs';
+export { createEmptyScene } from './empty-scene.mjs';

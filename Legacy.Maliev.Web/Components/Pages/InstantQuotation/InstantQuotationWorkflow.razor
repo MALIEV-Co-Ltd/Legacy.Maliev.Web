@@ -38,7 +38,7 @@
             @if (State is InstantQuotationWorkflowState.Empty)
             {
                 <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone>
-                    <span class="iq-empty-dropzone__icon" aria-hidden="true">📦</span>
+                    <InstantQuotationEmptyScene />
                     <strong>@Localizer["Drop your 3D file here"]</strong>
                     <span>
                         @Localizer["or click to browse"] · STL, OBJ, 3MF, STEP, IGES, GLB, GLTF

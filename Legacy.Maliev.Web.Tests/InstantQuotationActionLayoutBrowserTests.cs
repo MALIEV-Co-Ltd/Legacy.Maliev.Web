@@ -52,6 +52,64 @@ public sealed class InstantQuotationActionLayoutBrowserTests(CncNativeBrowserFix
             "element => document.activeElement === element"));
     }
 
+    [Theory]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    public async Task EmptyDecorationKeepsRealUploadControlReachableAndHonorsReducedMotion(string culture, bool reducedMotion)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 820, Height = 800 },
+            ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
+        });
+        var page = await context.NewPageAsync();
+        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-empty-scene]')?.dataset.cubeReady === 'true' && document.querySelector('[data-empty-scene]')?.dataset.hexReady === 'true'",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var decoration = page.Locator("[data-empty-scene]");
+        Assert.Equal("true", await decoration.GetAttributeAsync("aria-hidden"));
+        Assert.Equal("none", await decoration.EvaluateAsync<string>("element => getComputedStyle(element).pointerEvents"));
+        Assert.Equal(2, await decoration.Locator("canvas[aria-hidden='true']").CountAsync());
+        Assert.Equal(reducedMotion ? "still" : "running", await decoration.GetAttributeAsync("data-motion"));
+        var label = page.Locator("label[for='instant-quote-files'].iq-empty-dropzone");
+        Assert.Contains(culture == "th" ? "วางไฟล์ 3D ของคุณที่นี่" : "Drop your 3D file here", await label.InnerTextAsync(), StringComparison.Ordinal);
+        await page.Locator("#instant-quote-files").FocusAsync();
+        Assert.True(await page.Locator("#instant-quote-files").EvaluateAsync<bool>("element => document.activeElement === element"));
+        Assert.True(await label.EvaluateAsync<bool>("element => { const r = element.getBoundingClientRect(); return element.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }"));
+        await using var emptyScene = await decoration.EvaluateHandleAsync("element => element");
+        var chooser = await page.RunAndWaitForFileChooserAsync(
+            () => label.ClickAsync(),
+            new PageRunAndWaitForFileChooserOptions { Timeout = 30_000 });
+        Assert.True(chooser.IsMultiple);
+        await chooser.SetFilesAsync(new FilePayload
+        {
+            Name = "empty-scene-box.stl",
+            MimeType = "model/stl",
+            Buffer = WallThicknessParityBrowserFixture.Box(5),
+        });
+        await page.WaitForFunctionAsync(
+            """
+            scene => {
+              const workflow = document.querySelector('.instant-quote__workflow');
+              return !scene.isConnected && scene.dataset.motion === 'disposed'
+                && workflow && workflow.dataset.workflowState !== 'empty'
+                && workflow.querySelector('[data-workflow-upload-item], [data-workflow-part]') !== null;
+            }
+            """,
+            emptyScene, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.True(await emptyScene.EvaluateAsync<bool>("element => !element.isConnected"));
+        Assert.Equal("disposed", await emptyScene.EvaluateAsync<string>("element => element.dataset.motion"));
+        Assert.Equal(0, await label.CountAsync());
+        Assert.True(await page.Locator("[data-workflow-upload-item], [data-workflow-part]").CountAsync() > 0);
+    }
+
     private async Task<IPage> OpenActionsAsync(IBrowserContext context, string culture)
     {
         var page = await context.NewPageAsync();

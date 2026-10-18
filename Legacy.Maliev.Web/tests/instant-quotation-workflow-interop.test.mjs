@@ -454,3 +454,180 @@ test('a failing quote intent callback never blocks parsing', async () => {
     assert.equal(parsed, true);
   } finally { interop.dispose(); }
 });
+
+test('empty scene wave has a complete sweep and a still rest without flattening the centre', async () => {
+  const { emptySceneRelief, emptySceneMask } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const leading = { u: 0, gain: 1, rest: 0, mask: 1 };
+  const trailing = { ...leading, u: 1 };
+  assert.equal(emptySceneRelief(0, leading), 0);
+  assert.ok(Math.abs(emptySceneRelief(0.26, leading) - 0.8) < 1e-12);
+  assert.ok(Math.abs(emptySceneRelief(1.94, trailing) - 0.8) < 1e-12);
+  for (const time of [2.34, 3, 3.529]) {
+    assert.equal(emptySceneRelief(time, leading), 0);
+    assert.equal(emptySceneRelief(time, trailing), 0);
+  }
+  assert.equal(emptySceneMask(0, 0, 16, 10), 0);
+  assert.equal(emptySceneMask(0.64, 0, 16, 10), 0);
+  assert.equal(emptySceneMask(1, 0, 16, 10), 1);
+  assert.equal(emptySceneRelief(0.26, { ...leading, rest: 0.5, mask: 0 }), 0.3);
+});
+
+test('empty decoration pauses hidden work and reduced motion renders only the still scene', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  assert.equal(f.frames.size, 1);
+  f.tick(260);
+  assert.ok(f.renderers.every(renderer => renderer.draws > 0));
+  f.document.hidden = true;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(f.frames.size, 0);
+  const draws = f.renderers.map(renderer => renderer.draws);
+  f.document.hidden = false;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(f.frames.size, 1);
+  f.media.matches = true;
+  f.media.dispatchEvent(new Event('change'));
+  assert.equal(f.frames.size, 0);
+  assert.ok(f.renderers.every((renderer, index) => renderer.draws > draws[index]));
+  const mesh = f.renderers[1].lastScene.children.find(child => child.isInstancedMesh);
+  const before = mesh.instanceMatrix.array.slice();
+  f.window.dispatchEvent(new Event('pagehide'));
+  f.window.dispatchEvent(new Event('pageshow'));
+  assert.equal(f.frames.size, 0);
+  assert.deepEqual(mesh.instanceMatrix.array, before);
+  scene.dispose();
+  assert.equal(f.listeners.size, 0);
+});
+
+test('empty decoration releases frames resize timers and every GPU resource once', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  f.tick(0);
+  const resources = new Set();
+  for (const renderer of f.renderers) renderer.lastScene.traverse(object => {
+    if (object.isInstancedMesh) resources.add(object);
+    if (object.geometry) resources.add(object.geometry);
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      if (material) resources.add(material);
+    }
+  });
+  let released = 0;
+  for (const resource of resources) resource.addEventListener('dispose', () => { released += 1; });
+  f.window.dispatchEvent(new Event('resize'));
+  assert.equal(f.timers.size, 1);
+  scene.dispose();
+  scene.dispose();
+  assert.equal(f.frames.size, 0);
+  assert.equal(f.timers.size, 0);
+  assert.equal(f.listeners.size, 0);
+  assert.equal(f.observerDisconnected(), true);
+  assert.equal(released, resources.size);
+  assert.ok(f.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+});
+
+test('empty decoration isolates a failed renderer from its healthy sibling and upload affordance', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  for (const failed of [0, 1]) {
+    const f = emptySceneFixture();
+    f.options.createRenderer = canvas => {
+      if (canvas === f.canvases[failed]) throw new Error('synthetic renderer refusal');
+      return f.makeRenderer();
+    };
+    const scene = createEmptyScene(f.root, f.options);
+    f.tick(260);
+    assert.equal(f.renderers.length, 1);
+    assert.ok(f.renderers[0].draws > 0);
+    assert.equal(f.root.dataset.cubeReady, failed === 0 ? 'false' : 'true');
+    scene.dispose();
+    assert.equal(f.frames.size, 0);
+    assert.equal(f.listeners.size, 0);
+  }
+  const f = emptySceneFixture();
+  const primary = new Error('synthetic listener refusal');
+  f.window.addEventListener = () => { throw primary; };
+  assert.throws(() => createEmptyScene(f.root, f.options), error => error === primary);
+  assert.equal(f.root.dataset.cubeReady, 'false');
+  assert.equal(f.root.dataset.hexReady, 'false');
+  assert.equal(f.listeners.size, 0);
+  assert.ok(f.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+});
+
+test('empty decoration attempts remaining releases even when one renderer disposal throws', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  f.renderers[0].dispose = () => { f.renderers[0].disposals += 1; throw new Error('synthetic disposal refusal'); };
+  assert.throws(() => scene.dispose(), /synthetic disposal refusal/);
+  assert.ok(f.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+  assert.equal(f.frames.size, 0);
+  assert.equal(f.listeners.size, 0);
+});
+
+function emptySceneFixture() {
+  const listeners = new Set();
+  function target() {
+    const value = new EventTarget();
+    const add = value.addEventListener.bind(value);
+    const remove = value.removeEventListener.bind(value);
+    value.addEventListener = (type, listener) => { listeners.add({ value, type, listener }); add(type, listener); };
+    value.removeEventListener = (type, listener) => {
+      for (const entry of listeners) if (entry.value === value && entry.type === type && entry.listener === listener) listeners.delete(entry);
+      remove(type, listener);
+    };
+    return value;
+  }
+  const frames = new Map();
+  const timers = new Map();
+  const window = target();
+  const document = target();
+  const media = target();
+  media.matches = false;
+  document.hidden = false;
+  window.devicePixelRatio = 3;
+  window.matchMedia = () => media;
+  window.performance = { now: () => 0 };
+  let serial = 0;
+  window.requestAnimationFrame = callback => { frames.set(++serial, callback); return serial; };
+  window.cancelAnimationFrame = id => frames.delete(id);
+  window.setTimeout = callback => { timers.set(++serial, callback); return serial; };
+  window.clearTimeout = id => timers.delete(id);
+  let disconnected = false;
+  window.ResizeObserver = class {
+    observe() {}
+    disconnect() { disconnected = true; }
+  };
+  const canvases = [
+    { clientWidth: 240, clientHeight: 180 },
+    { clientWidth: 640, clientHeight: 400 },
+  ];
+  const root = {
+    dataset: {}, isConnected: true,
+    querySelector: selector => selector.includes('cube') ? canvases[0] : canvases[1],
+    closest: () => ({ matches: () => false, classList: { contains: () => false } }),
+  };
+  const renderers = [];
+  function makeRenderer() {
+    const renderer = {
+      draws: 0, disposals: 0, losses: 0,
+      setPixelRatio(ratio) { assert.equal(ratio, 2); },
+      setSize() {},
+      render(scene) { this.draws += 1; this.lastScene = scene; },
+      dispose() { this.disposals += 1; },
+      forceContextLoss() { this.losses += 1; },
+    };
+    renderers.push(renderer);
+    return renderer;
+  }
+  return {
+    root, canvases, renderers, frames, timers, listeners, window, document, media, makeRenderer,
+    observerDisconnected: () => disconnected,
+    tick(time) {
+      const callbacks = [...frames.values()];
+      frames.clear();
+      for (const callback of callbacks) callback(time);
+    },
+    options: { windowObject: window, documentObject: document, createRenderer: makeRenderer },
+  };
+}
