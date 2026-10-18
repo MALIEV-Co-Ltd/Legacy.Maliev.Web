@@ -656,7 +656,113 @@ public sealed class WebPrivateLoggingSourceTests
     private static void ThrowPrivateFailure() =>
         throw new InvalidOperationException(Secret, new ArgumentException(Secret));
 
-    private sealed class SyntheticLoggingFactory : TestingWebApplicationFactory
+    [Fact]
+    public async Task ActualKestrelDiagnostic_UsesSocketPeerAndEmitsPrivateNativeSeverity()
+    {
+        const string nonce = "0123456789abcdef0123456789abcdef";
+        var original = Console.Out;
+        using var buffer = new StringWriter(CultureInfo.InvariantCulture);
+        using var output = TextWriter.Synchronized(buffer);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try
+        {
+            Console.SetOut(output);
+            await using (var factory = new SyntheticLoggingFactory(useActualPeer: true))
+            {
+                factory.UseKestrel(0);
+                factory.ClientOptions.AllowAutoRedirect = false;
+                using var client = factory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(10);
+                Assert.Equal("127.0.0.1", client.BaseAddress?.Host);
+                Assert.InRange(client.BaseAddress?.Port ?? 0, 1, 65535);
+                Assert.Contains("Kestrel", factory.Services
+                    .GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>().GetType().FullName ?? "",
+                    StringComparison.Ordinal);
+
+                using var health = await client.GetAsync("/web/liveness", deadline.Token);
+                Assert.Equal(System.Net.HttpStatusCode.OK, health.StatusCode);
+                var instance = Assert.Single(health.Headers.GetValues("X-Maliev-Health-Instance"));
+                Assert.Matches("^[a-f0-9]{32}$", instance);
+
+                async Task<HttpResponseMessage> ProbeAsync(HttpMethod method, string suppliedNonce)
+                {
+                    using var request = new HttpRequestMessage(method,
+                        "/internal/diagnostics/observability?token=" + Secret);
+                    request.Headers.Add("X-Maliev-Diagnostic-Id", suppliedNonce);
+                    request.Headers.Add("X-Forwarded-For", "203.0.113.7");
+                    request.Headers.Add("Authorization", "Bearer " + Secret);
+                    request.Headers.Add("Cookie", "fixture=" + Secret);
+                    return await client.SendAsync(request, deadline.Token);
+                }
+
+                using var deniedMethod = await ProbeAsync(HttpMethod.Post, nonce);
+                using var deniedNonce = await ProbeAsync(HttpMethod.Get, "not-guid-n");
+                foreach (var denied in new[] { deniedMethod, deniedNonce })
+                {
+                    Assert.Equal(System.Net.HttpStatusCode.NotFound, denied.StatusCode);
+                    Assert.Empty(await denied.Content.ReadAsByteArrayAsync(deadline.Token));
+                    Assert.Equal("no-store", denied.Headers.CacheControl?.ToString());
+                    Assert.False(denied.Headers.Contains("X-Maliev-Diagnostic-Id"));
+                    Assert.False(denied.Headers.Contains("X-Maliev-Health-Instance"));
+                    Assert.False(denied.Headers.Contains("X-Incident-Id"));
+                }
+
+                using var admitted = await ProbeAsync(HttpMethod.Get, nonce.ToUpperInvariant());
+                Assert.Equal(System.Net.HttpStatusCode.InternalServerError, admitted.StatusCode);
+                Assert.Equal("application/problem+json", admitted.Content.Headers.ContentType?.MediaType);
+                Assert.Empty(await admitted.Content.ReadAsByteArrayAsync(deadline.Token));
+                Assert.Equal(nonce, Assert.Single(admitted.Headers.GetValues("X-Maliev-Diagnostic-Id")));
+                Assert.Equal(instance, Assert.Single(admitted.Headers.GetValues("X-Maliev-Health-Instance")));
+                Assert.Equal("no-store", admitted.Headers.CacheControl?.ToString());
+                Assert.False(admitted.Headers.Contains("X-Incident-Id"));
+                Assert.IsType<global::Maliev.Aspire.ServiceDefaults.Diagnostics.ProductionObservabilityDiagnosticException>(
+                    factory.Capture.Error);
+
+                using var repeated = await ProbeAsync(HttpMethod.Get, nonce);
+                Assert.Equal(System.Net.HttpStatusCode.TooManyRequests, repeated.StatusCode);
+                Assert.Empty(await repeated.Content.ReadAsByteArrayAsync(deadline.Token));
+                Assert.False(repeated.Headers.Contains("X-Maliev-Diagnostic-Id"));
+                Assert.False(repeated.Headers.Contains("X-Maliev-Health-Instance"));
+            }
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+
+        var records = new List<JsonDocument>();
+        try
+        {
+            foreach (var line in buffer.ToString().Split('\n',
+                         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                records.Add(JsonDocument.Parse(line));
+            var synthetic = records.Select(record => record.RootElement).Where(record =>
+                (record.TryGetProperty("DiagnosticId", out var direct) && direct.GetString() == nonce)
+                || (record.TryGetProperty("State", out var state)
+                    && state.TryGetProperty("DiagnosticId", out var nested) && nested.GetString() == nonce)).ToArray();
+            Assert.Equal(new[] { "WARNING", "ERROR", "CRITICAL" },
+                synthetic.Select(record => record.GetProperty("severity").GetString()).ToArray());
+            Assert.Equal("ObservabilityPipelineProbe", synthetic[0].GetProperty("State").GetProperty("EventName").GetString());
+            Assert.True(synthetic[0].GetProperty("State").GetProperty("Synthetic").GetBoolean());
+            Assert.Equal("Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware",
+                synthetic[1].GetProperty("Category").GetString());
+            Assert.Equal(1, synthetic[1].GetProperty("EventId").GetInt32());
+            Assert.True(synthetic[1].GetProperty("Synthetic").GetBoolean());
+            Assert.Equal("UnhandledRequestFailure", synthetic[2].GetProperty("State").GetProperty("EventName").GetString());
+            Assert.True(synthetic[2].GetProperty("State").GetProperty("Synthetic").GetBoolean());
+            Assert.DoesNotContain(Secret, buffer.ToString(), StringComparison.Ordinal);
+            Assert.DoesNotContain(records, record =>
+                record.RootElement.TryGetProperty("State", out var state)
+                && state.TryGetProperty("EventName", out var name)
+                && name.GetString() is "HealthProbeFailure" or "HandledOperationFailure");
+        }
+        finally
+        {
+            foreach (var record in records) record.Dispose();
+        }
+    }
+
+    private sealed class SyntheticLoggingFactory(bool useActualPeer = false) : TestingWebApplicationFactory
     {
         public TypedFailureCapture Capture { get; } = new();
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -666,7 +772,8 @@ public sealed class WebPrivateLoggingSourceTests
             builder.ConfigureServices(services =>
             {
                 services.AddSingleton<ILoggerProvider>(Capture);
-                services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter>(new LoopbackPeer());
+                if (!useActualPeer)
+                    services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter>(new LoopbackPeer());
             });
         }
     }
