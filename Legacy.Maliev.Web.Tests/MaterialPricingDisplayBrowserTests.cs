@@ -166,8 +166,15 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         var tough = scroller.Locator("[data-material-key='K']");
         await tough.ClickAsync();
         await Assertions.Expect(tough).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         var standard = scroller.Locator("[data-material-key='M68']");
-        await scroller.EvaluateAsync("node => { node.scrollTop = 0; }");
+        await scroller.EvaluateAsync("""
+            node => {
+                const card = node.querySelector('[data-material-key="M68"]');
+                const heading = card.previousElementSibling.getBoundingClientRect();
+                node.scrollTop += heading.bottom - node.getBoundingClientRect().top + 2;
+            }
+            """);
         var headingInitiallyVisible = await standard.EvaluateAsync<bool>("""
             card => {
                 const list = card.closest('[data-material-card-scroll]').getBoundingClientRect();
