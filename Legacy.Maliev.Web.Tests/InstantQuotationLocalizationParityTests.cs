@@ -31,6 +31,7 @@ public sealed partial class InstantQuotationLocalizationParityTests
             ["Balanced finish, durability, lead time, and price for everyday use"] = "สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป",
             ["Greater structural strength · material and load direction still require engineering review"] = "เพิ่มความแข็งแรงของโครงสร้าง · วัสดุและทิศทางรับแรงยังต้องให้วิศวกรตรวจสอบ",
             ["Preliminary price — model volume was measured; manufacturing suitability is confirmed by our engineer."] = "ราคาประเมินเบื้องต้น — วัดปริมาตรจากโมเดลแล้ว และวิศวกรจะยืนยันความเหมาะสมในการผลิต",
+            ["Manufacturing warnings may affect the final result of this part."] = "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน",
             ["Compare material prices"] = "เปรียบเทียบราคาวัสดุ",
             ["per piece"] = "ต่อชิ้น",
             ["Part {0}"] = "ชิ้นงานที่ {0}",
