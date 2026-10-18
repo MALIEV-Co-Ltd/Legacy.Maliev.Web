@@ -143,7 +143,7 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         Assert.True(select.Success);
         Assert.Matches("\\sdisabled(?:\\s|=|$)", select.Groups["attributes"].Value);
         Assert.Single(Regex.Matches(select.Groups["options"].Value, "<option\\b", RegexOptions.IgnoreCase).Cast<Match>());
-        Assert.Contains("value=\"\"", select.Groups["options"].Value, StringComparison.Ordinal);
+        Assert.Matches("<option\\b[^>]*\\svalue(?:=\"\"|='')?(?=\\s|>)[^>]*>", select.Groups["options"].Value);
         Assert.Contains("Select a country", select.Groups["options"].Value, StringComparison.Ordinal);
         var submit = Regex.Match(source, "<button\\b[^>]*\\bid=\"submit-button\"[^>]*>",
             RegexOptions.IgnoreCase);
