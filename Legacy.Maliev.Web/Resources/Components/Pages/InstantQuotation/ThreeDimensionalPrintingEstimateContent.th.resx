@@ -684,4 +684,13 @@
   <data name="Manufacturing warnings may affect the final result of this part." xml:space="preserve">
     <value>มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน</value>
   </data>
+  <data name="Demo" xml:space="preserve">
+    <value>สาธิต</value>
+  </data>
+  <data name="Development preview only. Advisory prices cannot be submitted." xml:space="preserve">
+    <value>ตัวอย่างสำหรับการพัฒนาเท่านั้น ราคาประเมินนี้ไม่สามารถส่งคำขอได้</value>
+  </data>
+  <data name="Advisory price and lead time" xml:space="preserve">
+    <value>ราคาและระยะเวลาโดยประมาณ</value>
+  </data>
 </root>

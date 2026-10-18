@@ -1551,6 +1551,252 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         Assert.Empty(pageErrors);
     }
 
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task FailedUploadDemoIsDevelopmentOnlyAdvisoryAndCannotSubmit(string culture)
+    {
+        var startup = new StartupDataProtectionMigrationFixture();
+        try
+        {
+            await startup.InitializeAsync();
+            foreach (var environment in new[] { "Development", "Production" })
+            {
+                var upload = new HashCheckingUploadClient();
+                upload.FailNextUpload();
+                var pricing = new CountingPricingService();
+                var observation = new MaterialCompletionObservation();
+                await using var parent = startup.CreateFactory(environment);
+                await using var factory = parent.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IInstantQuotationUploadClient>();
+                    services.AddSingleton<IInstantQuotationUploadClient>(upload);
+                    services.RemoveAll<IInstantQuotationPricingService>();
+                    services.AddSingleton<IInstantQuotationPricingService>(pricing);
+                    services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
+                    services.AddScoped<IInstantQuotationPhysicalAnalysisInputReader>(provider =>
+                        new BrowserMultiUploadInputReader(upload,
+                            provider.GetRequiredService<IInstantQuotationSessionStore>()));
+                    observation.Decorate(services);
+                }));
+                var port = ReserveFreePort();
+                var origin = new Uri($"http://127.0.0.1:{port}");
+                factory.UseKestrel(port);
+                using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+                {
+                    BaseAddress = origin,
+                    AllowAutoRedirect = false,
+                });
+                using var readiness = await client.GetAsync($"/instantquotation/3d-printing?culture={culture}");
+                Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+                Assert.Equal(environment, factory.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>().EnvironmentName);
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+                await using var page = await browser.NewPageAsync();
+                var submissionRequests = 0;
+                page.Request += (_, request) =>
+                {
+                    if (request.Method == "POST" && request.Url.Contains("handler=SubmitRequest", StringComparison.Ordinal))
+                        Interlocked.Increment(ref submissionRequests);
+                };
+                await page.GotoAsync(new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString(),
+                    new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+                await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+                var path = CreateBoxStl(20, 20, 5, "development-demo");
+                try
+                {
+                    await page.SetInputFilesAsync("#instant-quote-files", path);
+                    await Microsoft.Playwright.Assertions.Expect(page.Locator(".instant-quote__workflow"))
+                        .ToHaveAttributeAsync("data-workflow-state", "error",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    Assert.Equal(1, upload.StartedUploads);
+                    Assert.Equal(0, upload.VerifiedUploads);
+                    Assert.Equal(0, pricing.CallCount);
+                    Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                    var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+                    var failedState = await store.GetAsync(upload.AttemptedSessionId!, upload.AttemptedOwnerIdentity, default);
+                    Assert.NotNull(failedState);
+                    Assert.Empty(failedState.Parts);
+                    Assert.Null(failedState.QuoteAuthorization);
+                    Assert.Empty(failedState.PhysicalReceipts ?? []);
+                    var demo = page.Locator("[data-workflow-local-demo]");
+                    if (environment == "Production")
+                    {
+                        Assert.Equal(0, await demo.CountAsync());
+                        Assert.Equal(0, await page.Locator("[data-local-demo-badge]").CountAsync());
+                        Assert.Equal(0, await page.Locator("#instant-quotation-form").CountAsync());
+                        continue;
+                    }
+
+                    await demo.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+                    Assert.Equal(culture == "th" ? "สาธิต" : "Demo",
+                        (await demo.Locator("[data-local-demo-badge]").InnerTextAsync()).Trim());
+                    Assert.Contains(culture == "th" ? "ไม่สามารถส่ง" : "cannot be submitted",
+                        await demo.InnerTextAsync(), StringComparison.Ordinal);
+                    Assert.Equal("configuration", await demo.GetAttributeAsync("data-local-demo-step"));
+                    Assert.Equal(0, await page.Locator("[data-workflow-part]").CountAsync());
+                    await using var canvas = await demo.Locator("[data-local-demo-canvas]").ElementHandleAsync();
+                    Assert.NotNull(canvas);
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-canvas]"))
+                        .ToHaveAttributeAsync("data-local-demo-ready", "true",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    var oldSubtotal = await demo.Locator("[data-local-demo-subtotal]").InnerTextAsync();
+                    Assert.NotEqual("—", oldSubtotal.Trim());
+                    await demo.Locator("#demo-material").SelectOptionAsync("PETG");
+                    await demo.Locator("#demo-quantity").FillAsync("2");
+                    await demo.Locator("#demo-quantity").DispatchEventAsync("change");
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-configuration]"))
+                        .ToHaveTextAsync("PETG 2×", new LocatorAssertionsToHaveTextOptions { Timeout = 30_000 });
+                    Assert.NotEqual(oldSubtotal, await demo.Locator("[data-local-demo-subtotal]").InnerTextAsync());
+                    Assert.NotEqual("—", (await demo.Locator("[data-local-demo-lead-time]").InnerTextAsync()).Trim());
+                    await demo.Locator("[data-local-demo-review]").ClickAsync();
+                    await Microsoft.Playwright.Assertions.Expect(demo)
+                        .ToHaveAttributeAsync("data-local-demo-step", "review",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    Assert.Contains(Path.GetFileName(path), await demo.InnerTextAsync(), StringComparison.Ordinal);
+                    await demo.Locator("[data-local-demo-continue]").ClickAsync();
+                    await Microsoft.Playwright.Assertions.Expect(demo)
+                        .ToHaveAttributeAsync("data-local-demo-step", "contact",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    await demo.Locator("#demo-contact-name").FillAsync("Synthetic demo");
+                    await demo.Locator("#demo-contact-email").FillAsync("demo@example.invalid");
+                    var submit = demo.Locator("[data-local-demo-no-submit]");
+                    Assert.Equal("button", await submit.GetAttributeAsync("type"));
+                    Assert.True(await submit.IsDisabledAsync());
+                    Assert.Equal(0, await demo.Locator("form, [form], input[name='__RequestVerificationToken'], input[name*='Ticket']").CountAsync());
+                    await demo.Locator("#demo-contact-email").PressAsync("Enter");
+                    Assert.Equal(0, Volatile.Read(ref submissionRequests));
+                    Assert.Equal(0, upload.FinalizeCalls);
+                    Assert.Equal(0, pricing.CallCount);
+                    Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                    failedState = await store.GetAsync(upload.AttemptedSessionId!, upload.AttemptedOwnerIdentity, default);
+                    Assert.NotNull(failedState);
+                    Assert.Empty(failedState.Parts);
+                    Assert.Null(failedState.QuoteAuthorization);
+                    Assert.Empty(failedState.PhysicalReceipts ?? []);
+
+                    // The ordinary failed-row action and Demo action must share fresh-key rebinding.
+                    upload.FailNextUpload();
+                    await page.Locator("[data-workflow-upload-item] button").ClickAsync();
+                    await canvas.WaitForElementStateAsync(ElementState.Hidden, new() { Timeout = 30_000 });
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-canvas]"))
+                        .ToHaveAttributeAsync("data-local-demo-ready", "true",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    Assert.False(await canvas.EvaluateAsync<bool>("element => element.isConnected"));
+                    Assert.Equal(2, upload.StartedUploads);
+                    Assert.Equal(0, upload.VerifiedUploads);
+                    Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-configuration]"))
+                        .ToHaveTextAsync("PETG 2×", new LocatorAssertionsToHaveTextOptions { Timeout = 30_000 });
+                    await using var retriedCanvas = await demo.Locator("[data-local-demo-canvas]").ElementHandleAsync();
+                    Assert.NotNull(retriedCanvas);
+                    await demo.Locator("[data-local-demo-retry]").ClickAsync();
+                    await page.Locator("[data-workflow-part]").WaitForAsync(new LocatorWaitForOptions { Timeout = 60_000 });
+                    Assert.Equal(0, await demo.CountAsync());
+                    Assert.False(await retriedCanvas.EvaluateAsync<bool>("element => element.isConnected"));
+                    Assert.Equal(3, upload.StartedUploads);
+                    Assert.Equal(1, upload.VerifiedUploads);
+                    Assert.Equal(1, await page.Locator("[data-workflow-part]").CountAsync());
+                    var admitted = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                    Assert.NotNull(admitted);
+                    Assert.Single(admitted.Parts);
+                    Assert.NotNull(Assert.Single(admitted.Parts).PhysicalAnalysisUpload);
+                    await page.Locator("[data-workflow-price-tier]").First.WaitForAsync(
+                        new LocatorWaitForOptions { Timeout = 60_000 });
+                    Assert.DoesNotContain("pricingEntered=0;", observation.Describe(), StringComparison.Ordinal);
+                    admitted = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                    Assert.NotNull(admitted);
+                    Assert.NotNull(admitted.QuoteAuthorization);
+                    Assert.Equal(0, Volatile.Read(ref submissionRequests));
+                    Assert.Equal(0, upload.FinalizeCalls);
+                }
+                finally
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+        finally
+        {
+            await startup.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DevelopmentDemoNeverRetainsCancelledOrMalformedUploads()
+    {
+        var startup = new StartupDataProtectionMigrationFixture();
+        try
+        {
+            await startup.InitializeAsync();
+            var upload = new HashCheckingUploadClient { HoldUploads = true };
+            var pricing = new CountingPricingService();
+            var observation = new MaterialCompletionObservation();
+            await using var parent = startup.CreateFactory("Development");
+            await using var factory = parent.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IInstantQuotationUploadClient>();
+                services.AddSingleton<IInstantQuotationUploadClient>(upload);
+                services.RemoveAll<IInstantQuotationPricingService>();
+                services.AddSingleton<IInstantQuotationPricingService>(pricing);
+                observation.Decorate(services);
+            }));
+            var port = ReserveFreePort();
+            var origin = new Uri($"http://127.0.0.1:{port}");
+            factory.UseKestrel(port);
+            using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin, AllowAutoRedirect = false });
+            using var readiness = await client.GetAsync("/instantquotation/3d-printing?culture=en");
+            Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+            await using var page = await browser.NewPageAsync();
+            await page.GotoAsync(new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString(),
+                new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            var path = CreateBoxStl(20, 20, 5, "cancelled-demo");
+            try
+            {
+                await page.SetInputFilesAsync("#instant-quote-files", path);
+                var cancel = page.Locator("[data-workflow-upload-item] button");
+                await cancel.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+                await upload.UploadEntered.WaitAsync(TimeSpan.FromSeconds(30));
+                await cancel.ClickAsync();
+                await Microsoft.Playwright.Assertions.Expect(page.Locator(".instant-quote__workflow"))
+                    .ToHaveAttributeAsync("aria-busy", "false",
+                        new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                await Microsoft.Playwright.Assertions.Expect(page.Locator("#instant-quote-files"))
+                    .ToBeEnabledAsync(new LocatorAssertionsToBeEnabledOptions { Timeout = 30_000 });
+                Assert.Equal(1, upload.CancellationObserved);
+                Assert.Equal(0, await page.Locator("[data-workflow-local-demo]").CountAsync());
+                Assert.Equal(0, upload.VerifiedUploads);
+                Assert.Equal(0, pricing.CallCount);
+                Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+                {
+                    Name = "malformed.stl",
+                    MimeType = "model/stl",
+                    Buffer = [1, 2, 3],
+                });
+                await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-preview-status]"))
+                    .ToContainTextAsync("unavailable", new LocatorAssertionsToContainTextOptions { Timeout = 30_000 });
+                Assert.Equal(0, await page.Locator("[data-workflow-local-demo]").CountAsync());
+                Assert.Equal(0, upload.VerifiedUploads);
+                Assert.Equal(0, pricing.CallCount);
+                Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                Assert.Equal(0, upload.FinalizeCalls);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+        finally
+        {
+            await startup.DisposeAsync();
+        }
+    }
+
     private sealed class RealUploadTestingWebApplicationFactory(
         string contentRoot,
         HashCheckingUploadClient upload,
@@ -1647,10 +1893,22 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     private sealed class HashCheckingUploadClient : IInstantQuotationUploadClient
     {
         private int startedUploads;
+        private int failuresRemaining;
+        private int finalizeCalls;
+        private int cancellationObserved;
+        private readonly TaskCompletionSource<bool> uploadEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int validationRejectedUploads;
         private int verifiedUploads;
         private BrowserUpload? verifiedUpload;
         private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, BrowserUpload> uploads = new();
+
+        public bool HoldUploads { get; init; }
+        public Task UploadEntered => uploadEntered.Task;
+        public int CancellationObserved => Volatile.Read(ref cancellationObserved);
+        public string? AttemptedSessionId { get; private set; }
+        public string? AttemptedOwnerIdentity { get; private set; }
+        public int FinalizeCalls => Volatile.Read(ref finalizeCalls);
+        public void FailNextUpload() => Interlocked.Exchange(ref failuresRemaining, 1);
 
         public int VerifiedUploads => Volatile.Read(ref verifiedUploads);
         public int StartedUploads => Volatile.Read(ref startedUploads);
@@ -1685,6 +1943,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref startedUploads);
+            using var cancellationObservation = cancellationToken.Register(() => Interlocked.Increment(ref cancellationObserved));
+            uploadEntered.TrySetResult(true);
             using var copy = new MemoryStream();
             await content.CopyToAsync(copy, cancellationToken);
             var sha256 = Convert.ToHexString(SHA256.HashData(copy.GetBuffer().AsSpan(0, (int)copy.Length)))
@@ -1698,6 +1958,13 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     InstantQuotationAuthorizationStatus.Authorized,
                     InstantQuotationProblemCategory.Validation);
             }
+
+            AttemptedSessionId = sessionId;
+            AttemptedOwnerIdentity = ownerIdentity;
+            if (HoldUploads)
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            if (Interlocked.Exchange(ref failuresRemaining, 0) > 0)
+                return InstantQuotationUploadResult.Unavailable(operationId);
 
             var fileId = Guid.NewGuid();
             verifiedUpload = new BrowserUpload(sessionId, ownerIdentity, fileId, fileName,
@@ -1740,7 +2007,11 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             int quotationRequestId,
             IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
             string operationId,
-            CancellationToken cancellationToken) => Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref finalizeCalls);
+            return Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
+        }
     }
 
     private sealed record BrowserUpload(
