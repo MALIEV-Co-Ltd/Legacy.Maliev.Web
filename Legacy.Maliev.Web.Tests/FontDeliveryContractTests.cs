@@ -44,6 +44,12 @@ public sealed class FontDeliveryContractTests
         Assert.DoesNotContain("fonts.googleapis.com", blazorShell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", blazorShell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<body style=\"font-family", blazorShell, StringComparison.OrdinalIgnoreCase);
+
+        var quotationCss = File.ReadAllText(Path.Combine(webRoot, "wwwroot", "src", "app", "css", "instant-quotation.css"));
+        Assert.Contains("font-weight: 600;", quotationCss, StringComparison.Ordinal);
+        Assert.DoesNotMatch(
+            @"font-weight\s*:\s*(?:6(?:0[1-9]|[1-9][0-9])|[7-9][0-9]{2}|bold|bolder)\b",
+            quotationCss);
     }
 
     [Fact]

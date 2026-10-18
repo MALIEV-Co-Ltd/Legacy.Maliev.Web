@@ -20,6 +20,13 @@ public sealed class ServicePresentationCssParityTests
         Assert.Contains(".service-location-section .service-actions", services, StringComparison.Ordinal);
         Assert.Contains(".injection-gallery-grid", services, StringComparison.Ordinal);
         Assert.Contains(".injection-volume-grid", services, StringComparison.Ordinal);
+
+        var landing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "landing.css"));
+        Assert.Contains(".landing-service-card--injection > img { aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% center; padding: 0;", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-section + .landing-section { padding-top: clamp(5.5rem, 8vw, 8rem); }", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-service-card a { display: inline-flex; align-items: center; gap: .6rem;", landing, StringComparison.Ordinal);
+        Assert.Contains(".injection-hero { min-height: 0; display: grid; align-items: stretch; }", services, StringComparison.Ordinal);
+        Assert.Contains(".injection-benefit-grid { align-items: stretch; }", services, StringComparison.Ordinal);
         Assert.Contains("@media (prefers-reduced-motion: reduce)", services, StringComparison.Ordinal);
     }
 

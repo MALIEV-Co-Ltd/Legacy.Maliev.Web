@@ -72,8 +72,15 @@ public sealed class SharedNavigationMigrationTests : IClassFixture<TestingWebApp
 
         var navigationCss = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "public-navigation.css"));
         var thaiNavigation = File.ReadAllText(Path.Combine(web, "Resources", "Components", "Layout", "PublicNavigation.th.resx"));
-        Assert.Contains("@media (min-width: 68rem)", navigationCss, StringComparison.Ordinal);
-        Assert.Contains("@media (max-width: 67.99rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("@media (min-width: 90rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("@media (max-width: 89.99rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("gap: clamp(1rem, 2vw, 2rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains(".landing-nav-content { width: 100%; min-width: 0; }", navigationCss, StringComparison.Ordinal);
+        Assert.Contains(".landing-nav-links > li, .landing-nav-account > li { display: flex; align-items: center; }", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("gap: clamp(1.1rem, 1.6vw, 2rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("gap: clamp(.7rem, 1.2vw, 1.3rem)", navigationCss, StringComparison.Ordinal);
+        Assert.Contains("flex: 0 0 6.25rem; inline-size: 6.25rem; min-inline-size: 6.25rem", navigationCss, StringComparison.Ordinal);
+        Assert.Contains(".landing-nav-services > .landing-nav-services-toggle { width: auto; min-height: 2.8rem; padding: .65rem 0; }", navigationCss, StringComparison.Ordinal);
         Assert.Contains("<value>CNC ตามแบบ</value>", thaiNavigation, StringComparison.Ordinal);
         Assert.Contains("<value>พิมพ์ 3 มิติ</value>", thaiNavigation, StringComparison.Ordinal);
         Assert.Contains("<value>สแกน 3 มิติ</value>", thaiNavigation, StringComparison.Ordinal);
