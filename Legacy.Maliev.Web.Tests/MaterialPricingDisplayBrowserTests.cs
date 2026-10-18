@@ -9,18 +9,19 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Real DOM/circuit events over controlled historical protected input; not FileService or authentication acceptance.</summary>
-public sealed class MaterialPricingDisplayBrowserTests
+public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData("en", 375, ColorScheme.Light)]
     [InlineData("th", 1280, ColorScheme.Dark)]
     public async Task MaterialCardsSearchBothLanguagesAndArrowFocusDoesNotChangeSelection(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var selector = fixture.Page.Locator("[data-material-selector]");
         var selected = selector.Locator("[role='radio'][aria-checked='true']");
         await Assertions.Expect(selected).ToHaveAttributeAsync("data-material-key", "M68");
@@ -101,7 +102,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 1280, ColorScheme.Dark)]
     public async Task SameSelectionRepricePreservesManualCardScrollAndVisibleSelection(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var scroller = fixture.Page.Locator("[data-material-card-scroll]");
         var selected = scroller.Locator("[data-material-key='M68']");
         const string geometry = """
@@ -160,7 +161,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 1280, ColorScheme.Dark)]
     public async Task NewSelectionRevealsCategoryHeadingAfterTheRenderedLayout(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var scroller = fixture.Page.Locator("[data-material-card-scroll]");
         var tough = scroller.Locator("[data-material-key='K']");
         await tough.ClickAsync();
@@ -266,7 +267,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", ColorScheme.Dark)]
     public async Task ShortDesktopMaterialCardClickIsNotCoveredBySummaryFooter(string culture, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, 1280, scheme, height: 720,
+        await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 720,
             displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
         var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
         await card.ScrollIntoViewIfNeededAsync();
@@ -303,7 +304,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     public async Task ActualQuantityEventShowsCurrentProgressBeforeFinalAuthority(string culture, int width,
         ColorScheme scheme, InstantQuotationMaterialPricingStatus status, string expected)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var gate = fixture.Control.Arm(2, status);
         try
         {
@@ -343,7 +344,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 320, ColorScheme.Dark)]
     public async Task InputOnlyCannotShowOldNumbersOrEnableReviewForDifferentVisibleQuantity(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var before = await fixture.StoredAsync();
         Assert.NotNull(before.QuoteAuthorization);
         await fixture.Quantity.FillAsync("3"); // actual input event; deliberately no blur/change
@@ -375,7 +376,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 320, ColorScheme.Dark)]
     public async Task QueuedQuantityThreeThenFourDoesNotRelabelOlderActualFrames(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var two = fixture.Control.Arm(2, InstantQuotationMaterialPricingStatus.Completed);
         var three = fixture.Control.Arm(3, InstantQuotationMaterialPricingStatus.Completed);
         var four = fixture.Control.Arm(4, InstantQuotationMaterialPricingStatus.Completed);
@@ -419,7 +420,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 320, ColorScheme.Dark)]
     public async Task OlderAcceptedCompletionCannotEraseNewerInputOnlyDraft(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var three = fixture.Control.Arm(3, InstantQuotationMaterialPricingStatus.Completed, holdAuthorization: true);
         var four = fixture.Control.Arm(4, InstantQuotationMaterialPricingStatus.Completed);
         try
@@ -603,7 +604,7 @@ public sealed class MaterialPricingDisplayBrowserTests
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         public Fixture() => Factory = new(Control);
 
-        public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme, int height = 800,
+        public static async Task<Fixture> CreateAsync(ITestOutputHelper output, string culture, int width, ColorScheme scheme, int height = 800,
             string displayFileName = "historical-controlled.stl")
         {
             var fixture = new Fixture();
@@ -623,7 +624,11 @@ public sealed class MaterialPricingDisplayBrowserTests
                 fixture.Page = await fixture.context.NewPageAsync();
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrorCount);
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                await fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle });
+                using (var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin))
+                {
+                    await initialNavigation.RunAsync(
+                        () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
+                }
                 var consent = fixture.Page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await consent.IsVisibleAsync()) await consent.ClickAsync();
                 var cookie = Assert.Single(await fixture.context.CookiesAsync(), candidate => candidate.Name == InstantQuotationSessionIdentityCookie.CookieName);

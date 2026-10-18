@@ -95,6 +95,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (quantityEdits.IsPending(part.PartId) && !displayIntents.ContainsKey(part.PartId)
             || displayIntents.TryGetValue(part.PartId, out var intended) && intended != part.Configuration)
             return [];
+        if (!IsRepricing && DisplayQuote(part) is not null) return [];
         var snapshot = workflow?.MaterialPriceDisplay;
         if (snapshot is not null && snapshot.Generation > minimumDisplayGeneration)
             return snapshot.Entries.Where(row => row.PartId == part.PartId).ToArray();
