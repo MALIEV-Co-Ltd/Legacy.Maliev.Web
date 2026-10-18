@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import * as viewerModule from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
 
 import {
   addCadPreviewEdges,
@@ -471,6 +472,121 @@ test('OCCT loader clears a rejected promise so a transient script failure can re
   globalObject.occtimportjs = async () => ({ recovered: true });
   scripts[1].load();
   assert.deepEqual(await second, { recovered: true });
+});
+
+test('production preview scene retains the source neutral background and four-light rig', () => {
+  const scene = viewerModule.createPreviewScene();
+  assert.equal(scene.isScene, true);
+  assert.equal(scene.background.getHex(), 0xf7f9fc);
+  assert.equal(scene.children.length, 4);
+  const [hemisphere, key, fill, rim] = scene.children;
+  assert.equal(hemisphere.isHemisphereLight, true);
+  assert.equal(hemisphere.color.getHex(), 0xffffff);
+  assert.equal(hemisphere.groundColor.getHex(), 0xd6dfe6);
+  assert.equal(hemisphere.intensity, 0.56);
+  for (const [light, color, intensity, position] of [
+    [key, 0xffffff, 0.64, [50, 30, 60]],
+    [fill, 0xdbe6ef, 0.26, [-50, -15, 30]],
+    [rim, 0xb8c8d8, 0.1, [-20, 50, -30]],
+  ]) {
+    assert.equal(light.isDirectionalLight, true);
+    assert.equal(light.color.getHex(), color);
+    assert.equal(light.intensity, intensity);
+    assert.deepEqual(light.position.toArray(), position);
+  }
+});
+
+test('production capture renders white then restores the exact live background and camera', () => {
+  const scene = viewerModule.createPreviewScene();
+  const liveBackground = scene.background;
+  const camera = new PerspectiveCamera(45, 1, 0.1, 100000);
+  camera.position.set(12, 23, 34);
+  const renders = [];
+  const renderer = {
+    render(actualScene, actualCamera) {
+      assert.equal(actualScene, scene);
+      assert.equal(actualCamera, camera);
+      renders.push(actualScene.background.getHex());
+    },
+  };
+  for (const image of ['data:image/png;base64,preview', 'data:,']) {
+    const canvas = {
+      toDataURL(type) {
+        assert.equal(type, 'image/png');
+        assert.equal(scene.background.getHex(), 0xffffff);
+        return image;
+      },
+    };
+    assert.equal(viewerModule.capturePreviewSnapshot({ scene, camera, renderer, canvas }),
+      image === 'data:,' ? null : image);
+    assert.equal(scene.background, liveBackground);
+    assert.deepEqual(camera.position.toArray(), [12, 23, 34]);
+  }
+  assert.deepEqual(renders, [0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc]);
+});
+
+test('production capture restores and redraws the live background after render or encoding failure', () => {
+  for (const phase of ['render', 'encode']) {
+    const scene = viewerModule.createPreviewScene();
+    const liveBackground = scene.background;
+    const primary = new Error('synthetic capture failure');
+    const renders = [];
+    const renderer = {
+      render() {
+        renders.push(scene.background.getHex());
+        if (phase === 'render' && renders.length === 1) throw primary;
+      },
+    };
+    const canvas = { toDataURL() { throw primary; } };
+    assert.throws(
+      () => viewerModule.capturePreviewSnapshot({ scene, camera: new PerspectiveCamera(), renderer, canvas }),
+      error => error === primary);
+    assert.equal(scene.background, liveBackground);
+    assert.deepEqual(renders, [0xffffff, 0xf7f9fc]);
+  }
+});
+
+test('production capture retains both failures if the live redraw also fails', () => {
+  const scene = viewerModule.createPreviewScene();
+  const liveBackground = scene.background;
+  const primary = new Error('synthetic capture failure');
+  const redraw = new Error('synthetic redraw failure');
+  let renders = 0;
+  const renderer = { render() { renders += 1; if (renders === 2) throw redraw; } };
+  assert.throws(
+    () => viewerModule.capturePreviewSnapshot({
+      scene, camera: new PerspectiveCamera(), renderer,
+      canvas: { toDataURL() { throw primary; } },
+    }),
+    error => error instanceof AggregateError
+      && error.errors.length === 2 && error.errors[0] === primary && error.errors[1] === redraw);
+  assert.equal(scene.background, liveBackground);
+  assert.equal(renders, 2);
+});
+
+test('a failed background-part capture restores the prior selected part and its camera', () => {
+  const adapter = createAdapter();
+  const primary = new Error('synthetic snapshot failure');
+  adapter.snapshot = () => { throw primary; };
+  const viewer = createModelViewer({ adapter });
+  const first = disposableObject();
+  const second = disposableObject();
+  try {
+    viewer.addPart('first', first);
+    viewer.addPart('second', second);
+    viewer.select('first');
+    adapter.cameraState = { position: [3, 4, 5], target: [1, 2, 3] };
+    assert.throws(() => viewer.snapshot('second'), error => error === primary);
+    assert.deepEqual(adapter.cameraState, { position: [3, 4, 5], target: [1, 2, 3] });
+    const changed = [];
+    adapter.setColor = object => changed.push(object);
+    assert.equal(viewer.setColor('#123456'), true);
+    assert.deepEqual(changed, [first]);
+  } finally {
+    viewer.dispose();
+  }
+  assert.equal(first.disposeCount(), 1);
+  assert.equal(second.disposeCount(), 1);
 });
 
 function createAdapter() {
