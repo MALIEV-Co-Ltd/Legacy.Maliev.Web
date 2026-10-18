@@ -565,6 +565,86 @@ test('empty decoration attempts remaining releases even when one renderer dispos
   assert.equal(f.listeners.size, 0);
 });
 
+
+test('non-hover whole-workflow drag cues change real hex relief and tint without owning file events', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  assert.notEqual(f.zone, f.label);
+  const hex = () => f.renderers[1].lastScene.children.find(child => child.isInstancedMesh);
+  const snapshot = () => ({
+    height: hex().instanceMatrix.array[14],
+    tint: hex().instanceColor.array[0] / hex().instanceColor.array[2],
+  });
+  const send = type => {
+    const event = new Event(type, { cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { get() { throw new Error('No file inspection is permitted.'); } });
+    event.stopPropagation = () => { throw new Error('No propagation cancellation is permitted.'); };
+    assert.equal(f.zone.dispatchEvent(event), true);
+    assert.equal(event.defaultPrevented, false);
+  };
+  f.tick(260);
+  const baseline = snapshot();
+  send('dragenter');
+  send('dragenter');
+  send('dragover');
+  f.tick(260);
+  const dragging = snapshot();
+  assert.ok(dragging.height > baseline.height);
+  assert.ok(dragging.tint < baseline.tint);
+  send('dragleave');
+  f.tick(260);
+  assert.ok(snapshot().height > dragging.height, 'Leaving a nested child must keep the outer drag cue active.');
+  send('drop');
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  send('dragover');
+  f.tick(260);
+  assert.ok(snapshot().height > baseline.height);
+  send('dragleave');
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  send('dragenter');
+  f.tick(260);
+  f.document.hidden = true;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  f.document.hidden = false;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  send('dragenter');
+  f.tick(260);
+  f.window.dispatchEvent(new Event('pagehide'));
+  f.window.dispatchEvent(new Event('pageshow'));
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  assert.equal([...f.listeners].filter(entry => entry.value === f.zone).length, 4);
+  const draws = f.renderers.map(renderer => renderer.draws);
+  scene.dispose();
+  send('dragenter');
+  send('dragover');
+  send('dragleave');
+  send('drop');
+  f.tick(260);
+  assert.deepEqual(f.renderers.map(renderer => renderer.draws), draws);
+  assert.equal(f.listeners.size, 0);
+  assert.equal(f.frames.size, 0);
+
+  const partial = emptySceneFixture();
+  const add = partial.zone.addEventListener;
+  const primary = new Error('Synthetic second drag-listener refusal.');
+  let registrations = 0;
+  partial.zone.addEventListener = (...args) => {
+    registrations += 1;
+    if (registrations === 2) throw primary;
+    add(...args);
+  };
+  assert.throws(() => createEmptyScene(partial.root, partial.options), error => error === primary);
+  assert.equal(partial.listeners.size, 0);
+  assert.equal(partial.frames.size, 0);
+  assert.ok(partial.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+});
+
 function emptySceneFixture() {
   const listeners = new Set();
   function target() {
@@ -583,6 +663,9 @@ function emptySceneFixture() {
   const window = target();
   const document = target();
   const media = target();
+  const label = target();
+  const zone = target();
+  label.matches = () => false;
   media.matches = false;
   document.hidden = false;
   window.devicePixelRatio = 3;
@@ -605,7 +688,7 @@ function emptySceneFixture() {
   const root = {
     dataset: {}, isConnected: true,
     querySelector: selector => selector.includes('cube') ? canvases[0] : canvases[1],
-    closest: () => ({ matches: () => false, classList: { contains: () => false } }),
+    closest: selector => selector === 'label' ? label : zone,
   };
   const renderers = [];
   function makeRenderer() {
@@ -621,7 +704,7 @@ function emptySceneFixture() {
     return renderer;
   }
   return {
-    root, canvases, renderers, frames, timers, listeners, window, document, media, makeRenderer,
+    root, canvases, renderers, frames, timers, listeners, window, document, media, label, zone, makeRenderer,
     observerDisconnected: () => disconnected,
     tick(time) {
       const callbacks = [...frames.values()];

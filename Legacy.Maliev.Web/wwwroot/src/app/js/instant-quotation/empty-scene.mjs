@@ -37,8 +37,10 @@ export function createEmptyScene(root, {
   if (!root || !documentObject) throw new TypeError('An empty-scene root and document are required.');
   const media = windowObject.matchMedia?.('(prefers-reduced-motion: reduce)');
   const label = root.closest('label');
+  const dragZone = root.closest('.instant-quote__workflow') ?? label;
   const layers = [];
   let disposed = false, pageHidden = false, frame = null, resizeTimer = null, boost = 0;
+  let dragDepth = 0, dragActive = false;
   const started = windowObject.performance.now();
   const matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion();
   const scaleVector = new THREE.Vector3(1, 1, 1), position = new THREE.Vector3(), color = new THREE.Color();
@@ -206,9 +208,30 @@ export function createEmptyScene(root, {
       && (!root.getClientRects || root.getClientRects().length > 0);
   }
 
+  function resetDragCue() {
+    dragDepth = 0;
+    dragActive = false;
+    boost = 0;
+  }
+
+  function dragEnter() {
+    if (!visible()) return;
+    dragDepth = Math.min(dragDepth + 1, Number.MAX_SAFE_INTEGER);
+    dragActive = true;
+  }
+
+  function dragOver() {
+    if (visible()) dragActive = true;
+  }
+
+  function dragLeave() {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) resetDragCue();
+  }
+
   function draw(time, still) {
     const seconds = still ? CYCLE * 0.995 : (time - started) / 1000;
-    const want = label?.matches(':hover') || label?.classList.contains('iq-drag-over') ? 1 : 0;
+    const want = label?.matches(':hover') || dragActive ? 1 : 0;
     boost += ((still ? 0 : want) - boost) * 0.08;
     for (const layer of layers) {
       if (!layer.active) continue;
@@ -247,7 +270,7 @@ export function createEmptyScene(root, {
 
   function animate(time) {
     frame = null;
-    if (!visible()) { root.dataset.motion = 'paused'; return; }
+    if (!visible()) { resetDragCue(); root.dataset.motion = 'paused'; return; }
     draw(time, false);
     if (layers.some(layer => layer.active)) frame = windowObject.requestAnimationFrame(animate);
     else root.dataset.motion = 'failed';
@@ -255,7 +278,7 @@ export function createEmptyScene(root, {
 
   function refresh() {
     stop();
-    if (!visible()) { root.dataset.motion = 'paused'; return; }
+    if (!visible()) { resetDragCue(); root.dataset.motion = 'paused'; return; }
     const still = media?.matches === true;
     draw(windowObject.performance.now(), still);
     root.dataset.motion = layers.some(layer => layer.active) ? (still ? 'still' : 'running') : 'failed';
@@ -277,7 +300,7 @@ export function createEmptyScene(root, {
     }, 150);
   }
 
-  function pageHide() { pageHidden = true; stop(); root.dataset.motion = 'paused'; }
+  function pageHide() { pageHidden = true; resetDragCue(); stop(); root.dataset.motion = 'paused'; }
   function pageShow() { pageHidden = false; refresh(); }
   const observer = windowObject.ResizeObserver ? new windowObject.ResizeObserver(resized) : null;
 
@@ -286,8 +309,13 @@ export function createEmptyScene(root, {
     disposed = true;
     releaseAll([
       stop,
+      resetDragCue,
       () => { if (resizeTimer !== null) windowObject.clearTimeout(resizeTimer); resizeTimer = null; },
       () => observer?.disconnect(),
+      () => dragZone?.removeEventListener('dragenter', dragEnter),
+      () => dragZone?.removeEventListener('dragover', dragOver),
+      () => dragZone?.removeEventListener('dragleave', dragLeave),
+      () => dragZone?.removeEventListener('drop', resetDragCue),
       () => documentObject.removeEventListener('visibilitychange', refresh),
       () => media?.removeEventListener('change', refresh),
       () => windowObject.removeEventListener('pagehide', pageHide),
@@ -301,6 +329,10 @@ export function createEmptyScene(root, {
   try {
     initialize('cube');
     initialize('hex');
+    dragZone?.addEventListener('dragenter', dragEnter);
+    dragZone?.addEventListener('dragover', dragOver);
+    dragZone?.addEventListener('dragleave', dragLeave);
+    dragZone?.addEventListener('drop', resetDragCue);
     documentObject.addEventListener('visibilitychange', refresh);
     media?.addEventListener('change', refresh);
     windowObject.addEventListener('pagehide', pageHide);
