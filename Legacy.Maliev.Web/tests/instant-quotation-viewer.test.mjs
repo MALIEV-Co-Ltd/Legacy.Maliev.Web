@@ -9,6 +9,7 @@ import {
   createModelViewer,
   createOcctLoader,
   ensurePreviewGeometryNormals,
+  frameObject,
   loadStandaloneModel,
   orientGltfForPrinting,
   stableBodyColor,
@@ -16,11 +17,17 @@ import {
   validateStandaloneGltfDocument,
 } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
 import {
+  Box3,
+  BoxGeometry,
   BufferGeometry,
   Float32BufferAttribute,
+  Frustum,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
+  PerspectiveCamera,
   Texture,
+  Vector3,
 } from 'three';
 
 test('indexed preview geometry is expanded and flat-shaded before analysis', () => {
@@ -328,6 +335,122 @@ test('canvas resize caches CSS dimensions and DPR without repeated DPR 2 setSize
   assert.equal(resize.sync(), true);
   assert.equal(resize.sync(), false);
   assert.deepEqual(calls, [['ratio', 2], ['size', 400, 200, false], ['projection']]);
+});
+
+test('aspect reframe settles for 180 ms and ignores DPR-only changes and subpixel churn', () => {
+  let time = 0;
+  let ratio = 1;
+  const reframes = [];
+  const renderer = { setPixelRatio() {}, setSize() {} };
+  const camera = { aspect: 1, updateProjectionMatrix() {} };
+  const canvas = { clientWidth: 400, clientHeight: 200 };
+  const resize = createCanvasResizeController({
+    renderer, camera, canvas, devicePixelRatio: () => ratio,
+    now: () => time, onAspectSettled: () => reframes.push(camera.aspect),
+  });
+  resize.sync();
+  ratio = 2;
+  time = 200;
+  resize.sync();
+  canvas.clientWidth = 401;
+  time = 400;
+  resize.sync();
+  time = 600;
+  resize.sync();
+  assert.deepEqual(reframes, []);
+  canvas.clientWidth = 200;
+  resize.sync();
+  time = 779;
+  resize.sync();
+  assert.deepEqual(reframes, []);
+  canvas.clientWidth = 100;
+  resize.sync();
+  time = 958;
+  resize.sync();
+  assert.deepEqual(reframes, []);
+  time = 959;
+  resize.sync();
+  assert.deepEqual(reframes, [0.5]);
+  time = 2000;
+  resize.sync();
+  assert.deepEqual(reframes, [0.5]);
+});
+
+test('settled portrait resize frames the selected mesh through the production camera formula', () => {
+  const mesh = new Mesh(new BoxGeometry(120, 60, 20), new MeshStandardMaterial());
+  mesh.position.set(42, -17, 5);
+  mesh.rotation.set(0.2, 0.4, 0.1);
+  const camera = new PerspectiveCamera(45, 1, 0.1, 100000);
+  const controls = {
+    target: new Vector3(),
+    update() { camera.lookAt(this.target); camera.updateMatrixWorld(true); },
+  };
+  let fits = 0;
+  const adapter = {
+    show() {}, hide() {},
+    fit(object) { fits += 1; frameObject(object, camera, controls); },
+  };
+  const viewer = createModelViewer({ adapter });
+  let time = 0;
+  const canvas = { clientWidth: 600, clientHeight: 300 };
+  const resize = createCanvasResizeController({
+    renderer: { setPixelRatio() {}, setSize() {} }, camera, canvas,
+    devicePixelRatio: () => 1, now: () => time, onAspectSettled: () => viewer.fit(),
+  });
+  resize.sync();
+  viewer.addPart('selected', mesh);
+  const initialPosition = camera.position.toArray();
+  canvas.clientWidth = 150;
+  resize.sync();
+  time = 180;
+  resize.sync();
+  assert.equal(fits, 2);
+  assert.notDeepEqual(camera.position.toArray(), initialPosition);
+  const bounds = new Box3().setFromObject(mesh);
+  assert.deepEqual(controls.target.toArray(), bounds.getCenter(new Vector3()).toArray());
+  for (const aspect of [0.25, 0.5, 2]) {
+    camera.aspect = aspect;
+    frameObject(mesh, camera, controls);
+    const frustum = new Frustum().setFromProjectionMatrix(
+      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    for (const x of [bounds.min.x, bounds.max.x]) {
+      for (const y of [bounds.min.y, bounds.max.y]) {
+        for (const z of [bounds.min.z, bounds.max.z]) {
+          assert.equal(frustum.containsPoint(new Vector3(x, y, z)), true);
+        }
+      }
+    }
+  }
+  viewer.dispose();
+});
+
+test('aspect reframe uses the current selection and empty viewers do not fit a missing object', () => {
+  const fitted = [];
+  const adapter = { show() {}, hide() {}, fit: object => fitted.push(object) };
+  const viewer = createModelViewer({ adapter });
+  viewer.fit();
+  assert.deepEqual(fitted, []);
+  const first = disposableObject();
+  const second = disposableObject();
+  viewer.addPart('first', first);
+  viewer.addPart('second', second);
+  let time = 0;
+  const canvas = { clientWidth: 600, clientHeight: 300 };
+  const resize = createCanvasResizeController({
+    renderer: { setPixelRatio() {}, setSize() {} },
+    camera: { aspect: 1, updateProjectionMatrix() {} }, canvas,
+    now: () => time, onAspectSettled: () => viewer.fit(),
+  });
+  resize.sync();
+  canvas.clientWidth = 150;
+  resize.sync();
+  viewer.select('second');
+  time = 180;
+  resize.sync();
+  assert.equal(fitted.at(-1), second);
+  viewer.dispose();
+  assert.equal(first.disposeCount(), 1);
+  assert.equal(second.disposeCount(), 1);
 });
 
 test('OCCT loader clears a rejected promise so a transient script failure can retry', async () => {
