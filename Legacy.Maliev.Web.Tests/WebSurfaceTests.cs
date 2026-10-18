@@ -420,6 +420,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-order-creation-content\"", source, StringComparison.Ordinal);
+        Assert.Equal(
+            route.EndsWith("/3d-scanning", StringComparison.Ordinal),
+            source.Contains("src=\"/src/images/box-dimensions-annotation.webp\"", StringComparison.Ordinal));
         Assert.Contains($">{heading}<", decoded, StringComparison.Ordinal);
         Assert.Contains($"action=\"{action}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.OrdinalIgnoreCase);
@@ -579,6 +582,8 @@ public sealed class WebSurfaceTests : IDisposable
         using var displayResponse = await client.GetAsync($"{route}?culture={culture}");
         Assert.Equal(HttpStatusCode.OK, displayResponse.StatusCode);
         var displayHtml = await displayResponse.Content.ReadAsStringAsync();
+        Assert.Contains("src=\"/src/images/box-dimensions-annotation.webp\"", displayHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("box-dimensions-annotation.gif", displayHtml, StringComparison.Ordinal);
         foreach (var dimension in new[] { "width", "length", "height" })
         {
             var input = Regex.Match(displayHtml, $"<input[^>]*id=\"member-order-{dimension}\"[^>]*>", RegexOptions.IgnoreCase);
