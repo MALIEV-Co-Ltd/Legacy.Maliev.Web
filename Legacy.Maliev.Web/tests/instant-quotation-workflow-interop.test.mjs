@@ -714,3 +714,115 @@ function emptySceneFixture() {
     options: { windowObject: window, documentObject: document, createRenderer: makeRenderer },
   };
 }
+
+test('whole-workflow file drops feed the existing input change snapshot exactly once', async () => {
+  const { interop } = harness();
+  const zone = new EventTarget();
+  const input = new EventTarget();
+  input.closest = selector => selector === '.instant-quote__workflow' ? zone : null;
+  input.files = [];
+  input.disabled = false;
+  zone.getAttribute = () => 'false';
+  const first = { ...modelFile('drop-first.stl'), size: 1 };
+  const second = { ...modelFile('drop-second.obj'), size: 1 };
+  const dropped = [first, second];
+  let changes = 0;
+  try {
+    interop.bindInput(input);
+    input.addEventListener('change', () => { changes += 1; });
+    const over = new Event('dragover', { cancelable: true });
+    Object.defineProperty(over, 'dataTransfer', { value: { types: ['Files'], files: [] } });
+    assert.equal(zone.dispatchEvent(over), false);
+    const drop = new Event('drop', { cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', { value: { types: ['Files'], files: dropped } });
+    assert.equal(zone.dispatchEvent(drop), false);
+    assert.equal(input.files, dropped);
+    assert.equal(changes, 1);
+    input.files = [{ ...modelFile('later.stl'), size: 1 }];
+    const keys = interop.beginSelection(input, 1);
+    assert.equal(keys.length, 2);
+    await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+    assert.equal(changes, 1);
+  } finally { interop.dispose(); }
+});
+
+test('whole-workflow drops ignore non-files and refuse disabled or busy uploads without changing selection', () => {
+  const { interop } = harness();
+  const zone = new EventTarget();
+  const input = new EventTarget();
+  const original = [{ ...modelFile('retained.stl'), size: 1 }];
+  input.files = original;
+  input.closest = () => zone;
+  let busy = 'false';
+  zone.getAttribute = () => busy;
+  let changes = 0;
+  const send = transfer => {
+    const event = new Event('drop', { cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { value: transfer });
+    return zone.dispatchEvent(event);
+  };
+  try {
+    interop.bindInput(input);
+    input.addEventListener('change', () => { changes += 1; });
+    assert.equal(send({ types: ['text/plain'], files: [] }), true);
+    assert.equal(send({ types: ['Files'], files: [] }), false);
+    input.disabled = true;
+    assert.equal(send({ types: ['Files'], files: [modelFile('disabled.stl')] }), false);
+    input.disabled = false;
+    busy = 'true';
+    assert.equal(send({ types: ['Files'], files: [modelFile('busy.stl')] }), false);
+    assert.equal(input.files, original);
+    assert.equal(changes, 0);
+  } finally { interop.dispose(); }
+});
+
+test('whole-workflow drop bindings move with the bound input and release on disposal', async () => {
+  const { interop } = harness();
+  const zone = new EventTarget();
+  const replacementZone = new EventTarget();
+  const input = new EventTarget();
+  const replacement = new EventTarget();
+  input.closest = () => zone;
+  replacement.closest = () => replacementZone;
+  input.files = [];
+  replacement.files = [];
+  zone.getAttribute = replacementZone.getAttribute = () => 'false';
+  let changes = 0;
+  replacement.addEventListener('change', () => { changes += 1; });
+  const send = target => {
+    const event = new Event('drop', { cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', {
+      value: { types: ['Files'], files: [{ ...modelFile('current.stl'), size: 1 }] },
+    });
+    return target.dispatchEvent(event);
+  };
+  try {
+    interop.bindInput(input);
+    interop.bindInput(replacement);
+    interop.bindInput(replacement);
+    assert.equal(send(zone), true);
+    assert.deepEqual(input.files, []);
+    assert.equal(send(replacementZone), false);
+    assert.equal(changes, 1);
+    interop.dispose();
+    assert.equal(send(replacementZone), true);
+    assert.equal(changes, 1);
+  } finally { interop.dispose(); }
+  const primary = new Error('Synthetic preview cleanup refusal.');
+  const failed = harness(async () => ({
+    traverse(visitor) { visitor({ geometry: { dispose() { throw primary; } } }); },
+  }));
+  const failedInput = new EventTarget();
+  const failedZone = new EventTarget();
+  failedInput.files = [];
+  failedInput.closest = () => failedZone;
+  failedZone.getAttribute = () => 'false';
+  try {
+    failed.interop.bindInput(failedInput);
+    const [key] = failed.interop.beginSelection({ files: [{ ...modelFile('cleanup.stl'), size: 1 }] });
+    await failed.interop.getGeometryClaim(key);
+    assert.throws(() => failed.interop.dispose(), error => error === primary);
+    assert.equal(send(failedZone), true);
+    assert.deepEqual(failedInput.files, []);
+  } finally { failed.interop.dispose(); }
+});

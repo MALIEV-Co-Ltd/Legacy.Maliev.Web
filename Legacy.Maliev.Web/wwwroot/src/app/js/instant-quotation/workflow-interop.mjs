@@ -111,6 +111,8 @@ export function createWorkflowPreviewInterop({
   let quoteStarted = false;
   let inputElement = null;
   let inputChangeHandler = null;
+  let inputDropZone = null;
+  let inputDropHandler = null;
   const selectionSnapshots = [];
 
   function bindInput(input) {
@@ -120,13 +122,34 @@ export function createWorkflowPreviewInterop({
     unbindInput();
     inputElement = input;
     inputChangeHandler = () => selectionSnapshots.push(Array.from(input.files ?? []));
-    inputElement?.addEventListener?.('change', inputChangeHandler, { capture: true });
+    inputDropZone = inputElement?.closest?.('.instant-quote__workflow') ?? null;
+    inputDropHandler = event => {
+      const transfer = event.dataTransfer;
+      if (!transfer || !(Array.from(transfer.types ?? []).includes('Files') || transfer.files?.length)) return;
+      event.preventDefault();
+      if (event.type !== 'drop' || inputElement.disabled
+          || inputDropZone?.getAttribute('aria-busy') === 'true' || !transfer.files?.length) return;
+      inputElement.files = transfer.files;
+      inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    try {
+      inputElement?.addEventListener?.('change', inputChangeHandler, { capture: true });
+      inputDropZone?.addEventListener('dragover', inputDropHandler);
+      inputDropZone?.addEventListener('drop', inputDropHandler);
+    } catch (primary) {
+      unbindInput();
+      throw primary;
+    }
   }
 
   function unbindInput() {
     inputElement?.removeEventListener?.('change', inputChangeHandler, { capture: true });
+    inputDropZone?.removeEventListener('dragover', inputDropHandler);
+    inputDropZone?.removeEventListener('drop', inputDropHandler);
     inputElement = null;
     inputChangeHandler = null;
+    inputDropZone = null;
+    inputDropHandler = null;
   }
 
   function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY) {
@@ -505,10 +528,10 @@ export function createWorkflowPreviewInterop({
   function dispose() {
     if (disposed) return;
     disposed = true;
+    unbindInput();
     for (const key of [...previews.keys()]) release(key);
     for (const files of selectionSnapshots) files.length = 0;
     selectionSnapshots.length = 0;
-    unbindInput();
     partKeys.clear();
     viewer?.dispose();
     viewer = null;

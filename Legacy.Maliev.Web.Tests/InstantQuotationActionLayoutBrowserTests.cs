@@ -110,6 +110,91 @@ public sealed class InstantQuotationActionLayoutBrowserTests(CncNativeBrowserFix
         Assert.True(await page.Locator("[data-workflow-upload-item], [data-workflow-part]").CountAsync() > 0);
     }
 
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task NativeFileDropsUseTheSameInputPipelineAcrossEmptyAndConfiguredWorkflow(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 820, Height = 800 },
+        });
+        var page = await context.NewPageAsync();
+        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const zone = document.querySelector('.instant-quote__workflow');
+              const input = document.querySelector('#instant-quote-files');
+              if (!zone || !input || input._blazorInputFileNextFileId === undefined
+                  || input.disabled || zone.getAttribute('aria-busy') === 'true') return false;
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([], 'workflow-drop-readiness.stl', { type: 'model/stl' }));
+              const probe = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer });
+              return !zone.dispatchEvent(probe) && probe.defaultPrevented;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var encoded = Convert.ToBase64String(WallThicknessParityBrowserFixture.Box(5));
+        for (var index = 0; index < 2; index++)
+        {
+            var selector = index == 0 ? "[data-workflow-empty-dropzone]" : "[data-workflow-configuration]";
+            var observed = await page.EvaluateAsync<JsonElement>(
+                """
+                args => {
+                  const zone = document.querySelector('.instant-quote__workflow');
+                  const input = document.querySelector('#instant-quote-files');
+                  const target = zone.querySelector(args.selector);
+                  if (!target || input.disabled) throw new Error('The expected upload target is not ready.');
+                  let changes = 0;
+                  const changed = () => { changes += 1; };
+                  input.addEventListener('change', changed);
+                  try {
+                    const text = new DataTransfer();
+                    text.setData('text/plain', 'not a model');
+                    const ignored = target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: text }));
+                    const bytes = Uint8Array.from(atob(args.encoded), character => character.charCodeAt(0));
+                    const transfer = new DataTransfer();
+                    transfer.items.add(new File([bytes], args.name, { type: 'model/stl' }));
+                    input.disabled = true;
+                    const refused = target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                    const refusedChanges = changes;
+                    input.disabled = false;
+                    const over = target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                    const accepted = target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                    return { ignored, refused, refusedChanges, over, accepted, changes, files: input.files.length, name: input.files[0]?.name };
+                  } finally {
+                    input.disabled = false;
+                    input.removeEventListener('change', changed);
+                  }
+                }
+                """,
+                new { selector, encoded, name = $"workflow-drop-{index}.stl" });
+            Assert.True(observed.GetProperty("ignored").GetBoolean());
+            Assert.False(observed.GetProperty("refused").GetBoolean());
+            Assert.Equal(0, observed.GetProperty("refusedChanges").GetInt32());
+            Assert.False(observed.GetProperty("over").GetBoolean());
+            Assert.False(observed.GetProperty("accepted").GetBoolean());
+            Assert.Equal(1, observed.GetProperty("changes").GetInt32());
+            Assert.Equal(1, observed.GetProperty("files").GetInt32());
+            Assert.Equal($"workflow-drop-{index}.stl", observed.GetProperty("name").GetString());
+            await page.WaitForFunctionAsync(
+                """
+                count => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === count
+                  && document.querySelector('[data-workflow-configuration]') !== null
+                  && !document.querySelector('#instant-quote-files').disabled
+                """,
+                index + 1, new PageWaitForFunctionOptions { Timeout = 30_000 });
+            Assert.Equal(index + 1, await page.Locator("[data-workflow-parts] > [data-workflow-part]").CountAsync());
+            Assert.Contains($"workflow-drop-{index}.stl",
+                await page.Locator("[data-workflow-parts]").InnerTextAsync(), StringComparison.Ordinal);
+        }
+    }
+
     private async Task<IPage> OpenActionsAsync(IBrowserContext context, string culture)
     {
         var page = await context.NewPageAsync();
