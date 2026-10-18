@@ -149,6 +149,18 @@ public sealed class LocalizedServiceSeoHttpTests(TestingWebApplicationFactory fa
             return;
         }
 
+        var guideId = route switch
+        {
+            "/services/3d-printing" => "printing-guides",
+            "/services/3d-scanning" => "scanning-guides",
+            _ => "cnc-guides",
+        };
+        var guideSection = Assert.Single(Elements(RemoveScripts(html), "section"), element =>
+            Attribute(element.Attributes, "id") == guideId);
+        links = Elements(guideSection.Body, "a");
+        Assert.Equal(3, links.Count(link => Attribute(link.Attributes, "href")
+            .StartsWith("https://shop.maliev.com/blogs/news/", StringComparison.Ordinal)));
+
         // These source-owned guides are on Shopify. Freeze their rendered URL and
         // localized label without contacting the external host or claiming its readiness.
         var guides = route switch
