@@ -71,6 +71,7 @@ export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter
     analyzeGeometry: analyzeUploadDerivedGeometry,
     createViewer: viewerModule.createThreeModelViewer,
     reportStatus: () => dotNetStatusReporter?.invokeMethodAsync('ReportPreviewUnavailableAsync'),
+    reportQuoteStarted: () => dotNetStatusReporter?.invokeMethodAsync('ReportQuoteStartedAsync'),
     reportThickness: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportThicknessStateAsync', ...args),
     reportIncomplete: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportIncompletePreviewAsync', ...args),
   });
@@ -81,6 +82,7 @@ export function createWorkflowPreviewInterop({
   analyzeGeometry,
   createViewer,
   reportStatus = () => {},
+  reportQuoteStarted = () => {},
   reportThickness = () => {},
   reportIncomplete = () => {},
   thicknessAnalyzer = createWallThicknessAnalyzer(),
@@ -106,6 +108,7 @@ export function createWorkflowPreviewInterop({
   let disposed = false;
   let availability = 'ready';
   let nextKey = 0;
+  let quoteStarted = false;
   let inputElement = null;
   let inputChangeHandler = null;
   const selectionSnapshots = [];
@@ -165,6 +168,15 @@ export function createWorkflowPreviewInterop({
     if (!supportedExtensions.has(extensionOf(file?.name))) {
       setUnavailable();
       return key;
+    }
+
+    if (!quoteStarted) {
+      quoteStarted = true;
+      try {
+        Promise.resolve(reportQuoteStarted()).catch(() => {});
+      } catch {
+        // Intent measurement must not block model parsing or upload.
+      }
     }
 
     const operation = Promise.all([

@@ -497,7 +497,11 @@
              @ref="customerDetailsSection"
              tabindex="-1"
              aria-labelledby="instant-quote-customer-heading">
-            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview" />
+            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview"
+                                          HasFiles="@(workflow?.Uploads.Count > 0)"
+                                          FileUploadCompleted="@(workflow is not null && workflow.Uploads.Count > 0
+                                              && workflow.Uploads.All(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)
+                                              && Parts.Count == workflow.Uploads.Count)" />
         </div>
     }
 
