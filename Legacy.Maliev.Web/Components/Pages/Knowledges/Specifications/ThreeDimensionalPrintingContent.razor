@@ -2,14 +2,100 @@
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
     <p class="maliev-eyebrow">@Localizer["3D printing preparation"]</p>
-    <h1>@Localizer["Prepare a model for 3D printing"]</h1>
-    <p class="docs-lead">@Localizer["Process, material, orientation, wall thickness, and post-processing all influence strength, appearance, and cost."]</p>
-    <div class="docs-step-list">
-        <section><span>1</span><div><h2>@Localizer["Export clean geometry"]</h2><p>@Localizer["Submit a watertight solid or mesh at the correct scale. Remove unintended bodies, self-intersections, open edges, and duplicate shells."]</p></div></section>
-        <section><span>2</span><div><h2>@Localizer["Describe functional needs"]</h2><p>@Localizer["Tell us about loads, heat, UV exposure, flexibility, chemical contact, fit, cosmetic faces, and required color."]</p></div></section>
-        <section><span>3</span><div><h2>@Localizer["Plan for the process"]</h2><p>@Localizer["Allow for supports, layer direction, minimum wall thickness, clearances, shrinkage, and the finish achievable with the selected technology."]</p></div></section>
-    </div>
-    <div class="maliev-actions"><a class="maliev-button" href="/services/3d-printing">@Localizer["View 3D printing service"]</a></div>
+<h1>@Localizer["Prepare a model for 3D printing"]</h1>
+<p class="docs-lead">@Localizer["A printable model needs more than a clean appearance on screen. Geometry, material, build direction, mating clearances, and finishing determine whether the result suits its intended use. Use this guide to explain the requirements that should be reviewed before quotation."]</p>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul>
+<li>
+<a href="#geometry">@Localizer["Files and geometry"]</a>
+</li>
+<li>
+<a href="#process">@Localizer["FDM and resin considerations"]</a>
+</li>
+<li>
+<a href="#fit">@Localizer["Fit and tolerances"]</a>
+</li>
+<li>
+<a href="#finish">@Localizer["Finishing and quotation checklist"]</a>
+</li>
+</ul>
+</nav>
+<section id="geometry" class="docs-section">
+<h2>@Localizer["Check geometry and scale"]</h2>
+<p>@Localizer["Submit a closed, watertight model at the intended scale. Remove accidental bodies, overlapping shells, open edges, and self-intersections. Identify separate parts and their quantity rather than relying on a viewer screenshot to explain the order. State units and one overall reference dimension, especially with mesh files."]</p>
+<p>@Localizer["For a mesh export such as STL, OBJ, or 3MF, inspect curved surfaces for visible faceting. A smooth display shader can hide a coarse mesh; enlarging the file later does not recover missing design detail. Include the source solid or STEP export if available, and a drawing for critical requirements."]</p>
+</section>
+<section id="process" class="docs-section">
+<h2>@Localizer["Choose around the application"]</h2>
+<p>@Localizer["Describe loads, operating temperature, sunlight, chemical exposure, flexibility, and expected life. A material name or color alone does not establish suitability. Ask for review if the part has a demanding functional role, and identify which faces must remain visually clean."]</p>
+<div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Technical guidance table"]">
+<table>
+<thead>
+<tr>
+<th scope="col">@Localizer["Process consideration"]</th>
+<th scope="col">@Localizer["What to discuss"]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">@Localizer["FDM / FFF"]</th>
+<td>@Localizer["Layer direction affects strength and appearance. Show the direction of the applied load. Thin walls and small features must suit the extrusion process; overhangs may need supports."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Resin printing"]</th>
+<td>@Localizer["Orientation and support contact affect the supplied surface. Hollow parts need access for drainage and cleaning; hidden pockets require review before the design is finalized."]</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>@Localizer["There is no single orientation that optimizes strength, appearance, supports, and cost for every model. If an orientation is mandatory, say why and identify acceptable support-contact areas."]</p>
+<p>
+<a href="https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135">@Localizer["Prusa: geometry, supports, and FFF orientation"]</a>
+</p>
+</section>
+<section id="fit" class="docs-section">
+<h2>@Localizer["Separate layer height from tolerance"]</h2>
+<p>@Localizer["Layer height describes a printing setting, not a guaranteed dimensional tolerance. State the important dimension and its allowable variation. Material, geometry, orientation, and post-processing all influence the result, so a single universal clearance is not suitable for every assembly."]</p>
+<p>@Localizer["Explain whether a joint must slide, rotate, snap together, or remain fixed. Supply the mating part dimensions and identify threads, inserts, bearings, or fasteners. Consider a fit sample before committing to a larger batch when the interface is critical."]</p>
+<aside class="docs-example">
+<h3>@Localizer["Example: an enclosure with a lid"]</h3>
+<p>@Localizer["Mark the sealing or mating edge, show how the lid is retained, and state the desired opening force or clearance. Tell the team whether appearance or fit takes priority at each face instead of requesting that every surface be equally precise."]</p>
+</aside>
+<p>
+<a href="https://formlabs.com/blog/understanding-accuracy-precision-tolerance-in-3d-printing/">@Localizer["Formlabs: accuracy, precision, and tolerance"]</a>
+</p>
+</section>
+<section id="finish" class="docs-section">
+<h2>@Localizer["Define the supplied finish"]</h2>
+<p>@Localizer["Layer lines, seams, support marks, and changes in texture can remain visible. A rendered image does not define a finished surface. Confirm support removal and any sanding, painting, coating, assembly, or insert installation in the quoted scope. For resin, the washing and curing requirements depend on the selected material and process."]</p>
+<ul class="docs-checklist">
+<li>@Localizer["Send the approved revision, units, quantity, intended use, material requirements, and target date."]</li>
+<li>@Localizer["Identify critical dimensions, mating interfaces, load direction, cosmetic faces, and acceptable support-contact areas."]</li>
+<li>@Localizer["Flag enclosed cavities and any limits on splitting, joining, drainage holes, or surface modification."]</li>
+</ul>
+</section>
+<section class="docs-sources">
+<h2>@Localizer["Further reading"]</h2>
+<p>@Localizer["These manufacturer references explain general principles, not a guarantee of MALIEV equipment, materials, or achievable tolerances."]</p>
+<ol>
+<li>
+<a href="https://formlabs.com/support/Model-Orientation/">@Localizer["Formlabs: model orientation for SLA"]</a>
+</li>
+<li>
+<a href="https://formlabs.com/support/Hollowing-models-in-PreForm/">@Localizer["Formlabs: hollow models and drainage"]</a>
+</li>
+</ol>
+</section>
+<section class="docs-next">
+<h2>@Localizer["Prepare your next step"]</h2>
+<p>@Localizer["Have files and requirements ready? Request a reviewed quotation. If the process, material, or deliverable is still unclear, talk to our team first."]</p>
+<div class="maliev-actions">
+<a class="maliev-button" href="/quotation">@Localizer["Request a quotation"]</a>
+<a class="maliev-button maliev-button--secondary" href="/contact">@Localizer["Talk to our team"]</a>
+<a href="/services/3d-printing">@Localizer["View 3D printing service"]</a>
+</div>
+</section>
 </article>
 
 @code {

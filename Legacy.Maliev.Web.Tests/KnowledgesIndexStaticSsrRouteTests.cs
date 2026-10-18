@@ -36,13 +36,13 @@ public sealed partial class KnowledgesIndexStaticSsrRouteTests : IClassFixture<T
     [InlineData(
         "en",
         "Knowledge center | MALIEV",
-        "Practical manufacturing guidance for preparing files, choosing processes, and working with MALIEV.",
+        "Practical CNC, 3D printing, and scanning guidance for better designs and complete quotation requests.",
         "Knowledge center",
         "Manufacturing resources")]
     [InlineData(
         "th",
         "ศูนย์ความรู้ | MALIEV",
-        "คำแนะนำการเตรียมไฟล์ เลือกกระบวนการ และทำงานร่วมกับ MALIEV",
+        "ความรู้ด้าน CNC พิมพ์ 3 มิติ และสแกน 3 มิติ เพื่อออกแบบและเตรียมข้อมูลขอราคาให้ครบ",
         "ศูนย์ความรู้",
         "ข้อมูลด้านการผลิต")]
     public async Task KnowledgesRoute_RendersCompleteLocalizedStaticDocument(

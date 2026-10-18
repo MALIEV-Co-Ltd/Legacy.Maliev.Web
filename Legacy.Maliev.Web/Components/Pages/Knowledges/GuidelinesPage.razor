@@ -16,7 +16,7 @@
     <meta name="description" content="@description" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="documentLinks" />
-    <KnowledgeGuidelinesStructuredData CanonicalUrl="documentLinks.CanonicalUrl" />
+    <KnowledgeGuidelinesStructuredData CanonicalUrl="@documentLinks.CanonicalUrl" />
 </HeadContent>
 <div class="docs-page" data-migration-route-owner="blazor-static-ssr">
     <div class="workspace-shell docs-shell">
@@ -64,32 +64,3 @@
     </div>
     <button type="button" class="workspace-backdrop" data-workspace-backdrop hidden aria-label="@Localizer["Close contents"]"></button>
 </div>
-<script>
-    (() => {
-        const drawer = document.getElementById('knowledge-navigation');
-        const openButton = document.querySelector('[data-workspace-open]');
-        const closeButton = drawer?.querySelector('[data-workspace-close]');
-        const backdrop = document.querySelector('[data-workspace-backdrop]');
-        if (!drawer || !openButton || !backdrop) return;
-        const close = () => {
-            drawer.classList.remove('is-open');
-            document.body.classList.remove('workspace-drawer-open');
-            openButton.setAttribute('aria-expanded', 'false');
-            backdrop.hidden = true;
-            openButton.focus();
-        };
-        const open = () => {
-            drawer.classList.add('is-open');
-            document.body.classList.add('workspace-drawer-open');
-            openButton.setAttribute('aria-expanded', 'true');
-            backdrop.hidden = false;
-            closeButton?.focus();
-        };
-        openButton.addEventListener('click', open);
-        closeButton?.addEventListener('click', close);
-        backdrop.addEventListener('click', close);
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && drawer.classList.contains('is-open')) close();
-        });
-    })();
-</script>

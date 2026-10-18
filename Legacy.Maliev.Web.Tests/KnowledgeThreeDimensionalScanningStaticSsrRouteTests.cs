@@ -121,12 +121,12 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         "Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report.",
         "Prepare a part for 3D scanning",
         "3D scanning preparation",
-        "Clean and identify the part",
-        "Remove loose dirt and temporary items. Mark features that must remain untouched and disclose damaged or missing areas.",
-        "Explain the deliverable",
-        "Raw scans preserve measured surface data; reverse engineering creates editable CAD; deviation analysis compares a scan with reference geometry.",
-        "Plan access and surface treatment",
-        "Deep internal features, occluded surfaces, reflective or transparent materials may need repositioning, temporary scanning spray, or another measurement method.",
+        "Choose the deliverable explicitly",
+        "A triangulated surface represents captured shape. Agree the file format, units, coverage, and whether texture or color is needed. A mesh is not automatically a feature-based CAD model.",
+        "Do not confuse detail with measurement accuracy",
+        "Resolution describes captured detail or spacing of data points; accuracy concerns closeness to a reference value. Repeatability concerns consistency across repeated measurements. A dense mesh or a smooth screen image does not establish that a critical dimension is within tolerance.",
+        "Plan surface access and treatment",
+        "Provide photographs before shipping, including the underside, recesses, and important interfaces. Optical scanning requires a usable view of the surface. Deep bores, enclosed cavities, undercuts, and areas hidden by an assembly may not be captured completely; ask whether disassembly or another measurement method is needed.",
         "View 3D scanning service")]
     [InlineData(
         "th",
@@ -134,12 +134,12 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         "นำชิ้นงานสภาพดีที่สุดมา และระบุว่าต้องการไฟล์สแกนดิบ CAD reverse engineering หรือรายงาน deviation",
         "เตรียมชิ้นงานสำหรับสแกน 3 มิติ",
         "การเตรียมงานสแกน 3 มิติ",
-        "ทำความสะอาดและระบุชิ้นงาน",
-        "กำจัดฝุ่นและสิ่งของชั่วคราว ระบุจุดที่ห้ามแก้ไขและส่วนที่เสียหายหรือขาด",
-        "ระบุไฟล์ส่งมอบ",
-        "ไฟล์สแกนดิบเก็บข้อมูลผิวที่วัดได้ reverse engineering สร้าง CAD แก้ไขได้ และ deviation analysis เปรียบเทียบสแกนกับแบบอ้างอิง",
+        "ระบุสิ่งที่ต้องส่งมอบให้ชัดเจน",
+        "ผิวสามเหลี่ยมแสดงรูปทรงที่เก็บข้อมูลได้ ตกลงรูปแบบไฟล์ หน่วย พื้นที่ครอบคลุม และความต้องการเท็กซ์เจอร์หรือสี เมชไม่ได้เป็นโมเดล CAD ที่มีฟีเจอร์โดยอัตโนมัติ",
+        "อย่าสับสนรายละเอียดกับความแม่นยำในการวัด",
+        "ความละเอียดอธิบายรายละเอียดหรือระยะห่างของจุดข้อมูล ความแม่นยำเกี่ยวข้องกับความใกล้เคียงค่าอ้างอิง ส่วนความสามารถในการวัดซ้ำเกี่ยวข้องกับความสม่ำเสมอเมื่อวัดหลายครั้ง เมชที่หนาแน่นหรือภาพบนจอที่เรียบไม่ได้ยืนยันว่าขนาดสำคัญอยู่ในค่าความคลาดเคลื่อนที่กำหนด",
         "วางแผนการเข้าถึงและเตรียมผิว",
-        "ร่องลึก ผิวที่บัง วัสดุสะท้อนหรือโปร่งใส อาจต้องจัดท่า ใช้สเปรย์ชั่วคราว หรือใช้วิธีวัดอื่น",
+        "ส่งภาพถ่ายก่อนจัดส่ง รวมด้านใต้ ร่อง และจุดประกอบสำคัญ การสแกนเชิงแสงต้องมองเห็นผิวในสภาพที่เก็บข้อมูลได้ รูลึก โพรงปิด ส่วนเว้า และผิวที่ถูกชุดประกอบบังอาจเก็บข้อมูลได้ไม่ครบ ควรสอบถามว่าต้องถอดประกอบหรือใช้วิธีวัดอื่นหรือไม่",
         "ดูบริการสแกน 3 มิติ")]
     public async Task ThreeDimensionalScanningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
@@ -175,7 +175,7 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{thirdStepDescription}<", source, StringComparison.Ordinal);
         Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
+        Assert.Equal(4, Regex.Matches(source, "<section\\b[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
         Assert.Contains("href=\"/services/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -194,8 +194,10 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);

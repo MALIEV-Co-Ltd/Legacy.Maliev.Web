@@ -43,27 +43,27 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         "en",
         "CNC machining specifications | MALIEV",
         "A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe.",
-        "Files and requirements for CNC machining",
+        "Design decisions that make CNC parts easier to manufacture",
         "CNC machining preparation",
-        "Provide the model",
-        "STEP or another solid CAD format is preferred. Include separate files for each part and identify the revision.",
-        "Add the drawing",
-        "Call out tolerances, datums, threads, fits, surface finish, heat treatment, coatings, deburring, and inspection requirements.",
-        "Confirm production details",
-        "Specify material grade, quantity, repeat-order expectations, supplied components, packaging, and target date.",
+        "Files and quotation checklist",
+        "Supply a solid CAD model such as STEP and a readable dimensioned drawing for each part. Identify units, part number and revision consistently across both files. A model describes nominal shape; it does not reliably communicate every thread, fit, cosmetic requirement or inspection condition. If model and drawing disagree, identify which requirement governs before machining begins.",
+        "Thin walls and floors: consider support as well as thickness",
+        "Wall height, thickness, unsupported length and material all influence how a feature responds during cutting. A tall isolated wall behaves differently from a short wall tied into surrounding ribs. Thin floors can also bend under cutting or clamping loads. There is no single minimum wall thickness that establishes whether every material and geometry can be machined successfully.",
+        "Internal radii and pockets: leave room for the cutter",
+        "A rotating end mill leaves a radius in an internal vertical corner. Making that radius smaller usually changes the required tool diameter, reach or number of operations. When the cutter nearly fills a corner, engagement increases and the cut can become less stable. Give internal corners the largest radius that still provides clearance for the mating component and preserves required strength.",
         "View CNC machining service")]
     [InlineData(
         "th",
-        "ข้อแนะนำงาน CNC | MALIEV",
-        "โมเดล solid 3 มิติกำหนดรูปทรง ส่วนแบบงานใช้สื่อสารข้อกำหนดที่รูปทรงอย่างเดียวระบุไม่ได้",
-        "ไฟล์และข้อกำหนดสำหรับงาน CNC",
+        "ข้อแนะนำการออกแบบชิ้นงาน CNC | MALIEV",
+        "โมเดล solid 3 มิติกำหนดรูปทรงและขนาดพิกัด ส่วนแบบงานสื่อสารข้อกำหนดที่รูปทรงเพียงอย่างเดียวระบุไม่ได้",
+        "ออกแบบชิ้นงาน CNC ให้ผลิตได้ตรงความต้องการ",
         "การเตรียมงาน CNC",
-        "ส่งโมเดล",
-        "ควรใช้ STEP หรือ solid CAD แยกไฟล์แต่ละชิ้นและระบุรีวิชัน",
-        "แนบแบบงาน",
-        "ระบุค่าความคลาดเคลื่อน datum เกลียว fit ผิว การอบชุบ การเคลือบ ลบคม และการตรวจสอบ",
-        "ยืนยันรายละเอียดการผลิต",
-        "ระบุเกรดวัสดุ จำนวน งานซ้ำ ชิ้นส่วนที่จัดหา บรรจุภัณฑ์ และวันที่ต้องการ",
+        "ไฟล์และรายการข้อมูลสำหรับขอราคา",
+        "ส่งโมเดล solid CAD เช่น STEP พร้อมแบบระบุขนาดที่อ่านได้สำหรับชิ้นงานแต่ละรายการ ระบุหน่วย หมายเลขชิ้นงาน และรีวิชันให้ตรงกันทั้งสองไฟล์ โมเดลบอกรูปทรงตามแบบ แต่ไม่สามารถสื่อสารข้อกำหนดเกลียว พิกัดสวม ผิวที่ต้องการความสวยงาม หรือสภาวะการตรวจสอบได้ครบถ้วน หากโมเดลกับแบบไม่ตรงกัน ต้องตกลงว่าจะยึดข้อกำหนดใดก่อนเริ่มผลิต",
+        "ผนังและพื้นบาง: พิจารณาจุดรองรับร่วมกับความหนา",
+        "ความสูง ความหนา ความยาวช่วงที่ไม่มีตัวรองรับ และวัสดุ ล้วนมีผลต่อการตอบสนองของฟีเจอร์ขณะตัด ผนังสูงที่อยู่เดี่ยวมีพฤติกรรมต่างจากผนังเตี้ยที่เชื่อมกับครีบรอบข้าง พื้นบางอาจแอ่นจากแรงตัดหรือแรงจับยึดได้เช่นกัน จึงไม่มีค่าความหนาผนังต่ำสุดค่าเดียวที่ใช้ตัดสินการผลิตได้กับทุกวัสดุและทุกรูปทรง",
+        "รัศมีมุมในและโพรง: เผื่อพื้นที่ให้เครื่องมือตัด",
+        "ดอกเอ็นมิลหมุนตัดจะทิ้งรัศมีไว้ที่มุมในแนวตั้ง การลดรัศมีมักทำให้ต้องเปลี่ยนขนาดดอก ระยะยื่น หรือจำนวนขั้นตอน เมื่อดอกเกือบเต็มมุม พื้นที่สัมผัสตัดจะเพิ่มขึ้นและอาจทำให้การตัดไม่เสถียร ควรกำหนดรัศมีมุมในให้ใหญ่ที่สุดเท่าที่ชิ้นส่วนคู่ประกอบยังสวมได้และยังคงความแข็งแรงตามต้องการ",
         "ดูบริการ CNC")]
     public async Task CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
@@ -98,7 +98,7 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{thirdStepDescription}<", source, StringComparison.Ordinal);
         Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
+        Assert.Equal(12, Regex.Matches(source, "<section\\b[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
         Assert.Contains("href=\"/services/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -112,8 +112,10 @@ public sealed partial class KnowledgeCncMachiningStaticSsrRouteTests : IClassFix
         Assert.Contains("name=\"google-site-verification\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"knowledge-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("new WOW", source, StringComparison.Ordinal);
