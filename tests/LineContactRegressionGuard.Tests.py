@@ -1087,5 +1087,149 @@ class V4ProcExecutableRaceControls(unittest.TestCase):
         stop.assert_called_once_with(43, signal.SIGTERM)
 
 
+
+class CustodyRejectionEvidenceControls(unittest.TestCase):
+    def session(self):
+        return V4ProcExecutableRaceControls.session(self)
+
+    def test_missing_executable_records_exact_site_and_already_read_rows_without_signal(self):
+        session = self.session()
+        with patch.object(guard.Path, "read_text", side_effect=[
+                V4ProcExecutableRaceControls.stat(), V4ProcExecutableRaceControls.stat("S")]) as read, \
+             patch.object(guard.os, "readlink", side_effect=FileNotFoundError()) as executable, \
+             patch.object(guard.os, "kill") as send:
+            with self.assertRaisesRegex(guard.Rejected, "^custody-executable$"):
+                session.process(43)
+        witness = session.custody_rejections[0]
+        self.assertEqual("process-exe-enoent-fresh-stat", witness["site"])
+        self.assertEqual("absent", witness["readlinkOutcome"])
+        self.assertEqual(("R", "S", 43, 124), (
+            witness["before"]["state"], witness["fresh"]["state"],
+            witness["fresh"]["pid"], witness["fresh"]["startTicks"]))
+        self.assertTrue(witness["previous"]["hasExecutableValue"])
+        self.assertFalse(witness["fresh"]["hasExecutableValue"])
+        self.assertEqual(2, read.call_count)
+        executable.assert_called_once_with("/proc/43/exe")
+        send.assert_not_called()
+
+    def test_signal_mismatch_records_known_and_current_values_without_raw_executable(self):
+        session = self.session()
+        current = {**session.members[43], "executable": "/private/customer-token"}
+        with patch.object(session, "process", return_value=current) as inspect, \
+             patch.object(guard.os, "kill") as send:
+            with self.assertRaisesRegex(guard.Rejected, "^custody-executable$"):
+                session.send(43, signal.SIGTERM)
+        witness = session.custody_rejections[0]
+        self.assertEqual("signal-executable-mismatch", witness["site"])
+        self.assertFalse(witness["sameExecutable"])
+        self.assertEqual("read", witness["readlinkOutcome"])
+        self.assertEqual(43, witness["known"]["pid"])
+        self.assertTrue(witness["current"]["hasExecutableValue"])
+        self.assertNotIn("private", json.dumps(witness))
+        inspect.assert_called_once_with(43)
+        send.assert_not_called()
+
+    def test_poisoned_raw_state_executable_and_identifiers_are_projected_before_encoding(self):
+        session = self.session()
+        class PrivateValue:
+            def __str__(self):
+                raise AssertionError("No private rendering")
+            def __repr__(self):
+                raise AssertionError("No private rendering")
+        raw = {"pid": PrivateValue(), "ppid": True, "pgid": -1,
+               "sid": "private-customer", "startTicks": 18446744073709551616,
+               "state": "private-customer-state", "executable": "/private/customer@example.invalid"}
+        session.record_custody_rejection("private-site", before=raw, fresh=raw,
+                                        readlink="private-readlink", same_executable=PrivateValue())
+        session.record_custody_rejection("process-exe-enoent-fresh-stat",
+            before={**raw, "state": PrivateValue(), "executable": PrivateValue()},
+            fresh={**raw, "state": PrivateValue(), "executable": PrivateValue()}, readlink="absent")
+        text = json.dumps(session.custody_rejections)
+        self.assertNotIn("private", text)
+        self.assertNotIn("customer", text)
+        witness = session.custody_rejections[0]
+        self.assertEqual("unknown", witness["site"])
+        self.assertEqual("unknown", witness["before"]["state"])
+        self.assertIsNone(witness["sameExecutable"])
+        self.assertTrue(all(witness["before"][key] is None for key in
+                            ("pid", "ppid", "pgid", "sid", "startTicks")))
+
+    def test_failure_witnesses_stop_at_eight_and_count_omitted(self):
+        session = self.session()
+        for _ in range(13):
+            session.record_custody_rejection("signal-executable-mismatch",
+                                             known=session.members[43], same_executable=False)
+        self.assertEqual(8, len(session.custody_rejections))
+        self.assertEqual(5, session.custody_rejections_omitted)
+        self.assertLess(len(json.dumps(session.custody_rejections)), 8192)
+
+    def test_fresh_zombie_identity_change_still_rejects_and_records_transition(self):
+        for change in ({"start_ticks": 999}, {"sid": 777}, {"pgid": 88}):
+            with self.subTest(change=change):
+                session = self.session()
+                with patch.object(guard.Path, "read_text", side_effect=[
+                        V4ProcExecutableRaceControls.stat(), V4ProcExecutableRaceControls.stat("Z", **change)]) as read, \
+                     patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+                     patch.object(guard.os, "kill") as send:
+                    with self.assertRaisesRegex(guard.Rejected, "^custody-executable$"):
+                        session.send(43, signal.SIGTERM)
+                self.assertEqual("Z", session.custody_rejections[0]["fresh"]["state"])
+                self.assertEqual(2, read.call_count)
+                send.assert_not_called()
+
+    def test_valid_fresh_zombie_and_reaped_process_preserve_existing_acceptance_without_witness(self):
+        for fresh in (V4ProcExecutableRaceControls.stat("Z"), FileNotFoundError()):
+            with self.subTest(reaped=isinstance(fresh, FileNotFoundError)):
+                session = self.session()
+                with patch.object(guard.Path, "read_text", side_effect=[
+                        V4ProcExecutableRaceControls.stat(), fresh]) as read, \
+                     patch.object(guard.os, "readlink", side_effect=FileNotFoundError()), \
+                     patch.object(guard.os, "kill") as send:
+                    session.send(43, signal.SIGTERM)
+                self.assertEqual([], session.custody_rejections)
+                self.assertEqual(0, session.custody_rejections_omitted)
+                self.assertEqual(2, read.call_count)
+                send.assert_not_called()
+
+    def test_runner_persists_bounded_witness_on_rejection_in_existing_command_record(self):
+        seed = self.session()
+        seed.record_custody_rejection("signal-executable-mismatch",
+                                     known=seed.members[43], current=seed.members[43], same_executable=False)
+        class FakeSession:
+            def __init__(self, leader, token):
+                self.members = {}
+                self.custody_rejections = seed.custody_rejections
+                self.custody_rejections_omitted = 3
+            def observe(self):
+                raise guard.Rejected("custody-executable")
+            def stop(self):
+                return []
+            def finish(self):
+                return None
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            process = unittest.mock.Mock(pid=42)
+            process.wait.return_value = 0
+            def launch(command, **kwargs):
+                kwargs["stdout"].write(b"0 Warning(s)\n0 Error(s)")
+                return process
+            with patch.object(guard, "Session", FakeSession), \
+                 patch.object(guard.subprocess, "Popen", side_effect=launch), \
+                 patch.object(guard.shutil, "which", return_value="/usr/bin/dotnet"), \
+                 patch.object(guard, "birth", return_value=(42, 42, 123)), \
+                 patch.object(guard.os, "waitid") as waitid, \
+                 patch.object(guard.os, "kill") as send:
+                runner = guard.Runner(root, root)
+                with self.assertRaises(guard.ProofFailure):
+                    runner.run("diagnostic-control", ["dotnet", "never-executed"], 10, build=True)
+            record = json.loads((root / "diagnostic-control.json").read_text())
+            self.assertEqual(seed.custody_rejections, record["custodyRejections"])
+            self.assertEqual(3, record["custodyRejectionsOmitted"])
+            self.assertEqual("custody-executable", record["primaryFailure"]["category"])
+            self.assertEqual(0, record["exitCode"])
+            waitid.assert_not_called()
+            send.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

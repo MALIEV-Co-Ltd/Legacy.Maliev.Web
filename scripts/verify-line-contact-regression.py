@@ -399,12 +399,46 @@ def birth(pid):
     return (int(tail[2]), int(tail[3]), int(tail[19]))
 
 
+CUSTODY_REJECTION_LIMIT = 8
+CUSTODY_STATES = frozenset(("R", "S", "D", "Z", "T", "t", "X", "x", "K", "W", "P", "I"))
+
+
+def custody_row(row):
+    if type(row) is not dict:
+        return None
+    projected = {}
+    for key in ("pid", "ppid", "pgid", "sid", "startTicks"):
+        value = row.get(key)
+        projected[key] = value if type(value) is int and 0 <= value <= 18446744073709551615 else None
+    state = row.get("state")
+    projected["state"] = state if type(state) is str and len(state) == 1 and state in CUSTODY_STATES else "unknown"
+    executable = row.get("executable")
+    projected["hasExecutableValue"] = type(executable) is str and len(executable) > 0
+    return projected
+
+
 class Session:
     """Bounded observation of this exclusive SID, never universal detached-descendant custody."""
     def __init__(self, leader, token):
         self.leader, self.token = leader, token
         self.members, self.issues = {}, []
         self.forced_kill = False
+        self.custody_rejections, self.custody_rejections_omitted = [], 0
+
+    def record_custody_rejection(self, site, *, previous=None, before=None, fresh=None,
+                                 known=None, current=None, readlink=None, same_executable=None):
+        if len(self.custody_rejections) >= CUSTODY_REJECTION_LIMIT:
+            self.custody_rejections_omitted += 1
+            return
+        sites = ("process-exe-enoent-fresh-stat", "signal-executable-mismatch")
+        outcomes = ("absent", "read")
+        self.custody_rejections.append({
+            "site": site if type(site) is str and site in sites else "unknown",
+            "readlinkOutcome": readlink if type(readlink) is str and readlink in outcomes else "unknown",
+            "sameExecutable": same_executable if type(same_executable) is bool else None,
+            "previous": custody_row(previous), "before": custody_row(before), "fresh": custody_row(fresh),
+            "known": custody_row(known), "current": custody_row(current),
+        })
 
     def process(self, pid):
         def read_stat():
@@ -422,6 +456,10 @@ class Session:
                 except FileNotFoundError:
                     # The original stat may predate exit; qualify only a fresh same-generation zombie.
                     fresh = read_stat()
+                    if not (fresh["startTicks"] == row["startTicks"] and fresh["sid"] == row["sid"]
+                            and fresh["pgid"] == row["pgid"] and fresh["state"] == "Z"):
+                        self.record_custody_rejection("process-exe-enoent-fresh-stat",
+                            previous=self.members.get(pid), before=row, fresh=fresh, readlink="absent")
                     require(fresh["startTicks"] == row["startTicks"] and fresh["sid"] == row["sid"]
                             and fresh["pgid"] == row["pgid"] and fresh["state"] == "Z", "custody-executable")
                     row = fresh
@@ -464,6 +502,9 @@ class Session:
         if current is None:
             return
         require(current["startTicks"] == known["startTicks"], "custody-generation")
+        if not (current["executable"] == known["executable"] or current["state"] == "Z"):
+            self.record_custody_rejection("signal-executable-mismatch", known=known, current=current,
+                readlink="read", same_executable=False)
         require(current["executable"] == known["executable"] or current["state"] == "Z", "custody-executable")
         if current["sid"] != self.leader:
             self.issues.append("observed-session-escape")
@@ -575,6 +616,8 @@ class Runner:
                             secondary.append({"stage": "absence", "failure": summary_failure(error)})
                         record["forcedKillUsed"] = bool(getattr(session, "forced_kill", False))
                         record["observedMembers"] = list(session.members.values())
+                        record["custodyRejections"] = list(getattr(session, "custody_rejections", []))
+                        record["custodyRejectionsOmitted"] = getattr(session, "custody_rejections_omitted", 0)
                         record["custodyIssues"] = list(getattr(session, "issues", []))
                         record["custodyScope"] = "Observed original-SID members only; no universal detached-newSID guarantee"
                 raw, size = b"", 0
