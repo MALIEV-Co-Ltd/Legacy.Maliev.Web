@@ -1343,6 +1343,26 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             "id => document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
             singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
         Assert.Equal("Any", await singleColor.InputValueAsync());
+        var singleStrip = page.Locator($"[data-workflow-part][data-part-id='{singleId}']");
+        Assert.Contains("color-single.stl", await singleStrip.InnerTextAsync(), StringComparison.Ordinal);
+        var quantity = page.Locator($"#quantity-{singleId}");
+        await quantity.FillAsync("2");
+        await quantity.DispatchEventAsync("change");
+        await page.WaitForFunctionAsync(
+            """
+            id => {
+              const part = document.querySelector('[data-workflow-part][data-part-id="' + id + '"]');
+              const price = part?.querySelector('[data-workflow-summary-unit-price]')?.textContent?.trim();
+              return part?.querySelector('[data-workflow-summary-configuration]')?.textContent?.trim() === 'PETG 2×'
+                && price && price !== '—' && !document.querySelector('[data-pricing-loading-status]');
+            }
+            """,
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var unitPriceLabel = culture == "th" ? "ราคาต่อชิ้น" : "Unit price";
+        var configuredUnitPrice = page.Locator("[data-workflow-part-price] > div")
+            .Filter(new LocatorFilterOptions { HasText = unitPriceLabel }).Locator("dd");
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
         Assert.Equal(0, await page.Locator("[data-workflow-material-picker] input[type='color']").CountAsync());
         await MaterialCardBrowserActions.SelectAsync(page, "PLA");
         var custom = page.Locator("[data-workflow-material-picker] input[type='color']");
@@ -1365,6 +1385,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         Assert.Equal("#123abc", (await singleColor.InputValueAsync()).ToLowerInvariant());
         Assert.Equal(1, await custom.CountAsync());
         Assert.Equal(1, upload.VerifiedUploads);
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
         {
             Name = "color-multipart.stl",
@@ -1395,11 +1418,39 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         Assert.Equal("M68", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.MaterialKey);
         Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
         Assert.Equal("#123abc", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(shell)).ToLowerInvariant(),
+            Assert.Single(saved.Parts, part => part.PartId == singleId).Geometry.Sha256);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(multipart)).ToLowerInvariant(), multi.Geometry.Sha256);
+        var multiStrip = page.Locator($"[data-workflow-part][data-part-id='{multiId}']");
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal("M68 1×", (await multiStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const images = [...document.querySelectorAll('[data-workflow-thumbnail]')];
+              return images.length === 2 && images.every(image => image.complete && image.naturalWidth > 0
+                && image.src.startsWith('data:image/png'));
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var singleSnapshot = singleStrip.Locator("[data-workflow-thumbnail]");
+        var multiSnapshot = multiStrip.Locator("[data-workflow-thumbnail]");
+        Assert.True(await singleSnapshot.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+        Assert.True(await multiSnapshot.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+        Assert.NotEqual(await singleSnapshot.GetAttributeAsync("src"), await multiSnapshot.GetAttributeAsync("src"));
+        Assert.DoesNotContain("data-review-thumbnail", await singleStrip.InnerHTMLAsync(), StringComparison.Ordinal);
+        var singleStripPrice = (await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync()).Trim();
+        var multiStripPrice = (await multiStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync()).Trim();
+        Assert.NotEqual("—", singleStripPrice);
+        Assert.NotEqual("—", multiStripPrice);
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(), multiStripPrice);
         var reviewButton = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         await reviewButton.ClickAsync(new LocatorClickOptions { Timeout = 60_000 });
         var singleReview = page.Locator($"[data-review-part-id='{singleId}'][data-workflow-review-part]");
         var multiReview = page.Locator($"[data-review-part-id='{multiId}'][data-workflow-review-part]");
         await singleReview.WaitForAsync();
+        Assert.Equal(singleStripPrice, (await singleReview.Locator(".instant-quote__review-prices > div:first-child dd").InnerTextAsync()).Trim());
+        Assert.Equal(multiStripPrice, (await multiReview.Locator(".instant-quote__review-prices > div:first-child dd").InnerTextAsync()).Trim());
         Assert.Equal("#123abc", (await singleReview.Locator($"#review-color-{singleId}").InputValueAsync()).ToLowerInvariant());
         Assert.True(await multiReview.Locator($"#review-color-{multiId}").IsDisabledAsync());
         Assert.Equal("Any", await multiReview.Locator($"#review-color-{multiId}").InputValueAsync());
