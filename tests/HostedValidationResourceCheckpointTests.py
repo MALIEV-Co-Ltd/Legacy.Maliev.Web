@@ -439,5 +439,397 @@ class ResourceCheckpointTests(unittest.TestCase):
                 inspect.assert_not_called()
             self.assertFalse((root / "verification.json").exists())
 
+
+class VstestDiagnosticReplayTests(unittest.TestCase):
+    """Qualification contract for passive VSTest event replay, never test acceptance.
+
+    Proposed API in the existing checkpoint module:
+      VstestDiagnosticReplay(owner, persisted=None)
+      .poll(exact_trace_path, existing_Inputs)
+      .state() -> JSON-safe projection/cursors, never raw diagnostic bytes
+      .receipt() -> events, observed_uncompleted, history_complete,
+                    history_truncated, reasons
+
+    Every poll shares its caller's Inputs byte/time budget. A fresh replay object
+    restored from state represents the next existing checkpoint phase.
+    """
+    OWNER = {
+        "GITHUB_RUN_ID": "39064342206", "GITHUB_RUN_ATTEMPT": "1",
+        "GITHUB_SHA": "3b503afa1a677fa7d2c663e23a774f728055f064",
+        "GITHUB_JOB": "validate",
+        "MALIEV_BILLING_CANDIDATE_HEAD": "e97747f8132e2fc1e05e857081e8211802e90149",
+        "RESOURCE_CHECKPOINT_SCOPE": "full",
+    }
+    A = "Legacy.Maliev.Web.Tests.ReplayFixture.First"
+    B = "Legacy.Maliev.Web.Tests.ReplayFixture.Second"
+    ID_A = "11111111-1111-4111-8111-111111111111"
+    ID_B = "22222222-2222-4222-8222-222222222222"
+    POISON = "PRIVATE_CUSTOMER_TOKEN_592"
+
+    def replay(self, persisted=None):
+        return checkpoint.VstestDiagnosticReplay(dict(self.OWNER), persisted=persisted)
+
+    def budget(self, remaining=None):
+        result = checkpoint.Inputs(time.monotonic() + 30)
+        if remaining is not None:
+            result.remaining = remaining
+        return result
+
+    def case(self, identifier, fqn):
+        return {"Id": identifier, "FullyQualifiedName": fqn,
+                "DisplayName": self.POISON, "Source": "/private/" + self.POISON,
+                "ExecutorUri": "executor://" + self.POISON,
+                "Traits": [{"Name": self.POISON, "Value": self.POISON}]}
+
+    def line(self, starts=(), completed=(), final=False):
+        chunk = {"ActiveTests": list(starts),
+                 "NewTestResults": [{"TestCase": case, "Outcome": 1,
+                                     "ErrorMessage": self.POISON,
+                                     "ErrorStackTrace": self.POISON,
+                                     "Messages": [{"Text": self.POISON}]}
+                                    for case in completed],
+                 "TestRunStatistics": {"ExecutedTests": len(completed)},
+                 "UnknownPrivateField": self.POISON}
+        payload = {"LastRunTests": chunk, "TestRunCompleteArgs":
+                   {"Error": self.POISON}} if final else chunk
+        message = {"Version": 7,
+                   "MessageType": "TestExecution.Completed" if final
+                                  else "TestExecution.StatsChange",
+                   "Payload": payload}
+        prefix = ("TpTrace Verbose: 0 : 123, 1, 2026/10/18, 00:00:00.000, "
+                  "100, vstest.console, TestRequestSender.OnExecutionMessageReceived: "
+                  "Received message: ")
+        return (prefix + json.dumps(message, separators=(",", ":")) + "\n").encode()
+
+    def append(self, path, data):
+        with path.open("ab") as stream:
+            stream.write(data)
+
+    def restore(self, replay):
+        state = json.loads(json.dumps(replay.state()))
+        return self.replay(state)
+
+    def safe_projection(self, replay):
+        text = json.dumps({"state": replay.state(), "receipt": replay.receipt()},
+                          sort_keys=True)
+        self.assertNotIn(self.POISON, text)
+        for forbidden in ("DisplayName", "ErrorMessage", "ErrorStackTrace",
+                          "ExecutorUri", "UnknownPrivateField", "raw_json",
+                          "raw_tail", "base64", "currently_executing", "root_cause",
+                          "TpTrace", "Received message:", '"Payload"', "CUSTOMER_TOKEN"):
+            self.assertNotIn(forbidden, text)
+        self.assertLessEqual(len(checkpoint.encoded(replay.state())), checkpoint.MAX_RECEIPT)
+        self.assertLessEqual(len(checkpoint.encoded(replay.receipt())), checkpoint.MAX_RECEIPT)
+
+    def test_incremental_active_tests_survive_phase_restore_until_observed_completion(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            replay = self.restore(replay)
+            self.append(path, self.line(starts=[self.case(self.ID_B, self.B)],
+                                        completed=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            result = replay.receipt()
+            self.assertEqual([self.B], result["observed_uncompleted"])
+            self.assertTrue(result["history_complete"])
+            self.assertEqual([("start", self.A), ("start", self.B), ("completion", self.A)],
+                             [(event["kind"], event["fqn"]) for event in result["events"]])
+            self.safe_projection(replay)
+
+    def test_final_run_chunk_removes_only_observed_matching_test(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            self.append(path, self.line(completed=[self.case(self.ID_A, self.A)], final=True))
+            replay.poll(path, self.budget())
+            self.assertEqual([], replay.receipt()["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_missing_completion_is_observed_uncompleted_without_execution_verdict(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            replay = self.restore(replay)
+            replay.poll(path, self.budget())
+            self.assertEqual([self.A], replay.receipt()["observed_uncompleted"])
+            self.assertEqual(1, len(replay.receipt()["events"]))
+            self.safe_projection(replay)
+
+    def test_duplicate_start_id_is_idempotent_but_conflicting_fqn_is_incomplete(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            first = self.line(starts=[self.case(self.ID_A, self.A)])
+            self.append(path, first + first)
+            replay.poll(path, self.budget())
+            self.assertEqual(1, len(replay.receipt()["events"]))
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.B)]))
+            replay.poll(path, self.budget())
+            self.assertFalse(replay.receipt()["history_complete"])
+            self.assertTrue(replay.receipt()["reasons"])
+            self.assertEqual([], replay.receipt()["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_unmatched_completion_does_not_invent_start(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            self.append(path, self.line(completed=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            result = replay.receipt()
+            self.assertFalse(result["history_complete"])
+            self.assertEqual([], result["observed_uncompleted"])
+            self.assertNotIn("start", [event["kind"] for event in result["events"]])
+            self.safe_projection(replay)
+
+    def test_single_rotation_continues_old_inode_before_new_file(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            backup = path.with_name("vstest.bak.diag")
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            self.append(path, self.line(completed=[self.case(self.ID_A, self.A)]))
+            path.rename(backup)
+            self.append(path, self.line(starts=[self.case(self.ID_B, self.B)]))
+            replay.poll(path, self.budget())
+            self.assertTrue(replay.receipt()["history_complete"])
+            self.assertEqual([self.B], replay.receipt()["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_missing_rotation_generation_retains_prefix_and_separates_later_events(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            backup = path.with_name("vstest.bak.diag")
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            path.rename(Path(temporary) / "old-generation-held-open")
+            self.append(backup, b"unobserved generation\n")
+            self.append(path, self.line(starts=[self.case(self.ID_B, self.B)]))
+            replay.poll(path, self.budget())
+            result = replay.receipt()
+            self.assertFalse(result["history_complete"])
+            self.assertTrue(result["reasons"])
+            self.assertEqual([], result["observed_uncompleted"])
+            self.assertEqual([self.A, self.B], [event["fqn"] for event in result["events"]])
+            self.assertLess(result["events"][0]["epoch"], result["events"][1]["epoch"])
+            self.safe_projection(replay)
+
+    def test_same_inode_truncation_is_sticky_incomplete(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay.poll(path, self.budget())
+            with path.open("wb") as stream:
+                stream.write(b"\n")
+            replay.poll(path, self.budget())
+            replay = self.restore(replay)
+            self.append(path, self.line(starts=[self.case(self.ID_B, self.B)]))
+            replay.poll(path, self.budget())
+            self.assertFalse(replay.receipt()["history_complete"])
+            self.assertEqual([], replay.receipt()["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_split_private_field_never_persists_raw_partial_bytes(self):
+        raw = self.line(starts=[self.case(self.ID_A, self.A)])
+        sentinel = self.POISON.encode()
+        starts = [index for index in range(len(raw)) if raw.startswith(sentinel, index)]
+        for position in starts:
+            for delta in (1, len(sentinel) // 2, len(sentinel) - 1):
+                with self.subTest(position=position, delta=delta), tempfile.TemporaryDirectory() as temporary:
+                    path = Path(temporary) / "vstest.diag"
+                    replay = self.replay()
+                    split = position + delta
+                    self.append(path, raw[:split])
+                    replay.poll(path, self.budget())
+                    self.safe_projection(replay)
+                    # A restored phase may fail closed at a split boundary; it must not
+                    # persist the private tail or manufacture a completed event.
+                    replay = self.restore(replay)
+                    self.append(path, raw[split:])
+                    replay.poll(path, self.budget())
+                    self.safe_projection(replay)
+                    self.assertNotIn("completion", [event["kind"] for event in replay.receipt()["events"]])
+
+    def test_partial_line_rotation_marks_gap_and_never_joins_foreign_tail(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            raw = self.line(starts=[self.case(self.ID_A, self.A)])
+            split = raw.index(self.POISON.encode()) + 5
+            self.append(path, raw[:split])
+            replay.poll(path, self.budget())
+            path.rename(Path(temporary) / "lost-partial")
+            self.append(path, raw[split:])
+            replay.poll(path, self.budget())
+            self.assertFalse(replay.receipt()["history_complete"])
+            self.assertEqual([], replay.receipt()["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_byte_budget_is_shared_across_polls_and_prefix_survives_exhaustion(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            first = self.line(starts=[self.case(self.ID_A, self.A)])
+            self.append(path, first)
+            budget = self.budget(len(first) + 32)
+            replay.poll(path, budget)
+            remaining = budget.remaining
+            self.assertLess(remaining, len(first) + 32)
+            self.append(path, self.line(starts=[self.case(self.ID_B, self.B)]))
+            replay.poll(path, budget)
+            self.assertGreaterEqual(budget.remaining, 0)
+            self.assertLessEqual(budget.remaining, remaining)
+            result = replay.receipt()
+            self.assertFalse(result["history_complete"])
+            self.assertIn(self.A, [event["fqn"] for event in result["events"]])
+            self.safe_projection(replay)
+
+    def test_expired_observation_budget_does_not_consume_new_events(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            budget = checkpoint.Inputs(time.monotonic() - 1)
+            replay.poll(path, budget)
+            self.assertEqual([], replay.receipt()["events"])
+            self.assertFalse(replay.receipt()["history_complete"])
+            self.safe_projection(replay)
+
+    def test_oversize_or_malformed_payload_is_fixed_gap_without_raw_exception(self):
+        for raw in (b"x" * (65536 + 1) + b"\n",
+                    b"TestRequestSender.OnExecutionMessageReceived: Received message: {"
+                    + self.POISON.encode() + b"}\n",
+                    self.line(starts=[self.case(self.ID_A, self.A)]).replace(
+                        b'"Payload":{', b'"Payload":' + b"[" * 70 + b"{", 1)):
+            with self.subTest(size=len(raw)), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "vstest.diag"
+                replay = self.replay()
+                self.append(path, raw)
+                try:
+                    replay.poll(path, self.budget())
+                except Exception as error:
+                    self.fail("Diagnostic parser must return a fixed gap, not exception type "
+                              + type(error).__name__)
+                self.assertFalse(replay.receipt()["history_complete"])
+                self.safe_projection(replay)
+
+    def test_only_fixed_namespace_identifier_fqns_are_projected(self):
+        invalid = ("Other.Tests.Customer.Name", self.A + "(private@example.test)",
+                   self.A + "\n" + self.POISON, "Legacy.Maliev.Web.Tests." + self.POISON + "/x",
+                   "Legacy.Maliev.Web.Tests.ReplayFixture.M\u00e9thod")
+        for fqn in invalid:
+            with self.subTest(fqn=fqn), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "vstest.diag"
+                replay = self.replay()
+                self.append(path, self.line(starts=[self.case(self.ID_A, fqn)]))
+                replay.poll(path, self.budget())
+                self.assertEqual([], replay.receipt()["events"])
+                self.safe_projection(replay)
+
+    def test_event_ring_is_bounded_and_reports_truncation_without_losing_last_events(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            for number in range(40):
+                identifier = "00000000-0000-4000-8000-" + str(number).zfill(12)
+                case = self.case(identifier, self.A)
+                self.append(path, self.line(starts=[case]) + self.line(completed=[case]))
+            budget = self.budget()
+            for _ in range(4):
+                replay.poll(path, budget)
+            result = replay.receipt()
+            self.assertLessEqual(len(result["events"]), 64)
+            self.assertTrue(result["history_truncated"])
+            self.assertEqual("completion", result["events"][-1]["kind"])
+            self.assertEqual([], result["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_foreign_or_corrupt_state_is_rejected_without_echoing_values(self):
+        replay = self.replay()
+        state = replay.state()
+        for value in ({"owner": {**self.OWNER, "GITHUB_RUN_ATTEMPT": "2"}},
+                      {**state, "owner": {**self.OWNER, "GITHUB_SHA": "0" * 40}},
+                      {**state, "unapproved_private": self.POISON}):
+            with self.subTest(keys=sorted(value)):
+                try:
+                    self.replay(value)
+                except RuntimeError as error:
+                    self.assertNotIn(self.POISON, str(error))
+                else:
+                    self.fail("Foreign or non-schema replay state accepted")
+
+    def test_missing_trace_is_unavailable_not_a_complete_empty_run(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            replay = self.replay()
+            replay.poll(Path(temporary) / "vstest.diag", self.budget())
+            result = replay.receipt()
+            self.assertEqual([], result["events"])
+            self.assertFalse(result["history_complete"])
+            self.assertTrue(result["reasons"])
+            self.safe_projection(replay)
+
+    def test_existing_resource_caps_and_worker_lease_remain_unchanged(self):
+        self.assertEqual(8 * 1024 * 1024, checkpoint.MAX_INPUT)
+        self.assertEqual(256 * 1024, checkpoint.MAX_RECEIPT)
+        self.assertEqual(125 * 60, checkpoint.LEASE)
+        self.assertEqual(10 * 60, checkpoint.PERIOD)
+        source = Path(checkpoint.__file__).read_text()
+        self.assertIn("resource.RLIMIT_AS, (256 * 1024 * 1024, 256 * 1024 * 1024)", source)
+        self.assertIn("resource.RLIMIT_CPU, (20, 20)", source)
+        self.assertIn("time.monotonic() + 30", source)
+
+
+    def test_trace_symlink_is_preserved_without_reading_private_target(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = root / "private-target"
+            target.write_bytes(self.line(starts=[self.case(self.ID_A, self.A)]))
+            path = root / "vstest.diag"
+            path.symlink_to(target)
+            replay = self.replay()
+            replay.poll(path, self.budget())
+            self.assertTrue(path.is_symlink())
+            self.assertEqual([], replay.receipt()["events"])
+            self.assertFalse(replay.receipt()["history_complete"])
+            self.safe_projection(replay)
+
+    def test_active_id_bound_cannot_grow_state_without_limit(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "vstest.diag"
+            replay = self.replay()
+            budget = self.budget()
+            for number in range(129):
+                identifier = "00000000-0000-4000-8000-" + str(number).zfill(12)
+                self.append(path, self.line(starts=[self.case(identifier, self.A)]))
+                replay.poll(path, budget)
+            result = replay.receipt()
+            self.assertFalse(result["history_complete"])
+            self.assertEqual([], result["observed_uncompleted"])
+            self.safe_projection(replay)
+
+    def test_unknown_extra_trace_generation_is_gap_without_reading_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "vstest.diag"
+            self.append(path, self.line(starts=[self.case(self.ID_A, self.A)]))
+            replay = self.replay()
+            replay.poll(path, self.budget())
+            extra = root / "vstest.bak.diag9c7489f0-f315-4f91-beb1-7a22820bdffc"
+            extra.write_text(self.POISON)
+            replay.poll(path, self.budget())
+            self.assertFalse(replay.receipt()["history_complete"])
+            self.assertTrue(extra.exists())
+            self.safe_projection(replay)
+
+
 if __name__ == "__main__":
     unittest.main()
