@@ -22,9 +22,14 @@ using Testcontainers.Redis;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Real pinned Auth login, durable sessions, normal encrypted Web cookies and both member renderers.</summary>
-public sealed class AuthenticatedMemberCrawlPolicyHttpTests(MemberAuthorityFixture authority)
-    : IClassFixture<MemberAuthorityFixture>
+public sealed class AuthenticatedMemberCrawlPolicyHttpTests : IAsyncLifetime
 {
+    private readonly MemberAuthorityFixture authority = new();
+
+    public Task InitializeAsync() => authority.InitializeAsync();
+
+    public Task DisposeAsync() => authority.DisposeAsync();
+
     [Theory]
     [InlineData("en", false)]
     [InlineData("th", false)]
