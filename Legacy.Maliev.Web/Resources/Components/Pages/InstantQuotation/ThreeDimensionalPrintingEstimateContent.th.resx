@@ -701,4 +701,7 @@
   <data name="Enter your first name" xml:space="preserve"><value>กรอกชื่อ</value></data>
   <data name="Enter your last name" xml:space="preserve"><value>กรอกนามสกุล</value></data>
   <data name="Enter your company name" xml:space="preserve"><value>กรอกชื่อบริษัท</value></data>
+  <data name="Review all items" xml:space="preserve">
+    <value>ตรวจสอบรายการทั้งหมด</value>
+  </data>
 </root>
