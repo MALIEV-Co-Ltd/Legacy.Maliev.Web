@@ -3,6 +3,7 @@ using Legacy.Maliev.Web.Application.Pricing;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Xunit;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -52,6 +53,36 @@ public sealed class FilamentProfileCatalogTests
 
         Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
         Assert.DoesNotContain(validation.Entries, entry => entry.AutomationEligible);
+        // Source 199e5f supplies exact HIPS evidence, not worker-activation authority.
+        FilamentProfileCatalogEntry hips = Assert.Single(validation.Entries, entry => entry.MaterialKey == "HIPS");
+        Assert.Equal("eSUN HIPS White @Bambu Lab X1 Carbon 0.4 nozzle", hips.ProfileId);
+        Assert.Equal("A0F19BF4EE3B395302A7AACF19060601DAEB4F0E67E06932A7789D03508F6464", hips.ResolvedSha256);
+        Assert.True(hips.ExactMaterialMatch);
+        Assert.True(hips.OperatorApproved);
+        Assert.False(hips.AutomationEligible);
+        using var catalog = JsonDocument.Parse(File.ReadAllText(CatalogPath));
+        JsonElement hipsEvidence = Assert.Single(catalog.RootElement.GetProperty("entries").EnumerateArray(),
+            entry => entry.GetProperty("materialKey").GetString() == "HIPS");
+        Assert.Equal("eSUN", hipsEvidence.GetProperty("preferredVendor").GetString());
+        Assert.Equal("operator_local_custom", hipsEvidence.GetProperty("sourceAuthority").GetString());
+        Assert.Equal(new[] { "isolated_worker_not_active" },
+            hipsEvidence.GetProperty("blockers").EnumerateArray().Select(blocker => blocker.GetString()));
+        var runtimeProfiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        using var runtimeManifest = JsonDocument.Parse(runtimeProfiles.BrowserManifestJson);
+        JsonElement admittedHips = runtimeManifest.RootElement.GetProperty("materials").GetProperty("HIPS");
+        Assert.Equal("eSUN HIPS White @Bambu Lab X1 Carbon 0.4 nozzle", admittedHips.GetProperty("profileId").GetString());
+        Assert.Equal("A0F19BF4EE3B395302A7AACF19060601DAEB4F0E67E06932A7789D03508F6464",
+            admittedHips.GetProperty("sourceArtifactSha256").GetString());
+        Assert.Equal("operator_local_custom", admittedHips.GetProperty("sourceAuthority").GetString());
+        foreach (BuildPreference build in Enum.GetValues<BuildPreference>())
+        {
+            Assert.True(runtimeProfiles.ResolvePolicy("HIPS", build).AutomaticPricingEligible);
+            Assert.True(runtimeProfiles.TryResolveTrustedProfile("HIPS", build, out var profile));
+            Assert.NotNull(profile);
+            Assert.Equal("HIPS", profile.MaterialId);
+            Assert.Equal(1.05, profile.MaterialDensityGramsPerCm3, 6);
+            Assert.Equal(8, profile.MaximumVolumetricFlowMm3PerSecond!.Value, 6);
+        }
         // Source-derived runtime profiles do not inherit the historical PC-ESD
         // benchmark operator approval. Keep the two new decisions explicitly blocked.
         Assert.All(validation.Entries, entry =>
