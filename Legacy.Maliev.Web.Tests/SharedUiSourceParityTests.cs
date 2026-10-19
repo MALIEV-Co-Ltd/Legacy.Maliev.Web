@@ -28,6 +28,43 @@ public sealed class SharedUiSourceParityTests
         Assert.DoesNotContain(".underline", app, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ResolvedLineIncidentNoticeStaysAbsentWhilePublicLineContactRemains()
+    {
+        var root = FindRepositoryRoot();
+        var web = Path.Combine(root, "Legacy.Maliev.Web");
+        var surfaces = new[]
+        {
+            Path.Combine(web, "Pages", "Shared", "_Layout.cshtml"),
+            Path.Combine(web, "Pages", "Shared", "_InstantQuotationLayout.cshtml"),
+            Path.Combine(web, "Areas", "Member", "Pages", "Shared", "_LayoutMember.cshtml"),
+            Path.Combine(web, "Areas", "Knowledges", "Pages", "Shared", "_LayoutKnowledges.cshtml"),
+            Path.Combine(web, "Components", "App.razor"),
+            Path.Combine(web, "Components", "Pages", "Member", "MemberWorkspaceShell.razor"),
+            Path.Combine(web, "Components", "Pages", "Knowledges", "KnowledgeShell.razor"),
+        };
+        foreach (var surface in surfaces)
+        {
+            var markup = File.ReadAllText(surface);
+            Assert.DoesNotContain("_AccouncementPartial", markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("_LineOaRecoveryAlertPartial", markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("maliev-service-notice", markup, StringComparison.Ordinal);
+        }
+        Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_AccouncementPartial.cshtml")));
+        Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_LineOaRecoveryAlertPartial.cshtml")));
+
+        var social = File.ReadAllText(Path.Combine(web, "Components", "Pages", "About", "SocialMediaContent.razor"));
+        Assert.Contains("SocialNetworks.Line", social, StringComparison.Ordinal);
+        Assert.Contains("Chat with our team through LINE Official Account", social, StringComparison.Ordinal);
+        Assert.DoesNotContain("check the site notice", social, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("https://line.me/ti/p/@maliev", Legacy.Maliev.Web.Application.SocialNetworks.Line);
+        var translations = System.Xml.Linq.XDocument.Load(Path.Combine(web, "Resources", "Components", "Pages", "About", "SocialMediaContent.th.resx"));
+        var lineTranslation = translations.Root!.Elements("data")
+            .Single(entry => (string?)entry.Attribute("name") == "Chat with our team through LINE Official Account")
+            .Element("value")?.Value;
+        Assert.Equal("แชตกับทีมงานผ่าน LINE Official Account", lineTranslation);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

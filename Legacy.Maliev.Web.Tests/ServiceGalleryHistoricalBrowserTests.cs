@@ -91,6 +91,70 @@ public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture
         double hipsRatio = await page.Locator("#printing-part-gallery-extra .service-part-bento-tile--hips")
             .EvaluateAsync<double>("element => element.getBoundingClientRect().width / element.getBoundingClientRect().height");
         Assert.True(hipsRatio > 1.1, $"The HIPS sample should be framed as a wide Bento tile, but its ratio was {hipsRatio:F2}.");
+
+        await page.SetViewportSizeAsync(1474, 1032);
+        double[] absDimensions = await page.Locator("#printing-part-gallery-extra .service-part-bento-tile--abs img")
+            .EvaluateAsync<double[]>("""
+                async image => {
+                    image.loading = 'eager';
+                    let frame = 0;
+                    let timer;
+                    let stopped = false;
+                    const nextFrame = () => new Promise(resolve => {
+                        frame = requestAnimationFrame(resolve);
+                    });
+                    const snapshot = () => [
+                        image.currentSrc,
+                        image.getBoundingClientRect().width,
+                        image.getBoundingClientRect().height
+                    ];
+                    try {
+                        return await Promise.race([
+                            (async () => {
+                                let previous;
+                                let stableFrames = 0;
+                                while (!stopped) {
+                                    await nextFrame();
+                                    if (stopped) return [];
+                                    const current = snapshot();
+                                    stableFrames = previous && current.every((value, index) => value === previous[index])
+                                        ? stableFrames + 1 : 0;
+                                    previous = current;
+                                    if (innerWidth !== 1474 || !image.complete || image.naturalWidth <= 1
+                                        || current[1] <= 0 || current[2] <= 0 || stableFrames < 2) continue;
+                                    try {
+                                        await image.decode();
+                                    } catch (error) {
+                                        if (!(error instanceof DOMException) || error.name !== 'EncodingError'
+                                            || image.currentSrc === current[0]) throw error;
+                                        stableFrames = 0;
+                                        previous = undefined;
+                                        continue;
+                                    }
+                                    if (stopped) return [];
+                                    await nextFrame();
+                                    if (stopped) return [];
+                                    if (image.complete && snapshot().every((value, index) => value === current[index])) {
+                                        return [image.naturalWidth, image.getBoundingClientRect().width];
+                                    }
+                                    stableFrames = 0;
+                                }
+                                return [];
+                            })(),
+                            new Promise((_, reject) => {
+                                timer = setTimeout(() => reject(new Error('ABS responsive image settlement exceeded 15 seconds.')), 15000);
+                            })
+                        ]);
+                    } finally {
+                        stopped = true;
+                        clearTimeout(timer);
+                        cancelAnimationFrame(frame);
+                    }
+                }
+                """).WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal(2, absDimensions.Length);
+        Assert.True(absDimensions[0] >= absDimensions[1],
+            $"The ABS image intrinsic width {absDimensions[0]:F3} was smaller than its rendered width {absDimensions[1]:F3} at 1474 pixels.");
     }
 
     [Theory]

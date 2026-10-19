@@ -12,6 +12,12 @@ public sealed class ServicePageResponsiveSourceTests
         var js = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "service-toc.js");
         var entry = Read("Legacy.Maliev.Web", "assets", "route-service-toc.js");
 
+        Assert.Matches(@"(?m)^\.service-page\s*\{[^}]*overflow:\s*clip\s*;", css);
+        Assert.Matches(@"(?m)^\.service-page-toc\s*\{(?=[^}]*position:\s*sticky\s*;)(?=[^}]*padding-block:\s*\.25rem\s*;)", css);
+        Assert.Matches(@"(?m)^\.service-page-toc-inner\s*\{[^}]*min-width:\s*0\s*;", css);
+        Assert.Matches(@"(?m)^\.service-page-toc ul\s*\{(?=[^}]*justify-content:\s*flex-start\s*;)(?=[^}]*overflow-x:\s*auto\s*;)(?=[^}]*overflow-y:\s*hidden\s*;)(?=[^}]*scroll-padding-inline:\s*\.25rem\s*;)(?=[^}]*scrollbar-width:\s*none\s*;)(?=[^}]*-ms-overflow-style:\s*none\s*;)(?=[^}]*-webkit-overflow-scrolling:\s*touch\s*;)", css);
+        Assert.Matches(@"(?m)^\.service-page-toc ul::-webkit-scrollbar\s*\{[^}]*display:\s*none\s*;", css);
+
         Assert.Contains("data-service-toc", toc, StringComparison.Ordinal);
         Assert.Contains("data-service-toc-list", toc, StringComparison.Ordinal);
         Assert.Contains("data-service-toc-toggle", toc, StringComparison.Ordinal);
@@ -43,6 +49,31 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.Contains("<ServiceBreadcrumb", source, StringComparison.Ordinal);
         Assert.Contains("<ServicePageToc />", source, StringComparison.Ordinal);
         Assert.Contains($"ServiceKey=\"{service}\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ManufacturingPagesKeepOriginalGuideContentGuards()
+    {
+        var cnc = Read("Legacy.Maliev.Web", "Components", "Pages", "Services", "CncMachiningContent.razor");
+        var printing = Read("Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor");
+        var scanning = Read("Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor");
+
+        foreach (var required in new[] { "SS400", "S50C", "SCM", "SKD", "SUS", "POM", "PA6", "Acrylic", "PVC", "PTFE", "One piece", "wood or organic materials" })
+        {
+            Assert.Contains(required, cnc, StringComparison.Ordinal);
+        }
+
+        var keys = global::Legacy.Maliev.Web.Application.Pricing.PricingCatalog.Materials.Keys;
+        Assert.NotEmpty(keys);
+        foreach (var key in keys)
+        {
+            Assert.Contains($"data-material-key=\"{key}\"", printing, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("reflective", scanning, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scanning spray", scanning, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("สแกนนอกสถานที่", scanning, StringComparison.Ordinal);
+        Assert.DoesNotContain("ISO 9001", printing + scanning, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Read(params string[] parts) => File.ReadAllText(Path.Combine([Root, .. parts]));

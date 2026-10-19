@@ -1,0 +1,22 @@
+@page "/knowledges/finishing/heat-treatment"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<FinishingHeatTreatmentContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Planning heat treatment for manufactured parts | MALIEV"].Value;
+    var description = ContentLocalizer["Specify material condition, hardness, case depth, distortion allowances, machining sequence, and acceptance evidence for heat-treated parts."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/Finishing/Heat-Treatment" RouteOwner="blazor-static-ssr">
+    <FinishingHeatTreatmentContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>
