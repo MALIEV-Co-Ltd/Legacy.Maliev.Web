@@ -32,6 +32,13 @@ public sealed class MaterialPricingDisplayRendererContractTests
             var row = MaterialRow(html, "M68");
             Assert.Contains("600.00", WebUtility.HtmlDecode(row), StringComparison.Ordinal);
             Assert.DoesNotContain("1391", row, StringComparison.Ordinal);
+            var rail = Regex.Match(html, "<section\\b[^>]*data-workflow-parts[^>]*>.*?</section>", RegexOptions.Singleline);
+            Assert.True(rail.Success);
+            var count = Regex.Match(rail.Value, "<span\\b[^>]*data-workflow-part-count[^>]*aria-live=\"polite\"[^>]*>(.*?)</span>", RegexOptions.Singleline);
+            Assert.True(count.Success);
+            Assert.Equal(culture == "th" ? "1 ชิ้น" : "1 part", WebUtility.HtmlDecode(count.Groups[1].Value).Trim());
+            Assert.Contains(culture == "th" ? "<strong>เพิ่มชิ้นงาน</strong>" : "<strong>Add parts</strong>",
+                WebUtility.HtmlDecode(rail.Value), StringComparison.Ordinal);
         }
         finally { await fixture.CompleteAsync(); }
     }
