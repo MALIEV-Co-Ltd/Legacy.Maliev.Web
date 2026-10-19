@@ -251,12 +251,23 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new ArgumentException("Reserved upload identifiers must be unique.", nameof(localIds));
         }
 
-        var pending = localIds.Select(localId => entries.SingleOrDefault(entry => entry.LocalId == localId)
-                ?? throw new ArgumentException("A reserved upload was not found.", nameof(localIds)))
-            .ToArray();
-        if (pending.Any(static entry => entry.Status is not InstantQuotationWorkflowUploadStatus.Pending))
+        UploadEntry[] pending;
+        await WaitForStateGateAsync(cancellationToken);
+        try
         {
-            throw new InvalidOperationException("Only pending reserved uploads can be started.");
+            ThrowIfPricingCanceled(cancellationToken);
+            // A captured batch can outlive local removal of one of its reservations.
+            pending = localIds.Select(localId => entries.SingleOrDefault(entry => entry.LocalId == localId))
+                .OfType<UploadEntry>()
+                .ToArray();
+            if (pending.Any(static entry => entry.Status is not InstantQuotationWorkflowUploadStatus.Pending))
+            {
+                throw new InvalidOperationException("Only pending reserved uploads can be started.");
+            }
+        }
+        finally
+        {
+            stateGate.Release();
         }
 
         await Task.WhenAll(pending.Select(entry => StartUploadAsync(entry, cancellationToken)));
@@ -308,8 +319,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             var entry = entries.SingleOrDefault(item => item.LocalId == localId);
             if (entry is null) return;
             if (entry.Part is not null
-                || entry.Status is not (InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
-                throw new InvalidOperationException("Only failed or cancelled local uploads can be discarded.");
+                || entry.Status is not (InstantQuotationWorkflowUploadStatus.Pending or InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+                throw new DiscardRefusedException();
 
             entry.OperationId = NewOperationId();
             operationCancellation = entry.OperationCancellation;
@@ -541,20 +552,37 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task StartUploadAsync(UploadEntry entry, CancellationToken cancellationToken)
     {
-        entry.OperationCancellation?.Dispose();
-        entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken,
-            lifetimeToken);
-        var operationToken = entry.OperationCancellation.Token;
-        var operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
-            && entry.OperationId is { Length: > 0 } retainedOperationId
-                ? retainedOperationId
-                : NewOperationId();
-        var analyticsAttemptId = NewAnalyticsAttemptId();
-        entry.OperationId = operationId;
-        entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
-        entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
-        RefreshState();
+        CancellationToken operationToken;
+        string operationId;
+        string analyticsAttemptId;
+        await WaitForStateGateAsync(cancellationToken);
+        try
+        {
+            ThrowIfPricingCanceled(cancellationToken);
+            if (!entries.Contains(entry)) return;
+            if (entry.Part is not null
+                || entry.Status is not (InstantQuotationWorkflowUploadStatus.Pending or InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+                throw new InvalidOperationException("Only pending, failed or cancelled local uploads can be started.");
+
+            entry.OperationCancellation?.Dispose();
+            entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                lifetimeToken);
+            operationToken = entry.OperationCancellation.Token;
+            operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
+                && entry.OperationId is { Length: > 0 } retainedOperationId
+                    ? retainedOperationId
+                    : NewOperationId();
+            analyticsAttemptId = NewAnalyticsAttemptId();
+            entry.OperationId = operationId;
+            entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
+            entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
+            RefreshState();
+        }
+        finally
+        {
+            stateGate.Release();
+        }
 
         if (entry.File.Length is <= 0 or > MaximumFileSize)
         {
@@ -1192,6 +1220,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     {
         var extension = Path.GetExtension(fileName).TrimStart('.');
         return extension.Length == 0 ? null : extension;
+    }
+
+    internal sealed class DiscardRefusedException : InvalidOperationException
+    {
+        public DiscardRefusedException()
+            : base("Only pending, failed or cancelled local uploads can be discarded.")
+        {
+        }
     }
 
     private sealed class UploadEntry

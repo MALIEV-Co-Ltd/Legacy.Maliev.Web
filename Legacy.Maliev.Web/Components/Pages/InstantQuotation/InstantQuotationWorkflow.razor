@@ -280,6 +280,12 @@
                                 aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
                                 @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
                     }
+                    else if (upload.Status is InstantQuotationWorkflowUploadStatus.Pending)
+                    {
+                        <button type="button"
+                                aria-label="@Localizer["Remove {0}", upload.DisplayFileName]"
+                                @onclick="() => DiscardUploadAsync(upload.LocalId)">@Localizer["Remove"]</button>
+                    }
                     else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
                     {
                         <button type="button"

@@ -612,7 +612,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private async Task DiscardUploadAsync(Guid localId)
     {
         if (workflow is null) return;
-        await workflow.DiscardUploadAsync(localId, default);
+        try
+        {
+            await workflow.DiscardUploadAsync(localId, default);
+        }
+        catch (InstantQuotationWorkflowCoordinator.DiscardRefusedException)
+        {
+            return;
+        }
         developmentPreviews.Remove(localId);
         developmentClaims.Remove(localId);
         developmentRetries.Remove(localId);
