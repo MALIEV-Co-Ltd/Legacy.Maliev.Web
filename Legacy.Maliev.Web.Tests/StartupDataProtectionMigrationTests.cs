@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -82,6 +85,65 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
         }
     }
 
+    [Theory]
+    [InlineData("Development", false, true)]
+    [InlineData("development", false, true)]
+    [InlineData("Development", true, true)]
+    [InlineData("Staging", false, false)]
+    [InlineData("Production", false, false)]
+    public async Task ActualProgram_ExplicitContentRoot_LoadsSourceEnvironmentJsonFromTheSelectedApplicationRoot(
+        string environment, bool startsAtProject, bool expectsProject)
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null
+            && !File.Exists(Path.Combine(directory.FullName, "Legacy.Maliev.Web", "Legacy.Maliev.Web.csproj")))
+        {
+            directory = directory.Parent;
+        }
+        Assert.NotNull(directory);
+        var repositoryRoot = directory.FullName;
+        var projectRoot = Path.Combine(repositoryRoot, "Legacy.Maliev.Web");
+        var suppliedRoot = startsAtProject ? projectRoot : repositoryRoot;
+        var expectedRoot = expectsProject ? projectRoot : repositoryRoot;
+        Assert.True(File.Exists(Path.Combine(projectRoot, "appsettings.Development.json")));
+        Assert.True(Directory.Exists(Path.Combine(projectRoot, "wwwroot")));
+        Assert.False(File.Exists(Path.Combine(repositoryRoot, "appsettings.Development.json")));
+
+        await using var factory = fixture.CreateFactory(environment, suppliedRoot);
+        using var client = CreateClient(factory);
+        var configuration = Assert.IsAssignableFrom<IConfigurationRoot>(
+            factory.Services.GetRequiredService<IConfiguration>());
+        // WebApplicationFactory applies its own later ContentRoot. Inspect the JSON provider
+        // created by the actual entry point so that override cannot hide a missed early fallback.
+        var json = Assert.Single(configuration.Providers.OfType<JsonConfigurationProvider>(),
+            provider => provider.Source.Path == "appsettings.json");
+        var files = Assert.IsType<PhysicalFileProvider>(json.Source.FileProvider);
+        Assert.Equal(Path.GetFullPath(expectedRoot), Path.TrimEndingDirectorySeparator(files.Root));
+
+        var hostEnvironment = factory.Services.GetRequiredService<IWebHostEnvironment>();
+        Assert.True(string.Equals(environment, hostEnvironment.EnvironmentName, StringComparison.OrdinalIgnoreCase));
+        if (expectsProject)
+        {
+            var development = Assert.Single(configuration.Providers.OfType<JsonConfigurationProvider>(),
+                provider => provider.Source.Path == $"appsettings.{environment}.json");
+            Assert.Equal(Path.GetFullPath(projectRoot),
+                Path.TrimEndingDirectorySeparator(Assert.IsType<PhysicalFileProvider>(development.Source.FileProvider).Root));
+            Assert.Equal(Path.GetFullPath(projectRoot), Path.TrimEndingDirectorySeparator(hostEnvironment.ContentRootPath));
+            Assert.Equal(Path.GetFullPath(Path.Combine(projectRoot, "wwwroot")),
+                Path.TrimEndingDirectorySeparator(hostEnvironment.WebRootPath));
+        }
+        else
+        {
+            Assert.Equal(Path.GetFullPath(repositoryRoot), Path.TrimEndingDirectorySeparator(hostEnvironment.ContentRootPath));
+        }
+        // Host startup must retain the real owned encrypted-session provider, not a Testing bypass.
+        Assert.Equal(environment.Equals("Development", StringComparison.OrdinalIgnoreCase)
+            ? "Legacy.Maliev.Web.Development" : "Legacy.Maliev.Web",
+            factory.Services.GetRequiredService<IOptions<DataProtectionOptions>>().Value.ApplicationDiscriminator);
+        Assert.IsAssignableFrom<RedisCache>(factory.Services.GetRequiredService<IDistributedCache>());
+        Assert.True(factory.Services.GetRequiredService<IConnectionMultiplexer>().IsConnected);
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory) => factory.CreateClient(
         new WebApplicationFactoryClientOptions
         {
@@ -141,16 +203,41 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
             System.Globalization.CultureInfo.InvariantCulture, out var parsedRunId)
         && parsedRunId > 0;
 
-    public WebApplicationFactory<Program> CreateFactory(string environment) =>
-        new StartupWebFactory(environment, redis.GetConnectionString(), certificatePfxBase64);
+    public WebApplicationFactory<Program> CreateFactory(string environment, string? contentRoot = null) =>
+        new StartupWebFactory(environment, redis.GetConnectionString(), certificatePfxBase64, contentRoot);
 
-    private sealed class StartupWebFactory(string environment, string connection, string certificate)
+    private sealed class StartupWebFactory(string environment, string connection, string certificate, string? contentRoot)
         : TestingWebApplicationFactory
     {
+        protected override IHost CreateHost(IHostBuilder builder)
+        {
+            if (contentRoot is not null)
+            {
+                // The pinned MVC DeferredHostBuilder turns these into actual entry-point
+                // --environment= and --contentRoot= arguments before Program executes.
+                builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        [HostDefaults.EnvironmentKey] = environment,
+                        [HostDefaults.ContentRootKey] = contentRoot,
+                    }));
+            }
+            return base.CreateHost(builder);
+        }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.UseEnvironment(environment);
+            if (contentRoot is not null)
+            {
+                // Preserve the explicit non-Development root after MVC's own test-root
+                // override. The independent JSON-provider assertion above remains primary.
+                if (!environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                    builder.UseContentRoot(contentRoot);
+                builder.UseSetting("CORS:AllowedOrigins:0", "https://source659.invalid");
+                builder.UseSetting("Services:File", "https://file-source659.invalid");
+            }
             builder.UseSetting("ConnectionStrings:redis", connection);
             builder.UseSetting("DataProtection:CertificatePfxBase64", certificate);
             builder.UseSetting("DataProtection:CertificatePassword", CertificatePassword);
