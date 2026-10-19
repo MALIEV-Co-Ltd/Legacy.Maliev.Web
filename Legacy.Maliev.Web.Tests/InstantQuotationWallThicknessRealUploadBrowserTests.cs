@@ -128,9 +128,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 """,
                 null, new PageWaitForFunctionOptions { Timeout = 60_000 });
         }
-        catch (Exception original)
+        catch (Exception admissionFailure)
         {
-            await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+            await failureEvidence.AttachAsync(admissionFailure, () => page.EvaluateAsync<string>("""
                 () => {
                   const zone = document.querySelector(".instant-quote__workflow");
                   const workflow = zone?.dataset.workflowState;
