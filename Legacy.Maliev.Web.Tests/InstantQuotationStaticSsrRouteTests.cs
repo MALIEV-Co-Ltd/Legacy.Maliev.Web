@@ -109,6 +109,9 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
 
     private sealed class UnusedSubmissionService : IInstantQuotationSubmissionService
     {
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The fallback route GET must not restart a quotation.");
+
         public Task<InstantQuotationSubmissionResult> SubmitAsync(
             string sessionId,
             string? ownerIdentity,

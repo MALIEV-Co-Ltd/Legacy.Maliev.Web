@@ -30,6 +30,137 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
 
     public InstantQuotationSubmissionEndpointTests(WebApplicationFactory<Program> factory) => this.factory = factory;
 
+    [Theory]
+    [InlineData(false, "en", null)]
+    [InlineData(false, "th", null)]
+    [InlineData(true, "en", "member-42")]
+    [InlineData(true, "th", "member-42")]
+    public async Task StartAnother_UsesProtectedOwnerAndWritesFreshCookieAfterAntiforgery(
+        bool authenticated, string culture, string? expectedOwner)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var next = new InstantQuotationSessionState(new string('B', 64), new string('C', 64),
+            new InstantQuotationOrderState([]), now, now, OwnerIdentity: expectedOwner);
+        var service = new RecordingSubmissionService(Completed(717)) { RestartSession = next };
+        await using var application = CreateFactory(service, authenticated: authenticated);
+        using var client = CreateClient(application);
+        if (authenticated)
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
+        }
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync(
+            $"/InstantQuotation/3D-Printing?handler=StartAnother&culture={culture}&returnUrl=https://invalid.example/",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["SessionId"] = "forged-session",
+                ["OwnerIdentity"] = "forged-owner",
+                ["SubmissionId"] = "forged-submission",
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal($"/InstantQuotation/3D-Printing?culture={culture}", response.Headers.Location?.OriginalString);
+        var call = Assert.Single(service.RestartCalls);
+        Assert.Matches("^[0-9A-Fa-f]{64}$", call.SessionId);
+        Assert.NotEqual(next.SessionId, call.SessionId);
+        Assert.Equal(expectedOwner, call.OwnerIdentity);
+        Assert.Empty(service.Calls);
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("domain=", cookie, StringComparison.OrdinalIgnoreCase);
+        using var scope = application.Services.CreateScope();
+        var context = new DefaultHttpContext();
+        context.Request.Headers.Cookie = cookie.Split(';')[0];
+        Assert.Equal(next.SessionId, scope.ServiceProvider.GetRequiredService<InstantQuotationSessionIdentityCookie>().TryRead(context));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-protected")]
+    public async Task StartAnother_ValidAntiforgeryWithoutValidIdentityFailsClosed(string? identity)
+    {
+        var service = new RecordingSubmissionService(Completed(717));
+        await using var application = CreateFactory(service);
+        using var client = application.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        using var document = await client.GetAsync("/InstantQuotation/3D-Printing?culture=en");
+        var source = WebUtility.HtmlDecode(await document.Content.ReadAsStringAsync());
+        var token = AntiforgeryTokenRegex().Match(source).Groups["value"].Value;
+        Assert.NotEmpty(token);
+        var cookies = document.Headers.GetValues("Set-Cookie")
+            .Where(value => !value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal))
+            .Select(value => value.Split(';')[0]).ToList();
+        if (identity is not null) cookies.Add($"__Host-Maliev.InstantQuotation={identity}");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/InstantQuotation/3D-Printing?handler=StartAnother")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["__RequestVerificationToken"] = token }),
+        };
+        request.Headers.Add("Cookie", string.Join("; ", cookies));
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Empty(service.RestartCalls);
+        Assert.Empty(service.Calls);
+        var replacement = response.Headers.TryGetValues("Set-Cookie", out var values) ? values : [];
+        Assert.DoesNotContain(replacement, value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task StartAnother_RefusedCheckpointDoesNotReplaceCookie()
+    {
+        var service = new RecordingSubmissionService(Completed(717));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+
+        using var response = await client.PostAsync("/InstantQuotation/3D-Printing?handler=StartAnother",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["__RequestVerificationToken"] = token }));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Single(service.RestartCalls);
+        Assert.Empty(service.Calls);
+        var cookies = response.Headers.TryGetValues("Set-Cookie", out var values) ? values : [];
+        Assert.DoesNotContain(cookies, value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("en", false, "Start another quotation")]
+    [InlineData("en", true, "Start another quotation")]
+    [InlineData("th", false, "เริ่มขอใบเสนอราคาใหม่")]
+    [InlineData("th", true, "เริ่มขอใบเสนอราคาใหม่")]
+    public async Task PersistedTerminal_RendersLocalizedPostFormWithAntiforgery(string culture, bool partial, string label)
+    {
+        var service = new RecordingSubmissionService(partial
+            ? new(InstantQuotationSubmissionOutcome.Partial, 717, InstantQuotationProblemCategory.DependencyUnavailable)
+            : Completed(717));
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(client);
+        using var post = await client.PostAsync(SubmitRoute,
+            CustomerForm(new() { ["__RequestVerificationToken"] = token }));
+
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync($"/InstantQuotation/3D-Printing?culture={culture}"));
+        var form = Assert.Single(Regex.Matches(source,
+            "<form\\b[^>]*data-workflow-start-another[^>]*>[\\s\\S]*?</form>").Cast<Match>()).Value;
+
+        Assert.Contains("method=\"post\"", form, StringComparison.Ordinal);
+        Assert.Contains($"action=\"/InstantQuotation/3D-Printing?handler=StartAnother&culture={culture}\"", form, StringComparison.Ordinal);
+        Assert.Contains(label, form, StringComparison.Ordinal);
+        Assert.Matches(AntiforgeryTokenRegex(), form);
+        Assert.Single(service.Calls);
+        Assert.Empty(service.RestartCalls);
+    }
+
     [Fact]
     public async Task SubmitRequest_RequiresAValidAntiforgeryToken()
     {
@@ -563,6 +694,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
 
         Assert.Equal("terminal", payload.RootElement.GetProperty("outcome").GetString());
         Assert.Contains("Do not submit it again; contact MALIEV support.", nextPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-workflow-start-another", nextPage, StringComparison.Ordinal);
         Assert.Single(service.Calls);
     }
 
@@ -838,6 +970,15 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         : IInstantQuotationSubmissionService
     {
         public List<SubmissionCall> Calls { get; } = [];
+
+        public InstantQuotationSessionState? RestartSession { get; init; }
+        public List<(string SessionId, string? OwnerIdentity)> RestartCalls { get; } = [];
+
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken)
+        {
+            RestartCalls.Add((sessionId, ownerIdentity));
+            return Task.FromResult(RestartSession);
+        }
 
         public Task<InstantQuotationSubmissionResult> SubmitAsync(
             string sessionId,
