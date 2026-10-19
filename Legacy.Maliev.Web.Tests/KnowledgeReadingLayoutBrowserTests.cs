@@ -42,7 +42,7 @@ namespace Legacy.Maliev.Web.Tests
             Assert.Equal(200, response.Status);
             var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
             if (await consent.IsVisibleAsync()) await consent.ClickAsync();
-            await page.EvaluateAsync("async () => { await document.fonts.ready; }");
+            await page.EvaluateAsync("async () => { await document.fonts.ready; }").WaitAsync(TimeSpan.FromSeconds(30));
 
             ILocator contents = page.Locator(".docs-toc");
             Assert.True(await contents.Locator("h2, :scope > strong").IsVisibleAsync());
@@ -85,7 +85,7 @@ namespace Legacy.Maliev.Web.Tests
                 ILocator image = figure.Locator("img");
                 Assert.False(string.IsNullOrWhiteSpace(await image.GetAttributeAsync("alt")));
                 await image.ScrollIntoViewIfNeededAsync();
-                Assert.True(await image.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0 && image.naturalHeight > 0; }"));
+                Assert.True(await image.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0 && image.naturalHeight > 0; }").WaitAsync(TimeSpan.FromSeconds(30)));
                 await SaveScreenshotAsync(page, $"knowledge-reading-{anchor}-{culture}-{width}.png");
             }
 
@@ -110,7 +110,7 @@ namespace Legacy.Maliev.Web.Tests
             if (await consent.IsVisibleAsync()) await consent.ClickAsync();
             ILocator image = page.Locator(".knowledge-photo > img");
             Assert.Contains(culture == "th" ? "ไมโครมิเตอร์" : "micrometer", await image.GetAttributeAsync("alt"));
-            using var decodedDocument = System.Text.Json.JsonDocument.Parse(await image.EvaluateAsync<string>("async image => { await image.decode(); return JSON.stringify({ width: image.naturalWidth, height: image.naturalHeight, source: image.currentSrc }); }"));
+            using var decodedDocument = System.Text.Json.JsonDocument.Parse(await image.EvaluateAsync<string>("async image => { await image.decode(); return JSON.stringify({ width: image.naturalWidth, height: image.naturalHeight, source: image.currentSrc }); }").WaitAsync(TimeSpan.FromSeconds(30)));
             var decoded = decodedDocument.RootElement;
             Assert.True(decoded.GetProperty("width").GetDouble() > 0 && decoded.GetProperty("height").GetDouble() > 0, decoded.GetRawText());
             Assert.InRange(decoded.GetProperty("width").GetDouble() / decoded.GetProperty("height").GetDouble(), 1.49, 1.51);
