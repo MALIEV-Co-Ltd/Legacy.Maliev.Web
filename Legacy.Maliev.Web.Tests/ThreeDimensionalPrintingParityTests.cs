@@ -60,12 +60,12 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
                     html,
                     "<script type=\"application/ld\\+json\">(?<json>.*?)</script>",
                     RegexOptions.Singleline)
-                .Select(match => match.Groups["json"].Value)
-                .Where(json => json.Contains("\"FAQPage\"", StringComparison.Ordinal)));
+                .Select(match => match.Groups["json"].Value),
+                json => json.Contains("\"FAQPage\"", StringComparison.Ordinal));
             using var faq = JsonDocument.Parse(faqJson);
             Assert.Equal("FAQPage", faq.RootElement.GetProperty("@type").GetString());
-            var leadTime = Assert.Single(faq.RootElement.GetProperty("mainEntity").EnumerateArray()
-                .Where(question => question.GetProperty("name").GetString() == "งานพิมพ์ 3D ใช้เวลากี่วัน?"));
+            var leadTime = Assert.Single(faq.RootElement.GetProperty("mainEntity").EnumerateArray(),
+                question => question.GetProperty("name").GetString() == "งานพิมพ์ 3D ใช้เวลากี่วัน?");
             Assert.Equal(
                 "ระยะเวลางาน FDM โดยทั่วไปเริ่มต้น 1 วัน และงานเรซิ่นเริ่มต้น 7 วัน ส่วน MJF, SLS, SLM และ DMLS โดยทั่วไปประมาณ 14 วัน รูปทรง วัสดุ การเก็บผิว จำนวน การตรวจคุณภาพ และคิวผลิตอาจทำให้ระยะเวลาเพิ่มขึ้น",
                 leadTime.GetProperty("acceptedAnswer").GetProperty("text").GetString());

@@ -39,7 +39,7 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
         });
         using var client = inquiryFactory.CreateClient(
             new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
-        using var response = await client.GetAsync($"/{page}?culture={culture}&item=3d-printing");
+        using var response = await client.GetAsync($"/{page.ToLowerInvariant()}?culture={culture}&item=3d-printing");
         var source = await response.Content.ReadAsStringAsync();
         var decoded = WebUtility.HtmlDecode(source);
 

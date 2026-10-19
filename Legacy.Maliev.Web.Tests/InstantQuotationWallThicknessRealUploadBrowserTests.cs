@@ -57,6 +57,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 """);
         }
         await using var page = await context.NewPageAsync();
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[mobile-evidence-cleanup] " + metadata));
         var pageErrors = new List<string>();
         page.PageError += (_, error) => pageErrors.Add(error);
         await page.GotoAsync(quoteUrl,
@@ -115,13 +117,41 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             MimeType = contentType,
             Buffer = bytes,
         });
-        await page.WaitForFunctionAsync(
-            """
-            () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
-              && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)') !== null
-              && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
-            """,
-            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        failureEvidence.Stage("UploadAdmission");
+        try
+        {
+            await page.WaitForFunctionAsync(
+                """
+                () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
+                  && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)') !== null
+                  && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
+                """,
+                null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        }
+        catch (Exception original)
+        {
+            await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                () => {
+                  const zone = document.querySelector(".instant-quote__workflow");
+                  const workflow = zone?.dataset.workflowState;
+                  return JSON.stringify({
+                    workflow:["empty","uploading","uploaded","error","multipart","configured","review","customerdetails","submitted"].includes(workflow) ? workflow : "unavailable",
+                    parts:Math.min(document.querySelectorAll("[data-workflow-parts] > [data-workflow-part]").length,32),
+                    uploadRows:Math.min(document.querySelectorAll("[data-workflow-upload-item]").length,32),
+                    progress:zone?.getAttribute("aria-busy") === "true",
+                    configurationEnabled:document.querySelector("[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)") !== null,
+                    isRepricing:!!document.querySelector("[data-pricing-loading-status]"),
+                    errorVisible:document.querySelector("#blazor-error-ui")?.style.display === "block"
+                  });
+                }
+                """), metadata => output.WriteLine("[mobile-upload-admission] " + metadata));
+            try
+            {
+                output.WriteLine($"[mobile-upload-services] started={Math.Min(upload.StartedUploads, 32)}; verified={Math.Min(upload.VerifiedUploads, 32)}; validationRejected={Math.Min(upload.ValidationRejectedUploads, 32)}");
+            }
+            catch { /* Secondary evidence must preserve the original upload admission failure. */ }
+            throw;
+        }
         Assert.Equal(1, upload.StartedUploads);
         Assert.Equal(1, upload.VerifiedUploads);
         Assert.Equal(0, upload.ValidationRejectedUploads);
@@ -1703,8 +1733,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 upload.FailNextUpload();
                 var pricing = new CountingPricingService();
                 var observation = new MaterialCompletionObservation();
-                await using var parent = startup.CreateFactory(environment);
-                await using var factory = parent.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+                await using var factory = startup.CreateFactory(environment, builder => builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<IInstantQuotationUploadClient>();
                     services.AddSingleton<IInstantQuotationUploadClient>(upload);
@@ -1869,8 +1898,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             var upload = new HashCheckingUploadClient { HoldUploads = true };
             var pricing = new CountingPricingService();
             var observation = new MaterialCompletionObservation();
-            await using var parent = startup.CreateFactory("Development");
-            await using var factory = parent.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            await using var factory = startup.CreateFactory("Development", builder => builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IInstantQuotationUploadClient>();
                 services.AddSingleton<IInstantQuotationUploadClient>(upload);
