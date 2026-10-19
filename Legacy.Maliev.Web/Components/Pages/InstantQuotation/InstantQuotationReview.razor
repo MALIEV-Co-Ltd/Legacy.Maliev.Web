@@ -58,13 +58,20 @@
                     </div>
                     <div>
                         <label for="review-color-@part.PartId">@Localizer["Color"]</label>
-                        <select id="review-color-@part.PartId" value="@part.Configuration.Color"
-                                @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))">
-                            @foreach (var color in ColorsForMaterial(part.Configuration.MaterialKey))
-                            {
-                                <option value="@color">@Localizer[color]</option>
-                            }
-                        </select>
+                        @if (part.Geometry.BodyCount > 1)
+                        {
+                            <input id="review-color-@part.PartId" value="@Localizer["Multiple bodies"]" readonly />
+                        }
+                        else
+                        {
+                            <select id="review-color-@part.PartId" value="@part.Configuration.Color"
+                                    @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))">
+                                @foreach (var color in ColorsForMaterial(part.Configuration.MaterialKey))
+                                {
+                                    <option value="@color">@Localizer[color]</option>
+                                }
+                            </select>
+                        }
                     </div>
                     <div>
                         <label for="review-quantity-@part.PartId">@Localizer["Quantity"]</label>

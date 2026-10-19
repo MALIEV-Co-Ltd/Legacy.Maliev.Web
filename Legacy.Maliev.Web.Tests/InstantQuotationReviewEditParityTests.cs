@@ -44,6 +44,37 @@ public sealed class InstantQuotationReviewEditParityTests
         Assert.Contains("data-workflow-review-total", html, StringComparison.Ordinal);
     }
 
+
+    [Theory]
+    [InlineData("en", "Multiple bodies")]
+    [InlineData("th", "หลายชิ้นส่วน")]
+    public async Task Review_MultiBodyColorIsLocalizedReadOnlyTextWithoutChangingOtherSettings(string culture, string label)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var html = await RenderReviewAsync([Part(id, "assembly.3mf", bodyCount: 2)], id);
+            var color = System.Text.RegularExpressions.Regex.Match(html, $"<input[^>]*id=\"review-color-{id}\"[^>]*>");
+            Assert.True(color.Success);
+            Assert.Contains("readonly", color.Value, StringComparison.Ordinal);
+            var value = System.Text.RegularExpressions.Regex.Match(color.Value, "value=\"([^\"]*)\"");
+            Assert.True(value.Success);
+            Assert.Equal(label, WebUtility.HtmlDecode(value.Groups[1].Value));
+            Assert.DoesNotContain("&", WebUtility.HtmlDecode(value.Groups[1].Value), StringComparison.Ordinal);
+            Assert.DoesNotContain($"<select id=\"review-color-{id}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"for=\"review-color-{id}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"id=\"review-material-{id}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"id=\"review-quantity-{id}\"", html, StringComparison.Ordinal);
+            Assert.Contains("data-review-edit-part", html, StringComparison.Ordinal);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     [Theory]
     [InlineData("en", "Standard resin", "Standard")]
     [InlineData("th", "การพิมพ์เรซินมาตรฐาน", "มาตรฐาน")]
@@ -235,7 +266,7 @@ public sealed class InstantQuotationReviewEditParityTests
         });
     }
 
-    private static InstantQuotationWorkflowPartViewModel Part(Guid id, string fileName, bool isManifold = true) => new(
+    private static InstantQuotationWorkflowPartViewModel Part(Guid id, string fileName, bool isManifold = true, int bodyCount = 1) => new(
         id,
         Guid.NewGuid(),
         fileName,
@@ -246,7 +277,7 @@ public sealed class InstantQuotationReviewEditParityTests
             [10],
             [10],
             12,
-            1,
+            bodyCount,
             isManifold),
         new InstantQuotationPartConfiguration("PLA", "Black", 1),
         null);
