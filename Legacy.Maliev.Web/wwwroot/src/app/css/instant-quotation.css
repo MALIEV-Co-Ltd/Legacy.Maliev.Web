@@ -763,6 +763,35 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     align-self: center;
 }
 
+/* Keep the whole non-phone footer within its viewport share. Only the details
+   rail scrolls; legal links and configuration actions keep their own rows. */
+@media (min-width: 48rem) {
+    .instant-quote__workflow .instant-quote__configuration-footer {
+        box-sizing: border-box;
+        grid-template-rows: minmax(44px, 1fr) auto auto;
+        min-height: 0;
+        max-height: 40dvh;
+    }
+
+    .instant-quote__configuration-footer .instant-quote__summary-dock {
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .instant-quote__configuration-footer .instant-quote__summary-dock > summary {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: inherit;
+    }
+
+    .instant-quote__configuration-footer [data-workflow-order-total] {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
 @media (max-width: 35.99875rem) {
     .instant-quote__workflow .instant-quote__configuration-footer {
         grid-template-columns: minmax(0, 1fr);
