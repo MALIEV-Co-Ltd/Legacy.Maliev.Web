@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -29,6 +30,46 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains(nylonDescription, html, StringComparison.Ordinal);
         Assert.Contains(absDescription, html, StringComparison.Ordinal);
         Assert.Contains("printing-material-details.json?v=3", html, StringComparison.Ordinal);
+
+        if (culture == "th")
+        {
+            foreach (var sourceThaiCopy in new[]
+            {
+                "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่น",
+                "FDM สำหรับชิ้นงานทนทาน เรซิ่นสำหรับรายละเอียดและผิวเรียบ",
+                "วัสดุทั่วไป วิศวกรรม คาร์บอนไฟเบอร์ ESD หน่วงไฟ ยืดหยุ่น และเรซิ่น",
+                "ควรเลือกพิมพ์ FDM หรือเรซิ่นเมื่อใด?",
+                "ต้นแบบกล่องเรซิ่นผิวเรียบกำลังทดสอบประกอบกับอุปกรณ์อิเล็กทรอนิกส์",
+                "เรซิ่น: รายละเอียดสูงและผิวเรียบ",
+                "การพิมพ์เรซิ่นทำให้โฟโตโพลิเมอร์แข็งตัวเพื่อรายละเอียดสูงและผิวเรียบ เหมาะกับโมเดล ต้นแบบขนาดเล็ก ชิ้นงานใส ชิ้นงานยืดหยุ่น และต้นแบบงานหล่อ",
+                "ตัวอย่างชิ้นงานพิมพ์ 3D แบบ FDM และเรซิ่น",
+                ">เรซิ่น</option>",
+                "เรซิ่นมาตรฐาน",
+                "เรซิ่นเหนียว",
+                "เรซิ่นใส",
+                "เรซิ่นยืดหยุ่น",
+                "เรซิ่นหล่อขี้ผึ้งหาย",
+                "ควรเลือก FDM หรือเรซิ่น DLP?",
+                "ระยะเวลางาน FDM โดยทั่วไปเริ่มต้น 1 วัน และงานเรซิ่นเริ่มต้น 7 วัน ส่วน MJF, SLS, SLM และ DMLS โดยทั่วไปประมาณ 14 วัน รูปทรง วัสดุ การเก็บผิว จำนวน การตรวจคุณภาพ และคิวผลิตอาจทำให้ระยะเวลาเพิ่มขึ้น"
+            })
+            {
+                Assert.Contains(sourceThaiCopy, html, StringComparison.Ordinal);
+            }
+
+            var faqJson = Assert.Single(Regex.Matches(
+                    html,
+                    "<script type=\"application/ld\\+json\">(?<json>.*?)</script>",
+                    RegexOptions.Singleline)
+                .Select(match => match.Groups["json"].Value)
+                .Where(json => json.Contains("\"FAQPage\"", StringComparison.Ordinal)));
+            using var faq = JsonDocument.Parse(faqJson);
+            Assert.Equal("FAQPage", faq.RootElement.GetProperty("@type").GetString());
+            var leadTime = Assert.Single(faq.RootElement.GetProperty("mainEntity").EnumerateArray()
+                .Where(question => question.GetProperty("name").GetString() == "งานพิมพ์ 3D ใช้เวลากี่วัน?"));
+            Assert.Equal(
+                "ระยะเวลางาน FDM โดยทั่วไปเริ่มต้น 1 วัน และงานเรซิ่นเริ่มต้น 7 วัน ส่วน MJF, SLS, SLM และ DMLS โดยทั่วไปประมาณ 14 วัน รูปทรง วัสดุ การเก็บผิว จำนวน การตรวจคุณภาพ และคิวผลิตอาจทำให้ระยะเวลาเพิ่มขึ้น",
+                leadTime.GetProperty("acceptedAnswer").GetProperty("text").GetString());
+        }
     }
 
     [Fact]
