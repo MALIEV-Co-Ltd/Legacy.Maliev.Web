@@ -82,7 +82,7 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
             Assert.Equal(detailsCount, Regex.Matches(document, "<details><summary>", RegexOptions.CultureInvariant).Count);
             var faqQuestionCounts = new List<int>();
             foreach (Match match in Regex.Matches(
-                document,
+                System.Net.WebUtility.HtmlDecode(document),
                 "<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>.*?)</script>",
                 RegexOptions.Singleline | RegexOptions.CultureInvariant))
             {
