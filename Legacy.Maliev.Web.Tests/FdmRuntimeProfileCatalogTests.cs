@@ -79,6 +79,24 @@ public sealed class FdmRuntimeProfileCatalogTests
             }
         }
 
+        // Source ea074: packaged TPU settings and machine preparation retain independent source literals.
+        Assert.True(catalog.TryResolveTrustedProfile("TPU", BuildPreference.Standard, out var tpuProfile));
+        Assert.NotNull(tpuProfile);
+        Assert.Equal(1.43, PricingCatalog.ResolveMaterial("TPU")!.DensityGramsPerCm3, 6);
+        Assert.Equal(1.43, tpuProfile.MaterialDensityGramsPerCm3, 6);
+        Assert.Equal(2.5, tpuProfile.MaximumVolumetricFlowMm3PerSecond!.Value, 6);
+        Assert.Equal(260, tpuProfile.Motion.MachinePrepareCompensationSeconds, 6);
+        Assert.Equal(29, tpuProfile.Motion.MachineLoadFilamentSeconds, 6);
+        MotionLedger tpuPreparation = FeatureMotionEstimator.Estimate([], tpuProfile);
+        Assert.Equal(409, tpuPreparation.PreparationSeconds, 6);
+        JsonNode machineSettings = manifest["machine"]!["settings"]!;
+        Assert.Equal("bambu-fdm-machine-common-01.10.02.76",
+            machineSettings["preparation_sequence_version"]!.GetValue<string>());
+        Assert.Equal("260", machineSettings["machine_prepare_compensation_time"]!.GetValue<string>());
+        Assert.Equal("29", machineSettings["machine_load_filament_time"]!.GetValue<string>());
+        Assert.Equal("D4A1B8E69A0AAE8EDFA9CB1E7A314C5A9FB0E2C5BBF6F411FE231BA3068E2AFD",
+            manifest["materials"]!["TPU"]!["sourceArtifactSha256"]!.GetValue<string>());
+
         // Source cebda binds admitted PA12 settings to these exact packaged manufacturer-evidence bytes.
         using var source = typeof(FdmRuntimeProfileCatalog).Assembly.GetManifestResourceStream(
             "Legacy.Maliev.Web.Application.Pricing.Profiles.Sources.esun-epa12-manufacturer-profile.v1.json");
