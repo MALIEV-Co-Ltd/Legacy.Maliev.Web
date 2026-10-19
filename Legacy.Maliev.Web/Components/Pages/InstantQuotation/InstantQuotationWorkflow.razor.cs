@@ -98,6 +98,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         {
             if (HasDevelopmentPreview && Parts.Count == 0)
                 return new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Parts: true);
+            if (Parts.Count == 0 && Uploads.Count > 0
+                && State is (InstantQuotationWorkflowState.Error or InstantQuotationWorkflowState.Empty))
+                return new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Parts: true);
             return (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
                 || (State is InstantQuotationWorkflowState.Empty && HasMaterialDisplay && Parts.Count > 0)
                 ? new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Viewer: true, Parts: true, Configuration: true)
@@ -604,6 +607,17 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         {
             developmentRetries.Remove(localId);
         }
+    }
+
+    private async Task DiscardUploadAsync(Guid localId)
+    {
+        if (workflow is null) return;
+        await workflow.DiscardUploadAsync(localId, default);
+        developmentPreviews.Remove(localId);
+        developmentClaims.Remove(localId);
+        developmentRetries.Remove(localId);
+        RepriceDevelopmentPreview();
+        await ReleasePreviewAsync(localId);
     }
 
     private async Task RemovePartAsync(Guid partId)

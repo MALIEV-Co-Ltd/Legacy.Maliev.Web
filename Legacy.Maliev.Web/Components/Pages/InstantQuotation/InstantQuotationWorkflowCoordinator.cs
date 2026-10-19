@@ -296,6 +296,46 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await StartUploadAsync(entry, cancellationToken);
     }
 
+    public async Task DiscardUploadAsync(Guid localId, CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        CancellationTokenSource? operationCancellation = null;
+        await WaitForStateGateAsync(cancellationToken);
+        try
+        {
+            ThrowIfPricingCanceled(cancellationToken);
+            var entry = entries.SingleOrDefault(item => item.LocalId == localId);
+            if (entry is null) return;
+            if (entry.Part is not null
+                || entry.Status is not (InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+                throw new InvalidOperationException("Only failed or cancelled local uploads can be discarded.");
+
+            entry.OperationId = NewOperationId();
+            operationCancellation = entry.OperationCancellation;
+            entry.OperationCancellation = null;
+            entries.Remove(entry);
+            RefreshState();
+        }
+        finally
+        {
+            stateGate.Release();
+        }
+
+        try
+        {
+            operationCancellation?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // A competing retry may already have disposed this captured source.
+        }
+        finally
+        {
+            operationCancellation?.Dispose();
+        }
+    }
+
     public async Task RemoveAsync(Guid partId, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
@@ -505,6 +545,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             lifetimeToken);
+        var operationToken = entry.OperationCancellation.Token;
         var operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
             && entry.OperationId is { Length: > 0 } retainedOperationId
                 ? retainedOperationId
@@ -582,7 +623,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         try
         {
-            await using var content = await entry.File.OpenReadStreamAsync(entry.OperationCancellation.Token);
+            await using var content = await entry.File.OpenReadStreamAsync(operationToken);
             var result = await uploadClient.UploadAsync(
                 session!.SessionId,
                 ownerIdentity,
@@ -592,7 +633,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.File.Length,
                 entry.File.GeometryClaim,
                 operationId,
-                entry.OperationCancellation.Token);
+                operationToken);
             await ApplyUploadResultAsync(
                 entry,
                 operationId,
@@ -600,7 +641,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 result,
                 cancellationToken);
         }
-        catch (OperationCanceledException) when (entry.OperationCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
         {
             if (entry.OperationId == operationId)
             {
@@ -641,11 +682,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await stateGate.WaitAsync(cancellationToken);
         try
         {
-            var reconcilesRetainedOperation = entry.OperationId == operationId
+            var registered = entries.Contains(entry);
+            var reconcilesRetainedOperation = registered && entry.OperationId == operationId
                 && entry.Part is null
                 && entry.Status is InstantQuotationWorkflowUploadStatus.Error
                 && IsAuthoritativeSuccess(result);
-            if ((entry.OperationId != operationId
+            if ((!registered || entry.OperationId != operationId
                     || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading)
                 && !reconcilesRetainedOperation)
             {

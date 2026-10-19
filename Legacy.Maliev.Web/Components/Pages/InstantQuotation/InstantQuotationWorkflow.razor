@@ -285,6 +285,9 @@
                         <button type="button"
                                 aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
                                 @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                        <button type="button"
+                                aria-label="@Localizer["Remove {0}", upload.DisplayFileName]"
+                                @onclick="() => DiscardUploadAsync(upload.LocalId)">@Localizer["Remove"]</button>
                     }
                 </article>
             }
