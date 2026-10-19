@@ -43,6 +43,7 @@
                     <span>
                         @Localizer["or click to browse"] · STL, OBJ, 3MF, STEP, IGES, GLB, GLTF
                     </span>
+                    <span data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</span>
                 </label>
             }
         </section>
@@ -108,6 +109,7 @@
                 <span aria-hidden="true">＋</span>
                 <strong>@Localizer["Add file"]</strong>
                 <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
+                <small data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</small>
             </label>
             @foreach (var upload in Uploads.Where(upload => Parts.All(part => part.PreviewCorrelationId != upload.LocalId)))
             {
@@ -497,7 +499,11 @@
              @ref="customerDetailsSection"
              tabindex="-1"
              aria-labelledby="instant-quote-customer-heading">
-            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview" />
+            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview"
+                                          HasFiles="@(workflow?.Uploads.Count > 0)"
+                                          FileUploadCompleted="@(workflow is not null && workflow.Uploads.Count > 0
+                                              && workflow.Uploads.All(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)
+                                              && Parts.Count == workflow.Uploads.Count)" />
         </div>
     }
 

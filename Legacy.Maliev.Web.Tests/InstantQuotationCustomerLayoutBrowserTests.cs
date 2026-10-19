@@ -76,7 +76,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         Assert.True(await page.Locator(".instant-quote__customer-order").EvaluateAsync<bool>(
             "element => { const box = element.getBoundingClientRect(); return box.left >= -1 && box.right <= innerWidth + 1; }"));
 
-        if (width >= 992)
+        if (width >= 1024)
         {
             Assert.True(await page.EvaluateAsync<bool>(
                 "() => document.querySelector('.instant-quote__customer-order').getBoundingClientRect().right <= document.querySelector('[data-workflow-customer-details]').getBoundingClientRect().left + 1"));

@@ -16,7 +16,14 @@ public sealed class SitemapResponseCachingHttpTests(TestingWebApplicationFactory
         "/instantquotation/3d-printing", "/knowledges", "/knowledges/guidelines",
         "/knowledges/workflow", "/knowledges/specifications",
         "/knowledges/specifications/cnc-machining", "/knowledges/specifications/3d-printing",
-        "/knowledges/specifications/3d-scanning", "/legal", "/legal/privacypolicy",
+        "/knowledges/specifications/3d-scanning",
+        "/knowledges/manufacturing/process-selection", "/knowledges/cnc/feeds-and-speeds",
+        "/knowledges/cnc/cutting-tools", "/knowledges/cnc/geometry-and-workholding",
+        "/knowledges/cnc/holes-and-tolerances", "/knowledges/cnc/machining-processes",
+        "/knowledges/materials/selection", "/knowledges/materials/metals",
+        "/knowledges/materials/engineering-plastics", "/knowledges/finishing/surface-finishes",
+        "/knowledges/finishing/heat-treatment", "/knowledges/inspection/measuring-parts",
+        "/legal", "/legal/privacypolicy",
         "/legal/termsconditions", "/legal/nondisclosureagreement", "/no-weapons"
     ];
 
@@ -54,7 +61,7 @@ public sealed class SitemapResponseCachingHttpTests(TestingWebApplicationFactory
         XNamespace xhtml = "http://www.w3.org/1999/xhtml";
         Assert.Equal(ns + "urlset", xml.Root?.Name);
         var entries = xml.Root!.Elements(ns + "url").ToArray();
-        Assert.Equal(27, entries.Length);
+        Assert.Equal(39, entries.Length);
         Assert.Equal(IndexedPaths.Select(path => "https://www.maliev.com" + path),
             entries.Select(entry => entry.Element(ns + "loc")?.Value));
         for (var index = 0; index < entries.Length; index++)

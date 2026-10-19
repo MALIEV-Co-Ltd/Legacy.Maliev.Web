@@ -680,4 +680,5 @@
   <data name="Other materials" xml:space="preserve">
     <value>วัสดุอื่น ๆ</value>
   </data>
+  <data name="Up to {0} MB per file" xml:space="preserve"><value>สูงสุด {0} MB ต่อไฟล์</value></data>
 </root>

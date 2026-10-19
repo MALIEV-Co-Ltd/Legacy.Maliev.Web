@@ -152,12 +152,22 @@ public sealed class Index(
         if (!LeadAnalyticsEventQueue.TryQueueContactMessage(TempData, referenceNumber, out var analyticsFailure))
         {
             logger.LogWarning(
-                analyticsFailure,
                 "Analytics queue failed after contact message {MessageId} was persisted.",
                 referenceNumber);
         }
 
-        var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        var notificationsSent = false;
+        try
+        {
+            notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(
+                "Confirmation delivery failed after contact message {MessageId} was persisted.",
+                referenceNumber);
+        }
+
         Notification = notificationsSent
             ? localizer["Thank you for contacting us. Your reference number is #{0}.", referenceNumber].Value
             : localizer["Contact request #{0} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference.", referenceNumber].Value;
@@ -168,29 +178,35 @@ public sealed class Index(
         int referenceNumber,
         CancellationToken cancellationToken)
     {
-        var customer = notificationClient.SendAsync(
-            NotificationChannel.Info,
-            new EmailNotification(
-                Email.Trim(),
-                localizer["Contact request #{0}", referenceNumber].Value,
-                "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
-                    + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
-                null,
-                null,
-                null),
-            cancellationToken);
-        var internalNotification = notificationClient.SendAsync(
-            NotificationChannel.Info,
-            new EmailNotification(
-                "info@maliev.com",
-                $"Contact request #{referenceNumber}",
-                BuildInternalMessage(referenceNumber),
-                Email.Trim(),
-                null,
-                null),
-            cancellationToken);
+        var customer = SendCustomerAsync();
+        var internalNotification = SendInternalAsync();
         var results = await Task.WhenAll(customer, internalNotification);
         return results.All(result => result.Sent);
+
+        async Task<NotificationResult> SendCustomerAsync() =>
+            await notificationClient.SendAsync(
+                NotificationChannel.Info,
+                new EmailNotification(
+                    Email.Trim(),
+                    localizer["Contact request #{0}", referenceNumber].Value,
+                    "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
+                        + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
+                    null,
+                    null,
+                    null),
+                cancellationToken);
+
+        async Task<NotificationResult> SendInternalAsync() =>
+            await notificationClient.SendAsync(
+                NotificationChannel.Info,
+                new EmailNotification(
+                    "info@maliev.com",
+                    $"Contact request #{referenceNumber}",
+                    BuildInternalMessage(referenceNumber),
+                    Email.Trim(),
+                    null,
+                    null),
+                cancellationToken);
     }
 
     private string BuildInternalMessage(int referenceNumber) =>
