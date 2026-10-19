@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<MaterialsMetalsContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Metals for machined parts: grades and tradeoffs | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Compare aluminium, stainless steel, engineering steel, tool steel, and brass by application, condition, joining, corrosion, and inspection needs."];
+}
+<component type="typeof(MaterialsMetalsContent)" render-mode="Static" />

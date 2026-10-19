@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
@@ -374,6 +376,43 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         })
         {
             Assert.DoesNotContain(forbidden, html, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", InstantQuotationWorkflowState.Empty, "iq-empty-dropzone")]
+    [InlineData("th", InstantQuotationWorkflowState.Empty, "iq-empty-dropzone")]
+    [InlineData("en", InstantQuotationWorkflowState.Configured, "iq-compact-dropzone")]
+    [InlineData("th", InstantQuotationWorkflowState.Configured, "iq-compact-dropzone")]
+    public async Task UploadDropzone_ShowsConfiguredPerFileLimitInSelectedLocale(
+        string culture,
+        InstantQuotationWorkflowState state,
+        string dropzoneClass)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var html = WebUtility.HtmlDecode(await RenderWorkflowAsync(state));
+            var dropzone = Regex.Match(
+                html,
+                $"<label[^>]*class=\"{dropzoneClass}\"[^>]*>(?<content>.*?)</label>",
+                RegexOptions.Singleline | RegexOptions.CultureInvariant);
+            Assert.True(dropzone.Success);
+            var limitMb = InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024);
+            var expected = culture == "th"
+                ? $"สูงสุด {limitMb} MB ต่อไฟล์"
+                : $"Up to {limitMb} MB per file";
+
+            Assert.Contains(expected, dropzone.Groups["content"].Value, StringComparison.Ordinal);
+            Assert.DoesNotContain("instant-quote__sr-only", dropzone.Value, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
         }
     }
 

@@ -47,16 +47,28 @@ public sealed partial class KnowledgeSidebarRouteTests(TestingWebApplicationFact
         Assert.Equal(!retainedRazor,
             document.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
         var sidebar = Assert.Single(SidebarRegex().Matches(document).Cast<Match>()).Groups["body"].Value;
-        Assert.Contains($">{(culture == "th" ? "ภาพรวม" : "Overview")}<", sidebar, StringComparison.Ordinal);
+        Assert.Equal(5, Regex.Matches(sidebar, """<details\b""", RegexOptions.CultureInvariant).Count);
+        Assert.Equal(19, Regex.Matches(sidebar, "class=\"workspace-nav-link\"", RegexOptions.CultureInvariant).Count);
+        Assert.Contains($">{(culture == "th" ? "เริ่มต้นที่นี่" : "Start here")}<", sidebar, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "พบ {0} รายการ" : "Matches: {0}", sidebar, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "แสดง {0} จาก {1} รายการ ลองระบุคำค้นให้เฉพาะเจาะจงขึ้น" : "Showing {0} of {1} matches. Narrow your search to see more.", sidebar, StringComparison.Ordinal);
+        Assert.Contains("data-knowledge-search hidden", sidebar, StringComparison.Ordinal);
         AssertLink(sidebar, "/knowledges", culture == "th" ? "ศูนย์ความรู้" : "Knowledge center");
-        AssertLink(sidebar, "/knowledges/specifications", culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications");
+        AssertLink(sidebar, "/knowledges/specifications", culture == "th" ? "เตรียมงานสำหรับแต่ละบริการ" : "Service preparation guides");
+        Assert.Single(Regex.Matches(sidebar, """<details\b[^>]*\bopen(?:\s|=|>)""", RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Single(Regex.Matches(sidebar, "aria-current=\"page\"", RegexOptions.CultureInvariant).Cast<Match>());
+        var current = Regex.Match(sidebar, "<a\\b(?=[^>]*aria-current=\"page\")[^>]*href=\"(?<href>[^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(current.Success);
+        Assert.Equal(route, current.Groups["href"].Value.Split('?')[0], ignoreCase: true);
+        Assert.All(LinkRegex().Matches(sidebar).Cast<Match>(), link =>
+            Assert.Contains($"?culture={culture}", link.Groups["href"].Value, StringComparison.Ordinal));
         Assert.DoesNotContain("Lorem ipsum", sidebar, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AssertLink(string sidebar, string destination, string label)
     {
         var link = Assert.Single(LinkRegex().Matches(sidebar).Cast<Match>(), match =>
-            string.Equals(match.Groups["href"].Value.TrimEnd('/'), destination, StringComparison.OrdinalIgnoreCase));
+            string.Equals(match.Groups["href"].Value.Split('?')[0].TrimEnd('/'), destination, StringComparison.OrdinalIgnoreCase));
         Assert.Contains($">{label}<", link.Groups["body"].Value, StringComparison.Ordinal);
     }
 

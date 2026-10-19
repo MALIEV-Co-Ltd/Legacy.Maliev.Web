@@ -17,6 +17,8 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
     {
         var root = FindRepositoryRoot();
         var web = Path.Combine(root, "Legacy.Maliev.Web");
+        var toc = File.ReadAllText(Path.Combine(web, "Components", "Shared", "ServicePageToc.razor"));
+        Assert.Contains("aria-label=", toc, StringComparison.Ordinal);
         var expected = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
             ["ThreeDimensionalDesign"] = ["/services/3d-design", "design-title", "/src/images/services/design/design-workflow.webp", "design-workflow", "design-faq"],
@@ -36,8 +38,7 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
                 Assert.Contains(marker, content, StringComparison.Ordinal);
             }
 
-            Assert.Contains("service-page-toc", content, StringComparison.Ordinal);
-            Assert.Contains("aria-label=", content, StringComparison.Ordinal);
+            Assert.Contains("<ServicePageToc />", content, StringComparison.Ordinal);
             Assert.Contains("service-process", content, StringComparison.Ordinal);
             Assert.Contains("data-migration-component=\"public-service-faq\"", content, StringComparison.Ordinal);
         }
@@ -112,7 +113,11 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
         Assert.Contains($"id=\"{headingId}\"", source, StringComparison.Ordinal);
         Assert.Contains(contentMarker, source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains("data-service-page-toc", source, StringComparison.Ordinal);
+        Assert.Contains("data-service-toc", source, StringComparison.Ordinal);
+        Assert.Contains("data-service-toc-list", source, StringComparison.Ordinal);
+        Assert.Contains("data-service-toc-panel", source, StringComparison.Ordinal);
+        Assert.Contains("data-service-toc-toggle", source, StringComparison.Ordinal);
+        Assert.Contains("route-service-toc.js", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 

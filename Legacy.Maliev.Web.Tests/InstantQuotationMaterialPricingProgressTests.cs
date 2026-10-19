@@ -287,7 +287,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 await fixture.DrainAsync(run, caller.Cancel, () => MaterialPricingTestCleanup.ReleaseAll(
                     () => selectedRelease.TrySetResult(), () => comparisonRelease.TrySetResult()), caller.Token);
             }
-        }, output, clock: clock);
+        }, output, failComparisons: true, clock: clock);
     }
 
     [Fact]
@@ -666,8 +666,35 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     }
 
     [Fact]
+    public async Task PlainOverload_SelectedDeadlineUsesInjectedClock()
+    {
+        var clock = new ManualClock();
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            using var caller = new CancellationTokenSource();
+            var run = fixture.Service.QuoteAsync(session, Owner, true, caller.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
+                Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+                Assert.False(caller.IsCancellationRequested);
+                Assert.Equal(1, fixture.Reader.ReadCount);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => fixture.Reader.Release.TrySetResult(), caller.Token);
+            }
+        }, output, gateRead: 1, clock: clock);
+    }
+
+    [Fact]
     public async Task DisplayOverload_DoesNotChangeFinalKernelMoneyOrProtectedSession()
     {
+        var clock = new ManualClock();
         await Fixture.RunAsync(async fixture =>
         {
             var session = await fixture.CreateAsync();
@@ -687,7 +714,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             // 28.0766752577, explicit minimum surcharge 200; ceil10(201.9233) = 210.
             Assert.InRange(Assert.Single(actual.Parts).DirectCostPerUnit, 47.5000001, 50);
             Assert.Equal(210, Assert.Single(actual.Parts).UnitPrice);
-        }, output);
+        }, output, clock: clock);
     }
 
     [Fact]

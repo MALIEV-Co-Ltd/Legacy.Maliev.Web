@@ -2,15 +2,19 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 // The token below is transport-only test data. These tests do not establish Catalog actor permissions.
-public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory factory)
+public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory factory, ITestOutputHelper output)
     : IClassFixture<TestingWebApplicationFactory>
 {
     public static TheoryData<bool, string> RenderersAndCultures => new()
@@ -79,20 +83,30 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
     [MemberData(nameof(FailureCases))]
     public async Task ForeignCurrency_UnusableCatalogObservation_FailsClosed(bool active, string handler, string failure)
     {
-        using var transport = new CatalogTransport(_ => Failure(failure));
-        await using var application = Configure(active, transport);
+        var stages = new RequestStages(handler);
+        using var transport = new CatalogTransport(_ => Failure(failure), stages);
+        await using var application = Configure(active, transport, stages: stages);
         using var client = CreateClient(application);
-        using var response = await client.GetAsync(Route(handler, "USD", "en"));
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        try
+        {
+            using var response = await client.GetAsync(Route(handler, "USD", "en"));
+            stages.MarkClientCompleted();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.False(json.RootElement.GetProperty("success").GetBoolean());
-        Assert.Equal("pricing_unavailable", json.RootElement.GetProperty("code").GetString());
-        Assert.False(json.RootElement.TryGetProperty("finalOrderPrice", out _));
-        Assert.False(json.RootElement.TryGetProperty("unitPrice", out _));
-        Assert.NotEmpty(transport.Requests);
-        Assert.All(transport.Requests, request => AssertCatalogRequest(request, "USD"));
-        Assert.DoesNotContain("fx-contract-test-token", json.RootElement.GetRawText(), StringComparison.Ordinal);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            Assert.False(json.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal("pricing_unavailable", json.RootElement.GetProperty("code").GetString());
+            Assert.False(json.RootElement.TryGetProperty("finalOrderPrice", out _));
+            Assert.False(json.RootElement.TryGetProperty("unitPrice", out _));
+            Assert.NotEmpty(transport.Requests);
+            Assert.All(transport.Requests, request => AssertCatalogRequest(request, "USD"));
+            Assert.DoesNotContain("fx-contract-test-token", json.RootElement.GetRawText(), StringComparison.Ordinal);
+        }
+        catch (Exception primary)
+        {
+            WriteFailureDiagnostics(primary, () => output.WriteLine("fx-handler-stages: {0}", stages.Serialize()));
+            throw;
+        }
     }
 
     [Theory]
@@ -185,11 +199,194 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
         Assert.Equal(2, transport.Requests.Count);
     }
 
+    [Fact]
+    public async Task RequestStageDiagnostics_RecordActualForwardingTransportAndResponseCallbacks()
+    {
+        var stages = new RequestStages("GetOrderTotal");
+        var responseFeature = new DiagnosticResponseFeature();
+        var context = new DefaultHttpContext();
+        context.Features.Set<Microsoft.AspNetCore.Http.Features.IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = "/InstantQuotation/3D-Printing";
+        context.Request.QueryString = new QueryString("?handler=GetOrderTotal");
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var application = new ApplicationBuilder(services);
+        var forwarded = false;
+        new RequestStageStartupFilter(stages).Configure(builder => builder.Run(async actual =>
+        {
+            Assert.Same(context, actual);
+            forwarded = true;
+            using var transport = new CatalogTransport(_ => new(HttpStatusCode.Forbidden), stages);
+            using var client = new HttpMessageInvoker(transport, disposeHandler: false);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://catalog.test/");
+            using var response = await client.SendAsync(request, default);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            await responseFeature.StartAsync();
+            await responseFeature.CompleteAsync();
+        }))(application);
+        await application.Build()(context);
+        stages.MarkClientCompleted();
+        Assert.True(forwarded);
+        using var json = JsonDocument.Parse(stages.Serialize());
+        Assert.Equal(new[] { "schema", "clientCompleted", "serverEntered", "serverNextExited",
+            "responseStarting", "responseCompleted", "serverFaulted", "transportEntered", "transportReturned" },
+            json.RootElement.EnumerateObject().Select(property => property.Name));
+        Assert.All(json.RootElement.EnumerateObject(), property =>
+            Assert.Equal(property.Name == "serverFaulted" ? 0 : 1, property.Value.GetInt32()));
+    }
+
+    [Fact]
+    public async Task RequestStageDiagnostics_RethrowExactFaultsAndDoNotClaimReturnOrCompletion()
+    {
+        var stages = new RequestStages("GetOrderTotal");
+        var primary = new IOException("Controlled pipeline failure.");
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = "/InstantQuotation/3D-Printing";
+        context.Request.QueryString = new QueryString("?handler=GetOrderTotal");
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var application = new ApplicationBuilder(services);
+        new RequestStageStartupFilter(stages).Configure(builder =>
+            builder.Run(_ => Task.FromException(primary)))(application);
+        Assert.Same(primary, await Assert.ThrowsAsync<IOException>(() => application.Build()(context)));
+        var transportFailure = new IOException("Controlled transport failure.");
+        using var transport = new CatalogTransport(_ => throw transportFailure, stages);
+        using var client = new HttpMessageInvoker(transport, disposeHandler: false);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://catalog.test/");
+        Assert.Same(transportFailure, await Assert.ThrowsAsync<IOException>(() => client.SendAsync(request, default)));
+        using var json = JsonDocument.Parse(stages.Serialize());
+        foreach (var name in new[] { "schema", "serverEntered", "serverNextExited", "serverFaulted", "transportEntered" })
+            Assert.Equal(1, json.RootElement.GetProperty(name).GetInt32());
+        foreach (var name in new[] { "clientCompleted", "responseStarting", "responseCompleted", "transportReturned" })
+            Assert.Equal(0, json.RootElement.GetProperty(name).GetInt32());
+    }
+
+    [Fact]
+    public void RequestStageDiagnostics_OutputAndAttachmentFailuresCannotReplacePrimary()
+    {
+        var diagnosticFailure = new IOException("Controlled output failure.");
+        foreach (var primary in new Exception[] { new HostileDataException(), new ReadOnlyDataException() })
+        {
+            var attempts = 0;
+            void RethrowPrimary()
+            {
+                try { throw primary; }
+                catch (Exception actual)
+                {
+                    WriteFailureDiagnostics(actual, () =>
+                    {
+                        attempts++;
+                        throw diagnosticFailure;
+                    });
+                    throw;
+                }
+            }
+
+            Assert.Same(primary, Assert.ThrowsAny<Exception>(RethrowPrimary));
+            Assert.Equal(1, attempts);
+        }
+
+        var ordinaryPrimary = new IOException("Controlled primary failure.");
+        WriteFailureDiagnostics(ordinaryPrimary, () => throw diagnosticFailure);
+        Assert.Same(diagnosticFailure, ordinaryPrimary.Data["FxHandlerStageDiagnosticFailure"]);
+    }
+
+    private static void WriteFailureDiagnostics(Exception primary, Action write)
+    {
+        try { write(); }
+        catch (Exception diagnosticFailure)
+        {
+            try { primary.Data["FxHandlerStageDiagnosticFailure"] = diagnosticFailure; }
+            catch { /* Diagnostic output and attachment must never replace the primary failure. */ }
+        }
+    }
+
+    private sealed class HostileDataException : Exception
+    {
+        public override System.Collections.IDictionary Data =>
+            throw new InvalidOperationException("Controlled attachment access failure.");
+    }
+
+    private sealed class ReadOnlyDataException : Exception
+    {
+        private readonly System.Collections.IDictionary data =
+            new System.Collections.ObjectModel.ReadOnlyDictionary<object, object>(new Dictionary<object, object>());
+        public override System.Collections.IDictionary Data => data;
+    }
+
+    private sealed class RequestStages(string handler)
+    {
+        private int clientCompleted, serverEntered, serverNextExited, responseStarting,
+            responseCompleted, serverFaulted, transportEntered, transportReturned;
+
+        public bool Matches(HttpContext context) => HttpMethods.IsGet(context.Request.Method)
+            && string.Equals(context.Request.Path.Value, "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+            && context.Request.Query["handler"].ToString() == handler;
+        public void MarkClientCompleted() => Interlocked.Increment(ref clientCompleted);
+        public void MarkTransportEntered() => Interlocked.Increment(ref transportEntered);
+        public void MarkTransportReturned() => Interlocked.Increment(ref transportReturned);
+
+        public async Task ObserveAsync(HttpContext context, RequestDelegate next)
+        {
+            Interlocked.Increment(ref serverEntered);
+            context.Response.OnStarting(() =>
+            {
+                Interlocked.Increment(ref responseStarting);
+                return Task.CompletedTask;
+            });
+            context.Response.OnCompleted(() =>
+            {
+                Interlocked.Increment(ref responseCompleted);
+                return Task.CompletedTask;
+            });
+            try { await next(context); }
+            catch
+            {
+                Interlocked.Increment(ref serverFaulted);
+                throw;
+            }
+            finally { Interlocked.Increment(ref serverNextExited); }
+        }
+
+        public string Serialize() => JsonSerializer.Serialize(new
+        {
+            schema = 1,
+            clientCompleted = Volatile.Read(ref clientCompleted),
+            serverEntered = Volatile.Read(ref serverEntered),
+            serverNextExited = Volatile.Read(ref serverNextExited),
+            responseStarting = Volatile.Read(ref responseStarting),
+            responseCompleted = Volatile.Read(ref responseCompleted),
+            serverFaulted = Volatile.Read(ref serverFaulted),
+            transportEntered = Volatile.Read(ref transportEntered),
+            transportReturned = Volatile.Read(ref transportReturned),
+        });
+    }
+
+    private sealed class RequestStageStartupFilter(RequestStages stages) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => application =>
+        {
+            application.Use((context, forward) => stages.Matches(context)
+                ? stages.ObserveAsync(context, forward) : forward(context));
+            next(application);
+        };
+    }
+
+    private sealed class DiagnosticResponseFeature : Microsoft.AspNetCore.Http.Features.HttpResponseFeature
+    {
+        private Func<Task>? starting, completed;
+        public override void OnStarting(Func<object, Task> callback, object state) => starting = () => callback(state);
+        public override void OnCompleted(Func<object, Task> callback, object state) => completed = () => callback(state);
+        public Task StartAsync() => starting?.Invoke() ?? Task.CompletedTask;
+        public Task CompleteAsync() => completed?.Invoke() ?? Task.CompletedTask;
+    }
+
     private WebApplicationFactory<Program> Configure(
         bool active,
         CatalogTransport transport,
         TimeProvider? clock = null,
-        string? token = "fx-contract-test-token") => factory.WithWebHostBuilder(builder =>
+        string? token = "fx-contract-test-token",
+        RequestStages? stages = null) => factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Testing");
             builder.UseSetting("BlazorRouting:InstantQuotation", active ? "true" : "false");
@@ -197,6 +394,7 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
             builder.UseSetting("Recaptcha:SiteKey", "test-site-key");
             builder.ConfigureServices(services =>
             {
+                if (stages is not null) services.AddSingleton<IStartupFilter>(new RequestStageStartupFilter(stages));
                 services.RemoveAll<IHttpClientFactory>();
                 services.AddSingleton<IHttpClientFactory>(new CatalogOnlyClientFactory(transport));
                 services.RemoveAll<IServiceAccessTokenProvider>();
@@ -282,14 +480,17 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
 
     private sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? Authorization);
 
-    private sealed class CatalogTransport(Func<int, HttpResponseMessage> response) : HttpMessageHandler
+    private sealed class CatalogTransport(Func<int, HttpResponseMessage> response, RequestStages? stages = null) : HttpMessageHandler
     {
         public List<RecordedRequest> Requests { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            stages?.MarkTransportEntered();
             Requests.Add(new(request.Method, request.RequestUri!, request.Headers.Authorization?.ToString()));
-            return Task.FromResult(response(Requests.Count));
+            var result = response(Requests.Count);
+            stages?.MarkTransportReturned();
+            return Task.FromResult(result);
         }
     }
 

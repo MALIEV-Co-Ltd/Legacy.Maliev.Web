@@ -201,6 +201,105 @@ public sealed class InstantQuotationReviewEditParityTests
         Assert.Contains("<data name=\"Edit {0}\" xml:space=\"preserve\"><value>แก้ไข {0}</value></data>", resources, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("en", false, false, "Manufacturing warnings may affect the final result of this part.")]
+    [InlineData("th", false, false, "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน")]
+    [InlineData("en", true, false, "Manufacturing warnings may affect the final result of this part.")]
+    [InlineData("th", true, false, "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน")]
+    [InlineData("en", false, true, "Manufacturing warnings may affect the final result of this part.")]
+    [InlineData("th", false, true, "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน")]
+    public async Task Review_ShowsLocalizedConsequenceInIdentityOnlyWhenExistingWarningsExist(
+        string culture, bool geometryWarning, bool thicknessWarning, string expected)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            Func<Guid, IReadOnlyList<string>>? thicknessWarnings = thicknessWarning
+                ? _ => ["Thin walls may print with defects"] : null;
+            var html = WebUtility.HtmlDecode(await RenderReviewAsync(
+                [Part(id, "part.stl", isManifold: !geometryWarning)], id, thicknessWarnings));
+            var identity = System.Text.RegularExpressions.Regex.Match(
+                html, "<div class=\"instant-quote__review-identity\">(.*?)</div>",
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            Assert.True(identity.Success);
+            Assert.Contains(">part.stl</h4>", identity.Value, StringComparison.Ordinal);
+            Assert.DoesNotContain("<details", identity.Value, StringComparison.Ordinal);
+            if (geometryWarning || thicknessWarning)
+            {
+                Assert.Equal(1, Count(identity.Value, expected));
+                var consequence = System.Text.RegularExpressions.Regex.Match(
+                    identity.Value, "<p\\b[^>]*data-review-warning-consequence[^>]*>.*?</p>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                Assert.True(consequence.Success);
+                Assert.Contains(expected, consequence.Value, StringComparison.Ordinal);
+                Assert.DoesNotContain("hidden", consequence.Value, StringComparison.Ordinal);
+                Assert.DoesNotContain("sr-only", consequence.Value, StringComparison.Ordinal);
+                Assert.Contains("data-review-dfm-status=\"warning\"", html, StringComparison.Ordinal);
+                Assert.Contains("data-review-dfm-warnings", html, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.DoesNotContain(expected, html, StringComparison.Ordinal);
+                Assert.DoesNotContain("data-review-warning-consequence", html, StringComparison.Ordinal);
+                Assert.Contains("data-review-dfm-status=\"clear\"", html, StringComparison.Ordinal);
+            }
+            Assert.Contains("data-review-part-details", html, StringComparison.Ordinal);
+            Assert.Contains("data-review-edit-part", html, StringComparison.Ordinal);
+            Assert.Contains("class=\"instant-quote__review-measurements\"", html, StringComparison.Ordinal);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
+    [Theory]
+    [InlineData("en", "Manufacturing warnings may affect the final result of this part.")]
+    [InlineData("th", "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน")]
+    public async Task Review_KeepsConsequenceOnTheWarnedPartInEitherOrder(string culture, string expected)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var clearId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var warningId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var clear = Part(clearId, "clear.stl");
+            var warning = Part(warningId, "warning.stl", isManifold: false);
+            foreach (var parts in new[] { new[] { clear, warning }, new[] { warning, clear } })
+            {
+                var html = WebUtility.HtmlDecode(await RenderReviewAsync(parts, clearId));
+                var clearArticle = System.Text.RegularExpressions.Regex.Match(
+                    html, $"<article\\b[^>]*data-review-part-id=\"{clearId}\"[^>]*>.*?</article>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                var warningArticle = System.Text.RegularExpressions.Regex.Match(
+                    html, $"<article\\b[^>]*data-review-part-id=\"{warningId}\"[^>]*>.*?</article>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                Assert.True(clearArticle.Success);
+                Assert.True(warningArticle.Success);
+                Assert.Equal(2, Count(html, "data-workflow-review-part"));
+                Assert.Equal(1, Count(html, expected));
+                Assert.DoesNotContain(expected, clearArticle.Value, StringComparison.Ordinal);
+                Assert.DoesNotContain("data-review-warning-consequence", clearArticle.Value, StringComparison.Ordinal);
+                var warningIdentity = System.Text.RegularExpressions.Regex.Match(
+                    warningArticle.Value, "<div class=\"instant-quote__review-identity\">(.*?)</div>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                Assert.True(warningIdentity.Success);
+                Assert.Contains(expected, warningIdentity.Value, StringComparison.Ordinal);
+                Assert.Contains("data-review-dfm-status=\"clear\"", clearArticle.Value, StringComparison.Ordinal);
+                Assert.Contains("data-review-dfm-status=\"warning\"", warningArticle.Value, StringComparison.Ordinal);
+                Assert.Equal(2, Count(html, "data-review-part-details"));
+                Assert.Equal(2, Count(html, "data-review-edit-part"));
+            }
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     private static async Task<string> RenderReviewAsync(
         IReadOnlyList<InstantQuotationWorkflowPartViewModel> parts,
         Guid selectedPartId,
