@@ -37,17 +37,22 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
             });
             var specifications = sidebar.GetByRole(AriaRole.Link, new LocatorGetByRoleOptions
             {
-                Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications",
+                Name = culture == "th" ? "เตรียมงานสำหรับแต่ละบริการ" : "Service preparation guides",
                 Exact = true
             });
-            Assert.Equal(1, await overview.CountAsync());
-            Assert.Equal(1, await specifications.CountAsync());
-
-            if (width < 992)
+            if (width < 1152)
             {
                 var opener = page.Locator("[data-workspace-open]");
                 await opener.FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
+                await page.WaitForFunctionAsync("""
+                    () => {
+                        const drawer = document.querySelector('#knowledge-navigation');
+                        return !!drawer && drawer.classList.contains('is-open') && !drawer.inert
+                            && document.querySelector('[data-workspace-open]')?.getAttribute('aria-expanded') === 'true'
+                            && document.activeElement === drawer.querySelector('[data-workspace-close]');
+                    }
+                    """);
                 Assert.Equal("true", await opener.GetAttributeAsync("aria-expanded"));
                 Assert.True(await sidebar.EvaluateAsync<bool>("element => element.classList.contains('is-open')"));
                 Assert.True(await sidebar.Locator("[data-workspace-close]").EvaluateAsync<bool>(
@@ -58,12 +63,23 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
                 await page.Keyboard.PressAsync("Enter");
                 await page.WaitForFunctionAsync("""
                     () => {
+                        const drawer = document.querySelector('#knowledge-navigation');
+                        return !!drawer && drawer.classList.contains('is-open') && !drawer.inert
+                            && document.querySelector('[data-workspace-open]')?.getAttribute('aria-expanded') === 'true'
+                            && document.activeElement === drawer.querySelector('[data-workspace-close]');
+                    }
+                    """);
+                await page.WaitForFunctionAsync("""
+                    () => {
                         const bounds = document.querySelector('#knowledge-navigation')?.getBoundingClientRect();
                         return !!bounds && bounds.left >= 0 && bounds.right <= window.innerWidth;
                     }
                     """);
             }
 
+            await OpenStartGroupAsync(sidebar);
+            Assert.Equal(1, await overview.CountAsync());
+            Assert.Equal(1, await specifications.CountAsync());
             Assert.True(await overview.IsVisibleAsync());
             Assert.True(await specifications.IsVisibleAsync());
             Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= window.innerWidth"));
@@ -81,34 +97,72 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
             }
 
             await overview.FocusAsync();
-            await ActivateLinkAsync(page, overview, new Uri(origin, "/knowledges").ToString(),
+            await ActivateLinkAsync(page, overview, new Uri(origin, $"/knowledges?culture={culture}").ToString(),
                 route.Path, culture, width, "overview");
 
             await page.GotoAsync(url);
-            if (width < 992)
+            if (width < 1152)
             {
                 await page.Locator("[data-workspace-open]").FocusAsync();
                 await page.Keyboard.PressAsync("Enter");
+                // open() hands focus to Close on its next animation frame.
+                // Await that handoff before focusing the destination link, or the
+                // pending frame can overwrite the explicit keyboard target.
+                await page.WaitForFunctionAsync("""
+                    () => {
+                        const drawer = document.querySelector('#knowledge-navigation');
+                        return !!drawer && drawer.classList.contains('is-open') && !drawer.inert
+                            && document.querySelector('[data-workspace-open]')?.getAttribute('aria-expanded') === 'true'
+                            && document.activeElement === drawer.querySelector('[data-workspace-close]');
+                    }
+                    """);
             }
             var specificationsLink = page.Locator("#knowledge-navigation").GetByRole(AriaRole.Link,
                 new LocatorGetByRoleOptions
                 {
-                    Name = culture == "th" ? "ข้อแนะนำทุกบริการ" : "All service specifications",
+                    Name = culture == "th" ? "เตรียมงานสำหรับแต่ละบริการ" : "Service preparation guides",
                     Exact = true
                 });
+            await OpenStartGroupAsync(page.Locator("#knowledge-navigation"));
             await specificationsLink.FocusAsync();
             await ActivateLinkAsync(page, specificationsLink,
-                new Uri(origin, "/knowledges/specifications").ToString(),
+                new Uri(origin, $"/knowledges/specifications?culture={culture}").ToString(),
                 route.Path, culture, width, "specifications");
         }
 
         Assert.Empty(errors);
     }
 
+    private static async Task OpenStartGroupAsync(ILocator sidebar)
+    {
+        var group = sidebar.Locator("details.knowledge-nav-group").First;
+        if (!await group.EvaluateAsync<bool>("element => element.open"))
+        {
+            await group.Locator("summary").FocusAsync();
+            await group.Locator("summary").PressAsync("Enter");
+        }
+        Assert.True(await group.EvaluateAsync<bool>("element => element.open"));
+    }
+
+    private static async Task WaitForCommittedDestinationAsync(IPage page, Task committed, string destination)
+    {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await committed.WaitAsync(deadline.Token);
+        var remaining = 30_000 - System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        if (remaining <= 0) throw new TimeoutException("The keyboard destination did not commit and load within 30 seconds.");
+        await page.WaitForURLAsync(destination, new PageWaitForURLOptions
+        {
+            WaitUntil = WaitUntilState.Load,
+            Timeout = (float)remaining
+        });
+    }
+
     private static async Task ActivateLinkAsync(IPage page, ILocator link, string destination,
         string sourceRoute, string culture, int width, string phase)
     {
         var events = new List<string>();
+        var committed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         void Record(string value)
         {
             lock (events)
@@ -119,7 +173,10 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
         void Navigated(object? sender, IFrame frame)
         {
             if (frame == page.MainFrame && Uri.TryCreate(frame.Url, UriKind.Absolute, out var uri))
+            {
                 Record($"navigated:{uri.AbsolutePath}");
+                if (string.Equals(uri.AbsoluteUri, destination, StringComparison.Ordinal)) committed.TrySetResult(true);
+            }
         }
         void Loaded(object? sender, IPage loadedPage) => Record("load");
         page.FrameNavigated += Navigated;
@@ -128,12 +185,9 @@ public sealed class KnowledgeSidebarBrowserTests(CncNativeBrowserFixture fixture
         try
         {
             Assert.True(await link.EvaluateAsync<bool>("element => document.activeElement === element"));
-            // Register the same exact-URL, Load, 30-second observer before keyboard activation.
-            navigation = page.WaitForURLAsync(destination, new PageWaitForURLOptions
-            {
-                WaitUntil = WaitUntilState.Load,
-                Timeout = 30_000
-            });
+            // A matching current URL can satisfy WaitForURL before Enter starts a new document.
+            // Require that activation's main-frame commit, then Load, within the same 30-second budget.
+            navigation = WaitForCommittedDestinationAsync(page, committed.Task, destination);
             Record("waiter-armed");
             await page.Keyboard.PressAsync("Enter");
             Record("enter-returned");

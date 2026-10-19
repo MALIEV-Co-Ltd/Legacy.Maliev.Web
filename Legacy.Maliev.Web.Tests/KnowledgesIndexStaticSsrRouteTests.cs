@@ -35,22 +35,22 @@ public sealed partial class KnowledgesIndexStaticSsrRouteTests : IClassFixture<T
     [Theory]
     [InlineData(
         "en",
-        "Knowledge center | MALIEV",
-        "Practical manufacturing guidance for preparing files, choosing processes, and working with MALIEV.",
-        "Knowledge center",
-        "Manufacturing resources")]
+        "Manufacturing knowledge library | MALIEV",
+        "Practical manufacturing articles, calculations, material comparisons and design guidance for better engineering decisions.",
+        "Manufacturing knowledge library",
+        "Browse by topic. Each article explains the reasoning, inputs to check, and practical examples you can use when preparing a part for production.")]
     [InlineData(
         "th",
-        "ศูนย์ความรู้ | MALIEV",
-        "คำแนะนำการเตรียมไฟล์ เลือกกระบวนการ และทำงานร่วมกับ MALIEV",
-        "ศูนย์ความรู้",
-        "ข้อมูลด้านการผลิต")]
+        "คลังความรู้ด้านการผลิต | MALIEV",
+        "บทความด้านการผลิต การคำนวณ การเปรียบเทียบวัสดุ และแนวทางออกแบบ เพื่อช่วยตัดสินใจทางวิศวกรรม",
+        "คลังความรู้ด้านการผลิต",
+        "เลือกอ่านตามหัวข้อ แต่ละบทความอธิบายหลักการ ข้อมูลที่ควรตรวจสอบ และตัวอย่างที่นำไปใช้เตรียมชิ้นงานก่อนผลิตได้")]
     public async Task KnowledgesRoute_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
         string description,
         string heading,
-        string eyebrow)
+        string lead)
     {
         using var client = CreateClient(factory);
         using var response = await client.GetAsync($"/knowledges?culture={culture}&tracking=excluded");
@@ -64,7 +64,7 @@ public sealed partial class KnowledgesIndexStaticSsrRouteTests : IClassFixture<T
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -144,7 +144,7 @@ public sealed partial class KnowledgesIndexStaticSsrRouteTests : IClassFixture<T
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<title>Knowledge center | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Manufacturing knowledge library | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);

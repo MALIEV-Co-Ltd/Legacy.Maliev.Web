@@ -25,6 +25,62 @@ public sealed class ServiceFinderPresentationTests
         Assert.Contains("@media (prefers-reduced-motion: reduce)", css, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void FinderKeepsFinalSourceControllerScoringAndPresentationGuards()
+    {
+        var root = FindRepositoryRoot();
+        var web = Path.Combine(root, "Legacy.Maliev.Web");
+        var content = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ServicesContent.razor"));
+        var css = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "service-finder.css"));
+        var script = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "service-finder.js"));
+        var controller = System.Text.RegularExpressions.Regex.Match(content,
+            @"<main\b[^>]*\sdata-service-finder(?=\s|=|>)[^>]*>(?<body>[\s\S]*?)</main>");
+
+        Assert.True(controller.Success, "The finder controller must own the questions and result cards.");
+        var finder = controller.Groups["body"].Value;
+        Assert.Contains("service-finder-title", finder, StringComparison.Ordinal);
+        Assert.Equal(5, System.Text.RegularExpressions.Regex.Matches(finder, "data-finder-step=\"[0-4]\"").Count);
+        Assert.Equal(7, System.Text.RegularExpressions.Regex.Matches(finder, "data-finder-service=\"").Count);
+        Assert.Equal(7, System.Text.RegularExpressions.Regex.Matches(finder, "service-finder-service-price").Count);
+        Assert.Contains("ช่วยประเมินกระบวนการที่เกี่ยวข้องเบื้องต้น", finder, StringComparison.Ordinal);
+
+        Assert.Matches(@"\.service-finder-shell\s*\{[^}]*align-items:\s*start", css);
+        Assert.Matches(@"\.services-index-page \.maliev-page-header\s*\{[^}]*color:\s*#fff", css);
+        Assert.Matches(@"\.service-finder-image\s*\{[^}]*height:\s*auto", css);
+        Assert.Contains("@media (max-width: 47.99rem)", css, StringComparison.Ordinal);
+        Assert.Matches(@"\.services-index-page\.maliev-page-main\s*\{[^}]*padding-bottom:\s*0", css);
+        Assert.Matches(@"\.service-finder-results\s*\{[^}]*padding-block:[^}]*clamp\(1\.25rem,\s*2\.5vw,\s*2rem\)", css);
+        Assert.Matches(@"\.service-finder-path\s*\{", css);
+        Assert.Matches(@"\.service-finder-service-price\s*\{", css);
+        Assert.Contains("grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr)", css, StringComparison.Ordinal);
+        Assert.Contains(".service-finder-summary dt,", css, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere", css, StringComparison.Ordinal);
+        Assert.Contains("text-align: right", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: minmax(0, 1fr);", css, StringComparison.Ordinal);
+        Assert.Contains("text-align: left", css, StringComparison.Ordinal);
+
+        Assert.Contains("quantity-over-1000", script, StringComparison.Ordinal);
+        Assert.Contains("service.id === 'injection') score -= 100", script, StringComparison.Ordinal);
+        Assert.Contains("recommendationChain", script, StringComparison.Ordinal);
+        Assert.Contains("files-image", script, StringComparison.Ordinal);
+        Assert.Contains("aria-current", script, StringComparison.Ordinal);
+        Assert.Contains("scrollFinderElement", script, StringComparison.Ordinal);
+
+        Assert.Contains("data-finder-progress-optional", finder, StringComparison.Ordinal);
+        Assert.Contains("data-finder-optional-progress", finder, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)", css, StringComparison.Ordinal);
+        Assert.Contains(".service-finder-progress-optional", css, StringComparison.Ordinal);
+        Assert.Contains(".service-finder-progress li[data-finder-optional-progress]", css, StringComparison.Ordinal);
+        Assert.Contains("function shouldIncludeOptionalStep(step)", script, StringComparison.Ordinal);
+        Assert.Contains("return allSteps.filter(shouldIncludeOptionalStep);", script, StringComparison.Ordinal);
+        Assert.Contains("if (step.hasAttribute('data-finder-optional') && !shouldIncludeOptionalStep(step))", script, StringComparison.Ordinal);
+        Assert.Contains("if (progressOptionalLabel) progressOptionalLabel.hidden = !currentStep || !currentStep.hasAttribute('data-finder-optional');", script, StringComparison.Ordinal);
+        Assert.Contains("direction === 'service-machining'", script, StringComparison.Ordinal);
+        Assert.Contains("workflow === 'workflow-3d-scanning'", script, StringComparison.Ordinal);
+        Assert.Contains("direction === 'service-molding'", script, StringComparison.Ordinal);
+        Assert.Contains("guidanceReason", script, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

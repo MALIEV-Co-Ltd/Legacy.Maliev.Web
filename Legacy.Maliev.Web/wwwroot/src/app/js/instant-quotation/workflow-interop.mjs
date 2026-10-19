@@ -71,6 +71,7 @@ export async function createInstantQuotationWorkflowInterop(dotNetStatusReporter
     analyzeGeometry: analyzeUploadDerivedGeometry,
     createViewer: viewerModule.createThreeModelViewer,
     reportStatus: () => dotNetStatusReporter?.invokeMethodAsync('ReportPreviewUnavailableAsync'),
+    reportQuoteStarted: () => dotNetStatusReporter?.invokeMethodAsync('ReportQuoteStartedAsync'),
     reportThickness: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportThicknessStateAsync', ...args),
     reportIncomplete: (...args) => dotNetStatusReporter?.invokeMethodAsync('ReportIncompletePreviewAsync', ...args),
   });
@@ -81,6 +82,7 @@ export function createWorkflowPreviewInterop({
   analyzeGeometry,
   createViewer,
   reportStatus = () => {},
+  reportQuoteStarted = () => {},
   reportThickness = () => {},
   reportIncomplete = () => {},
   thicknessAnalyzer = createWallThicknessAnalyzer(),
@@ -106,8 +108,11 @@ export function createWorkflowPreviewInterop({
   let disposed = false;
   let availability = 'ready';
   let nextKey = 0;
+  let quoteStarted = false;
   let inputElement = null;
   let inputChangeHandler = null;
+  let inputDropZone = null;
+  let inputDropHandler = null;
   const selectionSnapshots = [];
 
   function bindInput(input) {
@@ -117,13 +122,34 @@ export function createWorkflowPreviewInterop({
     unbindInput();
     inputElement = input;
     inputChangeHandler = () => selectionSnapshots.push(Array.from(input.files ?? []));
-    inputElement?.addEventListener?.('change', inputChangeHandler, { capture: true });
+    inputDropZone = inputElement?.closest?.('.instant-quote__workflow') ?? null;
+    inputDropHandler = event => {
+      const transfer = event.dataTransfer;
+      if (!transfer || !(Array.from(transfer.types ?? []).includes('Files') || transfer.files?.length)) return;
+      event.preventDefault();
+      if (event.type !== 'drop' || inputElement.disabled
+          || inputDropZone?.getAttribute('aria-busy') === 'true' || !transfer.files?.length) return;
+      inputElement.files = transfer.files;
+      inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    try {
+      inputElement?.addEventListener?.('change', inputChangeHandler, { capture: true });
+      inputDropZone?.addEventListener('dragover', inputDropHandler);
+      inputDropZone?.addEventListener('drop', inputDropHandler);
+    } catch (primary) {
+      unbindInput();
+      throw primary;
+    }
   }
 
   function unbindInput() {
     inputElement?.removeEventListener?.('change', inputChangeHandler, { capture: true });
+    inputDropZone?.removeEventListener('dragover', inputDropHandler);
+    inputDropZone?.removeEventListener('drop', inputDropHandler);
     inputElement = null;
     inputChangeHandler = null;
+    inputDropZone = null;
+    inputDropHandler = null;
   }
 
   function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY) {
@@ -165,6 +191,15 @@ export function createWorkflowPreviewInterop({
     if (!supportedExtensions.has(extensionOf(file?.name))) {
       setUnavailable();
       return key;
+    }
+
+    if (!quoteStarted) {
+      quoteStarted = true;
+      try {
+        Promise.resolve(reportQuoteStarted()).catch(() => {});
+      } catch {
+        // Intent measurement must not block model parsing or upload.
+      }
     }
 
     const operation = Promise.all([
@@ -493,10 +528,10 @@ export function createWorkflowPreviewInterop({
   function dispose() {
     if (disposed) return;
     disposed = true;
+    unbindInput();
     for (const key of [...previews.keys()]) release(key);
     for (const files of selectionSnapshots) files.length = 0;
     selectionSnapshots.length = 0;
-    unbindInput();
     partKeys.clear();
     viewer?.dispose();
     viewer = null;

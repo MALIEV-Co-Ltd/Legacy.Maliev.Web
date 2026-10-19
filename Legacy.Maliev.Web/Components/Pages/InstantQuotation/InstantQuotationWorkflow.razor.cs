@@ -23,6 +23,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [Parameter]
     public InstantQuotationCustomerDisplayModel CustomerModel { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
 
+    private readonly string analyticsWorkflowId = Guid.NewGuid().ToString("N");
     private InstantQuotationWorkflowCoordinator? workflow;
     private bool initializationFailed;
     private InputFile? fileInput;
@@ -559,6 +560,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
         }
     }
+
+    [JSInvokable]
+    public ValueTask ReportQuoteStartedAsync() =>
+        disposed ? ValueTask.CompletedTask : analytics.RecordQuoteStartedAsync(analyticsWorkflowId);
 
     private async Task<string[]> BeginPreviewSelectionAsync()
     {
