@@ -79,7 +79,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     }
 
     [Fact]
-    public void PrimaryJourney_IsUploadFirst_AndExposesAllWorkflowMarkers()
+    public async Task PrimaryJourney_IsUploadFirst_AndExposesAllWorkflowMarkers()
     {
         var source = ReadWorkflowSource();
         var document = File.ReadAllText(Path.Combine(
@@ -93,7 +93,11 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         Assert.Contains("Start by uploading a file", source, StringComparison.Ordinal);
         Assert.DoesNotContain("instant-quote__header", document, StringComparison.Ordinal);
         Assert.Contains("data-workflow-empty-dropzone", source, StringComparison.Ordinal);
-        Assert.Contains("iq-empty-dropzone__icon", source, StringComparison.Ordinal);
+        Assert.Contains("<InstantQuotationEmptyScene />", source, StringComparison.Ordinal);
+        var emptyHtml = await RenderWorkflowAsync(InstantQuotationWorkflowState.Empty);
+        Assert.Contains("iq-empty-dropzone__icon", emptyHtml, StringComparison.Ordinal);
+        Assert.Contains("data-empty-hex", emptyHtml, StringComparison.Ordinal);
+        Assert.Contains("data-empty-cube", emptyHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("Height (mm)", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Solid volume", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Footprint", document, StringComparison.OrdinalIgnoreCase);
