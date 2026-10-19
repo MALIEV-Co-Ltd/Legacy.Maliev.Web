@@ -15,6 +15,26 @@ public sealed partial class ScanningPresentationContractTests : IClassFixture<Te
         this.factory = factory;
     }
 
+    [Fact]
+    public void ScanningSources_UseQualifiedAccuracyClaimsOnly()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var page = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor"));
+        var routePage = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ThreeDimensionalScanningPage.razor"));
+        var retainedPage = File.ReadAllText(Path.Combine(web, "Pages", "Services", "3D-Scanning.cshtml"));
+        var thaiResources = File.ReadAllText(Path.Combine(web, "Resources", "Pages", "Services", "3D-Scanning.th.resx"));
+        var combined = string.Join(Environment.NewLine, page, routePage, retainedPage, thaiResources);
+
+        Assert.Contains("0.02 mm + 0.06 mm/m", page, StringComparison.Ordinal);
+        Assert.Contains("Actual project results also depend on object size and surface", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("0.04 mm", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("0.04mm", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("up to 0.10mm accuracy", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("upto 0.10mm precision", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ความละเอียดสูงสุดถึง 0.10mm", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("ความแม่นยำสูงสุดถึง 0.10mm", combined, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("en", "What do the outputs of 3D scanning look like?", "Scan mesh", "Before your scan", "Show us the part")]
     [InlineData("th", "ผลลัพธ์จากการสแกน 3D มีหน้าตาอย่างไร?", "เมชสแกน", "เตรียมตัวก่อนสแกน", "ส่งรูปชิ้นงานให้เราดู")]
