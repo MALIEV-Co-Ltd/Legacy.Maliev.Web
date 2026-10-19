@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -18,7 +19,11 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
     [Fact]
     public async Task ContactForm_RejectsOptionalCookiesAndPostsOnlyToItsRenderedAction()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = "th-TH",
+            UserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 LINE/15.10.0",
+        });
         await using var page = await context.NewPageAsync();
         var response = await page.GotoAsync(new Uri(fixture.Origin, "/contact?culture=en").ToString());
         Assert.NotNull(response);
@@ -45,20 +50,119 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.Contains("FirstName=Browser", posted, StringComparison.Ordinal);
         Assert.Contains("Country=Thailand", posted, StringComparison.Ordinal);
         Assert.Contains("browser-submission%40example.test", posted, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Message=Please+quote+a+manufacturing+project.", posted, StringComparison.Ordinal);
     }
 
-    private static async Task<IRequest> CaptureFormPostAsync(IPage page, string formSelector)
+    [Theory]
+    [InlineData("/quotation/cnc-machining?culture=th", "#quotation-form", "SubmitRequest", "FirstName,LastName,Email,Phone,Company,TaxNumber,Country,Message", true)]
+    [InlineData("/account/login?culture=th&returnUrl=%2FMember%2FOrders", "#customer-login", "Login", "Email,Password,ReturnUrl", false)]
+    [InlineData("/account/signup?culture=th", "#customer-signup", "SignUp", "FirstName,LastName,Email,Password,ConfirmPassword", false)]
+    [InlineData("/account/forgotpassword?culture=th", ".auth-card form", "PasswordReset", "Email", false)]
+    [InlineData("/account/resetpassword?culture=th&email=browser-submission%40example.test&token=abcdefghijklmnopqrstuvwxyz123456", ".auth-card form", "ChangePassword", "Email,Token,Password,ConfirmPassword", false)]
+    public async Task OriginalPublicForm_NativeBrowserPostPreservesFieldsAndRenderedSubmitter(
+        string path, string formSelector, string handler, string requiredFields, bool includesFile)
     {
-        var action = new Uri(await page.Locator(formSelector).EvaluateAsync<string>("form => form.action"));
+        // Source parity is native validation/serialization, not reCAPTCHA or JavaScript enhancement acceptance.
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = "th-TH",
+            UserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 LINE/15.10.0",
+            JavaScriptEnabled = false,
+        });
+        await context.AddCookiesAsync([new Microsoft.Playwright.Cookie
+        {
+            Name = "maliev_tracking_consent",
+            Value = "denied",
+            Url = fixture.Origin.AbsoluteUri,
+        }]);
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, path).ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok, "The original public form route must render successfully.");
+        Assert.Contains("maliev_tracking_consent=denied", (await context.CookiesAsync())
+            .Select(cookie => $"{cookie.Name}={cookie.Value}"));
+
+        await FillIfPresentAsync(page, "#FirstName", "Browser");
+        await FillIfPresentAsync(page, "#LastName", "Submission");
+        await FillIfPresentAsync(page, "#Email", "browser-submission@example.test");
+        await FillIfPresentAsync(page, "#Password", "FormTest123!");
+        await FillIfPresentAsync(page, "#ConfirmPassword", "FormTest123!");
+        await FillIfPresentAsync(page, "#Phone", "0818030404");
+        await FillIfPresentAsync(page, "#Company", "MALIEV Form Test");
+        await FillIfPresentAsync(page, "#TaxNumber", "0125561001573");
+        await FillIfPresentAsync(page, "#Message", "CNC machining; aluminium 6061; quantity 2; drawing attached.");
+        if (includesFile)
+        {
+            await page.Locator("#Country").SelectOptionAsync("Thailand");
+            await page.SetInputFilesAsync("#Files", new FilePayload
+            {
+                Name = "cnc-bracket.step",
+                MimeType = string.Empty,
+                Buffer = Encoding.ASCII.GetBytes("ISO-10303-21; END-ISO-10303-21;"),
+            });
+            Assert.Equal(string.Empty, await page.Locator("#Files")
+                .EvaluateAsync<string>("input => input.files[0].type"));
+        }
+
+        var submitter = page.Locator(formSelector).Locator("button[type='submit']").First;
+        var action = new Uri(await submitter.EvaluateAsync<string>("button => button.hasAttribute('formaction') ? button.formAction : button.form.action"));
+        Assert.Equal(fixture.Origin.GetLeftPart(UriPartial.Authority), action.GetLeftPart(UriPartial.Authority));
+        Assert.Equal(handler, Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(action.Query)["handler"].ToString());
+
+        var request = await CaptureFormPostAsync(page, formSelector, "button[type='submit']");
+        Assert.Equal("POST", request.Method);
+        Assert.Equal("document", request.ResourceType);
+        Assert.Equal(action, new Uri(request.Url));
+        Assert.NotNull(request.PostDataBuffer);
+        var posted = includesFile
+            ? Encoding.Latin1.GetString(request.PostDataBuffer!)
+            : request.PostData ?? string.Empty;
+        Assert.Contains("__RequestVerificationToken", posted, StringComparison.Ordinal);
+        foreach (var field in requiredFields.Split(','))
+        {
+            Assert.Contains(includesFile ? $"name=\"{field}\"" : $"{field}=", posted, StringComparison.Ordinal);
+        }
+        Assert.True(posted.Contains("browser-submission@example.test", StringComparison.OrdinalIgnoreCase)
+            || posted.Contains("browser-submission%40example.test", StringComparison.OrdinalIgnoreCase));
+        if (includesFile)
+        {
+            Assert.Contains("multipart/form-data", request.Headers["content-type"], StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("cnc-bracket.step", posted, StringComparison.Ordinal);
+            Assert.Contains("CNC machining; aluminium 6061; quantity 2; drawing attached.", posted, StringComparison.Ordinal);
+        }
+    }
+
+    private static async Task FillIfPresentAsync(IPage page, string selector, string value)
+    {
+        var input = page.Locator(selector);
+        if (await input.CountAsync() > 0 && await input.IsVisibleAsync())
+        {
+            await input.FillAsync(value);
+        }
+    }
+
+    private static async Task<IRequest> CaptureFormPostAsync(IPage page, string formSelector, string? submitterSelector = null)
+    {
+        var form = page.Locator(formSelector);
+        var submitter = submitterSelector is null ? null : form.Locator(submitterSelector).First;
+        var action = new Uri(submitter is null
+            ? await form.EvaluateAsync<string>("form => form.action")
+            : await submitter.EvaluateAsync<string>("button => button.hasAttribute('formaction') ? button.formAction : button.form.action"));
         var submitted = new TaskCompletionSource<IRequest>(TaskCreationOptions.RunContinuationsAsynchronously);
         await page.RouteAsync("**/*", async route =>
         {
             var request = route.Request;
-            if (request.Method == "POST"
-                && request.ResourceType == "document"
-                && new Uri(request.Url).Equals(action))
+            if (request.Method == "POST" && request.ResourceType == "document")
             {
-                submitted.TrySetResult(request);
+                if (new Uri(request.Url).Equals(action))
+                {
+                    submitted.TrySetResult(request);
+                }
+                else
+                {
+                    submitted.TrySetException(new InvalidOperationException("The form posted to an unexpected document action."));
+                }
                 await route.AbortAsync();
                 return;
             }
@@ -71,7 +175,14 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.True(invalidFields.Length == 0,
             $"{formSelector} did not pass browser validation: {string.Join(", ", invalidFields)}.");
 
-        await page.Locator(formSelector).EvaluateAsync("form => form.submit()");
+        if (submitter is null)
+        {
+            await form.EvaluateAsync("form => form.submit()");
+        }
+        else
+        {
+            await submitter.EvaluateAsync("button => button.form.requestSubmit(button)");
+        }
         return await submitted.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 }

@@ -58,15 +58,21 @@ public sealed class CustomerOrderSubmissionTransportTests
         Assert.Equal("orders", Assert.Single(orders.Requests).Path);
     }
 
-    [Fact]
-    public async Task Upload_UsesStablePathAndOctetStreamFallback()
+    [Theory]
+    [InlineData(null, "application/octet-stream")]
+    [InlineData("", "application/octet-stream")]
+    [InlineData("not a media type", "application/octet-stream")]
+    [InlineData("simplify3d_stl", "simplify3d_stl/stl")]
+    [InlineData("application/pdf", "application/pdf")]
+    [InlineData("model/stl", "model/stl")]
+    public async Task Upload_UsesStablePathAndOctetStreamFallback(string? contentType, string expectedMediaType)
     {
         var files = new RecordingHandler(async request =>
         {
             Assert.Equal("legacy-web-member-order-op-upload", request.Headers.GetValues("Idempotency-Key").Single());
             var body = await request.Content!.ReadAsByteArrayAsync();
             var text = Encoding.Latin1.GetString(body);
-            Assert.Contains("Content-Type: application/octet-stream", text, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains($"Content-Type: {expectedMediaType}", text, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("filename=part.step", text, StringComparison.OrdinalIgnoreCase);
             return Json(HttpStatusCode.Created, "{\"object\":[{\"bucket\":\"maliev.com\",\"objectName\":\"uploads/42/2026-8-2/part.step\",\"uri\":\"https://storage.googleapis.com/maliev.com/uploads/42/2026-8-2/part.step\"}]}");
         });
@@ -74,7 +80,7 @@ public sealed class CustomerOrderSubmissionTransportTests
 
         var result = await transport.UploadAsync(
             42,
-            [new TestUpload("part.step", string.Empty, [1, 2, 3])],
+            [new TestUpload("part.step", contentType!, [1, 2, 3])],
             "legacy-web-member-order-op-upload",
             CancellationToken.None);
 

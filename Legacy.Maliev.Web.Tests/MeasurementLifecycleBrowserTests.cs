@@ -17,6 +17,88 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowserFixture fixture)
 {
     [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task FinderVisitCorrelation_ComesFromRealAnswersAndRespectsConsentAndSecureRandomness(
+        bool secureRandomAvailable, bool consentGranted)
+    {
+        await using var session = await OpenContactFreshAsync("en", 390);
+        var contactSubmissions = fixture.ContactClient.SubmissionCount;
+        var quotationSubmissions = fixture.QuotationClient.SubmissionCount;
+        if (!secureRandomAvailable)
+        {
+            await session.Context.AddInitScriptAsync(
+                "Object.defineProperty(window.crypto, 'randomUUID', { value: undefined, configurable: true });");
+        }
+
+        await session.Page.GotoAsync(new Uri(fixture.Origin, "/services?culture=en").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        var finder = session.Page.Locator("main[data-service-finder]");
+        await Assertions.Expect(finder).ToBeVisibleAsync();
+        Assert.Equal("denied", await ConsentStateAsync(session.Page, "default"));
+        Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+        await session.Page.Locator(consentGranted
+            ? "#cookieConsent [data-consent-action='accept']"
+            : "#cookieConsent [data-consent-action='reject']").ClickAsync();
+        await finder.Locator("[data-finder-answer='files-3d']").ClickAsync();
+        await finder.Locator("[data-finder-next]").ClickAsync();
+
+        using var document = JsonDocument.Parse(await session.Page.EvaluateAsync<string>(
+            "() => JSON.stringify(dataLayer.filter(item => item.event?.startsWith('service_finder_')))"));
+        var events = document.RootElement;
+        Assert.Equal(contactSubmissions, fixture.ContactClient.SubmissionCount);
+        Assert.Equal(quotationSubmissions, fixture.QuotationClient.SubmissionCount);
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        if (!consentGranted)
+        {
+            Assert.Equal(0, events.GetArrayLength());
+            Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+            return;
+        }
+
+        Assert.Equal(2, events.GetArrayLength());
+        Assert.Equal("service_finder_started", events[0].GetProperty("event").GetString());
+        Assert.Equal("service_finder_step_completed", events[1].GetProperty("event").GetString());
+        Assert.Equal("files", events[1].GetProperty("step_key").GetString());
+        Assert.Equal("files-3d", events[1].GetProperty("answer_id").GetString());
+        Assert.Equal(1, events[1].GetProperty("step_number").GetInt32());
+        Assert.All(events.EnumerateArray(), item => Assert.All(item.EnumerateObject(), property =>
+            Assert.Contains(property.Name, new[] { "event", "step_key", "answer_id", "step_number", "finder_session_id" })));
+        string? visitId = null;
+        if (secureRandomAvailable)
+        {
+            Assert.True(events[0].TryGetProperty("finder_session_id", out var visit));
+            visitId = visit.GetString();
+            Assert.NotNull(visitId);
+            Assert.Matches("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", visitId);
+            Assert.All(events.EnumerateArray(), item => Assert.Equal(visitId, item.GetProperty("finder_session_id").GetString()));
+        }
+        else
+        {
+            Assert.All(events.EnumerateArray(), item => Assert.False(item.TryGetProperty("finder_session_id", out _)));
+        }
+
+        await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await session.Page.Locator("[data-finder-answer='files-3d']").ClickAsync();
+        using var reloaded = JsonDocument.Parse(await session.Page.EvaluateAsync<string>(
+            "() => JSON.stringify(dataLayer.filter(item => item.event?.startsWith('service_finder_')))"));
+        Assert.Equal(1, reloaded.RootElement.GetArrayLength());
+        if (secureRandomAvailable)
+        {
+            Assert.True(reloaded.RootElement[0].TryGetProperty("finder_session_id", out var nextVisit));
+            var nextVisitId = nextVisit.GetString();
+            Assert.NotNull(nextVisitId);
+            Assert.Matches("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", nextVisitId);
+            Assert.NotEqual(visitId, nextVisitId);
+        }
+        else
+        {
+            Assert.False(reloaded.RootElement[0].TryGetProperty("finder_session_id", out _));
+        }
+    }
+
+    [Theory]
     [InlineData(390)]
     [InlineData(1440)]
     public async Task FreshVisit_DefaultsDeniedAndDoesNotRequestExternalAnalytics(int width)
