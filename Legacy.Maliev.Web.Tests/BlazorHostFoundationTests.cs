@@ -31,6 +31,8 @@ public sealed class BlazorHostFoundationTests : IClassFixture<TestingWebApplicat
         Assert.Contains("AddInteractiveServerRenderMode", program, StringComparison.Ordinal);
         Assert.DoesNotContain("AddInteractiveWebAssemblyComponents", program, StringComparison.Ordinal);
         Assert.DoesNotContain("MapBlazorHub", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("Public = true", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("MaxAge = TimeSpan.FromSeconds(10)", program, StringComparison.Ordinal);
         Assert.Contains("<!DOCTYPE html>", app, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("<HeadOutlet", app, StringComparison.Ordinal);
         Assert.Contains("<Routes />", app, StringComparison.Ordinal);
