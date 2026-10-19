@@ -43,6 +43,16 @@ public sealed class ServiceFinderPresentationTests
         Assert.Contains(".service-finder-option[hidden]", css, StringComparison.Ordinal);
         Assert.Contains("service-finder-shortcuts", css, StringComparison.Ordinal);
         Assert.Contains("service-finder-material-guidance", css, StringComparison.Ordinal);
+
+        Assert.Contains("scrollFinderElement", script, StringComparison.Ordinal);
+        Assert.Contains("service_finder_started", script, StringComparison.Ordinal);
+        Assert.Contains("service_finder_step_completed", script, StringComparison.Ordinal);
+        Assert.Contains("service_finder_completed", script, StringComparison.Ordinal);
+        Assert.Contains("service_finder_recommendation_clicked", script, StringComparison.Ordinal);
+        Assert.Contains("recommended_service_ids: state.recommendedIds.join(',')", script, StringComparison.Ordinal);
+        Assert.Contains("finder_path: state.finderPath.join('>')", script, StringComparison.Ordinal);
+        Assert.Contains("handoffUrl.searchParams.set('finder_recommendations', state.recommendedIds.join(','));", script, StringComparison.Ordinal);
+        Assert.Contains("service-finder-step-in", css, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
