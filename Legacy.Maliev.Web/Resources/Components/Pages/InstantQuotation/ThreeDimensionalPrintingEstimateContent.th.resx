@@ -680,4 +680,9 @@
   <data name="Other materials" xml:space="preserve">
     <value>วัสดุอื่น ๆ</value>
   </data>
+  <data name="ASA-CF — Bambu ASA-CF" xml:space="preserve"><value>ASA-CF — Bambu ASA-CF เสริมคาร์บอนไฟเบอร์</value></data>
+  <data name="PC-FR — Bambu PC FR" xml:space="preserve"><value>PC-FR — Bambu PC FR โพลีคาร์บอเนตหน่วงไฟ</value></data>
+  <data name="PA12 — eSUN ePA12" xml:space="preserve"><value>PA12 — ไนลอน eSUN ePA12</value></data>
+  <data name="PETG-rCF08 — Fiberon recycled-carbon PETG" xml:space="preserve"><value>PETG-rCF08 — Fiberon PETG เสริมคาร์บอนไฟเบอร์รีไซเคิล 8%</value></data>
+  <data name="PET-CF17 — Fiberon carbon-fiber PET" xml:space="preserve"><value>PET-CF17 — Fiberon PET เสริมคาร์บอนไฟเบอร์ 17%</value></data>
 </root>

@@ -422,6 +422,29 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 }
                 await page.WaitForFunctionAsync(
                     "() => !document.querySelector('[data-pricing-loading-status]')");
+
+                if (index == 0)
+                {
+                    var selector = page.Locator("[data-workflow-material-picker] [data-material-selector]");
+                    var toggle = selector.Locator("[data-material-toggle]");
+                    var wasExpanded = await toggle.GetAttributeAsync("aria-expanded") == "true";
+                    if (!wasExpanded) await toggle.ClickAsync();
+                    await Assertions.Expect(selector.Locator("[role='radio'][data-material-key='PC-FR']"))
+                        .ToHaveCountAsync(1);
+                    var names = await selector.EvaluateAsync<System.Text.Json.JsonElement>("""
+                        selector => Object.fromEntries(['ASA-CF', 'PC-FR', 'PA12', 'PETG-CF', 'PET-CF'].map(key => {
+                            const card = selector.querySelector('[role="radio"][data-material-key="' + key + '"]');
+                            return [key, card ? card.querySelector('.material-card__heading strong').textContent.trim()
+                                + ' — ' + card.querySelector('.material-card__detail > span').textContent.trim() : null];
+                        }))
+                        """);
+                    Assert.Equal("ASA-CF — Bambu ASA-CF", names.GetProperty("ASA-CF").GetString());
+                    Assert.Equal("PC-FR — Bambu PC FR", names.GetProperty("PC-FR").GetString());
+                    Assert.Equal("PA12 — eSUN ePA12", names.GetProperty("PA12").GetString());
+                    Assert.Equal("PETG-rCF08 — Fiberon recycled-carbon PETG", names.GetProperty("PETG-CF").GetString());
+                    Assert.Equal("PET-CF17 — Fiberon carbon-fiber PET", names.GetProperty("PET-CF").GetString());
+                    if (!wasExpanded) await toggle.ClickAsync();
+                }
             }
             try
             {
