@@ -121,7 +121,7 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
         Assert.Equal(Path.GetFullPath(expectedRoot), Path.TrimEndingDirectorySeparator(files.Root));
 
         var hostEnvironment = factory.Services.GetRequiredService<IWebHostEnvironment>();
-        Assert.True(string.Equals(environment, hostEnvironment.EnvironmentName, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(environment, hostEnvironment.EnvironmentName, StringComparer.OrdinalIgnoreCase);
         if (expectsProject)
         {
             var development = Assert.Single(configuration.Providers.OfType<JsonConfigurationProvider>(),
