@@ -52,9 +52,11 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         {
             var layout = File.ReadAllText(layoutPath);
             Assert.DoesNotContain("_AccouncementPartial", layout, StringComparison.Ordinal);
+            Assert.DoesNotContain("_LineOaRecoveryAlertPartial", layout, StringComparison.Ordinal);
             Assert.DoesNotContain("ServiceNotices", layout, StringComparison.Ordinal);
         }
         Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_AccouncementPartial.cshtml")));
+        Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_LineOaRecoveryAlertPartial.cshtml")));
         Assert.False(File.Exists(Path.Combine(web, "tests", "VerifyLineOaNavToggle.ps1")));
         Assert.False(File.Exists(Path.Combine(web, "tests", "VerifyLineOaRecoveryBanner.ps1")));
     }
@@ -103,6 +105,7 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
             ? "<span>แชตกับทีมงานผ่าน LINE Official Account</span>"
             : "<span>Chat with our team through LINE Official Account</span>", lineCard.Value, StringComparison.Ordinal);
         Assert.DoesNotContain("maliev-service-notice", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("maliev-service-notice-dismissed", source, StringComparison.Ordinal);
         Assert.DoesNotContain("check the site notice", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ช่องทางข้อความ โปรดตรวจสอบประกาศบนเว็บไซต์สำหรับสถานะล่าสุด", source, StringComparison.Ordinal);
 
