@@ -64,6 +64,53 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
             Assert.Equal(expected.Description, detail.GetProperty("description").GetProperty(culture).GetString());
             Assert.Equal(expected.Availability, detail.GetProperty("availability").GetProperty(culture).GetString());
         }
+
+        var expectedReferences = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["PLA"] = "Polymaker PolyLite PLA",
+            ["PETG"] = "eSUN PETG",
+            ["ASA"] = "eSUN ASA+",
+            ["TPU"] = "eSUN TPU-95A",
+            ["M68"] = "eSUN Standard Resin",
+        };
+        var verifiedColourRecords = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "PLA", "PETG", "ASA", "TPU", "M68", "G217", "PA612-ESD", "ABS-ESD",
+        };
+        foreach (var material in details.RootElement.EnumerateObject())
+        {
+            var availability = material.Value.GetProperty("availability").GetProperty(culture).GetString()!;
+            Assert.DoesNotContain("Elegoo", availability, StringComparison.OrdinalIgnoreCase);
+            if (expectedReferences.TryGetValue(material.Name, out var reference))
+            {
+                Assert.Contains(reference, availability, StringComparison.Ordinal);
+            }
+            var colours = material.Value.GetProperty("colors").GetProperty(culture).EnumerateArray();
+            if (verifiedColourRecords.Contains(material.Name))
+            {
+                Assert.NotEmpty(colours);
+                if (culture == "en")
+                {
+                    Assert.True(availability.Contains("local", StringComparison.OrdinalIgnoreCase)
+                        || availability.Contains("Thailand", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            else
+            {
+                Assert.Empty(colours);
+            }
+        }
+        var expectedResinColours = culture == "th"
+            ? new[] { "เบจ", "ดำ", "ใส", "เทา", "เขียว", "ส้ม", "แดง", "ฟ้า", "ขาว", "เหลือง" }
+            : new[] { "Beige", "Black", "Clear", "Gray", "Green", "Orange", "Red", "Sky blue", "White", "Yellow" };
+        Assert.Equal(expectedResinColours, details.RootElement.GetProperty("M68").GetProperty("colors")
+            .GetProperty(culture).EnumerateArray().Select(colour => colour.GetString()).ToArray());
+        // Final source replaces the earlier PC-ESD catalogue record, not its historical sample.
+        Assert.False(details.RootElement.TryGetProperty("PC-ESD", out _));
+        Assert.Contains("Fiberon PA612-ESD", details.RootElement.GetProperty("PA612-ESD")
+            .GetProperty("availability").GetProperty(culture).GetString(), StringComparison.Ordinal);
+        Assert.Contains("eSUN ABS-ESD", details.RootElement.GetProperty("ABS-ESD")
+            .GetProperty("availability").GetProperty(culture).GetString(), StringComparison.Ordinal);
     }
 
     [Fact]
