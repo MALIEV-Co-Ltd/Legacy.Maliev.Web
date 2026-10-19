@@ -18,7 +18,11 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = ResolveContentRoot(args),
+});
 if (builder.Environment.IsEnvironment("Testing"))
 {
     builder.WebHost.UseStaticWebAssets();
@@ -639,4 +643,55 @@ app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();
 
-public partial class Program;
+public partial class Program
+{
+    private static string ResolveContentRoot(string[] args) =>
+        ResolveContentRoot(args, Directory.GetCurrentDirectory, Environment.GetEnvironmentVariable);
+
+    internal static string ResolveContentRoot(string[] args, Func<string> getCurrentDirectory,
+        Func<string, string?> getEnvironmentVariable)
+    {
+        var configuredRoot = GetArgumentValue(args, "contentRoot") ?? getCurrentDirectory();
+        var contentRoot = Path.GetFullPath(configuredRoot);
+        var environmentName = GetArgumentValue(args, "environment")
+            ?? getEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? getEnvironmentVariable("DOTNET_ENVIRONMENT");
+
+        if (!string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase))
+        {
+            return contentRoot;
+        }
+
+        if (File.Exists(Path.Combine(contentRoot, "appsettings.Development.json")))
+        {
+            return contentRoot;
+        }
+
+        var webProjectRoot = Path.Combine(contentRoot, "Legacy.Maliev.Web");
+        return File.Exists(Path.Combine(webProjectRoot, "appsettings.Development.json"))
+            && Directory.Exists(Path.Combine(webProjectRoot, "wwwroot"))
+                ? webProjectRoot
+                : contentRoot;
+    }
+
+    private static string? GetArgumentValue(string[] args, string key)
+    {
+        var prefix = $"--{key}=";
+        for (var index = 0; index < args.Length; index++)
+        {
+            var argument = args[index];
+            if (argument.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return argument.Substring(prefix.Length);
+            }
+
+            if (string.Equals(argument, $"--{key}", StringComparison.OrdinalIgnoreCase)
+                && index + 1 < args.Length)
+            {
+                return args[index + 1];
+            }
+        }
+
+        return null;
+    }
+}

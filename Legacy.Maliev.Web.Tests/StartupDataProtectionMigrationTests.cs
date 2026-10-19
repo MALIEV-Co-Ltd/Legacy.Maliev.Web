@@ -128,6 +128,11 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
                 provider => provider.Source.Path == $"appsettings.{environment}.json");
             Assert.Equal(Path.GetFullPath(projectRoot),
                 Path.TrimEndingDirectorySeparator(Assert.IsType<PhysicalFileProvider>(development.Source.FileProvider).Root));
+            if (environment == "Development")
+            {
+                Assert.True(development.TryGet("Career:HideLocalAspireFixture", out var hideLocalAspireFixture));
+                Assert.Equal(bool.TrueString, hideLocalAspireFixture, StringComparer.OrdinalIgnoreCase);
+            }
             Assert.Equal(Path.GetFullPath(projectRoot), Path.TrimEndingDirectorySeparator(hostEnvironment.ContentRootPath));
             Assert.Equal(Path.GetFullPath(Path.Combine(projectRoot, "wwwroot")),
                 Path.TrimEndingDirectorySeparator(hostEnvironment.WebRootPath));
@@ -142,6 +147,107 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
             factory.Services.GetRequiredService<IOptions<DataProtectionOptions>>().Value.ApplicationDiscriminator);
         Assert.IsAssignableFrom<RedisCache>(factory.Services.GetRequiredService<IDistributedCache>());
         Assert.True(factory.Services.GetRequiredService<IConnectionMultiplexer>().IsConnected);
+    }
+
+    [Theory]
+    [InlineData(new string[] { "--environment=Development" }, null, null, true)]
+    [InlineData(new string[] { "--environment", "Development" }, null, null, true)]
+    [InlineData(new string[] { "--ENVIRONMENT=development" }, null, null, true)]
+    [InlineData(new string[] { "--environment=Development", "--environment=Production" }, null, null, true)]
+    [InlineData(new string[] { "--environment=", "--environment=Development" }, "Development", "Development", false)]
+    [InlineData(new string[] { "--environment=Staging" }, "Development", "Development", false)]
+    [InlineData(new string[] { "--environment" }, "Development", null, true)]
+    [InlineData(new string[] { "--environment", "--unrelated" }, "Development", null, false)]
+    [InlineData(new string[] { }, "Development", "Production", true)]
+    [InlineData(new string[] { }, "Production", "Development", false)]
+    [InlineData(new string[] { }, "", "Development", false)]
+    [InlineData(new string[] { }, null, "Development", true)]
+    [InlineData(new string[] { }, null, null, false)]
+    public void SourceContentRoot_EnvironmentArgumentsAndAmbientPrecedence_SelectTheSourceRoot(
+        string[] args, string? aspNetCore, string? dotnet, bool expectsProject)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"source659-{Guid.NewGuid():N}");
+        var project = Path.Combine(root, "Legacy.Maliev.Web");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(project, "wwwroot"));
+            File.WriteAllText(Path.Combine(project, "appsettings.Development.json"), "{}");
+            var actual = Program.ResolveContentRoot(args, () => root, name => name switch
+            {
+                "ASPNETCORE_ENVIRONMENT" => aspNetCore,
+                "DOTNET_ENVIRONMENT" => dotnet,
+                _ => throw new InvalidOperationException("Unexpected environment lookup."),
+            });
+            Assert.Equal(expectsProject ? project : root, actual);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, true, true, true)]
+    [InlineData(true, true, true, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, false, false)]
+    public void SourceContentRoot_DevelopmentRequiresBothChildAssetsAndPreservesOwnSettings(
+        bool ownSettings, bool childSettings, bool childWebRoot, bool expectsProject)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"source659-{Guid.NewGuid():N}");
+        var project = Path.Combine(root, "Legacy.Maliev.Web");
+        try
+        {
+            Directory.CreateDirectory(project);
+            if (ownSettings) File.WriteAllText(Path.Combine(root, "appsettings.Development.json"), "{}");
+            if (childSettings) File.WriteAllText(Path.Combine(project, "appsettings.Development.json"), "{}");
+            if (childWebRoot) Directory.CreateDirectory(Path.Combine(project, "wwwroot"));
+            var actual = Program.ResolveContentRoot(["--environment=Development"], () => root,
+                _ => throw new InvalidOperationException("Explicit environment must not read ambient values."));
+            Assert.Equal(expectsProject ? project : root, actual);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SourceContentRoot_ExplicitFirstRootUsesBothArgumentFormsWithoutReadingTheCurrentDirectory(bool separated)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"source659-{Guid.NewGuid():N}");
+        var project = Path.Combine(root, "Legacy.Maliev.Web");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(project, "wwwroot"));
+            File.WriteAllText(Path.Combine(project, "appsettings.Development.json"), "{}");
+            string[] args = separated
+                ? ["--CONTENTROOT", root, "--contentRoot", Path.Combine(root, "ignored"), "--environment=Development"]
+                : [$"--CONTENTROOT={root}", $"--contentRoot={Path.Combine(root, "ignored")}", "--environment=Development"];
+            Assert.Equal(project, Program.ResolveContentRoot(args,
+                () => throw new InvalidOperationException("Explicit root must not read the current directory."),
+                _ => throw new InvalidOperationException("Explicit environment must not read ambient values.")));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void SourceContentRoot_DanglingRootFallsBackButAnEmptyFirstRootIsNotAbsent()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"source659-{Guid.NewGuid():N}");
+        Assert.Equal(Path.GetFullPath(root), Program.ResolveContentRoot(
+            ["--environment=Production", "--contentRoot"], () => root,
+            _ => throw new InvalidOperationException("Explicit environment must not read ambient values.")));
+        Assert.Throws<ArgumentException>(() => Program.ResolveContentRoot(
+            ["--contentRoot=", $"--contentRoot={root}", "--environment=Production"],
+            () => throw new InvalidOperationException("An empty explicit root is not an absent root."),
+            _ => throw new InvalidOperationException("Invalid root must fail before reading the environment.")));
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory) => factory.CreateClient(
