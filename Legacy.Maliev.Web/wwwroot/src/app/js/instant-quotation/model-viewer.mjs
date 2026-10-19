@@ -370,6 +370,8 @@ export function createModelViewer({ adapter, eventTarget = null }) {
   const parts = new Map();
   let activeId = null;
   let disposed = false;
+  let selectionGeneration = 0;
+  let snapshotTail = Promise.resolve();
   const keyHandler = event => handleKey(event);
   eventTarget?.addEventListener('keydown', keyHandler);
 
@@ -390,6 +392,11 @@ export function createModelViewer({ adapter, eventTarget = null }) {
   }
 
   function select(id) {
+    selectionGeneration += 1;
+    activate(id);
+  }
+
+  function activate(id) {
     assertActive();
     const next = requirePart(id);
     if (activeId === id) return;
@@ -420,10 +427,10 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     }
   }
 
-  function setColor(color) {
+  function setColor(color, id = activeId) {
     assertActive();
-    if (activeId === null) return false;
-    const part = requirePart(activeId);
+    if (id === null) return false;
+    const part = requirePart(id);
     if (part.bodyCount > 1) return false;
     adapter.setColor?.(part.object, color);
     return true;
@@ -464,11 +471,27 @@ export function createModelViewer({ adapter, eventTarget = null }) {
 
   function snapshot(id) {
     assertActive();
-    const previousId = activeId;
-    select(id);
-    const image = adapter.snapshot?.() ?? null;
-    if (previousId !== null && previousId !== id) select(previousId);
-    return image;
+    const part = requirePart(id);
+    const generation = selectionGeneration;
+    const current = () => !disposed && parts.get(id) === part
+      && selectionGeneration === generation;
+    const pending = snapshotTail.then(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      if (!current()) return null;
+      const previousId = activeId;
+      const previous = parts.get(previousId);
+      try {
+        activate(id);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        if (!current()) return null;
+        return adapter.snapshot?.() ?? null;
+      } finally {
+        if (current() && previousId !== null && previousId !== id
+            && parts.get(previousId) === previous) activate(previousId);
+      }
+    });
+    snapshotTail = pending.then(() => undefined, () => undefined);
+    return pending;
   }
 
   function handleKey(event) {

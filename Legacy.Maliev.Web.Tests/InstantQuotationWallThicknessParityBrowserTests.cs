@@ -189,18 +189,18 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
           });
           try {
             const file = new File([Uint8Array.from(atob(base64), c => c.charCodeAt(0))], 'advisory-component.stl', {type:'model/stl'});
-            interop.attach(canvas);
+            await interop.attach(canvas);
             const key = interop.beginSelection({files:[file]})[0];
             await interop.getGeometryClaim(key);
             // Browser preview component correlation only: never server admission or pricing authority.
-            interop.admit(key, 'component-only', 'PLA'); interop.select('component-only');
+            await interop.admit(key, 'component-only', 'PLA'); interop.select('component-only');
             await Promise.race([measured, new Promise((_,reject) => setTimeout(() => reject(new Error('Real thickness worker did not complete')), 15000))]);
             const evidence = object.userData.wallThicknessEvidence;
             const originals = [];
             object.traverse(child => { if (child.isMesh && !child.userData.wallThicknessPatch) originals.push({child,color:child.material.color.getHex(),vertexColors:child.material.vertexColors,side:child.material.side}); });
             const fdm = assessThickness(evidence, 'PLA');
             interop.toggleThickness('component-only');
-            viewer.snapshot('component-only');
+            await viewer.snapshot('component-only');
             const patch = object.userData.wallThicknessPatchMesh;
             const positions = patch?.geometry.getAttribute('position');
             const patchVisible = !!patch?.visible;
@@ -208,7 +208,7 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
               Math.abs(positions.getY(i)) < 0.001 && positions.getZ(i) >= -0.001 && positions.getZ(i) <= 0.501);
             const patchRendered = !!patch?.userData.shader && patch.material.transparent
               && patch.geometry.getAttribute('wallThicknessMm')?.count === positions?.count;
-            interop.setThicknessMaterial('component-only','M68'); viewer.snapshot('component-only');
+            interop.setThicknessMaterial('component-only','M68'); await viewer.snapshot('component-only');
             const resin = assessThickness(object.userData.wallThicknessEvidence, 'M68');
             return { reliable:fdm.reliable, thin:fdm.hasThinRegion, workerCount,
               sameEvidence:object.userData.wallThicknessEvidence === evidence,

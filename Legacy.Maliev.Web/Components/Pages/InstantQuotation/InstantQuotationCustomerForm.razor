@@ -162,7 +162,13 @@
         {
             <button type="button" @onclick="OnBack">@Localizer["Back"]</button>
         }
-        <button type="submit" form="instant-quotation-form" data-instant-quote-submit disabled="@Model.ProfileUnavailable">@Localizer["Submit"]</button>
+        <button type="submit" form="instant-quotation-form" data-instant-quote-submit disabled="@Model.ProfileUnavailable">
+            <span data-instant-quote-submit-label>@Localizer["Submit"]</span>
+            <span data-instant-quote-submit-pending hidden>
+                <span class="instant-quote__pricing-spinner d-inline-block" aria-hidden="true"></span>
+                @Localizer["Submitting..."]
+            </span>
+        </button>
     </div>
 </section>
 

@@ -97,7 +97,16 @@ public sealed class InstantQuotationWorkflowInteropTests
     {
         var interop = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "instant-quotation", "workflow-interop.mjs");
 
-        Assert.Contains("viewer.snapshot?.(image.dataset.partId)", interop, StringComparison.Ordinal);
+        var start = interop.IndexOf("async function renderReviewThumbnails(root)", StringComparison.Ordinal);
+        Assert.True(start >= 0);
+        var end = interop.IndexOf("async function updatePartAppearance", start, StringComparison.Ordinal);
+        Assert.True(end > start);
+        var thumbnails = interop[start..end];
+        Assert.Contains("const partId = image.dataset.partId;", thumbnails, StringComparison.Ordinal);
+        Assert.Contains("source = await currentViewer.snapshot?.(partId);", thumbnails, StringComparison.Ordinal);
+        Assert.Contains("if (disposed || viewer !== currentViewer) break;", thumbnails, StringComparison.Ordinal);
+        Assert.Contains("if (!partKeys.has(partId) || image.dataset.partId !== partId", thumbnails, StringComparison.Ordinal);
+        Assert.Contains("|| typeof source !== 'string' || !source.startsWith('data:image/')) continue;", thumbnails, StringComparison.Ordinal);
         Assert.DoesNotContain("viewer.snapshot?.()", interop, StringComparison.Ordinal);
     }
 

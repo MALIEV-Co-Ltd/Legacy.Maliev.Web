@@ -680,4 +680,7 @@
   <data name="Other materials" xml:space="preserve">
     <value>วัสดุอื่น ๆ</value>
   </data>
+  <data name="Submitting..." xml:space="preserve">
+    <value>กำลังส่ง...</value>
+  </data>
 </root>

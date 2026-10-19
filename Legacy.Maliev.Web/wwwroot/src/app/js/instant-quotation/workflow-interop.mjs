@@ -101,6 +101,7 @@ export function createWorkflowPreviewInterop({
   const guardedResources = new WeakSet();
   const viewerDisposedResources = new WeakSet();
   let viewer = null;
+  let selectionGeneration = 0;
   let incompleteEntry = null;
   let incompleteViewer = null;
   let disposed = false;
@@ -170,7 +171,7 @@ export function createWorkflowPreviewInterop({
     const operation = Promise.all([
       Promise.resolve(loadModel(file, { signal: controller.signal })),
       sha256(file, controller.signal),
-    ]).then(([object, hash]) => {
+    ]).then(async ([object, hash]) => {
       if (!isCurrent(entry)) {
         disposeModel(object, disposedResources);
         return null;
@@ -186,7 +187,8 @@ export function createWorkflowPreviewInterop({
         failPreview(entry, error);
         return null;
       }
-      completePreview(entry, object);
+      await completePreview(entry, object);
+      if (!isCurrent(entry)) return null;
       // Zero-volume planar inputs outside the exceptional budget/shape contract
       // remain rejected. Do not send them to the larger normal-part worker budget.
       if (!entry.previewOnly && entry.geometryClaim.volumeMm3 === 0
@@ -251,7 +253,7 @@ export function createWorkflowPreviewInterop({
       && !entry.controller?.signal.aborted;
   }
 
-  function completePreview(entry, object) {
+  async function completePreview(entry, object) {
     if (disposed || entry.released || entry.quarantined || previews.get(entry.key) !== entry) {
       disposeModel(object, disposedResources);
       return;
@@ -259,7 +261,7 @@ export function createWorkflowPreviewInterop({
 
     guardModelDisposal(object, guardedResources, viewerDisposedResources);
     entry.object = object;
-    attachAdmittedPreview(entry);
+    await attachAdmittedPreview(entry);
   }
 
   function failPreview(entry, error) {
@@ -267,13 +269,13 @@ export function createWorkflowPreviewInterop({
     setUnavailable();
   }
 
-  function attach(canvas) {
+  async function attach(canvas) {
     assertActive();
     if (!viewer) viewer = createViewer(canvas);
-    for (const entry of previews.values()) attachAdmittedPreview(entry);
+    for (const entry of previews.values()) await attachAdmittedPreview(entry);
   }
 
-  function admit(key, partId, material = '') {
+  async function admit(key, partId, material = '') {
     assertActive();
     const entry = requirePreview(key);
     if (entry.released || entry.quarantined || entry.previewOnly || !partId) return false;
@@ -281,13 +283,15 @@ export function createWorkflowPreviewInterop({
     entry.thicknessMaterial = material;
     entry.file = null;
     partKeys.set(partId, key);
-    attachAdmittedPreview(entry);
+    await attachAdmittedPreview(entry);
     notifyThickness(entry);
-    return true;
+    return isCurrent(entry) && entry.partId === partId;
   }
 
-  function attachAdmittedPreview(entry) {
-    if (!viewer || !entry.object || !entry.partId || entry.released || entry.quarantined || entry.attached) return;
+  async function attachAdmittedPreview(entry) {
+    if (!viewer || !entry.object || !entry.partId || !isCurrent(entry) || entry.attached) return;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (!viewer || !entry.object || !entry.partId || !isCurrent(entry) || entry.attached) return;
     viewer.addPart(entry.partId, entry.object);
     entry.attached = true;
     if (entry.thicknessEvidence) viewer.setThicknessEvidence?.(entry.partId, entry.thicknessEvidence);
@@ -345,6 +349,7 @@ export function createWorkflowPreviewInterop({
   function select(partId) {
     assertActive();
     if (!partKeys.has(partId) || !viewer) return false;
+    selectionGeneration += 1;
     viewer.select(partId);
     const entry = previews.get(partKeys.get(partId));
     if (entry) notifyThickness(entry);
@@ -379,6 +384,7 @@ export function createWorkflowPreviewInterop({
     if (!entry) return false;
     entry.thicknessMaterial = material;
     if (entry.thicknessVisible && viewer) {
+      selectionGeneration += 1;
       viewer.select(partId);
       viewer.setThicknessVisible?.(true, policyForMaterial(material));
     }
@@ -389,6 +395,7 @@ export function createWorkflowPreviewInterop({
   function toggleThickness(partId) {
     const entry = previews.get(partKeys.get(partId));
     if (!entry?.thicknessEvidence || !viewer) return false;
+    selectionGeneration += 1;
     viewer.select(partId);
     entry.thicknessVisible = !entry.thicknessVisible;
     if (!viewer.setThicknessVisible?.(
@@ -407,29 +414,42 @@ export function createWorkflowPreviewInterop({
   function reset() { viewer?.reset(); }
   function fit() { viewer?.fit(); }
   function fullscreen() { return viewer?.fullscreen(); }
-  function renderReviewThumbnails(root) {
+  async function renderReviewThumbnails(root) {
     if (!viewer || !root?.querySelectorAll) return 0;
     let rendered = 0;
+    const currentViewer = viewer;
     for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id]')) {
       let source = null;
+      const partId = image.dataset.partId;
       try {
-        source = viewer.snapshot?.(image.dataset.partId);
+        source = await currentViewer.snapshot?.(partId);
       } catch {
         continue;
       }
-      if (typeof source !== 'string' || !source.startsWith('data:image/')) continue;
+      if (disposed || viewer !== currentViewer) break;
+      if (!partKeys.has(partId) || image.dataset.partId !== partId
+          || typeof source !== 'string' || !source.startsWith('data:image/')) continue;
       image.src = source;
       rendered += 1;
     }
     return rendered;
   }
 
-  function updatePartAppearance(partId, color) {
-    if (!viewer || !partKeys.has(partId)) return null;
-    viewer.select(partId);
-    viewer.setColor(previewColorForSelection(color));
-    const source = viewer.snapshot?.(partId);
-    return typeof source === 'string' && source.startsWith('data:image/') ? source : null;
+  async function updatePartAppearance(partId, color) {
+    const key = partKeys.get(partId);
+    const entry = previews.get(key);
+    const currentViewer = viewer;
+    const generation = selectionGeneration;
+    if (!currentViewer || !entry || !isCurrent(entry)) return null;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (viewer !== currentViewer || !isCurrent(entry) || partKeys.get(partId) !== key) return null;
+    if (selectionGeneration === generation) currentViewer.select(partId);
+    currentViewer.setColor(previewColorForSelection(color), partId);
+    if (selectionGeneration !== generation) return null;
+    const source = await currentViewer.snapshot?.(partId);
+    return viewer === currentViewer && isCurrent(entry) && partKeys.get(partId) === key
+      && selectionGeneration === generation
+      && typeof source === 'string' && source.startsWith('data:image/') ? source : null;
   }
   function status() { return availability; }
 
