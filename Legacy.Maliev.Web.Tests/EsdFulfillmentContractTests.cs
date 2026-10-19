@@ -21,6 +21,49 @@ public sealed class EsdFulfillmentContractTests
         "fixture.stl", "model/stl", 100, new string('a', 64));
 
     [Theory]
+    [InlineData("ASA-CF", "ASA-CF — Bambu ASA-CF")]
+    [InlineData("PC-FR", "PC-FR — Bambu PC FR")]
+    [InlineData("PA12", "PA12 — eSUN ePA12")]
+    [InlineData("PETG-CF", "PETG-rCF08 — Fiberon recycled-carbon PETG")]
+    [InlineData("PET-CF", "PET-CF17 — Fiberon carbon-fiber PET")]
+    public async Task Provision_CommercialMaterial_PreservesExactDescriptionCatalogIdsAndMoney(
+        string material, string expectedName)
+    {
+        using var boundary = new Boundary(material);
+        var part = Part(material, BuildPreference.Standard);
+        // The existing synthetic quote is a transport input, not a calibration or payment proof.
+        var quote = SyntheticPhysicalPricingTestData.Quote(new([part])).Parts.Single();
+
+        var result = await boundary.Client.ProvisionOrderAsync(
+            SubmissionId, 0, CustomerId, null, part, quote, 7, File, default);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(OrderId, result.OrderId);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.False(result.Conflict);
+        var create = Assert.Single(boundary.Requests, request => request.Method == "POST" && request.Path == "orders");
+        using var document = JsonDocument.Parse(create.Body!);
+        var wire = document.RootElement;
+        Assert.Equal($"3D printing: {expectedName}; Standard", wire.GetProperty("description").GetString());
+        Assert.Equal(CustomerId, wire.GetProperty("customerId").GetInt32());
+        Assert.Equal(boundary.MaterialId, wire.GetProperty("materialId").GetInt32());
+        Assert.NotEqual(999, wire.GetProperty("materialId").GetInt32());
+        Assert.Equal(3, wire.GetProperty("processId").GetInt32());
+        Assert.Equal(9, wire.GetProperty("colorId").GetInt32());
+        Assert.Equal(7, wire.GetProperty("surfaceFinishId").GetInt32());
+        Assert.Equal(764, wire.GetProperty("currencyId").GetInt32());
+        Assert.Equal(2, wire.GetProperty("quantity").GetInt32());
+        Assert.Equal(Convert.ToDecimal(quote.UnitPrice), wire.GetProperty("unitPrice").GetDecimal());
+        Assert.Contains($"Material key: {material}", wire.GetProperty("comment").GetString()!, StringComparison.Ordinal);
+        foreach (var field in new[] { "allowPayment", "allowCancellation", "allowSocialMedia" })
+            Assert.False(wire.GetProperty(field).GetBoolean());
+        Assert.Equal(create.IdempotencyKey, wire.GetProperty("operationKey").GetString());
+        Assert.Equal(3, boundary.Requests.Count(request => request.Method == "POST"));
+        Assert.Empty(boundary.Tokens.Invalidated);
+    }
+
+    [Theory]
     [InlineData("PA612-ESD", BuildPreference.Standard)]
     [InlineData("PA612-ESD", BuildPreference.Quality)]
     [InlineData("PA612-ESD", BuildPreference.Strength)]

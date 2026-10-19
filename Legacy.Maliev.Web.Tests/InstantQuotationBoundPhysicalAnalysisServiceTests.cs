@@ -14,6 +14,92 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
     private static readonly byte[] Bytes = BinaryBox(8);
     private static readonly string Digest = Convert.ToHexStringLower(SHA256.HashData(Bytes));
 
+    [Fact]
+    public void CurrentSourceMaterialBuildCells_AllResolveTrustedEligibleProfiles()
+    {
+        // Final source7b470357 replaces PC-ESD with PA612-ESD and ABS-ESD: 19 becomes 20 materials.
+        string[] materialKeys =
+        [
+            "PLA", "PLA-CF", "PETG", "PETG-CF", "PETG-ESD", "PET-CF",
+            "ABS", "ABS-FR", "ASA", "ASA-CF", "HIPS", "PC", "PC-FR",
+            "PA612-ESD", "ABS-ESD", "PA6", "PA12", "PA-CF", "TPU", "PVA",
+        ];
+        BuildPreference[] builds =
+        [
+            BuildPreference.Standard, BuildPreference.Quality, BuildPreference.Strength,
+        ];
+        var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+
+        Assert.Equal(
+            materialKeys.OrderBy(key => key, StringComparer.Ordinal),
+            PricingCatalog.Materials.Values.Where(material => material.Process == PrintProcess.Fdm)
+                .Select(material => material.Key).OrderBy(key => key, StringComparer.Ordinal));
+        Assert.Equal(builds, Enum.GetValues<BuildPreference>());
+        Assert.Equal(60, materialKeys.Length * builds.Length);
+        foreach (var materialKey in materialKeys)
+        {
+            foreach (var build in builds)
+            {
+                Assert.True(catalog.TryResolveTrustedProfile(materialKey, build, out var profile),
+                    $"{materialKey}/{build} must resolve a trusted server profile.");
+                Assert.NotNull(profile);
+                Assert.Equal(materialKey, profile.MaterialId);
+                Assert.True(catalog.ResolvePolicy(materialKey, build).AutomaticPricingEligible,
+                    $"{materialKey}/{build} must use an exact approved automatic-pricing profile.");
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("ASA-CF", 18, 12)]
+    [InlineData("PC-FR", 18, 12)]
+    [InlineData("PA12", 8, 8)]
+    [InlineData("PETG-CF", 12, 12)]
+    [InlineData("PET-CF", 12, 5)]
+    public void CommercialProfiles_UseOriginalFlowAndCoolingLimits(
+        string materialKey, double expectedMaximumFlow, double expectedMinimumLayerTime)
+    {
+        var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+
+        Assert.True(catalog.TryResolveTrustedProfile(materialKey, BuildPreference.Standard, out var profile));
+        Assert.NotNull(profile);
+        Assert.Equal(expectedMaximumFlow, profile.MaximumVolumetricFlowMm3PerSecond!.Value, 3);
+        Assert.Equal(expectedMinimumLayerTime, profile.Motion.MinimumLayerTimeSeconds, 3);
+    }
+
+    [Fact]
+    public async Task ApprovedManufacturerPa12_ProducesBoundPhysicalEvidenceWithoutSubstitution()
+    {
+        var fixture = Fixture();
+        fixture.Store.State = fixture.Store.State with
+        {
+            RequestState = new InstantQuotationOrderState(
+                [fixture.Store.State.Parts.Single() with
+                {
+                    Configuration = new InstantQuotationPartConfiguration("PA12", "Black", 1),
+                }]),
+        };
+        var binding = fixture.Binding with { MaterialKey = "PA12" };
+        var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+        Assert.True(catalog.TryResolveTrustedProfile("PA12", BuildPreference.Standard, out var profile));
+        Assert.NotNull(profile);
+
+        var result = await fixture.Service.AnalyzeAsync(binding, default);
+
+        Assert.True(result.IsReady);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.None, result.Failure);
+        Assert.Equal(binding, result.Binding);
+        Assert.NotNull(result.Physical);
+        Assert.Equal(profile.ResolvedProfileSha256, result.Physical.ProfileSha256);
+        Assert.DoesNotContain("vendor_profile_substitution", result.Physical.Diagnostics);
+        Assert.DoesNotContain("vendor_profile_substitution",
+            catalog.ResolvePolicy("PA12", BuildPreference.Standard).ReasonCodes);
+        Assert.True(result.Physical.TotalDepositedMm3 > 0);
+        Assert.True(result.Physical.Motion.TotalSeconds > 0);
+        Assert.Equal(1, fixture.Reader.ReadCount);
+        Assert.Equal(2, fixture.Store.ReadCount);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(10_000)]

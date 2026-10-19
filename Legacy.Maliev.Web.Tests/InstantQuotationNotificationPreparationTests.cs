@@ -8,6 +8,31 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class InstantQuotationNotificationPreparationTests
 {
+    [Theory]
+    [InlineData("ASA-CF", "ASA-CF — Bambu ASA-CF")]
+    [InlineData("PC-FR", "PC-FR — Bambu PC FR")]
+    [InlineData("PA12", "PA12 — eSUN ePA12")]
+    [InlineData("PETG-CF", "PETG-rCF08 — Fiberon recycled-carbon PETG")]
+    [InlineData("PET-CF", "PET-CF17 — Fiberon carbon-fiber PET")]
+    public async Task CommercialMaterialNames_ReachBothPreparedMessagesAndDisplayOptions(
+        string materialKey, string expectedName)
+    {
+        using var boundary = new Boundary(materialKey);
+
+        var result = await boundary.PrepareAsync();
+
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.NotNull(result.Payload);
+        var expectedField = "<div>Material: " + WebUtility.HtmlEncode(expectedName) + "</div>";
+        Assert.Contains(expectedField, result.Payload.Customer.Body, StringComparison.Ordinal);
+        Assert.Contains(expectedField, result.Payload.Manufacturing.Body, StringComparison.Ordinal);
+        Assert.Equal(expectedName, PricingCatalog.ResolveMaterial(materialKey)!.DisplayName);
+        var display = Legacy.Maliev.Web.Components.Pages.InstantQuotation.InstantQuotationCalculator.CreateDisplayModel();
+        Assert.Equal(expectedName, display.Materials.Single(material => material.Key == materialKey).DisplayName);
+        Assert.Single(boundary.Paths);
+    }
+
     [Fact]
     public async Task ExactFinalizedBytesAndAuthoritativeMoneyPrepareBothFrozenMessages()
     {
@@ -200,13 +225,13 @@ public sealed class InstantQuotationNotificationPreparationTests
         public InstantQuotationOrderQuote Quote { get; }
         public InstantQuotationFinalizedFile File { get; }
 
-        public Boundary()
+        public Boundary(string materialKey = "ABS")
         {
             var geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
                 1, new string('a', 64), 10, 20, 30, 1000, 700,
                 Enumerable.Repeat(100.0, 64).ToArray(), Enumerable.Repeat(60.0, 64).ToArray(), 12, 1, true, false, false, 0.8);
             var id = Guid.Parse("11111111-2222-3333-4444-555555555555");
-            Part = new(Guid.NewGuid(), "frozen-file.stl", new(id.ToString("D")), geometry, new("ABS", "Black", 2, BuildPreference.Strength));
+            Part = new(Guid.NewGuid(), "frozen-file.stl", new(id.ToString("D")), geometry, new(materialKey, "Black", 2, BuildPreference.Strength));
             Quote = SyntheticPhysicalPricingTestData.Quote(new([Part]));
             File = new(id, "private-fixture", "clean/fixture part.stl", "frozen-file.stl", "model/stl", 100, new string('a', 64));
             http = new(new Handler(this)) { BaseAddress = new("https://files.test/") };
