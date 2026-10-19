@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Net;
+using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Components.Pages.Member;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -92,7 +94,7 @@ public sealed class MemberDashboardSurfaceContractTests
         });
 
         Assert.Contains("<th class=\"d-none d-lg-table-cell\">" + descriptionLabel + "</th>", WebUtility.HtmlDecode(html), StringComparison.Ordinal);
-        Assert.Matches("<td data-title=\"[^\"]+\" class=\"d-none d-lg-table-cell table-multiline\">First line\\s*&lt;script&gt;not markup&lt;/script&gt;</td>", html);
+        Assert.Matches("<td data-title=\"[^\"]+\" class=\"d-none d-lg-table-cell table-multiline\">" + Regex.Escape(HtmlEncoder.Default.Encode(description)) + "</td>", html);
         Assert.Matches("<td data-title=\"[^\"]+\" class=\"d-none d-lg-table-cell table-multiline\">-</td>", html);
         Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
         Assert.Contains("href=\"/member/orders/view?itemID=41\"", html, StringComparison.Ordinal);
@@ -108,13 +110,14 @@ public sealed class MemberDashboardSurfaceContractTests
     [InlineData("th")]
     public async Task OrderDetail_RendersMultilineEscapedDescriptionAndRetainsEmptyFallback(string culture)
     {
-        var model = MemberOrderDetailDisplayModel.Empty with { Id = 41, Description = "First line\n<script>not markup</script>" };
+        const string description = "First line\n<script>not markup</script>";
+        var model = MemberOrderDetailDisplayModel.Empty with { Id = 41, Description = description };
         var html = await RenderAsync<MemberOrderDetailContent>(culture, new()
         {
             [nameof(MemberOrderDetailContent.Model)] = model,
         });
 
-        Assert.Matches("<dd class=\"table-multiline\">First line\\s*&lt;script&gt;not markup&lt;/script&gt;</dd>", html);
+        Assert.Matches("<dd class=\"table-multiline\">" + Regex.Escape(HtmlEncoder.Default.Encode(description)) + "</dd>", html);
         Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
         var empty = await RenderAsync<MemberOrderDetailContent>(culture, new()
         {
