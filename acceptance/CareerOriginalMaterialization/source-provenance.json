@@ -1,0 +1,27 @@
+{
+  "sourceSha": "135e526d0dab85c415b3afdcefd7b70fe2c82e2f",
+  "originalFiles": [
+    {
+      "path": "Maliev.JobService.Data/Database/JobContext/Offer.cs",
+      "sourceSha": "135e526d0dab85c415b3afdcefd7b70fe2c82e2f",
+      "fixture": "OriginalSource/Offer.cs",
+      "sha256": "88913efbd5f9a55b7776c5bc6f37744dc45d364a672de97cc0cc78f76c754031",
+      "byteIdentical": true
+    },
+    {
+      "path": "Maliev.JobService.Data/Database/JobContext/Level.cs",
+      "sourceSha": "135e526d0dab85c415b3afdcefd7b70fe2c82e2f",
+      "fixture": "OriginalSource/Level.cs",
+      "sha256": "fbb8db295fe74bca7bcb9856c40941fd127657aba67878a758c930c4fa25a4a4",
+      "byteIdentical": true
+    }
+  ],
+  "originalPackages": {
+    "Microsoft.AspNet.WebApi.Client": "6.0.0",
+    "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "8.0.28",
+    "Newtonsoft.Json": "13.0.4"
+  },
+  "sourceRuntime": "net8.0",
+  "nativeExecuted": false,
+  "upstreamProducerNotModified": true
+}

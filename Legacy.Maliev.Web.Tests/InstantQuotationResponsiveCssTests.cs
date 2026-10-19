@@ -24,7 +24,11 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("min-height: calc(100dvh - 4.5625rem)", css, StringComparison.Ordinal);
         Assert.Contains("grid-template-columns: minmax(0, 44fr) minmax(0, 56fr)", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-state=\"review\"]", css, StringComparison.Ordinal);
-        Assert.Contains("height: 260px", css, StringComparison.Ordinal);
+        Assert.Contains("height: clamp(280px, 72vw, 340px)", css, StringComparison.Ordinal);
+        Assert.Contains("height: clamp(260px, 32vh, 420px)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (max-width: 35.99875rem)", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: 52px minmax(0, 1fr)", css, StringComparison.Ordinal);
+        Assert.Contains(".instant-quote__workflow .instant-quote__review-fields {\n        grid-template-columns: 1fr;\n        gap: .45rem;", css.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.Contains("[data-workflow-build-preference]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-material-comparison]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-part-number]", css, StringComparison.Ordinal);

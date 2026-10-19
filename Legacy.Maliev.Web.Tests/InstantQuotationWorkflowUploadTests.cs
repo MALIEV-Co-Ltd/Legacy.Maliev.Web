@@ -1012,6 +1012,115 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.True(workflow.HasCompleteAuthoritativeQuote);
     }
 
+    [Fact]
+    public async Task Upload_MultipleBodiesPersistAnyWhileSingleBodyKeepsDefaultColor()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        await using var workflow = CreateWorkflow(client: client, store: store);
+        await workflow.InitializeAsync(default);
+        var multi = UploadFile("multi.stl") with { GeometryClaim = Geometry() with { BodyCount = 2 } };
+
+        var uploading = workflow.UploadAsync([multi, UploadFile("single.stl")], default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteSuccess("multi.stl", "opaque-multi", multi.GeometryClaim);
+        client.CompleteSuccess("single.stl", "opaque-single", Geometry());
+        await uploading;
+
+        Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "multi.stl").Configuration.Color);
+        Assert.Equal("Black", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
+        Assert.Equal("Any", Assert.Single(store.LastSavedState!.Parts, part => part.DisplayFileName == "multi.stl").Configuration.Color);
+        Assert.Equal("Black", Assert.Single(store.LastSavedState.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
+        Assert.NotNull(workflow.OrderQuote);
+        Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "multi.stl").Quote!.Color);
+        Assert.Equal("Black", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Quote!.Color);
+    }
+
+    [Theory]
+    [InlineData("PLA", "White")]
+    [InlineData("PETG", "Red")]
+    [InlineData("M68", "Gray")]
+    [InlineData("G217", "Clear")]
+    public async Task Configure_MultipleBodiesKeepAnyWithoutChangingAnotherPart(string material, string color)
+    {
+        var multi = PersistedPart("multi.stl", "opaque-multi") with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 2, true),
+        };
+        var single = PersistedPart("single.stl", "opaque-single");
+        var store = new RecordingSessionStore { ExistingSession = Session("color-session", multi, single) };
+        await using var workflow = CreateWorkflow(store: store);
+        await workflow.InitializeAsync("color-session", default);
+
+        await workflow.UpdateConfigurationAsync(multi.PartId, material, color, 3, default);
+
+        var actual = Assert.Single(workflow.Parts, part => part.PartId == multi.PartId);
+        Assert.Equal(material, actual.Configuration.MaterialKey);
+        Assert.Equal("Any", actual.Configuration.Color);
+        Assert.Equal(3, actual.Configuration.Quantity);
+        Assert.Equal("Any", actual.Quote!.Color);
+        Assert.Equal("Any", Assert.Single(store.LastSavedState!.Parts, part => part.PartId == multi.PartId).Configuration.Color);
+        var untouched = Assert.Single(workflow.Parts, part => part.PartId == single.PartId);
+        Assert.Equal(single.Configuration, untouched.Configuration);
+        Assert.Equal(single.Geometry, untouched.Geometry);
+        Assert.Equal("Black", untouched.Quote!.Color);
+    }
+
+    [Theory]
+    [InlineData("#12345")]
+    [InlineData("#GGGGGG")]
+    [InlineData("__custom__")]
+    [InlineData("")]
+    public async Task Configure_MultipleBodiesRejectMalformedColorBeforeCoercion(string color)
+    {
+        var multi = PersistedPart("multi.stl", "opaque-multi") with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 2, true),
+        };
+        var store = new RecordingSessionStore { ExistingSession = Session("color-session", multi) };
+        await using var workflow = CreateWorkflow(store: store);
+        await workflow.InitializeAsync("color-session", default);
+        var saved = store.LastSavedState;
+        var configuration = Assert.Single(workflow.Parts).Configuration;
+        var quote = workflow.OrderQuote;
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            workflow.UpdateConfigurationAsync(multi.PartId, "PLA", color, 1, default));
+
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Equal(configuration, Assert.Single(workflow.Parts).Configuration);
+        Assert.Same(quote, workflow.OrderQuote);
+    }
+
+    [Theory]
+    [InlineData("PLA", "White", 2, "Any")]
+    [InlineData("PLA", "#123ABC", 2, "Any")]
+    [InlineData("M68", "Gray", 2, "Any")]
+    [InlineData("PLA", "#123ABC", 1, "#123ABC")]
+    [InlineData("PETG", "#00ff7F", 1, "#00ff7F")]
+    public async Task Initialize_RestoredColorUsesActualBodyCountWithoutNarrowingSingleBodyHex(
+        string material, string color, int bodies, string expected)
+    {
+        var part = PersistedPart("restored.stl", "opaque-restored") with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, bodies, true),
+            Configuration = new(material, color, 2),
+        };
+        var store = new RecordingSessionStore { ExistingSession = Session("color-session", part) };
+        await using var workflow = CreateWorkflow(store: store);
+
+        await workflow.InitializeAsync("color-session", default);
+
+        var restored = Assert.Single(workflow.Parts);
+        Assert.Equal(expected, restored.Configuration.Color);
+        Assert.Equal(expected, Assert.Single(store.LastSavedState!.Parts).Configuration.Color);
+        Assert.Equal(expected, restored.Quote!.Color);
+        Assert.Equal(material, restored.Configuration.MaterialKey);
+        Assert.Equal(2, restored.Configuration.Quantity);
+        Assert.Equal(bodies, restored.Geometry.BodyCount);
+        Assert.Equal(0, store.CreateCalls);
+    }
+
     private static InstantQuotationWorkflowCoordinator CreateWorkflow(
         ControlledUploadClient? client = null,
         RecordingSessionStore? store = null,

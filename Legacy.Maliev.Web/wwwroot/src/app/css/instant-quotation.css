@@ -108,7 +108,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 .instant-quote__field-error {
     display: block;
     margin-top: .35rem;
-    font-weight: 650;
+    font-weight: 600;
 }
 
 .instant-quote__header {
@@ -123,7 +123,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 .instant-quote .eyebrow {
     color: #c62828;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: .12em;
     text-transform: uppercase;
 }
@@ -155,14 +155,14 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     max-width: 100%;
     padding: 0 .5rem;
     font-size: 1.1rem;
-    font-weight: 700;
+    font-weight: 600;
     white-space: normal;
 }
 
 .instant-quote__workflow label {
     display: block;
     margin-top: 1rem;
-    font-weight: 650;
+    font-weight: 600;
 }
 
 .instant-quote__workflow input,
@@ -184,7 +184,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     border: 1px solid #b71c1c;
     border-radius: .5rem;
     color: #8e1111;
-    font-weight: 700;
+    font-weight: 600;
     text-align: center;
 }
 
@@ -210,7 +210,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     border-radius: .5rem;
     color: #8e1111;
     background: #fff;
-    font-weight: 700;
+    font-weight: 600;
     white-space: normal;
 }
 
@@ -305,7 +305,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 .instant-quote__workflow dd {
     margin: 0;
-    font-weight: 700;
+    font-weight: 600;
     text-align: end;
 }
 
@@ -448,7 +448,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 /* Below the split-pane desktop shell, keep names and actions in the page's
    scroll path instead of clipping them behind the horizontal parts rail. */
-@media (max-width: 61.999rem) {
+@media (max-width: 63.99875rem) {
     .instant-quote__workflow > [data-workflow-parts] {
         flex-wrap: wrap;
     }
@@ -467,7 +467,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 .instant-quote__workflow > [data-workflow-viewer] {
     position: relative;
-    height: 260px;
+    height: clamp(280px, 72vw, 340px);
     padding: 0;
     overflow: hidden;
     border-radius: 0;
@@ -625,7 +625,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     border-radius: 50%;
     color: #8a5b00;
     background: #fff4d6;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .instant-quote__summary-dock-heading,
@@ -676,7 +676,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     gap: .35rem;
     white-space: nowrap;
     font-size: .82rem;
-    font-weight: 650;
+    font-weight: 600;
 }
 
 .instant-quote__summary-dock:not([open]) [data-summary-hide],
@@ -763,7 +763,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     align-self: center;
 }
 
-@media (max-width: 36rem) {
+@media (max-width: 35.99875rem) {
     .instant-quote__workflow .instant-quote__configuration-footer {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -809,7 +809,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     border: 1px solid #0b57d0;
     border-radius: .5rem;
     color: #0b57d0;
-    font-weight: 700;
+    font-weight: 600;
     text-align: center;
     overflow-wrap: normal;
     white-space: nowrap;
@@ -820,7 +820,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     outline-offset: 3px;
 }
 
-@media (max-width: 36rem) {
+@media (max-width: 35.99875rem) {
     .instant-quote__configuration-actions button,
     .instant-quote__consultation-link {
         height: auto;
@@ -881,7 +881,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     color: #087d55;
     background: #e7f8ef;
     font-size: 1.8rem;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .instant-quote__submission-icon--warning {
@@ -961,7 +961,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     background: #eaf2ff;
     font-size: .75rem;
     font-variant-numeric: tabular-nums;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .instant-quote__workflow [data-workflow-build-preference] {
@@ -1015,7 +1015,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     min-height: 44px;
     color: #0b57d0;
     cursor: pointer;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .instant-quote__workflow [data-workflow-material-comparison] ul {
@@ -1067,14 +1067,14 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 /* The page itself scrolls below the fixed desktop shell; keep the tier list
    in that single scroll path instead of trapping touch and keyboard users. */
-@media (max-width: 61.999rem) {
+@media (max-width: 63.99875rem) {
     .instant-quote__bulk-pricing {
         max-height: none;
         overflow-y: visible;
     }
 }
 
-@media (min-width: 62rem) and (min-height: 62.5rem) {
+@media (min-width: 64rem) and (min-height: 62.5rem) {
     .instant-quote__bulk-pricing {
         max-height: clamp(11rem, calc(100dvh - 42rem), 24rem);
     }
@@ -1265,9 +1265,21 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     margin: .4rem var(--instant-quote-review-inset) var(--instant-quote-review-inset);
 }
 
-@media (max-width: 36rem) {
+@media (max-width: 35.99875rem) {
     .instant-quote__workflow [data-workflow-review-part] {
         --instant-quote-review-inset: .55rem;
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: .55rem;
+    }
+
+    .instant-quote__review-thumbnail {
+        width: 52px;
+        height: 52px;
+    }
+
+    .instant-quote__workflow .instant-quote__review-fields {
+        grid-template-columns: 1fr;
+        gap: .45rem;
     }
 }
 
@@ -1541,7 +1553,13 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 }
 
-@media (min-width: 62rem) {
+@media (min-width: 48rem) and (max-width: 63.99875rem) {
+    .instant-quote__workflow > [data-workflow-viewer] {
+        height: clamp(260px, 32vh, 420px);
+    }
+}
+
+@media (min-width: 64rem) {
     body.instant-quotation-shell {
         height: 100dvh;
         overflow: hidden;
@@ -1778,3 +1796,59 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 [data-material-selector] .material-card__heading { position: relative; min-height: 44px; align-items: center; padding-right: 2.75rem; }
 [data-material-selector] .material-card__heading strong { font-size: .8rem; overflow-wrap: anywhere; }
 [data-material-selector] .material-card__heading button { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 44px; min-width: 44px; height: 44px; margin: 0; padding: 0; }
+
+/* Empty-only decoration: the existing label remains the sole upload affordance. */
+.instant-quote__workflow .iq-empty-dropzone {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+        radial-gradient(130% 78% at 50% 112%, rgba(7, 93, 232, .11) 0%, transparent 64%),
+        linear-gradient(180deg, #fff 0%, #f8fbff 52%, #edf3fd 100%);
+}
+
+.instant-quote__workflow .iq-empty-scene {
+    display: grid;
+    place-items: center;
+    width: clamp(220px, 27vw, 340px);
+    height: clamp(170px, 21vw, 260px);
+    pointer-events: none;
+}
+
+.instant-quote__workflow .iq-empty-scene__hex,
+.instant-quote__workflow .iq-empty-scene__veil {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.instant-quote__workflow .iq-empty-scene__hex { z-index: -2; }
+.instant-quote__workflow .iq-empty-scene__veil {
+    z-index: -1;
+    background: radial-gradient(closest-side ellipse at 50% 50%,
+        #fff 0%, rgba(255, 255, 255, .86) 42%, transparent 78%);
+}
+
+.instant-quote__workflow .iq-empty-scene__cube,
+.instant-quote__workflow .iq-empty-scene__fallback {
+    grid-area: 1 / 1;
+    pointer-events: none;
+}
+
+.instant-quote__workflow .iq-empty-scene__cube {
+    display: block;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+}
+
+.instant-quote__workflow .iq-empty-scene[data-cube-ready="true"] .iq-empty-scene__cube { visibility: visible; }
+.instant-quote__workflow .iq-empty-scene[data-cube-ready="true"] .iq-empty-scene__fallback { visibility: hidden; }
+
+.instant-quote__workflow .iq-empty-dropzone span.iq-empty-scene__fallback {
+    font-size: 3rem;
+    font-weight: 400;
+    line-height: 1.5;
+}

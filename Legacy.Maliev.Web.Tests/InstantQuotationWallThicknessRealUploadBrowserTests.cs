@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -917,14 +918,39 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             await page.WaitForFunctionAsync(
                 "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
                 null, new PageWaitForFunctionOptions { Timeout = 90000 });
+            failureEvidence.Stage("Review");
             await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
-            await page.WaitForFunctionAsync(
-                """
-                count => {
-                    const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
-                    return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
-                }
-                """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    """
+                    count => {
+                        const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
+                        return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
+                    }
+                    """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            }
+            catch (Exception original)
+            {
+                await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                    expected => {
+                      const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
+                      const workflow = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
+                      const reviewParts = document.querySelectorAll('[data-workflow-review-part]').length;
+                      const pngReady = images.filter(image => image.getAttribute('src')?.startsWith('data:image/png')).length;
+                      return JSON.stringify({
+                        workflow:['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(workflow) ? workflow : 'unavailable',
+                        expectedThumbnails:Math.min(expected,32),
+                        reviewParts:Math.min(reviewParts,32),
+                        actualThumbnails:Math.min(images.length,32),
+                        pngReadyThumbnails:Math.min(pngReady,32),
+                        reviewCountsCapped:expected > 32 || reviewParts > 32 || images.length > 32,
+                        errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
+                      });
+                    }
+                    """, partCount), metadata => output.WriteLine("[pdf-review-readiness] " + metadata));
+                throw;
+            }
             var reviewNames = await page.Locator("[data-workflow-review-part] h4").AllInnerTextsAsync();
             Assert.Equal(paths.Select(Path.GetFileName).Order(StringComparer.Ordinal), reviewNames.Order(StringComparer.Ordinal));
             var button = page.Locator("#preliminary-quotation-button");
@@ -957,6 +983,197 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         finally
         {
             foreach (var path in paths) File.Delete(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    public async Task EmptyDecorationKeepsRealUploadControlReachableAndHonorsReducedMotion(string culture, bool reducedMotion)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 820, Height = 800 },
+            ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
+        });
+        await using var page = await context.NewPageAsync();
+        await page.GotoAsync(quoteUrl,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-empty-scene]')?.dataset.cubeReady === 'true' && document.querySelector('[data-empty-scene]')?.dataset.hexReady === 'true'",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var decoration = page.Locator("[data-empty-scene]");
+        Assert.Equal("true", await decoration.GetAttributeAsync("aria-hidden"));
+        Assert.Equal("none", await decoration.EvaluateAsync<string>("element => getComputedStyle(element).pointerEvents"));
+        Assert.Equal(2, await decoration.Locator("canvas[aria-hidden='true']").CountAsync());
+        Assert.Equal(reducedMotion ? "still" : "running", await decoration.GetAttributeAsync("data-motion"));
+        var label = page.Locator("label[for='instant-quote-files'].iq-empty-dropzone");
+        Assert.Contains(culture == "th" ? "วางไฟล์ 3D ของคุณที่นี่" : "Drop your 3D file here", await label.InnerTextAsync(), StringComparison.Ordinal);
+        await page.Locator("#instant-quote-files").FocusAsync();
+        Assert.True(await page.Locator("#instant-quote-files").EvaluateAsync<bool>("element => document.activeElement === element"));
+        Assert.True(await label.EvaluateAsync<bool>("element => { const r = element.getBoundingClientRect(); return element.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }"));
+        await using var emptyScene = await decoration.EvaluateHandleAsync("element => element");
+        var chooser = await page.RunAndWaitForFileChooserAsync(
+            () => label.ClickAsync(),
+            new PageRunAndWaitForFileChooserOptions { Timeout = 30_000 });
+        Assert.True(chooser.IsMultiple);
+        await chooser.SetFilesAsync(new FilePayload
+        {
+            Name = "empty-scene-box.stl",
+            MimeType = "model/stl",
+            Buffer = WallThicknessParityBrowserFixture.Box(5),
+        });
+        await page.WaitForFunctionAsync(
+            """
+            scene => {
+              const workflow = document.querySelector('.instant-quote__workflow');
+              return !scene.isConnected && scene.dataset.motion === 'disposed'
+                && workflow && workflow.dataset.workflowState !== 'empty'
+                && workflow.querySelector('[data-workflow-upload-item], [data-workflow-part]') !== null;
+            }
+            """,
+            emptyScene, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.True(await emptyScene.EvaluateAsync<bool>("element => !element.isConnected"));
+        Assert.Equal("disposed", await emptyScene.EvaluateAsync<string>("element => element.dataset.motion"));
+        Assert.Equal(0, await label.CountAsync());
+        Assert.True(await page.Locator("[data-workflow-upload-item], [data-workflow-part]").CountAsync() > 0);
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.Equal(1, await page.Locator("[data-workflow-parts] > [data-workflow-part]").CountAsync());
+        Assert.Equal(1, upload.StartedUploads);
+        Assert.Equal(1, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+        var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+        await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task NativeFileDropsUseTheSameInputPipelineAcrossEmptyAndConfiguredWorkflow(string culture)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 820, Height = 800 },
+        });
+        await using var page = await context.NewPageAsync();
+        await page.GotoAsync(quoteUrl,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const zone = document.querySelector('.instant-quote__workflow');
+              const input = document.querySelector('#instant-quote-files');
+              if (!zone || !input || input._blazorInputFileNextFileId === undefined
+                  || input.disabled || zone.getAttribute('aria-busy') === 'true') return false;
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([], 'workflow-drop-readiness.stl', { type: 'model/stl' }));
+              const probe = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer });
+              return !zone.dispatchEvent(probe) && probe.defaultPrevented;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var encoded = Convert.ToBase64String(WallThicknessParityBrowserFixture.Box(5));
+        for (var index = 0; index < 2; index++)
+        {
+            var selector = index == 0 ? "[data-workflow-empty-dropzone]" : "[data-workflow-configuration]";
+            var observed = await page.EvaluateAsync<JsonElement>(
+                """
+                args => {
+                  const zone = document.querySelector('.instant-quote__workflow');
+                  const input = document.querySelector('#instant-quote-files');
+                  const target = zone.querySelector(args.selector);
+                  if (!target || input.disabled) throw new Error('The expected upload target is not ready.');
+                  let changes = 0;
+                  const changed = () => { changes += 1; };
+                  input.addEventListener('change', changed);
+                  try {
+                    const text = new DataTransfer();
+                    text.setData('text/plain', 'not a model');
+                    const ignored = target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: text }));
+                    const bytes = Uint8Array.from(atob(args.encoded), character => character.charCodeAt(0));
+                    const transfer = new DataTransfer();
+                    transfer.items.add(new File([bytes], args.name, { type: 'model/stl' }));
+                    input.disabled = true;
+                    const refused = target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                    const refusedChanges = changes;
+                    input.disabled = false;
+                    const over = target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                    const accepted = target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                    return { ignored, refused, refusedChanges, over, accepted, changes, files: input.files.length, name: input.files[0]?.name };
+                  } finally {
+                    input.disabled = false;
+                    input.removeEventListener('change', changed);
+                  }
+                }
+                """,
+                new { selector, encoded, name = $"workflow-drop-{index}.stl" });
+            Assert.True(observed.GetProperty("ignored").GetBoolean());
+            Assert.False(observed.GetProperty("refused").GetBoolean());
+            Assert.Equal(0, observed.GetProperty("refusedChanges").GetInt32());
+            Assert.False(observed.GetProperty("over").GetBoolean());
+            Assert.False(observed.GetProperty("accepted").GetBoolean());
+            Assert.Equal(1, observed.GetProperty("changes").GetInt32());
+            Assert.Equal(1, observed.GetProperty("files").GetInt32());
+            Assert.Equal($"workflow-drop-{index}.stl", observed.GetProperty("name").GetString());
+            await page.WaitForFunctionAsync(
+                """
+                count => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === count
+                  && document.querySelector('[data-workflow-configuration]') !== null
+                  && !document.querySelector('#instant-quote-files').disabled
+                """,
+                index + 1, new PageWaitForFunctionOptions { Timeout = 30_000 });
+            Assert.Equal(index + 1, await page.Locator("[data-workflow-parts] > [data-workflow-part]").CountAsync());
+            Assert.Contains($"workflow-drop-{index}.stl",
+                await page.Locator("[data-workflow-parts]").InnerTextAsync(), StringComparison.Ordinal);
+            Assert.Equal(index + 1, upload.StartedUploads);
+            Assert.Equal(index + 1, upload.VerifiedUploads);
+            Assert.Equal(0, upload.ValidationRejectedUploads);
+            var partId = Guid.Parse((await page.Locator("[data-workflow-part]").Nth(index).GetAttributeAsync("data-part-id"))!);
+            await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
         }
     }
 
@@ -1056,6 +1273,282 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         return port;
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ColorEditingPreservesSourceDefaultsHexRestoreAndMultipartIsolation(string culture)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
+        });
+        await using var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+
+        // Two disconnected, individually closed shells: actual mesh analysis owns BodyCount.
+        var shell = WallThicknessParityBrowserFixture.Box(5);
+        var multipart = new byte[84 + (2 * (shell.Length - 84))];
+        Array.Copy(shell, multipart, shell.Length);
+        BitConverter.GetBytes(24u).CopyTo(multipart, 80);
+        Array.Copy(shell, 84, multipart, shell.Length, shell.Length - 84);
+        for (var triangle = 0; triangle < 12; triangle++)
+        {
+            for (var vertex = 0; vertex < 3; vertex++)
+            {
+                var xOffset = shell.Length + (triangle * 50) + 12 + (vertex * 12);
+                BitConverter.GetBytes(BitConverter.ToSingle(multipart, xOffset) + 40f).CopyTo(multipart, xOffset);
+            }
+        }
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "color-single.stl",
+            MimeType = "model/stl",
+            Buffer = shell,
+        });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 1 && !!document.querySelector('[data-workflow-price-tier]')",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var singleId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+        var singleColor = page.Locator($"#color-{singleId}");
+        await singleColor.SelectOptionAsync("White");
+        await MaterialCardBrowserActions.SelectAsync(page, "PETG");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal("Any", await singleColor.InputValueAsync());
+        var singleStrip = page.Locator($"[data-workflow-part][data-part-id='{singleId}']");
+        Assert.Contains("color-single.stl", await singleStrip.InnerTextAsync(), StringComparison.Ordinal);
+        var quantity = page.Locator($"#quantity-{singleId}");
+        await quantity.FillAsync("2");
+        await quantity.DispatchEventAsync("change");
+        await page.WaitForFunctionAsync(
+            """
+            id => {
+              const part = document.querySelector('[data-workflow-part][data-part-id="' + id + '"]');
+              const price = part?.querySelector('[data-workflow-summary-unit-price]')?.textContent?.trim();
+              return part?.querySelector('[data-workflow-summary-configuration]')?.textContent?.trim() === 'PETG 2×'
+                && price && price !== '—' && !document.querySelector('[data-pricing-loading-status]');
+            }
+            """,
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var unitPriceLabel = culture == "th" ? "ราคาต่อชิ้น" : "Unit price";
+        var configuredUnitPrice = page.Locator("[data-workflow-part-price] > div")
+            .Filter(new LocatorFilterOptions { HasText = unitPriceLabel }).Locator("dd");
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        Assert.Equal(0, await page.Locator("[data-workflow-material-picker] input[type='color']").CountAsync());
+        await MaterialCardBrowserActions.SelectAsync(page, "PLA");
+        var custom = page.Locator("[data-workflow-material-picker] input[type='color']");
+        await custom.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+        await custom.EvaluateAsync(
+            "(input, color) => { input.value = color; input.dispatchEvent(new Event('change', { bubbles: true })); }",
+            "#123abc");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#123abc' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+        var saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#123abc", Assert.Single(saved.Parts).Configuration.Color.ToLowerInvariant());
+
+        Assert.Equal("#123abc", (await singleColor.InputValueAsync()).ToLowerInvariant());
+        Assert.Equal(1, await custom.CountAsync());
+        Assert.Equal(1, upload.VerifiedUploads);
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "color-multipart.stl",
+            MimeType = "model/stl",
+            Buffer = multipart,
+        });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 2 && !document.querySelector('#instant-quote-files').disabled",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        var multi = Assert.Single(saved.Parts, part => part.PartId != singleId);
+        Assert.Equal(2, multi.Geometry.BodyCount);
+        Assert.Equal("Any", multi.Configuration.Color);
+        var multiId = multi.PartId;
+        await page.Locator($"[data-workflow-part][data-part-id='{multiId}'] button[aria-pressed]").ClickAsync();
+        var multiColor = page.Locator($"#color-{multiId}");
+        await multiColor.WaitForAsync();
+        Assert.True(await multiColor.IsDisabledAsync());
+        Assert.Equal("Any", await multiColor.InputValueAsync());
+        Assert.Equal(0, await page.Locator("[data-workflow-material-picker] input[type='color']").CountAsync());
+        await MaterialCardBrowserActions.SelectAsync(page, "M68");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.disabled && document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
+            multiId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("M68", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.MaterialKey);
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal("#123abc", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(shell)).ToLowerInvariant(),
+            Assert.Single(saved.Parts, part => part.PartId == singleId).Geometry.Sha256);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(multipart)).ToLowerInvariant(), multi.Geometry.Sha256);
+        var multiStrip = page.Locator($"[data-workflow-part][data-part-id='{multiId}']");
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal("M68 1×", (await multiStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const images = [...document.querySelectorAll('[data-workflow-thumbnail]')];
+              return images.length === 2 && images.every(image => image.complete && image.naturalWidth > 0
+                && image.src.startsWith('data:image/png'));
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var singleSnapshot = singleStrip.Locator("[data-workflow-thumbnail]");
+        var multiSnapshot = multiStrip.Locator("[data-workflow-thumbnail]");
+        Assert.True(await singleSnapshot.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+        Assert.True(await multiSnapshot.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+        Assert.NotEqual(await singleSnapshot.GetAttributeAsync("src"), await multiSnapshot.GetAttributeAsync("src"));
+        Assert.DoesNotContain("data-review-thumbnail", await singleStrip.InnerHTMLAsync(), StringComparison.Ordinal);
+        var singleStripPrice = (await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync()).Trim();
+        var multiStripPrice = (await multiStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync()).Trim();
+        Assert.NotEqual("—", singleStripPrice);
+        Assert.NotEqual("—", multiStripPrice);
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(), multiStripPrice);
+        var reviewButton = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        await reviewButton.ClickAsync(new LocatorClickOptions { Timeout = 60_000 });
+        var singleReview = page.Locator($"[data-review-part-id='{singleId}'][data-workflow-review-part]");
+        var multiReview = page.Locator($"[data-review-part-id='{multiId}'][data-workflow-review-part]");
+        await singleReview.WaitForAsync();
+        Assert.Equal(singleStripPrice, (await singleReview.Locator(".instant-quote__review-prices > div:first-child dd").InnerTextAsync()).Trim());
+        Assert.Equal(multiStripPrice, (await multiReview.Locator(".instant-quote__review-prices > div:first-child dd").InnerTextAsync()).Trim());
+        Assert.Equal("#123abc", (await singleReview.Locator($"#review-color-{singleId}").InputValueAsync()).ToLowerInvariant());
+        Assert.True(await multiReview.Locator($"#review-color-{multiId}").IsDisabledAsync());
+        Assert.Equal("Any", await multiReview.Locator($"#review-color-{multiId}").InputValueAsync());
+        Assert.Equal(0, await multiReview.Locator("input[type='color']").CountAsync());
+        await singleReview.Locator("[data-review-select-part]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('[data-workflow-review-part][data-review-part-id=\"' + id + '\"]')?.dataset.selected === 'true'",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await page.WaitForFunctionAsync(
+            "() => [...document.querySelectorAll('[data-review-thumbnail]')].length === 2 && [...document.querySelectorAll('[data-review-thumbnail]')].every(image => image.complete && image.naturalWidth > 0 && image.src.startsWith('data:image/png'))",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var beforeSingle = await singleReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src");
+        var beforeMulti = await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src");
+        // Two native changes may overlap server repricing; the visible result must use the final accepted configuration.
+        await singleReview.Locator("input[type='color']").EvaluateAsync(
+            """
+            input => {
+              for (const color of ['#1122ee', '#ee1122']) {
+                input.value = color;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            """
+            args => {
+              const single = document.querySelector('[data-workflow-review-part][data-review-part-id="' + args.id + '"]');
+              return single?.querySelector('select[id^="review-color-"]')?.value?.toLowerCase() === '#ee1122'
+                && single.querySelector('[data-review-thumbnail]')?.src !== args.before
+                && !document.querySelector('[data-pricing-loading-status]');
+            }
+            """,
+            new { id = singleId.ToString(), before = beforeSingle },
+            new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await page.WaitForFunctionAsync(
+            """
+            async id => {
+              const article = document.querySelector('[data-workflow-review-part][data-review-part-id="' + id + '"]');
+              const thumbnail = article?.querySelector('[data-review-thumbnail]');
+              if (!thumbnail?.src.startsWith('data:image/png') || document.querySelector('[data-pricing-loading-status]')) return false;
+              const image = new Image();
+              image.src = thumbnail.src;
+              await image.decode();
+              const canvas = document.createElement('canvas');
+              canvas.width = image.naturalWidth;
+              canvas.height = image.naturalHeight;
+              const context = canvas.getContext('2d');
+              context.drawImage(image, 0, 0);
+              const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+              let red = 0;
+              let blue = 0;
+              for (let index = 0; index < pixels.length; index += 4) {
+                if (pixels[index] > pixels[index + 2] * 1.5 && pixels[index] > pixels[index + 1] * 1.5) red++;
+                if (pixels[index + 2] > pixels[index] * 1.5 && pixels[index + 2] > pixels[index + 1] * 1.5) blue++;
+              }
+              return red > 20 && red > blue;
+            }
+            """,
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.Equal(beforeMulti, await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src"));
+        Assert.Equal("true", await singleReview.GetAttributeAsync("data-selected"));
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#ee1122", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal(2, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+
+        // Browser model bytes live only until reload. Verify real PNG/pixel behavior above,
+        // then verify protected configuration restoration without inventing durable mesh fetch.
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 2 && !document.querySelector('[data-pricing-loading-status]')",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await singleStrip.Locator("button[aria-pressed]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#ee1122' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal("#ee1122", (await singleColor.InputValueAsync()).ToLowerInvariant());
+        Assert.Equal("2", await page.Locator($"#quantity-{singleId}").InputValueAsync());
+        Assert.Equal(1, await custom.CountAsync());
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        await multiStrip.Locator("button[aria-pressed]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.disabled && document.querySelector('#color-' + id)?.value === 'Any'",
+            multiId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.True(await multiColor.IsDisabledAsync());
+        Assert.Equal("Any", await multiColor.InputValueAsync());
+        Assert.Equal("1", await page.Locator($"#quantity-{multiId}").InputValueAsync());
+        Assert.Equal(0, await custom.CountAsync());
+        Assert.Equal("M68 1×", (await multiStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await multiStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#ee1122", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal(2, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+        Assert.Empty(pageErrors);
     }
 
     private sealed class RealUploadTestingWebApplicationFactory(

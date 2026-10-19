@@ -38,11 +38,12 @@
             @if (State is InstantQuotationWorkflowState.Empty)
             {
                 <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone>
-                    <span class="iq-empty-dropzone__icon" aria-hidden="true">📦</span>
+                    <InstantQuotationEmptyScene />
                     <strong>@Localizer["Drop your 3D file here"]</strong>
                     <span>
                         @Localizer["or click to browse"] · STL, OBJ, 3MF, STEP, IGES, GLB, GLTF
                     </span>
+                    <span data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</span>
                 </label>
             }
         </section>
@@ -108,6 +109,7 @@
                 <span aria-hidden="true">＋</span>
                 <strong>@Localizer["Add file"]</strong>
                 <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
+                <small data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</small>
             </label>
             @foreach (var upload in Uploads.Where(upload => Parts.All(part => part.PreviewCorrelationId != upload.LocalId)))
             {
@@ -236,12 +238,19 @@
                     <select id="color-@part.PartId"
                             name="color"
                             value="@part.Configuration.Color"
+                            disabled="@(part.Geometry.BodyCount > 1)"
                             @onchange="args => ChangeColorAsync(part.PartId, args)">
-                        @foreach (var color in GetColors(part.Configuration.MaterialKey))
+                        @foreach (var color in GetPartColors(part))
                         {
                             <option value="@color">@Localizer[color]</option>
                         }
                     </select>
+                    @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
+                    {
+                        <input type="color" aria-label="@Localizer["Color"]"
+                               value="@(part.Configuration.Color.StartsWith('#') ? part.Configuration.Color : "#000000")"
+                               @onchange="args => ChangeColorAsync(part.PartId, args)" />
+                    }
                     <div class="instant-quote__quantity-heading">
                         <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
                         @if (InstantQuotationBulkSavings.Calculate(part, HasUnacceptedConfiguration(part)) is { } savings)
@@ -497,7 +506,11 @@
              @ref="customerDetailsSection"
              tabindex="-1"
              aria-labelledby="instant-quote-customer-heading">
-            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview" />
+            <InstantQuotationCustomerForm Model="@CustomerModel" Quote="@OrderQuote" OnBack="ReturnToReview"
+                                          HasFiles="@(workflow?.Uploads.Count > 0)"
+                                          FileUploadCompleted="@(workflow is not null && workflow.Uploads.Count > 0
+                                              && workflow.Uploads.All(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)
+                                              && Parts.Count == workflow.Uploads.Count)" />
         </div>
     }
 

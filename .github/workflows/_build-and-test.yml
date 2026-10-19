@@ -41,6 +41,25 @@ jobs:
       - name: Verify offline Search Console cohort reporter
         shell: pwsh
         run: ./tests/SearchConsoleCohortReport.Tests.ps1
+      - name: Set up original Career oracle runtime
+        timeout-minutes: 5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+      - name: Build original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet build acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --disable-build-servers -warnaserror
+          -p:UseSharedCompilation=false -nodeReuse:false
+      - name: Verify original Career materialization oracle
+        timeout-minutes: 5
+        run: >-
+          dotnet test acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj
+          --configuration Release --no-build --no-restore --disable-build-servers
+          -p:UseSharedCompilation=false -nodeReuse:false
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --logger trx --results-directory ./career-original-materialization-test-results
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -51,7 +70,14 @@ jobs:
         working-directory: Legacy.Maliev.Web
         run: npm run ci
       - name: Verify committed browser assets
-        run: git diff --exit-code -- Legacy.Maliev.Web/wwwroot/dist
+        run: |
+          set -euo pipefail
+          git diff --exit-code HEAD -- Legacy.Maliev.Web/wwwroot/dist Legacy.Maliev.Web/wwwroot/src/vendor/three
+          untracked="$(git ls-files --others -- Legacy.Maliev.Web/wwwroot/dist Legacy.Maliev.Web/wwwroot/src/vendor/three)"
+          if [ -n "$untracked" ]; then
+            echo 'Unexpected untracked generated public output.' >&2
+            exit 1
+          fi
       - name: Verify frozen source-parity manifest
         shell: pwsh
         run: ./scripts/verify-complete-source-history-parity.ps1 -ManifestOnly
@@ -69,6 +95,25 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify migrated Home Knowledge sitemap copy and asset consumers before browser validation
+        timeout-minutes: 10
+        run: |
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter "FullyQualifiedName~PublicCrawlerInventoryAcceptanceTests|FullyQualifiedName~SitemapResponseCachingHttpTests|FullyQualifiedName~KnowledgeGuidelinesStaticSsrRouteTests|FullyQualifiedName~KnowledgeCncMachiningStaticSsrRouteTests|FullyQualifiedName~PublicCopyParityTests|FullyQualifiedName~AssetDeliveryContractTests|FullyQualifiedName~PublicWebpImageContractTests|FullyQualifiedName~AboutPageContractTests|FullyQualifiedName~WebSurfaceTests.HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity|FullyQualifiedName~WebSurfaceTests.AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration|FullyQualifiedName~WebSurfaceTests.Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates" \
+            --logger trx --results-directory ./migration-consumer-test-results
+          python3 -B scripts/verify-focused-web-trx.py \
+            --directory migration-consumer-test-results --suite migration-consumers \
+            --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
+      - name: Verify controlled currency failure boundaries and stage diagnostics
+        timeout-minutes: 5
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~AdditiveFxHandlerContractTests"
+          --logger trx --results-directory ./fx-handler-test-results
       - name: Verify exact owned-resource refusal and cleanup controls
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -115,21 +160,35 @@ jobs:
           pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Verify focused TRX rejection controls
         run: python3 -B tests/FocusedWebTrxGate.Tests.py
+      - name: Verify immutable company asset custody and rejection controls
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p company-asset-custody-results
+          python3 -B tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee company-asset-custody-results/normal.log
+          python3 -B -O tests/CompanyReleaseAssetValidator.Tests.py 2>&1 | tee company-asset-custody-results/optimized.log
+          python3 -B scripts/verify_company_release_assets.py | tee company-asset-custody-results/custody.json
+          python3 -B tests/KnowledgeAssetIntake.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-intake-normal.log
+          python3 -B -O tests/KnowledgeAssetIntake.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-intake-optimized.log
+          python3 -B tests/KnowledgeCurrentAsset.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-current-normal.log
+          python3 -B -O tests/KnowledgeCurrentAsset.Tests.py 2>&1 | tee company-asset-custody-results/knowledge-current-optimized.log
+          python3 -B scripts/verify_knowledge_assets.py | tee company-asset-custody-results/knowledge-custody.json
       - name: Verify bounded browser failure evidence controls
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests"
+          --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests|FullyQualifiedName~MaterialInitialRequestStagesTests"
           --logger trx --results-directory ./browser-failure-evidence-test-results
-      - name: Verify all ten sidebar culture and viewport browser cases
+      - name: Verify all twelve sidebar culture and viewport browser cases
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~InstantQuotationSidebarLayoutBrowserTests"
           --logger trx --results-directory ./sidebar-focused-test-results
-      - name: Require exact ten passing sidebar browser rows
+      - name: Require exact twelve passing sidebar browser rows
         run: >-
           python3 -B scripts/verify-focused-web-trx.py
           --directory ./sidebar-focused-test-results --suite sidebar
@@ -183,15 +242,8 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~KnowledgeSidebarRouteTests|FullyQualifiedName~KnowledgeSidebarBrowserTests"
+          --filter "FullyQualifiedName~KnowledgeSidebarRouteTests|FullyQualifiedName~KnowledgeSidebarBrowserTests|FullyQualifiedName~KnowledgeGuideBundleRouteTests|FullyQualifiedName~KnowledgeCenterGuidesBrowserTests|FullyQualifiedName~KnowledgeSearchBrowserTests|FullyQualifiedName~KnowledgeReadingLayoutBrowserTests|FullyQualifiedName~KnowledgeGroupedNavigationBrowserTests|FullyQualifiedName~KnowledgeVisualAssetDeliveryTests|FullyQualifiedName~KnowledgeLibrarySourceContractTests"
           --logger trx --results-directory ./knowledge-navigation-test-results
-      - name: Verify localized ordered Home process across active and retained renderers
-        run: >-
-          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
-          --configuration Release --no-build --no-restore
-          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~HomeStaticSsrRouteTests"
-          --logger trx --results-directory ./home-process-test-results
       - name: Verify historical service gallery framing and actual mobile composition
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -237,6 +289,38 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~StartupDataProtectionMigrationTests|FullyQualifiedName~RecaptchaConfigurationStartupTests|FullyQualifiedName~RecaptchaEnterpriseVerifierTests|FullyQualifiedName~AppSettingsCredentialBoundaryTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~HealthProcessIdentityContractTests|FullyQualifiedName~CountrySourceFailureObservationTests|FullyQualifiedName~PrivateRequestObservationConsumerTests|FullyQualifiedName~LegacyServiceDefaultsIdentityContractTests|FullyQualifiedName~SharedDiagnosticsContractTests|FullyQualifiedName~ErrorIncidentCorrelationTests"
           --logger trx --results-directory ./startup-security-test-results
+      - name: Verify localized ordered Home process across active and retained renderers
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~HomeStaticSsrRouteTests|FullyQualifiedName~HomeStorySsrRouteTests|FullyQualifiedName~HomeStoryBrowserTests"
+          --logger trx --results-directory ./home-process-test-results
+      - name: Verify localized About presentation and actual route-scoped enhancements
+        timeout-minutes: 10
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~AboutPageContractTests|FullyQualifiedName~AboutStaticSsrRouteTests|FullyQualifiedName~AboutStoryBrowserTests|FullyQualifiedName~RouteScopedAssetRenderingTests|FullyQualifiedName~SharedFrontendBundleContractTests"
+          --logger trx --results-directory ./about-presentation-test-results
+      - name: Verify complete original Career consumer contracts
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~CareerIndexStaticSsrRouteTests|FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerDetailStaticSsrRouteTests|FullyQualifiedName~CareerSearchKestrelContractTests"
+          --logger trx --results-directory ./career-consumer-test-results
+      - name: Preserve successful Career focus and original oracle before the full suite
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: career-focused-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
+          retention-days: 7
+          if-no-files-found: error
       - name: Verify localized account posts and rendered service SEO contracts
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -401,6 +485,7 @@ jobs:
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
+            migration-consumer-test-results/**/*.trx
             ticket-test-results/**/*.trx
             cnc-resource-test-results/**/*.trx
             quotation-conversion-test-results/**/*.trx
@@ -412,15 +497,20 @@ jobs:
             quotation-response-test-results/**/*.trx
             knowledge-navigation-test-results/**/*.trx
             home-process-test-results/**/*.trx
+            about-presentation-test-results/**/*.trx
+            company-asset-custody-results/**
             service-gallery-test-results/**/*.trx
             authenticated-profile-test-results/**/*.trx
             material-identity-test-results/**/*.trx
             material-progress-test-results/**/*.trx
+            fx-handler-test-results/**/*.trx
             material-card-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.png
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.json
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-diagnostics/*.json
             signed-link-test-results/**/*.trx
+            career-original-materialization-test-results/**/*.trx
+            career-consumer-test-results/**/*.trx
             startup-security-test-results/**/*.trx
             startup-image-acquisition/dockerhub-quota.json
             scanning-comparison-test-results/**/*.trx
@@ -444,6 +534,7 @@ jobs:
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.json
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.png
             Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
+            Legacy.Maliev.Web.Tests/TestResults/knowledge-center-guides/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.json
             tests/web-fx-generated-inclusive.runsettings
