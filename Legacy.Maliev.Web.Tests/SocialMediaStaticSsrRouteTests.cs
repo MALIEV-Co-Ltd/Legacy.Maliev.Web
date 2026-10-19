@@ -41,6 +41,22 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.Contains("\"SocialMedia\": true", appsettings, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(SocialMediaContent)\"", fallback, StringComparison.Ordinal);
+
+        foreach (var layoutPath in new[]
+        {
+            Path.Combine(web, "Pages", "Shared", "_Layout.cshtml"),
+            Path.Combine(web, "Pages", "Shared", "_InstantQuotationLayout.cshtml"),
+            Path.Combine(web, "Areas", "Member", "Pages", "Shared", "_LayoutMember.cshtml"),
+            Path.Combine(web, "Areas", "Knowledges", "Pages", "Shared", "_LayoutKnowledges.cshtml")
+        })
+        {
+            var layout = File.ReadAllText(layoutPath);
+            Assert.DoesNotContain("_AccouncementPartial", layout, StringComparison.Ordinal);
+            Assert.DoesNotContain("ServiceNotices", layout, StringComparison.Ordinal);
+        }
+        Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_AccouncementPartial.cshtml")));
+        Assert.False(File.Exists(Path.Combine(web, "tests", "VerifyLineOaNavToggle.ps1")));
+        Assert.False(File.Exists(Path.Combine(web, "tests", "VerifyLineOaRecoveryBanner.ps1")));
     }
 
     [Theory]
@@ -77,6 +93,18 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         {
             Assert.Contains($"href=\"{destination}\" target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         }
+
+        var lineCard = Assert.Single(Regex.Matches(
+            source,
+            """<a class="maliev-panel social-link-card" href="https://line\.me/ti/p/@maliev"[^>]*>[\s\S]*?</a>""",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("<strong>LINE</strong>", lineCard.Value, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "<span>แชตกับทีมงานผ่าน LINE Official Account</span>"
+            : "<span>Chat with our team through LINE Official Account</span>", lineCard.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("maliev-service-notice", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("check the site notice", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ช่องทางข้อความ โปรดตรวจสอบประกาศบนเว็บไซต์สำหรับสถานะล่าสุด", source, StringComparison.Ordinal);
 
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
