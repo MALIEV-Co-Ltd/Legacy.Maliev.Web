@@ -101,7 +101,8 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
                 MimeType = string.Empty,
                 Buffer = Encoding.ASCII.GetBytes("ISO-10303-21; END-ISO-10303-21;"),
             });
-            Assert.Equal(string.Empty, await page.Locator("#Files")
+            // Playwright infers binary for an empty FilePayload MIME type and an unknown extension.
+            Assert.Equal("application/octet-stream", await page.Locator("#Files")
                 .EvaluateAsync<string>("input => input.files[0].type"));
         }
 
@@ -128,6 +129,7 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         if (includesFile)
         {
             Assert.Contains("multipart/form-data", request.Headers["content-type"], StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Content-Type: application/octet-stream", posted, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("cnc-bracket.step", posted, StringComparison.Ordinal);
             Assert.Contains("CNC machining; aluminium 6061; quantity 2; drawing attached.", posted, StringComparison.Ordinal);
         }
