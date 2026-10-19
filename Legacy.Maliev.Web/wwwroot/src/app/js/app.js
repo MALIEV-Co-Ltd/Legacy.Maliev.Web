@@ -75,6 +75,11 @@ function initializeApplication() {
                 return;
             }
 
+            if (!ValidateFormForSubmission(form)) {
+                event.preventDefault();
+                return;
+            }
+
             if (form.dataset.recaptchaVerified === 'true') {
                 if (form.dataset.uploadAnalytics === 'true'
                     && !uploadStartEmitted
@@ -89,20 +94,18 @@ function initializeApplication() {
                         file_count: uploadFiles.files.length
                     });
                     event.preventDefault();
-                    window.setTimeout(function () { form.submit(); }, 150);
+                    window.setTimeout(function () {
+                        if (!ValidateFormForSubmission(form)) {
+                            resetAfterRecaptchaFailure();
+                            return;
+                        }
+                        form.submit();
+                    }, 150);
                 }
                 return;
             }
 
             event.preventDefault();
-            if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
-                if (typeof form.reportValidity === 'function') {
-                    form.reportValidity();
-                }
-
-                return;
-            }
-
             if (!window.grecaptcha || !window.grecaptcha.enterprise
                 || typeof window.grecaptcha.enterprise.ready !== 'function'
                 || typeof window.grecaptcha.enterprise.execute !== 'function') {
@@ -126,6 +129,11 @@ function initializeApplication() {
                         form.dataset.recaptchaSiteKey,
                         { action: form.dataset.recaptchaAction }).then(function (token) {
                             if (!token) {
+                                resetAfterRecaptchaFailure();
+                                return;
+                            }
+
+                            if (!ValidateFormForSubmission(form)) {
                                 resetAfterRecaptchaFailure();
                                 return;
                             }
@@ -204,12 +212,34 @@ if (document.readyState === 'loading') {
     initializeApplication();
 }
 
-// Prevents reCAPTCHA callbacks from bypassing the normal in-flight button state
-// when they invoke the browser's native form.submit() method.
+function ValidateFormForSubmission(form) {
+    var hasJqueryValidation = typeof jQuery === 'function'
+        && jQuery.fn
+        && typeof jQuery.fn.valid === 'function';
+    if (hasJqueryValidation && !jQuery(form).valid()) {
+        return false;
+    }
+
+    var hasNativeValidation = typeof form.checkValidity === 'function';
+    if (hasNativeValidation && !form.checkValidity()) {
+        if (typeof form.reportValidity === 'function') {
+            form.reportValidity();
+        }
+
+        return false;
+    }
+
+    return Boolean(hasJqueryValidation || hasNativeValidation);
+}
+
+// reCAPTCHA callbacks must revalidate before locking and invoking native form.submit().
 function SubmitFormOnce(formId, buttonId, submittingText) {
     var form = document.getElementById(formId);
     var submitButton = document.getElementById(buttonId);
     if (!form || !submitButton || form.dataset.submitting === 'true') {
+        return false;
+    }
+    if (!ValidateFormForSubmission(form)) {
         return false;
     }
 
@@ -268,11 +298,7 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
             return;
         }
 
-        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
-            if (typeof form.reportValidity === 'function') {
-                form.reportValidity();
-            }
-
+        if (!ValidateFormForSubmission(form)) {
             return;
         }
 
@@ -303,7 +329,9 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
                         tokenInput.value = token;
                         delete form.dataset.recaptchaPending;
                         var submit = function () {
-                            SubmitFormOnce(formId, buttonId, submittingText);
+                            if (!SubmitFormOnce(formId, buttonId, submittingText)) {
+                                showError();
+                            }
                         };
                         if (form.dataset.uploadAnalytics === 'true'
                             && !uploadStartEmitted
