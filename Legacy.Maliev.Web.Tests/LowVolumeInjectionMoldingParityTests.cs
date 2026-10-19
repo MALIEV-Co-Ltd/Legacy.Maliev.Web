@@ -30,6 +30,8 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
         Assert.Contains("id=\"injection-volume-title\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"injection-faq\"", source, StringComparison.Ordinal);
         Assert.Contains("Lower tooling cost while you validate the part", source, StringComparison.Ordinal);
+        Assert.Contains("2,500 Baht", source, StringComparison.Ordinal);
+        Assert.Contains("100,000 Baht", source, StringComparison.Ordinal);
         Assert.Contains("Use the service for up to 1,000 parts; own the machine for larger runs", source, StringComparison.Ordinal);
         Assert.Contains("Manufacturer guides cite melt settings around 205–220 °C", source, StringComparison.Ordinal);
         Assert.Contains("hazardous formaldehyde-containing fumes", source, StringComparison.Ordinal);

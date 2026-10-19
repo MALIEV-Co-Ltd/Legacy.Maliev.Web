@@ -917,14 +917,39 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             await page.WaitForFunctionAsync(
                 "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
                 null, new PageWaitForFunctionOptions { Timeout = 90000 });
+            failureEvidence.Stage("Review");
             await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
-            await page.WaitForFunctionAsync(
-                """
-                count => {
-                    const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
-                    return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
-                }
-                """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    """
+                    count => {
+                        const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
+                        return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
+                    }
+                    """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+            }
+            catch (Exception original)
+            {
+                await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                    expected => {
+                      const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
+                      const workflow = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
+                      const reviewParts = document.querySelectorAll('[data-workflow-review-part]').length;
+                      const pngReady = images.filter(image => image.getAttribute('src')?.startsWith('data:image/png')).length;
+                      return JSON.stringify({
+                        workflow:['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(workflow) ? workflow : 'unavailable',
+                        expectedThumbnails:Math.min(expected,32),
+                        reviewParts:Math.min(reviewParts,32),
+                        actualThumbnails:Math.min(images.length,32),
+                        pngReadyThumbnails:Math.min(pngReady,32),
+                        reviewCountsCapped:expected > 32 || reviewParts > 32 || images.length > 32,
+                        errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
+                      });
+                    }
+                    """, partCount), metadata => output.WriteLine("[pdf-review-readiness] " + metadata));
+                throw;
+            }
             var reviewNames = await page.Locator("[data-workflow-review-part] h4").AllInnerTextsAsync();
             Assert.Equal(paths.Select(Path.GetFileName).Order(StringComparer.Ordinal), reviewNames.Order(StringComparer.Ordinal));
             var button = page.Locator("#preliminary-quotation-button");

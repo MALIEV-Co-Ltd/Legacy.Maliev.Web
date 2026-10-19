@@ -98,6 +98,178 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
     }
 
     [Theory]
+    [InlineData("en", 375, ColorScheme.Light)]
+    [InlineData("th", 1280, ColorScheme.Dark)]
+    public async Task SameSelectionRepricePreservesManualCardScrollAndVisibleSelection(string culture, int width, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
+        var scroller = fixture.Page.Locator("[data-material-card-scroll]");
+        var selected = scroller.Locator("[data-material-key='M68']");
+        const string geometry = """
+            (node, position) => {
+                const card = node.querySelector('[data-material-key="M68"]');
+                if (position) {
+                    const cardTop = card.getBoundingClientRect().top - node.getBoundingClientRect().top;
+                    node.scrollTop += cardTop - 16;
+                }
+                const list = node.getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                const heading = card.previousElementSibling;
+                const category = heading?.matches('[data-material-category]') ? heading.getBoundingClientRect() : null;
+                return [node.scrollTop, node.scrollHeight, node.clientHeight,
+                    list.top, list.bottom, bounds.top, bounds.bottom,
+                    category?.top ?? -1, category?.bottom ?? -1,
+                    node.ownerDocument.defaultView.scrollY,
+                    node.ownerDocument.activeElement === node.ownerDocument.querySelector('input[name="quantity"]') ? 1 : 0,
+                    card.getAttribute('aria-checked') === 'true' ? 1 : 0,
+                    node.ownerDocument.defaultView.performance.now()];
+            }
+            """;
+        var original = await scroller.EvaluateAsync<double[]>(geometry, true);
+        await fixture.Page.WaitForFunctionAsync("""
+            () => {
+                const node = document.querySelector('[data-material-card-scroll]');
+                const card = node.querySelector('[data-material-key="M68"]');
+                const list = node.getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                return bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1;
+            }
+            """);
+        var gate = fixture.Control.Arm(2, InstantQuotationMaterialPricingStatus.Pending);
+        try
+        {
+            await fixture.ChangeQuantityAsync(2);
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await Assertions.Expect(selected.Locator("[data-material-card-price]"))
+                .ToHaveAttributeAsync("data-price-status", "pending");
+            var during = await scroller.EvaluateAsync<double[]>(geometry, false);
+            AssertManualCardScrollPreserved(original, during,
+                "Repricing may minimally repair a growing card but must not jump back to its category heading.");
+            await AssertSelectedCardVisibleAsync(scroller);
+        }
+        finally { gate.Release.TrySetResult(); }
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        var after = await scroller.EvaluateAsync<double[]>(geometry, false);
+        AssertManualCardScrollPreserved(original, after,
+            "The final price must not jump a deliberately positioned card back to its heading.");
+        await AssertSelectedCardVisibleAsync(scroller);
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+    }
+
+    [Theory]
+    [InlineData("en", 375, ColorScheme.Light)]
+    [InlineData("th", 1280, ColorScheme.Dark)]
+    public async Task NewSelectionRevealsCategoryHeadingAfterTheRenderedLayout(string culture, int width, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
+        var scroller = fixture.Page.Locator("[data-material-card-scroll]");
+        var tough = scroller.Locator("[data-material-key='K']");
+        await tough.ClickAsync();
+        await Assertions.Expect(tough).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        var standard = scroller.Locator("[data-material-key='M68']");
+        await scroller.EvaluateAsync("""
+            node => {
+                const card = node.querySelector('[data-material-key="M68"]');
+                const heading = card.previousElementSibling.getBoundingClientRect();
+                node.scrollTop += heading.bottom - node.getBoundingClientRect().top + 2;
+            }
+            """);
+        var headingInitiallyVisible = await standard.EvaluateAsync<bool>("""
+            card => {
+                const list = card.closest('[data-material-card-scroll]').getBoundingClientRect();
+                const heading = card.previousElementSibling.getBoundingClientRect();
+                return heading.top >= list.top - 1 && heading.bottom <= list.bottom + 1;
+            }
+            """);
+        Assert.False(headingInitiallyVisible, "The new-selection reveal must do real work.");
+        await standard.EvaluateAsync("element => element.click()"); // Avoid Playwright auto-scrolling the card.
+        await Assertions.Expect(standard).ToHaveAttributeAsync("aria-checked", "true");
+        await fixture.Page.WaitForFunctionAsync("""
+            () => {
+                const node = document.querySelector('[data-material-card-scroll]');
+                const card = node.querySelector('[data-material-key="M68"]');
+                const heading = card.previousElementSibling;
+                const list = node.getBoundingClientRect();
+                const category = heading?.getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                return heading?.matches('[data-material-category]')
+                    && category.top >= list.top - 1 && category.bottom <= list.bottom + 1
+                    && bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1;
+            }
+            """);
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+    }
+
+    [Fact]
+    public void ManualScrollGeometry_RebasesObservedShrinkButRejectsHeadingJumpClippingAndSelectionLoss()
+    {
+        double[] original = [1507, 1961, 384, 887.328125, 1271.328125, 903.703125, 997.0625,
+            878.90625, 895.703125, 0, 0, 1, 2684];
+        double[] current = [1329, 1730, 384, -7.671875, 376.328125, 9.28125, 90.046875,
+            -15.515625, 1.28125, 0, 0, 1, 2741.9];
+        Assert.True(current[1] - current[2] < original[0] - 1,
+            "The original absolute-scroll assertion is impossible after this observed content shrink.");
+        AssertManualCardScrollPreserved(original, current, "Observed anchored layout shrink");
+        AssertManualCardScrollPreserved(original, original, "Unchanged layout");
+
+        var headingReveal = (double[])current.Clone();
+        headingReveal[0] -= 9;
+        foreach (var index in new[] { 5, 6, 7, 8 }) headingReveal[index] += 9;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, headingReveal, "True heading reveal"));
+
+        var downwardJump = (double[])original.Clone();
+        downwardJump[0] -= 1.5;
+        foreach (var index in new[] { 5, 6, 7, 8 }) downwardJump[index] += 1.5;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, downwardJump, "Downward jump exceeds the unchanged one-pixel bound"));
+
+        var clippedTop = (double[])current.Clone();
+        clippedTop[5] = clippedTop[3] - 2;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, clippedTop, "Clipped selected-card top"));
+
+        var clippedBottom = (double[])current.Clone();
+        clippedBottom[6] = clippedBottom[4] + 2;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, clippedBottom, "Clipped selected-card bottom"));
+
+        var lostSelection = (double[])current.Clone();
+        lostSelection[11] = 0;
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() =>
+            AssertManualCardScrollPreserved(original, lostSelection, "Selection lost"));
+    }
+
+    private static void AssertManualCardScrollPreserved(double[] original, double[] current, string message)
+    {
+        var originalCardTop = original[5] - original[3];
+        var currentCardTop = current[5] - current[3];
+        // Rebase scroll coordinates when rows above the selected card change height.
+        // This is exactly currentCardTop <= originalCardTop + 1, not a larger tolerance.
+        var contentOffsetDelta = (current[0] + currentCardTop) - (original[0] + originalCardTop);
+        var rebasedOriginal = original[0] + contentOffsetDelta;
+        Assert.True(current[0] >= rebasedOriginal - 1,
+            message + " " + System.Text.Json.JsonSerializer.Serialize(new { Original = original, Current = current }));
+        Assert.True(current[5] >= current[3] - 1 && current[6] <= current[4] + 1,
+            "The selected material must remain fully visible within its own scroller.");
+        Assert.Equal(1d, current[11]);
+    }
+
+    private static async Task AssertSelectedCardVisibleAsync(ILocator scroller)
+    {
+        var bounds = await scroller.EvaluateAsync<double[]>("""
+            node => {
+                const list = node.getBoundingClientRect();
+                const card = node.querySelector('[aria-checked="true"]').getBoundingClientRect();
+                return [list.top, list.bottom, card.top, card.bottom];
+            }
+            """);
+        Assert.True(bounds[2] >= bounds[0] - 1 && bounds[3] <= bounds[1] + 1,
+            "The selected material must remain fully visible within its own scroller.");
+    }
+
+    [Theory]
     [InlineData("en", ColorScheme.Light)]
     [InlineData("th", ColorScheme.Dark)]
     public async Task ShortDesktopMaterialCardClickIsNotCoveredBySummaryFooter(string culture, ColorScheme scheme)
@@ -318,6 +490,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 
     private sealed class Control
     {
+        public MaterialInitialRequestStages InitialStages { get; } = new();
         public ConcurrentQueue<Gate> Gates { get; } = new();
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
         public ConcurrentQueue<(string Stage, int Quantity, bool Canceled)> Timeline { get; } = new();
@@ -410,6 +583,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                control.InitialStages.Register(services);
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
@@ -418,9 +592,9 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 var store = services.Single(item => item.ServiceType == typeof(IInstantQuotationSessionStore));
                 services.RemoveAll<IInstantQuotationSessionStore>();
                 services.Add(new ServiceDescriptor(typeof(IInstantQuotationSessionStore), provider =>
-                    new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
+                    new MaterialInitialRequestStages.Store(new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
                         ?? store.ImplementationFactory?.Invoke(provider)
-                        ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), store.Lifetime));
+                        ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), control.InitialStages), store.Lifetime));
             });
         }
     }
@@ -459,11 +633,24 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 fixture.Page = await fixture.context.NewPageAsync();
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrorCount);
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                using (var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin))
+                try
                 {
+                    using var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin);
                     await initialNavigation.RunAsync(
                         () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
                 }
+                catch
+                {
+                    try
+                    {
+                        fixture.Control.InitialStages.Freeze();
+                        output.WriteLine("material-initial-server-stages "
+                            + System.Text.Json.JsonSerializer.Serialize(fixture.Control.InitialStages.Snapshot()));
+                    }
+                    catch { /* Secondary evidence cannot replace the original navigation failure. */ }
+                    throw;
+                }
+                finally { fixture.Control.InitialStages.Freeze(); }
                 var consent = fixture.Page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await consent.IsVisibleAsync()) await consent.ClickAsync();
                 var cookie = Assert.Single(await fixture.context.CookiesAsync(), candidate => candidate.Name == InstantQuotationSessionIdentityCookie.CookieName);

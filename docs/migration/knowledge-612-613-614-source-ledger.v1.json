@@ -1,0 +1,2360 @@
+{
+  "schema": "legacy-web-614-source-disposition.v1",
+  "status": "source-candidate-not-runtime-acceptance",
+  "sourceRange": {
+    "base": "e1edc6de1537712f52c016318e311c8dd3819e5c",
+    "head": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+    "comparisonStatus": "ahead",
+    "aheadBy": 10,
+    "commitCount": 10,
+    "linearParentsVerified": true,
+    "comparisonUrl": "https://github.com/MALIEV-Co-Ltd/maliev-web/compare/e1edc6de1537712f52c016318e311c8dd3819e5c...770cb58032969ae4a0fe169686b53ab61a44fff8"
+  },
+  "canonicalIntakeBlob": "f1247781f96b4e2c57639b4c3da8528914fde1f0",
+  "commits": [
+    {
+      "sha": "73357e3fff70a4b6131d1a12413e9f680aec319b",
+      "subject": "feat(web): add bilingual manufacturing reference guides",
+      "parents": [
+        "e1edc6de1537712f52c016318e311c8dd3819e5c"
+      ],
+      "changedPathCount": 31,
+      "paths": [
+        {
+          "path": "Maliev.Web.Tests/ApplicationPageMigrationSourceTests.cs",
+          "status": "modified",
+          "preBlob": "167f13de9301603d91552561ba94c1318576e21e",
+          "postBlob": "59e99bd68b2eed263be167206828544d8c81bbfb",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web.Tests/KnowledgePageMigrationSourceTests.cs",
+          "status": "modified",
+          "preBlob": "77bdf30d83b1be089c7d32ef7b2e44492e46bea3",
+          "postBlob": "9d2ce0ce44e10ee52e02de783252cdb080c6f96f",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web.Tests/SeoBusinessContractTests.cs",
+          "status": "modified",
+          "preBlob": "fda3e22ad4b4c32dfe2bb8b0a2b9081f42092479",
+          "postBlob": "510fd36150a1445f722d0533fcf219d0e8717ebc",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web.Tests/TechnicalSeoTests.cs",
+          "status": "modified",
+          "preBlob": "a3f8183eb9179817bd2bdc056c128fe6baadabdb",
+          "postBlob": "940d296fae931b2835c8afaeba45d2ce60ac97e3",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Cutting-Tools.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "ebed283d65b79c2ad9afaaea37ede586b2375b0d",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Feeds-and-Speeds.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "95ae2b435368153b686b44202f0d1e2b53bd8012",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "9d9ea675076150830a022c0de6eb13ab7c04baec",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "1fe6b5291c8e911b8cbece8897d04709b697c145",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Machining-Processes.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "78125b598503f52ab33375727c057dbf65699d60",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Finishing/Heat-Treatment.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "16509401589a20864b2435f5be763af525774b66",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Finishing/Surface-Finishes.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "f350c1de9325904f43b4f1ed4fcb21205f0c08dd",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Inspection/Measuring-Parts.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "67e68211fd0f326330af37c22a3b86b48cc447c6",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Manufacturing/Process-Selection.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "105de657068dd81798ce051fb291dd35687d82c4",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Engineering-Plastics.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "665042b21cb73e6c281c363469484d0912bffcf1",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Metals.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "1cbe764c158e7510c76968375959461b37f2c280",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Selection.cshtml",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "efefd0c6460c33a6d87229625b8a2c0f4ace5c34",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Pages/PublicSearchRouteCatalog.cs",
+          "status": "modified",
+          "preBlob": "fbf866495cc49352e5206d4f0316d64780b9cdfd",
+          "postBlob": "f20e8cf6e2f4aee23702c2dca012e5db5a787934",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Cutting-Tools.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "1ec8329d00e6089276c95181b167a7436092a08e",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Feeds-and-Speeds.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "821fe27068745d1b07dbbd3babb82598daaa551b",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "8aac10c37c2a5a082d213f1eb42b6e83edf6738d",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "268be1091f42c0874fdf6666e7f7e318cead6ecc",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Machining-Processes.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "0b6794abba616c543c37370d62e7d02ae888a6f9",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Finishing/Heat-Treatment.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "32eacb6d06f06142efe952d8bc7758ed463ccf39",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Finishing/Surface-Finishes.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "d0cfa3ec4433af270ce10073d7e9ae88ac66f3ff",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Inspection/Measuring-Parts.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "0b8d19504f75f9152680bd38a174a154ed74be38",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Manufacturing/Process-Selection.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "603025672f6c4d29feb315b1ca9f3071a3b260be",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Engineering-Plastics.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "8fc61de35982587b810e1807d1ec52fcf4836b19",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Metals.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "8b332a4c5e074af3a4aaa610e64f313e333f983a",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Selection.th.resx",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "a63b6f6bb93d8d9434e4014950f0f0a2e5d2ee37",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/tests/ProductionSeoVerifier.Tests.ps1",
+          "status": "modified",
+          "preBlob": "abc1dd1fe5d0c447bd2510387cfbefab6375f986",
+          "postBlob": "818f4a8e67ec1fec657976700e561ae3f8fb1ca3",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/tests/ProductionSeoVerifier.psm1",
+          "status": "modified",
+          "preBlob": "f7856d6a645db481435e3d2872a015ec0d76fc19",
+          "postBlob": "a0efd11668473e0d94c2a8e16eab4d3db762c1b0",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "51158c450e713863fe46a82d6b150b3493ad65d6",
+      "subject": "feat(web): organize knowledge library into grouped contents",
+      "parents": [
+        "73357e3fff70a4b6131d1a12413e9f680aec319b"
+      ],
+      "changedPathCount": 11,
+      "paths": [
+        {
+          "path": "Maliev.Web.Tests/KnowledgeCenterBrowserTests.cs",
+          "status": "modified",
+          "preBlob": "7705eace82392bce6128dd9aa963345777df1dc0",
+          "postBlob": "d418e6586fcce9a99e993aafe12048f88f4e3039",
+          "previousPath": null,
+          "owners": [
+            "612",
+            "613",
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web.Tests/TechnicalSeoTests.cs",
+          "status": "modified",
+          "preBlob": "940d296fae931b2835c8afaeba45d2ce60ac97e3",
+          "postBlob": "ed42caf9765a8b7ea19eb190b009532f9dca795d",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Index.cshtml",
+          "status": "modified",
+          "preBlob": "30d097dd24e4d5963419dc8382cfbe251b76c3ab",
+          "postBlob": "3246bea70503f7c9e569ae907f1db05c1c6749df",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+          "status": "modified",
+          "preBlob": "9bc4321e88007c456a6a9eb1cdb0534deea50f76",
+          "postBlob": "4ab4f53139f6a7f28585ae284496318503b7a4e9",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/CNC-Machining.cshtml",
+          "status": "modified",
+          "preBlob": "90f0a318a3a8005a89be1a28a82e4a5885af74b6",
+          "postBlob": "a5882baeb63a88428567b4f4b9f5ecb9830f6e28",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Index.th.resx",
+          "status": "modified",
+          "preBlob": "8452cf54b256f4e4c7bacc1ad2509d43ebdaad6b",
+          "postBlob": "4b7317cd55fa1b229239904e7323e235161e8dfc",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Shared/_SidebarPartial.th.resx",
+          "status": "modified",
+          "preBlob": "10a7d0ae740390b2bd2f84aaec5f75194367fb0f",
+          "postBlob": "3ea7c435c487275acff04c0a3c9f55a626d37df2",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/CNC-Machining.th.resx",
+          "status": "modified",
+          "preBlob": "601383cde29eb5a7e0e853d6e3776a199b22c8e2",
+          "postBlob": "c01a0a190974512e5bd78f97f9104c807548a091",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+          "status": "modified",
+          "preBlob": "f94d8a22b5cc508739e771df49067eaf14697888",
+          "postBlob": "e90c51a2587ca149712fc23022ee3306d5c115ab",
+          "previousPath": null,
+          "owners": [
+            "612",
+            "613",
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/js/knowledge-navigation.js",
+          "status": "modified",
+          "preBlob": "b35170240b7834de03055cd27b199b7435eedb5f",
+          "postBlob": "198904f4e26c554dba03e9e206a7d6a3e5ed9d1d",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-manufacturing-knowledge-library.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "eb99f3abc3001183cbeb93f19b63b0ffba9d66ed",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+      "subject": "Add realistic manufacturing knowledge photographs",
+      "parents": [
+        "51158c450e713863fe46a82d6b150b3493ad65d6"
+      ],
+      "changedPathCount": 39,
+      "paths": [
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "d79c9b9cd473b2f2e8a74addd952ca5595f9297f",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "5736aa5481742248ca3669f3ada42c4a8d4cbfbc",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "cf8cadda595d1d5a9a712fa7e0f7da60a9a7aab6",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "dc5ea85de92301eadee8b03b3937ab81f888a165",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "ac34dda2df197f69ec3dca4b183fc0a73c8073b5",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "6f3665f5364deb0c5957c3536b02fc7a090759ad",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "34150108666546d4f48f41cf6e0a24b62bc9db63",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "76dae672b01ca888da2d6b04964d541b3902eba4",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "3f76dec13d38296b4334a67771ddbab52e7f4ab7",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "54c97fe9ce334fa68406218277f8def74d0e77e5",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "1a940bb85534549a81cdf2bc01a0aa532af7f821",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "c5554058c8e197775466c28935ca7a755eaec461",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "1b1c4e98d9ee9367f0d03f5bc7119862343daa11",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "96668ab1fda0850391e0e607c3bba4d2693fa7fe",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "e4ffb773c6fe377e4af402ab66e1e8b0bb9c9848",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "4a48ee8cc096cbc12eaab60d4c577557ffdef44d",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/library-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "00eb843e3d8e3ab750e25e8e0aee66af738a3770",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/library.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "e0419ad1b748534d7fd62fe317218af365eac3f3",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "ecf8f2b7ddc39077edddc440360d6993fe099707",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "dc61cd0e69aaa9e84c000bb8c6d04e380c487a5a",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/metals-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "c5a7633348dbb313c054f8f857484845db117e52",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/metals.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "6bebf53b05c99228683760bd458ad670e275fac9",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "6cd0bbc8d7513a07b7b3894da1e0f2feb75ee40c",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "9eeddeb3fb172532e697d83ef282c18e0b0d72ab",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/printing-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "757122343ffc52c4b9aa5763fd36a2344d9ad563",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/printing.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "051d6e00ab3a11e9fb3133b69d1e1f07b638bc88",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "6fc9e23b69a566f4d50cf6d73ed083243dbd0b6a",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "623bb42f005866788e454767fdfb57b406186325",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "5d15ff2391cd3a513e9e9c62f63bcd9d7fb621ea",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "7aa3a64d15095cce97b2fe4207f0e58cb39f5e26",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/scanning-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "9f2acd15f01c829e08af54d9157e2b2b62cae4d4",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/scanning.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "39feb4239a039fe5bd13ed9f496bdeda18659e46",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "d12a43a9549a4eb9734f9035eaab3aaa9956cf57",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "e2eac24c4dcb28b1b9bda4c3b014fdbfd5f8f13d",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "996dd603c133c64d6ea0c291d59fa5624db9d7f5",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "0c55ece68f358c77f57b4b8ca7d89258d57bdfab",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/workholding-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "b53fa04ea8e5273a1aaf9685c69e8ccab15cf83d",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/workholding.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "59cd08027593a020498fd667ef7a25620b91a0bf",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-photo-prompts.json",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "310e9e472a0e4b96ab647463c8afd55875e92420",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+      "subject": "Add clean SVG manufacturing teaching diagrams",
+      "parents": [
+        "c3f53426bfa3843441015a69a6624706f4b0bb98"
+      ],
+      "changedPathCount": 17,
+      "paths": [
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-cnc-preparation.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "06d04ee47ccde68eaafaa05a74ddc6ff71d87855",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-cutting-tool-reach.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "23046a19cff12c1674892c4063146a4319a5e1e5",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-feeds-speeds.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "41ccf1e9f5417e511535eb96200406932136df31",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-hole-depths.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "5fe8770165f385672dee8e1b4c8e47fd315abd4f",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-machining-access.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "d5db4c2348f4a01d9331a23316ce51a3e0c06503",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-material-criteria.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "08f3d918cf01dd50d5f11ed1262c93fb7f1991a8",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-metal-designation.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "d7c3f33ed118f69353205495c3988cbdd5cc171e",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-polymer-creep.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "bf7318e313cdfb0d7774b96ce6a9a6d04deb0c5c",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-print-orientation.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "b1d078661de7135a2944c48143dc25e0e3986fc1",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-process-routes.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "eacadee4e5840f14a762142277e3d9af8eb4c7a1",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-quotation-package.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "6589367b71493346fcfddd6e11ed2490d1eb4daa",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-review-loop.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "d1c25fddcfb7f93de6c246fb2c1d2ba9c2137c4b",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-scan-to-cad.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "9f7f00c287d6e1e0f82a30ba481cefc919159339",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-service-inputs.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "30e4140d4c1d3f5eaa748bd4a9eb2fcc913e967b",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-thermal-measurement.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "3352a9cde32d439b013691b55545d40559b0666b",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-treatment-allowance.svg",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "a49380b786525a7c84713b8eb2994418809953fc",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-diagram-captions.json",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "0a01d84ef2cc68b9f6fe44c707987e01a7d6d139",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "94eaf9bb0571594114b8aaab6335cb446ea9ed2e",
+      "subject": "Illustrate bilingual knowledge guides with responsive imagery",
+      "parents": [
+        "cdb7e480238424f208a36f54dd1e9770db5a9506"
+      ],
+      "changedPathCount": 42,
+      "paths": [
+        {
+          "path": "Maliev.Web.Tests/KnowledgeCenterBrowserTests.cs",
+          "status": "modified",
+          "preBlob": "d418e6586fcce9a99e993aafe12048f88f4e3039",
+          "postBlob": "d24a986ef046f44ef330025c377322fccb439eb8",
+          "previousPath": null,
+          "owners": [
+            "612",
+            "613",
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web.Tests/KnowledgePageMigrationSourceTests.cs",
+          "status": "modified",
+          "preBlob": "9d2ce0ce44e10ee52e02de783252cdb080c6f96f",
+          "postBlob": "777ba4bfb2cd094f3575e8d9f86c6a9e0a9d9a50",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Cutting-Tools.cshtml",
+          "status": "modified",
+          "preBlob": "ebed283d65b79c2ad9afaaea37ede586b2375b0d",
+          "postBlob": "432d04868cc29b16fb0c59fe25bf371d0f6cb4c3",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Feeds-and-Speeds.cshtml",
+          "status": "modified",
+          "preBlob": "95ae2b435368153b686b44202f0d1e2b53bd8012",
+          "postBlob": "3d4fbc00ef9d12c3b23c93f2d73d70ce209fe20f",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.cshtml",
+          "status": "modified",
+          "preBlob": "9d9ea675076150830a022c0de6eb13ab7c04baec",
+          "postBlob": "68124d98113ec460afa3038b99cfcfaf7af308e1",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.cshtml",
+          "status": "modified",
+          "preBlob": "1fe6b5291c8e911b8cbece8897d04709b697c145",
+          "postBlob": "4969b52393c4651f41b78d3d41c8c202d62c1df2",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Machining-Processes.cshtml",
+          "status": "modified",
+          "preBlob": "78125b598503f52ab33375727c057dbf65699d60",
+          "postBlob": "3c3b596c7583a50316cbb0a840626ca1b178dc8f",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Finishing/Heat-Treatment.cshtml",
+          "status": "modified",
+          "preBlob": "16509401589a20864b2435f5be763af525774b66",
+          "postBlob": "a929849bb5b1943660c62720b166d158a6713e1e",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Finishing/Surface-Finishes.cshtml",
+          "status": "modified",
+          "preBlob": "f350c1de9325904f43b4f1ed4fcb21205f0c08dd",
+          "postBlob": "aa8a2e1cedf1b485d049480ff03c94cf4ccbe2ec",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Guidelines.cshtml",
+          "status": "modified",
+          "preBlob": "bb23421efed2e639bd9cc5c4f03efef40ca866a7",
+          "postBlob": "c1b523842fd61c6628849bd63bf122a01e43cf62",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Index.cshtml",
+          "status": "modified",
+          "preBlob": "3246bea70503f7c9e569ae907f1db05c1c6749df",
+          "postBlob": "e359a9f74a6dc2e2513196fe22195cc9601f0846",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Inspection/Measuring-Parts.cshtml",
+          "status": "modified",
+          "preBlob": "67e68211fd0f326330af37c22a3b86b48cc447c6",
+          "postBlob": "a193e1b84d56c8153f48d55999af2127e43549bf",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Manufacturing/Process-Selection.cshtml",
+          "status": "modified",
+          "preBlob": "105de657068dd81798ce051fb291dd35687d82c4",
+          "postBlob": "b787565bb482eb4c3e8f8111ef1353b473fbc373",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Engineering-Plastics.cshtml",
+          "status": "modified",
+          "preBlob": "665042b21cb73e6c281c363469484d0912bffcf1",
+          "postBlob": "55f230e20c7f2f51def3231bc713a0dc8e3b2747",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Metals.cshtml",
+          "status": "modified",
+          "preBlob": "1cbe764c158e7510c76968375959461b37f2c280",
+          "postBlob": "a00aa307110181a766ae5b37966262d03285b6ab",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Selection.cshtml",
+          "status": "modified",
+          "preBlob": "efefd0c6460c33a6d87229625b8a2c0f4ace5c34",
+          "postBlob": "9d06d49bceb760f55302829f9279cb6a00d8d53f",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Printing.cshtml",
+          "status": "modified",
+          "preBlob": "5efbd00748c2143a4acce9f2d6a60882c94f4229",
+          "postBlob": "45f3b0f293e8427018a10c049b65e31fcb2c0916",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Scanning.cshtml",
+          "status": "modified",
+          "preBlob": "c1c2957942c6900426f1d4663563541f07f667db",
+          "postBlob": "f5f572cc25eb784a70c3acd23f7cb242d9966848",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/CNC-Machining.cshtml",
+          "status": "modified",
+          "preBlob": "a5882baeb63a88428567b4f4b9f5ecb9830f6e28",
+          "postBlob": "fef69967d59a59b92af050cc8a74659ddc370142",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/Index.cshtml",
+          "status": "modified",
+          "preBlob": "9929f5be61f8a60ffc9047eb88f231fa47e6c014",
+          "postBlob": "088b93b1ae2f505c9498044d164fa5830c4afcba",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Workflow.cshtml",
+          "status": "modified",
+          "preBlob": "62c20e06329c01f28812ab7b188e88dbcfca7f99",
+          "postBlob": "87e84445a1894fa60ae865a2b1be4d03b193fc7b",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Cutting-Tools.th.resx",
+          "status": "modified",
+          "preBlob": "1ec8329d00e6089276c95181b167a7436092a08e",
+          "postBlob": "dae20786acb43fdf7169c776e8856f0927fbd206",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Feeds-and-Speeds.th.resx",
+          "status": "modified",
+          "preBlob": "821fe27068745d1b07dbbd3babb82598daaa551b",
+          "postBlob": "993329b98ee77dd2974f181934420c65baa062d4",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.th.resx",
+          "status": "modified",
+          "preBlob": "8aac10c37c2a5a082d213f1eb42b6e83edf6738d",
+          "postBlob": "d9083557432338d15c64686a3c9fee3841acb1de",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.th.resx",
+          "status": "modified",
+          "preBlob": "268be1091f42c0874fdf6666e7f7e318cead6ecc",
+          "postBlob": "c935bf1aa2289d8de4a59369e4079df8dbfd5d06",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Machining-Processes.th.resx",
+          "status": "modified",
+          "preBlob": "0b6794abba616c543c37370d62e7d02ae888a6f9",
+          "postBlob": "10f009030c6b932ab6796bfbd92cd6e15318611e",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Finishing/Heat-Treatment.th.resx",
+          "status": "modified",
+          "preBlob": "32eacb6d06f06142efe952d8bc7758ed463ccf39",
+          "postBlob": "be0ebda07427ff33fa4582e35a1eab9e7b1e8f50",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Finishing/Surface-Finishes.th.resx",
+          "status": "modified",
+          "preBlob": "d0cfa3ec4433af270ce10073d7e9ae88ac66f3ff",
+          "postBlob": "8a1bc948a7bedbd38f8282ea886069bd09ceb3ec",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Guidelines.th.resx",
+          "status": "modified",
+          "preBlob": "9ad7eed910c50a79dd1bd6b9d1d9865c975fdb70",
+          "postBlob": "d787b277ed41a4b93398693ad867bb99ba266035",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Index.th.resx",
+          "status": "modified",
+          "preBlob": "4b7317cd55fa1b229239904e7323e235161e8dfc",
+          "postBlob": "159ef6f0181de3ff92937b3a8813113f00b41181",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Inspection/Measuring-Parts.th.resx",
+          "status": "modified",
+          "preBlob": "0b8d19504f75f9152680bd38a174a154ed74be38",
+          "postBlob": "14830585d3bafc4815e073e369d85d5b601806ed",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Manufacturing/Process-Selection.th.resx",
+          "status": "modified",
+          "preBlob": "603025672f6c4d29feb315b1ca9f3071a3b260be",
+          "postBlob": "761d013ee43583cdb50e4aa9226b445f3cd05d5f",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Engineering-Plastics.th.resx",
+          "status": "modified",
+          "preBlob": "8fc61de35982587b810e1807d1ec52fcf4836b19",
+          "postBlob": "f1b6c13863ac3ab46c6cec77cf9858383b0d6a61",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Metals.th.resx",
+          "status": "modified",
+          "preBlob": "8b332a4c5e074af3a4aaa610e64f313e333f983a",
+          "postBlob": "ccb434606ad28250b835e20d7ae4aa575aab21d7",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Selection.th.resx",
+          "status": "modified",
+          "preBlob": "a63b6f6bb93d8d9434e4014950f0f0a2e5d2ee37",
+          "postBlob": "7cca095b8dd5cef0adcf2c1425b731084bd210a2",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Printing.th.resx",
+          "status": "modified",
+          "preBlob": "34781134decacc06aee05c7594042f0c61cbfe00",
+          "postBlob": "7e729ace70e999efd149768626cbbdfdb6db0e19",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Scanning.th.resx",
+          "status": "modified",
+          "preBlob": "25da31e91c0afef140ccfd9424e8ae64e263a57c",
+          "postBlob": "87764b0a721532417136a80ae51d6ba290b8b28d",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/CNC-Machining.th.resx",
+          "status": "modified",
+          "preBlob": "c01a0a190974512e5bd78f97f9104c807548a091",
+          "postBlob": "4b846a1996c556b7b38dd87e142e201a4589aeea",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/Index.th.resx",
+          "status": "modified",
+          "preBlob": "3bb9332d2f2dc30efacfc9cd22becb3255cd0913",
+          "postBlob": "e70dc0c35086630d516ba1a6801b4d71d882df89",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Workflow.th.resx",
+          "status": "modified",
+          "preBlob": "c98c5e0bdc80d23d07abf0f70f00c97b6b29a3cc",
+          "postBlob": "277baa258db815700628a3f5ba4a6b805dd75c55",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+          "status": "modified",
+          "preBlob": "e90c51a2587ca149712fc23022ee3306d5c115ab",
+          "postBlob": "0122afdcadce16f01e71fa2c523b870084bf0d31",
+          "previousPath": null,
+          "owners": [
+            "612",
+            "613",
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-visuals.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "e5d0034bfb5fcbbc06a8d96ede7aa30cc9cbd449",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "995ab350353fa81cbcfdba8f9b4148e02493588a",
+      "subject": "Correct knowledge center definitions and technical references",
+      "parents": [
+        "94eaf9bb0571594114b8aaab6335cb446ea9ed2e"
+      ],
+      "changedPathCount": 12,
+      "paths": [
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Cutting-Tools.cshtml",
+          "status": "modified",
+          "preBlob": "432d04868cc29b16fb0c59fe25bf371d0f6cb4c3",
+          "postBlob": "d5be5c727c1d2064cfa89ba6254f1460063188c3",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Inspection/Measuring-Parts.cshtml",
+          "status": "modified",
+          "preBlob": "a193e1b84d56c8153f48d55999af2127e43549bf",
+          "postBlob": "58ff608d5d6ca719716df2e611adcb8fed5063bb",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Printing.cshtml",
+          "status": "modified",
+          "preBlob": "45f3b0f293e8427018a10c049b65e31fcb2c0916",
+          "postBlob": "db19e1326aed3fe5d62123b81ed6d868db891243",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Scanning.cshtml",
+          "status": "modified",
+          "preBlob": "f5f572cc25eb784a70c3acd23f7cb242d9966848",
+          "postBlob": "89ac718591f688fae43759741bf7341f6e548dad",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Cutting-Tools.th.resx",
+          "status": "modified",
+          "preBlob": "dae20786acb43fdf7169c776e8856f0927fbd206",
+          "postBlob": "d1218c36b197d511e0e3e41fc7b7135a7ace4833",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Finishing/Heat-Treatment.th.resx",
+          "status": "modified",
+          "preBlob": "be0ebda07427ff33fa4582e35a1eab9e7b1e8f50",
+          "postBlob": "27e69d8349913909de9b62b7bf526f202ba348ca",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Inspection/Measuring-Parts.th.resx",
+          "status": "modified",
+          "preBlob": "14830585d3bafc4815e073e369d85d5b601806ed",
+          "postBlob": "4d30947a366292ce91ca3784235df042012ad80e",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Printing.th.resx",
+          "status": "modified",
+          "preBlob": "7e729ace70e999efd149768626cbbdfdb6db0e19",
+          "postBlob": "dc1874d8cf4ba051ed2b28cacea43d8d695e6bc4",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Scanning.th.resx",
+          "status": "modified",
+          "preBlob": "87764b0a721532417136a80ae51d6ba290b8b28d",
+          "postBlob": "809c9aaf039eec75e89219269b66ec6bd27178d9",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-print-orientation.svg",
+          "status": "modified",
+          "preBlob": "b1d078661de7135a2944c48143dc25e0e3986fc1",
+          "postBlob": "488a03af97f7d2f09607b09c135f7297710442cf",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-diagram-captions.json",
+          "status": "modified",
+          "preBlob": "0a01d84ef2cc68b9f6fe44c707987e01a7d6d139",
+          "postBlob": "d4656e473875655da527905e7a4ad670312fda34",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-fact-audit.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "253d94e832e81cb2e1925a31cec580aa602b2c42",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "adbed46b23ec00a8302e3ebc5bf2d73d48121734",
+      "subject": "Add bilingual knowledge search and fading directory highlights",
+      "parents": [
+        "995ab350353fa81cbcfdba8f9b4148e02493588a"
+      ],
+      "changedPathCount": 9,
+      "paths": [
+        {
+          "path": "Maliev.Web.Tests/JavaScript/knowledge-search.test.cjs",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "41cc2c6a0c84a31da9db297fb518a15929ba9036",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web.Tests/KnowledgeSearchBrowserTests.cs",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "8f1f28fa2f80fdce486f46c6bd6c2dffa0ab011e",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",
+          "status": "modified",
+          "preBlob": "77e89bab8f1ecf3d6d1932f0096e9335caa4cb33",
+          "postBlob": "6762ca8dfdc481b4ef538cae126bbfe4acd7c3fd",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+          "status": "modified",
+          "preBlob": "4ab4f53139f6a7f28585ae284496318503b7a4e9",
+          "postBlob": "b5b035294aa4aa10854f550d6b1270b5f5280a82",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Shared/_SidebarPartial.th.resx",
+          "status": "modified",
+          "preBlob": "3ea7c435c487275acff04c0a3c9f55a626d37df2",
+          "postBlob": "6b6f427114a464eea72f77f5a092e029a4fa8b9b",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+          "status": "modified",
+          "preBlob": "0122afdcadce16f01e71fa2c523b870084bf0d31",
+          "postBlob": "b6339ef52a43b2a280d05489aa52f70a28c222ed",
+          "previousPath": null,
+          "owners": [
+            "612",
+            "613",
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/js/knowledge-navigation.js",
+          "status": "modified",
+          "preBlob": "198904f4e26c554dba03e9e206a7d6a3e5ed9d1d",
+          "postBlob": "b16f170add4b3408a0194ab10d689bf03db6386a",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/js/knowledge-search.js",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "211cac91219cf174a421111fa8a8bd1ff5a99be3",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-search-and-hover.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "439929828950e9b4ddc9c58b416bcc238489c6af",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+      "subject": "Correct engineering diagrams and CNC preparation imagery",
+      "parents": [
+        "adbed46b23ec00a8302e3ebc5bf2d73d48121734"
+      ],
+      "changedPathCount": 20,
+      "paths": [
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.cshtml",
+          "status": "modified",
+          "preBlob": "4969b52393c4651f41b78d3d41c8c202d62c1df2",
+          "postBlob": "7d010096772d2d73631cde8a11384ed337710837",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Guidelines.cshtml",
+          "status": "modified",
+          "preBlob": "c1b523842fd61c6628849bd63bf122a01e43cf62",
+          "postBlob": "40672df87da387e38a732b75ee3f2a24d51dbc67",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Materials/Selection.cshtml",
+          "status": "modified",
+          "preBlob": "9d06d49bceb760f55302829f9279cb6a00d8d53f",
+          "postBlob": "d3e72cf602e4291177d3797afe0b1b58384937d7",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/CNC-Machining.cshtml",
+          "status": "modified",
+          "preBlob": "fef69967d59a59b92af050cc8a74659ddc370142",
+          "postBlob": "f1111a3239b450d681f75ad031322d06f8386a74",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Holes-and-Tolerances.th.resx",
+          "status": "modified",
+          "preBlob": "c935bf1aa2289d8de4a59369e4079df8dbfd5d06",
+          "postBlob": "e5a28faef7feb7c4c89ca78319f55976a8880684",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Guidelines.th.resx",
+          "status": "modified",
+          "preBlob": "d787b277ed41a4b93398693ad867bb99ba266035",
+          "postBlob": "ecbc47fcef337b1db061f2989178fec2c193616e",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Materials/Selection.th.resx",
+          "status": "modified",
+          "preBlob": "7cca095b8dd5cef0adcf2c1425b731084bd210a2",
+          "postBlob": "8ba3330534aefe053273e9c680dd37c7e905cef9",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/CNC-Machining.th.resx",
+          "status": "modified",
+          "preBlob": "4b846a1996c556b7b38dd87e142e201a4589aeea",
+          "postBlob": "e63744b83efbdc9f6088b715058ce838ff90ebcb",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+          "status": "modified",
+          "preBlob": "cc65568285c3c519cc2dc1411310a418b2840763",
+          "postBlob": "190a6756bdae3ea76d0117eb36f401361826a408",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview-small.webp",
+          "status": "modified",
+          "preBlob": "d79c9b9cd473b2f2e8a74addd952ca5595f9297f",
+          "postBlob": "49a863c6abe53a9cb31cc9fdd0f74754d2b895b6",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview.webp",
+          "status": "modified",
+          "preBlob": "5736aa5481742248ca3669f3ada42c4a8d4cbfbc",
+          "postBlob": "2cf4e9d5b90bd70d468482fc3c404b726d54c98d",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-cnc-preparation.svg",
+          "status": "modified",
+          "preBlob": "06d04ee47ccde68eaafaa05a74ddc6ff71d87855",
+          "postBlob": "d9fee4db56638dc242419f9c4dcb81b0f391b734",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-hole-depths.svg",
+          "status": "modified",
+          "preBlob": "5fe8770165f385672dee8e1b4c8e47fd315abd4f",
+          "postBlob": "61ed15230758fc1824f5697b9f07f62fb8c2c5b4",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-machining-access.svg",
+          "status": "modified",
+          "preBlob": "d5db4c2348f4a01d9331a23316ce51a3e0c06503",
+          "postBlob": "4da62a319cb71b2702909f046b14391f3db2222f",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-material-criteria.svg",
+          "status": "modified",
+          "preBlob": "08f3d918cf01dd50d5f11ed1262c93fb7f1991a8",
+          "postBlob": "2e329bf64624671a81f99f79979c76254e5355ee",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-process-routes.svg",
+          "status": "modified",
+          "preBlob": "eacadee4e5840f14a762142277e3d9af8eb4c7a1",
+          "postBlob": "f68e77865a172928c1741a64ba4c1d2b4155aede",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-quotation-package.svg",
+          "status": "modified",
+          "preBlob": "6589367b71493346fcfddd6e11ed2490d1eb4daa",
+          "postBlob": "f93ad604fba57ff9f79265ddc7af5e48d2ec15b7",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-review-loop.svg",
+          "status": "modified",
+          "preBlob": "d1c25fddcfb7f93de6c246fb2c1d2ba9c2137c4b",
+          "postBlob": "d4fab4ed787906251b1a15ee0f22d6e629d777c5",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/visual-service-inputs.svg",
+          "status": "modified",
+          "preBlob": "30e4140d4c1d3f5eaa748bd4a9eb2fcc913e967b",
+          "postBlob": "7aeb07d58101f0ba2963e305669e2a0cc6956b43",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-visual-corrections.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "4633827aeb6c66e16003ebe396d4090fb7ece00d",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+      "subject": "Make knowledge articles easier to navigate and illustrate machining issues",
+      "parents": [
+        "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff"
+      ],
+      "changedPathCount": 16,
+      "paths": [
+        {
+          "path": "Maliev.Web.Tests/KnowledgeReadingLayoutBrowserTests.cs",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "9380da95c0ad40aebcd40ed41978803d4a7b1bc4",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.cshtml",
+          "status": "modified",
+          "preBlob": "68124d98113ec460afa3038b99cfcfaf7af308e1",
+          "postBlob": "0fe2f93bca7210c7f9a62443b5e8191d3ef83614",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/CNC/Machining-Processes.cshtml",
+          "status": "modified",
+          "preBlob": "3c3b596c7583a50316cbb0a840626ca1b178dc8f",
+          "postBlob": "b9c77b9e5c5b2e3830979abccc8aba263b553824",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Finishing/Surface-Finishes.cshtml",
+          "status": "modified",
+          "preBlob": "aa8a2e1cedf1b485d049480ff03c94cf4ccbe2ec",
+          "postBlob": "ce75e862a61224cf36b6569b218e95e649a6c514",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Inspection/Measuring-Parts.cshtml",
+          "status": "modified",
+          "preBlob": "58ff608d5d6ca719716df2e611adcb8fed5063bb",
+          "postBlob": "0461796932e722c3056ec1b9e472a134e58a80a0",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/CNC/Geometry-and-Workholding.th.resx",
+          "status": "modified",
+          "preBlob": "d9083557432338d15c64686a3c9fee3841acb1de",
+          "postBlob": "34bec36e81aa2c16563800eb7288414ae309cea0",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Inspection/Measuring-Parts.th.resx",
+          "status": "modified",
+          "preBlob": "4d30947a366292ce91ca3784235df042012ad80e",
+          "postBlob": "e4b3004c3a2e8fce795e26682faab54c07f9a0d0",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+          "status": "modified",
+          "preBlob": "b6339ef52a43b2a280d05489aa52f70a28c222ed",
+          "postBlob": "6b2ba1009f1cf6cc5e999b3fea5de54d17d5f73a",
+          "previousPath": null,
+          "owners": [
+            "612",
+            "613",
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/chatter-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "bd8e3effb27290b5103f0c5efed9665cd984b46e",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/chatter.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "66f847c61544eb01cf6c1068735994ff2bfd59c9",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection-small.webp",
+          "status": "modified",
+          "preBlob": "ac34dda2df197f69ec3dca4b183fc0a73c8073b5",
+          "postBlob": "0298b0482052ad9e5d88fdf72ef183bfad18af9a",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection.webp",
+          "status": "modified",
+          "preBlob": "6f3665f5364deb0c5957c3536b02fc7a090759ad",
+          "postBlob": "018c11396b8316f3d7de6d8c9fc3c845540185e3",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/warpage-small.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "f8c2271c14cca635f5864129bcb404bb6d97eb91",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/wwwroot/src/images/knowledge/photos/warpage.webp",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "ed5e23ca9b8d5f44db6205a5123835553af7431c",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-reading-images.json",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "6e187a6fbeb86929a2dac4ec85862225587d0193",
+          "previousPath": null,
+          "owners": [
+            "613"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-reading-layout.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "8a3f6cb923ab30422da1dc087b07a72e5b18da16",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    },
+    {
+      "sha": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+      "subject": "Guard literal localized search templates on knowledge pages",
+      "parents": [
+        "f96a6cbe23407ac25af3ebc4bc669296a09ac164"
+      ],
+      "changedPathCount": 4,
+      "paths": [
+        {
+          "path": "Maliev.Web.Tests/KnowledgeSearchBrowserTests.cs",
+          "status": "modified",
+          "preBlob": "8f1f28fa2f80fdce486f46c6bd6c2dffa0ab011e",
+          "postBlob": "bd33c9c3622f56644561c10636c603dac88995b9",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        },
+        {
+          "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+          "status": "modified",
+          "preBlob": "b5b035294aa4aa10854f550d6b1270b5f5280a82",
+          "postBlob": "2ab60aa1110d8e63020b4b890088ca7e9d30453d",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-16-knowledge-format-error.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "40e9f93286224fc5f9d0260f8e3bf40153764724",
+          "previousPath": null,
+          "owners": [
+            "614"
+          ],
+          "disposition": "614 shared shell/search/navigation/reading portion proposed; remaining consumers/semantics remain separately owned and unaccepted"
+        },
+        {
+          "path": "docs/superpowers/verification/2026-10-17-knowledge-production-release.md",
+          "status": "added",
+          "preBlob": null,
+          "postBlob": "b645ea88d537cb55c771e5076c2ca9547586b171",
+          "previousPath": null,
+          "owners": [
+            "612"
+          ],
+          "disposition": "not owned by614; retained immutable source intake for612/613"
+        }
+      ],
+      "wholeCommitAccepted": false
+    }
+  ],
+  "constraints": [
+    "All201 original path occurrences retained with full parents/pre/post blobs; no wholeSHAclosure",
+    "Source770 changes only comment/two regressions; production .Value fix derives from adbed46",
+    "No original writes or asset acquisition"
+  ],
+  "resources": {
+    "processes": 0,
+    "readers": 0,
+    "containers": 0,
+    "browsers": 0
+  }
+}
