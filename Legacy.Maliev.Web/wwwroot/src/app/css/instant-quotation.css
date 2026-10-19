@@ -1701,6 +1701,47 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         align-items: flex-start;
     }
 
+    /* Source09f04/f506: the part rail belongs below its preview, not above
+       configuration. Review/customer and development-only rails have no pair. */
+    .instant-quote__workflow:has(> [data-workflow-viewer]):has(> [data-workflow-parts]) {
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .instant-quote__workflow:has(> [data-workflow-parts]) > [data-workflow-viewer] {
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow:has(> [data-workflow-viewer]) > [data-workflow-parts] {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow:has(> [data-workflow-parts]) > [data-workflow-configuration] {
+        grid-row: 1 / -1;
+    }
+
+    /* A retained-part failure keeps its real alert above both working panes. */
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-viewer]):has(> [data-workflow-parts]) {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-parts]) > p[role="alert"] {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-parts]) > [data-workflow-viewer] {
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-viewer]) > [data-workflow-parts] {
+        grid-row: 3;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-parts]) > [data-workflow-configuration] {
+        grid-row: 2 / -1;
+    }
+
     .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));

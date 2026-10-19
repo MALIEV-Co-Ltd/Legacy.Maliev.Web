@@ -704,4 +704,13 @@
   <data name="Review all items" xml:space="preserve">
     <value>ตรวจสอบรายการทั้งหมด</value>
   </data>
+  <data name="Add parts" xml:space="preserve">
+    <value>เพิ่มชิ้นงาน</value>
+  </data>
+  <data name="{0} part" xml:space="preserve">
+    <value>{0} ชิ้น</value>
+  </data>
+  <data name="{0} parts" xml:space="preserve">
+    <value>{0} ชิ้น</value>
+  </data>
 </root>
