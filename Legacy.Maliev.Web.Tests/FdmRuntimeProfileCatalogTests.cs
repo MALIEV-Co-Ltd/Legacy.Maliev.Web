@@ -55,6 +55,30 @@ public sealed class FdmRuntimeProfileCatalogTests
         Assert.False(catalog.ResolvePolicy("M68", BuildPreference.Standard).AutomaticPricingEligible);
         Assert.False(catalog.ResolvePolicy("UNKNOWN", BuildPreference.Standard).AutomaticPricingEligible);
 
+        // Source 68aab: retained filament cooling limits resolve independently for every admitted build.
+        (string Material, double LayerSeconds, double CoolingSpeed)[] coolingCases =
+        [
+            ("PLA", 4, 20),
+            ("PETG", 12, 20),
+            ("PETG-ESD", 2, 20),
+            ("ABS", 3, 20),
+            ("ASA", 3, 20),
+            ("HIPS", 6, 20),
+            ("PA12", 8, 10),
+            ("PVA", 7, 20),
+        ];
+        foreach (var cooling in coolingCases)
+        {
+            foreach (BuildPreference build in Enum.GetValues<BuildPreference>())
+            {
+                Assert.True(catalog.TryResolveTrustedProfile(cooling.Material, build, out var profile));
+                Assert.NotNull(profile);
+                Assert.Equal(cooling.Material, profile.MaterialId);
+                Assert.Equal(cooling.LayerSeconds, profile.Motion.MinimumLayerTimeSeconds, 6);
+                Assert.Equal(cooling.CoolingSpeed, profile.Motion.MinimumCoolingSpeedMmPerSecond, 6);
+            }
+        }
+
         // Source cebda binds admitted PA12 settings to these exact packaged manufacturer-evidence bytes.
         using var source = typeof(FdmRuntimeProfileCatalog).Assembly.GetManifestResourceStream(
             "Legacy.Maliev.Web.Application.Pricing.Profiles.Sources.esun-epa12-manufacturer-profile.v1.json");
