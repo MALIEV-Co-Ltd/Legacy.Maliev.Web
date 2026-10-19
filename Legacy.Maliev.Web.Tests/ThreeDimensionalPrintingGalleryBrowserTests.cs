@@ -1,9 +1,10 @@
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(PublicContactBrowserCollection.Name)]
-public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBrowserFixture fixture)
+public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBrowserFixture fixture, ITestOutputHelper output)
 {
     [Fact]
     public async Task PartGallery_RejectingOptionalCookiesAllowsExpansionAndLoadsDeferredImages()
@@ -117,9 +118,50 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
         Assert.EndsWith("#printing-tolerances", page.Url, StringComparison.Ordinal);
         Assert.Equal("false", await toggle.GetAttributeAsync("aria-expanded"));
         Assert.Equal("true", await link.GetAttributeAsync("aria-current"));
-        await Assertions.Expect(section).ToBeInViewportAsync(new LocatorAssertionsToBeInViewportOptions
+        try
         {
-            Timeout = 30000
-        });
+            await Assertions.Expect(section).ToBeInViewportAsync(new LocatorAssertionsToBeInViewportOptions
+            {
+                Timeout = 30000
+            });
+        }
+        catch (PlaywrightException failure)
+        {
+            // Observe the failed native fragment navigation without scrolling or changing focus.
+            try
+            {
+                failure.Data["ToleranceTocGeometry"] = await section.EvaluateAsync<string>("""
+                    section => {
+                        const toc = document.querySelector('nav[data-service-toc]');
+                        const active = document.activeElement;
+                        const rect = element => {
+                            const r = element?.getBoundingClientRect();
+                            return r ? [r.left, r.top, r.right, r.bottom] : null;
+                        };
+                        return JSON.stringify({
+                            viewport: [window.innerWidth, window.innerHeight],
+                            scroll: [window.scrollX, window.scrollY],
+                            section: rect(section),
+                            toc: rect(toc),
+                            tocLink: rect(toc?.querySelector("a[href='#printing-tolerances']")),
+                            readyState: document.readyState,
+                            panelOpen: toc?.dataset.tocOpen === 'true',
+                            targetHash: window.location.hash === '#printing-tolerances',
+                            targetFocused: active === section,
+                            tocLinkFocused: active === toc?.querySelector("a[href='#printing-tolerances']"),
+                            scrollMarginTop: getComputedStyle(section).scrollMarginTop,
+                            parentOverflow: getComputedStyle(section.parentElement).overflow
+                        });
+                    }
+                    """);
+                output.WriteLine("Tolerance TOC geometry: {0}", failure.Data["ToleranceTocGeometry"]);
+            }
+            catch (Exception diagnosticFailure)
+            {
+                output.WriteLine("Tolerance TOC geometry unavailable: {0}", diagnosticFailure.GetType().Name);
+            }
+
+            throw;
+        }
     }
 }
