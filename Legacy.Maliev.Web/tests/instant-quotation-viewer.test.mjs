@@ -116,14 +116,14 @@ test('viewer retains camera state per part and exposes orbit keyboard alternativ
   assert.equal(adapter.fullscreens, 1);
 });
 
-test('review snapshot renders the requested part and restores the active part', () => {
+test('review snapshot renders the requested part and restores the active part', async () => {
   const adapter = createAdapter();
   const viewer = createModelViewer({ adapter });
   viewer.addPart('a', disposableObject());
   viewer.addPart('b', disposableObject());
   viewer.select('a');
 
-  assert.equal(viewer.snapshot('b'), 'data:image/png;base64,preview');
+  assert.equal(await viewer.snapshot('b'), 'data:image/png;base64,preview');
   assert.equal(adapter.snapshots, 1);
   viewer.setColor('#123456');
   assert.equal(adapter.colors.length, 1);
@@ -349,6 +349,231 @@ test('OCCT loader clears a rejected promise so a transient script failure can re
   scripts[1].load();
   assert.deepEqual(await second, { recovered: true });
 });
+
+test('snapshot yields real tasks before activation and capture and restores the original camera', async () => {
+  await withSnapshotTasks(async tasks => {
+    const adapter = createAdapter();
+    let active = null;
+    adapter.show = object => { active = object; };
+    const viewer = createModelViewer({ adapter });
+    const a = disposableObject();
+    const b = disposableObject();
+    viewer.addPart('a', a);
+    viewer.addPart('b', b);
+    const camera = { position: [1, 2, 3], target: [4, 5, 6] };
+    adapter.cameraState = camera;
+    try {
+      const result = tasks.track(viewer.snapshot('b'));
+      assert.ok(result instanceof Promise);
+      assert.equal(active, a);
+      assert.equal(adapter.snapshots, 0);
+      await tasks.next();
+      assert.equal(active, b);
+      assert.equal(adapter.snapshots, 0);
+      await tasks.next();
+      assert.equal(await result, 'data:image/png;base64,preview');
+      assert.equal(adapter.snapshots, 1);
+      assert.equal(active, a);
+      assert.equal(JSON.stringify(adapter.cameraState), JSON.stringify(camera));
+    } finally { viewer.dispose(); }
+  });
+});
+
+test('snapshot removal or disposal at either task boundary never captures a stale part', async () => {
+  for (const boundary of [1, 2]) {
+    for (const action of ['remove', 'dispose']) {
+      await withSnapshotTasks(async tasks => {
+        const adapter = createAdapter();
+        const viewer = createModelViewer({ adapter });
+        const part = disposableObject();
+        viewer.addPart('a', disposableObject());
+        viewer.addPart('b', part);
+        try {
+          const result = tasks.track(viewer.snapshot('b'));
+          assert.ok(result instanceof Promise);
+          if (boundary === 2) await tasks.next();
+          if (action === 'remove') viewer.remove('b');
+          else viewer.dispose();
+          await tasks.next();
+          assert.equal(await result, null);
+          assert.equal(adapter.snapshots, 0);
+          assert.equal(part.disposeCount(), 1);
+        } finally { viewer.dispose(); }
+      });
+    }
+  }
+});
+
+test('snapshot external selection at either boundary remains selected without capture or restoration', async () => {
+  for (const boundary of [1, 2]) {
+    await withSnapshotTasks(async tasks => {
+      const adapter = createAdapter();
+      let active = null;
+      adapter.show = object => { active = object; };
+      const viewer = createModelViewer({ adapter });
+      const c = disposableObject();
+      viewer.addPart('a', disposableObject());
+      viewer.addPart('b', disposableObject());
+      viewer.addPart('c', c);
+      try {
+        const result = tasks.track(viewer.snapshot('b'));
+        assert.ok(result instanceof Promise);
+        if (boundary === 2) await tasks.next();
+        viewer.select('c');
+        const camera = { position: [7, 8, 9], target: [0, 1, 2] };
+        adapter.cameraState = camera;
+        await tasks.next();
+        assert.equal(await result, null);
+        assert.equal(active, c);
+        assert.equal(JSON.stringify(adapter.cameraState), JSON.stringify(camera));
+        assert.equal(adapter.snapshots, 0);
+      } finally { viewer.dispose(); }
+    });
+  }
+});
+
+test('concurrent snapshots serialize their task boundaries and restore the same active camera', async () => {
+  await withSnapshotTasks(async tasks => {
+    const adapter = createAdapter();
+    let active = null;
+    adapter.show = object => { active = object; };
+    const captures = [];
+    adapter.snapshot = () => { captures.push(active); return 'image'; };
+    const viewer = createModelViewer({ adapter });
+    const a = disposableObject();
+    const b = disposableObject();
+    const c = disposableObject();
+    viewer.addPart('a', a);
+    viewer.addPart('b', b);
+    viewer.addPart('c', c);
+    const camera = { position: [4, 3, 2], target: [1, 0, 0] };
+    adapter.cameraState = camera;
+    try {
+      const first = tasks.track(viewer.snapshot('b'));
+      const second = tasks.track(viewer.snapshot('c'));
+      assert.ok(first instanceof Promise);
+      assert.ok(second instanceof Promise);
+      await tasks.next();
+      assert.equal(active, b);
+      assert.equal(captures.length, 0);
+      await tasks.next();
+      assert.equal(await first, 'image');
+      assert.equal(active, a);
+      await tasks.next();
+      assert.equal(active, c);
+      await tasks.next();
+      assert.equal(await second, 'image');
+      assert.deepEqual(captures, [b, c]);
+      assert.equal(active, a);
+      assert.equal(JSON.stringify(adapter.cameraState), JSON.stringify(camera));
+    } finally { viewer.dispose(); }
+  });
+});
+
+test('snapshot does not capture a replacement object registered under a removed part ID', async () => {
+  await withSnapshotTasks(async tasks => {
+    const adapter = createAdapter();
+    const viewer = createModelViewer({ adapter });
+    viewer.addPart('a', disposableObject());
+    viewer.addPart('b', disposableObject());
+    try {
+      const result = tasks.track(viewer.snapshot('b'));
+      assert.ok(result instanceof Promise);
+      viewer.remove('b');
+      viewer.addPart('b', disposableObject());
+      await tasks.next();
+      assert.equal(await result, null);
+      assert.equal(adapter.snapshots, 0);
+    } finally { viewer.dispose(); }
+  });
+});
+
+test('snapshot restores after capture failure and a later snapshot still runs', async () => {
+  await withSnapshotTasks(async tasks => {
+    const adapter = createAdapter();
+    let active = null;
+    adapter.show = object => { active = object; };
+    const viewer = createModelViewer({ adapter });
+    const a = disposableObject();
+    viewer.addPart('a', a);
+    viewer.addPart('b', disposableObject());
+    adapter.snapshot = () => { throw new Error('capture failed'); };
+    try {
+      const failed = tasks.track(viewer.snapshot('b'));
+      assert.ok(failed instanceof Promise);
+      const rejected = assert.rejects(failed, /capture failed/);
+      await tasks.next();
+      await tasks.next();
+      await rejected;
+      assert.equal(active, a);
+      adapter.snapshot = () => 'recovered';
+      const recovered = tasks.track(viewer.snapshot('b'));
+      await tasks.next();
+      await tasks.next();
+      assert.equal(await recovered, 'recovered');
+      assert.equal(active, a);
+    } finally { viewer.dispose(); }
+  });
+});
+
+test('snapshot treats an explicit same-part selection as external intent at either boundary', async () => {
+  for (const boundary of [1, 2]) {
+    await withSnapshotTasks(async tasks => {
+      const adapter = createAdapter();
+      const viewer = createModelViewer({ adapter });
+      viewer.addPart('a', disposableObject());
+      viewer.addPart('b', disposableObject());
+      try {
+        const result = tasks.track(viewer.snapshot('b'));
+        assert.ok(result instanceof Promise);
+        if (boundary === 2) await tasks.next();
+        viewer.select(boundary === 1 ? 'a' : 'b');
+        const camera = { position: [12, 13, 14], target: [2, 3, 4] };
+        adapter.cameraState = camera;
+        await tasks.next();
+        assert.equal(await result, null);
+        assert.equal(adapter.snapshots, 0);
+        assert.equal(JSON.stringify(adapter.cameraState), JSON.stringify(camera));
+      } finally { viewer.dispose(); }
+    });
+  }
+});
+
+async function withSnapshotTasks(run) {
+  const original = globalThis.setTimeout;
+  const callbacks = [];
+  const pending = [];
+  globalThis.setTimeout = (callback, delay) => {
+    assert.equal(delay, 0);
+    callbacks.push(callback);
+    return callbacks.length;
+  };
+  const flush = async () => { for (let index = 0; index < 12; index += 1) await Promise.resolve(); };
+  const tasks = {
+    track(value) { pending.push(Promise.resolve(value).catch(() => {})); return value; },
+    async next() {
+      await flush();
+      assert.ok(callbacks.length > 0, 'a real zero-delay task must be scheduled');
+      callbacks.shift()();
+      await flush();
+    },
+  };
+  try { await run(tasks); }
+  finally {
+    try {
+      for (let index = 0; index < 32; index += 1) {
+        await flush();
+        if (callbacks.length === 0) break;
+        callbacks.shift()();
+      }
+      await Promise.allSettled(pending);
+    } finally {
+      callbacks.length = 0;
+      pending.length = 0;
+      globalThis.setTimeout = original;
+    }
+  }
+}
 
 function createAdapter() {
   let cameraState = { position: [0, 0, 5], target: [0, 0, 0] };

@@ -50,7 +50,7 @@ function harness(
     reset: () => calls.push(['reset']),
     fit: () => calls.push(['fit']),
     fullscreen: () => calls.push(['fullscreen']),
-    snapshot: id => {
+    snapshot: async id => {
       calls.push(['snapshot', id]);
       if (id === 'missing') throw new RangeError('Unknown viewer part.');
       return `data:image/png;base64,${id}`;
@@ -60,6 +60,7 @@ function harness(
   return {
     calls,
     statuses,
+    viewer,
     interop: createWorkflowPreviewInterop({
       loadModel,
       analyzeGeometry,
@@ -163,13 +164,13 @@ test('review thumbnails use admitted browser previews and preserve fallback when
   const { interop, calls } = harness();
   const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
   await interop.getGeometryClaim(key);
-  interop.attach({});
-  interop.admit(key, 'part-a');
+  await interop.attach({});
+  await interop.admit(key, 'part-a');
   const admitted = { dataset: { partId: 'part-a' }, src: '/fallback.svg' };
   const unavailable = { dataset: { partId: 'missing' }, src: '/fallback.svg' };
   const root = { querySelectorAll: () => [admitted, unavailable] };
 
-  assert.equal(interop.renderReviewThumbnails(root), 1);
+  assert.equal(await interop.renderReviewThumbnails(root), 1);
   assert.equal(admitted.src, 'data:image/png;base64,part-a');
   assert.equal(unavailable.src, '/fallback.svg');
   assert.deepEqual(calls.filter(call => call[0] === 'snapshot'), [
@@ -184,14 +185,14 @@ test('part appearance updates select the requested part, apply a canonical previ
     files: [modelFile('first.stl'), modelFile('second.stl')],
   });
   await Promise.all([interop.getGeometryClaim(firstKey), interop.getGeometryClaim(secondKey)]);
-  interop.attach({});
-  interop.admit(firstKey, 'part-a');
-  interop.admit(secondKey, 'part-b');
+  await interop.attach({});
+  await interop.admit(firstKey, 'part-a');
+  await interop.admit(secondKey, 'part-b');
 
-  assert.equal(interop.updatePartAppearance('part-b', 'Blue'), 'data:image/png;base64,part-b');
+  assert.equal(await interop.updatePartAppearance('part-b', 'Blue'), 'data:image/png;base64,part-b');
   assert.deepEqual(calls.slice(-3), [
     ['select', 'part-b'],
-    ['color', '#2563eb'],
+    ['color', '#2563eb', 'part-b'],
     ['snapshot', 'part-b'],
   ]);
 });
@@ -225,12 +226,12 @@ test('starts duplicate-name previews in selection order without waiting for pars
   const files = [modelFile('same.stl'), modelFile('same.stl')];
   let call = 0;
   const { calls, interop } = harness(() => [first.promise, second.promise][call++]);
-  interop.attach({});
+  await interop.attach({});
   const keys = await interop.beginSelection({ files });
   assert.equal(keys.length, 2);
   assert.notEqual(keys[0], keys[1]);
-  interop.admit(keys[0], 'part-a');
-  interop.admit(keys[1], 'part-b');
+  await interop.admit(keys[0], 'part-a');
+  await interop.admit(keys[1], 'part-b');
   second.resolve(objectB);
   first.resolve(objectA);
   await Promise.all([first.promise, second.promise]);
@@ -290,11 +291,11 @@ test('admits successful previews and releases failed, removed, cancelled, and st
     if (signal.aborted) throw new DOMException('cancelled', 'AbortError');
     return objects.shift();
   });
-  interop.attach({});
+  await interop.attach({});
   const [ok, failed, cancelled] = await interop.beginSelection({
     files: [modelFile('a.stl'), modelFile('b.stl'), modelFile('c.stl')],
   });
-  interop.admit(ok, 'part-a');
+  await interop.admit(ok, 'part-a');
   interop.release(failed);
   interop.release(cancelled);
   await interop.getGeometryClaim(ok);
@@ -308,12 +309,12 @@ test('retry creates a new key and stale completion cannot replace it', async () 
   const newLoad = deferred();
   let invocation = 0;
   const { calls, interop } = harness(() => invocation++ === 0 ? oldLoad.promise : newLoad.promise);
-  interop.attach({});
+  await interop.attach({});
   const [oldKey] = await interop.beginSelection({ files: [modelFile('part.step')] });
   interop.quarantine(oldKey);
   const newKey = interop.retry(oldKey);
   assert.notEqual(newKey, oldKey);
-  interop.admit(newKey, 'part-new');
+  await interop.admit(newKey, 'part-new');
   oldLoad.resolve(disposableObject());
   newLoad.resolve(disposableObject());
   await Promise.all([oldLoad.promise, newLoad.promise]);
@@ -326,14 +327,14 @@ test('terminal release deletes correlation and clears retry access', async () =>
   const [key] = await interop.beginSelection({ files: [modelFile('released.stl')] });
   interop.release(key);
   assert.throws(() => interop.retry(key), /Unknown preview correlation/);
-  assert.throws(() => interop.admit(key, 'part-released'), /Unknown preview correlation/);
+  await assert.rejects(interop.admit(key, 'part-released'), /Unknown preview correlation/);
 });
 
 test('parser failures report persistent advisory state without raw error details', async () => {
   const { calls, statuses, interop } = harness(async () => { throw new Error('parser detail'); });
-  interop.attach({});
+  await interop.attach({});
   const [key] = await interop.beginSelection({ files: [modelFile('bad.obj')] });
-  interop.admit(key, 'server-part');
+  await interop.admit(key, 'server-part');
   await assert.rejects(interop.getGeometryClaim(key), /Geometry analysis is unavailable/);
   assert.equal(interop.status(), 'unavailable');
   assert.deepEqual(statuses, ['unavailable']);
@@ -358,9 +359,9 @@ test('attached remove delegates disposal exactly once and wrapper disposal does 
     createViewer: () => viewer,
     reportStatus() {},
   });
-  interop.attach({});
+  await interop.attach({});
   const [key] = await interop.beginSelection({ files: [modelFile('attached.stl')] });
-  interop.admit(key, 'attached-part');
+  await interop.admit(key, 'attached-part');
   await interop.getGeometryClaim(key);
   interop.remove('attached-part');
   interop.dispose();
@@ -384,10 +385,10 @@ test('attached parts with shared resources preserve Task4A identity-dedup across
     createViewer: () => viewer,
     reportStatus() {},
   });
-  interop.attach({});
+  await interop.attach({});
   const keys = await interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
-  interop.admit(keys[0], 'part-a');
-  interop.admit(keys[1], 'part-b');
+  await interop.admit(keys[0], 'part-a');
+  await interop.admit(keys[1], 'part-b');
   await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
   interop.remove('part-a');
   interop.dispose();
@@ -397,7 +398,7 @@ test('attached parts with shared resources preserve Task4A identity-dedup across
 test('dispose aborts pending parsing and disposes the viewer exactly once', async () => {
   const pending = deferred();
   const { calls, interop } = harness(() => pending.promise);
-  interop.attach({});
+  await interop.attach({});
   await interop.beginSelection({ files: [modelFile('pending.3mf')] });
   interop.dispose();
   interop.dispose();
@@ -419,4 +420,115 @@ test('unadmitted cleanup disposes shared geometry, materials, and textures once 
   interop.release(keys[0]);
   interop.release(keys[1]);
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });
+});
+
+test('admission yields a browser task before attaching an already parsed first part', async () => {
+  const { interop, calls } = harness();
+  let pending;
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+    await interop.getGeometryClaim(key);
+    await interop.attach({});
+    pending = Promise.resolve(interop.admit(key, 'part-a'));
+    assert.equal(calls.filter(call => call[0] === 'add').length, 0);
+    await Promise.resolve();
+    assert.equal(calls.filter(call => call[0] === 'add').length, 0);
+    assert.equal(await pending, true);
+    assert.deepEqual(calls.filter(call => call[0] === 'add').map(call => call[1]), ['part-a']);
+  } finally {
+    await pending;
+    interop.dispose();
+  }
+});
+
+for (const action of ['release', 'quarantine', 'dispose']) {
+  test(`a queued attachment is cancelled by ${action} before its browser task`, async () => {
+    const object = disposableObject();
+    const { interop, calls } = harness(async () => object);
+    let pending;
+    try {
+      const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+      await interop.getGeometryClaim(key);
+      await interop.attach({});
+      pending = Promise.resolve(interop.admit(key, 'part-a'));
+      if (action === 'dispose') interop.dispose();
+      else interop[action](key);
+      assert.equal(await pending, false);
+      assert.equal(calls.filter(call => call[0] === 'add').length, 0);
+      assert.equal(object.disposed, true);
+    } finally {
+      await pending;
+      interop.dispose();
+    }
+  });
+}
+
+test('appearance yields before selection and suppresses a snapshot after removal', async () => {
+  const { interop, viewer, calls } = harness();
+  const snapshot = deferred();
+  let pending;
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+    await interop.getGeometryClaim(key);
+    await interop.attach({});
+    await interop.admit(key, 'part-a');
+    const previousCalls = calls.length;
+    viewer.snapshot = () => snapshot.promise;
+    pending = Promise.resolve(interop.updatePartAppearance('part-a', 'Blue'));
+    assert.equal(calls.length, previousCalls);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.deepEqual(calls.slice(-2), [['select', 'part-a'], ['color', '#2563eb', 'part-a']]);
+    interop.remove('part-a');
+    snapshot.resolve('data:image/png;base64,stale');
+    assert.equal(await pending, null);
+  } finally {
+    snapshot.resolve(null);
+    await pending;
+    interop.dispose();
+  }
+});
+
+test('a queued appearance update preserves later selection without losing the requested part colour', async () => {
+  const { interop, calls } = harness();
+  let pending;
+  try {
+    const keys = interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
+    await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+    await interop.attach({});
+    await interop.admit(keys[0], 'part-a');
+    await interop.admit(keys[1], 'part-b');
+    interop.select('part-a');
+    const prior = calls.length;
+    pending = interop.updatePartAppearance('part-a', 'Blue');
+    assert.equal(interop.select('part-b'), true);
+    assert.equal(await pending, null);
+    assert.deepEqual(calls.slice(prior), [['select', 'part-b'], ['color', '#2563eb', 'part-a']]);
+    interop.select('part-a');
+    assert.deepEqual(calls.at(-1), ['select', 'part-a']);
+  } finally {
+    await pending;
+    interop.dispose();
+  }
+});
+
+test('keyed colour changes the requested object while retaining the active object', () => {
+  const a = disposableObject();
+  const b = disposableObject();
+  let active;
+  const colours = [];
+  const viewer = createModelViewer({ adapter: {
+    show(object) { active = object; },
+    hide() {},
+    setColor(object, colour) { colours.push([object, colour]); },
+  } });
+  try {
+    viewer.addPart('a', a);
+    viewer.addPart('b', b);
+    viewer.select('b');
+    assert.equal(viewer.setColor('#2563eb', 'a'), true);
+    assert.equal(active, b);
+    assert.equal(colours.length, 1);
+    assert.equal(colours[0][0], a);
+    assert.equal(colours[0][1], '#2563eb');
+  } finally { viewer.dispose(); }
 });

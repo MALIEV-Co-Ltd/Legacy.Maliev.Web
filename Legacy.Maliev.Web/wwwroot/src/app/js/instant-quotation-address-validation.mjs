@@ -75,7 +75,8 @@ export function wireInstantQuotationAddressValidation(form, submit = form?.query
 
     const updateSubmit = () => {
         if (submit) {
-            submit.disabled = form.dataset?.profileUnavailable === 'true' || !form.checkValidity?.();
+            submit.disabled = form.getAttribute?.('aria-busy') === 'true'
+                || form.dataset?.profileUnavailable === 'true' || !form.checkValidity?.();
         }
     };
 

@@ -604,6 +604,15 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         Assert.Equal(HttpStatusCode.OK, feedback.StatusCode);
         Assert.Contains(taxMessage, source, StringComparison.Ordinal);
         Assert.Contains(buildingMessage, source, StringComparison.Ordinal);
+        var submit = Regex.Match(source,
+            "<button\\b[^>]*\\bdata-instant-quote-submit\\b[^>]*>.*?</button>",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        Assert.True(submit.Success);
+        Assert.Contains("form=\"instant-quotation-form\"", submit.Value, StringComparison.Ordinal);
+        Assert.Contains("data-instant-quote-submit-label", submit.Value, StringComparison.Ordinal);
+        Assert.Matches("<span\\b(?=[^>]*\\bdata-instant-quote-submit-pending\\b)(?=[^>]*\\bhidden\\b)[^>]*>", submit.Value);
+        Assert.Contains(culture == "th" ? "กำลังส่ง..." : "Submitting...", submit.Value, StringComparison.Ordinal);
+        Assert.Contains("instant-quote__pricing-spinner d-inline-block", submit.Value, StringComparison.Ordinal);
         Assert.Matches(
             "id=\"instant-quote-billing-building-error\"[^>]*>" + System.Text.RegularExpressions.Regex.Escape(buildingMessage) + "</span>",
             source);
