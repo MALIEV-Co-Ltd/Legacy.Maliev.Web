@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
+using Legacy.Maliev.Web.Application.Pricing.Simulation;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -40,6 +41,38 @@ public sealed class AdditivePhysicalFailureMeaningContractTests
         Assert.Equal((Session, Owner, PartId), fixture.Reader.LastRequest);
         Assert.Null(fixture.Store.State.QuoteAuthorization);
         Assert.Equal(0, fixture.Store.Writes);
+    }
+
+    [Fact]
+    public async Task ClosedSeparatedBoxes_EmptyIntermediateSliceRetainsGeometryReview()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var bytes = SeparatedBoxes();
+        Assert.Equal(1284, bytes.Length); // One 84-byte header and 24 bounded 50-byte facets.
+        var parsed = AdmittedStlMeshReader.Read(bytes, cancellation.Token);
+        var mesh = MeshNormalizer.Normalize(parsed, new GeometryTolerance(0.001, 0.02), cancellation.Token);
+        Assert.Equal(24, mesh.Triangles.Count);
+        Assert.DoesNotContain("mesh_open_edges", mesh.Diagnostics);
+        Assert.DoesNotContain("mesh_nonmanifold_edges", mesh.Diagnostics);
+        var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+        Assert.True(catalog.TryResolveTrustedProfile("PLA", BuildPreference.Standard, out var profile));
+        Assert.NotNull(profile);
+        var contourFailure = Assert.Throws<SimulationGeometryException>(() => LayerContourBuilder.Build(
+            mesh, new Pose("source", Matrix4x4.Identity), profile,
+            new AnalysisBudget(100_000, 2_000, 1_000_000, cancellation.Token)));
+        Assert.Equal("geometry_slice_empty", contourFailure.ReasonCode);
+
+        var fixture = Create(bytes);
+        var result = await fixture.Service.AnalyzeAsync(fixture.Binding, cancellation.Token);
+
+        Assert.False(result.IsReady);
+        Assert.Null(result.Physical);
+        Assert.Null(result.Binding);
+        Assert.Equal(1, fixture.Reader.Reads);
+        Assert.Equal((Session, Owner, PartId), fixture.Reader.LastRequest);
+        Assert.Null(fixture.Store.State.QuoteAuthorization);
+        Assert.Equal(0, fixture.Store.Writes);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview, result.Failure);
     }
 
     [Fact]
@@ -123,6 +156,30 @@ public sealed class AdditivePhysicalFailureMeaningContractTests
                 writer.Write(vertices[index].X); writer.Write(vertices[index].Y); writer.Write(vertices[index].Z);
             }
             writer.Write((ushort)0);
+        }
+        return stream.ToArray();
+    }
+
+    private static byte[] SeparatedBoxes()
+    {
+        var box = AdmittedStlMeshReader.Read(Box(8));
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write(new byte[80]);
+        writer.Write(24u);
+        // Closed shells occupy Z=0..8 and Z=12..20; deposited planes in the gap have no contour.
+        foreach (var translation in new[] { Vector3.Zero, new Vector3(0, 0, 12) })
+        {
+            foreach (var triangle in box.Triangles)
+            {
+                writer.Write(new byte[12]);
+                foreach (var vertex in new[] { triangle.A, triangle.B, triangle.C })
+                {
+                    var translated = vertex + translation;
+                    writer.Write(translated.X); writer.Write(translated.Y); writer.Write(translated.Z);
+                }
+                writer.Write((ushort)0);
+            }
         }
         return stream.ToArray();
     }
