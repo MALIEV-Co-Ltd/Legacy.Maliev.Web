@@ -138,14 +138,14 @@ public sealed class MaterialPricingDisplayRendererContractTests
 
     private static string ReviewButton(string html)
     {
-        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review|ตรวจสอบรายการ)\\s*</button>", RegexOptions.Singleline);
+        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review all items|ตรวจสอบรายการทั้งหมด)\\s*</button>", RegexOptions.Singleline);
         Assert.True(match.Success, "The actual component review action was not rendered.");
         return match.Value;
     }
 
     private static void AssertReviewDisabled(string html)
     {
-        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review|ตรวจสอบรายการ)\\s*</button>", RegexOptions.Singleline);
+        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review all items|ตรวจสอบรายการทั้งหมด)\\s*</button>", RegexOptions.Singleline);
         // During restored initialization the action is absent; absence cannot authorize review.
         if (match.Success) Assert.Contains("disabled", match.Value, StringComparison.Ordinal);
     }
