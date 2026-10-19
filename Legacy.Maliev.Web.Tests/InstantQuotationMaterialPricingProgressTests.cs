@@ -52,11 +52,26 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             var session = await fixture.CreateAsync();
             var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(release);
+            var observerReturned = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var comparisonReturned = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var report = fixture.Reader.Report;
+            fixture.Reader.Report = (state, canceled) =>
+            {
+                report?.Invoke(state, canceled);
+                if (fixture.Reader.ReadCount <= 1) return;
+                Assert.True(observerReturned.Task.IsCompletedSuccessfully,
+                    "A real comparison read must follow the selected observer's return.");
+                if (state == "returned") comparisonReturned.TrySetResult();
+            };
             Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
                 async (frame, token) =>
                 {
                     if (frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
-                    { entered.TrySetResult(); await release.Task.WaitAsync(token); }
+                    {
+                        entered.TrySetResult();
+                        await release.Task.WaitAsync(token);
+                        observerReturned.TrySetResult();
+                    }
                 }, default);
             Task first = await Task.WhenAny(entered.Task, run);
             try
@@ -67,7 +82,17 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             }
             catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
             finally { await fixture.DrainAsync(run, () => { }, () => release.TrySetResult(), default); }
-        }, output);
+            Assert.True(observerReturned.Task.IsCompletedSuccessfully);
+            Assert.True(comparisonReturned.Task.IsCompletedSuccessfully,
+                "At least one actual optional-comparison input read must have returned after release.");
+            Assert.True(fixture.Reader.ReadCount >= 2);
+            var final = await run;
+            Assert.NotNull(final);
+            var selected = Assert.Single(final.Parts);
+            Assert.Equal("ABS", selected.MaterialKey);
+            Assert.Equal(1, selected.Quantity);
+            Assert.Equal(210d, selected.UnitPrice);
+        }, output, failComparisons: true);
     }
 
     [Fact]
