@@ -148,7 +148,7 @@ internal sealed class CustomerOrderSubmissionTransport(
                 }
 
                 var streamContent = new StreamContent(file.OpenReadStream());
-                streamContent.Headers.ContentType = ResolveContentType(file.ContentType);
+                streamContent.Headers.ContentType = UploadContentTypeResolver.Resolve(file.ContentType);
                 content.Add(streamContent, "files", fileName);
             }
 
@@ -266,12 +266,6 @@ internal sealed class CustomerOrderSubmissionTransport(
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;
     }
-
-    private static MediaTypeHeaderValue ResolveContentType(string? contentType) =>
-        !string.IsNullOrWhiteSpace(contentType)
-        && MediaTypeHeaderValue.TryParse(contentType, out var parsed)
-            ? parsed
-            : new MediaTypeHeaderValue("application/octet-stream");
 
     private static string? TrimToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
