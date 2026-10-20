@@ -1009,6 +1009,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 && Equals(workflow.CurrentPhysicalAnalysisBinding(partId, catalog.ProfileVersion), binding))
             {
                 physicalAnalyses[partId] = result;
+                InstantQuotationStageFailure? stageFailure = result.Failure switch
+                {
+                    InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview => InstantQuotationStageFailure.GeometryRequiresReview,
+                    InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded => InstantQuotationStageFailure.GeometryComplexityExceeded,
+                    InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable => InstantQuotationStageFailure.SimulationFailed,
+                    _ => null,
+                };
+                if (stageFailure is { } failure)
+                {
+                    await analytics.RecordStageResultAsync(
+                        InstantQuotationStage.Pricing,
+                        InstantQuotationStageResult.Failure,
+                        failure,
+                        "stl",
+                        cancellation.Token);
+                }
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)

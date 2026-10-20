@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
@@ -40,6 +41,8 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
             await Assertions.Expect(panel.Locator("[role='status']")).ToHaveTextAsync(
                 culture == "th" ? "กำลังตรวจสอบการพิมพ์จริง…" : "Checking physical build…");
             await Assertions.Expect(panel.Locator("[data-physical-analysis-result]")).ToHaveCountAsync(0);
+            Assert.Empty(fixture.Diagnostics.Snapshot());
+            Assert.False(fixture.Diagnostics.Overflowed);
             await Assertions.Expect(fixture.Review).ToBeDisabledAsync();
             Assert.Null((await fixture.StoredAsync()).QuoteAuthorization);
         }
@@ -57,6 +60,21 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         Assert.Equal(1, fixture.Reader.Reads);
         Assert.Equal((fixture.SessionId, (string?)null, fixture.PartId), fixture.Reader.LastRequest);
         Assert.Equal(0, fixture.PageErrors);
+        var diagnostic = Assert.Single(fixture.Diagnostics.Snapshot());
+        Assert.False(fixture.Diagnostics.Overflowed);
+        Assert.Equal(new[] { "event", "failure_category", "file_type", "result", "service", "stage" },
+            diagnostic.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal("quote_stage_result", diagnostic.GetProperty("event").GetString());
+        Assert.Equal("3d_printing", diagnostic.GetProperty("service").GetString());
+        Assert.Equal("pricing", diagnostic.GetProperty("stage").GetString());
+        Assert.Equal("failure", diagnostic.GetProperty("result").GetString());
+        Assert.Equal(input switch
+        {
+            "open" => "geometry_requires_review",
+            "layers" => "geometry_complexity_exceeded",
+            _ => "simulation_failed",
+        }, diagnostic.GetProperty("failure_category").GetString());
+        Assert.Equal("stl", diagnostic.GetProperty("file_type").GetString());
     }
 
     // Return no quote on either overload. No pricing kernel, financial provider or ticket issuer is invoked.
@@ -111,13 +129,36 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         }
     }
 
-    private sealed class Host(ControlledReader reader) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    // Observe the real tracker at its existing sink boundary; this is payload proof, not live consent delivery.
+    private sealed class StageSink : IInstantQuotationAnalyticsSink
+    {
+        private readonly object gate = new();
+        private readonly List<JsonElement> records = [];
+        public bool Overflowed { get { lock (gate) return overflowed; } }
+        private bool overflowed;
+        public JsonElement[] Snapshot() { lock (gate) return records.ToArray(); }
+        public ValueTask EmitAsync(InstantQuotationAnalyticsPayload payload, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (payload is not InstantQuotationStageResultPayload) return ValueTask.CompletedTask;
+            lock (gate)
+            {
+                if (records.Count >= 8) { overflowed = true; return ValueTask.CompletedTask; }
+                records.Add(JsonSerializer.SerializeToElement(payload, payload.GetType()));
+            }
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class Host(ControlledReader reader, StageSink diagnostics) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.RemoveAll<IInstantQuotationAnalyticsSink>();
+                services.AddSingleton<IInstantQuotationAnalyticsSink>(diagnostics);
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddSingleton<IInstantQuotationAuthoritativePricingService, NoQuotePricing>();
                 services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
@@ -135,6 +176,7 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
     private sealed class Fixture : IAsyncDisposable
     {
         public ControlledReader Reader { get; }
+        public StageSink Diagnostics { get; } = new();
         private Host Factory { get; }
         private IPlaywright? playwright;
         private IBrowser? browser;
@@ -146,7 +188,7 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         private int pageErrors;
         public int PageErrors => Volatile.Read(ref pageErrors);
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
-        private Fixture(byte[] bytes) { Reader = new(bytes); Factory = new(Reader); }
+        private Fixture(byte[] bytes) { Reader = new(bytes); Factory = new(Reader, Diagnostics); }
 
         public static async Task<Fixture> CreateAsync(string culture, int width, string input)
         {
