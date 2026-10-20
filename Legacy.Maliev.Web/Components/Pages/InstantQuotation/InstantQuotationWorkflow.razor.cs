@@ -59,6 +59,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool previewUnavailable;
     private string? uploadSelectionError;
     private bool batchInProgress;
+    private readonly Dictionary<string, PendingLocalPreview> pendingPreviewSelections = [];
+    private sealed record PendingLocalPreview(string Name, long Generation);
     private readonly RepricingActivity repricing = new();
     private Guid? selectedPreviewPartId;
     private Guid? selectedPreviewUploadId;
@@ -112,7 +114,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private string? LocalThumbnail(string? key) => key is not null ? localPreviewThumbnails.GetValueOrDefault(key) : null;
 
-    private WorkflowSectionVisibility VisibleSections => HasLocalFileFailures || incompletePreviewKey is not null
+    private WorkflowSectionVisibility VisibleSections => pendingPreviewSelections.Count > 0 || HasLocalFileFailures || incompletePreviewKey is not null
         ? new(Upload: true, Error: false, Viewer: true, Parts: true, Configuration: Parts.Count > 0)
         : (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
             || (State is InstantQuotationWorkflowState.Empty && HasMaterialDisplay && Parts.Count > 0)
@@ -589,6 +591,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
         batchInProgress = true;
         var selectionGeneration = InvalidatePreviewSelectionIntent();
+        Exception? primary = null;
         try
         {
             uploadSelectionError = null;
@@ -631,31 +634,44 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 return;
             }
 
+            for (var index = 0; index < browserFiles.Length; index++)
+                pendingPreviewSelections[keys[index]] = new(browserFiles[index].Name, selectionGeneration);
+            await InvokeAsync(StateHasChanged);
+
             var analyzed = new List<(IBrowserFile File, string PreviewKey, InstantQuotationGeometryClaim Claim)>();
             for (var index = 0; index < browserFiles.Length; index++)
             {
+                if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
                 try
                 {
                     var claim = await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>(
                         "getGeometryClaim",
                         keys[index]);
                     if (disposed) return;
+                    if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
                     var incomplete = await previewInterop!.InvokeAsync<bool>("isIncompletePreview", keys[index]);
                     if (disposed) return;
+                    if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
                     if (incomplete)
                     {
                         await RemoveIncompletePreviewAsync();
                         if (disposed) return;
+                        if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
                         incompletePreviewKey = keys[index];
                         incompletePreviewMeasured = false;
                         incompletePreviewRevision = 0;
                         await InvokeAsync(StateHasChanged);
+                        if (disposed) return;
                     }
+                    if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                    pendingPreviewSelections.Remove(keys[index]);
                     analyzed.Add((browserFiles[index], keys[index], claim));
                 }
                 catch (JSException)
                 {
                     if (disposed) return;
+                    if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                    pendingPreviewSelections.Remove(keys[index]);
                     failedPreviewSelections[keys[index]] = browserFiles[index].Name;
                     if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= keys[index];
                     await InvokePreviewAsync("release", keys[index]);
@@ -716,12 +732,46 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 }
             }
         }
+        catch (Exception exception) { primary = exception; throw; }
         finally
         {
-            batchInProgress = false;
-            if (disposed) uploadBatchGate.Dispose();
-            else uploadBatchGate.Release();
+            Exception? cleanupFailure = null;
+            try
+            {
+                foreach (var pending in pendingPreviewSelections.Where(pair =>
+                    pair.Value.Generation == selectionGeneration).Select(pair => pair.Key).ToArray())
+                {
+                    pendingPreviewSelections.Remove(pending);
+                    try { await InvokePreviewAsync("release", pending); }
+                    catch (Exception exception) { cleanupFailure ??= exception; }
+                }
+            }
+            finally
+            {
+                batchInProgress = false;
+                if (disposed) uploadBatchGate.Dispose();
+                else
+                {
+                    uploadBatchGate.Release();
+                    try { await InvokeAsync(() => { if (!disposed) StateHasChanged(); }); }
+                    catch (Exception exception) { cleanupFailure ??= exception; }
+                }
+            }
+            if (primary is null && cleanupFailure is not null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupFailure).Throw();
         }
+    }
+
+    private bool IsPendingPreview(string key, long generation) =>
+        pendingPreviewSelections.TryGetValue(key, out var pending) && pending.Generation == generation;
+
+    private async Task RemovePendingPreviewAsync(string key)
+    {
+        if (disposed || bulkApplying || !pendingPreviewSelections.Remove(key)) return;
+        // Release only this local selection; late parser completion cannot admit a removed key.
+        if (incompletePreviewKey == key) await RemoveIncompletePreviewAsync();
+        else await InvokePreviewAsync("release", key);
+        if (!disposed) await InvokeAsync(StateHasChanged);
     }
 
     private long InvalidatePreviewSelectionIntent()
@@ -1580,6 +1630,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         selectedPreviewUploadId = null;
         selectedFailedPreviewKey = null;
         repricing.ClearOwnership();
+        pendingPreviewSelections.Clear();
         localPreviewThumbnails.Clear();
         materialDisplaySubscription?.Dispose();
         materialDisplaySubscription = null;

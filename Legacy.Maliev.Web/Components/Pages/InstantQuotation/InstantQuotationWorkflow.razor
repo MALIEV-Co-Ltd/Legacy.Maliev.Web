@@ -161,6 +161,16 @@
                 <strong>@Localizer["Add file"]</strong>
                 <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
             </label>
+            @foreach (var pending in pendingPreviewSelections)
+            {
+                <article data-workflow-pending-parse class="instant-quote__local-file">
+                    <h4>@pending.Value.Name</h4>
+                    <span role="status">@Localizer["Checking physical build…"]</span>
+                    <button type="button" data-workflow-remove-pending
+                            aria-label="@Localizer["Remove {0}", pending.Value.Name]"
+                            @onclick="() => RemovePendingPreviewAsync(pending.Key)">@Localizer["Remove"]</button>
+                </article>
+            }
             @foreach (var failure in failedPreviewSelections)
             {
                 <article data-workflow-upload-item data-workflow-failed-preview class="instant-quote__local-file is-error">

@@ -14,6 +14,127 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task RemovingPendingLocalParser_UnblocksCurrentProtectedQuoteBeforeActualReadReturns(string culture)
+    {
+        var upload = new HashCheckingUploadClient();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, new CountingPricingService());
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        using var response = await client.GetAsync(url);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(
+            new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync();
+        await using var page = await context.NewPageAsync();
+        await page.AddInitScriptAsync("""
+            (() => {
+              const original = File.prototype.arrayBuffer;
+              let release;
+              let reject;
+              const gate = new Promise((resolve, fail) => { release = resolve; reject = fail; });
+              gate.catch(() => {});
+              const state = { entered: 0, completed: 0 };
+              let timeout = null;
+              state.release = () => { clearTimeout(timeout); release(); };
+              state.restore = () => { state.release(); File.prototype.arrayBuffer = original; };
+              File.prototype.arrayBuffer = async function () {
+                if (this.name !== 'pending-local-parse.stl') return original.call(this);
+                state.entered++;
+                timeout ??= setTimeout(() => reject(new Error('Controlled parser lease expired.')), 30000);
+                try { await gate; return await original.call(this); }
+                finally { state.completed++; }
+              };
+              window.__pendingLocalParser = state;
+            })();
+            """);
+        Exception? primary = null;
+        try
+        {
+            await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            await page.WaitForFunctionAsync("""
+                () => {
+                  const input = document.querySelector('#instant-quote-files');
+                  return input && typeof input._blazorInputFileNextFileId === 'number';
+                }
+                """);
+            var bytes = WallThicknessParityBrowserFixture.Box(5);
+            await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+            {
+                Name = "healthy-protected.stl", MimeType = "model/stl", Buffer = bytes,
+            });
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            await Assertions.Expect(review).ToBeEnabledAsync();
+            var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+            await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+            var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+            var before = (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!;
+            Assert.NotNull(before.QuoteAuthorization);
+            var receipt = Assert.Single(before.PhysicalReceipts!,
+                row => row.MaterialKey == Assert.Single(before.Parts).Configuration.MaterialKey);
+            Assert.Equal(partId, receipt.PartId);
+            Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(bytes)), receipt.UploadSha256);
+            Assert.True(receipt.MotionSeconds > 0);
+            var protectedBefore = System.Text.Json.JsonSerializer.Serialize(before);
+
+            await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+            {
+                Name = "pending-local-parse.stl", MimeType = "model/stl", Buffer = bytes,
+            });
+            var pending = page.Locator("[data-workflow-pending-parse]");
+            await Assertions.Expect(pending).ToHaveCountAsync(1);
+            await page.WaitForFunctionAsync("() => window.__pendingLocalParser.entered > 0");
+            await Assertions.Expect(review).ToBeDisabledAsync();
+            Assert.Equal(0, await page.EvaluateAsync<int>("window.__pendingLocalParser.completed"));
+            await pending.Locator("[data-workflow-remove-pending]").ClickAsync();
+            await Assertions.Expect(pending).ToHaveCountAsync(0);
+            await Assertions.Expect(review).ToBeEnabledAsync();
+            Assert.Equal(0, await page.EvaluateAsync<int>("window.__pendingLocalParser.completed"));
+            Assert.Equal(1, upload.VerifiedUploads);
+            await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(1);
+            var current = (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!;
+            Assert.True(protectedBefore == System.Text.Json.JsonSerializer.Serialize(current));
+
+            await page.EvaluateAsync("window.__pendingLocalParser.release()");
+            await page.WaitForFunctionAsync("""
+                () => window.__pendingLocalParser.completed === window.__pendingLocalParser.entered
+                  && window.__pendingLocalParser.entered > 0
+                """);
+            await Assertions.Expect(page.Locator("[data-workflow-failed-preview]")).ToHaveCountAsync(0);
+            await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(1);
+            Assert.Equal(partId.ToString(), await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"));
+            Assert.Equal(1, upload.VerifiedUploads);
+            Assert.True(protectedBefore == System.Text.Json.JsonSerializer.Serialize(
+                (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!));
+            await Assertions.Expect(review).ToBeEnabledAsync();
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            try
+            {
+                await page.EvaluateAsync("window.__pendingLocalParser?.restore()");
+                await page.WaitForFunctionAsync("""
+                    () => !window.__pendingLocalParser
+                      || window.__pendingLocalParser.completed === window.__pendingLocalParser.entered
+                    """);
+            }
+            catch when (primary is not null) { /* Preserve the first browser failure while context disposal drains owned work. */ }
+        }
+    }
+
+    [Theory]
     [InlineData(320, "th")]
     [InlineData(375, "en")]
     public async Task UploadedPartShowsOnlyPhysicallyVerifiedQuantityAndReviewActionsReachable(int width, string culture)
