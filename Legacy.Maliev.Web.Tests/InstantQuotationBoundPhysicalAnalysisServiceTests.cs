@@ -654,7 +654,8 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
             : (object)new { byteLength = binary.Length, uri = "data:application/octet-stream;base64," + Convert.ToBase64String(binary) };
         byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
         {
-            asset = new { version = "2.0" }, scene = 0,
+            asset = new { version = "2.0" },
+            scene = 0,
             scenes = new[] { new { nodes = new[] { 0 } } },
             nodes = new[] { new { mesh = 0 } },
             meshes = new[] { new { primitives = new[] { new { attributes = new { POSITION = 0 }, mode = 4 } } } },
