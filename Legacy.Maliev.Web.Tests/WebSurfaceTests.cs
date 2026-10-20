@@ -446,8 +446,8 @@ public sealed class WebSurfaceTests : IDisposable
             var label = culture == "th" ? thai : english;
             var link = Assert.Single(Regex.Matches(navigation.Value,
                 "<a\\b[^>]*href=\"(?<href>[^\"]+)\"[^>]*>[\\s\\S]*?</a>",
-                RegexOptions.CultureInvariant).Cast<Match>()
-                .Where(match => match.Value.Contains($"<span>{label}</span>", StringComparison.Ordinal)));
+                RegexOptions.CultureInvariant).Cast<Match>(),
+                match => match.Value.Contains($"<span>{label}</span>", StringComparison.Ordinal));
             var destination = new Uri(member.BaseAddress!, link.Groups["href"].Value);
             Assert.Equal(member.BaseAddress!.GetLeftPart(UriPartial.Authority), destination.GetLeftPart(UriPartial.Authority));
             if (retained)
