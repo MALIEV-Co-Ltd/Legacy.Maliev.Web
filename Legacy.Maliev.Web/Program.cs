@@ -18,11 +18,7 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    ContentRootPath = ResolveContentRoot(args),
-});
+var builder = Program.CreateApplicationBuilder(args);
 if (builder.Environment.IsEnvironment("Testing"))
 {
     builder.WebHost.UseStaticWebAssets();
@@ -645,53 +641,52 @@ await app.RunAsync();
 
 public partial class Program
 {
-    private static string ResolveContentRoot(string[] args) =>
-        ResolveContentRoot(args, Directory.GetCurrentDirectory, Environment.GetEnvironmentVariable);
-
-    internal static string ResolveContentRoot(string[] args, Func<string> getCurrentDirectory,
-        Func<string, string?> getEnvironmentVariable)
+    internal static WebApplicationBuilder CreateApplicationBuilder(string[] args)
     {
-        var configuredRoot = GetArgumentValue(args, "contentRoot") ?? getCurrentDirectory();
-        var contentRoot = Path.GetFullPath(configuredRoot);
-        var environmentName = GetArgumentValue(args, "environment")
-            ?? getEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-            ?? getEnvironmentVariable("DOTNET_ENVIRONMENT");
-
-        if (!string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase))
+        using var hostConfiguration = new ConfigurationManager();
+        hostConfiguration.AddEnvironmentVariables("ASPNETCORE_");
+        hostConfiguration.AddEnvironmentVariables("DOTNET_");
+        hostConfiguration.AddCommandLine(args);
+        return WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            return contentRoot;
+            Args = args,
+            ContentRootPath = ResolveContentRoot(hostConfiguration, Directory.GetCurrentDirectory),
+        });
+    }
+
+    internal static string? ResolveContentRoot(IConfiguration hostConfiguration, Func<string> getCurrentDirectory)
+    {
+        if (!string.Equals(hostConfiguration[HostDefaults.EnvironmentKey], Environments.Development,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
         }
 
+        var configuredRoot = hostConfiguration[HostDefaults.ContentRootKey];
+        if (configuredRoot is null)
+        {
+            var currentDirectory = getCurrentDirectory();
+            configuredRoot = OperatingSystem.IsWindows()
+                && string.Equals(currentDirectory, Environment.SystemDirectory, StringComparison.OrdinalIgnoreCase)
+                    ? AppContext.BaseDirectory
+                    : currentDirectory;
+        }
+
+        // Match the framework's relative/empty-root base; override only the Development child fallback.
+        var contentRoot = string.IsNullOrEmpty(configuredRoot)
+            ? AppContext.BaseDirectory
+            : Path.GetFullPath(Path.IsPathRooted(configuredRoot)
+                ? configuredRoot
+                : Path.Combine(AppContext.BaseDirectory, configuredRoot));
         if (File.Exists(Path.Combine(contentRoot, "appsettings.Development.json")))
         {
-            return contentRoot;
+            return null;
         }
 
         var webProjectRoot = Path.Combine(contentRoot, "Legacy.Maliev.Web");
         return File.Exists(Path.Combine(webProjectRoot, "appsettings.Development.json"))
             && Directory.Exists(Path.Combine(webProjectRoot, "wwwroot"))
                 ? webProjectRoot
-                : contentRoot;
-    }
-
-    private static string? GetArgumentValue(string[] args, string key)
-    {
-        var prefix = $"--{key}=";
-        for (var index = 0; index < args.Length; index++)
-        {
-            var argument = args[index];
-            if (argument.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return argument.Substring(prefix.Length);
-            }
-
-            if (string.Equals(argument, $"--{key}", StringComparison.OrdinalIgnoreCase)
-                && index + 1 < args.Length)
-            {
-                return args[index + 1];
-            }
-        }
-
-        return null;
+                : null;
     }
 }
