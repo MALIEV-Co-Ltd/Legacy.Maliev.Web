@@ -692,4 +692,5 @@
   <data name="Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture." xml:space="preserve">
     <value>ใช้แบบจำลองชั่วคราวเพื่อคำนวณราคา รายละเอียดเล็กอาจเปลี่ยนไป ต้องตรวจสอบไฟล์ต้นฉบับก่อนผลิต</value>
   </data>
+  <data name="Apply {0} to selected parts" xml:space="preserve"><value>ใช้ {0} กับชิ้นงานที่เลือก</value></data>
 </root>

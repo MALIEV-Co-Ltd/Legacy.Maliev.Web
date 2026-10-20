@@ -237,6 +237,10 @@ public sealed class InstantQuotationResinPresentationTests
             Assert.All(labels, label => Assert.Matches("<span class=\"instant-quote__sr-only\">[^<]+</span>", label.Value));
             Assert.Contains("data-workflow-select-all", initial, StringComparison.Ordinal);
             Assert.Contains("data-workflow-apply-material", initial, StringComparison.Ordinal);
+            var applyButton = Regex.Match(initial, "<button\\b[^>]*data-workflow-apply-material[^>]*>([\\s\\S]*?)</button>");
+            Assert.True(applyButton.Success);
+            Assert.Equal(culture == "th" ? $"ใช้ {material} กับชิ้นงานที่เลือก" : $"Apply {material} to selected parts",
+                Regex.Replace(applyButton.Groups[1].Value, "\\s+", " ").Trim());
 
             void InvokeSelection(string method, params object[] arguments) =>
                 typeof(InstantQuotationWorkflow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!

@@ -868,6 +868,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         await all.CheckAsync();
         await Assertions.Expect(page.Locator("[data-workflow-part-select]:checked")).ToHaveCountAsync(2);
         await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-select-all]').indeterminate === false");
+        await Assertions.Expect(page.Locator("[data-workflow-apply-material]")).ToHaveAccessibleNameAsync(
+            culture == "th" ? "ใช้ PETG กับชิ้นงานที่เลือก" : "Apply PETG to selected parts");
         await page.Locator("[data-workflow-apply-material]").ClickAsync();
         var sessions = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
         using var resultDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));

@@ -151,7 +151,11 @@
                     <span role="status" aria-live="polite">@Localizer["{0} parts selected", SelectedBulkCount]</span>
                     <button type="button" data-workflow-apply-material
                             disabled="@(!CanApplyBulkMaterial)"
-                            @onclick="ApplyMaterialToSelectedAsync">@Localizer["Apply material to selected parts"]</button>
+                            @onclick="ApplyMaterialToSelectedAsync">
+                        @(ConfigurationParts.SingleOrDefault() is { } active
+                            ? Localizer["Apply {0} to selected parts", active.Configuration.MaterialKey]
+                            : Localizer["Apply material to selected parts"])
+                    </button>
                 </div>
             }
             <label for="instant-quote-files"
