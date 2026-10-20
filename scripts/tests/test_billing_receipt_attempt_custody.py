@@ -87,8 +87,8 @@ class CustodyControls(unittest.TestCase):
 LIFECYCLE_ROWS = (
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.IO.IOException\", expected: \"IOException\")",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.Net.Sockets.SocketException\", expected: \"SocketException\")",
-    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.AspNetCore.Connections.AddressInUseException\", expected: \"AddressInUseException\")",
-    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.Extensions.Options.OptionsValidationException\", expected: \"OptionsValidationException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.AspNetCore.Connections.AddressInUseExcep\"···, expected: \"AddressInUseException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.Extensions.Options.OptionsValidationExce\"···, expected: \"OptionsValidationException\")",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.InvalidOperationException\", expected: \"InvalidOperationException\")",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Npgsql.NpgsqlException\", expected: \"NpgsqlException\")",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Npgsql.PostgresException\", expected: \"PostgresException\")",
@@ -184,6 +184,22 @@ class LifecycleRosterControls(unittest.TestCase):
                     results.remove(rows[-1])
                 else:
                     rows[-1].set('testName', rows[0].get('testName') if defect == 'duplicate' else 'Foreign.Control')
+                with self.assertRaisesRegex(SystemExit, '^Missing, duplicate, foreign or unsuccessful lifecycle control row$'):
+                    self.execute(root)
+
+
+        for raw, displayed in (
+            ("Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.AspNetCore.Connections.AddressInUseException\", expected: \"AddressInUseException\")",
+             "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.AspNetCore.Connections.AddressInUseExcep\"···, expected: \"AddressInUseException\")"),
+            ("Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.Extensions.Options.OptionsValidationException\", expected: \"OptionsValidationException\")",
+             "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.Extensions.Options.OptionsValidationExce\"···, expected: \"OptionsValidationException\")"),
+        ):
+            with self.subTest(untruncated=raw):
+                root = self.document()
+                matching = [row for row in root.findall('.//' + tag + 'UnitTestResult')
+                            if row.get('testName') == displayed]
+                self.assertEqual(1, len(matching))
+                matching[0].set('testName', raw)
                 with self.assertRaisesRegex(SystemExit, '^Missing, duplicate, foreign or unsuccessful lifecycle control row$'):
                     self.execute(root)
 

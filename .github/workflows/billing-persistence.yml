@@ -218,8 +218,8 @@ jobs:
           expected = {
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.IO.IOException", expected: "IOException")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.Net.Sockets.SocketException", expected: "SocketException")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.AspNetCore.Connections.AddressInUseException", expected: "AddressInUseException")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.Extensions.Options.OptionsValidationException", expected: "OptionsValidationException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.AspNetCore.Connections.AddressInUseExcep"···, expected: "AddressInUseException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.Extensions.Options.OptionsValidationExce"···, expected: "OptionsValidationException")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.InvalidOperationException", expected: "InvalidOperationException")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Npgsql.NpgsqlException", expected: "NpgsqlException")',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Npgsql.PostgresException", expected: "PostgresException")',
