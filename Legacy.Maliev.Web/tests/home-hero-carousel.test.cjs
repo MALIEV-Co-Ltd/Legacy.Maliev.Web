@@ -341,7 +341,9 @@ test('an old decoded image cannot release the gate of a newer assembly entrance'
         await f.tick(); await f.tick(); await f.tick();
         assert.equal(f.active(), 0);
         assert.equal(f.timers.size, 0);
-        const latest = f.recorded.filter(item => !item.animation.cancelled);
+        // Completed outgoing effects are not owned by the incoming image-decode gate.
+        const latest = f.recorded.filter(item => item.animation.paused && !item.animation.cancelled);
+        assert.ok(latest.length > 0);
         oldDecode(); await flush();
         assert.equal(f.timers.size, 0);
         assert.ok(latest.every(item => !item.animation.played));
