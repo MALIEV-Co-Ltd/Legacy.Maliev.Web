@@ -199,6 +199,158 @@ public sealed class InstantQuotationResinPresentationTests
         Assert.Empty(javascript.Snapshots);
     }
 
+
+    [Theory]
+    [InlineData("en", "PETG", "Select all", "Any")]
+    [InlineData("th", "PETG", "เลือกทั้งหมด", "Any")]
+    [InlineData("en", "M68", "Select all", "Gray")]
+    [InlineData("th", "M68", "เลือกทั้งหมด", "Gray")]
+    public async Task BulkMaterial_ChangesOnlySelectedPartsThroughExistingServerConfiguration(
+        string culture, string material, string selectAll, string color)
+    {
+        using var cultures = new CultureScope(culture);
+        var active = Part(material, BuildPreference.Standard);
+        var selected = Part("PLA", BuildPreference.Strength) with
+        {
+            Configuration = new("PLA", "Blue", 7, BuildPreference.Strength),
+        };
+        var untouched = Part("PLA", BuildPreference.Quality);
+        var store = new SessionStore(active, selected, untouched);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var initial = WebUtility.HtmlDecode(root.ToHtmlString());
+            Assert.Contains(selectAll, initial, StringComparison.Ordinal);
+            Assert.Equal(3, Regex.Matches(initial, "data-workflow-part-select").Count);
+            Assert.Contains("data-workflow-select-all", initial, StringComparison.Ordinal);
+            Assert.Contains("data-workflow-apply-material", initial, StringComparison.Ordinal);
+
+            void InvokeSelection(string method, params object[] arguments) =>
+                typeof(InstantQuotationWorkflow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(component, arguments);
+
+            InvokeSelection("SelectAllParts", new ChangeEventArgs { Value = true });
+            Assert.Equal(4, Regex.Matches(root.ToHtmlString(), "<input\\b[^>]*data-workflow-(?:part-select|select-all)[^>]*\\schecked(?:[\\s=>])").Count);
+            InvokeSelection("SelectAllParts", new ChangeEventArgs { Value = false });
+            InvokeSelection("SetPartSelected", selected.PartId, new ChangeEventArgs { Value = true });
+            Assert.Contains("aria-checked=\"mixed\"", root.ToHtmlString(), StringComparison.Ordinal);
+            InvokeSelection("OnQuantityInput", selected.PartId, new ChangeEventArgs { Value = "9" });
+            await (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ApplyMaterialToSelectedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, null)!;
+            Assert.Equal("PLA", coordinator.Parts.Single(part => part.PartId == selected.PartId).Configuration.MaterialKey);
+            await (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ChangeQuantityAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [selected.PartId, new ChangeEventArgs { Value = "7" }])!;
+            await (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ApplyMaterialToSelectedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, null)!;
+
+            var result = coordinator.Parts.Single(part => part.PartId == selected.PartId);
+            Assert.Equal(material, result.Configuration.MaterialKey);
+            Assert.Equal(color, result.Configuration.Color);
+            Assert.Equal(7, result.Configuration.Quantity);
+            Assert.Equal(material == "M68" ? BuildPreference.Standard : BuildPreference.Strength,
+                result.Configuration.BuildPreference);
+            Assert.Equal(active.Configuration, coordinator.Parts.Single(part => part.PartId == active.PartId).Configuration);
+            Assert.Equal(untouched.Configuration, coordinator.Parts.Single(part => part.PartId == untouched.PartId).Configuration);
+            Assert.NotNull(coordinator.OrderQuote);
+            Assert.Equal(3, coordinator.OrderQuote.Parts.Count);
+            Assert.Equal(7, coordinator.OrderQuote.Parts.Single(part => part.PartId == selected.PartId).Quantity);
+        });
+    }
+
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task BulkMaterial_OwnsConfigurationUntilTheDelayedWriteSettles(bool refusesWrite, bool disposes)
+    {
+        var active = Part("PETG", BuildPreference.Standard);
+        var first = Part("PLA", BuildPreference.Quality);
+        var next = Part("PLA", BuildPreference.Strength) with
+        {
+            Configuration = new("PLA", "Blue", 7, BuildPreference.Strength),
+        };
+        var store = new SessionStore(active, first, next);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            object? Invoke(string name, params object[] arguments) =>
+                typeof(InstantQuotationWorkflow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(component, arguments);
+            Invoke("SelectAllParts", new ChangeEventArgs { Value = true });
+            store.BeforePut = async () =>
+            {
+                store.BeforePut = null;
+                entered.TrySetResult();
+                await release.Task.WaitAsync(lease.Token);
+                if (refusesWrite) throw new InvalidOperationException("Synthetic owned write refusal.");
+            };
+            var applying = (Task)Invoke("ApplyMaterialToSelectedAsync")!;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                var fieldset = Regex.Match(root.ToHtmlString(), "<fieldset[^>]*data-workflow-material-color-quantity[^>]*>").Value;
+                Assert.NotEmpty(fieldset);
+                Assert.Matches("\\sdisabled(?:[\\s=>])", fieldset);
+                Assert.Matches("\\sinert(?:[\\s=>])", fieldset);
+                Invoke("OnQuantityInput", next.PartId, new ChangeEventArgs { Value = "9" });
+                await (Task)Invoke("ChangeQuantityAsync", next.PartId, new ChangeEventArgs { Value = "9" })!;
+                await (Task)Invoke("ChangeMaterialAsync", next.PartId, new ChangeEventArgs { Value = "M68" })!;
+                await (Task)Invoke("ChangeColorAsync", next.PartId, new ChangeEventArgs { Value = "White" })!;
+                await (Task)Invoke("ChangeBuildPreferenceAsync", next.PartId, BuildPreference.Quality)!;
+                await (Task)Invoke("RemovePartAsync", next.PartId)!;
+                Assert.Equal(next.Configuration, coordinator.Parts.Single(part => part.PartId == next.PartId).Configuration);
+                if (disposes) await component.DisposeAsync();
+                release.TrySetResult();
+                if (disposes) await Assert.ThrowsAnyAsync<OperationCanceledException>(() => applying);
+                else if (refusesWrite) await Assert.ThrowsAsync<InvalidOperationException>(() => applying);
+                else await applying.WaitAsync(lease.Token);
+                Assert.False((bool)typeof(InstantQuotationWorkflow)
+                    .GetField("bulkApplying", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                if (disposes) return;
+                var after = Regex.Match(root.ToHtmlString(), "<fieldset[^>]*data-workflow-material-color-quantity[^>]*>").Value;
+                Assert.DoesNotMatch("\\sdisabled(?:[\\s=>])", after);
+                Assert.DoesNotMatch("\\sinert(?:[\\s=>])", after);
+                if (!refusesWrite)
+                {
+                    var changed = coordinator.Parts.Single(part => part.PartId == next.PartId);
+                    Assert.Equal("PETG", changed.Configuration.MaterialKey);
+                    Assert.Equal(7, changed.Configuration.Quantity);
+                    Assert.Equal(BuildPreference.Strength, changed.Configuration.BuildPreference);
+                }
+            }
+            finally
+            {
+                release.TrySetResult();
+                try { await applying.WaitAsync(lease.Token); }
+                catch (InvalidOperationException) when (refusesWrite) { }
+                catch (OperationCanceledException) when (disposes && !lease.IsCancellationRequested) { }
+            }
+        });
+    }
+
     private static InstantQuotationPart Part(string material, BuildPreference preference) => new(
         Guid.NewGuid(), material + ".stl", new InstantQuotationUploadReference("synthetic-presentation"),
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 1, true),
@@ -213,12 +365,16 @@ public sealed class InstantQuotationResinPresentationTests
     private sealed class CapturingActivator(InstantQuotationWorkflowCoordinator? coordinator = null) : IComponentActivator
     {
         internal InstantQuotationPreliminaryQuotation? Preliminary { get; private set; }
+        internal InstantQuotationWorkflow? Workflow { get; private set; }
         public IComponent CreateInstance(Type componentType)
         {
             var component = (IComponent)Activator.CreateInstance(componentType)!;
             if (component is InstantQuotationWorkflow workflow)
+            {
+                Workflow = workflow;
                 typeof(InstantQuotationWorkflow).GetField("workflow", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .SetValue(workflow, coordinator);
+            }
             if (component is InstantQuotationPreliminaryQuotation preliminary) Preliminary = preliminary;
             return component;
         }
@@ -242,12 +398,18 @@ public sealed class InstantQuotationResinPresentationTests
         }
     }
 
-    private sealed class SessionStore(InstantQuotationPart part) : IInstantQuotationSessionStore
+    private sealed class SessionStore(params InstantQuotationPart[] parts) : IInstantQuotationSessionStore
     {
-        private InstantQuotationSessionState state = new("presentation-session", "presentation-submission", new([part]), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+        private InstantQuotationSessionState state = new("presentation-session", "presentation-submission", new(parts), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
         public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken) => throw new InvalidOperationException("Restore expected.");
         public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) => Task.FromResult<InstantQuotationSessionState?>(state);
-        public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity, CancellationToken cancellationToken) { state = session; return Task.FromResult(true); }
+        internal Func<Task>? BeforePut { get; set; }
+        public async Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity, CancellationToken cancellationToken)
+        {
+            if (BeforePut is { } before) await before();
+            state = session;
+            return true;
+        }
         public Task<bool> RemoveAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) => throw new InvalidOperationException("No removal expected.");
     }
 

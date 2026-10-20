@@ -404,6 +404,11 @@ export function createWorkflowPreviewInterop({
     if (key) release(key);
   }
 
+  function setBulkSelectionState(input, mixed) {
+    if (disposed || input?.type !== 'checkbox') return;
+    input.indeterminate = mixed === true;
+  }
+
   function reset() { viewer?.reset(); }
   function fit() { viewer?.fit(); }
   function fullscreen() { return viewer?.fullscreen(); }
@@ -531,6 +536,7 @@ export function createWorkflowPreviewInterop({
     fit,
     fullscreen,
     renderReviewThumbnails,
+    setBulkSelectionState,
     updatePartAppearance,
     isIncompletePreview,
     retainIncompletePreview,

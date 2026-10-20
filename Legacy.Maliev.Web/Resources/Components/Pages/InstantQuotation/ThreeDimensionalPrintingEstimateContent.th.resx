@@ -681,4 +681,8 @@
     <value>วัสดุอื่น ๆ</value>
   </data>
   <data name="Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review" xml:space="preserve"><value>ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม</value></data>
+  <data name="Select all" xml:space="preserve"><value>เลือกทั้งหมด</value></data>
+  <data name="{0} parts selected" xml:space="preserve"><value>เลือกแล้ว {0} ชิ้นงาน</value></data>
+  <data name="Apply material to selected parts" xml:space="preserve"><value>ใช้วัสดุกับชิ้นงานที่เลือก</value></data>
+  <data name="Select for bulk material: {0}" xml:space="preserve"><value>เลือกเพื่อใช้วัสดุร่วมกัน: {0}</value></data>
 </root>

@@ -102,6 +102,23 @@
     {
         <section data-workflow-parts data-workflow-part-list aria-labelledby="instant-quote-parts-heading">
             <h3 id="instant-quote-parts-heading">@Localizer["Parts"]</h3>
+            <label class="instant-quote__bulk-checkbox">
+                <input type="checkbox" data-workflow-select-all @ref="bulkSelectAll"
+                       checked="@AllBulkPartsSelected"
+                       aria-checked="@(BulkSelectionMixed ? "mixed" : AllBulkPartsSelected ? "true" : "false")"
+                       disabled="@(InputDisabled || IsRepricing || BulkParts.Count == 0)"
+                       @onchange="SelectAllParts" />
+                @Localizer["Select all"]
+            </label>
+            @if (Parts.Count > 1)
+            {
+                <div class="instant-quote__bulk-material" data-workflow-bulk-material>
+                    <span role="status" aria-live="polite">@Localizer["{0} parts selected", SelectedBulkCount]</span>
+                    <button type="button" data-workflow-apply-material
+                            disabled="@(!CanApplyBulkMaterial)"
+                            @onclick="ApplyMaterialToSelectedAsync">@Localizer["Apply material to selected parts"]</button>
+                </div>
+            }
             <label for="instant-quote-files"
                    class="iq-compact-dropzone"
                    aria-disabled="@InputDisabled.ToString().ToLowerInvariant()">
@@ -135,12 +152,21 @@
                 <article data-workflow-part data-part-id="@part.PartId">
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4>@part.DisplayFileName</h4>
+                    <label class="instant-quote__bulk-checkbox">
+                        <input type="checkbox" data-workflow-part-select
+                               checked="@(IsBulkEligible(part) && selectedBulkParts.Contains(part.PartId))"
+                               disabled="@(InputDisabled || IsRepricing || !IsBulkEligible(part))"
+                               @onchange="args => SetPartSelected(part.PartId, args)" />
+                        @Localizer["Select for bulk material: {0}", part.DisplayFileName]
+                    </label>
                     <button type="button"
                             aria-label="@Localizer["View {0}", part.DisplayFileName]"
                             aria-pressed="@IsPreviewSelected(part.PartId).ToString().ToLowerInvariant()"
+                            disabled="@bulkApplying"
                             @onclick="() => SelectPreviewAsync(part.PartId)">@Localizer["View"]</button>
                     <button type="button"
                             aria-label="@Localizer["Remove {0}", part.DisplayFileName]"
+                            disabled="@bulkApplying"
                             @onclick="() => RemovePartAsync(part.PartId)">@Localizer["Remove"]</button>
                 </article>
             }
@@ -225,7 +251,8 @@
             {
                 var partNumber = PartNumber(part.PartId);
                 var displayQuote = DisplayQuote(part);
-                <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
+                <fieldset data-workflow-material-color-quantity data-workflow-material-picker
+                          disabled="@bulkApplying" inert="@(bulkApplying ? string.Empty : null)">
                     <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
                     <InstantQuotationMaterialSelector @key="part.PartId" Materials="Materials"
                         SelectedMaterialKey="@part.Configuration.MaterialKey" PriceRows="CardPriceRows(part)"

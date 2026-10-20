@@ -1778,3 +1778,32 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 [data-material-selector] .material-card__heading { position: relative; min-height: 44px; align-items: center; padding-right: 2.75rem; }
 [data-material-selector] .material-card__heading strong { font-size: .8rem; overflow-wrap: anywhere; }
 [data-material-selector] .material-card__heading button { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 44px; min-width: 44px; height: 44px; margin: 0; padding: 0; }
+
+/* Small native checkboxes retain the full associated-label touch target. */
+.instant-quote__bulk-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+}
+.instant-quote__bulk-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    margin: 0;
+    flex: 0 0 16px;
+    accent-color: var(--bs-primary);
+}
+.instant-quote__bulk-material {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.instant-quote__bulk-material button {
+    min-height: 44px;
+}

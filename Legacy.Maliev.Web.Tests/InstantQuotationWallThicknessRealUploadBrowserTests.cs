@@ -681,6 +681,97 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         }
     }
 
+
+    [Theory]
+    [InlineData(375, "th")]
+    [InlineData(1280, "en")]
+    public async Task BulkSelection_UsesAccessibleNativeControlsAndKeepsServerOwnedPartSettings(int width, string culture)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false, BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var page = await browser.NewPageAsync(new BrowserNewPageOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = 800 },
+        });
+        await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+        var bytes = WallThicknessParityBrowserFixture.Box(5);
+        await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(0, 3).Select(index => new FilePayload
+        {
+            Name = $"bulk-{index}.stl", MimeType = "model/stl", Buffer = bytes,
+        }));
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 3 && !document.querySelector('#instant-quote-files').disabled");
+        var parts = page.Locator("[data-workflow-part]");
+        var ids = await parts.EvaluateAllAsync<string[]>("nodes => nodes.map(node => node.dataset.partId)");
+        await parts.Nth(1).Locator("button").First.ClickAsync();
+        await page.Locator($"#quantity-{ids[1]}").FillAsync("7");
+        await page.Locator($"#quantity-{ids[1]}").PressAsync("Tab");
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')");
+        await page.Locator($"input[name='build-preference-{ids[1]}'][value='strength']").CheckAsync();
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')");
+        await parts.Nth(2).Locator("button").Last.ClickAsync();
+        await Assertions.Expect(parts.Nth(2).Locator("[data-workflow-part-select]")).ToBeDisabledAsync();
+        await parts.Nth(0).Locator("button").First.ClickAsync();
+        await MaterialCardBrowserActions.SelectAsync(page, "PETG");
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-pricing-loading-status]')");
+
+        var second = parts.Nth(1).Locator("[data-workflow-part-select]");
+        await second.Locator("..").ClickAsync(new LocatorClickOptions { Position = new Position { X = 3, Y = 3 } });
+        await Assertions.Expect(second).ToBeCheckedAsync();
+        var all = page.Locator("[data-workflow-select-all]");
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-select-all]').indeterminate === true");
+        Assert.Equal("mixed", await all.GetAttributeAsync("aria-checked"));
+        Assert.True(await page.Locator("[data-workflow-part-select], [data-workflow-select-all]").EvaluateAllAsync<bool>("""
+            inputs => inputs.length === 4 && inputs.every(input => {
+              const box = input.getBoundingClientRect(), label = input.labels[0].getBoundingClientRect();
+              return box.width === 16 && box.height === 16 && label.width >= 44 && label.height >= 44;
+            })
+            """);
+        await second.FocusAsync();
+        await page.Keyboard.PressAsync("Space");
+        await Assertions.Expect(second).Not.ToBeCheckedAsync();
+        await all.CheckAsync();
+        await Assertions.Expect(page.Locator("[data-workflow-part-select]:checked")).ToHaveCountAsync(2);
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-select-all]').indeterminate === false");
+        await page.Locator("[data-workflow-apply-material]").ClickAsync();
+        var sessions = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+        using var resultDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        InstantQuotationSessionState? saved;
+        do
+        {
+            saved = await sessions.GetAsync(upload.SessionId, upload.OwnerIdentity, resultDeadline.Token);
+            if (saved?.Parts.Single(part => part.PartId == Guid.Parse(ids[1])).Configuration.MaterialKey == "PETG") break;
+            await Task.Delay(20, resultDeadline.Token);
+        } while (true);
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-workflow-material-color-quantity][inert]')");
+        await Assertions.Expect(parts.Nth(1).Locator("[data-workflow-part-select]")).ToBeEnabledAsync();
+        Assert.NotNull(saved);
+        Assert.Equal(3, saved.Parts.Count);
+        Assert.Equal("PETG", saved.Parts.Single(part => part.PartId == Guid.Parse(ids[0])).Configuration.MaterialKey);
+        var changed = saved.Parts.Single(part => part.PartId == Guid.Parse(ids[1]));
+        Assert.Equal("PETG", changed.Configuration.MaterialKey);
+        Assert.Equal(7, changed.Configuration.Quantity);
+        Assert.Equal(Legacy.Maliev.Web.Application.Pricing.BuildPreference.Strength, changed.Configuration.BuildPreference);
+        Assert.Equal("PLA", saved.Parts.Single(part => part.PartId == Guid.Parse(ids[2])).Configuration.MaterialKey);
+        Assert.Equal(3, upload.VerifiedUploads);
+        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+        await Assertions.Expect(page.Locator("[data-workflow-parts] .iq-compact-dropzone")).ToBeInViewportAsync();
+    }
+
     private static async Task AssertPrintableDfmMatchesReviewAsync(IPage page, IReadOnlyList<string> reviewedWarnings)
     {
         var preliminary = page.Locator("#preliminary-quotation-button");

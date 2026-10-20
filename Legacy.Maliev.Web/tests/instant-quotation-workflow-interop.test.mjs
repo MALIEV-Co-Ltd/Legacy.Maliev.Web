@@ -420,3 +420,23 @@ test('unadmitted cleanup disposes shared geometry, materials, and textures once 
   interop.release(keys[1]);
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });
 });
+
+test('bulk select-all uses the native indeterminate property without changing checked state or unrelated inputs', () => {
+  const { interop } = harness();
+  const input = { type: 'checkbox', checked: false, indeterminate: false };
+  try {
+    interop.setBulkSelectionState(input, true);
+    assert.equal(input.indeterminate, true);
+    assert.equal(input.checked, false);
+    input.checked = true;
+    interop.setBulkSelectionState(input, false);
+    assert.equal(input.indeterminate, false);
+    assert.equal(input.checked, true);
+    const text = { type: 'text', value: 'unchanged' };
+    interop.setBulkSelectionState(text, true);
+    assert.deepEqual(text, { type: 'text', value: 'unchanged' });
+    interop.dispose();
+    interop.setBulkSelectionState(input, true);
+    assert.equal(input.indeterminate, false);
+  } finally { interop.dispose(); }
+});

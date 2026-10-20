@@ -61,6 +61,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool batchInProgress;
     private readonly RepricingActivity repricing = new();
     private Guid? selectedPreviewPartId;
+    private readonly HashSet<Guid> selectedBulkParts = [];
+    private ElementReference bulkSelectAll;
+    private bool bulkApplying;
     private PendingWorkflowFocus pendingFocus;
 
     private ThicknessStatus? SelectedThickness => selectedPreviewPartId is { } id
@@ -125,7 +128,74 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }));
     }
 
-    private bool InputDisabled => IsBusy || batchInProgress;
+    private bool InputDisabled => IsBusy || batchInProgress || bulkApplying;
+
+    private bool IsBulkEligible(InstantQuotationWorkflowPartViewModel part) =>
+        Uploads.Any(upload => upload.LocalId == part.PreviewCorrelationId
+            && upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)
+        && part.Geometry.TopologyChecked && !part.Geometry.NonWatertight && !part.Geometry.NonManifold
+        && (!physicalAnalyses.TryGetValue(part.PartId, out var physical) || physical.IsReady);
+
+    private IReadOnlyList<InstantQuotationWorkflowPartViewModel> BulkParts => Parts.Where(IsBulkEligible).ToArray();
+
+    private int SelectedBulkCount => BulkParts.Count(part => selectedBulkParts.Contains(part.PartId));
+
+    private bool AllBulkPartsSelected => BulkParts.Count > 0 && SelectedBulkCount == BulkParts.Count;
+
+    private bool BulkSelectionMixed => SelectedBulkCount > 0 && !AllBulkPartsSelected;
+
+    private bool CanApplyBulkMaterial => !disposed && !InputDisabled && !IsRepricing && VisibleSections.Configuration
+        && SelectedBulkCount > 0 && !Parts.Any(part => quantityEdits.IsPending(part.PartId))
+        && ConfigurationParts.SingleOrDefault() is { } active && IsBulkEligible(active);
+
+    private void SetPartSelected(Guid partId, ChangeEventArgs args)
+    {
+        if (disposed || InputDisabled || IsRepricing || !BulkParts.Any(part => part.PartId == partId)) return;
+        if (args.Value is true) selectedBulkParts.Add(partId);
+        else selectedBulkParts.Remove(partId);
+        StateHasChanged();
+    }
+
+    private void SelectAllParts(ChangeEventArgs args)
+    {
+        if (disposed || InputDisabled || IsRepricing) return;
+        selectedBulkParts.Clear();
+        if (args.Value is true) selectedBulkParts.UnionWith(BulkParts.Select(part => part.PartId));
+        StateHasChanged();
+    }
+
+    private async Task ApplyMaterialToSelectedAsync()
+    {
+        if (!CanApplyBulkMaterial) return;
+        var active = ConfigurationParts.SingleOrDefault();
+        if (active is null || !IsBulkEligible(active)) return;
+        var material = active.Configuration.MaterialKey;
+        var ids = BulkParts.Where(part => selectedBulkParts.Contains(part.PartId))
+            .Select(part => part.PartId).ToArray();
+        bulkApplying = true;
+        try
+        {
+            await RepriceAsync(async () =>
+            {
+                foreach (var id in ids)
+                {
+                    if (disposed) return;
+                    var part = Parts.SingleOrDefault(candidate => candidate.PartId == id);
+                    if (part is null || !IsBulkEligible(part) || part.Configuration.MaterialKey == material) continue;
+                    InvalidatePhysicalAnalysis(id);
+                    var color = GetColors(material).First();
+                    await workflow!.UpdateConfigurationAsync(id, material, color, part.Configuration.Quantity, default);
+                    await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(id), material);
+                    await UpdatePartAppearanceAsync(id, color);
+                }
+            });
+        }
+        finally
+        {
+            bulkApplying = false;
+            if (!disposed) await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private bool CanEnterReview
     {
@@ -227,6 +297,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
 
         await EnsurePreviewInputBoundAsync();
+        selectedBulkParts.IntersectWith(BulkParts.Select(part => part.PartId));
+        if (VisibleSections.Parts && previewInterop is not null)
+        {
+            await InvokePreviewAsync("setBulkSelectionState", bulkSelectAll, BulkSelectionMixed);
+        }
 
         if (incompletePreviewKey is { } incompleteKey && !incompletePreviewAttached && previewInterop is not null)
         {
@@ -388,6 +463,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task UploadFilesAsync(InputFileChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         if (workflow is null)
         {
             return;
@@ -535,6 +611,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task RemovePartAsync(Guid partId)
     {
+        if (bulkApplying || disposed) return;
         InvalidatePhysicalAnalysis(partId);
         if (workflow is not null)
         {
@@ -545,6 +622,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 thicknessStatuses.Remove(partId);
                 thicknessToggleRevisions.Remove(partId);
                 quantityEdits.Forget(partId);
+                selectedBulkParts.Remove(partId);
                 quantityDrafts.Remove(partId);
                 displayIntents.Remove(partId);
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
@@ -694,6 +772,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task SelectPreviewAsync(Guid partId)
     {
+        if (bulkApplying || disposed) return;
         selectedPreviewPartId = partId;
         await InvokePreviewAsync("select", ViewerPartKey(partId));
     }
@@ -838,6 +917,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeMaterialAsync(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var material = args.Value?.ToString() ?? part.Configuration.MaterialKey;
@@ -854,6 +934,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeColorAsync(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var color = args.Value?.ToString() ?? part.Configuration.Color;
@@ -867,6 +948,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private void OnQuantityInput(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         if (Parts.All(part => part.PartId != partId)) return;
         quantityDrafts[partId] = (checked(++quantityDraftRevision), args.Value?.ToString() ?? "");
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
@@ -876,6 +958,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
@@ -888,6 +971,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
     {
+        if (bulkApplying || disposed) return Task.CompletedTask;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         displayIntents[partId] = part.Configuration with { BuildPreference = buildPreference };
@@ -1062,18 +1146,21 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeReviewMaterialAsync((Guid PartId, string Value) change)
     {
+        if (bulkApplying || disposed) return;
         await ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
         workflow?.EnterReview();
     }
 
     private async Task ChangeReviewColorAsync((Guid PartId, string Value) change)
     {
+        if (bulkApplying || disposed) return;
         await ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
         workflow?.EnterReview();
     }
 
     private async Task ChangeReviewQuantityAsync((Guid PartId, string Value) change)
     {
+        if (bulkApplying || disposed) return;
         if (!int.TryParse(change.Value, out var quantity)
             || quantity < 1
             || quantity > PricingCatalog.MaximumAdditiveQuantity)
@@ -1087,6 +1174,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeReviewBuildPreferenceAsync((Guid PartId, string Value) change)
     {
+        if (bulkApplying || disposed) return;
         if (!Enum.TryParse<BuildPreference>(change.Value, true, out var preference)
             || !Enum.IsDefined(preference))
         {
