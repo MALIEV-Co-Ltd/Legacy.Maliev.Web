@@ -3512,7 +3512,12 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        var firstNameLabelElement = Assert.Single(Regex.Matches(source,
+            "<label\\b[^>]*\\bfor=\"FirstName\"[^>]*>([\\s\\S]*?)</label>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("class=\"form-label\"", firstNameLabelElement.Value, StringComparison.Ordinal);
+        Assert.Equal($"{firstNameLabel} <span class=\"inquiry-required\">*</span>",
+            WebUtility.HtmlDecode(firstNameLabelElement.Groups[1].Value));
         Assert.Contains(submitLabel, decodedSource, StringComparison.Ordinal);
         Assert.Contains($"action=\"/Contact?handler=SubmitRequest&amp;culture={culture}\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
@@ -3591,7 +3596,12 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("data-migration-component=\"quotation-hero-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        var firstNameLabelElement = Assert.Single(Regex.Matches(source,
+            "<label\\b[^>]*\\bfor=\"FirstName\"[^>]*>([\\s\\S]*?)</label>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("class=\"form-label\"", firstNameLabelElement.Value, StringComparison.Ordinal);
+        Assert.Equal($"{firstNameLabel} <span class=\"inquiry-required\">*</span>",
+            WebUtility.HtmlDecode(firstNameLabelElement.Groups[1].Value));
         Assert.Contains(
             $"action=\"/Quotation?handler=SubmitRequest&amp;culture={culture}\"",
             source,
@@ -3604,7 +3614,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("name=\"Files\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
         Assert.Contains("multiple", source, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"quotation-files-help Files-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error quotation-file-too-large\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
