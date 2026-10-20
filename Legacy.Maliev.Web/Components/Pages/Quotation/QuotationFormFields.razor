@@ -56,17 +56,17 @@
         {
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="FirstName" class="form-label">@Localizer["First name"]</label>
+                    <label for="FirstName" class="form-label">@Localizer["First name"] <span class="inquiry-required">*</span></label>
                     <input class="form-control" autocomplete="given-name" type="text" id="FirstName" maxlength="50" name="FirstName" value="@Model.FirstName" required aria-invalid="@AriaInvalid("FirstName")" aria-describedby="FirstName-error" />
                     <span id="FirstName-error" class="text-danger @(HasError("FirstName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("FirstName")</span>
                 </div>
                 <div class="col-md-6">
-                    <label for="LastName" class="form-label">@Localizer["Last name"]</label>
+                    <label for="LastName" class="form-label">@Localizer["Last name"] <span class="inquiry-required">*</span></label>
                     <input class="form-control" autocomplete="family-name" type="text" id="LastName" maxlength="50" name="LastName" value="@Model.LastName" required aria-invalid="@AriaInvalid("LastName")" aria-describedby="LastName-error" />
                     <span id="LastName-error" class="text-danger @(HasError("LastName") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("LastName")</span>
                 </div>
                 <div class="col-md-6">
-                    <label for="Email" class="form-label">@Localizer["Email"]</label>
+                    <label for="Email" class="form-label">@Localizer["Email"] <span class="inquiry-required">*</span></label>
             <input class="form-control" autocomplete="email" inputmode="email" type="email" id="Email" maxlength="50" name="Email" value="@Model.Email" required aria-invalid="@AriaInvalid("Email")" aria-describedby="Email-error quotation-email-feedback" data-live-email data-live-email-invalid='@Localizer["Please enter a valid email address"]' />
             <span id="Email-error" class="text-danger @(HasError("Email") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Email")</span>
             <span id="quotation-email-feedback" class="inquiry-help inquiry-live-feedback" data-email-feedback hidden></span>
@@ -88,7 +88,7 @@
                     <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="quotation-company-lookup" Surface="quotation-company" />
                 </div>
                 <div class="col-md-6">
-                    <label for="Country" class="form-label">@Localizer["Country"]</label>
+                    <label for="Country" class="form-label">@Localizer["Country"] <span class="inquiry-required">*</span></label>
                     <select class="form-select" id="Country" name="Country" required disabled="@(!Model.CountryServiceAvailable)" aria-invalid="@AriaInvalid("Country")" aria-describedby="Country-error" data-auto-country>
                         <option value="">@Localizer["Select a country"]</option>
                         @foreach (var country in Model.Countries)
@@ -109,7 +109,7 @@
         </div>
         <div class="row g-3">
         <div class="col-12">
-            <label for="Message" class="form-label">@Localizer["Project requirements"]</label>
+            <label for="Message" class="form-label">@Localizer["Project requirements"] <span class="inquiry-required">*</span></label>
             <textarea class="form-control" rows="10" id="Message" maxlength="10000" name="Message" required aria-invalid="@AriaInvalid("Message")" aria-describedby="Message-error">@Model.Message</textarea>
             <span id="Message-error" class="text-danger @(HasError("Message") ? "field-validation-error" : "field-validation-valid")">@Model.FirstErrorFor("Message")</span>
         </div>
