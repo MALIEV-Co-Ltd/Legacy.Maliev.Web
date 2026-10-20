@@ -1040,12 +1040,17 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task RepriceAsync(Func<Task> update, Func<Task>? afterUpdate = null)
     {
+        Task NotifyAsync() => InvokeAsync(() =>
+        {
+            if (!disposed) StateHasChanged();
+        });
+
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
-        try { await repricing.RunAsync(update, () => InvokeAsync(StateHasChanged), afterUpdate); }
+        try { await repricing.RunAsync(update, NotifyAsync, afterUpdate); }
         finally
         {
             if (!repricing.IsActive) displayIntents.Clear();
-            if (!disposed) await InvokeAsync(StateHasChanged);
+            if (!disposed) await NotifyAsync();
         }
     }
 
