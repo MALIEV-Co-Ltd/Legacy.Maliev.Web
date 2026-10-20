@@ -45,6 +45,12 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
         }
         Assert.Contains(culture == "th" ? "ภาพประกอบ" : "Illustrative", html, StringComparison.Ordinal);
         Assert.Contains("data-tech-leader=\"resin\" data-target-x=\"790\" data-target-y=\"289\"", html, StringComparison.Ordinal);
+
+        foreach (var key in new[] { "fdm", "resin", "nylon", "cnc" })
+        {
+            Assert.Matches("<path[^>]*data-tech-leader=\\\"" + key + "\\\"[^>]*pathLength=\\\"1\\\"", html);
+            Assert.Matches("<circle[^>]*data-tech-point=\\\"" + key + "\\\"", html);
+        }
         Assert.Contains("camera-bracket-sketch-v6.webp", html, StringComparison.Ordinal);
         Assert.Contains("camera-bracket-cad-v5.webp", html, StringComparison.Ordinal);
         Assert.Contains("camera-bracket-prototypes-v4.webp", html, StringComparison.Ordinal);

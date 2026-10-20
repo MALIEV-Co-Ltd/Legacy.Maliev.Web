@@ -39,11 +39,11 @@
                 <div class="hero-assembly-annotated">
                     <img src="/src/images/landing/profile-hybrid-gripper-cutout.webp" width="1200" height="800" fetchpriority="@(inCarousel && variant != "assembly" ? "low" : "high")" loading="eager" decoding="async" alt="@L("Illustrative gripper combining machined aluminium, orange FDM housing, ivory nylon fingers and an amber resin cover")" />
                     <svg class="hero-tech-leaders" viewBox="0 0 1200 1091" aria-hidden="true" focusable="false">
-                        <path data-tech-leader="resin" data-target-x="790" data-target-y="289" d="M800 145 L790 289" />
-                        <path data-tech-leader="fdm" data-target-x="580" data-target-y="335" d="M170 145 L580 335" />
-                        <path data-tech-leader="nylon" data-target-x="300" data-target-y="615" d="M160 946 L300 615" />
-                        <path data-tech-leader="cnc" data-target-x="850" data-target-y="780" d="M980 946 L850 780" />
-                        <circle cx="790" cy="289" r="6" /><circle cx="580" cy="335" r="6" /><circle cx="300" cy="615" r="6" /><circle cx="850" cy="780" r="6" />
+                        <path data-tech-leader="resin" data-target-x="790" data-target-y="289" pathLength="1" d="M800 145 L790 289" />
+                        <path data-tech-leader="fdm" data-target-x="580" data-target-y="335" pathLength="1" d="M170 145 L580 335" />
+                        <path data-tech-leader="nylon" data-target-x="300" data-target-y="615" pathLength="1" d="M160 946 L300 615" />
+                        <path data-tech-leader="cnc" data-target-x="850" data-target-y="780" pathLength="1" d="M980 946 L850 780" />
+                        <circle cx="790" cy="289" r="6" data-tech-point="resin" /><circle cx="580" cy="335" r="6" data-tech-point="fdm" /><circle cx="300" cy="615" r="6" data-tech-point="nylon" /><circle cx="850" cy="780" r="6" data-tech-point="cnc" />
                     </svg>
                     <ul class="hero-tech-callouts">
                         <li class="hero-tech-resin"><strong>@L("SLA printing")</strong><span>@L("Resin sensor cover")</span></li>

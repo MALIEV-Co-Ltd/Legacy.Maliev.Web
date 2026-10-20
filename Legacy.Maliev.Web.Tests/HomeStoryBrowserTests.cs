@@ -214,6 +214,109 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture, X
         Assert.Equal("stopped", await page.Locator("[data-home-hero-carousel]").GetAttributeAsync("data-carousel-ready"));
     }
 
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ActualHomeBundle_RevealsDecodedAssemblyBeforeItsFullReadableDwell(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new()
+        {
+            ViewportSize = new() { Width = 1440, Height = 1000 },
+            ReducedMotion = ReducedMotion.NoPreference,
+        });
+        await context.AddInitScriptAsync("""
+            (() => {
+                const nativeSet = window.setTimeout.bind(window), nativeClear = window.clearTimeout.bind(window);
+                const timers = new Map(); let now = 0, next = -1;
+                window.setTimeout = (callback, delay, ...args) => {
+                    if (delay !== 8000) return nativeSet(callback, delay, ...args);
+                    const id = next--; timers.set(id, { callback: () => callback(...args), due: now + delay }); return id;
+                };
+                window.clearTimeout = id => { if (!timers.delete(id)) nativeClear(id); };
+                const complete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'complete');
+                const nativeDecode = HTMLImageElement.prototype.decode;
+                const nativeAnimate = Element.prototype.animate;
+                const calls = [];
+                let held = true, releaseDecode;
+                const target = image => image.getAttribute('src') === '/src/images/landing/profile-hybrid-gripper-cutout.webp';
+                Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+                    configurable: true,
+                    get() { return target(this) && held ? false : complete.get.call(this); }
+                });
+                HTMLImageElement.prototype.decode = function () {
+                    if (!target(this) || !held) return nativeDecode.call(this);
+                    return new Promise((resolve, reject) => {
+                        releaseDecode = () => { held = false; nativeDecode.call(this).then(resolve, reject); };
+                    });
+                };
+                Element.prototype.animate = function (frames, timing) {
+                    const animation = nativeAnimate.call(this, frames, timing);
+                    if (this.closest('[data-home-hero-carousel]')) calls.push({ element: this, animation });
+                    return animation;
+                };
+                window.__homeReveal = {
+                    calls, ready: () => typeof releaseDecode === 'function',
+                    release: () => releaseDecode(),
+                    count: () => timers.size,
+                    advance: milliseconds => {
+                        now += milliseconds;
+                        for (const [id, item] of [...timers]) if (item.due <= now) { timers.delete(id); item.callback(); }
+                    }
+                };
+            })();
+            """);
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, $"/?culture={culture}").ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok);
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+        var parking = page.Locator(".maliev-skip-link[href='#main-content']");
+        await parking.FocusAsync();
+        await parking.HoverAsync();
+        await page.WaitForFunctionAsync("""
+            () => window.__homeReveal.ready()
+                && document.querySelector('[data-home-hero-carousel]')?.dataset.carouselReady === 'true'
+                && !document.querySelector('[data-home-hero-carousel]').matches(':hover')
+                && !document.querySelector('[data-home-hero-carousel]').contains(document.activeElement)
+                && document.querySelector('#home-hero-assembly img').naturalWidth > 0
+            """, null, new() { Timeout = 30000 });
+        Assert.Equal(0, await page.EvaluateAsync<int>("window.__homeReveal.count()"));
+        Assert.True(await page.EvaluateAsync<bool>("window.__homeReveal.calls.length > 0 && window.__homeReveal.calls.every(call => call.animation.playState === 'paused')"));
+        await page.EvaluateAsync("window.__homeReveal.advance(24000)");
+        Assert.True(await page.Locator("#home-hero-assembly").IsVisibleAsync());
+        Assert.Equal(0, await page.EvaluateAsync<int>("window.__homeReveal.count()"));
+        Assert.True(await page.EvaluateAsync<bool>("""
+            (() => {
+                const calls = window.__homeReveal.calls;
+                const timing = selector => calls.find(call => call.element.matches(selector))?.animation.effect.getTiming();
+                if (timing('.hero-assembly-annotated > img')?.duration !== 600) return false;
+                return ['fdm', 'resin', 'nylon', 'cnc'].every((key, i) => {
+                    const line = timing('[data-tech-leader="' + key + '"]');
+                    const label = timing('.hero-tech-' + key), point = timing('[data-tech-point="' + key + '"]');
+                    return line?.delay === 650 + i * 360 && line.duration === 280
+                        && label?.delay === line.delay + 120 && label.duration === 200
+                        && point?.delay === line.delay + 220 && point.duration === 100;
+                }) && timing('.hero-material-summary')?.delay === 2100;
+            })()
+            """));
+        await page.EvaluateAsync("window.__homeReveal.release()");
+        await page.WaitForFunctionAsync("() => window.__homeReveal.count() === 1", null, new() { Timeout = 30000 });
+        Assert.True(await page.Locator("#home-hero-assembly").EvaluateAsync<bool>("""
+            panel => ['fdm', 'resin', 'nylon', 'cnc'].every(key =>
+                [panel.querySelector('.hero-tech-' + key), panel.querySelector('[data-tech-point="' + key + '"]'),
+                 panel.querySelector('[data-tech-leader="' + key + '"]')].every(element => getComputedStyle(element).opacity === '1'))
+            """));
+        await page.EvaluateAsync("window.__homeReveal.advance(7999)");
+        Assert.True(await page.Locator("#home-hero-assembly").IsVisibleAsync());
+        await page.EvaluateAsync("window.__homeReveal.advance(1)");
+        await page.WaitForFunctionAsync("() => document.querySelector('#home-hero-partnership')?.hidden === false",
+            null, new() { Timeout = 30000 });
+        await page.EvaluateAsync("window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))");
+        Assert.Equal(0, await page.EvaluateAsync<int>("window.__homeReveal.count()"));
+        Assert.Equal("stopped", await page.Locator("[data-home-hero-carousel]").GetAttributeAsync("data-carousel-ready"));
+    }
+
     [Theory]
     [InlineData("en")]
     [InlineData("th")]
