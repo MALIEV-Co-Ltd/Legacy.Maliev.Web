@@ -17,11 +17,11 @@
     {
         @foreach (var failure in failedPreviewSelections)
         {
-            <article data-workflow-failed-preview>
-                <h4>@failure.Value</h4>
-                <p role="alert">@Localizer["The file could not be uploaded. Try again."]</p>
+            <article data-workflow-failed-preview data-preview-failure="@failure.Value.Category">
+                <h4>@failure.Value.Name</h4>
+                <p role="alert">@LocalPreviewFailureMessage(failure.Value)</p>
                 <button type="button" disabled="@(InputDisabled || IsRepricing)"
-                        aria-label="@Localizer["Remove {0}", failure.Value]"
+                        aria-label="@Localizer["Remove {0}", failure.Value.Name]"
                         @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
             </article>
         }
@@ -177,17 +177,17 @@
             }
             @foreach (var failure in failedPreviewSelections)
             {
-                <article data-workflow-upload-item data-workflow-failed-preview class="instant-quote__local-file is-error">
-                    <h4>@failure.Value</h4>
+                <article data-workflow-upload-item data-workflow-failed-preview data-preview-failure="@failure.Value.Category" class="instant-quote__local-file is-error">
+                    <h4>@failure.Value.Name</h4>
                     <span class="instant-quote__local-thumbnail" aria-hidden="true">◇</span>
                     <span data-workflow-file-error-badge class="instant-quote__file-error-badge" role="img"
-                          aria-label="@(failure.Value + ": " + Localizer["Invalid file. Repair the model and reupload it."])">!</span>
+                          aria-label="@(failure.Value.Name + ": " + LocalPreviewFailureMessage(failure.Value))">!</span>
                     <button type="button" disabled="@bulkApplying"
-                            aria-label="@Localizer["View {0}", failure.Value]"
+                            aria-label="@Localizer["View {0}", failure.Value.Name]"
                             aria-pressed="@(selectedFailedPreviewKey == failure.Key ? "true" : "false")"
                             @onclick="() => SelectFailedPreviewAsync(failure.Key)">@Localizer["View"]</button>
                     <button type="button" data-workflow-remove-failed disabled="@(InputDisabled || IsRepricing)"
-                            aria-label="@Localizer["Remove {0}", failure.Value]"
+                            aria-label="@Localizer["Remove {0}", failure.Value.Name]"
                             @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
                 </article>
             }

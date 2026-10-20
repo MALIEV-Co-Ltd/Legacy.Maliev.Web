@@ -69,7 +69,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private Guid? autoPreviewLocalId;
     private Guid? revealPreviewPartId;
     private long previewSelectionGeneration;
-    private readonly Dictionary<string, string> failedPreviewSelections = [];
+    private sealed record LocalPreviewFailure(string Name, string Category);
+    private readonly Dictionary<string, LocalPreviewFailure> failedPreviewSelections = [];
     private readonly HashSet<Guid> selectedBulkParts = [];
     private ElementReference bulkSelectAll;
     private bool bulkApplying;
@@ -100,8 +101,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         get
         {
             if (disposed) return null;
-            if (selectedFailedPreviewKey is { } key && failedPreviewSelections.TryGetValue(key, out var name))
-                return (name, Localizer["Invalid file. Repair the model and reupload it."]);
+            if (selectedFailedPreviewKey is { } key && failedPreviewSelections.TryGetValue(key, out var failure))
+                return (failure.Name, LocalPreviewFailureMessage(failure));
             var upload = selectedPreviewUploadId is { } id ? Uploads.FirstOrDefault(item => item.LocalId == id) : null;
             return upload?.Status is InstantQuotationWorkflowUploadStatus.Error
                 && Parts.All(part => part.PreviewCorrelationId != upload.LocalId)
@@ -110,6 +111,25 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     : "The file could not be uploaded. Try again."])
                 : null;
         }
+    }
+
+    private string LocalPreviewFailureMessage(LocalPreviewFailure failure) => Localizer[failure.Category switch
+    {
+        "unreadable" => "Invalid file. Repair the model and reupload it.",
+        "complexity" => "This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation.",
+        _ => "3D file processing is unavailable. Try again or contact our engineers for a quotation.",
+    }].Value;
+
+    private async Task<string> ReadPreviewFailureCategoryAsync(string key)
+    {
+        var interop = previewInterop;
+        if (disposed || interop is null) return "unavailable";
+        try
+        {
+            var category = await interop.InvokeAsync<string?>("getFailureCategory", key);
+            return category is "unreadable" or "complexity" ? category : "unavailable";
+        }
+        catch (JSException) { return "unavailable"; }
     }
 
     private string? LocalThumbnail(string? key) => key is not null ? localPreviewThumbnails.GetValueOrDefault(key) : null;
@@ -622,7 +642,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 for (var index = 0; index < browserFiles.Length; index++)
                 {
                     var localKey = $"local-selection-{selectionGeneration}-{index}";
-                    failedPreviewSelections[localKey] = browserFiles[index].Name;
+                    failedPreviewSelections[localKey] = new(browserFiles[index].Name, "unavailable");
                     if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= localKey;
                 }
                 foreach (var key in keys)
@@ -671,8 +691,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 {
                     if (disposed) return;
                     if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                    var category = await ReadPreviewFailureCategoryAsync(keys[index]);
+                    if (disposed) return;
+                    if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
                     pendingPreviewSelections.Remove(keys[index]);
-                    failedPreviewSelections[keys[index]] = browserFiles[index].Name;
+                    failedPreviewSelections[keys[index]] = new(browserFiles[index].Name, category);
                     if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= keys[index];
                     await InvokePreviewAsync("release", keys[index]);
                     await ReportPreviewUnavailableAsync();

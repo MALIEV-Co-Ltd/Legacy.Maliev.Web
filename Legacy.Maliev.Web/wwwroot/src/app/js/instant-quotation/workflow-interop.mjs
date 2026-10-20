@@ -150,6 +150,7 @@ export function createWorkflowPreviewInterop({
       loadedObject: null,
       settleCompletion: null,
       geometryClaim: null,
+      failureCategory: null,
       completion: null,
       partId: null,
       released: false,
@@ -166,6 +167,7 @@ export function createWorkflowPreviewInterop({
     };
     previews.set(key, entry);
     if (!supportedExtensions.has(extensionOf(file?.name))) {
+      entry.failureCategory = 'unreadable';
       setUnavailable();
       return key;
     }
@@ -279,7 +281,19 @@ export function createWorkflowPreviewInterop({
 
   function failPreview(entry, error) {
     if (!isCurrent(entry) || isCancellation(error)) return;
+    const message = String(error?.message ?? error ?? '');
+    // Advisory categories never carry decoder text or authorize an upload/price.
+    entry.failureCategory = /^(?:geometry_complexity_exceeded|triangle_budget_exceeded|layer_budget_exceeded|simulation_timeout)\b/.test(message)
+      || /^(?:Preview processing timed out\.|This file is too complex to process\.)/.test(message)
+      ? 'complexity'
+      : /^(?:Unable to load |CAD preview support failed|worker_unavailable\b|Failed to fetch dynamically imported module|Loading chunk |WebGL)/.test(message)
+        || ['NetworkError', 'NotReadableError', 'SecurityError', 'OperationError'].includes(error?.name)
+        ? 'unavailable' : 'unreadable';
     setUnavailable();
+  }
+
+  function getFailureCategory(key) {
+    return previews.get(key)?.failureCategory ?? null;
   }
 
   function attach(canvas) {
@@ -614,6 +628,7 @@ export function createWorkflowPreviewInterop({
   return Object.freeze({
     beginSelection,
     getGeometryClaim,
+    getFailureCategory,
     bindInput,
     discardSelection,
     attach,

@@ -622,6 +622,44 @@ test('a failed renderable local preview snapshots at bounded size and restores t
   } finally { interop.dispose(); }
 });
 
+
+for (const [message, expected] of [
+  ['Unable to load 3D file processing support.', 'unavailable'],
+  ['CAD preview support failed to initialize.', 'unavailable'],
+  ['worker_unavailable', 'unavailable'],
+  ['Preview processing timed out.', 'complexity'],
+  ['simulation_timeout', 'complexity'],
+  ['geometry_complexity_exceeded', 'complexity'],
+  ['Unable to read this 3D file.', 'unreadable'],
+]) {
+  test(`local advisory failure maps ${message} to fixed ${expected} without leaking decoder detail`, async () => {
+    const { interop } = harness(async () => { throw new Error(message + ' private-customer.stl'); });
+    const [key] = interop.beginSelection({ files: [modelFile('failed.stl')] });
+    try {
+      await assert.rejects(interop.getGeometryClaim(key), /Geometry analysis is unavailable/);
+      assert.equal(interop.getFailureCategory(key), expected);
+      assert.equal(interop.getFailureCategory('foreign-key'), null);
+      interop.release(key);
+      assert.equal(interop.getFailureCategory(key), null);
+    } finally { interop.dispose(); }
+  });
+}
+
+test('a failed preview category cannot replace its healthy neighbour or claim', async () => {
+  const { interop } = harness(async file => {
+    if (file.name === 'bad.stl') throw new Error('Unable to load private support.');
+    return disposableObject();
+  });
+  const [healthy, failed] = interop.beginSelection({ files: [modelFile('healthy.stl'), modelFile('bad.stl')] });
+  try {
+    const claim = await interop.getGeometryClaim(healthy);
+    await assert.rejects(interop.getGeometryClaim(failed));
+    assert.equal(interop.getFailureCategory(healthy), null);
+    assert.equal(interop.getFailureCategory(failed), 'unavailable');
+    assert.strictEqual(await interop.getGeometryClaim(healthy), claim);
+  } finally { interop.dispose(); }
+});
+
 test('bounded snapshots validate their size before changing the viewer selection', () => {
   const sizes = [], shown = [];
   const viewer = createModelViewer({ adapter: {

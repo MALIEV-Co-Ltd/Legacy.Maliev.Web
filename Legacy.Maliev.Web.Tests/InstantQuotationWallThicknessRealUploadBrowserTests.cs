@@ -1124,6 +1124,101 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         }
     }
 
+    [Theory]
+    [InlineData("en", "unreadable", "Invalid file. Repair the model and reupload it.")]
+    [InlineData("th", "unreadable", "ไฟล์ไม่สมบูรณ์ กรุณาแก้ไขโมเดลแล้วอัปโหลดใหม่")]
+    [InlineData("en", "complexity", "This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation.")]
+    [InlineData("th", "complexity", "ไฟล์นี้เกินขีดจำกัดของการวิเคราะห์ กรุณาลดความซับซ้อนของเมชหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา")]
+    [InlineData("en", "unavailable", "3D file processing is unavailable. Try again or contact our engineers for a quotation.")]
+    [InlineData("th", "unavailable", "ไม่สามารถประมวลผลไฟล์ 3 มิติได้ โปรดลองอีกครั้งหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา")]
+    public async Task ActualPreviewFailure_DistinguishesAdvisoryCategoryWithoutChangingHealthyReceipt(
+        string culture, string category, string expected)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+        using var response = await client.GetAsync(url);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var page = await browser.NewPageAsync(new()
+        { ViewportSize = new() { Width = culture == "th" ? 390 : 1440, Height = 1000 } });
+        await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "healthy-advisory.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+        });
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 1 && !document.querySelector('#instant-quote-files').disabled");
+        await MaterialCardBrowserActions.SelectAsync(page, "PETG");
+        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        await Assertions.Expect(review).ToBeEnabledAsync();
+        var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+        await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+        var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+        var before = (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!;
+        Assert.NotNull(before.QuoteAuthorization);
+        Assert.Contains(before.PhysicalReceipts!, receipt => receipt.PartId == partId && receipt.MotionSeconds > 0);
+        var protectedBefore = System.Text.Json.JsonSerializer.Serialize(before);
+        var calls = pricing.CallCount;
+        Exception? primary = null;
+        try
+        {
+            await page.EvaluateAsync("""
+                category => {
+                    const original = File.prototype.arrayBuffer;
+                    window.__restoreAdvisoryRead = () => { File.prototype.arrayBuffer = original; delete window.__restoreAdvisoryRead; };
+                    File.prototype.arrayBuffer = function () {
+                        if (this.name !== 'advisory-failure.stl') return original.call(this);
+                        return Promise.reject(category === 'unreadable'
+                            ? new TypeError('Unable to read this 3D file.')
+                            : new Error(category === 'complexity'
+                                ? 'Preview processing timed out.' : 'Unable to load 3D file processing support.'));
+                    };
+                }
+                """, category);
+            await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+            {
+                Name = "advisory-failure.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+            });
+            var failed = page.Locator("[data-workflow-failed-preview]");
+            await Assertions.Expect(failed).ToHaveCountAsync(1);
+            await page.WaitForFunctionAsync("() => !document.querySelector('#instant-quote-files').disabled");
+            Assert.Null(await failed.GetAttributeAsync("data-part-id"));
+            await failed.Locator("button[aria-pressed]").ClickAsync();
+            var alert = page.Locator("[data-workflow-file-error]");
+            await Assertions.Expect(alert).ToBeVisibleAsync();
+            await Assertions.Expect(alert).ToContainTextAsync(expected);
+            Assert.Equal(1, await page.Locator("[role='alert']").CountAsync());
+            if (category != "unreadable")
+                await Assertions.Expect(alert).Not.ToContainTextAsync(culture == "th" ? "ไฟล์ไม่สมบูรณ์" : "Invalid file");
+            await Assertions.Expect(review).ToBeDisabledAsync();
+            Assert.Equal(1, upload.StartedUploads);
+            Assert.Equal(1, upload.VerifiedUploads);
+            Assert.Equal(calls, pricing.CallCount);
+            Assert.True(protectedBefore == System.Text.Json.JsonSerializer.Serialize(
+                (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!));
+            await failed.Locator("[data-workflow-remove-failed]").ClickAsync();
+            await Assertions.Expect(failed).ToHaveCountAsync(0);
+            await Assertions.Expect(alert).ToBeHiddenAsync();
+            await Assertions.Expect(review).ToBeEnabledAsync();
+            Assert.True(protectedBefore == System.Text.Json.JsonSerializer.Serialize(
+                (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!));
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            try { await page.EvaluateAsync("window.__restoreAdvisoryRead?.()").WaitAsync(TimeSpan.FromSeconds(5)); }
+            catch when (primary is not null) { /* Preserve the browser failure; owned page disposal is the final cleanup. */ }
+        }
+    }
+
     private static async Task AssertPrintableDfmMatchesReviewAsync(IPage page, IReadOnlyList<string> reviewedWarnings)
     {
         var preliminary = page.Locator("#preliminary-quotation-button");

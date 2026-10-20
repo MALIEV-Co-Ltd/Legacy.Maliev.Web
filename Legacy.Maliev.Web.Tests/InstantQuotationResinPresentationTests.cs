@@ -453,9 +453,9 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.Equal(part.PartId, Assert.Single(coordinator.Parts).PartId);
                 Assert.Equal(part.Configuration, Assert.Single(coordinator.Parts).Configuration);
                 Assert.Same(priced, coordinator.OrderQuote);
-                var failures = (Dictionary<string, string>)typeof(InstantQuotationWorkflow)
+                var failures = (System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
                     .GetField("failedPreviewSelections", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
-                await (Task)Invoke("RemoveFailedPreviewAsync", Assert.Single(failures).Key)!;
+                await (Task)Invoke("RemoveFailedPreviewAsync", Assert.Single(failures.Keys.Cast<string>()))!;
                 Assert.DoesNotContain("data-workflow-failed-preview", root.ToHtmlString(), StringComparison.Ordinal);
                 Assert.True(CanReview());
                 Assert.Same(priced, coordinator.OrderQuote);
@@ -1156,6 +1156,150 @@ public sealed class InstantQuotationResinPresentationTests
         });
     }
 
+    [Theory]
+    [InlineData("en", "unreadable", "Invalid file. Repair the model and reupload it.")]
+    [InlineData("th", "unreadable", "ไฟล์ไม่สมบูรณ์ กรุณาแก้ไขโมเดลแล้วอัปโหลดใหม่")]
+    [InlineData("en", "complexity", "This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation.")]
+    [InlineData("th", "complexity", "ไฟล์นี้เกินขีดจำกัดของการวิเคราะห์ กรุณาลดความซับซ้อนของเมชหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา")]
+    [InlineData("en", "unavailable", "3D file processing is unavailable. Try again or contact our engineers for a quotation.")]
+    [InlineData("th", "unavailable", "ไม่สามารถประมวลผลไฟล์ 3 มิติได้ โปรดลองอีกครั้งหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา")]
+    [InlineData("en", "private decoder detail", "3D file processing is unavailable. Try again or contact our engineers for a quotation.")]
+    public async Task LocalPreviewFailure_UsesOnlyFixedAdvisoryCategoryAndRetainsHealthyAuthority(
+        string culture, string category, string expected)
+    {
+        using var cultures = new CultureScope(culture);
+        var healthy = Part("PLA", BuildPreference.Strength);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(healthy), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var quote = coordinator.OrderQuote;
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference((name, _) =>
+            {
+                if (name == "beginSelection") return Task.FromResult<object?>(new[] { "failed-category" });
+                if (name == "getGeometryClaim") throw new JSException("private decoder detail");
+                return Task.FromResult<object?>(name == "getFailureCategory" ? category : null);
+            });
+            void Set(string name, object value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] arguments) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, arguments);
+            Set("previewInterop", preview);
+            Set("fileInput", new InputFile());
+            using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var selecting = (Task)Invoke("UploadFilesAsync", new InputFileChangeEventArgs(
+                new IBrowserFile[] { new UnreadableBrowserFile() }))!;
+            Exception? primary = null;
+            try
+            {
+                await selecting.WaitAsync(lease.Token);
+                await (Task)Invoke("SelectFailedPreviewAsync", "failed-category")!;
+                var html = WebUtility.HtmlDecode(root.ToHtmlString());
+                Assert.Contains(expected, html, StringComparison.Ordinal);
+                Assert.DoesNotContain("private decoder detail", html, StringComparison.Ordinal);
+                if (category != "unreadable")
+                    Assert.DoesNotContain("Invalid file. Repair", html, StringComparison.Ordinal);
+                Assert.Equal(healthy.PartId, Assert.Single(coordinator.Parts).PartId);
+                Assert.Equal(healthy.Configuration, Assert.Single(coordinator.Parts).Configuration);
+                Assert.Same(quote, coordinator.OrderQuote);
+                Assert.False((bool)typeof(InstantQuotationWorkflow)
+                    .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                await (Task)Invoke("RemoveFailedPreviewAsync", "failed-category")!;
+                Assert.True((bool)typeof(InstantQuotationWorkflow)
+                    .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                Assert.Same(quote, coordinator.OrderQuote);
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        selecting, () => lease.Cancel(), () => { }, lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "advisory-failure-selection"));
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PendingFailureCategory_IgnoresRemovedOrDisposedLocalSelection(bool disposes)
+    {
+        var healthy = Part("PLA", BuildPreference.Standard);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(healthy), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var quote = coordinator.OrderQuote;
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference(async (name, _) =>
+            {
+                if (name == "beginSelection") return new[] { "held-category" };
+                if (name == "getGeometryClaim") throw new JSException("private parser detail");
+                if (name == "getFailureCategory")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                    return "unavailable";
+                }
+                return null;
+            });
+            void Set(string name, object value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] arguments) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, arguments);
+            Set("previewInterop", preview);
+            Set("fileInput", new InputFile());
+            var selecting = (Task)Invoke("UploadFilesAsync", new InputFileChangeEventArgs(
+                new IBrowserFile[] { new UnreadableBrowserFile() }))!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (disposes) await component.DisposeAsync();
+                else await (Task)Invoke("RemovePendingPreviewAsync", "held-category")!;
+                release.TrySetResult();
+                await selecting.WaitAsync(lease.Token);
+                Assert.Empty((System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
+                    .GetField("failedPreviewSelections", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                Assert.Equal(healthy.PartId, Assert.Single(coordinator.Parts).PartId);
+                Assert.Same(quote, coordinator.OrderQuote);
+                if (!disposes)
+                {
+                    Assert.DoesNotContain("data-workflow-failed-preview", root.ToHtmlString(), StringComparison.Ordinal);
+                    Assert.True((bool)typeof(InstantQuotationWorkflow)
+                        .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                }
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        selecting, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "advisory-failure-category"));
+            }
+        });
+    }
+
     private sealed class PendingParsePreviewReference(CancellationToken lease) : IJSObjectReference
     {
         private readonly TaskCompletionSource<InstantQuotationGeometryClaim> completion =
@@ -1256,10 +1400,10 @@ public sealed class InstantQuotationResinPresentationTests
                     .GetField("incompletePreviewKey", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
                 Assert.Equal(healthy.Configuration, Assert.Single(coordinator.Parts).Configuration);
                 Assert.Same(quote, coordinator.OrderQuote);
-                var failed = (Dictionary<string, string>)typeof(InstantQuotationWorkflow)
+                var failed = (System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
                     .GetField("failedPreviewSelections", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
-                Assert.DoesNotContain("removed-planar", failed.Keys);
-                Assert.DoesNotContain("removed-future", failed.Keys);
+                Assert.DoesNotContain("removed-planar", failed.Keys.Cast<string>());
+                Assert.DoesNotContain("removed-future", failed.Keys.Cast<string>());
             }
             catch (Exception exception) { primary = exception; throw; }
             finally
