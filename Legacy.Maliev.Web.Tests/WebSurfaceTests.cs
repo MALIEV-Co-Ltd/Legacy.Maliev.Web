@@ -3550,7 +3550,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("aria-describedby=\"Email-error contact-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
-        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+        Assert.Contains("Please enter a valid email address", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3749,7 +3749,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("aria-describedby=\"Email-error quotation-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
-        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+        Assert.Contains("Please enter a valid email address", source, StringComparison.Ordinal);
     }
 
     [Fact]

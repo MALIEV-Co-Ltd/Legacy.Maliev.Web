@@ -213,13 +213,6 @@ if (document.readyState === 'loading') {
 }
 
 function ValidateFormForSubmission(form) {
-    var hasJqueryValidation = typeof jQuery === 'function'
-        && jQuery.fn
-        && typeof jQuery.fn.valid === 'function';
-    if (hasJqueryValidation && !jQuery(form).valid()) {
-        return false;
-    }
-
     var hasNativeValidation = typeof form.checkValidity === 'function';
     if (hasNativeValidation && !form.checkValidity()) {
         if (typeof form.reportValidity === 'function') {
@@ -229,7 +222,7 @@ function ValidateFormForSubmission(form) {
         return false;
     }
 
-    return Boolean(hasJqueryValidation || hasNativeValidation);
+    return hasNativeValidation;
 }
 
 // reCAPTCHA callbacks must revalidate before locking and invoking native form.submit().

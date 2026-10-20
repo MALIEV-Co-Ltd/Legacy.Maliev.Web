@@ -225,11 +225,11 @@ test('quotation upload emits the controlled analytics event before native submis
 
 for (const row of [
     { name: 'native refusal', native: false, jquery: null, allowed: false, checks: ['native', 'report'] },
-    { name: 'jQuery refusal', native: true, jquery: false, allowed: false, checks: ['jquery'] },
-    { name: 'native refusal after jQuery success', native: false, jquery: true, allowed: false, checks: ['jquery', 'native', 'report'] },
-    { name: 'both validators succeed', native: true, jquery: true, allowed: true, checks: ['jquery', 'native'] },
+    { name: 'ambient jQuery refusal does not replace native validation', native: true, jquery: false, allowed: true, checks: ['native'] },
+    { name: 'ambient jQuery success cannot admit native refusal', native: false, jquery: true, allowed: false, checks: ['native', 'report'] },
+    { name: 'native success ignores ambient jQuery', native: true, jquery: true, allowed: true, checks: ['native'] },
     { name: 'native-only success', native: true, jquery: null, allowed: true, checks: ['native'] },
-    { name: 'jQuery-only success', native: null, jquery: true, allowed: true, checks: ['jquery'] },
+    { name: 'ambient jQuery success cannot replace absent native validation', native: null, jquery: true, allowed: false, checks: [] },
     { name: 'no validation mechanism', native: null, jquery: null, allowed: false, checks: [] },
 ]) {
     test(`native submit-once guard validates before locking: ${row.name}`, () => {
