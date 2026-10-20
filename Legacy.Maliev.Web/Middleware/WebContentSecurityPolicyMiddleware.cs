@@ -49,6 +49,7 @@ public sealed class WebContentSecurityPolicyMiddleware(RequestDelegate next)
             {
                 var (response, responsePolicy) = ((HttpResponse Response, string Policy))state;
                 response.Headers.ContentSecurityPolicy = responsePolicy;
+                response.Headers.StrictTransportSecurity = "max-age=63072000; includeSubDomains";
                 return Task.CompletedTask;
             },
             (context.Response, policy));
