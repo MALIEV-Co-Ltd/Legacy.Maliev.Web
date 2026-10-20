@@ -72,6 +72,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private ElementReference bulkSelectAll;
     private bool bulkApplying;
     private PendingWorkflowFocus pendingFocus;
+    private long reviewNavigationRevision;
 
     private ThicknessStatus? SelectedThickness => !HasLocalPreviewSelection && selectedPreviewPartId is { } id
         && thicknessStatuses.TryGetValue(id, out var status) ? status : null;
@@ -833,6 +834,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 thicknessToggleRevisions.Remove(partId);
                 quantityEdits.Forget(partId);
                 selectedBulkParts.Remove(partId);
+                repricing.Forget(partId);
                 quantityDrafts.Remove(partId);
                 displayIntents.Remove(partId);
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
@@ -1191,10 +1193,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var color = colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
             ? part.Configuration.Color
             : colors.First();
-        await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async () =>
+        await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async current =>
         {
+            if (!current()) return;
             await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), material);
-            await UpdatePartAppearanceAsync(partId, color);
+            if (current()) await UpdatePartAppearanceAsync(partId, color);
         });
     }
 
@@ -1208,8 +1211,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             part,
             part.Configuration.MaterialKey,
             color,
-            part.Configuration.Quantity);
-        await UpdatePartAppearanceAsync(partId, color);
+            part.Configuration.Quantity,
+            current => current() ? UpdatePartAppearanceAsync(partId, color) : Task.CompletedTask);
     }
 
     private void OnQuantityInput(Guid partId, ChangeEventArgs args)
@@ -1240,6 +1243,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (bulkApplying || disposed) return Task.CompletedTask;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
+        workflow?.ValidateConfiguration(partId, part.Configuration.MaterialKey, part.Configuration.Color,
+            part.Configuration.Quantity, buildPreference);
         displayIntents[partId] = part.Configuration with { BuildPreference = buildPreference };
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(
             part.PartId,
@@ -1247,7 +1252,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             part.Configuration.Color,
             part.Configuration.Quantity,
             buildPreference,
-            default) ?? Task.CompletedTask);
+            default) ?? Task.CompletedTask, owner: partId);
     }
 
     private int PartNumber(Guid partId)
@@ -1297,14 +1302,20 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         string material,
         string color,
         int quantity,
-        Func<Task>? afterUpdate = null)
+        Func<Func<bool>, Task>? afterUpdate = null)
     {
+        var selected = workflow?.ValidateConfiguration(part.PartId, material, color, quantity);
+        var key = selected?.Key ?? material;
         displayIntents[part.PartId] = part.Configuration with { MaterialKey = material, Color = color, Quantity = quantity };
+        bool HasCurrentBinding() => !disposed && Parts.Any(current => current.PartId == part.PartId
+            && current.Configuration.MaterialKey == key && current.Configuration.Color == color
+            && current.Configuration.Quantity == quantity);
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
-            ?? Task.CompletedTask, afterUpdate);
+            ?? Task.CompletedTask, afterUpdate is null ? null
+                : current => afterUpdate(() => current() && HasCurrentBinding()), part.PartId);
     }
 
-    private async Task RepriceAsync(Func<Task> update, Func<Task>? afterUpdate = null)
+    private async Task RepriceAsync(Func<Task> update, Func<Func<bool>, Task>? afterUpdate = null, Guid? owner = null)
     {
         Task NotifyAsync() => InvokeAsync(() =>
         {
@@ -1312,7 +1323,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         });
 
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
-        try { await repricing.RunAsync(update, NotifyAsync, afterUpdate); }
+        try
+        {
+            if (owner is { } partId) await repricing.RunAsync(partId, update, NotifyAsync, afterUpdate);
+            else await repricing.RunAsync(update, NotifyAsync, afterUpdate is null ? null : () => afterUpdate(() => !disposed));
+        }
         finally
         {
             if (!repricing.IsActive) displayIntents.Clear();
@@ -1428,15 +1443,21 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private async Task ChangeReviewMaterialAsync((Guid PartId, string Value) change)
     {
         if (bulkApplying || disposed) return;
-        await ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
-        workflow?.EnterReview();
+        var update = ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewColorAsync((Guid PartId, string Value) change)
     {
         if (bulkApplying || disposed) return;
-        await ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
-        workflow?.EnterReview();
+        var update = ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewQuantityAsync((Guid PartId, string Value) change)
@@ -1449,8 +1470,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
-        await ChangeQuantityAsync(change.PartId, new ChangeEventArgs { Value = quantity });
-        workflow?.EnterReview();
+        var update = ChangeQuantityAsync(change.PartId, new ChangeEventArgs { Value = quantity });
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewBuildPreferenceAsync((Guid PartId, string Value) change)
@@ -1462,12 +1486,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
-        await ChangeBuildPreferenceAsync(change.PartId, preference);
-        workflow?.EnterReview();
+        var update = ChangeBuildPreferenceAsync(change.PartId, preference);
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task EditReviewPartAsync(Guid partId)
     {
+        checked { reviewNavigationRevision++; }
         await SelectPreviewAsync(partId);
         workflow?.ReturnToConfiguration();
         pendingFocus = PendingWorkflowFocus.Configuration;
@@ -1483,12 +1511,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private void EnterCustomerDetails()
     {
         if (disposed || InputDisabled || IsRepricing || failedPreviewSelections.Count > 0) return;
+        checked { reviewNavigationRevision++; }
         workflow?.EnterCustomerDetails();
         pendingFocus = PendingWorkflowFocus.CustomerDetails;
     }
 
     private void ReturnToConfiguration()
     {
+        checked { reviewNavigationRevision++; }
         workflow?.ReturnToConfiguration();
         pendingFocus = PendingWorkflowFocus.Configuration;
     }
@@ -1549,6 +1579,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         failedPreviewSelections.Clear();
         selectedPreviewUploadId = null;
         selectedFailedPreviewKey = null;
+        repricing.ClearOwnership();
         localPreviewThumbnails.Clear();
         materialDisplaySubscription?.Dispose();
         materialDisplaySubscription = null;

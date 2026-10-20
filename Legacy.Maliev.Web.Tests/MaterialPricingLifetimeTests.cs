@@ -78,19 +78,21 @@ public sealed class MaterialPricingLifetimeTests
     [Fact]
     public async Task QueuedConfiguration_DisposalDoesNotMutateNewerRequestOrStartAnotherPrice()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(partCount: 2);
         var pending = fixture.Pricing.Arm();
         var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, default);
         await pending.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var queued = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, default);
+        var queued = fixture.Workflow.UpdateConfigurationAsync(fixture.OtherPartId, "M68", "White", 3, default);
         try
         {
             await fixture.Workflow.DisposeAsync();
             pending.Release.TrySetResult();
             await IgnoreCancellationAsync(first);
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => queued);
-            Assert.Equal(2, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
-            Assert.Equal(2, Assert.Single((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.Parts).Configuration.Quantity);
+            Assert.Equal(2, fixture.Workflow.Parts.Single(part => part.PartId == fixture.PartId).Configuration.Quantity);
+            Assert.Equal(2, (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.Parts.Single(part => part.PartId == fixture.PartId).Configuration.Quantity);
+            Assert.Equal(1, fixture.Workflow.Parts.Single(part => part.PartId == fixture.OtherPartId).Configuration.Quantity);
+            Assert.Equal(1, (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.Parts.Single(part => part.PartId == fixture.OtherPartId).Configuration.Quantity);
             Assert.Null(fixture.Workflow.OrderQuote);
         }
         finally { pending.Release.TrySetResult(); await IgnoreCancellationAsync(first); await IgnoreCancellationAsync(queued); }
@@ -144,6 +146,171 @@ public sealed class MaterialPricingLifetimeTests
             "Invalid configuration changed protected authorization.");
     }
 
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task SupersededActualPhysicalQuote_CannotReplaceCurrentReceiptOrProtectedAuthorization(
+        bool failLate, bool captureBeforeHold)
+    {
+        await using var fixture = await Fixture.CreateAsync(physical: true);
+        var older = fixture.Pricing.Arm(ignoreCancellation: true, failLate: failLate, captureBeforeHold: captureBeforeHold);
+        var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "PLA", "Black", 2, default);
+        await older.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var newer = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "PLA", "Black", 3, default);
+        Exception? primary = null;
+        try
+        {
+            await newer.WaitAsync(TimeSpan.FromSeconds(5));
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(older.Token.IsCancellationRequested);
+            Assert.False(older.ActualTask!.IsCompleted);
+            var quote = Assert.IsType<InstantQuotationOrderQuote>(fixture.Workflow.OrderQuote);
+            var stored = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+            var receipt = Assert.Single(stored.PhysicalReceipts!,
+                row => row.MaterialKey == "PLA");
+            Assert.Equal(3, Assert.Single(stored.Parts).Configuration.Quantity);
+            Assert.Equal(3, receipt.Quantity);
+            Assert.Equal(Owner, receipt.OwnerIdentity);
+            Assert.Equal(fixture.SessionId, receipt.SessionId);
+            Assert.Equal(fixture.PartId, receipt.PartId);
+            Assert.Equal(fixture.PhysicalDigest, receipt.UploadSha256);
+            Assert.Equal(Guid.Parse("66666666-6666-6666-6666-666666666666"), receipt.FileId);
+            Assert.Equal(3.2, receipt.BoundingCm3PerUnit, 3);
+            Assert.True(receipt.DepositedMm3 > 0);
+            Assert.True(receipt.MotionSeconds > 0);
+            Assert.True(fixture.Tickets.Validate(stored, quote, stored.QuoteAuthorization!, DateTimeOffset.UtcNow));
+            var revision = fixture.Workflow.AuthoritativeQuoteRevision;
+            var protectedBefore = System.Text.Json.JsonSerializer.Serialize(stored);
+            older.Release.TrySetResult();
+            if (failLate) await Assert.ThrowsAsync<ControlledLatePriceException>(() => older.ActualTask!);
+            else await older.ActualTask!.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Same(quote, fixture.Workflow.OrderQuote);
+            Assert.Equal(revision, fixture.Workflow.AuthoritativeQuoteRevision);
+            var after = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+            Assert.True(protectedBefore == System.Text.Json.JsonSerializer.Serialize(after));
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            older.Release.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await DrainSupersessionTaskAsync(first),
+                async () => await DrainSupersessionTaskAsync(newer),
+                async () => await DrainSupersessionTaskAsync(older.ActualTask!));
+        }
+    }
+
+    [Fact]
+    public async Task SupersessionCallbackFault_BelongsToOldRequestAndDoesNotBlockCurrentAdmission()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var older = fixture.Pricing.Arm(ignoreCancellation: true);
+        var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, default);
+        await older.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        using var registration = older.Token.Register(static () => throw new ControlledCancellationCallbackException());
+        var newer = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, default);
+        Exception? primary = null;
+        try
+        {
+            await newer.WaitAsync(TimeSpan.FromSeconds(5));
+            var error = await Assert.ThrowsAsync<InstantQuotationWorkflowCoordinator.ObsoleteQuoteCancellationException>(() => first);
+            var callbacks = Assert.IsType<AggregateException>(error.InnerException);
+            Assert.IsType<ControlledCancellationCallbackException>(Assert.Single(callbacks.InnerExceptions));
+            Assert.False(older.ActualTask!.IsCompleted);
+            Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
+            Assert.NotNull(fixture.Workflow.OrderQuote);
+            var stored = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+            Assert.Equal(3, Assert.Single(stored.Parts).Configuration.Quantity);
+            Assert.NotNull(stored.QuoteAuthorization);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            older.Release.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await DrainSupersessionTaskAsync(first, callbackFault: true),
+                async () => await DrainSupersessionTaskAsync(newer),
+                async () => await DrainSupersessionTaskAsync(older.ActualTask!));
+        }
+    }
+
+    private sealed class ControlledCancellationCallbackException : Exception { }
+
+    [Theory]
+    [InlineData("M68", "White", 0)]
+    [InlineData("UNKNOWN", "White", 3)]
+    [InlineData("M68", "INVALID", 3)]
+    public async Task InvalidNewRequest_DoesNotRetireReachedSamePartOwnership(string material, string color, int quantity)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var older = fixture.Pricing.Arm(ignoreCancellation: true);
+        var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, default);
+        Exception? primary = null;
+        try
+        {
+            await older.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+                fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, material, color, quantity, default));
+            Assert.False(older.Token.IsCancellationRequested);
+            Assert.False(first.IsCompleted);
+            older.Release.TrySetResult();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(2, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
+            Assert.NotNull((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.QuoteAuthorization);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            older.Release.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await DrainSupersessionTaskAsync(first),
+                async () => await DrainSupersessionTaskAsync(older.ActualTask!));
+        }
+    }
+
+    [Fact]
+    public async Task UnrelatedPartRequest_DoesNotRetireTheCurrentPartsPricingConsumer()
+    {
+        await using var fixture = await Fixture.CreateAsync(partCount: 2);
+        var older = fixture.Pricing.Arm(ignoreCancellation: true);
+        var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, default);
+        await older.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var other = fixture.Workflow.UpdateConfigurationAsync(fixture.OtherPartId, "M68", "White", 3, default);
+        Exception? primary = null;
+        try
+        {
+            Assert.False(older.Token.IsCancellationRequested);
+            Assert.False(other.IsCompleted);
+            older.Release.TrySetResult();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            await other.WaitAsync(TimeSpan.FromSeconds(5));
+            var parts = fixture.Workflow.Parts;
+            Assert.Equal(2, parts.Single(part => part.PartId == fixture.PartId).Configuration.Quantity);
+            Assert.Equal(3, parts.Single(part => part.PartId == fixture.OtherPartId).Configuration.Quantity);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            older.Release.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await DrainSupersessionTaskAsync(first),
+                async () => await DrainSupersessionTaskAsync(other),
+                async () => await DrainSupersessionTaskAsync(older.ActualTask!));
+        }
+    }
+
+    private static async Task DrainSupersessionTaskAsync(Task task, bool callbackFault = false)
+    {
+        try { await task.WaitAsync(TimeSpan.FromSeconds(5)); }
+        catch (OperationCanceledException) when (task.IsCanceled) { }
+        catch (ControlledLatePriceException) { }
+        catch (InstantQuotationWorkflowCoordinator.ObsoleteQuoteCancellationException exception) when (
+            callbackFault && exception.InnerException is AggregateException callbacks
+            && callbacks.InnerExceptions.All(error => error is ControlledCancellationCallbackException)) { }
+    }
+
     private static async Task IgnoreCancellationAsync(Task task)
     {
         try { await task; } catch (OperationCanceledException) { } catch (ControlledLatePriceException) { }
@@ -151,7 +318,7 @@ public sealed class MaterialPricingLifetimeTests
 
     private const string Owner = "pricing-lifetime-fixture-owner";
     private sealed class ControlledLatePriceException : Exception { }
-    private sealed class Pending(bool ignoreCancellation, bool failLate)
+    private sealed class Pending(bool ignoreCancellation, bool failLate, bool captureBeforeHold)
     {
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -159,6 +326,8 @@ public sealed class MaterialPricingLifetimeTests
         public CancellationToken Token { get; set; }
         public bool IgnoreCancellation { get; } = ignoreCancellation;
         public bool FailLate { get; } = failLate;
+        public bool CaptureBeforeHold { get; } = captureBeforeHold;
+        public Task<InstantQuotationOrderQuote?>? ActualTask { get; set; }
     }
 
     private sealed class ControlledObserverBoundary(IInstantQuotationAuthoritativePricingService inner)
@@ -166,23 +335,59 @@ public sealed class MaterialPricingLifetimeTests
     {
         private readonly Queue<Pending> pending = new();
         private readonly List<Pending> all = [];
-        public Pending Arm(bool ignoreCancellation = false, bool failLate = false)
+        private readonly List<(Task Task, Pending? Control)> actual = [];
+        public Pending Arm(bool ignoreCancellation = false, bool failLate = false, bool captureBeforeHold = false)
         {
-            var next = new Pending(ignoreCancellation, failLate); pending.Enqueue(next); all.Add(next); return next;
+            var next = new Pending(ignoreCancellation, failLate, captureBeforeHold); pending.Enqueue(next); all.Add(next); return next;
         }
         public void ReleaseAll() { foreach (var entry in all) entry.Release.TrySetResult(); }
-        public async Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,
-            string? owner, bool includeComparisons, CancellationToken token)
+        public async Task DrainAsync()
         {
-            if (!pending.TryDequeue(out var next)) return await inner.QuoteAsync(session, owner, includeComparisons, token);
-            try
+            foreach (var item in actual)
             {
-                next.Token = token; next.Entered.TrySetResult();
-                await next.Release.Task.WaitAsync(next.IgnoreCancellation ? default : token);
-                if (next.FailLate) throw new ControlledLatePriceException();
-                return await inner.QuoteAsync(session, owner, includeComparisons, next.IgnoreCancellation ? default : token);
+                try { await item.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+                catch (OperationCanceledException) when (item.Control?.Token.IsCancellationRequested == true) { }
+                catch (ControlledLatePriceException) when (item.Control?.FailLate == true) { }
             }
-            finally { next.Exited.TrySetResult(); }
+        }
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,
+            string? owner, bool includeComparisons, CancellationToken token) =>
+            Start(session, owner, includeComparisons, null, token);
+
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,
+            string? owner, bool includeComparisons,
+            Func<InstantQuotationMaterialPricingProgress, CancellationToken, ValueTask> observer,
+            CancellationToken token) => Start(session, owner, includeComparisons, observer, token);
+
+        private Task<InstantQuotationOrderQuote?> Start(InstantQuotationSessionState session,
+            string? owner, bool includeComparisons,
+            Func<InstantQuotationMaterialPricingProgress, CancellationToken, ValueTask>? observer, CancellationToken token)
+        {
+            pending.TryDequeue(out var next);
+            var task = RunAsync();
+            if (next is not null) next.ActualTask = task;
+            actual.Add((task, next));
+            return task;
+
+            Task<InstantQuotationOrderQuote?> Inner(CancellationToken current) => observer is null
+                ? inner.QuoteAsync(session, owner, includeComparisons, current)
+                : inner.QuoteAsync(session, owner, includeComparisons, observer, current);
+
+            async Task<InstantQuotationOrderQuote?> RunAsync()
+            {
+                if (next is null) return await Inner(token);
+                try
+                {
+                    next.Token = token;
+                    var current = next.IgnoreCancellation ? CancellationToken.None : token;
+                    var captured = next.CaptureBeforeHold ? await Inner(current) : null;
+                    next.Entered.TrySetResult();
+                    await next.Release.Task.WaitAsync(current);
+                    if (next.FailLate) throw new ControlledLatePriceException();
+                    return next.CaptureBeforeHold ? captured : await Inner(current);
+                }
+                finally { next.Exited.TrySetResult(); }
+            }
         }
     }
 
@@ -194,33 +399,52 @@ public sealed class MaterialPricingLifetimeTests
         public ControlledObserverBoundary Pricing { get; }
         public InstantQuotationWorkflowCoordinator Workflow { get; }
         public Guid PartId { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        public Guid OtherPartId { get; } = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        public IInstantQuotationQuoteTicketService Tickets { get; }
+        private static readonly byte[] PhysicalBytes = WallThicknessParityBrowserFixture.Box(8);
+        public string PhysicalDigest => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(PhysicalBytes));
         public string SessionId { get; private set; } = "";
-        private Fixture()
+        private Fixture(bool physical)
         {
             scope = factory.Services.CreateAsyncScope();
             Store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
-            Pricing = new(scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
+            var profiles = Legacy.Maliev.Web.Application.Pricing.FdmRuntimeProfileCatalog.LoadEmbedded();
+            Pricing = new(physical
+                ? new InstantQuotationAuthoritativePricingService(
+                    new InstantQuotationBoundPhysicalAnalysisService(Store,
+                        new InstantQuotationAdmittedMeshService(new PhysicalInputReader()), profiles),
+                    profiles, new InstantQuotationPricingService())
+                : scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
+            Tickets = scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>();
             Workflow = new(Store,
                 scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
                 scope.ServiceProvider.GetRequiredService<IInstantQuotationPricingService>(), Owner,
-                quoteTicketService: scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>(),
+                quoteTicketService: Tickets,
                 authoritativePricingService: Pricing);
         }
-        public static async Task<Fixture> CreateAsync(bool initialize = true)
+        public static async Task<Fixture> CreateAsync(bool initialize = true, bool physical = false, int partCount = 1)
         {
-            var fixture = new Fixture();
+            var fixture = new Fixture(physical);
             try
             {
                 var reference = new InstantQuotationUploadReference("66666666-6666-6666-6666-666666666666");
-                var digest = new string('a', 64);
+                var digest = physical ? fixture.PhysicalDigest : new string('a', 64);
                 var geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
                     InstantQuotationUploadResult.Succeeded("controlled-historical-session", reference, digest),
-                    new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
+                    new InstantQuotationGeometryClaim(1, digest, physical ? 20 : 8, physical ? 20 : 8, 8,
+                        physical ? 3200 : 512, physical ? 1440 : 384,
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
                         12, 1, true, false, false, 1))!;
                 var part = new InstantQuotationPart(fixture.PartId, "controlled.stl", reference, geometry,
-                    new InstantQuotationPartConfiguration("M68", "White", 1));
-                var state = await fixture.Store.CreateAsync(Owner, new InstantQuotationOrderState([part]), default);
+                    new InstantQuotationPartConfiguration(physical ? "PLA" : "M68", physical ? "Black" : "White", 1),
+                    physical ? new InstantQuotationPhysicalAnalysisUpload(
+                        Guid.Parse(reference.Value), "controlled.stl", "model/stl", PhysicalBytes.Length, digest, "clean") : null);
+                var parts = partCount == 1 ? new[] { part } : new[] { part, part with
+                {
+                    PartId = fixture.OtherPartId,
+                    UploadReference = new InstantQuotationUploadReference("88888888-8888-8888-8888-888888888888"),
+                } };
+                var state = await fixture.Store.CreateAsync(Owner, new InstantQuotationOrderState(parts), default);
                 fixture.SessionId = state.SessionId;
                 if (initialize) await fixture.Workflow.InitializeAsync(state.SessionId, default);
                 return fixture;
@@ -230,9 +454,25 @@ public sealed class MaterialPricingLifetimeTests
         public async ValueTask DisposeAsync()
         {
             Pricing.ReleaseAll();
-            await Workflow.DisposeAsync();
-            await scope.DisposeAsync();
-            await factory.DisposeAsync();
+            try { await Workflow.DisposeAsync(); await Pricing.DrainAsync(); }
+            finally
+            {
+                try { await scope.DisposeAsync(); }
+                finally { await factory.DisposeAsync(); }
+            }
+        }
+
+        private sealed class PhysicalInputReader : IInstantQuotationPhysicalAnalysisInputReader
+        {
+            public Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(
+                string sessionId, string? owner, Guid partId, CancellationToken token)
+            {
+                token.ThrowIfCancellationRequested();
+                return Task.FromResult(new InstantQuotationPhysicalAnalysisInputResult(
+                    PhysicalBytes, InstantQuotationPhysicalAnalysisInputFailure.None,
+                    Guid.Parse("66666666-6666-6666-6666-666666666666"), "controlled.stl",
+                    Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(PhysicalBytes))));
+            }
         }
     }
 }

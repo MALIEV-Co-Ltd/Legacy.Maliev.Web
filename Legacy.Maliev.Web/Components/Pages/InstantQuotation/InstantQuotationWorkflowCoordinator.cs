@@ -63,6 +63,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly CancellationToken lifetimeToken;
     private readonly object displayGate = new();
+    private readonly object configurationGate = new();
+    private readonly Dictionary<Guid, ConfigurationRequest> configurationRequests = [];
     private readonly Dictionary<long, Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask>> displaySubscribers = [];
     private InstantQuotationMaterialPriceDisplaySnapshot materialPriceDisplay = new(1);
     private DisplayPricingContext? displayContext;
@@ -396,44 +398,116 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         BuildPreference? buildPreference,
         CancellationToken cancellationToken)
     {
-        ThrowIfDisposed();
-        EnsureInitialized();
-        var material = PricingCatalog.ResolveMaterial(materialKey)
-            ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
-        if (!PricingCatalog.IsColorSupported(material.Key, color))
-        {
-            throw new ArgumentException("The selected color is not supported.", nameof(color));
-        }
-
-        if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
-        {
-            throw new ArgumentOutOfRangeException(nameof(quantity));
-        }
-
-        await WaitForStateGateAsync(cancellationToken);
+        var material = ValidateConfiguration(partId, materialKey, color, quantity, buildPreference);
+        ThrowIfPricingCanceled(cancellationToken);
+        var request = BeginConfigurationRequest(partId);
         try
         {
-            ThrowIfPricingCanceled(cancellationToken);
-            var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
-                ?? throw new ArgumentException("The part was not found.", nameof(partId));
-            var previous = entry.Part!;
-            entry.Part = previous with
+            await WaitForStateGateAsync(cancellationToken);
+            try
             {
-                Configuration = new InstantQuotationPartConfiguration(
-                    material.Key,
-                    color,
-                    quantity,
-                    material.Process is PrintProcess.Resin
-                        ? BuildPreference.Standard
-                        : buildPreference ?? previous.Configuration.BuildPreference),
-            };
-            entry.HasConfigured = true;
-            await PersistAndPriceAsync(cancellationToken);
+                ThrowIfPricingCanceled(cancellationToken);
+                if (!IsCurrentConfigurationRequest(request)) return;
+                var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
+                    ?? throw new ArgumentException("The part was not found.", nameof(partId));
+                var previous = entry.Part!;
+                entry.Part = previous with
+                {
+                    Configuration = new InstantQuotationPartConfiguration(
+                        material.Key, color, quantity,
+                        material.Process is PrintProcess.Resin
+                            ? BuildPreference.Standard
+                            : buildPreference ?? previous.Configuration.BuildPreference),
+                };
+                entry.HasConfigured = true;
+                await PersistAndPriceAsync(cancellationToken, request);
+            }
+            finally { stateGate.Release(); }
         }
         finally
         {
-            stateGate.Release();
+            lock (configurationGate)
+                if (configurationRequests.GetValueOrDefault(partId) == request)
+                    configurationRequests.Remove(partId);
         }
+        // Release stateGate before draining obsolete callbacks; a primary operation fault still wins.
+        if (request.CancellationCallbacks is { } callbacks)
+        {
+            try { await callbacks; }
+            catch (AggregateException exception) { throw new ObsoleteQuoteCancellationException(exception); }
+        }
+    }
+
+    internal MaterialInfo ValidateConfiguration(Guid partId, string materialKey, string color,
+        int quantity, BuildPreference? buildPreference = null)
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        if (buildPreference is { } preference && !Enum.IsDefined(preference))
+            throw new ArgumentOutOfRangeException(nameof(buildPreference));
+        var material = PricingCatalog.ResolveMaterial(materialKey)
+            ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
+        if (!PricingCatalog.IsColorSupported(material.Key, color))
+            throw new ArgumentException("The selected color is not supported.", nameof(color));
+        if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
+            throw new ArgumentOutOfRangeException(nameof(quantity));
+        if (!entries.Any(item => item.Part?.PartId == partId))
+            throw new ArgumentException("The part was not found.", nameof(partId));
+        return material;
+    }
+
+    private ConfigurationRequest BeginConfigurationRequest(Guid partId)
+    {
+        lock (configurationGate)
+        {
+            var previous = configurationRequests.GetValueOrDefault(partId);
+            var current = new ConfigurationRequest(partId);
+            configurationRequests[partId] = current;
+            if (previous?.QuoteConsumer is { } consumer)
+            {
+                // Callback faults belong to the obsolete request, not its valid replacement.
+                previous.CancellationCallbacks = consumer.CancelAsync();
+                _ = previous.CancellationCallbacks.ContinueWith(static task => { _ = task.Exception; },
+                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+            }
+            return current;
+        }
+    }
+
+    private bool IsCurrentConfigurationRequest(ConfigurationRequest? request)
+    {
+        if (request is null) return true;
+        lock (configurationGate)
+            return configurationRequests.GetValueOrDefault(request.PartId) == request;
+    }
+
+    private CancellationTokenSource? BeginQuoteConsumer(ConfigurationRequest request, CancellationToken token)
+    {
+        lock (configurationGate)
+        {
+            if (configurationRequests.GetValueOrDefault(request.PartId) != request) return null;
+            return request.QuoteConsumer = CancellationTokenSource.CreateLinkedTokenSource(token);
+        }
+    }
+
+    private void EndQuoteConsumer(ConfigurationRequest request, CancellationTokenSource consumer)
+    {
+        lock (configurationGate)
+        {
+            if (request.QuoteConsumer == consumer) request.QuoteConsumer = null;
+            consumer.Dispose();
+        }
+    }
+
+    internal sealed class ObsoleteQuoteCancellationException(AggregateException innerException)
+        : Exception("Obsolete quote cancellation callbacks failed.", innerException);
+
+    private sealed class ConfigurationRequest(Guid partId)
+    {
+        internal Guid PartId { get; } = partId;
+        internal CancellationTokenSource? QuoteConsumer { get; set; }
+        internal Task? CancellationCallbacks { get; set; }
     }
 
     public void EnterReview()
@@ -842,13 +916,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
-    private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
+    private async Task PersistAndPriceAsync(CancellationToken cancellationToken, ConfigurationRequest? request = null)
     {
         var generation = BeginMaterialDisplay();
         using var pricingCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
         try
         {
-            await PersistAndPriceCoreAsync(pricingCancellation.Token, generation);
+            await PersistAndPriceCoreAsync(pricingCancellation.Token, generation, request);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -863,7 +937,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
-    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken, long generation)
+    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken, long generation, ConfigurationRequest? request)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OrderQuote = null;
@@ -892,25 +966,46 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
             else
             {
-                var context = CaptureMaterialDisplay(generation, state.Parts, session, cancellationToken);
-                var pricing = authoritativePricingService.QuoteAsync(
-                    session, ownerIdentity, includeComparisons: true,
-                    (frame, token) => PublishMaterialDisplayAsync(context, frame, token), cancellationToken);
-                // Cancellation stops this consumer even when a dependency ignores its token.
-                // An abandoned dependency has no continuation into ticket/publication code.
-                _ = pricing.ContinueWith(static task => { _ = task.Exception; },
-                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-                quote = await pricing.WaitAsync(cancellationToken);
-                CompleteMaterialDisplay(generation);
+                CancellationTokenSource? consumer = null;
+                if (request is not null)
+                {
+                    consumer = BeginQuoteConsumer(request, cancellationToken);
+                    if (consumer is null) { ClearMaterialDisplay(generation); return; }
+                }
+                var quoteToken = consumer?.Token ?? cancellationToken;
+                try
+                {
+                    var context = CaptureMaterialDisplay(generation, state.Parts, session, quoteToken);
+                    var pricing = authoritativePricingService.QuoteAsync(
+                        session, ownerIdentity, includeComparisons: true,
+                        (frame, token) => PublishMaterialDisplayAsync(context, frame, token), quoteToken);
+                    // Retire only this consumer. The actual dependency remains observed and owns its cleanup.
+                    _ = pricing.ContinueWith(static task => { _ = task.Exception; },
+                        CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
+                    quote = await pricing.WaitAsync(quoteToken);
+                    CompleteMaterialDisplay(generation);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested
+                    && !IsCurrentConfigurationRequest(request))
+                {
+                    ClearMaterialDisplay(generation);
+                    return;
+                }
+                finally
+                {
+                    if (request is not null && consumer is not null) EndQuoteConsumer(request, consumer);
+                }
             }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentConfigurationRequest(request)) { ClearMaterialDisplay(generation); return; }
         if (quote is not null && quoteTicketService is not null)
         {
             var current = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            if (!IsCurrentConfigurationRequest(request)) { ClearMaterialDisplay(generation); return; }
             if (current is null || current.UpdatedAt != session.UpdatedAt)
             {
                 quote = null;
@@ -941,6 +1036,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentConfigurationRequest(request)) { ClearMaterialDisplay(generation); return; }
         if (quote is null) ClearMaterialDisplay(generation);
         OrderQuote = quote;
         if (OrderQuote is not null)

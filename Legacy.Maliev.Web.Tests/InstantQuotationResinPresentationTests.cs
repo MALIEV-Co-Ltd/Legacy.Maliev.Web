@@ -801,6 +801,283 @@ public sealed class InstantQuotationResinPresentationTests
         });
     }
 
+
+    [Fact]
+    public async Task InvalidSamePartUiEdit_DoesNotRetireAValidReachedRepricingActivity()
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            Task Change(int quantity) => (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ChangeQuantityAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [part.PartId, new ChangeEventArgs { Value = quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) }])!;
+            bool Active() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("IsRepricing", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            store.BeforePut = async () =>
+            {
+                store.BeforePut = null;
+                entered.TrySetResult();
+                await release.Task.WaitAsync(lease.Token);
+            };
+            var valid = Change(2);
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                Assert.True(Active());
+                await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Change(0));
+                Assert.True(Active());
+                Assert.False(valid.IsCompleted);
+                release.TrySetResult();
+                await valid.WaitAsync(lease.Token);
+                Assert.False(Active());
+                Assert.Equal(2, Assert.Single(coordinator.Parts).Configuration.Quantity);
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        valid, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "same-part-ui-repricing"));
+            }
+        });
+    }
+
+
+    [Fact]
+    public async Task CurrentMaterialReview_DoesNotWaitForOrRunTheObsoleteAppearanceContinuation()
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var appearances = new List<string>();
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference(async (name, args) =>
+            {
+                if (name == "setThicknessMaterial" && args?[1]?.ToString() == "PETG")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                if (name == "updatePartAppearance") appearances.Add(args![0]!.ToString()!);
+                return null;
+            });
+            typeof(InstantQuotationWorkflow).GetField("previewInterop", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(component, preview);
+            Task Change(string material) => (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ChangeMaterialAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [part.PartId, new ChangeEventArgs { Value = material }])!;
+            bool Property(string name) => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            var old = Change("PETG");
+            Task newer = Task.CompletedTask;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                newer = Change("PLA");
+                await newer.WaitAsync(lease.Token);
+                Assert.False(old.IsCompleted);
+                Assert.False(Property("IsRepricing"));
+                Assert.True(Property("CanEnterReview"));
+                Assert.Equal(part.PartId.ToString("N"), Assert.Single(appearances));
+                var quote = Assert.IsType<InstantQuotationOrderQuote>(coordinator.OrderQuote);
+                release.TrySetResult();
+                await old.WaitAsync(lease.Token);
+                Assert.Equal(part.PartId.ToString("N"), Assert.Single(appearances));
+                Assert.Same(quote, coordinator.OrderQuote);
+                Assert.Equal("PLA", Assert.Single(coordinator.Parts).Configuration.MaterialKey);
+                Assert.True(Property("CanEnterReview"));
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        old, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "obsolete-material-appearance"),
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        newer, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "current-material-appearance"));
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("Material", false, "none")]
+    [InlineData("Color", false, "none")]
+    [InlineData("Quantity", false, "none")]
+    [InlineData("BuildPreference", false, "none")]
+    [InlineData("Material", true, "none")]
+    [InlineData("Material", false, "same")]
+    [InlineData("Material", false, "back")]
+    [InlineData("Material", false, "other")]
+    public async Task ReviewEditSupersession_ReentersOnlyForCurrentCompletedOwnership(
+        string field, bool callbackFault, string navigation)
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var other = Part("PLA", BuildPreference.Quality);
+        var store = new SessionStore(part, other);
+        var pricing = new HeldReviewPricing();
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: pricing);
+        await coordinator.InitializeAsync("presentation-session", default);
+        coordinator.EnterReview();
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var older = pricing.Arm(callbackFault);
+        var latest = pricing.Arm(false);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            Task Change(string value) => (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ChangeReview" + field + "Async", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [(part.PartId, value)])!;
+            var values = field switch
+            {
+                "Material" => ("PETG", "PLA"),
+                "Color" => ("Black", "White"),
+                "Quantity" => ("2", "3"),
+                _ => ("Strength", "Quality"),
+            };
+            var first = Change(values.Item1);
+            Task current = Task.CompletedTask;
+            Exception? primary = null;
+            try
+            {
+                await older.Entered.Task.WaitAsync(lease.Token);
+                current = Change(values.Item2);
+                await latest.Entered.Task.WaitAsync(lease.Token);
+                await first.WaitAsync(lease.Token);
+                Assert.False(older.Actual!.IsCompleted);
+                Assert.False(current.IsCompleted);
+                Assert.Null(coordinator.OrderQuote);
+                Assert.Equal(InstantQuotationWorkflowState.Review, coordinator.State);
+                if (navigation == "back")
+                    typeof(InstantQuotationWorkflow)
+                        .GetMethod("ReturnToConfiguration", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .Invoke(component, null);
+                else if (navigation != "none")
+                    await (Task)typeof(InstantQuotationWorkflow)
+                        .GetMethod("EditReviewPartAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .Invoke(component, [navigation == "other" ? other.PartId : part.PartId])!;
+                latest.Release.TrySetResult();
+                await current.WaitAsync(lease.Token);
+                var expectedState = navigation != "none"
+                    ? InstantQuotationWorkflowState.Configured : InstantQuotationWorkflowState.Review;
+                Assert.Equal(expectedState, coordinator.State);
+                var quote = Assert.IsType<InstantQuotationOrderQuote>(coordinator.OrderQuote);
+                var configuration = coordinator.Parts.Single(row => row.PartId == part.PartId).Configuration;
+                older.Release.TrySetResult();
+                await older.Actual.WaitAsync(lease.Token);
+                Assert.Same(quote, coordinator.OrderQuote);
+                Assert.Equal(configuration, coordinator.Parts.Single(row => row.PartId == part.PartId).Configuration);
+                Assert.Equal(expectedState, coordinator.State);
+                Assert.False((bool)typeof(InstantQuotationWorkflow)
+                    .GetProperty("IsRepricing", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        first, () => lease.Cancel(), () => older.Release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "obsolete-review-edit"),
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        current, () => lease.Cancel(), () => latest.Release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "current-review-edit"),
+                    async () => await pricing.DrainAsync());
+            }
+        });
+    }
+
+    private sealed class HeldReviewPricing : IInstantQuotationAuthoritativePricingService
+    {
+        internal sealed class Pending(bool callbackFault)
+        {
+            internal bool CallbackFault { get; } = callbackFault;
+            internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            internal Task? Actual { get; set; }
+        }
+
+        private readonly Queue<Pending> queued = new();
+        private readonly List<Pending> owned = [];
+
+        internal Pending Arm(bool callbackFault)
+        {
+            var next = new Pending(callbackFault);
+            queued.Enqueue(next);
+            owned.Add(next);
+            return next;
+        }
+
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,
+            string? owner, bool includeComparisons, CancellationToken token)
+        {
+            if (!queued.TryDequeue(out var next))
+                return SyntheticAuthoritativePricingTestService.Instance.QuoteAsync(
+                    session, owner, includeComparisons, token);
+            var task = RunAsync();
+            next.Actual = task;
+            return task;
+
+            async Task<InstantQuotationOrderQuote?> RunAsync()
+            {
+                using var registration = next.CallbackFault
+                    ? token.Register(static () => throw new InvalidOperationException("controlled callback"))
+                    : default;
+                var result = await SyntheticAuthoritativePricingTestService.Instance.QuoteAsync(
+                    session, owner, includeComparisons, CancellationToken.None);
+                next.Entered.TrySetResult();
+                await next.Release.Task;
+                return result;
+            }
+        }
+
+        internal async Task DrainAsync()
+        {
+            foreach (var next in owned) next.Release.TrySetResult();
+            foreach (var next in owned)
+                if (next.Actual is { } actual) await actual.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
     private sealed class AdmissionAnalyticsSink : IInstantQuotationAnalyticsSink
     {
         internal List<InstantQuotationAnalyticsPayload> Payloads { get; } = [];
@@ -1173,7 +1450,7 @@ public sealed class InstantQuotationResinPresentationTests
                 {
                     entered.TrySetResult();
                     await release.Task.WaitAsync(lease.Token);
-                }), null])!;
+                }), null, null])!;
             Exception? primary = null;
             try
             {
