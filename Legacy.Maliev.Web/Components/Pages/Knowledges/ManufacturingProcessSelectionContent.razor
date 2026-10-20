@@ -58,11 +58,38 @@
 <p class="docs-source"><a href="https://www.protolabs.com/services/sheet-metal-fabrication/">@Localizer["Source: Protolabs sheet metal fabrication overview"]</a></p>
 <p>@Localizer["Treat this table as a shortlist, not a purchase specification. Metal casting includes processes with different tooling, alloy, surface, and internal-quality implications. A route can also combine processes: cast a body and machine its bearing seats, or print a housing and machine selected interfaces. Ask which operations are included in the delivered price."]</p>
 
-<figure class="docs-figure knowledge-diagram">
-    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Cross-sections show removing material from a pocket, depositing successive layers, and bending a sheet into an angle."]">
-        <img src="/src/images/knowledge/visual-process-routes.svg" alt="@Localizer["Cross-sections show removing material from a pocket, depositing successive layers, and bending a sheet into an angle."]" width="960" height="480" loading="lazy" decoding="async" />
+<figure class="docs-figure knowledge-diagram knowledge-process-illustration">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A vertical end mill cuts an aluminum pocket while a vise grips the billet."]">
+        <img src="/src/images/knowledge/diagrams/process-milling-v3.webp" srcset="/src/images/knowledge/diagrams/process-milling-v3-small.webp 768w, /src/images/knowledge/diagrams/process-milling-v3.webp 1536w" sizes="(min-width: 48rem) 48rem, calc(100vw - 4rem)" alt="@Localizer["A vertical end mill cuts an aluminum pocket while a vise grips the billet."]" width="1536" height="1024" loading="lazy" decoding="async" />
     </div>
-    <figcaption>@Localizer["1: subtractive machining removes material from stock. 2: additive manufacturing builds successive layers. 3: sheet forming changes the shape of a sheet. These are process principles, not interchangeable routes for every geometry or material."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-process-routes.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+    <figcaption>
+        <strong>@Localizer["CNC machining"]</strong>
+        <p>@Localizer["The rotating cutter removes material from a clamped billet to form a pocket. Chips are removed stock; the surrounding walls and floor remain part of the original block. A round cutter leaves radii at the internal corners."]</p>
+        <a class="knowledge-diagram-link" href="/src/images/knowledge/diagrams/process-milling-v3.webp" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-holes-cavities-pockets">Sandvik Coromant</a></p>
+    </figcaption>
+</figure>
+<figure class="docs-figure knowledge-diagram knowledge-process-illustration">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["An FDM nozzle deposits a blue bead onto the supported top layer of a printed tray."]">
+        <img src="/src/images/knowledge/diagrams/process-fdm-v3.webp" srcset="/src/images/knowledge/diagrams/process-fdm-v3-small.webp 768w, /src/images/knowledge/diagrams/process-fdm-v3.webp 1536w" sizes="(min-width: 48rem) 48rem, calc(100vw - 4rem)" alt="@Localizer["An FDM nozzle deposits a blue bead onto the supported top layer of a printed tray."]" width="1536" height="1024" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>
+        <strong>@Localizer["FDM material extrusion"]</strong>
+        <p>@Localizer["The heated nozzle deposits polymer onto the preceding layer. Repeated paths build the tray walls upward from the build plate. FDM is one additive process; resin and powder processes form layers differently."]</p>
+        <a class="knowledge-diagram-link" href="/src/images/knowledge/diagrams/process-fdm-v3.webp" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a>
+        <p class="docs-source"><a href="https://www.prusa3d.com/p/3d-printing/3d-printing-101/">Prusa Research</a></p>
+    </figcaption>
+</figure>
+<figure class="docs-figure knowledge-diagram knowledge-process-illustration">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A press-brake punch bends a continuous blue sheet over the two shoulders of a V-die."]">
+        <img src="/src/images/knowledge/diagrams/process-air-bending-v3.webp" srcset="/src/images/knowledge/diagrams/process-air-bending-v3-small.webp 768w, /src/images/knowledge/diagrams/process-air-bending-v3.webp 1536w" sizes="(min-width: 48rem) 48rem, calc(100vw - 4rem)" alt="@Localizer["A press-brake punch bends a continuous blue sheet over the two shoulders of a V-die."]" width="1536" height="1024" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>
+        <strong>@Localizer["Press-brake air bending"]</strong>
+        <p>@Localizer["The punch pushes the sheet between two die shoulders. The sheet contacts the punch and those shoulders while gaps remain above the die walls. This operation changes the sheet shape rather than cutting away material; punch travel helps determine the bend angle."]</p>
+        <a class="knowledge-diagram-link" href="/src/images/knowledge/diagrams/process-air-bending-v3.webp" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a>
+        <p class="docs-source"><a href="https://www.trumpf.com/en_INT/solutions/applications/bending/">TRUMPF</a></p>
+    </figcaption>
 </figure>
 </section>
 <section id="economics" class="docs-section">

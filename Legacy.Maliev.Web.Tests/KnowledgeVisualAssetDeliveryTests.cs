@@ -242,6 +242,86 @@ public sealed class KnowledgeVisualAssetDeliveryTests(ITestOutputHelper output)
         }
     }
 
+
+    /// <summary>Both route owners deliver final figures while all twelve final source image URLs remain exact.</summary>
+    [Theory]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    public async Task ProcessIllustrations_FinalSourceV3IsLocalizedAndActuallyServed(string culture, bool retained)
+    {
+        await using var parent = new TestingWebApplicationFactory();
+        await using var application = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:KnowledgesIndex", retained ? "false" : "true"));
+        using var client = application.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false,
+        });
+        using var article = await client.GetAsync("/knowledges/manufacturing/process-selection?culture=" + culture);
+        Assert.Equal(HttpStatusCode.OK, article.StatusCode);
+        string html = WebUtility.HtmlDecode(await article.Content.ReadAsStringAsync());
+        Assert.Contains($"<html lang=\"{culture}\"", html, StringComparison.Ordinal);
+        var figures = Regex.Matches(html,
+            "<figure class=\"docs-figure knowledge-diagram knowledge-process-illustration\">(?<body>.*?)</figure>",
+            RegexOptions.Singleline).Cast<Match>().ToArray();
+        Assert.Equal(3, figures.Length);
+        var topics = new[] { "milling", "fdm", "air-bending" };
+        var alt = culture == "th"
+            ? new[] { "ดอกเอ็นมิลแนวตั้งกัดโพ็กเก็ตบนชิ้นอะลูมิเนียมที่จับยึดด้วยปากกา",
+                "หัวฉีด FDM วางแนวพลาสติกสีน้ำเงินบนชั้นบนสุดของถาด โดยมีชั้นเดิมรองรับอยู่ด้านล่าง",
+                "พันช์ของเครื่องพับกดแผ่นสีน้ำเงินที่ต่อเนื่องเป็นชิ้นเดียว โดยแผ่นวางบนบ่าทั้งสองด้านของแม่พิมพ์ตัววี" }
+            : new[] { "A vertical end mill cuts an aluminum pocket while a vise grips the billet.",
+                "An FDM nozzle deposits a blue bead onto the supported top layer of a printed tray.",
+                "A press-brake punch bends a continuous blue sheet over the two shoulders of a V-die." };
+        var labels = culture == "th"
+            ? new[] { "การตัดเฉือน CNC", "พิมพ์ FDM แบบอัดรีดวัสดุ", "พับแผ่นด้วยเครื่องพับแบบ Air bending" }
+            : new[] { "CNC machining", "FDM material extrusion", "Press-brake air bending" };
+        for (int index = 0; index < figures.Length; index++)
+        {
+            string body = figures[index].Groups["body"].Value;
+            string full = "/src/images/knowledge/diagrams/process-" + topics[index] + "-v3.webp";
+            string small = full.Replace(".webp", "-small.webp", StringComparison.Ordinal);
+            Assert.Contains($"src=\"{full}\"", body, StringComparison.Ordinal);
+            Assert.Contains($"srcset=\"{small} 768w, {full} 1536w\"", body, StringComparison.Ordinal);
+            Assert.Contains("sizes=\"(min-width: 48rem) 48rem, calc(100vw - 4rem)\"", body, StringComparison.Ordinal);
+            Assert.Contains("width=\"1536\" height=\"1024\"", body, StringComparison.Ordinal);
+            Assert.Contains($"alt=\"{alt[index]}\"", body, StringComparison.Ordinal);
+            Assert.Contains($"aria-label=\"{alt[index]}\"", body, StringComparison.Ordinal);
+            Assert.Contains("role=\"region\" tabindex=\"0\"", body, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{labels[index]}</strong>", body, StringComparison.Ordinal);
+            Assert.Contains($"href=\"{full}\" target=\"_blank\" rel=\"noopener\"", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("-v2", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("visual-process-routes.svg", body, StringComparison.Ordinal);
+        }
+
+        (string File, string Blob, int Bytes)[] assets =
+        [
+            ("photos/process-air-bending-v2-small.webp", "0390d76d289086002011ea3c17318bbae9f4a118", 26554),
+            ("photos/process-air-bending-v2.webp", "407e49f1bb15c2c7a56dfe597086c1a85876a18e", 112096),
+            ("photos/process-fdm-v2-small.webp", "bbd1924ea3233b345f5e62710747daf0668ef1ef", 49418),
+            ("photos/process-fdm-v2.webp", "40edf15d12e971f9b59647ad73ce496fec367741", 151828),
+            ("photos/process-milling-v2-small.webp", "a5009177c9a971eb88cb1db74f7ef467fe31d17f", 54044),
+            ("photos/process-milling-v2.webp", "20fe39f64b4eb6622efc77f83c2ac430e851f406", 228600),
+            ("diagrams/process-air-bending-v3-small.webp", "03780d544f142bab1bf874f26253acbad50146cf", 23690),
+            ("diagrams/process-air-bending-v3.webp", "f2745e40f83fc2f78d9a7a7b294cb8bcc4674ca0", 63098),
+            ("diagrams/process-fdm-v3-small.webp", "3236aaf1c24b49ee94ac5b69966be5503bbd8870", 43088),
+            ("diagrams/process-fdm-v3.webp", "88a82e1235d02a751673356299e1d99398ab308e", 116834),
+            ("diagrams/process-milling-v3-small.webp", "bbb7b2982e306c119202915c8aefbbc1b60b70f5", 42138),
+            ("diagrams/process-milling-v3.webp", "816b62e9755077c6a8e991d290560d3c7796a2cd", 106930),
+        ];
+        Assert.Equal(12, assets.Length);
+        foreach (var expected in assets)
+        {
+            using var asset = await client.GetAsync("/src/images/knowledge/" + expected.File);
+            Assert.Equal(HttpStatusCode.OK, asset.StatusCode);
+            Assert.Equal("image/webp", asset.Content.Headers.ContentType?.MediaType);
+            byte[] data = await asset.Content.ReadAsByteArrayAsync();
+            Assert.Equal(expected.Bytes, data.Length);
+            Assert.Equal(expected.Blob, GitBlob(data));
+        }
+    }
+
     private static string GitBlob(byte[] bytes)
     {
         byte[] header = Encoding.ASCII.GetBytes($"blob {bytes.Length}\0");

@@ -2065,7 +2065,7 @@ a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
 .knowledge-directory-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-    gap: 0 1.75rem;
+    gap: .25rem 1.75rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -2073,14 +2073,13 @@ a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
 
 .knowledge-directory-list li {
     min-width: 0;
-    border-bottom: 1px solid var(--maliev-line);
 }
 
 .docs-content .knowledge-directory-list li > a {
     display: grid;
     gap: .35rem;
     min-height: 44px;
-    padding: 1rem .2rem;
+    padding: .75rem;
     text-decoration: none;
     background-color: transparent;
     transition: background-color 180ms ease;
@@ -2171,6 +2170,37 @@ a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
 }
 
 
+.knowledge-process-illustration {
+    display: grid;
+    gap: 1.25rem;
+    align-items: center;
+    margin-block: 2rem;
+}
+
+.knowledge-process-illustration .knowledge-diagram-viewport img {
+    min-width: 0;
+    max-width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: contain;
+}
+
+.knowledge-process-illustration figcaption {
+    margin-top: 0;
+}
+
+.knowledge-process-illustration figcaption strong {
+    color: var(--maliev-ink);
+    font-size: 1.05rem;
+}
+
+.knowledge-process-illustration figcaption p {
+    margin-block: .5rem;
+}
+
+.knowledge-process-illustration .knowledge-diagram-link {
+    margin-inline-start: 0;
+}
+
 .knowledge-search {
     padding: 1rem;
     border-bottom: 1px solid var(--maliev-line);
@@ -2210,6 +2240,12 @@ a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
 
 .knowledge-search input::-webkit-search-cancel-button {
     display: none;
+}
+
+@media (min-width: 72rem) {
+    .knowledge-search input {
+        font-size: .875rem;
+    }
 }
 
 .knowledge-search-clear,
