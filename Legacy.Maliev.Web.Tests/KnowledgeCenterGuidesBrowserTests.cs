@@ -352,7 +352,8 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                 finally { bitmap.close(); }
             }))
             """, publicImages, new() { Timeout = 30_000 });
-        var receipts = await decoded.JsonValueAsync<JsonElement[]>();
+        var receiptArray = await decoded.JsonValueAsync<JsonElement>();
+        var receipts = receiptArray.EnumerateArray().ToArray();
         Assert.Equal(12, receipts.Length);
         Assert.Equal<string?>(publicImages.AsEnumerable(), receipts.Select(receipt => receipt.GetProperty("url").GetString()));
         Assert.Equal(3, selectedImages.Count);
