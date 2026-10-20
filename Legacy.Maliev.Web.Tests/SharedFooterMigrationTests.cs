@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -100,6 +101,19 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
             "LINE must remain ahead of the secondary Messenger link.");
         Assert.Contains("<footer class=\"landing-footer\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var preferredSource = Assert.Single(Regex.Matches(source,
+            "<a\\b[^>]*class=\"landing-preferred-source\"[^>]*>[\\s\\S]*?</a>",
+            RegexOptions.CultureInvariant).Cast<Match>()).Value;
+        Assert.Contains("href=\"https://www.google.com/preferences/source?q=maliev.com\"", preferredSource, StringComparison.Ordinal);
+        Assert.Contains("target=\"_blank\"", preferredSource, StringComparison.Ordinal);
+        Assert.Contains("rel=\"noopener noreferrer\"", preferredSource, StringComparison.Ordinal);
+        Assert.Contains("<i class=\"far fa-star\" aria-hidden=\"true\"></i>", preferredSource, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "เพิ่ม MALIEV เป็นแหล่งข้อมูลที่ต้องการบน Google"
+            : "Add MALIEV as a preferred source on Google", preferredSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("onclick", preferredSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("data-contact-", preferredSource, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

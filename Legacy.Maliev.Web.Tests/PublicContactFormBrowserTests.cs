@@ -47,6 +47,40 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.Contains("browser-submission%40example.test", posted, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    [InlineData("en", 390)]
+    [InlineData("th", 390)]
+    public async Task Footer_PreferredSourceLink_IsLocalizedAndAccessible(string culture, int width)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = 1000 },
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, "/legal?culture=" + culture).ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"Footer page returned HTTP {response.Status}.");
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var link = page.Locator(".landing-preferred-source");
+        await Assertions.Expect(link).ToHaveCountAsync(1);
+        await Assertions.Expect(link).ToHaveAttributeAsync("href", "https://www.google.com/preferences/source?q=maliev.com");
+        await Assertions.Expect(link).ToHaveAttributeAsync("target", "_blank");
+        await Assertions.Expect(link).ToHaveAttributeAsync("rel", "noopener noreferrer");
+        await Assertions.Expect(link).ToHaveTextAsync(culture == "th"
+            ? "เพิ่ม MALIEV เป็นแหล่งข้อมูลที่ต้องการบน Google"
+            : "Add MALIEV as a preferred source on Google");
+        await link.FocusAsync();
+        await Assertions.Expect(link).ToBeFocusedAsync();
+        Assert.True(await link.EvaluateAsync<bool>(@"el => {
+            const box = el.getBoundingClientRect();
+            return box.width >= 44 && box.height >= 44 && el.scrollWidth <= el.clientWidth + 1
+                && box.left >= 0 && box.right <= innerWidth;
+        }"));
+    }
+
     private static async Task<IRequest> CaptureFormPostAsync(IPage page, string formSelector)
     {
         var action = new Uri(await page.Locator(formSelector).EvaluateAsync<string>("form => form.action"));
