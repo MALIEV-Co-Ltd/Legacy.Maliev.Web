@@ -54,7 +54,7 @@ export function thicknessMeshes(object) {
 
 // One disposable worker at a time bounds browser CPU and memory for multi-file uploads.
 export function createWallThicknessAnalyzer({
-  workerFactory = () => new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=2'),
+  workerFactory = () => new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=3'),
   timeoutMs = analysisTimeoutMs,
 } = {}) {
   const pending = [];
