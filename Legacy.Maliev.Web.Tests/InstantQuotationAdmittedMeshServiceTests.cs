@@ -65,7 +65,7 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
             "file" => response with { FileId = Guid.NewGuid() },
             "descriptor" => response with { Sha256 = new string('A', 64) },
             "content" => response with { Content = BinaryBox(9) },
-            "format" => response with { FileName = "part.obj" },
+            "format" => response with { FileName = "part.step" },
             _ => throw new InvalidOperationException(),
         };
         var service = new InstantQuotationAdmittedMeshService(new RecordingInputReader(response));
@@ -139,6 +139,63 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
             new InstantQuotationAdmittedMeshService(reader).ReadAsync(
                 SessionId, Owner, PartId, FileId, digest, cancellation.Token));
         Assert.NotNull(reader.LastRequest);
+    }
+
+    [Fact]
+    public async Task CleanOriginalObjBytes_ProduceUploadBoundNormalizedMesh()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("v 0 0 0\nv 8 0 0\nv 0 8 0\nf 1 2 3\n");
+        string digest = Convert.ToHexString(SHA256.HashData(bytes));
+        var reader = new RecordingInputReader(Ready(bytes, digest) with { FileName = "original.OBJ" });
+
+        var result = await new InstantQuotationAdmittedMeshService(reader).ReadAsync(
+            SessionId, Owner, PartId, FileId, digest, default);
+
+        Assert.True(result.IsReady);
+        Assert.Equal(digest, result.UploadSha256);
+        Assert.Single(result.Mesh!.Triangles);
+        Assert.Contains("mesh_open_edges", result.Mesh.Diagnostics);
+        Assert.Equal((SessionId, Owner, PartId), reader.LastRequest);
+    }
+
+    [Theory]
+    [InlineData("file")]
+    [InlineData("descriptor")]
+    [InlineData("content")]
+    [InlineData("format")]
+    [InlineData("malformed")]
+    [InlineData("null-name")]
+    [InlineData("empty-name")]
+    public async Task ObjAdmission_PreservesUploadIdentityAndFailsClosed(string alteration)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("v 0 0 0\nv 8 0 0\nv 0 8 0\nf 1 2 3\n");
+        string digest = Convert.ToHexString(SHA256.HashData(bytes));
+        var response = Ready(bytes, digest) with { FileName = "original.obj" };
+        response = alteration switch
+        {
+            "file" => response with { FileId = Guid.NewGuid() },
+            "descriptor" => response with { Sha256 = new string('A', 64) },
+            "content" => response with { Content = Encoding.UTF8.GetBytes("v 1 1 1") },
+            "format" => response with { FileName = "original.step" },
+            "malformed" => Ready(Encoding.UTF8.GetBytes("v NaN 0 0")) with { FileName = "original.obj" },
+            "null-name" => response with { FileName = null },
+            "empty-name" => response with { FileName = string.Empty },
+            _ => throw new InvalidOperationException(),
+        };
+        string expected = alteration == "malformed" ? response.Sha256! : digest;
+
+        var result = await new InstantQuotationAdmittedMeshService(new RecordingInputReader(response)).ReadAsync(
+            SessionId, Owner, PartId, FileId, expected, default);
+
+        Assert.False(result.IsReady);
+        Assert.Null(result.Mesh);
+        Assert.Equal(alteration switch
+        {
+            "format" => InstantQuotationAdmittedMeshFailure.UnsupportedFormat,
+            "null-name" or "empty-name" => InstantQuotationAdmittedMeshFailure.UploadUnavailable,
+            "malformed" => InstantQuotationAdmittedMeshFailure.InvalidMesh,
+            _ => InstantQuotationAdmittedMeshFailure.UploadChanged,
+        }, result.Failure);
     }
 
     private static InstantQuotationPhysicalAnalysisInputResult Ready(byte[] bytes, string? digest = null) =>

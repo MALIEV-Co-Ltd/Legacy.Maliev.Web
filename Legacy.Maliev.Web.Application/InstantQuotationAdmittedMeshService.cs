@@ -32,6 +32,11 @@ internal sealed record InstantQuotationAdmittedMeshResult(
 internal sealed class InstantQuotationAdmittedMeshService(
     IInstantQuotationPhysicalAnalysisInputReader inputReader)
 {
+    internal static bool IsSupportedFileName(string? fileName) =>
+        Path.GetExtension(fileName) is { } extension
+        && (extension.Equals(".stl", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".obj", StringComparison.OrdinalIgnoreCase));
+
     internal async Task<InstantQuotationAdmittedMeshResult> ReadAsync(
         string sessionId,
         string? ownerIdentity,
@@ -69,14 +74,16 @@ internal sealed class InstantQuotationAdmittedMeshService(
             return InstantQuotationAdmittedMeshResult.Unavailable(InstantQuotationAdmittedMeshFailure.UploadChanged);
         }
 
-        if (!string.Equals(Path.GetExtension(input.FileName), ".stl", StringComparison.OrdinalIgnoreCase))
+        if (!IsSupportedFileName(input.FileName))
         {
             return InstantQuotationAdmittedMeshResult.Unavailable(InstantQuotationAdmittedMeshFailure.UnsupportedFormat);
         }
 
         try
         {
-            MeshInput parsed = AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
+            MeshInput parsed = string.Equals(Path.GetExtension(input.FileName), ".obj", StringComparison.OrdinalIgnoreCase)
+                ? AdmittedObjMeshReader.Read(input.Content!, cancellationToken)
+                : AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
             NormalizedMesh mesh = MeshNormalizer.Normalize(
                 parsed, new GeometryTolerance(0.001, 0.02), cancellationToken);
             return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None);
