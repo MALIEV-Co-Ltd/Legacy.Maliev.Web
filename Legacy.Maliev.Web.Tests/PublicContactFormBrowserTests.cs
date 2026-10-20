@@ -47,6 +47,37 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.Contains("browser-submission%40example.test", posted, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("/contact?culture=en", "#contact-us")]
+    [InlineData("/quotation?culture=en", "#quotation-form")]
+    public async Task InquiryForms_RetainSourceFocusAndReducedMotionStyles(string route, string formSelector)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ReducedMotion = ReducedMotion.Reduce,
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, route).ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"Inquiry returned HTTP {response.Status}.");
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        Assert.Equal(1, await page.Locator(".inquiry-page .inquiry-hero").CountAsync());
+        Assert.Equal(1, await page.Locator($".inquiry-page {formSelector}").CountAsync());
+        Assert.True(await page.EvaluateAsync<bool>("matchMedia('(prefers-reduced-motion: reduce)').matches"));
+        var firstName = page.Locator($"{formSelector} #FirstName");
+        await firstName.FocusAsync();
+        Assert.True(await firstName.EvaluateAsync<bool>("input => input.matches(':focus-visible')"));
+        Assert.Equal("3px", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineWidth"));
+        Assert.Equal("solid", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineStyle"));
+        Assert.Equal("rgb(114, 169, 255)", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineColor"));
+        Assert.Equal("3px", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineOffset"));
+        var durations = await page.Locator($"{formSelector} #submit-button").EvaluateAsync<double[]>(
+            "button => getComputedStyle(button).transitionDuration.split(',').map(value => parseFloat(value) * (value.trim().endsWith('ms') ? 0.001 : 1))");
+        Assert.NotEmpty(durations);
+        Assert.All(durations, seconds => Assert.Equal(0.00001, seconds, precision: 8));
+    }
+
     private static async Task<IRequest> CaptureFormPostAsync(IPage page, string formSelector)
     {
         var action = new Uri(await page.Locator(formSelector).EvaluateAsync<string>("form => form.action"));

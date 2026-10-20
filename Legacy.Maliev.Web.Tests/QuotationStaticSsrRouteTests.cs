@@ -109,6 +109,35 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Equal(useBlazorRoute, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var form = Assert.Single(Regex.Matches(source,
+            "<form\\b[^>]*\\bid=\"quotation-form\"[^>]*>[\\s\\S]*?</form>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("<div class=\"inquiry-page\"", source, StringComparison.Ordinal);
+        Assert.Contains("<header class=\"inquiry-form-header\">", form.Value, StringComparison.Ordinal);
+        Assert.Contains("id=\"quotation-form-title\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-required-note\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-field-grid\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-field inquiry-field--full\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-submit\"", form.Value, StringComparison.Ordinal);
+        var decodedForm = WebUtility.HtmlDecode(form.Value);
+        Assert.Contains(culture == "th" ? "ขอใบเสนอราคาจากทีมงาน" : "Request a manual quotation", decodedForm, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "กรอกแบบฟอร์มด้านล่าง ช่องที่จำเป็นจะแสดงด้วยเครื่องหมายดอกจัน" : "Complete the form below. Required fields are marked with an asterisk.", decodedForm, StringComparison.Ordinal);
+        var projectGuidance = culture == "th"
+            ? "ระบุบริการ จำนวน วัสดุ ผิวสำเร็จ ค่าความคลาดเคลื่อน และวันที่ต้องการเมื่อทราบ"
+            : "Include service, quantity, material, finish, tolerances, and target date when known.";
+        var fileGuidance = culture == "th"
+            ? "เลือกได้หลายไฟล์ ควร ZIP ไฟล์ที่เกี่ยวข้องเพื่อรักษาการอ้างอิงและโครงสร้างโฟลเดอร์"
+            : "You may select multiple files. ZIP related files together to preserve references and folder structure.";
+        var projectHelp = Assert.Single(Regex.Matches(source,
+            "<span\\b[^>]*\\bid=\"quotation-message-help\"[^>]*>[\\s\\S]*?</span>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains(projectGuidance, WebUtility.HtmlDecode(projectHelp.Value), StringComparison.Ordinal);
+        var fileHelp = Assert.Single(Regex.Matches(source,
+            "<div\\b[^>]*\\bid=\"quotation-files-help\"[^>]*>[\\s\\S]*?</div>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains(fileGuidance, WebUtility.HtmlDecode(fileHelp.Value), StringComparison.Ordinal);
+        Assert.Matches("<textarea\\b[^>]*\\bid=\"Message\"[^>]*\\baria-describedby=\"Message-error quotation-message-help\"", source);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error\"", source, StringComparison.Ordinal);
         foreach (var field in new[] { "FirstName", "LastName", "Email", "Country", "Message" })
         {
             var label = Assert.Single(Regex.Matches(
