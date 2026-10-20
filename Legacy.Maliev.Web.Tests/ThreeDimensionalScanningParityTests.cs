@@ -72,6 +72,9 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
         Assert.Contains("scanning-preparation-details", component, StringComparison.Ordinal);
         Assert.Contains("scanning-workflow-timeline.is-active", styles, StringComparison.Ordinal);
         Assert.Contains("scanning-workflow-step.is-visible", styles, StringComparison.Ordinal);
+        Assert.Contains(".service-card h3 { margin: 1rem 0 .45rem; color: var(--service-ink);", styles, StringComparison.Ordinal);
+        Assert.Contains("aspect-ratio: 1 / 1", styles, StringComparison.Ordinal);
+        Assert.Contains("box-sizing: border-box", styles, StringComparison.Ordinal);
         Assert.Contains("@media print", styles, StringComparison.Ordinal);
         Assert.Contains("#scanning-onsite-checklist .scanning-checklist-actions { display: none; }", styles, StringComparison.Ordinal);
         Assert.Contains("IntersectionObserver", script, StringComparison.Ordinal);
