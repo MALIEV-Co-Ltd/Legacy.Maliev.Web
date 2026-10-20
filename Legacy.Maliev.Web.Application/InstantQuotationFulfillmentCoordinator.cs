@@ -547,5 +547,6 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
             checkpoint.RequestReference,
             category,
             checkpoint.TransactionId,
-            checkpoint.JourneyId) { FulfillmentFailure = failure };
+            checkpoint.JourneyId)
+        { FulfillmentFailure = failure };
 }

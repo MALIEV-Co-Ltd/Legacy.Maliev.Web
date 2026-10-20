@@ -248,7 +248,7 @@ internal sealed class CustomerOrderSubmissionTransport(
         (int)statusCode < 500,
         IsAuthorized(statusCode, token),
         statusCode == HttpStatusCode.Conflict)
-        { FailureStatusCode = (int)statusCode is >= 200 and < 300 ? null : (int)statusCode };
+    { FailureStatusCode = (int)statusCode is >= 200 and < 300 ? null : (int)statusCode };
 
     private bool IsAuthorized(HttpStatusCode statusCode, string token)
     {

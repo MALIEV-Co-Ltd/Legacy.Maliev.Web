@@ -764,7 +764,8 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     {
         public bool ThrowOnLog { get; init; }
         public List<(LogLevel Level, EventId EventId, Exception? Exception,
-            KeyValuePair<string, object?>[] State, string Message)> Entries { get; } = [];
+            KeyValuePair<string, object?>[] State, string Message)> Entries
+        { get; } = [];
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
