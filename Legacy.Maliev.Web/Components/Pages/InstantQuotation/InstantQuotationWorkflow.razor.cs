@@ -1115,8 +1115,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
-        InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
+    private async Task UpdatePartAppearanceAsync(Guid partId, string color)
+    {
+        if (disposed || Parts.All(part => part.PartId != partId)) return;
+        await InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
+        if (disposed) return;
+        var selected = Parts.FirstOrDefault(part => part.PartId == selectedPreviewPartId) ?? Parts.FirstOrDefault();
+        selectedPreviewPartId = selected?.PartId;
+        if (selected is not null)
+        {
+            await InvokePreviewAsync("select", ViewerPartKey(selected.PartId));
+        }
+    }
 
     private Task SelectReviewPartAsync(Guid partId) => SelectPreviewAsync(partId);
 

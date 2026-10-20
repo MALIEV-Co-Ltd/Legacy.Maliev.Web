@@ -157,7 +157,7 @@
                                checked="@(IsBulkEligible(part) && selectedBulkParts.Contains(part.PartId))"
                                disabled="@(InputDisabled || IsRepricing || !IsBulkEligible(part))"
                                @onchange="args => SetPartSelected(part.PartId, args)" />
-                        @Localizer["Select for bulk material: {0}", part.DisplayFileName]
+                        <span class="instant-quote__sr-only">@Localizer["Select for bulk material: {0}", part.DisplayFileName]</span>
                     </label>
                     <button type="button"
                             aria-label="@Localizer["View {0}", part.DisplayFileName]"

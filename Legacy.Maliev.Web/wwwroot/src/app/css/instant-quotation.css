@@ -1788,6 +1788,9 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     min-height: 44px;
     cursor: pointer;
 }
+.instant-quote__workflow [data-workflow-part] > .instant-quote__bulk-checkbox {
+    grid-column: 1 / -1;
+}
 .instant-quote__bulk-checkbox input[type="checkbox"] {
     width: 16px;
     height: 16px;

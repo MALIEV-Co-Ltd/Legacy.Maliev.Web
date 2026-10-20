@@ -230,6 +230,10 @@ public sealed class InstantQuotationResinPresentationTests
             var initial = WebUtility.HtmlDecode(root.ToHtmlString());
             Assert.Contains(selectAll, initial, StringComparison.Ordinal);
             Assert.Equal(3, Regex.Matches(initial, "data-workflow-part-select").Count);
+            var labels = Regex.Matches(initial, "<label class=\"instant-quote__bulk-checkbox\">[\\s\\S]*?</label>")
+                .Cast<Match>().Where(label => label.Value.Contains("data-workflow-part-select", StringComparison.Ordinal)).ToArray();
+            Assert.Equal(3, labels.Length);
+            Assert.All(labels, label => Assert.Matches("<span class=\"instant-quote__sr-only\">[^<]+</span>", label.Value));
             Assert.Contains("data-workflow-select-all", initial, StringComparison.Ordinal);
             Assert.Contains("data-workflow-apply-material", initial, StringComparison.Ordinal);
 
@@ -308,6 +312,7 @@ public sealed class InstantQuotationResinPresentationTests
                 if (refusesWrite) throw new InvalidOperationException("Synthetic owned write refusal.");
             };
             var applying = (Task)Invoke("ApplyMaterialToSelectedAsync")!;
+            Exception? primary = null;
             try
             {
                 await entered.Task.WaitAsync(lease.Token);
@@ -341,14 +346,175 @@ public sealed class InstantQuotationResinPresentationTests
                     Assert.Equal(BuildPreference.Strength, changed.Configuration.BuildPreference);
                 }
             }
+            catch (Exception exception)
+            {
+                primary = exception;
+                throw;
+            }
             finally
             {
-                release.TrySetResult();
-                try { await applying.WaitAsync(lease.Token); }
-                catch (InvalidOperationException) when (refusesWrite) { }
-                catch (OperationCanceledException) when (disposes && !lease.IsCancellationRequested) { }
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        applying, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: refusesWrite || disposes, taskKind: "bulk-configuration"));
             }
         });
+    }
+
+    [Fact]
+    public async Task BulkAppearanceCompletion_RestoresTheRenderedSelectedPart()
+    {
+        using var cultures = new CultureScope("en");
+        var active = Part("PETG", BuildPreference.Standard);
+        var other = Part("PLA", BuildPreference.Strength);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(active, other), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var viewerSelections = new List<string>();
+        var appearances = new List<string>();
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new BulkAppearancePreviewReference((name, args) =>
+            {
+                if (name == "select") viewerSelections.Add((string)args![0]!);
+                if (name == "updatePartAppearance") appearances.Add((string)args![0]!);
+                return Task.FromResult<object?>(null);
+            });
+            void Set(string name, object value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            Set("previewInterop", preview);
+            Set("selectedPreviewPartId", active.PartId);
+            Invoke("SelectAllParts", new ChangeEventArgs { Value = true });
+            await (Task)Invoke("ApplyMaterialToSelectedAsync")!;
+            Assert.Equal("PETG", coordinator.Parts.Single(part => part.PartId == other.PartId).Configuration.MaterialKey);
+            Assert.Equal(other.PartId.ToString("N"), Assert.Single(appearances));
+            Assert.Equal(active.PartId.ToString("N"), viewerSelections.Last());
+            var html = WebUtility.HtmlDecode(root.ToHtmlString());
+            Assert.Matches("aria-label=\"View " + Regex.Escape(active.DisplayFileName) + "\"[^>]*aria-pressed=\"true\"", html);
+        });
+    }
+
+
+    [Theory]
+    [InlineData("current")]
+    [InlineData("null")]
+    [InlineData("removed")]
+    [InlineData("empty")]
+    [InlineData("disposed")]
+    public async Task AppearanceCompletion_UsesOnlyCurrentExistingSelection(string transition)
+    {
+        var original = Part("PLA", BuildPreference.Quality);
+        var other = Part("PETG", BuildPreference.Strength);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(original, other), new SuccessfulRemoveClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var selected = new List<string>();
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new BulkAppearancePreviewReference(async (name, args) =>
+            {
+                if (name == "updatePartAppearance")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                if (name == "select") selected.Add((string)args![0]!);
+                return null;
+            });
+            void Set(string name, object? value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            Set("previewInterop", preview);
+            Set("selectedPreviewPartId", original.PartId);
+            var appearance = (Task)Invoke("UpdatePartAppearanceAsync", original.PartId, "Blue")!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (transition == "current") await (Task)Invoke("SelectPreviewAsync", other.PartId)!;
+                if (transition == "null") Set("selectedPreviewPartId", null);
+                if (transition is "removed" or "empty") await (Task)Invoke("RemovePartAsync", original.PartId)!;
+                if (transition == "empty") await (Task)Invoke("RemovePartAsync", other.PartId)!;
+                if (transition == "disposed") await component.DisposeAsync();
+                selected.Clear();
+                release.TrySetResult();
+                await appearance.WaitAsync(lease.Token);
+                if (transition is "empty" or "disposed")
+                {
+                    Assert.Empty(selected);
+                    if (transition == "empty")
+                        Assert.Null(typeof(InstantQuotationWorkflow)
+                            .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                }
+                else
+                {
+                    var expected = transition == "null" ? original.PartId : other.PartId;
+                    Assert.Equal(expected.ToString("N"), Assert.Single(selected));
+                    Assert.Equal(expected, (Guid?)typeof(InstantQuotationWorkflow)
+                        .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                    Assert.Contains(coordinator.Parts, part => part.PartId == expected);
+                }
+            }
+            catch (Exception exception)
+            {
+                primary = exception;
+                throw;
+            }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        appearance, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "appearance"));
+            }
+        });
+    }
+
+    private sealed class BulkAppearancePreviewReference(Func<string, object?[]?, Task<object?>> invoke) : IJSObjectReference
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, default, args);
+        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            var result = await invoke(identifier, args);
+            return result is null ? default! : (TValue)result;
+        }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class SuccessfulRemoveClient : IInstantQuotationUploadClient
+    {
+        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
+            string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim geometryClaim,
+            string operationId, CancellationToken cancellationToken) => throw new InvalidOperationException("No upload expected.");
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
+            InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
+            Task.FromResult(new InstantQuotationRemoveResult(operationId, InstantQuotationServiceStatus.Available,
+                InstantQuotationAuthorizationStatus.Authorized, InstantQuotationOperationStatus.Succeeded,
+                InstantQuotationProblemCategory.None));
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity,
+            int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
+            string operationId, CancellationToken cancellationToken) => throw new InvalidOperationException("No finalization expected.");
     }
 
     private static InstantQuotationPart Part(string material, BuildPreference preference) => new(
