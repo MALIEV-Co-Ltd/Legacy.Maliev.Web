@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
@@ -114,6 +115,128 @@ public sealed class MaterialPricingDisplayRendererContractTests
         finally { await fixture.CompleteAsync(); }
     }
 
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task Renderer_HiddenPartFramesRetainSnapshotsWithoutRedundantRendersOrAuthority(string culture)
+    {
+        await RunProjectionAsync(culture, async fixture =>
+        {
+            await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.AssertNoFinalAuthorityAsync();
+            var before = fixture.RenderCount;
+            var html = await fixture.HtmlAsync();
+            fixture.Pricing.ReleaseFirst.TrySetResult();
+            await fixture.Pricing.SecondSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(before, fixture.RenderCount);
+            Assert.Equal(html, await fixture.HtmlAsync());
+            Assert.Contains(fixture.Snapshot.Entries, row => row.PartId == fixture.SecondPartId
+                && row.MaterialKey == "M68" && row.Status == InstantQuotationMaterialPricingStatus.Completed);
+            await fixture.AssertNoFinalAuthorityAsync();
+            fixture.Pricing.ReleaseSecond.TrySetResult();
+            await fixture.Pricing.FinalComputed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.AssertNoFinalAuthorityAsync();
+            var beforeFinal = fixture.RenderCount;
+            await fixture.CompleteAsync();
+            Assert.True(fixture.RenderCount > beforeFinal);
+            var finalHtml = await fixture.HtmlAsync();
+            Assert.DoesNotContain("disabled", ReviewButton(finalHtml), StringComparison.Ordinal);
+            var stored = (await fixture.Store.GetAsync(fixture.SessionId, null, default))!;
+            var quote = Assert.IsType<InstantQuotationOrderQuote>(fixture.Pricing.FinalQuote);
+            Assert.Equal(2, quote.Parts.Count);
+            Assert.True(fixture.Tickets.Validate(stored, quote, stored.QuoteAuthorization!, DateTimeOffset.UtcNow));
+        });
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task Renderer_ViewSwitchMakesTheNewlyVisiblePartFramesRender(string culture)
+    {
+        await RunProjectionAsync(culture, async fixture =>
+        {
+            await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.SelectPartAsync(fixture.SecondPartId);
+            var before = fixture.RenderCount;
+            fixture.Pricing.ReleaseFirst.TrySetResult();
+            await fixture.Pricing.SecondSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(fixture.RenderCount > before);
+            var html = await fixture.HtmlAsync();
+            Assert.Contains("quantity-" + fixture.SecondPartId, html, StringComparison.Ordinal);
+            Assert.Contains("600.00", WebUtility.HtmlDecode(MaterialRow(html, "M68")), StringComparison.Ordinal);
+            AssertReviewDisabled(html);
+            await fixture.AssertNoFinalAuthorityAsync();
+        });
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task Renderer_NewGenerationRejectsStaleAndCanceledFramesWithoutPoisoningVisibleProjection(string culture)
+    {
+        await RunProjectionAsync(culture, async fixture =>
+        {
+            await fixture.CompleteAsync();
+            var old = fixture.Snapshot;
+            var beforeEdit = fixture.RenderCount;
+            fixture.BeginQuantityChange();
+            await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(fixture.Snapshot.Generation > old.Generation);
+            Assert.True(fixture.RenderCount > beforeEdit);
+            var beforeStale = fixture.RenderCount;
+            await fixture.NotifyAsync(old, default);
+            Assert.Equal(beforeStale, fixture.RenderCount);
+            await fixture.SelectPartAsync(fixture.SecondPartId);
+            var beforeCanceled = fixture.RenderCount;
+            using var canceled = new CancellationTokenSource();
+            canceled.Cancel();
+            await fixture.NotifyAsync(fixture.Snapshot, canceled.Token);
+            Assert.Equal(beforeCanceled, fixture.RenderCount);
+            await fixture.NotifyAsync(fixture.Snapshot, default);
+            Assert.True(fixture.RenderCount > beforeCanceled);
+            Assert.Contains("quantity-" + fixture.SecondPartId, await fixture.HtmlAsync(), StringComparison.Ordinal);
+            Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, null, default))!.QuoteAuthorization);
+        });
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task Renderer_DisposedProjectionCannotQueueLateRenderOrPublishAuthority(string culture)
+    {
+        await RunProjectionAsync(culture, async fixture =>
+        {
+            await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var snapshot = fixture.Snapshot;
+            await fixture.DisposeRendererAsync();
+            var before = fixture.RenderCount;
+            await fixture.NotifyAsync(snapshot, default);
+            Assert.Equal(before, fixture.RenderCount);
+            await fixture.CompleteAsync();
+            Assert.Null(fixture.Pricing.FinalQuote);
+            Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, null, default))!.QuoteAuthorization);
+        });
+    }
+
+    private static async Task RunProjectionAsync(string culture, Func<Fixture, Task> body)
+    {
+        Fixture? fixture = null;
+        Exception? primary = null;
+        try
+        {
+            fixture = await Fixture.CreateAsync(culture, InstantQuotationMaterialPricingStatus.Completed,
+                partCount: 2, projectionControls: true);
+            await body(fixture);
+        }
+        catch (Exception failure) { primary = failure; throw; }
+        finally
+        {
+            if (fixture is not null)
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await fixture.CompleteAsync(), fixture.DisposeAsync);
+        }
+    }
+
     private static string MaterialRow(string html, string key)
     {
         var match = Regex.Match(html, $"<li\\b[^>]*data-workflow-material-price=\"{Regex.Escape(key)}\"[^>]*>.*?</li>", RegexOptions.Singleline);
@@ -158,6 +281,27 @@ public sealed class MaterialPricingDisplayRendererContractTests
         public InstantQuotationMaterialPricingProgress? PausedFrame { get; private set; }
         public bool ObserverRoute { get; private set; }
         public InstantQuotationOrderQuote? FinalQuote { get; private set; }
+        public bool ProjectionControls { get; set; }
+        public TaskCompletionSource FirstSelected { get; private set; } = NewGate();
+        public TaskCompletionSource ReleaseFirst { get; private set; } = NewGate();
+        public TaskCompletionSource SecondSelected { get; private set; } = NewGate();
+        public TaskCompletionSource ReleaseSecond { get; private set; } = NewGate();
+        public TaskCompletionSource FinalComputed { get; private set; } = NewGate();
+        public TaskCompletionSource ReleaseFinal { get; private set; } = NewGate();
+        private static TaskCompletionSource NewGate() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void ResetProjection()
+        {
+            ProjectionControls = true;
+            FirstSelected = NewGate(); ReleaseFirst = NewGate();
+            SecondSelected = NewGate(); ReleaseSecond = NewGate();
+            FinalComputed = NewGate(); ReleaseFinal = NewGate();
+            FinalQuote = null;
+        }
+        public void ReleaseAll()
+        {
+            Release.TrySetResult();
+            ReleaseFirst.TrySetResult(); ReleaseSecond.TrySetResult(); ReleaseFinal.TrySetResult();
+        }
 
         public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session, string? owner,
             bool comparisons, CancellationToken token) => inner.QuoteAsync(session, owner, comparisons, token);
@@ -168,9 +312,27 @@ public sealed class MaterialPricingDisplayRendererContractTests
         {
             ObserverRoute = true;
             bool paused = false;
-            FinalQuote = await inner.QuoteAsync(session, owner, comparisons, async (frame, callbackToken) =>
+            int selected = 0;
+            var quote = await inner.QuoteAsync(session, owner, comparisons, async (frame, callbackToken) =>
             {
                 await observer(frame, callbackToken);
+                if (ProjectionControls)
+                {
+                    if (frame.MaterialKey == "M68" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
+                    {
+                        if (++selected == 1)
+                        {
+                            FirstSelected.TrySetResult();
+                            await ReleaseFirst.Task.WaitAsync(callbackToken);
+                        }
+                        else
+                        {
+                            SecondSelected.TrySetResult();
+                            await ReleaseSecond.Task.WaitAsync(callbackToken);
+                        }
+                    }
+                    return;
+                }
                 if (!paused && frame.Status == pauseAt)
                 {
                     paused = true;
@@ -179,7 +341,42 @@ public sealed class MaterialPricingDisplayRendererContractTests
                     await Release.Task.WaitAsync(callbackToken);
                 }
             }, token);
+            if (ProjectionControls)
+            {
+                FinalComputed.TrySetResult();
+                await ReleaseFinal.Task.WaitAsync(token);
+            }
+            FinalQuote = quote;
             return FinalQuote;
+        }
+    }
+
+    private sealed class CountingWorkflow : InstantQuotationWorkflow
+    {
+        private int renders;
+        public int RenderCount => Volatile.Read(ref renders);
+        protected override bool ShouldRender()
+        {
+            Interlocked.Increment(ref renders);
+            return base.ShouldRender();
+        }
+    }
+
+    private sealed class CountingActivator(Func<IServiceProvider> services) : IComponentActivator
+    {
+        public CountingWorkflow? Workflow { get; private set; }
+        public IComponent CreateInstance(Type componentType)
+        {
+            if (componentType != typeof(InstantQuotationWorkflow))
+                return (IComponent)Activator.CreateInstance(componentType)!;
+            var component = new CountingWorkflow();
+            // The measured subclass still uses the actual workflow's private injected services.
+            foreach (var property in typeof(InstantQuotationWorkflow).GetProperties(
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                if (property.GetCustomAttribute<InjectAttribute>() is not null)
+                    property.SetValue(component, services().GetRequiredService(property.PropertyType));
+            Workflow = component;
+            return component;
         }
     }
 
@@ -206,6 +403,35 @@ public sealed class MaterialPricingDisplayRendererContractTests
         private ServiceProvider? rendererServices;
         private HtmlRenderer? renderer;
         private HtmlRootComponent root;
+        private bool rootCreated;
+        private CountingActivator? counter;
+        private Task? quantityChange;
+        public int RenderCount => counter!.Workflow!.RenderCount;
+        public Guid SecondPartId { get; private set; }
+        private InstantQuotationWorkflowCoordinator Coordinator =>
+            (InstantQuotationWorkflowCoordinator)typeof(InstantQuotationWorkflow).GetField(
+                "workflow", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(counter!.Workflow)!;
+        public InstantQuotationMaterialPriceDisplaySnapshot Snapshot => Coordinator.MaterialPriceDisplay;
+        public Task NotifyAsync(InstantQuotationMaterialPriceDisplaySnapshot snapshot, CancellationToken token) =>
+            ((ValueTask)typeof(InstantQuotationWorkflow).GetMethod("MaterialDisplayChangedAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter!.Workflow, [snapshot, token])!).AsTask();
+        public Task SelectPartAsync(Guid partId) => renderer!.Dispatcher.InvokeAsync(() =>
+            EventCallback.Factory.Create<Guid>(counter!.Workflow!, id =>
+                (Task)typeof(InstantQuotationWorkflow).GetMethod("SelectPreviewAsync",
+                    BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter.Workflow, [id])!)
+                .InvokeAsync(partId));
+        public void BeginQuantityChange()
+        {
+            Pricing.ResetProjection();
+            quantityChange = renderer!.Dispatcher.InvokeAsync(() =>
+            {
+                var first = Coordinator.Parts.First();
+                Func<Task> update = () => Coordinator.UpdateConfigurationAsync(
+                    first.PartId, "M68", "White", 3, default);
+                return (Task)typeof(InstantQuotationWorkflow).GetMethod("RepriceAsync",
+                    BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter!.Workflow, [update, null])!;
+            });
+        }
         private readonly CultureInfo previousCulture = CultureInfo.CurrentCulture;
         private readonly CultureInfo previousUiCulture = CultureInfo.CurrentUICulture;
         public IInstantQuotationSessionStore Store { get; }
@@ -220,7 +446,8 @@ public sealed class MaterialPricingDisplayRendererContractTests
             Pricing = new(scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>(), pauseAt);
         }
 
-        public static async Task<Fixture> CreateAsync(string culture, InstantQuotationMaterialPricingStatus pauseAt)
+        public static async Task<Fixture> CreateAsync(string culture, InstantQuotationMaterialPricingStatus pauseAt,
+            int partCount = 1, bool projectionControls = false)
         {
             var fixture = new Fixture(pauseAt);
             try
@@ -235,8 +462,20 @@ public sealed class MaterialPricingDisplayRendererContractTests
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
                 var part = new InstantQuotationPart(Guid.Parse("55555555-5555-5555-5555-555555555555"),
                     "controlled.stl", reference, geometry, new("M68", "White", 2));
-                var saved = await fixture.Store.CreateAsync(null, new([part]), default);
+                var parts = new List<InstantQuotationPart> { part };
+                if (partCount == 2)
+                {
+                    var second = part with
+                    {
+                        PartId = Guid.Parse("77777777-7777-7777-7777-777777777777"),
+                        DisplayFileName = "second-controlled.stl",
+                    };
+                    parts.Add(second);
+                    fixture.SecondPartId = second.PartId;
+                }
+                var saved = await fixture.Store.CreateAsync(null, new(parts), default);
                 fixture.SessionId = saved.SessionId;
+                fixture.Pricing.ProjectionControls = projectionControls;
                 var services = new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
                     .AddSingleton<IJSRuntime, NoJavaScript>()
                     .AddSingleton(fixture.scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>())
@@ -247,13 +486,26 @@ public sealed class MaterialPricingDisplayRendererContractTests
                     .AddSingleton(fixture.scope.ServiceProvider.GetRequiredService<FdmRuntimeProfileCatalog>())
                     .AddSingleton<IInstantQuotationAuthoritativePricingService>(fixture.Pricing)
                     .AddSingleton<IInstantQuotationWorkflowSessionIdentityAccessor>(new SessionIdentity(saved.SessionId));
+                if (projectionControls)
+                {
+                    fixture.counter = new CountingActivator(() => fixture.rendererServices!);
+                    services.AddSingleton<IComponentActivator>(fixture.counter);
+                }
                 fixture.rendererServices = services.BuildServiceProvider();
                 fixture.renderer = new(fixture.rendererServices, fixture.rendererServices.GetRequiredService<ILoggerFactory>());
                 fixture.root = await fixture.renderer.Dispatcher.InvokeAsync(() =>
                     fixture.renderer.BeginRenderingComponent<InstantQuotationWorkflow>());
+                fixture.rootCreated = true;
                 return fixture;
             }
-            catch { await fixture.DisposeAsync(); throw; }
+            catch (Exception primary)
+            {
+                if (projectionControls)
+                    await MaterialPricingTestCleanup.ReleaseAllAsync(primary, fixture.DisposeAsync);
+                else
+                    await fixture.DisposeAsync();
+                throw;
+            }
         }
 
         public Task<string> HtmlAsync() => renderer!.Dispatcher.InvokeAsync(root.ToHtmlString);
@@ -265,8 +517,9 @@ public sealed class MaterialPricingDisplayRendererContractTests
         }
         public async Task CompleteAsync()
         {
-            Pricing.Release.TrySetResult();
-            await root.QuiescenceTask.WaitAsync(TimeSpan.FromSeconds(10));
+            Pricing.ReleaseAll();
+            await Task.WhenAll(root.QuiescenceTask, quantityChange ?? Task.CompletedTask)
+                .WaitAsync(TimeSpan.FromSeconds(10));
         }
         public async Task DisposeRendererAsync()
         {
@@ -276,7 +529,30 @@ public sealed class MaterialPricingDisplayRendererContractTests
         }
         public async ValueTask DisposeAsync()
         {
-            Pricing.Release.TrySetResult();
+            if (Pricing.ProjectionControls)
+            {
+                try
+                {
+                    await MaterialPricingTestCleanup.ReleaseAllAsync(null,
+                        () => { Pricing.ReleaseAll(); return ValueTask.CompletedTask; },
+                        async () =>
+                        {
+                            if (rootCreated)
+                                await Task.WhenAll(root.QuiescenceTask, quantityChange ?? Task.CompletedTask)
+                                    .WaitAsync(TimeSpan.FromSeconds(10));
+                        },
+                        async () => await DisposeRendererAsync(),
+                        async () => { if (rendererServices is not null) await rendererServices.DisposeAsync(); },
+                        scope.DisposeAsync, factory.DisposeAsync);
+                }
+                finally
+                {
+                    CultureInfo.CurrentCulture = previousCulture;
+                    CultureInfo.CurrentUICulture = previousUiCulture;
+                }
+                return;
+            }
+            Pricing.ReleaseAll();
             await DisposeRendererAsync();
             if (rendererServices is not null) await rendererServices.DisposeAsync();
             await scope.DisposeAsync();
