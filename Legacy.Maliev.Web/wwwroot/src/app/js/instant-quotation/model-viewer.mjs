@@ -406,6 +406,25 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     else adapter.fit?.(next.object);
   }
 
+  function clearSelection() {
+    assertActive();
+    if (activeId === null) return;
+    const current = requirePart(activeId);
+    current.camera = clone(adapter.getCameraState?.());
+    adapter.setThickness?.(current.object, false, { thinMm: 0.8 });
+    adapter.hide?.(current.object);
+    activeId = null;
+  }
+
+  function promotePart(localId, partId) {
+    assertActive();
+    const part = requirePart(localId);
+    if (!partId || parts.has(partId)) throw new TypeError('A unique admitted render key is required.');
+    parts.delete(localId);
+    parts.set(partId, part);
+    if (activeId === localId) activeId = partId;
+  }
+
   function remove(id) {
     assertActive();
     const part = requirePart(id);
@@ -471,7 +490,8 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     try {
       return adapter.snapshot?.(maximumDimension) ?? null;
     } finally {
-      if (previousId !== null && previousId !== id && parts.has(previousId)) select(previousId);
+      if (previousId === null) clearSelection();
+      else if (previousId !== id && parts.has(previousId)) select(previousId);
     }
   }
 
@@ -518,7 +538,7 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return part;
   }
 
-  return Object.freeze({ addPart, select, remove, setColor, setThicknessEvidence,
+  return Object.freeze({ addPart, select, clearSelection, promotePart, remove, setColor, setThicknessEvidence,
     setThicknessVisible, reset, fit, fullscreen, snapshot, handleKey, dispose });
 }
 

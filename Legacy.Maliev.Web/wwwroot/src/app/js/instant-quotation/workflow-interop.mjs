@@ -205,7 +205,7 @@ export function createWorkflowPreviewInterop({
         if (!isCurrent(entry)) return;
         entry.thicknessEvidence = evidence;
         entry.evidenceCompleted = true;
-        if (entry.attached && evidence) viewer?.setThicknessEvidence?.(entry.partId, evidence);
+        if (entry.attached && evidence) viewer?.setThicknessEvidence?.(entry.partId ?? entry.key, evidence);
         notifyThickness(entry);
         notifyIncomplete(entry);
       }).catch(() => {
@@ -277,6 +277,7 @@ export function createWorkflowPreviewInterop({
     entry.object = object;
     entry.loadedObject = null;
     attachAdmittedPreview(entry);
+    if (activeLocalPreviewKey === entry.key) attachLocalPreview(entry);
   }
 
   function failPreview(entry, error) {
@@ -300,10 +301,11 @@ export function createWorkflowPreviewInterop({
     assertActive();
     if (!viewer) viewer = createViewer(canvas);
     for (const entry of previews.values()) attachAdmittedPreview(entry);
+    if (activeLocalPreviewKey) selectLocalPreview(activeLocalPreviewKey);
   }
 
   function detachEmptyViewer() {
-    if (disposed || partKeys.size !== 0) return false;
+    if (disposed || partKeys.size !== 0 || [...previews.values()].some(entry => entry.attached)) return false;
     viewer?.dispose();
     viewer = null;
     return true;
@@ -313,7 +315,9 @@ export function createWorkflowPreviewInterop({
     assertActive();
     const entry = requirePreview(key);
     if (entry.released || entry.quarantined || entry.previewOnly || !partId) return false;
+    if (entry.attached && !entry.partId) viewer.promotePart(entry.key, partId);
     entry.partId = partId;
+    if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
     entry.thicknessMaterial = material;
     entry.file = null;
     partKeys.set(partId, key);
@@ -327,6 +331,8 @@ export function createWorkflowPreviewInterop({
     viewer.addPart(entry.partId, entry.object);
     entry.attached = true;
     if (entry.thicknessEvidence) viewer.setThicknessEvidence?.(entry.partId, entry.thicknessEvidence);
+    if (activeLocalPreviewKey && !previews.get(activeLocalPreviewKey)?.attached)
+      selectLocalPreview(activeLocalPreviewKey);
   }
 
   function quarantine(key) {
@@ -336,24 +342,26 @@ export function createWorkflowPreviewInterop({
       release(key);
       return;
     }
+    if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
     entry.settleCompletion?.(null);
     entry.controller?.abort();
     clearTimeout(entry.stallTimer);
     entry.stallTimer = null;
-    if (entry.attached && viewer) viewer.remove(entry.partId);
+    if (entry.attached && viewer) viewer.remove(entry.partId ?? entry.key);
     else disposeModel(entry.object ?? entry.loadedObject, disposedResources);
     entry.loadedObject = null;
     entry.object = null;
     entry.geometryClaim = null;
     entry.attached = false;
     entry.quarantined = true;
+    if (activeLocalPreviewKey) selectLocalPreview(activeLocalPreviewKey);
   }
 
   function release(key) {
     const entry = previews.get(key);
     if (!entry) return;
+    if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
     if (incompleteEntry === entry) {
-      activeLocalPreviewKey = null;
       incompleteEntry = null;
       incompleteViewer?.dispose();
       incompleteViewer = null;
@@ -365,13 +373,14 @@ export function createWorkflowPreviewInterop({
     entry.stallTimer = null;
     entry.controller?.abort();
     if (entry.partId) partKeys.delete(entry.partId);
-    if (entry.attached && viewer) viewer.remove(entry.partId);
+    if (entry.attached && viewer) viewer.remove(entry.partId ?? entry.key);
     else disposeModel(entry.object ?? entry.loadedObject, disposedResources);
     entry.loadedObject = null;
     entry.object = null;
     entry.geometryClaim = null;
     entry.file = null;
     entry.controller = null;
+    if (activeLocalPreviewKey) selectLocalPreview(activeLocalPreviewKey);
   }
 
   function retry(key) {
@@ -393,15 +402,29 @@ export function createWorkflowPreviewInterop({
     return true;
   }
 
+  function attachLocalPreview(entry) {
+    if (!viewer || !entry.object || entry.partId || entry.previewOnly || !isCurrent(entry)) return false;
+    if (!entry.attached) {
+      // Local keys are renderer-only; only admit() can populate the authoritative correlation map.
+      viewer.addPart(entry.key, entry.object);
+      entry.attached = true;
+    }
+    viewer.select(entry.key);
+    return true;
+  }
+
   function selectLocalPreview(key) {
     if (disposed) return false;
-    if (incompleteEntry?.key !== key || !incompleteViewer || !isCurrent(incompleteEntry)) {
-      activeLocalPreviewKey = null;
-      return false;
-    }
+    const entry = previews.get(key);
+    if (!entry || !isCurrent(entry) || entry.partId) return false;
     activeLocalPreviewKey = key;
-    incompleteViewer.select(key);
-    return true;
+    if (incompleteEntry === entry && incompleteViewer) {
+      incompleteViewer.select(key);
+      return true;
+    }
+    const selected = attachLocalPreview(entry);
+    if (!selected) viewer?.clearSelection?.();
+    return selected;
   }
 
   function captureFailedThumbnail(key, canvas = null) {
@@ -414,7 +437,7 @@ export function createWorkflowPreviewInterop({
       if (!viewer && canvas) attach(canvas);
       if (!viewer) return null;
       // This temporary local renderer key is never entered in admitted partKeys.
-      viewer.addPart(key, object);
+      if (!entry.attached) viewer.addPart(key, object);
       attached = true;
       guardModelDisposal(object, guardedResources, viewerDisposedResources);
       const source = viewer.snapshot?.(key, 192);
@@ -423,7 +446,11 @@ export function createWorkflowPreviewInterop({
     } catch {
       return null; // Thumbnail/WebGL failure must not replace the actual upload failure.
     } finally {
-      if (attached) { try { viewer.remove(key); } catch { /* Release remaining owned resources below. */ } }
+      if (attached) {
+        try { viewer.remove(key); }
+        catch { /* Release remaining owned resources below. */ }
+        finally { entry.attached = false; }
+      }
       try { quarantine(key); }
       finally {
         try { disposeModel(object, disposedResources); }
@@ -506,6 +533,11 @@ export function createWorkflowPreviewInterop({
     if (!tile) return false;
     const bounds = rail.getBoundingClientRect();
     const target = tile.getBoundingClientRect();
+    if (globalThis.getComputedStyle?.(rail)?.overflowY === 'visible') {
+      if (target.top < 0 || target.bottom > globalThis.innerHeight)
+        tile.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+      return true;
+    }
     const add = rail.querySelector?.('.iq-compact-dropzone');
     const left = add && globalThis.getComputedStyle?.(add)?.position === 'sticky'
       ? Math.max(bounds.left, add.getBoundingClientRect().right) : bounds.left;
@@ -516,9 +548,12 @@ export function createWorkflowPreviewInterop({
     return true;
   }
 
-  function reset() { (activeLocalPreviewKey ? incompleteViewer : viewer)?.reset(); }
-  function fit() { (activeLocalPreviewKey ? incompleteViewer : viewer)?.fit(); }
-  function fullscreen() { return (activeLocalPreviewKey ? incompleteViewer : viewer)?.fullscreen(); }
+  function selectedViewer() {
+    return activeLocalPreviewKey && incompleteEntry?.key === activeLocalPreviewKey ? incompleteViewer : viewer;
+  }
+  function reset() { selectedViewer()?.reset(); }
+  function fit() { selectedViewer()?.fit(); }
+  function fullscreen() { return selectedViewer()?.fullscreen(); }
   function renderReviewThumbnails(root) {
     if (!viewer || !root?.querySelectorAll) return 0;
     let rendered = 0;

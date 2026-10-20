@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
+public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Fact]
     public async Task NineOriginalGlbCopies_SupersededPetgTasksDoNotBlockCurrentSignedPlaBatch()
@@ -2420,7 +2420,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         HashCheckingUploadClient upload,
         CountingPricingService pricing,
         MaterialCompletionObservation? observation = null,
-        SupersededPetgPricing? obsolete = null) : TestingWebApplicationFactory(contentRoot)
+        SupersededPetgPricing? obsolete = null,
+        BatchEstimateGate? batchEstimates = null) : TestingWebApplicationFactory(contentRoot)
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -2437,6 +2438,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                         provider.GetRequiredService<IInstantQuotationSessionStore>()));
                 observation?.Decorate(services);
                 obsolete?.Decorate(services);
+                batchEstimates?.Decorate(services);
             });
         }
     }

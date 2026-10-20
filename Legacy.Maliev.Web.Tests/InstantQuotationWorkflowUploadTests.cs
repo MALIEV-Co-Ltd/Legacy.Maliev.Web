@@ -1012,6 +1012,94 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.True(workflow.HasCompleteAuthoritativeQuote);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UploadStart_HeldSinkCannotResumeAnObsoleteCanceledAttempt(bool retryIdentical)
+    {
+        var sink = new HeldUploadStartSink();
+        var client = new ControlledUploadClient(ignoreCancellation: true);
+        await using var workflow = CreateWorkflow(client: client, analytics: new InstantQuotationAnalyticsTracker(sink));
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var original = workflow.UploadAsync([UploadFile("held-start.stl")], default);
+        Task? retry = null;
+        Guid? localId = null;
+        Exception? primary = null;
+        try
+        {
+            await sink.Entered.Task.WaitAsync(lease.Token);
+            localId = Assert.Single(workflow.Uploads).LocalId;
+            Assert.Empty(client.UploadOperations);
+            workflow.Cancel(localId.Value);
+            if (retryIdentical)
+            {
+                retry = workflow.RetryAsync(localId.Value, default);
+                await client.WaitForUploadsAsync(1).WaitAsync(lease.Token);
+                Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploading, Assert.Single(workflow.Uploads).Status);
+                Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+            }
+            sink.Release.TrySetResult();
+            await original.WaitAsync(lease.Token);
+            if (retryIdentical)
+            {
+                Assert.Single(client.UploadOperations);
+                Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploading, Assert.Single(workflow.Uploads).Status);
+                Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+                Assert.Empty(workflow.Parts);
+                client.CompleteSuccess("held-start.stl", "opaque-current", Geometry());
+                await retry!.WaitAsync(lease.Token);
+                Assert.Single(workflow.Parts);
+            }
+            else
+            {
+                Assert.Empty(client.UploadOperations);
+                Assert.Equal(InstantQuotationWorkflowUploadStatus.Cancelled, Assert.Single(workflow.Uploads).Status);
+                Assert.Empty(workflow.Parts);
+            }
+            Assert.Equal(1, sink.Starts);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                () =>
+                {
+                    sink.Release.TrySetResult();
+                    if (localId is { } id) workflow.Cancel(id);
+                    if (retry is { IsCompleted: false } && client.UploadOperations.Count > 0)
+                        client.CompleteLatestUnavailable("held-start.stl", InstantQuotationUploadRetryDisposition.None);
+                    return ValueTask.CompletedTask;
+                },
+                async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                    original, () => lease.Cancel(), () => sink.Release.TrySetResult(), lease.Token, null,
+                    receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                    expectedTerminalFailure: false, taskKind: "obsolete-upload-start"),
+                async () =>
+                {
+                    if (retry is null) return;
+                    await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        retry, () => lease.Cancel(), () => sink.Release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "current-upload-start");
+                });
+        }
+    }
+
+    private sealed class HeldUploadStartSink : IInstantQuotationAnalyticsSink
+    {
+        internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal int Starts { get; private set; }
+        public async ValueTask EmitAsync(InstantQuotationAnalyticsPayload payload, CancellationToken cancellationToken = default)
+        {
+            if (payload is not InstantQuotationUploadStartPayload) return;
+            Starts++;
+            Entered.TrySetResult();
+            await Release.Task;
+        }
+    }
+
     private static InstantQuotationWorkflowCoordinator CreateWorkflow(
         ControlledUploadClient? client = null,
         RecordingSessionStore? store = null,

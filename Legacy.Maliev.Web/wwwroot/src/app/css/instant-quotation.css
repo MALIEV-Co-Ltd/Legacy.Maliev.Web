@@ -234,6 +234,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 }
 
 .instant-quote__workflow [data-workflow-upload-item],
+.instant-quote__workflow [data-workflow-pending-parse],
 .instant-quote__workflow [data-workflow-part],
 .instant-quote__workflow [data-workflow-review-part] {
     margin-top: 1rem;
@@ -440,6 +441,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone,
 .instant-quote__workflow > [data-workflow-parts] > [data-workflow-upload-item],
+.instant-quote__workflow > [data-workflow-parts] > [data-workflow-pending-parse],
 .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
     width: 11.125rem;
     min-width: 11.125rem;
@@ -451,6 +453,15 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 @media (max-width: 61.999rem) {
     .instant-quote__workflow > [data-workflow-parts] {
         flex-wrap: wrap;
+        overflow: visible;
+    }
+
+    .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone {
+        position: sticky;
+        top: .5rem;
+        z-index: 1;
+        align-self: flex-start;
+        background: var(--bs-body-bg, #fff);
     }
 
     .instant-quote__workflow > [data-workflow-parts] > h3 {
@@ -459,6 +470,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
     .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone,
     .instant-quote__workflow > [data-workflow-parts] > [data-workflow-upload-item],
+    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-pending-parse],
     .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
         width: 100%;
         min-width: 0;

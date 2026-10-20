@@ -505,3 +505,40 @@ test('standalone additive STEP imports request finer tessellation and leave IGES
     else delete globalThis.occtimportjs;
   }
 });
+
+test('promoting a local render key preserves its object, camera and selection without disposing it', () => {
+  const adapter = createAdapter();
+  const object = disposableObject();
+  const viewer = createModelViewer({ adapter });
+  try {
+    viewer.addPart('preview-local', object);
+    adapter.cameraState = { position: [3, 4, 5], target: [1, 1, 1] };
+    const fits = adapter.fits;
+    viewer.promotePart('preview-local', 'server-part');
+    assert.equal(object.disposeCount(), 0);
+    assert.equal(adapter.fits, fits);
+    assert.deepEqual(adapter.cameraState, { position: [3, 4, 5], target: [1, 1, 1] });
+    assert.throws(() => viewer.select('preview-local'), /Unknown/);
+    viewer.select('server-part');
+    assert.equal(adapter.fits, fits);
+    viewer.remove('server-part');
+    assert.equal(object.disposeCount(), 1);
+  } finally { viewer.dispose(); }
+});
+
+test('local render promotion refuses a duplicate server key without losing either owned object', () => {
+  const first = disposableObject();
+  const second = disposableObject();
+  const viewer = createModelViewer({ adapter: createAdapter() });
+  try {
+    viewer.addPart('preview-local', first);
+    viewer.addPart('server-part', second);
+    assert.throws(() => viewer.promotePart('preview-local', 'server-part'), /unique/);
+    viewer.select('preview-local');
+    viewer.select('server-part');
+    assert.equal(first.disposeCount(), 0);
+    assert.equal(second.disposeCount(), 0);
+  } finally { viewer.dispose(); }
+  assert.equal(first.disposeCount(), 1);
+  assert.equal(second.disposeCount(), 1);
+});

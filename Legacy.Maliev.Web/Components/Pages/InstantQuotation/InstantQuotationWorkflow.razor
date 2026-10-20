@@ -87,9 +87,9 @@
             }
 
             <canvas @ref="previewCanvas"
-                    style="visibility: @(HasLocalPreviewSelection ? "hidden" : "visible")"
-                    aria-hidden="@HasLocalPreviewSelection.ToString().ToLowerInvariant()"
-                    inert="@(HasLocalPreviewSelection ? string.Empty : null)"
+                    style="visibility: @(HasLocalPreviewSelection && selectedPendingPreviewKey is null ? "hidden" : "visible")"
+                    aria-hidden="@((HasLocalPreviewSelection && selectedPendingPreviewKey is null).ToString().ToLowerInvariant())"
+                    inert="@(HasLocalPreviewSelection && selectedPendingPreviewKey is null ? string.Empty : null)"
                     tabindex="0"
                     aria-label="@Localizer["Interactive 3D part preview"]"
                     aria-describedby="instant-quote-preview-help"></canvas>
@@ -159,7 +159,7 @@
                 </div>
             }
             <label for="instant-quote-files"
-                   class="iq-compact-dropzone"
+                   class="iq-compact-dropzone" data-workflow-add-file
                    aria-disabled="@InputDisabled.ToString().ToLowerInvariant()">
                 <span aria-hidden="true">＋</span>
                 <strong>@Localizer["Add file"]</strong>
@@ -167,9 +167,13 @@
             </label>
             @foreach (var pending in pendingPreviewSelections)
             {
-                <article data-workflow-pending-parse class="instant-quote__local-file">
+                <article data-workflow-pending-parse data-browser-preview-key="@pending.Key" class="instant-quote__local-file">
                     <h4>@pending.Value.Name</h4>
                     <span role="status">@Localizer["Checking physical build…"]</span>
+                    <button type="button" disabled="@bulkApplying"
+                            aria-label="@Localizer["View {0}", pending.Value.Name]"
+                            aria-pressed="@(selectedPendingPreviewKey == pending.Key ? "true" : "false")"
+                            @onclick="() => SelectPendingPreviewAsync(pending.Key)">@Localizer["View"]</button>
                     <button type="button" data-workflow-remove-pending
                             aria-label="@Localizer["Remove {0}", pending.Value.Name]"
                             @onclick="() => RemovePendingPreviewAsync(pending.Key)">@Localizer["Remove"]</button>
@@ -197,7 +201,7 @@
                 var thumbnail = LocalThumbnail(previewKeys.GetValueOrDefault(upload.LocalId));
                 var failureMessage = Localizer[upload.ProblemCategory is InstantQuotationProblemCategory.Validation
                     ? "Invalid file. Repair the model and reupload it." : "The file could not be uploaded. Try again."];
-                <article data-workflow-upload-item data-upload-local-id="@upload.LocalId" data-upload-error="@(failed ? "true" : null)"
+                <article data-workflow-upload-item data-upload-local-id="@upload.LocalId" data-browser-preview-key="@BrowserPreviewKey(upload.LocalId)" data-upload-error="@(failed ? "true" : null)"
                          class="instant-quote__local-file @(failed ? "is-error" : null)" aria-labelledby="upload-name-@upload.LocalId">
                     <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
                     @if (thumbnail is not null)
@@ -207,6 +211,14 @@
                     else
                     {
                         <span class="instant-quote__local-thumbnail" aria-hidden="true">◇</span>
+                    }
+                    @if ((upload.Status is InstantQuotationWorkflowUploadStatus.Pending or InstantQuotationWorkflowUploadStatus.Uploading)
+                        && BrowserPreviewKey(upload.LocalId) is { } pendingKey)
+                    {
+                        <button type="button" disabled="@bulkApplying"
+                                aria-label="@Localizer["View {0}", upload.DisplayFileName]"
+                                aria-pressed="@(selectedPendingPreviewKey == pendingKey ? "true" : "false")"
+                                @onclick="() => SelectPendingPreviewAsync(pendingKey)">@Localizer["View"]</button>
                     }
                     @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
                     {
@@ -246,7 +258,7 @@
             @foreach (var part in Parts)
             {
                 var partNumber = PartNumber(part.PartId);
-                <article data-workflow-part data-part-id="@part.PartId">
+                <article data-workflow-part data-part-id="@part.PartId" data-browser-preview-key="@BrowserPreviewKey(part.PreviewCorrelationId)">
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4>@part.DisplayFileName</h4>
                     <label class="instant-quote__bulk-checkbox">
@@ -343,6 +355,48 @@
                     </article>
                 }
             </section>
+
+
+            @if (SelectedPendingConfiguration is { } pending && selectedPendingPreviewKey is { } pendingKey)
+            {
+                <fieldset data-workflow-material-picker data-workflow-local-settings data-browser-preview-key="@pendingKey"
+                          disabled="@bulkApplying" inert="@(bulkApplying ? string.Empty : null)">
+                    <legend>@pending.Name — @Localizer["Settings"]</legend>
+                    <p role="status">@Localizer["Checking physical build…"]</p>
+                    <InstantQuotationMaterialSelector @key="pendingKey" Materials="Materials"
+                        SelectedMaterialKey="@pending.Configuration.MaterialKey"
+                        PriceRows="Array.Empty<InstantQuotationMaterialPricingProgress>()"
+                        PricingPending="true" FormatPrice="Money"
+                        SelectionChanged="key => ChangePendingMaterialAsync(pendingKey, key)" />
+                    <label for="pending-color-@pendingKey">@Localizer["Color"]</label>
+                    <select id="pending-color-@pendingKey" name="color" value="@pending.Configuration.Color"
+                            @onchange="args => ChangePendingColorAsync(pendingKey, args)">
+                        @foreach (var color in GetColors(pending.Configuration.MaterialKey))
+                        {
+                            <option value="@color">@Localizer[color]</option>
+                        }
+                    </select>
+                    <label for="pending-quantity-@pendingKey">@Localizer["Quantity"]</label>
+                    <input id="pending-quantity-@pendingKey" name="quantity" type="number" min="1"
+                           max="@PricingCatalog.MaximumAdditiveQuantity"
+                           aria-describedby="pending-quantity-hint-@pendingKey"
+                           @bind:get="pending.Quantity" @bind:set="raw => ChangePendingQuantityAsync(pendingKey, new ChangeEventArgs { Value = raw })"
+                           @bind:event="oninput" />
+                    <small id="pending-quantity-hint-@pendingKey">@Localizer["Maximum {0} pieces", PricingCatalog.MaximumAdditiveQuantity.ToString("N0")]</small>
+                    <fieldset disabled="@(PricingCatalog.ResolveMaterial(pending.Configuration.MaterialKey)?.Process is PrintProcess.Resin)">
+                        <legend>@Localizer["Build preference"]</legend>
+                        @foreach (var preference in new[] { BuildPreference.Quality, BuildPreference.Standard, BuildPreference.Strength })
+                        {
+                            <label>
+                                <input type="radio" name="pending-build-@pendingKey"
+                                       checked="@(pending.Configuration.BuildPreference == preference)"
+                                       @onchange="() => ChangePendingBuildPreferenceAsync(pendingKey, preference)" />
+                                @Localizer[preference.ToString()]
+                            </label>
+                        }
+                    </fieldset>
+                </fieldset>
+            }
 
             @foreach (var part in ConfigurationParts)
             {

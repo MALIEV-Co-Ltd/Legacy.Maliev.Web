@@ -45,6 +45,7 @@ function harness(
   const viewer = {
     addPart: (...args) => calls.push(['add', ...args]),
     select: (...args) => calls.push(['select', ...args]),
+    promotePart: (...args) => calls.push(['promote', ...args]),
     remove: (...args) => calls.push(['remove', ...args]),
     setColor: (...args) => calls.push(['color', ...args]),
     reset: () => calls.push(['reset']),
@@ -676,4 +677,198 @@ test('bounded snapshots validate their size before changing the viewer selection
     assert.deepEqual(sizes, [192]);
     assert.equal(shown.at(-1), good);
   } finally { viewer.dispose(); }
+});
+
+test('pending local selection is render-only and promotes exactly once after real admission', async () => {
+  const object = disposableObject();
+  const { interop, calls } = harness(async () => object);
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('pending.glb')] });
+    await interop.getGeometryClaim(key);
+    interop.attach({});
+    assert.equal(interop.selectLocalPreview(key), true);
+    assert.equal(interop.select(key), false);
+    assert.deepEqual(calls.filter(call => call[0] === 'add').map(call => call.slice(1)), [[key, object]]);
+    assert.equal(interop.admit(key, 'server-part', 'PLA'), true);
+    assert.deepEqual(calls.filter(call => call[0] === 'promote'), [['promote', key, 'server-part']]);
+    assert.equal(calls.filter(call => call[0] === 'add').length, 1);
+    assert.equal(interop.selectLocalPreview(key), false);
+    assert.equal(interop.select('server-part'), true);
+    assert.equal(object.disposed, false);
+    interop.release(key);
+    assert.deepEqual(calls.filter(call => call[0] === 'remove'), [['remove', 'server-part']]);
+    assert.equal(interop.select('server-part'), false);
+  } finally { interop.dispose(); }
+});
+
+test('admitting another pending file does not steal the explicitly selected local preview', async () => {
+  const { interop, calls } = harness();
+  try {
+    const [first, last] = interop.beginSelection({ files: [modelFile('first.glb'), modelFile('last.glb')] });
+    await Promise.all([interop.getGeometryClaim(first), interop.getGeometryClaim(last)]);
+    interop.attach({});
+    assert.equal(interop.selectLocalPreview(last), true);
+    const selected = calls.filter(call => call[0] === 'select').length;
+    interop.admit(first, 'server-first');
+    assert.equal(calls.filter(call => call[0] === 'select').length, selected);
+    interop.admit(last, 'server-last');
+    assert.deepEqual(calls.filter(call => call[0] === 'promote'), [['promote', last, 'server-last']]);
+    assert.equal(interop.select('server-last'), true);
+  } finally { interop.dispose(); }
+});
+
+test('removing a selected pending preview prevents local selection and server admission resurrection', async () => {
+  const { interop, calls } = harness();
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('removed.glb')] });
+    await interop.getGeometryClaim(key);
+    interop.attach({});
+    assert.equal(interop.selectLocalPreview(key), true);
+    interop.release(key);
+    assert.equal(interop.selectLocalPreview(key), false);
+    assert.throws(() => interop.admit(key, 'fabricated-part'), /Unknown preview correlation/);
+    assert.equal(interop.select('fabricated-part'), false);
+    assert.deepEqual(calls.filter(call => call[0] === 'remove'), [['remove', key]]);
+    assert.equal(calls.some(call => call[0] === 'promote'), false);
+  } finally { interop.dispose(); }
+});
+
+test('local View before parsing returns cannot admit an object and late removal disposes the real result', async () => {
+  const loaded = deferred();
+  const object = disposableObject();
+  const { interop, calls } = harness(() => loaded.promise);
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('held.glb')] });
+    const claim = interop.getGeometryClaim(key);
+    const rejected = assert.rejects(claim, /Geometry analysis is unavailable/);
+    interop.attach({});
+    assert.equal(interop.selectLocalPreview(key), false);
+    interop.release(key);
+    loaded.resolve(object);
+    await rejected;
+    await loaded.promise;
+    await Promise.resolve();
+    assert.equal(object.disposed, true);
+    assert.equal(calls.some(call => call[0] === 'add' || call[0] === 'promote'), false);
+  } finally { loaded.resolve(object); interop.dispose(); }
+});
+
+test('nine existing parsers start once while completion consumers and local selection remain independently owned', async () => {
+  const gate = deferred();
+  const objects = Array.from({ length: 9 }, () => disposableObject());
+  const loaded = [];
+  const actual = [];
+  const { interop } = harness(file => {
+    const index = loaded.push(file) - 1;
+    const task = gate.promise.then(() => objects[index]);
+    actual.push(task);
+    return task;
+  });
+  const files = Array.from({ length: 9 }, (_, index) => modelFile(`copy-${index}.glb`));
+  let claims = [];
+  try {
+    const keys = interop.beginSelection({ files });
+    claims = keys.map(key => interop.getGeometryClaim(key));
+    const observed = Promise.allSettled(claims);
+    interop.attach({});
+    await Promise.resolve();
+    assert.equal(loaded.length, 9);
+    assert.deepEqual(loaded, files);
+    assert.equal(interop.selectLocalPreview(keys[0]), false);
+    interop.release(keys[0]);
+    gate.resolve();
+    const results = await observed;
+    assert.equal(results[0].status, 'rejected');
+    assert.equal(results.slice(1).every(result => result.status === 'fulfilled'), true);
+    await Promise.all(actual);
+    assert.equal(loaded.length, 9);
+    assert.equal(actual.length, 9);
+  } finally {
+    gate.resolve();
+    interop.dispose();
+    await Promise.allSettled(claims);
+    await Promise.allSettled(actual);
+  }
+  assert.equal(objects.every(object => object.disposed), true);
+});
+
+test('wrapped mobile parts reveal only an off-viewport selected tile through actual page scrolling', () => {
+  const { interop } = harness();
+  const oldStyle = globalThis.getComputedStyle;
+  const oldHeight = globalThis.innerHeight;
+  const scrolls = [];
+  let bounds = { left: 0, right: 390, top: 1200, bottom: 1300 };
+  const tile = { dataset: { partId: 'new-tenth' }, getBoundingClientRect: () => bounds,
+    scrollIntoView: options => scrolls.push(options) };
+  const rail = { querySelectorAll: () => [tile], getBoundingClientRect: () => ({ left: 0, right: 390, top: -500, bottom: 1300 }) };
+  globalThis.getComputedStyle = () => ({ overflowY: 'visible' });
+  globalThis.innerHeight = 1000;
+  try {
+    assert.equal(interop.revealPart({ querySelector: () => rail }, 'new-tenth'), true);
+    assert.deepEqual(scrolls, [{ block: 'nearest', inline: 'nearest', behavior: 'auto' }]);
+    bounds = { left: 0, right: 390, top: 500, bottom: 600 };
+    assert.equal(interop.revealPart({ querySelector: () => rail }, 'new-tenth'), true);
+    assert.equal(scrolls.length, 1);
+  } finally {
+    globalThis.getComputedStyle = oldStyle;
+    if (oldHeight === undefined) delete globalThis.innerHeight;
+    else globalThis.innerHeight = oldHeight;
+    interop.dispose();
+  }
+});
+
+test('a selected unready local file never displays another admitted mesh and preserves its eventual identity', async () => {
+  const held = deferred();
+  const first = disposableObject(), middle = disposableObject(), last = disposableObject();
+  const visible = new Set();
+  let camera = { position: [1, 2, 3], target: [0, 0, 0] };
+  const viewer = createModelViewer({ adapter: {
+    show: object => visible.add(object), hide: object => visible.delete(object), fit() {},
+    getCameraState: () => structuredClone(camera),
+    setCameraState: value => { camera = structuredClone(value); },
+    snapshot: () => 'data:image/png;base64,aW1hZ2U=',
+  } });
+  const interop = createWorkflowPreviewInterop({
+    loadModel: file => file.name === 'last.glb' ? held.promise : Promise.resolve(file.name === 'first.glb' ? first : middle),
+    analyzeGeometry: () => ({ volumeMm3: 1000 }),
+    createViewer: () => viewer,
+    thicknessAnalyzer: { analyze: async () => null, dispose() {} },
+  });
+  let claims = [];
+  try {
+    const [firstKey, middleKey, lastKey] = interop.beginSelection({
+      files: [modelFile('first.glb'), modelFile('middle.glb'), modelFile('last.glb')],
+    });
+    claims = [interop.getGeometryClaim(firstKey), interop.getGeometryClaim(middleKey), interop.getGeometryClaim(lastKey)];
+    interop.attach({});
+    assert.equal(interop.selectLocalPreview(lastKey), false);
+    await claims[0];
+    assert.equal(interop.admit(firstKey, 'first-real'), true);
+    await claims[1];
+    assert.equal(interop.admit(middleKey, 'middle-real'), true);
+    interop.release(firstKey);
+    assert.equal(first.disposed, true);
+    assert.equal(visible.size, 0);
+    assert.equal(interop.select(lastKey), false);
+    viewer.snapshot('middle-real', 192);
+    assert.equal(visible.size, 0);
+    held.resolve(last);
+    await claims[2];
+    assert.deepEqual([...visible], [last]);
+    camera = { position: [7, 8, 9], target: [1, 1, 1] };
+    assert.equal(interop.admit(lastKey, 'last-real'), true);
+    assert.deepEqual([...visible], [last]);
+    assert.deepEqual(camera, { position: [7, 8, 9], target: [1, 1, 1] });
+    assert.equal(middle.disposed, false);
+    assert.equal(last.disposed, false);
+    assert.equal(interop.select(lastKey), false);
+    assert.equal(interop.select('last-real'), true);
+  } finally {
+    held.resolve(last);
+    interop.dispose();
+    await Promise.allSettled(claims);
+  }
+  assert.equal(first.disposed, true);
+  assert.equal(middle.disposed, true);
+  assert.equal(last.disposed, true);
 });

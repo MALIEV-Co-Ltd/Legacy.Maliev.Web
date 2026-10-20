@@ -241,6 +241,26 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         return pending.Select(static entry => entry.LocalId).ToArray();
     }
 
+    internal IReadOnlyList<Guid> ReserveUploads(IReadOnlyList<InstantQuotationWorkflowUploadFile> files, Guid? beforeLocalId)
+    {
+        if (beforeLocalId is not { } before) return ReserveUploads(files);
+        ThrowIfDisposed();
+        EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(files);
+        var insertionIndex = entries.FindIndex(entry => entry.LocalId == before);
+        if (insertionIndex < 0) throw new ArgumentException("The next reserved upload was not found.", nameof(beforeLocalId));
+        var pending = new List<UploadEntry>(files.Count);
+        foreach (var file in files)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            var entry = new UploadEntry(file);
+            entries.Insert(insertionIndex++, entry);
+            pending.Add(entry);
+        }
+        RefreshState();
+        return pending.Select(static entry => entry.LocalId).ToArray();
+    }
+
     public async Task UploadReservedAsync(
         IReadOnlyList<Guid> localIds,
         CancellationToken cancellationToken)
@@ -614,9 +634,11 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private async Task StartUploadAsync(UploadEntry entry, CancellationToken cancellationToken)
     {
         entry.OperationCancellation?.Dispose();
-        entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             lifetimeToken);
+        entry.OperationCancellation = operationCancellation;
+        var operationToken = operationCancellation.Token;
         var operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
             && entry.OperationId is { Length: > 0 } retainedOperationId
                 ? retainedOperationId
@@ -694,7 +716,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         try
         {
-            await using var content = await entry.File.OpenReadStreamAsync(entry.OperationCancellation.Token);
+            await using var content = await entry.File.OpenReadStreamAsync(operationToken);
+            if (disposed || entry.OperationCancellation != operationCancellation
+                || entry.OperationId != operationId || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading) return;
+            operationToken.ThrowIfCancellationRequested();
+            await analytics.RecordUploadStartAsync($"upload-{entry.LocalId:N}", 1);
+            if (disposed || entry.OperationCancellation != operationCancellation
+                || entry.OperationId != operationId || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading) return;
+            operationToken.ThrowIfCancellationRequested();
             var result = await uploadClient.UploadAsync(
                 session!.SessionId,
                 ownerIdentity,
@@ -704,7 +733,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 entry.File.Length,
                 entry.File.GeometryClaim,
                 operationId,
-                entry.OperationCancellation.Token);
+                operationToken);
             await ApplyUploadResultAsync(
                 entry,
                 operationId,
@@ -712,9 +741,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 result,
                 cancellationToken);
         }
-        catch (OperationCanceledException) when (entry.OperationCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
         {
-            if (entry.OperationId == operationId)
+            if (!disposed && entry.OperationCancellation == operationCancellation && entry.OperationId == operationId)
             {
                 entry.Status = InstantQuotationWorkflowUploadStatus.Cancelled;
                 entry.RetryDisposition = InstantQuotationUploadRetryDisposition.RetryIdentical;
@@ -723,7 +752,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
         catch
         {
-            if (entry.OperationId == operationId)
+            if (!disposed && entry.OperationCancellation == operationCancellation && entry.OperationId == operationId)
             {
                 entry.Status = InstantQuotationWorkflowUploadStatus.Error;
                 entry.ProblemCategory = InstantQuotationProblemCategory.Unexpected;
