@@ -1448,9 +1448,25 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(2);
             var recoveryRow = page.Locator("[data-workflow-part]").Filter(new LocatorFilterOptions { HasText = Path.GetFileName(recoveryPath) });
             await recoveryRow.Locator("button").First.ClickAsync();
-            await MaterialCardBrowserActions.SelectAsync(page, "PETG");
             var recoveryId = Guid.Parse((await recoveryRow.GetAttributeAsync("data-part-id"))!);
+            var beforeBulk = await CurrentReceiptAsync(recoveryId, "PLA", 1, Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard);
+            var beforeBulkPart = Assert.Single(beforeBulk.Parts, part => part.PartId == recoveryId);
+            Assert.NotNull(Assert.Single(beforeBulk.PhysicalReceipts!, value => value.PartId == recoveryId).GeometryReconstruction);
+            await recoveryRow.Locator("[data-workflow-part-select]").CheckAsync();
+            var strictRow = page.Locator($"[data-workflow-part][data-part-id='{strictPart.PartId}']");
+            await strictRow.Locator("button").First.ClickAsync();
+            await page.Locator("[data-workflow-apply-material]").ClickAsync();
             var current = await CurrentReceiptAsync(recoveryId, "PETG", 1, Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard);
+            var afterBulkPart = Assert.Single(current.Parts, part => part.PartId == recoveryId);
+            Assert.Equal("Any", afterBulkPart.Configuration.Color);
+            Assert.Equal(beforeBulkPart.Configuration.Quantity, afterBulkPart.Configuration.Quantity);
+            Assert.Equal(beforeBulkPart.Configuration.BuildPreference, afterBulkPart.Configuration.BuildPreference);
+            Assert.Equal(beforeBulkPart.PhysicalAnalysisUpload, afterBulkPart.PhysicalAnalysisUpload);
+            Assert.True(System.Text.Json.Nodes.JsonNode.DeepEquals(
+                System.Text.Json.JsonSerializer.SerializeToNode(beforeBulkPart.Geometry),
+                System.Text.Json.JsonSerializer.SerializeToNode(afterBulkPart.Geometry)));
+            Assert.Equal(strictPart.Configuration, Assert.Single(current.Parts, part => part.PartId == strictPart.PartId).Configuration);
+            await recoveryRow.Locator("button").First.ClickAsync();
             var original = Assert.Single(current.Parts, part => part.PartId == recoveryId);
             var receipt = Assert.Single(current.PhysicalReceipts!, value => value.PartId == recoveryId);
             Assert.Equal("voxel-majority-v1", receipt.GeometryReconstruction!.Method);

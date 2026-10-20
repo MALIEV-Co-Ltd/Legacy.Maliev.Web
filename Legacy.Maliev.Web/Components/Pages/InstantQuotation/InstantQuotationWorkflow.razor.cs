@@ -169,8 +169,41 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool IsBulkEligible(InstantQuotationWorkflowPartViewModel part) =>
         Uploads.Any(upload => upload.LocalId == part.PreviewCorrelationId
             && upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)
-        && part.Geometry.TopologyChecked && !part.Geometry.NonWatertight && !part.Geometry.NonManifold
+        && ((part.Geometry.TopologyChecked && !part.Geometry.NonWatertight && !part.Geometry.NonManifold)
+            || HasCurrentRecoveryQuote(part))
         && (!physicalAnalyses.TryGetValue(part.PartId, out var physical) || physical.IsReady);
+
+    private bool HasCurrentRecoveryQuote(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (disposed || (IsRepricing && !bulkApplying) || workflow is null
+            || Services.GetService<FdmRuntimeProfileCatalog>() is not { } catalog
+            || OrderQuote?.Parts.SingleOrDefault(line => line.PartId == part.PartId) is not { } quote
+            || quote.Process != PrintProcess.Fdm
+            || quote.MaterialKey != part.Configuration.MaterialKey || quote.Color != part.Configuration.Color
+            || quote.Quantity != part.Configuration.Quantity || quote.BuildPreference != part.Configuration.BuildPreference
+            || !double.IsFinite(quote.UnitPrice) || quote.UnitPrice <= 0
+            || quote.PhysicalReceipt is not { GeometryReconstruction: { } reconstruction } receipt
+            || !reconstruction.IsValid()
+            || !catalog.TryResolveTrustedProfile(part.Configuration.MaterialKey, part.Configuration.BuildPreference, out var profile)
+            || profile is null
+            || workflow.CurrentPhysicalAnalysisBinding(part.PartId, catalog.ProfileVersion) is not { } binding)
+        {
+            return false;
+        }
+
+        // Only the current server quotation may relax topology eligibility; the original geometry and warnings remain intact.
+        return receipt.SessionId == binding.SessionId && receipt.OwnerIdentity == binding.OwnerIdentity
+            && receipt.PartId == binding.PartId && receipt.FileId == binding.FileId
+            && string.Equals(receipt.UploadSha256, binding.UploadSha256, StringComparison.OrdinalIgnoreCase)
+            && receipt.ConfiguredMaterialKey == part.Configuration.MaterialKey && receipt.MaterialKey == binding.MaterialKey
+            && receipt.Quantity == binding.Quantity && receipt.BuildPreference == binding.BuildPreference
+            && receipt.ProfileVersion == binding.ProfileVersion && receipt.ProfileSha256 == profile.ResolvedProfileSha256
+            && receipt.AnalysisVersion == Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion
+            && double.IsFinite(receipt.DepositedMm3) && receipt.DepositedMm3 > 0
+            && double.IsFinite(receipt.SupportMm3) && receipt.SupportMm3 >= 0
+            && double.IsFinite(receipt.MotionSeconds) && receipt.MotionSeconds > 0
+            && double.IsFinite(receipt.BoundingCm3PerUnit) && receipt.BoundingCm3PerUnit > 0;
+    }
 
     private IReadOnlyList<InstantQuotationWorkflowPartViewModel> BulkParts => Parts.Where(IsBulkEligible).ToArray();
 

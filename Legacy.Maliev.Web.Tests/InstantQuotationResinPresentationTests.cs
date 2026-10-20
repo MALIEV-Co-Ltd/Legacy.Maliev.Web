@@ -1139,6 +1139,175 @@ public sealed class InstantQuotationResinPresentationTests
             string operationId, CancellationToken cancellationToken) => throw new InvalidOperationException("No finalization expected.");
     }
 
+    [Fact]
+    public async Task BulkEligibility_RecoveryIsUnavailableDuringExternalRepricing()
+    {
+        var geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+            1, new string('A', 64), 10, 10, 10, 1_000, 600, [100], [40], 10, 1, true, true, false, 1);
+        var part = Part("PLA", BuildPreference.Standard) with
+        {
+            Geometry = geometry,
+            PhysicalAnalysisUpload = new(Guid.NewGuid(), "recovery.stl", "model/stl", 584, geometry.Sha256, "clean"),
+        };
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(part), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: new RecoveryPresentationPricing("current"));
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            bool Eligible() => (bool)typeof(InstantQuotationWorkflow)
+                .GetMethod("IsBulkEligible", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [Assert.Single(coordinator.Parts)])!;
+            Assert.True(Eligible());
+            var work = (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("RepriceAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [new Func<Task>(async () =>
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }), null])!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                Assert.False(Eligible());
+                release.TrySetResult();
+                await work.WaitAsync(lease.Token);
+                Assert.True(Eligible());
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        work, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "recovery-eligibility"));
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("current", true)]
+    [InlineData("missing", false)]
+    [InlineData("unpriced", false)]
+    [InlineData("session", false)]
+    [InlineData("owner", false)]
+    [InlineData("part", false)]
+    [InlineData("file", false)]
+    [InlineData("sha", false)]
+    [InlineData("configured", false)]
+    [InlineData("material", false)]
+    [InlineData("quantity", false)]
+    [InlineData("build", false)]
+    [InlineData("profile", false)]
+    [InlineData("profile-sha", false)]
+    [InlineData("analysis", false)]
+    [InlineData("provenance", false)]
+    [InlineData("nonfinite", false)]
+    [InlineData("refused", false)]
+    public async Task BulkEligibility_RecoveryRequiresCurrentBoundServerQuote(string mode, bool eligible)
+    {
+        var geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+            1, new string('A', 64), 10, 10, 10, 1_000, 600, [100], [40], 10, 1, true, true, false, 1);
+        var part = Part("PLA", BuildPreference.Standard) with
+        {
+            Geometry = geometry,
+            PhysicalAnalysisUpload = new(Guid.NewGuid(), "recovery.stl", "model/stl", 584, geometry.Sha256, "clean"),
+        };
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: new RecoveryPresentationPricing(mode));
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            if (mode == "refused")
+            {
+                var analyses = Assert.IsType<Dictionary<Guid, InstantQuotationBoundPhysicalAnalysisResult>>(
+                    typeof(InstantQuotationWorkflow).GetField("physicalAnalyses", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .GetValue(component));
+                analyses[part.PartId] = InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
+                    InstantQuotationBoundPhysicalAnalysisFailure.UploadUnavailable);
+            }
+            var view = Assert.Single(coordinator.Parts);
+            // An unrelated cached view-model quote cannot stand in for the coordinator's current server quote.
+            var stored = Assert.IsType<InstantQuotationSessionState>(
+                await store.GetAsync("presentation-session", null, default));
+            var staleQuote = await new RecoveryPresentationPricing("current").QuoteAsync(stored, null, true, default);
+            var stale = Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(staleQuote).Parts);
+            view = view with { Quote = stale };
+            var actual = (bool)typeof(InstantQuotationWorkflow)
+                .GetMethod("IsBulkEligible", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, [view])!;
+            Assert.Equal(eligible, actual);
+            Assert.True(view.Geometry.NonWatertight);
+            Assert.Equal(part.Geometry, view.Geometry);
+            Assert.Equal(part.Configuration, view.Configuration);
+            if (mode == "current")
+            {
+                var checkbox = Regex.Match(root.ToHtmlString(), "<input[^>]*data-workflow-part-select[^>]*>");
+                Assert.True(checkbox.Success);
+                Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", checkbox.Value);
+                Assert.NotNull(Assert.Single(coordinator.OrderQuote!.Parts).PhysicalReceipt!.GeometryReconstruction);
+            }
+        });
+    }
+
+    private sealed class RecoveryPresentationPricing(string mode) : IInstantQuotationAuthoritativePricingService
+    {
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,
+            string? ownerIdentity, bool includeComparisons, CancellationToken cancellationToken)
+        {
+            if (mode == "missing") return Task.FromResult<InstantQuotationOrderQuote?>(null);
+            var quote = SyntheticPhysicalPricingTestData.Quote(session.RequestState);
+            var part = Assert.Single(session.Parts);
+            var line = Assert.Single(quote.Parts);
+            var catalog = FdmRuntimeProfileCatalog.LoadEmbedded();
+            Assert.True(catalog.TryResolveTrustedProfile(part.Configuration.MaterialKey,
+                part.Configuration.BuildPreference, out var profile));
+            var receipt = line.PhysicalReceipt! with
+            {
+                SessionId = session.SessionId,
+                OwnerIdentity = ownerIdentity,
+                ProfileSha256 = profile!.ResolvedProfileSha256,
+                GeometryReconstruction = new("voxel-majority-v1", 0.2),
+            };
+            receipt = mode switch
+            {
+                "session" => receipt with { SessionId = "foreign-session" },
+                "owner" => receipt with { OwnerIdentity = "foreign-owner" },
+                "part" => receipt with { PartId = Guid.NewGuid() },
+                "file" => receipt with { FileId = Guid.NewGuid() },
+                "sha" => receipt with { UploadSha256 = new string('C', 64) },
+                "configured" => receipt with { ConfiguredMaterialKey = "PETG" },
+                "material" => receipt with { MaterialKey = "PETG" },
+                "quantity" => receipt with { Quantity = 2 },
+                "build" => receipt with { BuildPreference = BuildPreference.Strength },
+                "profile" => receipt with { ProfileVersion = "stale-profile" },
+                "profile-sha" => receipt with { ProfileSha256 = new string('C', 64) },
+                "analysis" => receipt with { AnalysisVersion = "stale-analysis" },
+                "provenance" => receipt with { GeometryReconstruction = new("untrusted", 0.2) },
+                "nonfinite" => receipt with { MotionSeconds = double.NaN },
+                _ => receipt,
+            };
+            line = line with { PhysicalReceipt = receipt, UnitPrice = mode == "unpriced" ? 0 : line.UnitPrice };
+            return Task.FromResult<InstantQuotationOrderQuote?>(quote with { Parts = [line] });
+        }
+    }
+
     private static InstantQuotationPart Part(string material, BuildPreference preference) => new(
         Guid.NewGuid(), material + ".stl", new InstantQuotationUploadReference("synthetic-presentation"),
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 1, true),
