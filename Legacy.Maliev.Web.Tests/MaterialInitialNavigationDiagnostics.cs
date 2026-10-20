@@ -178,15 +178,15 @@ internal sealed class MaterialInitialNavigationDiagnostics : IDisposable
                 }
                 emit((serverProbe is null ? "material-initial-navigation " : "quotation-navigation ")
                     + JsonSerializer.Serialize(new
-                {
-                    SchemaVersion = 1,
-                    Phase = phase,
-                    WaitState = waitState,
-                    ClockDomain = "managed-callback-arrival",
-                    ClockOriginUtc = clockOriginUtc,
-                    MilestoneSemantics = "unobserved-is-not-absence",
-                    Snapshot = snapshot,
-                }));
+                    {
+                        SchemaVersion = 1,
+                        Phase = phase,
+                        WaitState = waitState,
+                        ClockDomain = "managed-callback-arrival",
+                        ClockOriginUtc = clockOriginUtc,
+                        MilestoneSemantics = "unobserved-is-not-absence",
+                        Snapshot = snapshot,
+                    }));
             }
             catch { /* Secondary observation/output never replaces the exact navigation exception. */ }
             throw;
