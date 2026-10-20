@@ -52,7 +52,7 @@ public sealed class InstantQuotationResponsiveCssTests
         var css = ReadCss();
         var selector = "[data-material-selector] .material-card__detail";
         var rule = System.Text.RegularExpressions.Regex.Match(css,
-            System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*\{(?<declarations>[^}]*)\}");
+            @"(?m)^" + System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*\{(?<declarations>[^}]*)\}");
         Assert.True(rule.Success);
         var declarations = rule.Groups["declarations"].Value;
         Assert.Contains("line-height: 1.2", declarations, StringComparison.Ordinal);
