@@ -72,6 +72,10 @@ public sealed class SharedNavigationMigrationTests : IClassFixture<TestingWebApp
 
         var navigationCss = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "public-navigation.css"));
         var thaiNavigation = File.ReadAllText(Path.Combine(web, "Resources", "Components", "Layout", "PublicNavigation.th.resx"));
+        var languageStyleRules = string.Join("\n", Regex.Matches(navigationCss,
+            @"\.maliev-language-select\b[^{]*\{[^}]*\}").Select(match => match.Value));
+        Assert.DoesNotContain("border: 0", languageStyleRules, StringComparison.Ordinal);
+        Assert.DoesNotContain("background-color: transparent", languageStyleRules, StringComparison.Ordinal);
         Assert.Contains("@media (min-width: 90rem)", navigationCss, StringComparison.Ordinal);
 
         Assert.Contains(".landing-nav-account .maliev-account-link { display: inline-flex; align-items: center; gap: .6rem; }", navigationCss, StringComparison.Ordinal);
@@ -108,6 +112,8 @@ public sealed class SharedNavigationMigrationTests : IClassFixture<TestingWebApp
         Assert.Contains("href=\"/Account/Login\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"maliev-navbar-language\"", source, StringComparison.Ordinal);
+        Assert.Contains("class=\"form-select form-select-sm maliev-language-select\"", source, StringComparison.Ordinal);
+        Assert.Contains("<label class=\"visually-hidden\" for=\"maliev-navbar-language\">Select language</label>", source, StringComparison.Ordinal);
         Assert.Matches($"<option[^>]*selected[^>]*>{selectedLanguage}</option>", source);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
