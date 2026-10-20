@@ -865,7 +865,7 @@ public sealed class InstantQuotationResinPresentationTests
                 {
                     Assert.Contains("bad<&>.stl", match.Value, StringComparison.Ordinal);
                     Assert.Contains(invalidMessage, match.Value, StringComparison.Ordinal);
-                    Assert.Equal(1, Regex.Matches(Html(), "role=\"alert\"").Count);
+                    Assert.Single(Regex.Matches(Html(), "role=\"alert\""));
                 }
             }
             await (Task)Invoke("SelectPreviewAsync", healthy.PartId)!;
