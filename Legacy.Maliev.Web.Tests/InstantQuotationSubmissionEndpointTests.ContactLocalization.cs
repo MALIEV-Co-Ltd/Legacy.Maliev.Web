@@ -22,7 +22,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         using var response = await client.PostAsync(
             SubmitRoute + "&culture=" + culture,
             CustomerForm(new() { ["__RequestVerificationToken"] = token, [field] = string.Empty }));
