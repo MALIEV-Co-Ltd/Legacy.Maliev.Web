@@ -198,6 +198,55 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
         }, result.Failure);
     }
 
+
+    [Theory]
+    [InlineData("clean")]
+    [InlineData("file")]
+    [InlineData("descriptor")]
+    [InlineData("content")]
+    [InlineData("format")]
+    [InlineData("cancel")]
+    public async Task ThreeMfAdmission_BindsExactOriginalBytesAndPropagatesCancellation(string alteration)
+    {
+        byte[] bytes = Convert.FromBase64String(AdmittedThreeMfMeshReaderTests.OriginalFixture);
+        string digest = Convert.ToHexString(SHA256.HashData(bytes));
+        var response = Ready(bytes, digest) with { FileName = "source.3MF" };
+        response = alteration switch
+        {
+            "file" => response with { FileId = Guid.NewGuid() },
+            "descriptor" => response with { Sha256 = new string('A', 64) },
+            "content" => response with { Content = [0] },
+            "format" => response with { FileName = "source.step" },
+            _ => response,
+        };
+        using var cancellation = new CancellationTokenSource();
+        var reader = new RecordingInputReader(response,
+            alteration == "cancel" ? cancellation.Cancel : null);
+        var service = new InstantQuotationAdmittedMeshService(reader);
+        if (alteration == "cancel")
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.ReadAsync(SessionId, Owner, PartId, FileId, digest, cancellation.Token));
+            return;
+        }
+        var result = await service.ReadAsync(SessionId, Owner, PartId, FileId, digest, default);
+        Assert.Equal((SessionId, Owner, PartId), reader.LastRequest);
+        if (alteration == "clean")
+        {
+            Assert.True(result.IsReady);
+            Assert.Equal(digest, result.UploadSha256);
+            Assert.Empty(result.Mesh!.Diagnostics);
+            Assert.Equal(12, result.Mesh.PositiveFillGroups!.Count);
+        }
+        else
+        {
+            Assert.False(result.IsReady);
+            Assert.Null(result.Mesh);
+            Assert.Equal(alteration == "format" ? InstantQuotationAdmittedMeshFailure.UnsupportedFormat
+                : InstantQuotationAdmittedMeshFailure.UploadChanged, result.Failure);
+        }
+    }
+
     private static InstantQuotationPhysicalAnalysisInputResult Ready(byte[] bytes, string? digest = null) =>
         new(bytes, InstantQuotationPhysicalAnalysisInputFailure.None, FileId, "part.stl",
             digest ?? Convert.ToHexString(SHA256.HashData(bytes)));

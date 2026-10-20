@@ -54,7 +54,12 @@ public sealed record MeshTriangle(Vector3 A, Vector3 B, Vector3 C);
 public sealed record MeshInput(
     IReadOnlyList<MeshTriangle> Triangles,
     double UnitsToMillimetres,
-    Matrix4x4 ComponentTransform);
+    Matrix4x4 ComponentTransform)
+{
+    /// <summary>Per-triangle positive-fill object occurrence; null preserves legacy even-odd fill.</summary>
+    /// <remarks>One non-negative group per triangle, at most 256 groups. Object solids are unioned.</remarks>
+    public IReadOnlyList<int>? PositiveFillGroups { get; init; }
+}
 
 /// <summary>Normalized finite mesh and its stable identity.</summary>
 /// <param name="Triangles">Local-origin triangles in millimetres.</param>
@@ -63,7 +68,12 @@ public sealed record MeshInput(
 public sealed record NormalizedMesh(
     IReadOnlyList<MeshTriangle> Triangles,
     string Sha256,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics)
+{
+    /// <summary>Per-triangle positive-fill object occurrence; null preserves legacy even-odd fill.</summary>
+    /// <remarks>One non-negative group per triangle, at most 256 groups. Object solids are unioned.</remarks>
+    public IReadOnlyList<int>? PositiveFillGroups { get; init; }
+}
 
 /// <summary>Rigid build pose with a deterministic identifier.</summary>
 /// <param name="Id">Stable tie-break identifier.</param>

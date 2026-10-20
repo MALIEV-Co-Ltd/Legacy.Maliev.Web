@@ -21,7 +21,7 @@ public interface IInstantQuotationAuthoritativePricingService
         QuoteAsync(session, ownerIdentity, includeComparisons, cancellationToken);
 }
 
-/// <summary>Prices only current admitted STL or OBJ evidence; unverified FDM remains unavailable.</summary>
+/// <summary>Prices only current admitted STL, OBJ or 3MF evidence; unverified FDM remains unavailable.</summary>
 internal sealed class InstantQuotationAuthoritativePricingService(
     InstantQuotationBoundPhysicalAnalysisService analysis,
     FdmRuntimeProfileCatalog profiles,
@@ -86,7 +86,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
                     foreach (var candidate in PricingCatalog.Materials.Values)
                     {
                         if (string.Equals(candidate.Key, selectedKey, StringComparison.Ordinal)) continue;
-                        // The final kernel includes resin cards even without an admitted STL.
+                        // The final kernel includes resin cards even without an admitted mesh.
                         if (candidate.Process == PrintProcess.Fdm && !IsAdmittedMesh(part)) continue;
                         if (comparison.IsCancellationRequested) break;
                         // Display delivery keeps its original absolute budget; only optional

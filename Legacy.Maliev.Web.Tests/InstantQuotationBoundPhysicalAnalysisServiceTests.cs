@@ -302,6 +302,63 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
             now.AddMinutes(1)));
     }
 
+
+    [Fact]
+    public async Task ExactOriginalThreeMf_ProducesRealReceiptAndTicketAndRejectsOwnerAndRevisionReplay()
+    {
+        var seed = Fixture();
+        byte[] bytes = Convert.FromBase64String(AdmittedThreeMfMeshReaderTests.OriginalFixture);
+        string digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var original = Assert.Single(seed.Store.State.Parts);
+        var part = original with
+        {
+            DisplayFileName = "original.3mf",
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, digest),
+                new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
+                    Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+                    12, 1, true, false, false, 1))!,
+            PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
+            {
+                FileName = "original.3mf", ContentType = "model/3mf", SizeBytes = bytes.Length, Sha256 = digest,
+            },
+        };
+        seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
+        var reader = new BatchInputReader([part], bytes);
+        var profiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        var analysis = new InstantQuotationBoundPhysicalAnalysisService(
+            seed.Store, new InstantQuotationAdmittedMeshService(reader), profiles);
+        var pricing = new InstantQuotationAuthoritativePricingService(analysis, profiles, new InstantQuotationPricingService());
+        Assert.Null(await pricing.QuoteAsync(seed.Store.State, "another-member", false, default));
+        Assert.Empty(reader.RequestedParts);
+        var quote = await pricing.QuoteAsync(seed.Store.State, Owner, false, default);
+        Assert.NotNull(quote);
+        var line = Assert.Single(quote.Parts);
+        var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+        Assert.Equal(part.PartId, receipt.PartId);
+        Assert.Equal(part.PhysicalAnalysisUpload.FileId, receipt.FileId);
+        Assert.Equal(digest, receipt.UploadSha256);
+        Assert.Equal(Owner, receipt.OwnerIdentity);
+        Assert.Equal(profiles.ProfileVersion, receipt.ProfileVersion);
+        Assert.Equal(24, receipt.BoundingCm3PerUnit, 3);
+        Assert.True(receipt.MotionSeconds > 0);
+        Assert.True(receipt.DepositedMm3 > 0);
+        Assert.True(line.UnitPrice > 0);
+        var state = seed.Store.State with { PhysicalReceipts = [receipt] };
+        var tickets = new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
+        var now = DateTimeOffset.UtcNow;
+        var ticket = tickets.Issue(state, quote, now);
+        Assert.True(tickets.Validate(state, quote, ticket, now.AddMinutes(1)));
+        Assert.False(tickets.Validate(state with { OwnerIdentity = "another-member" }, quote, ticket, now));
+        Assert.False(tickets.Validate(state with { PhysicalReceipts = [] }, quote, ticket, now));
+        reader.OnRead = () => seed.Store.State = seed.Store.State with { UpdatedAt = seed.Store.State.UpdatedAt.AddTicks(1) };
+        var binding = new InstantQuotationPhysicalAnalysisBinding(SessionId, Owner, part.PartId,
+            part.PhysicalAnalysisUpload.FileId, digest, "PLA", BuildPreference.Standard, 1, profiles.ProfileVersion);
+        var stale = await analysis.AnalyzeAsync(binding, default);
+        Assert.False(stale.IsReady);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.StalePart, stale.Failure);
+    }
+
     // Exact unchanged source fixture 36ffdc2c4029f75cd86818bba6ba6c80e8593a66.
     private const string ObjCube = """
         # https://github.com/mikedh/trimesh
@@ -332,6 +389,7 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         : IInstantQuotationPhysicalAnalysisInputReader
     {
         internal List<Guid> RequestedParts { get; } = [];
+        internal Action? OnRead { get; set; }
 
         public Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(
             string sessionId, string? ownerIdentity, Guid partId, CancellationToken cancellationToken)
@@ -341,6 +399,7 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
             Assert.Equal(Owner, ownerIdentity);
             var part = Assert.Single(parts, candidate => candidate.PartId == partId);
             RequestedParts.Add(partId);
+            OnRead?.Invoke();
             var upload = part.PhysicalAnalysisUpload!;
             return Task.FromResult(new InstantQuotationPhysicalAnalysisInputResult(
                 bytes, InstantQuotationPhysicalAnalysisInputFailure.None,
