@@ -3550,7 +3550,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("aria-describedby=\"Email-error contact-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
-        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+        Assert.Contains("Please enter a valid email address", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3749,7 +3749,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("aria-describedby=\"Email-error quotation-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
-        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+        Assert.Contains("Please enter a valid email address", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4048,10 +4048,10 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("contact", "th", "", "กรุณากรอกอีเมล")]
     [InlineData("quotation", "en", "", "Email address is required")]
     [InlineData("quotation", "th", "", "กรุณากรอกอีเมล")]
-    [InlineData("contact", "en", "invalid", "The Email field is not a valid e-mail address.")]
-    [InlineData("contact", "th", "invalid", "กรุณาระบุอีเมลที่ถูกต้อง")]
-    [InlineData("quotation", "en", "invalid", "The Email field is not a valid e-mail address.")]
-    [InlineData("quotation", "th", "invalid", "กรุณาระบุอีเมลที่ถูกต้อง")]
+    [InlineData("contact", "en", "invalid", "Please enter a valid email address")]
+    [InlineData("contact", "th", "invalid", "กรุณากรอกอีเมลที่ถูกต้อง")]
+    [InlineData("quotation", "en", "invalid", "Please enter a valid email address")]
+    [InlineData("quotation", "th", "invalid", "กรุณากรอกอีเมลที่ถูกต้อง")]
     public async Task InquiryLocalization_ActualRenderedPostRejectsInvalidEmailBeforePersistence(
         string route, string culture, string email, string expected)
     {
@@ -4062,6 +4062,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($"<html lang=\"{culture}\">", source, StringComparison.Ordinal);
         Assert.Contains(expected, source, StringComparison.Ordinal);
+        var emailError = Regex.Match(source, "<span id=\"Email-error\"[^>]*>([^<]*)</span>", RegexOptions.CultureInvariant);
+        Assert.True(emailError.Success, "The posted form must render its actual server-side email error.");
+        Assert.Equal(expected, emailError.Groups[1].Value);
         Assert.Empty(Assert.IsType<StubContactClient>(configuredFactory.Services.GetRequiredService<IContactClient>()).Submissions);
         Assert.Null(Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
         Assert.Empty(Assert.IsType<StubNotificationClient>(configuredFactory.Services.GetRequiredService<INotificationClient>()).Notifications);
