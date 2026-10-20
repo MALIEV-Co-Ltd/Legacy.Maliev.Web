@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -20,6 +22,11 @@ public class TestingWebApplicationFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.ConfigureServices(services =>
+        {
+            services.TryAddSingleton<TestResponseProbeRegistry>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupFilter, TestResponseProbeStartupFilter>());
+        });
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
             new Dictionary<string, string?>
             {
