@@ -147,7 +147,7 @@ internal sealed class CustomerProfileClient(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Customer service was unavailable during instant quotation profile provisioning.");
-            return new(null, false, false, true);
+            return new(null, false, false, true) { FailureExceptionType = exception.GetType().Name };
         }
     }
 

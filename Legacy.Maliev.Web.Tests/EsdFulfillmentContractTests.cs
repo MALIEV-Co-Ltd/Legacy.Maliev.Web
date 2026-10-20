@@ -256,6 +256,49 @@ public sealed class EsdFulfillmentContractTests
         if (failure.StartsWith("missing-", StringComparison.Ordinal)) Assert.True(result.ServiceAvailable);
     }
 
+    [Theory]
+    [InlineData("status-500", "order-status", true)]
+    [InlineData("file-500", "order-file-link", true)]
+    [InlineData("status-network", "order-status", false)]
+    [InlineData("file-network", "order-file-link", false)]
+    [InlineData("file-owner-500", "order-file-link", false)]
+    public async Task ActualOrderBoundary_RetainsFineStageAndDoesNotPromoteTransportOrOwnershipRead(string fault, string stage, bool definite)
+    {
+        using var boundary = new Boundary("PA612-ESD", failure: fault);
+        var part = Part("PA612-ESD", BuildPreference.Standard);
+        var quote = SyntheticPhysicalPricingTestData.Quote(new([part])).Parts.Single();
+
+        var result = await boundary.Client.ProvisionOrderAsync(
+            SubmissionId, 0, CustomerId, "private-description-sentinel", part, quote, 7, File, default);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(OrderId, result.OrderId);
+        Assert.Equal(stage, result.FailureStage);
+        Assert.Equal(definite, result.DefiniteHttpRejection);
+        if (definite)
+        {
+            Assert.Equal(500, result.FailureStatusCode);
+            Assert.Equal("InstantQuotationDefiniteFailureException", result.FailureExceptionType);
+        }
+        else if (fault.EndsWith("network", StringComparison.Ordinal))
+        {
+            Assert.Null(result.FailureStatusCode);
+            Assert.Equal(nameof(HttpRequestException), result.FailureExceptionType);
+        }
+        else
+        {
+            Assert.Equal(500, result.FailureStatusCode);
+            Assert.Null(result.FailureExceptionType);
+        }
+        using var wire = JsonDocument.Parse(JsonSerializer.Serialize(result));
+        Assert.Equal(new[] { "OrderId", "Succeeded", "ServiceAvailable", "Authorized", "Conflict" },
+            wire.RootElement.EnumerateObject().Select(property => property.Name));
+        Assert.DoesNotContain("private-", JsonSerializer.Serialize(result), StringComparison.Ordinal);
+        Assert.Equal(1, boundary.Requests.Count(request => request.Method == "POST" && request.Path == "orders"));
+        Assert.DoesNotContain(boundary.Requests, request => request.Method == "DELETE");
+        Assert.Empty(boundary.Tokens.Invalidated);
+    }
+
     private static InstantQuotationPart Part(string material, BuildPreference build) => new(
         Guid.Parse("11111111-1111-1111-1111-111111111111"), "fixture.stl", new(Guid.NewGuid().ToString("D")),
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(1, new string('a', 64), 10, 20, 30, 1000, 700,
@@ -311,6 +354,96 @@ public sealed class EsdFulfillmentContractTests
             Assert.Equal(2, boundary.Requests.Count(request => request.Path == "currencies"));
         else
             Assert.Empty(boundary.Requests);
+    }
+
+    [Theory]
+    [InlineData("status-500", true)]
+    [InlineData("file-500", true)]
+    [InlineData("status-network", false)]
+    [InlineData("file-network", false)]
+    [InlineData("file-owner-500", false)]
+    [InlineData("status-403", false)]
+    [InlineData("status-409", false)]
+    [InlineData("file-403", false)]
+    [InlineData("file-409", false)]
+    public async Task Fulfill_ActualHttpBoundary_OnlyKnownAuthorizedDefiniteMutationRejectionCompensates(string fault, bool cleanup)
+    {
+        using var boundary = new Boundary("PA612-ESD", fault);
+        var part = Part("PA612-ESD", BuildPreference.Standard) with { UploadReference = new(File.FileId.ToString("D")) };
+        var state = new InstantQuotationOrderState([part]);
+        var time = new DateTimeOffset(2026, 10, 2, 0, 0, 0, TimeSpan.Zero);
+        var session = new InstantQuotationSessionState("controlled-session", SubmissionId, state, time, time);
+        var checkpoint = new InstantQuotationSubmissionCheckpoint(SubmissionId, 417,
+            InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning, new string('b', 64),
+            [File], CustomerId, CustomerCreated: false, OrderIds: []);
+        await using var lease = new Lease(checkpoint, true);
+
+        var result = await new InstantQuotationFulfillmentCoordinator(boundary.Client).FulfillAsync(
+            session, SyntheticPhysicalPricingTestData.Quote(state), "customer:42",
+            new("Mali", "Ev", "controlled@example.test", null, "Thailand", null, null, null),
+            lease, checkpoint, CancellationToken.None);
+
+        var failure = Assert.IsType<InstantQuotationFulfillmentFailure>(result.FulfillmentFailure);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(417, result.RequestReference);
+        Assert.Equal(fault.StartsWith("status", StringComparison.Ordinal) ? "order-status" : "order-file-link", failure.Stage);
+        Assert.True(failure.CustomerCommitted);
+        Assert.Equal(1, failure.OrderCount);
+        Assert.Equal(cleanup, failure.RetrySafe);
+        Assert.Equal(cleanup ? 1 : 0, boundary.Requests.Count(request => request.Method == "DELETE"));
+        Assert.DoesNotContain(boundary.Requests, request => request.Method == "DELETE" && request.Path != "orders/901");
+        if (cleanup)
+        {
+            Assert.Equal("InstantQuotationDefiniteFailureException", failure.ExceptionType);
+            Assert.Null(lease.Checkpoint.CustomerId);
+            Assert.False(lease.Checkpoint.CompensationRequired);
+            Assert.Equal(InstantQuotationSubmissionCheckpointStatus.FilesLinked, lease.Checkpoint.Status);
+        }
+        else
+        {
+            Assert.Same(checkpoint, lease.Checkpoint);
+            Assert.Empty(lease.Writes);
+        }
+        Assert.Equal(1, boundary.Requests.Count(request => request.Method == "POST" && request.Path == "orders"));
+        Assert.Equal(fault.EndsWith("403", StringComparison.Ordinal) ? 1 : 0, boundary.Tokens.Invalidated.Count);
+    }
+
+    [Theory]
+    [InlineData("create-unknown")]
+    [InlineData("create-zero")]
+    [InlineData("create-rejected")]
+    public async Task Fulfill_UnconfirmedOrderCreation_NeverDeletesKnownPriorOrdersOrCustomer(string fault)
+    {
+        using var boundary = new Boundary("PA612-ESD", fault);
+        var part = Part("PA612-ESD", BuildPreference.Standard) with { UploadReference = new(File.FileId.ToString("D")) };
+        var completedId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var completed = part with { PartId = completedId, UploadReference = new(completedId.ToString("D")) };
+        var state = new InstantQuotationOrderState([completed, part]);
+        var time = new DateTimeOffset(2026, 10, 2, 0, 0, 0, TimeSpan.Zero);
+        var session = new InstantQuotationSessionState("controlled-session", SubmissionId, state, time, time);
+        var checkpoint = new InstantQuotationSubmissionCheckpoint(SubmissionId, 417,
+            InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning, new string('b', 64),
+            [File with { FileId = completedId }, File], CustomerId, CustomerCreated: true, OrderIds: [900]);
+        await using var lease = new Lease(checkpoint, true);
+
+        var result = await new InstantQuotationFulfillmentCoordinator(boundary.Client).FulfillAsync(
+            session, SyntheticPhysicalPricingTestData.Quote(state), "customer:42",
+            new("Mali", "Ev", "controlled@example.test", null, "Thailand", null, null, null),
+            lease, checkpoint, CancellationToken.None);
+
+        var failure = Assert.IsType<InstantQuotationFulfillmentFailure>(result.FulfillmentFailure);
+        Assert.Equal("order-creation", failure.Stage);
+        Assert.Null(failure.ExceptionType);
+        Assert.False(failure.RetrySafe);
+        Assert.Equal(1, failure.OrderCount);
+        Assert.True(failure.CustomerCommitted);
+        Assert.Same(checkpoint, lease.Checkpoint);
+        Assert.Equal([900], lease.Checkpoint.OrderIds);
+        Assert.False(lease.Checkpoint.CompensationRequired);
+        Assert.Empty(lease.Writes);
+        Assert.DoesNotContain(boundary.Requests, request => request.Method == "DELETE");
+        Assert.DoesNotContain(boundary.Requests, request => request.Path.StartsWith("orderstatuses/", StringComparison.Ordinal));
+        Assert.Equal(1, boundary.Requests.Count(request => request.Method == "POST" && request.Path == "orders"));
     }
 
     private sealed class Lease(InstantQuotationSubmissionCheckpoint checkpoint, bool validFence) : IInstantQuotationSubmissionLease
@@ -369,6 +502,28 @@ public sealed class EsdFulfillmentContractTests
         public HttpResponseMessage Respond(Request request)
         {
             var path = request.Path;
+            if (request.Method == "POST" && path == "orders")
+            {
+                if (failure == "create-unknown") return Json("{}");
+                if (failure == "create-zero") return Json("{\"id\":0}");
+                if (failure == "create-rejected") return new(HttpStatusCode.BadRequest);
+            }
+            if (path == "orderstatuses/histories/901/new")
+            {
+                if (failure == "status-403") return new(HttpStatusCode.Forbidden);
+                if (failure == "status-409") return new(HttpStatusCode.Conflict);
+                if (failure == "status-500") return new(HttpStatusCode.InternalServerError);
+                if (failure == "status-network") throw new HttpRequestException("private-status-sentinel");
+            }
+            if (request.Method == "POST" && path.StartsWith("orders/901/files?", StringComparison.Ordinal))
+            {
+                if (failure == "file-403") return new(HttpStatusCode.Forbidden);
+                if (failure == "file-409") return new(HttpStatusCode.Conflict);
+                if (failure == "file-500") return new(HttpStatusCode.InternalServerError);
+                if (failure == "file-network") throw new HttpRequestException("private-file-sentinel");
+            }
+            if (failure == "file-owner-500" && path == "orders/customers/42/901")
+                return new(HttpStatusCode.InternalServerError);
             if ((failure == "material-network" && path == "materials/printable")) throw new HttpRequestException("controlled unavailable boundary");
             if (failure == "colors-timeout" && path.EndsWith("/colors", StringComparison.Ordinal)) throw new TaskCanceledException("controlled timeout");
             if (failure == "currency-network" && path == "currencies") throw new HttpRequestException("controlled currency unavailable boundary");
@@ -392,6 +547,7 @@ public sealed class EsdFulfillmentContractTests
                 var value when value == $"materials/{MaterialId}/colors" => Json(failure == "missing-color" ? "[]" : "[{\"id\":9,\"name\":\"Black\"}]"),
                 var value when value == $"materials/{MaterialId}/surfacefinishes" => Json(failure == "missing-finish" ? "[]" : "[{\"id\":7,\"name\":\"As printed\"}]"),
                 "currencies" => Json(failure == "missing-currency" ? "[]" : "[{\"id\":764,\"shortName\":\"THB\",\"longName\":\"Thai Baht\"}]"),
+                "orders/901" when request.Method == "DELETE" => new(HttpStatusCode.NoContent),
                 "orders" when request.Method == "POST" => Json("{\"id\":901}", HttpStatusCode.Created),
                 "orderstatuses/histories/901/new" when request.Method == "POST" => new(HttpStatusCode.NoContent),
                 "orders/customers/42/901" => Json("{\"order\":{\"id\":901,\"customerId\":42},\"files\":[]}"),
