@@ -401,6 +401,87 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    public async Task MemberNavigation_ContextualQuotesReachPublicRfqWithoutCreatingOrders(string culture, bool retained)
+    {
+        await using var host = configuredFactory.WithWebHostBuilder(
+            builder => builder.UseSetting("BlazorRouting:MemberOrdersIndex", (!retained).ToString()));
+        using var member = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        var loginHtml = await member.GetStringAsync("/account/login");
+        var token = Regex.Match(loginHtml, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(token.Success);
+        using var login = await member.PostAsync("/account/login?handler=Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            ["Email"] = "customer@example.com",
+            ["Password"] = "correct-password",
+            ["RememberMe"] = "false",
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        using var response = await member.GetAsync($"/member/orders?culture={culture}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(!retained, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var navigation = Assert.Single(Regex.Matches(html,
+            "<aside\\b[^>]*\\bid=\"member-navigation\"[^>]*>[\\s\\S]*?</aside>", RegexOptions.CultureInvariant).Cast<Match>());
+        if (retained)
+        {
+            Assert.Contains("href=\"/quotation\"", navigation.Value, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var (item, context, english, thai) in new[]
+        {
+            ("CNC-Machining", "cnc_machining", "New CNC machining quote", "ขอใบเสนอราคางาน CNC ใหม่"),
+            ("3D-Printing", "3d_printing", "New 3D printing quote", "ขอใบเสนอราคางานพิมพ์ 3 มิติใหม่"),
+            ("3D-Scanning", "3d_scanning", "New 3D scanning quote", "ขอใบเสนอราคางานสแกน 3 มิติใหม่"),
+        })
+        {
+            var label = culture == "th" ? thai : english;
+            var link = Assert.Single(Regex.Matches(navigation.Value,
+                "<a\\b[^>]*href=\"(?<href>[^\"]+)\"[^>]*>[\\s\\S]*?</a>",
+                RegexOptions.CultureInvariant).Cast<Match>()
+                .Where(match => match.Value.Contains($"<span>{label}</span>", StringComparison.Ordinal)));
+            var destination = new Uri(member.BaseAddress!, link.Groups["href"].Value);
+            Assert.Equal(member.BaseAddress!.GetLeftPart(UriPartial.Authority), destination.GetLeftPart(UriPartial.Authority));
+            if (retained)
+            {
+                var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(destination.Query);
+                Assert.Equal("/quotation", destination.AbsolutePath, ignoreCase: true);
+                Assert.Equal(item, query["item"].ToString());
+                Assert.Equal(culture, query["culture"].ToString());
+            }
+            else
+            {
+                Assert.Equal($"/Quotation/{item}", destination.AbsolutePath);
+            }
+
+            using var linked = await member.GetAsync(destination);
+            Assert.True(linked.StatusCode is HttpStatusCode.OK or HttpStatusCode.MovedPermanently);
+            using var quotation = await member.GetAsync(linked.Headers.Location ?? destination);
+            Assert.Equal(HttpStatusCode.OK, quotation.StatusCode);
+            var quotationHtml = WebUtility.HtmlDecode(await quotation.Content.ReadAsStringAsync());
+            Assert.Contains($"name=\"ServiceContext\" value=\"{context}\"", quotationHtml, StringComparison.Ordinal);
+            var message = Assert.Single(Regex.Matches(quotationHtml,
+                "<textarea\\b[^>]*\\bid=\"Message\"[^>]*>(?<message>[\\s\\S]*?)</textarea>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains(item, message.Groups["message"].Value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("sensitive-access-token", quotationHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("sensitive-refresh-token", quotationHtml, StringComparison.Ordinal);
+        }
+
+        Assert.Null(Assert.IsType<StubQuotationClient>(host.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
+        Assert.Null(Assert.IsType<StubCustomerOrderSubmissionService>(host.Services.GetRequiredService<ICustomerOrderSubmissionService>()).LastInvocation);
+        Assert.Empty(Assert.IsType<StubNotificationClient>(host.Services.GetRequiredService<INotificationClient>()).Notifications);
+    }
+
+    [Theory]
     [InlineData("/member/orders/3d-printing", "en", "Additive Manufacturing", "/Member/Orders/3D-Printing?handler=Submit&amp;culture=en")]
     [InlineData("/member/orders/3d-printing", "th", "งานผลิตแบบเพิ่มเนื้อวัสดุ", "/Member/Orders/3D-Printing?handler=Submit&amp;culture=th")]
     [InlineData("/member/orders/3d-scanning", "en", "3D Scanning", "/Member/Orders/3D-Scanning?handler=Submit&amp;culture=en")]
