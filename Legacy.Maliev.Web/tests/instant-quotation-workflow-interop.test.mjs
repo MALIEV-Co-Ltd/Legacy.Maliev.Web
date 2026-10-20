@@ -440,3 +440,202 @@ test('bulk select-all uses the native indeterminate property without changing ch
     assert.equal(input.indeterminate, false);
   } finally { interop.dispose(); }
 });
+
+for (const terminal of ['release', 'quarantine', 'dispose']) {
+  test(`${terminal} settles a pending claim before an abort-ignoring loader completes`, async () => {
+    const pending = deferred();
+    const object = disposableObject();
+    let analyzed = 0;
+    const { interop, calls, statuses } = harness(() => pending.promise, () => {
+      analyzed += 1;
+      return { version: 1, volumeMm3: 1000 };
+    });
+    let deadline;
+    try {
+      interop.attach({});
+      const [key] = interop.beginSelection({ files: [modelFile('pending.stl')] });
+      const claim = interop.getGeometryClaim(key);
+      await Promise.resolve();
+      if (terminal === 'dispose') interop.dispose();
+      else interop[terminal](key);
+      await assert.rejects(Promise.race([claim, new Promise((_, reject) => {
+        deadline = setTimeout(() => reject(new Error('Claim did not settle after termination.')), 1000);
+      })]), /Geometry analysis is unavailable/);
+      pending.resolve(object);
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(object.disposed, true);
+      assert.equal(analyzed, 0);
+      assert.deepEqual(calls.filter(call => call[0] === 'add'), []);
+      assert.deepEqual(statuses, []);
+    } finally {
+      clearTimeout(deadline);
+      pending.resolve(object);
+      interop.dispose();
+    }
+  });
+}
+
+test('a synchronous failed loader preserves its neighbour selection and yields no geometry', async () => {
+  const { interop } = harness(file => {
+    if (file.name === 'bad.stl') throw new Error('private decoder detail');
+    return disposableObject();
+  });
+  try {
+    const keys = interop.beginSelection({ files: [modelFile('bad.stl'), modelFile('good.stl')] });
+    assert.equal(keys.length, 2);
+    await assert.rejects(interop.getGeometryClaim(keys[0]), /Geometry analysis is unavailable/);
+    assert.equal((await interop.getGeometryClaim(keys[1])).volumeMm3, 1000);
+  } finally { interop.dispose(); }
+});
+
+test('local reveal changes only the part rail scroll and respects its sticky upload control', () => {
+  const { interop } = harness();
+  const oldStyle = globalThis.getComputedStyle;
+  const add = { getBoundingClientRect: () => ({ left: 0, right: 100 }) };
+  const tile = { dataset: { partId: 'part-b' },
+    getBoundingClientRect: () => ({ left: 500, right: 650, top: 300, bottom: 350 }) };
+  const rail = {
+    scrollLeft: 0, scrollTop: 0,
+    getBoundingClientRect: () => ({ left: 0, right: 400, top: 0, bottom: 200 }),
+    querySelector: selector => selector === '.iq-compact-dropzone' ? add : null,
+    querySelectorAll: () => [tile],
+  };
+  const root = { querySelector: () => rail };
+  globalThis.getComputedStyle = () => ({ position: 'sticky' });
+  try {
+    assert.equal(interop.revealPart(root, 'part-b'), true);
+    assert.equal(rail.scrollLeft, 250);
+    assert.equal(rail.scrollTop, 150);
+    rail.scrollLeft = 200; rail.scrollTop = 100;
+    tile.getBoundingClientRect = () => ({ left: 80, right: 180, top: -30, bottom: 20 });
+    assert.equal(interop.revealPart(root, 'part-b'), true);
+    assert.equal(rail.scrollLeft, 180);
+    assert.equal(rail.scrollTop, 70);
+    assert.equal(interop.revealPart(root, 'unknown'), false);
+    interop.dispose();
+    assert.equal(interop.revealPart(root, 'part-b'), false);
+    assert.equal(rail.scrollLeft, 180);
+    assert.equal(rail.scrollTop, 70);
+  } finally {
+    globalThis.getComputedStyle = oldStyle;
+    interop.dispose();
+  }
+});
+
+
+test('a retained local failure thumbnail and selection never create an admitted part binding', async () => {
+  const selected = { ...modelFile('open.stl'), size: 100 };
+  const calls = [];
+  let count = 0;
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => disposableObject(),
+    analyzeGeometry: () => ({ dimensionXmm: 20, dimensionYmm: 20, dimensionZmm: 0, volumeMm3: 0,
+      surfaceAreaMm2: 400, facetCount: 2, bodyCount: 1, topologyChecked: true,
+      nonWatertight: true, nonManifold: false }),
+    createViewer: () => {
+      const owner = ++count;
+      return {
+        addPart: key => calls.push(['add', owner, key]),
+        select: key => calls.push(['select', owner, key]),
+        snapshot: key => { calls.push(['snapshot', owner, key]); return 'data:image/png;base64,aW1hZ2U='; },
+        reset: () => calls.push(['reset', owner]),
+        fit: () => calls.push(['fit', owner]),
+        fullscreen: () => calls.push(['fullscreen', owner]),
+        dispose: () => calls.push(['dispose', owner]),
+      };
+    },
+    thicknessAnalyzer: { analyze: async () => null, dispose() {} },
+  });
+  try {
+    const [key] = interop.beginSelection({ files: [selected] });
+    await interop.getGeometryClaim(key);
+    interop.attach({});
+    assert.equal(interop.getLocalThumbnail(key), null);
+    assert.equal(interop.retainIncompletePreview(key, {}), true);
+    assert.equal(interop.getLocalThumbnail(key), 'data:image/png;base64,aW1hZ2U=');
+    assert.equal(interop.admit(key, 'invented-part'), false);
+    assert.equal(interop.select('invented-part'), false);
+    assert.equal(interop.selectLocalPreview(key), true);
+    interop.reset(); interop.fit();
+    assert.deepEqual(calls.filter(call => call[0] === 'reset' || call[0] === 'fit'), [['reset', 2], ['fit', 2]]);
+    assert.deepEqual(calls.filter(call => call[0] === 'add' && call[1] === 1), []);
+    interop.release(key);
+    assert.equal(interop.getLocalThumbnail(key), null);
+    assert.equal(interop.selectLocalPreview(key), false);
+  } finally { interop.dispose(); }
+  assert.equal(interop.getLocalThumbnail('stale'), null);
+  assert.equal(interop.selectLocalPreview('stale'), false);
+});
+
+
+test('an empty detached stage releases its renderer but never disposes an admitted sibling', async () => {
+  const { interop, calls } = harness();
+  try {
+    interop.attach({});
+    assert.equal(interop.detachEmptyViewer(), true);
+    assert.equal(calls.filter(call => call[0] === 'dispose').length, 1);
+    interop.attach({});
+    const [key] = interop.beginSelection({ files: [modelFile('healthy.stl')] });
+    await interop.getGeometryClaim(key);
+    assert.equal(interop.admit(key, 'healthy'), true);
+    assert.equal(interop.detachEmptyViewer(), false);
+    assert.equal(interop.select('healthy'), true);
+    assert.equal(calls.filter(call => call[0] === 'dispose').length, 1);
+  } finally { interop.dispose(); }
+});
+
+
+test('a failed renderable local preview snapshots at bounded size and restores the healthy viewer on context loss', async () => {
+  const objects = new Map(), shown = [], dimensions = [];
+  let losesContext = false;
+  const viewer = createModelViewer({ adapter: {
+    show: object => shown.push(object), hide() {}, fit() {}, snapshot: maximum => {
+      dimensions.push(maximum);
+      if (losesContext) throw new Error('synthetic context loss');
+      return 'data:image/png;base64,aW1hZ2U=';
+    },
+  } });
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async file => { const object = disposableObject(); objects.set(file.name, object); return object; },
+    analyzeGeometry: () => ({ volumeMm3: 1000 }),
+    createViewer: () => viewer,
+    thicknessAnalyzer: { analyze: async () => null, dispose() {} },
+  });
+  try {
+    interop.attach({});
+    const keys = interop.beginSelection({ files: [modelFile('good.stl'), modelFile('bad.stl'), modelFile('lost.stl')] });
+    await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+    interop.admit(keys[0], 'healthy');
+    assert.equal(interop.captureFailedThumbnail(keys[1]), 'data:image/png;base64,aW1hZ2U=');
+    assert.deepEqual(dimensions, [192]);
+    assert.equal(shown.at(-1), objects.get('good.stl'));
+    assert.equal(objects.get('good.stl').disposed, false);
+    assert.equal(objects.get('bad.stl').disposed, true);
+    assert.equal(interop.admit(keys[1], 'fake-server-part'), false);
+    assert.equal(interop.select(keys[1]), false);
+    losesContext = true;
+    assert.equal(interop.captureFailedThumbnail(keys[2]), null);
+    assert.equal(shown.at(-1), objects.get('good.stl'));
+    assert.equal(objects.get('lost.stl').disposed, true);
+    assert.equal(objects.get('good.stl').disposed, false);
+    assert.equal(interop.select('healthy'), true);
+  } finally { interop.dispose(); }
+});
+
+test('bounded snapshots validate their size before changing the viewer selection', () => {
+  const sizes = [], shown = [];
+  const viewer = createModelViewer({ adapter: {
+    show: object => shown.push(object), hide() {}, fit() {},
+    snapshot: size => { sizes.push(size); return 'data:image/png;base64,aW1hZ2U='; },
+  } });
+  const good = disposableObject(), other = disposableObject();
+  try {
+    viewer.addPart('good', good); viewer.addPart('other', other);
+    for (const size of [0, 193, Infinity, NaN, 1.5]) assert.throws(() => viewer.snapshot('other', size), RangeError);
+    assert.equal(shown.at(-1), good);
+    assert.deepEqual(sizes, []);
+    viewer.snapshot('other', 192);
+    assert.deepEqual(sizes, [192]);
+    assert.equal(shown.at(-1), good);
+  } finally { viewer.dispose(); }
+});

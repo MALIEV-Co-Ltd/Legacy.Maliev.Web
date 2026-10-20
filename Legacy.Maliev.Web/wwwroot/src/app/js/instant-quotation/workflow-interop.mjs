@@ -103,6 +103,7 @@ export function createWorkflowPreviewInterop({
   let viewer = null;
   let incompleteEntry = null;
   let incompleteViewer = null;
+  let activeLocalPreviewKey = null;
   let disposed = false;
   let availability = 'ready';
   let nextKey = 0;
@@ -146,6 +147,8 @@ export function createWorkflowPreviewInterop({
       file,
       controller,
       object: null,
+      loadedObject: null,
+      settleCompletion: null,
       geometryClaim: null,
       completion: null,
       partId: null,
@@ -168,7 +171,11 @@ export function createWorkflowPreviewInterop({
     }
 
     const operation = Promise.all([
-      Promise.resolve(loadModel(file, { signal: controller.signal })),
+      Promise.resolve().then(() => loadModel(file, { signal: controller.signal })).then(object => {
+        if (isCurrent(entry)) entry.loadedObject = object;
+        else disposeModel(object, disposedResources);
+        return object;
+      }),
       sha256(file, controller.signal),
     ]).then(([object, hash]) => {
       if (!isCurrent(entry)) {
@@ -209,26 +216,33 @@ export function createWorkflowPreviewInterop({
       return entry.geometryClaim;
     }).catch(error => {
       failPreview(entry, error);
+      entry.controller?.abort();
+      disposeModel(entry.loadedObject, disposedResources);
+      entry.loadedObject = null;
       return null;
     });
     entry.completion = new Promise((resolve, reject) => {
-      entry.stallTimer = setTimeout(() => {
+      let completed = false;
+      entry.settleCompletion = (value, error = null) => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(entry.stallTimer);
         entry.stallTimer = null;
+        entry.settleCompletion = null;
+        if (error) reject(error);
+        else resolve(value);
+      };
+      entry.stallTimer = setTimeout(() => {
         if (!isCurrent(entry)) return;
-        entry.controller.abort();
         const error = new Error('Preview processing timed out.');
         failPreview(entry, error);
-        reject(error);
+        entry.controller.abort();
+        disposeModel(entry.loadedObject, disposedResources);
+        entry.loadedObject = null;
+        entry.settleCompletion?.(null, error);
       }, STALL_TIMEOUT_MS);
-      operation.then(value => {
-        clearTimeout(entry.stallTimer);
-        entry.stallTimer = null;
-        resolve(value);
-      }, error => {
-        clearTimeout(entry.stallTimer);
-        entry.stallTimer = null;
-        reject(error);
-      });
+      operation.then(value => entry.settleCompletion?.(value),
+        error => entry.settleCompletion?.(null, error));
     });
     return key;
   }
@@ -259,11 +273,12 @@ export function createWorkflowPreviewInterop({
 
     guardModelDisposal(object, guardedResources, viewerDisposedResources);
     entry.object = object;
+    entry.loadedObject = null;
     attachAdmittedPreview(entry);
   }
 
   function failPreview(entry, error) {
-    if (entry.released || entry.quarantined || isCancellation(error)) return;
+    if (!isCurrent(entry) || isCancellation(error)) return;
     setUnavailable();
   }
 
@@ -271,6 +286,13 @@ export function createWorkflowPreviewInterop({
     assertActive();
     if (!viewer) viewer = createViewer(canvas);
     for (const entry of previews.values()) attachAdmittedPreview(entry);
+  }
+
+  function detachEmptyViewer() {
+    if (disposed || partKeys.size !== 0) return false;
+    viewer?.dispose();
+    viewer = null;
+    return true;
   }
 
   function admit(key, partId, material = '') {
@@ -300,11 +322,13 @@ export function createWorkflowPreviewInterop({
       release(key);
       return;
     }
+    entry.settleCompletion?.(null);
     entry.controller?.abort();
     clearTimeout(entry.stallTimer);
     entry.stallTimer = null;
     if (entry.attached && viewer) viewer.remove(entry.partId);
-    else if (entry.object) disposeModel(entry.object, disposedResources);
+    else disposeModel(entry.object ?? entry.loadedObject, disposedResources);
+    entry.loadedObject = null;
     entry.object = null;
     entry.geometryClaim = null;
     entry.attached = false;
@@ -315,18 +339,21 @@ export function createWorkflowPreviewInterop({
     const entry = previews.get(key);
     if (!entry) return;
     if (incompleteEntry === entry) {
+      activeLocalPreviewKey = null;
       incompleteEntry = null;
       incompleteViewer?.dispose();
       incompleteViewer = null;
     }
     previews.delete(key);
     entry.released = true;
+    entry.settleCompletion?.(null);
     clearTimeout(entry.stallTimer);
     entry.stallTimer = null;
     entry.controller?.abort();
     if (entry.partId) partKeys.delete(entry.partId);
     if (entry.attached && viewer) viewer.remove(entry.partId);
-    else if (entry.object) disposeModel(entry.object, disposedResources);
+    else disposeModel(entry.object ?? entry.loadedObject, disposedResources);
+    entry.loadedObject = null;
     entry.object = null;
     entry.geometryClaim = null;
     entry.file = null;
@@ -345,10 +372,57 @@ export function createWorkflowPreviewInterop({
   function select(partId) {
     assertActive();
     if (!partKeys.has(partId) || !viewer) return false;
+    activeLocalPreviewKey = null;
     viewer.select(partId);
     const entry = previews.get(partKeys.get(partId));
     if (entry) notifyThickness(entry);
     return true;
+  }
+
+  function selectLocalPreview(key) {
+    if (disposed) return false;
+    if (incompleteEntry?.key !== key || !incompleteViewer || !isCurrent(incompleteEntry)) {
+      activeLocalPreviewKey = null;
+      return false;
+    }
+    activeLocalPreviewKey = key;
+    incompleteViewer.select(key);
+    return true;
+  }
+
+  function captureFailedThumbnail(key, canvas = null) {
+    const entry = previews.get(key);
+    if (!entry || !isCurrent(entry) || entry.partId || entry.previewOnly || !entry.object) return null;
+    const object = entry.object;
+    entry.object = null;
+    let attached = false;
+    try {
+      if (!viewer && canvas) attach(canvas);
+      if (!viewer) return null;
+      // This temporary local renderer key is never entered in admitted partKeys.
+      viewer.addPart(key, object);
+      attached = true;
+      guardModelDisposal(object, guardedResources, viewerDisposedResources);
+      const source = viewer.snapshot?.(key, 192);
+      return typeof source === 'string' && source.startsWith('data:image/png;base64,')
+        && source.length <= 262144 ? source : null;
+    } catch {
+      return null; // Thumbnail/WebGL failure must not replace the actual upload failure.
+    } finally {
+      if (attached) { try { viewer.remove(key); } catch { /* Release remaining owned resources below. */ } }
+      try { quarantine(key); }
+      finally {
+        try { disposeModel(object, disposedResources); }
+        catch { setUnavailable(); } // Cleanup reporting must not replace the actual upload failure.
+      }
+    }
+  }
+
+  function getLocalThumbnail(key) {
+    if (disposed || incompleteEntry?.key !== key || !incompleteViewer || !isCurrent(incompleteEntry)) return null;
+    const source = incompleteViewer.snapshot?.(key, 192);
+    return typeof source === 'string' && source.startsWith('data:image/png;base64,')
+      && source.length <= 262144 ? source : null;
   }
 
   function notifyThickness(entry) {
@@ -409,9 +483,28 @@ export function createWorkflowPreviewInterop({
     input.indeterminate = mixed === true;
   }
 
-  function reset() { viewer?.reset(); }
-  function fit() { viewer?.fit(); }
-  function fullscreen() { return viewer?.fullscreen(); }
+
+  function revealPart(root, partId) {
+    if (disposed) return false;
+    const rail = root?.querySelector?.('[data-workflow-part-list]');
+    const tile = [...(rail?.querySelectorAll?.('[data-workflow-part]') ?? [])]
+      .find(element => element.dataset.partId === partId);
+    if (!tile) return false;
+    const bounds = rail.getBoundingClientRect();
+    const target = tile.getBoundingClientRect();
+    const add = rail.querySelector?.('.iq-compact-dropzone');
+    const left = add && globalThis.getComputedStyle?.(add)?.position === 'sticky'
+      ? Math.max(bounds.left, add.getBoundingClientRect().right) : bounds.left;
+    if (target.left < left) rail.scrollLeft = Math.max(0, rail.scrollLeft + target.left - left);
+    else if (target.right > bounds.right) rail.scrollLeft += target.right - bounds.right;
+    if (target.top < bounds.top) rail.scrollTop = Math.max(0, rail.scrollTop + target.top - bounds.top);
+    else if (target.bottom > bounds.bottom) rail.scrollTop += target.bottom - bounds.bottom;
+    return true;
+  }
+
+  function reset() { (activeLocalPreviewKey ? incompleteViewer : viewer)?.reset(); }
+  function fit() { (activeLocalPreviewKey ? incompleteViewer : viewer)?.fit(); }
+  function fullscreen() { return (activeLocalPreviewKey ? incompleteViewer : viewer)?.fullscreen(); }
   function renderReviewThumbnails(root) {
     if (!viewer || !root?.querySelectorAll) return 0;
     let rendered = 0;
@@ -524,11 +617,15 @@ export function createWorkflowPreviewInterop({
     bindInput,
     discardSelection,
     attach,
+    detachEmptyViewer,
     admit,
     quarantine,
     release,
     retry,
     select,
+    selectLocalPreview,
+    getLocalThumbnail,
+    captureFailedThumbnail,
     setThicknessMaterial,
     toggleThickness,
     remove,
@@ -536,6 +633,7 @@ export function createWorkflowPreviewInterop({
     fit,
     fullscreen,
     renderReviewThumbnails,
+    revealPart,
     setBulkSelectionState,
     updatePartAppearance,
     isIncompletePreview,

@@ -462,13 +462,17 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return adapter.fullscreen?.();
   }
 
-  function snapshot(id) {
+  function snapshot(id, maximumDimension = null) {
     assertActive();
+    if (maximumDimension !== null && (!Number.isSafeInteger(maximumDimension)
+        || maximumDimension < 1 || maximumDimension > 192)) throw new RangeError('Invalid thumbnail dimensions.');
     const previousId = activeId;
     select(id);
-    const image = adapter.snapshot?.() ?? null;
-    if (previousId !== null && previousId !== id) select(previousId);
-    return image;
+    try {
+      return adapter.snapshot?.(maximumDimension) ?? null;
+    } finally {
+      if (previousId !== null && previousId !== id && parts.has(previousId)) select(previousId);
+    }
   }
 
   function handleKey(event) {
@@ -563,10 +567,20 @@ export function createThreeModelViewer(canvas) {
     reset(object) { frameObject(object, camera, controls); },
     fit(object) { frameObject(object, camera, controls); },
     fullscreen() { return canvas.requestFullscreen?.(); },
-    snapshot() {
+    snapshot(maximumDimension) {
       resize.sync();
       controls.update();
       renderer.render(scene, camera);
+      if (maximumDimension !== null) {
+        const image = canvas.ownerDocument.createElement('canvas');
+        const scale = Math.min(1, maximumDimension / canvas.width, maximumDimension / canvas.height);
+        image.width = Math.max(1, Math.floor(canvas.width * scale));
+        image.height = Math.max(1, Math.floor(canvas.height * scale));
+        const context = image.getContext('2d');
+        if (!context) throw new Error('Thumbnail rendering is unavailable.');
+        context.drawImage(canvas, 0, 0, image.width, image.height);
+        return image.toDataURL('image/png');
+      }
       return canvas.toDataURL('image/png');
     },
     setColor(object, color) {

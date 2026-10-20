@@ -8,6 +8,7 @@ using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -360,6 +361,548 @@ public sealed class InstantQuotationResinPresentationTests
                         expectedTerminalFailure: refusesWrite || disposes, taskKind: "bulk-configuration"));
             }
         });
+    }
+
+
+    [Theory]
+    [InlineData("en", "The file could not be uploaded. Try again.", false, false)]
+    [InlineData("th", "ไม่สามารถอัปโหลดไฟล์ได้ โปรดลองอีกครั้ง", false, false)]
+    [InlineData("en", "The file could not be uploaded. Try again.", true, false)]
+    [InlineData("en", "The file could not be uploaded. Try again.", false, true)]
+    public async Task FailedLocalSelection_BlocksReviewWithoutRemovingThePricedPart(
+        string culture, string message, bool disposeWhilePending, bool unavailableSelection)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part("PLA", BuildPreference.Strength);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var priced = coordinator.OrderQuote;
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            object? Invoke(string name, params object[] arguments) =>
+                typeof(InstantQuotationWorkflow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(component, arguments);
+            bool CanReview() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            var preview = new ControlledPreviewReference(async (name, _) =>
+            {
+                if (name == "beginSelection")
+                {
+                    if (!unavailableSelection) return new[] { "failed-local-preview" };
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                    return Array.Empty<string>();
+                }
+                if (name == "getGeometryClaim")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                    throw new JSException("private decoder detail");
+                }
+                if (name == "dispose") release.TrySetResult();
+                return null;
+            });
+            typeof(InstantQuotationWorkflow).GetField("previewInterop", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(component, preview);
+            typeof(InstantQuotationWorkflow).GetField("fileInput", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(component, new InputFile());
+            Assert.True(CanReview());
+            var uploading = (Task)Invoke("UploadFilesAsync",
+                new InputFileChangeEventArgs(new IBrowserFile[] { new UnreadableBrowserFile() }))!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                Assert.False(CanReview());
+                Invoke("EnterReview");
+                Assert.Equal(InstantQuotationWorkflowState.Configured, coordinator.State);
+                coordinator.EnterReview();
+                Invoke("EnterCustomerDetails");
+                Assert.Equal(InstantQuotationWorkflowState.Review, coordinator.State);
+                coordinator.ReturnToConfiguration();
+                if (disposeWhilePending) await component.DisposeAsync();
+                release.TrySetResult();
+                await uploading.WaitAsync(lease.Token);
+                if (disposeWhilePending)
+                {
+                    Assert.Empty((System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
+                        .GetField("failedPreviewSelections", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                    return;
+                }
+                var html = WebUtility.HtmlDecode(root.ToHtmlString());
+                Assert.Contains("data-workflow-failed-preview", html, StringComparison.Ordinal);
+                Assert.Contains("unreadable.stl", html, StringComparison.Ordinal);
+                Assert.Contains(message, html, StringComparison.Ordinal);
+                Assert.DoesNotContain("private decoder detail", html, StringComparison.Ordinal);
+                Assert.False(CanReview());
+                Assert.Equal(part.PartId, Assert.Single(coordinator.Parts).PartId);
+                Assert.Equal(part.Configuration, Assert.Single(coordinator.Parts).Configuration);
+                Assert.Same(priced, coordinator.OrderQuote);
+                var failures = (Dictionary<string, string>)typeof(InstantQuotationWorkflow)
+                    .GetField("failedPreviewSelections", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+                await (Task)Invoke("RemoveFailedPreviewAsync", Assert.Single(failures).Key)!;
+                Assert.DoesNotContain("data-workflow-failed-preview", root.ToHtmlString(), StringComparison.Ordinal);
+                Assert.True(CanReview());
+                Assert.Same(priced, coordinator.OrderQuote);
+            }
+            catch (Exception exception)
+            {
+                primary = exception;
+                throw;
+            }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        uploading, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "selection"));
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task LatestUploadSelection_SelectsLastAdmissionUnlessTheUserViewedAnotherPart(
+        bool userViews, bool disposeWhilePending)
+    {
+        var first = Part("PLA", BuildPreference.Quality);
+        var latest = Part("PETG", BuildPreference.Strength);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(first, latest), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var selected = new List<string>();
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference(async (name, args) =>
+            {
+                if (name == "admit" && !entered.Task.IsCompleted)
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                if (name == "select") selected.Add((string)args![0]!);
+                return null;
+            });
+            void Set(string name, object? value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            Set("previewInterop", preview);
+            var keys = (Dictionary<Guid, string>)typeof(InstantQuotationWorkflow)
+                .GetField("previewKeys", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            var parts = coordinator.Parts.ToArray();
+            keys.Add(parts[0].PreviewCorrelationId, "first-preview");
+            keys.Add(parts[1].PreviewCorrelationId, "latest-preview");
+            Set("autoPreviewLocalId", parts[1].PreviewCorrelationId);
+            var reconciling = (Task)Invoke("ReconcilePreviewsAsync")!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (userViews) await (Task)Invoke("SelectPreviewAsync", first.PartId)!;
+                if (disposeWhilePending) await component.DisposeAsync();
+                release.TrySetResult();
+                await reconciling.WaitAsync(lease.Token);
+                if (disposeWhilePending)
+                {
+                    Assert.Null(typeof(InstantQuotationWorkflow)
+                        .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                    Assert.Empty(selected);
+                    return;
+                }
+                var expected = userViews ? first.PartId : latest.PartId;
+                Assert.Equal(expected, (Guid?)typeof(InstantQuotationWorkflow)
+                    .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                Assert.Equal(expected.ToString("N"), selected.Last());
+                Assert.Equal(first.Configuration, coordinator.Parts.Single(part => part.PartId == first.PartId).Configuration);
+                Assert.Equal(latest.Configuration, coordinator.Parts.Single(part => part.PartId == latest.PartId).Configuration);
+            }
+            catch (Exception exception)
+            {
+                primary = exception;
+                throw;
+            }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        reconciling, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "preview-admission"));
+            }
+        });
+    }
+
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UploadProducer_DoesNotRestoreAutomaticSelectionAfterAnExplicitViewDuringParsing(bool userViews)
+    {
+        var original = Part("PLA", BuildPreference.Strength);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(original), new SyntheticUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference(async (name, _) =>
+            {
+                if (name == "beginSelection") return new[] { "new-preview" };
+                if (name == "getGeometryClaim")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                    return new InstantQuotationGeometryClaim(1, new string('a', 64), 10, 10, 10, 1000, 600,
+                        Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
+                        100, 1, true, false, false, 0.8);
+                }
+                if (name == "isIncompletePreview") return false;
+                return null;
+            });
+            void Set(string name, object value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            Set("previewInterop", preview);
+            Set("fileInput", new InputFile());
+            var uploading = (Task)Invoke("UploadFilesAsync",
+                new InputFileChangeEventArgs(new IBrowserFile[] { new SyntheticBrowserFile() }))!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (userViews) await (Task)Invoke("SelectPreviewAsync", original.PartId)!;
+                release.TrySetResult();
+                await uploading.WaitAsync(lease.Token);
+                Assert.Equal(2, coordinator.Parts.Count);
+                var newest = coordinator.Parts.Single(part => part.DisplayFileName == "new.stl");
+                var expected = userViews ? original.PartId : newest.PartId;
+                Assert.Equal(expected, (Guid?)typeof(InstantQuotationWorkflow)
+                    .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                Assert.Equal(original.Configuration, coordinator.Parts.Single(part => part.PartId == original.PartId).Configuration);
+                Assert.DoesNotContain("data-workflow-failed-preview", root.ToHtmlString(), StringComparison.Ordinal);
+            }
+            catch (Exception exception)
+            {
+                primary = exception;
+                throw;
+            }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        uploading, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "selection"));
+            }
+        });
+    }
+
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreviewAdmissionCompletion_IgnoresRemovedOrReboundPart(bool rebindsPreview)
+    {
+        var original = Part("PLA", BuildPreference.Quality);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(original), new SuccessfulRemoveClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var selected = new List<string>();
+        var sink = new AdmissionAnalyticsSink();
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference(async (name, args) =>
+            {
+                if (name == "admit")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                if (name == "select") selected.Add((string)args![0]!);
+                return null;
+            });
+            void Set(string name, object? value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            Set("previewInterop", preview);
+            Set("analytics", new InstantQuotationAnalyticsTracker(sink));
+            Set("selectedPreviewPartId", null);
+            var localId = Assert.Single(coordinator.Parts).PreviewCorrelationId;
+            var keys = (Dictionary<Guid, string>)typeof(InstantQuotationWorkflow)
+                .GetField("previewKeys", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            keys.Add(localId, "held-preview");
+            Set("autoPreviewLocalId", localId);
+            var reconciling = (Task)Invoke("ReconcilePreviewsAsync")!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (rebindsPreview)
+                {
+                    keys[localId] = "replacement-preview";
+                }
+                else
+                {
+                    await (Task)Invoke("RemovePartAsync", original.PartId)!;
+                    Assert.Empty(coordinator.Parts);
+                    Assert.Empty(keys);
+                }
+                Assert.Null(typeof(InstantQuotationWorkflow)
+                    .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                release.TrySetResult();
+                await reconciling.WaitAsync(lease.Token);
+                Assert.Null(typeof(InstantQuotationWorkflow)
+                    .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                Assert.Null(typeof(InstantQuotationWorkflow)
+                    .GetField("revealPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                Assert.Empty(selected);
+                Assert.Empty(sink.Payloads);
+                if (rebindsPreview)
+                {
+                    Assert.Equal("replacement-preview", keys[localId]);
+                    Assert.Equal(original.PartId, Assert.Single(coordinator.Parts).PartId);
+                }
+            }
+            catch (Exception exception)
+            {
+                primary = exception;
+                throw;
+            }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        reconciling, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "stale-preview-admission"));
+            }
+        });
+    }
+
+    private sealed class AdmissionAnalyticsSink : IInstantQuotationAnalyticsSink
+    {
+        internal List<InstantQuotationAnalyticsPayload> Payloads { get; } = [];
+        public ValueTask EmitAsync(InstantQuotationAnalyticsPayload payload, CancellationToken cancellationToken = default)
+        {
+            Payloads.Add(payload);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+
+    [Theory]
+    [InlineData("en", "Invalid file. Repair the model and reupload it.")]
+    [InlineData("th", "ไฟล์ไม่สมบูรณ์ กรุณาแก้ไขโมเดลแล้วอัปโหลดใหม่")]
+    public async Task SelectedLocalUploadFailure_ClearsDuringRetryAndRemovalWithoutInventingAPart(
+        string culture, string invalidMessage)
+    {
+        using var cultures = new CultureScope(culture);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var healthy = Part("PLA", BuildPreference.Quality);
+        var client = new RetryingFailureClient(entered, release, lease.Token);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(healthy), client, new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var priced = Assert.IsType<InstantQuotationOrderQuote>(coordinator.OrderQuote);
+        var claim = new InstantQuotationGeometryClaim(1, new string('a', 64), 10, 10, 10, 1000, 600,
+            Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
+            12, 1, true, false, false, 0.8);
+        Assert.False(coordinator.DismissFailedUpload(Assert.Single(coordinator.Parts).PreviewCorrelationId));
+        var localId = Assert.Single(coordinator.ReserveUploads([
+            new InstantQuotationWorkflowUploadFile("bad<&>.stl", "model/stl", 3, claim,
+                _ => Task.FromResult<Stream>(new MemoryStream(new byte[] { 1, 2, 3 }, writable: false))),
+        ]));
+        Assert.False(coordinator.DismissFailedUpload(localId));
+        await coordinator.UploadReservedAsync([localId], lease.Token);
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, coordinator.Uploads.Single(upload => upload.LocalId == localId).Status);
+        Assert.Equal(healthy.PartId, Assert.Single(coordinator.Parts).PartId);
+        Assert.DoesNotContain(coordinator.Parts, part => part.PreviewCorrelationId == localId);
+
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            void Refresh() => typeof(ComponentBase).GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, null);
+            string Html() => WebUtility.HtmlDecode(root.ToHtmlString());
+            void AssertPanel(bool visible)
+            {
+                Refresh();
+                var match = Regex.Match(Html(), "<div[^>]*data-workflow-file-error[^>]*>([\\s\\S]*?)</div>");
+                Assert.True(match.Success);
+                Assert.Equal(!visible, Regex.IsMatch(match.Value[..(match.Value.IndexOf('>') + 1)], @"\bhidden(?:\s|=|>)"));
+                if (visible)
+                {
+                    Assert.Contains("bad<&>.stl", match.Value, StringComparison.Ordinal);
+                    Assert.Contains(invalidMessage, match.Value, StringComparison.Ordinal);
+                    Assert.Equal(1, Regex.Matches(Html(), "role=\"alert\"").Count);
+                }
+            }
+            await (Task)Invoke("SelectPreviewAsync", healthy.PartId)!;
+            AssertPanel(false);
+            await (Task)Invoke("SelectUploadPreviewAsync", localId)!;
+            AssertPanel(true);
+            Assert.DoesNotContain("bad<&>.stl", root.ToHtmlString(), StringComparison.Ordinal);
+            Assert.DoesNotContain("data-part-id=\"" + localId, root.ToHtmlString(), StringComparison.Ordinal);
+            Assert.Same(priced, coordinator.OrderQuote);
+            var retrying = (Task)Invoke("RetryUploadAsync", localId)!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                AssertPanel(false);
+                release.TrySetResult();
+                await retrying.WaitAsync(lease.Token);
+                AssertPanel(true);
+                await (Task)Invoke("SelectPreviewAsync", healthy.PartId)!;
+                AssertPanel(false);
+                await (Task)Invoke("SelectUploadPreviewAsync", localId)!;
+                AssertPanel(true);
+                await (Task)Invoke("RemoveFailedUploadAsync", localId)!;
+                AssertPanel(false);
+                Assert.DoesNotContain("bad&lt;&amp;&gt;.stl", root.ToHtmlString(), StringComparison.Ordinal);
+                Assert.DoesNotContain(coordinator.Uploads, upload => upload.LocalId == localId);
+                Assert.Equal(healthy.PartId, Assert.Single(coordinator.Parts).PartId);
+                Assert.Same(priced, coordinator.OrderQuote);
+                Assert.Equal(InstantQuotationWorkflowState.Configured, coordinator.State);
+                Assert.True((bool)typeof(InstantQuotationWorkflow)
+                    .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                await component.DisposeAsync();
+                Assert.Null(typeof(InstantQuotationWorkflow)
+                    .GetProperty("SelectedFileError", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        retrying, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "local-failure-retry"));
+            }
+        });
+    }
+
+    private sealed class RetryingFailureClient(
+        TaskCompletionSource entered, TaskCompletionSource release, CancellationToken lease) : IInstantQuotationUploadClient
+    {
+        private int attempts;
+        public async Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
+            string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim geometryClaim,
+            string operationId, CancellationToken cancellationToken)
+        {
+            if (++attempts == 2)
+            {
+                entered.TrySetResult();
+                await release.Task.WaitAsync(lease);
+            }
+            return InstantQuotationUploadResult.Failed(operationId, InstantQuotationServiceStatus.Available,
+                InstantQuotationAuthorizationStatus.Authorized, InstantQuotationProblemCategory.Validation);
+        }
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
+            InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("A failed local upload has no persisted object to remove.");
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity,
+            int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
+            string operationId, CancellationToken cancellationToken) => throw new InvalidOperationException("No finalization expected.");
+    }
+
+    private sealed class SyntheticBrowserFile : IBrowserFile
+    {
+        public string Name => "new.stl";
+        public DateTimeOffset LastModified => DateTimeOffset.UnixEpoch;
+        public long Size => 4;
+        public string ContentType => "model/stl";
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default) =>
+            new MemoryStream(new byte[] { 1, 2, 3, 4 }, writable: false);
+    }
+
+    private sealed class SyntheticUploadClient : IInstantQuotationUploadClient
+    {
+        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
+            string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim geometryClaim,
+            string operationId, CancellationToken cancellationToken) => Task.FromResult(
+                InstantQuotationUploadResult.Succeeded(operationId, new InstantQuotationUploadReference("synthetic-new-upload"), geometryClaim.Sha256));
+        public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
+            InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("No removal expected.");
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity,
+            int quotationRequestId, IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
+            string operationId, CancellationToken cancellationToken) => throw new InvalidOperationException("No finalization expected.");
+    }
+
+
+    private sealed class ControlledPreviewReference(Func<string, object?[]?, Task<object?>> invoke) : IJSObjectReference
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, default, args);
+        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            var result = await invoke(identifier, args);
+            return result is null ? default! : (TValue)result;
+        }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class UnreadableBrowserFile : IBrowserFile
+    {
+        public string Name => "unreadable.stl";
+        public DateTimeOffset LastModified => DateTimeOffset.UnixEpoch;
+        public long Size => 3;
+        public string ContentType => "model/stl";
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("No unreadable bytes may cross the upload boundary.");
     }
 
     [Fact]

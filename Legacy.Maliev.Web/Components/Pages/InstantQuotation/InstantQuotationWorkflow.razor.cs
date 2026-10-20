@@ -61,12 +61,19 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool batchInProgress;
     private readonly RepricingActivity repricing = new();
     private Guid? selectedPreviewPartId;
+    private Guid? selectedPreviewUploadId;
+    private string? selectedFailedPreviewKey;
+    private readonly Dictionary<string, string> localPreviewThumbnails = [];
+    private Guid? autoPreviewLocalId;
+    private Guid? revealPreviewPartId;
+    private long previewSelectionGeneration;
+    private readonly Dictionary<string, string> failedPreviewSelections = [];
     private readonly HashSet<Guid> selectedBulkParts = [];
     private ElementReference bulkSelectAll;
     private bool bulkApplying;
     private PendingWorkflowFocus pendingFocus;
 
-    private ThicknessStatus? SelectedThickness => selectedPreviewPartId is { } id
+    private ThicknessStatus? SelectedThickness => !HasLocalPreviewSelection && selectedPreviewPartId is { } id
         && thicknessStatuses.TryGetValue(id, out var status) ? status : null;
 
     private bool ThicknessNeedsAttention => thicknessStatuses.Values.Any(
@@ -76,8 +83,37 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         ? InstantQuotationWorkflowState.Error
         : workflow?.State ?? InitialState;
 
-    private WorkflowSectionVisibility VisibleSections =>
-        (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
+    private bool HasLocalFileFailures => failedPreviewSelections.Count > 0
+        || Uploads.Any(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Error
+            && Parts.All(part => part.PreviewCorrelationId != upload.LocalId));
+
+    private bool HasLocalPreviewSelection => selectedPreviewUploadId is not null || selectedFailedPreviewKey is not null;
+
+    private string? SelectedLocalPreviewKey => selectedFailedPreviewKey
+        ?? (selectedPreviewUploadId is { } localId && previewKeys.TryGetValue(localId, out var key) ? key : null);
+
+    private (string Name, string Message)? SelectedFileError
+    {
+        get
+        {
+            if (disposed) return null;
+            if (selectedFailedPreviewKey is { } key && failedPreviewSelections.TryGetValue(key, out var name))
+                return (name, Localizer["Invalid file. Repair the model and reupload it."]);
+            var upload = selectedPreviewUploadId is { } id ? Uploads.FirstOrDefault(item => item.LocalId == id) : null;
+            return upload?.Status is InstantQuotationWorkflowUploadStatus.Error
+                && Parts.All(part => part.PreviewCorrelationId != upload.LocalId)
+                ? (upload.DisplayFileName, Localizer[upload.ProblemCategory is InstantQuotationProblemCategory.Validation
+                    ? "Invalid file. Repair the model and reupload it."
+                    : "The file could not be uploaded. Try again."])
+                : null;
+        }
+    }
+
+    private string? LocalThumbnail(string? key) => key is not null ? localPreviewThumbnails.GetValueOrDefault(key) : null;
+
+    private WorkflowSectionVisibility VisibleSections => HasLocalFileFailures || incompletePreviewKey is not null
+        ? new(Upload: true, Error: false, Viewer: true, Parts: true, Configuration: Parts.Count > 0)
+        : (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
             || (State is InstantQuotationWorkflowState.Empty && HasMaterialDisplay && Parts.Count > 0)
             ? new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Viewer: true, Parts: true, Configuration: true)
             : GetVisibleSections(State);
@@ -201,7 +237,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         get
         {
-            if (disposed || IsRepricing || workflow?.State is not InstantQuotationWorkflowState.Configured
+            if (disposed || InputDisabled || IsRepricing || failedPreviewSelections.Count > 0
+                || workflow?.State is not InstantQuotationWorkflowState.Configured
                 || workflow.OrderQuote is null) return false;
             var parts = Parts;
             return !parts.Any(part => quantityEdits.IsPending(part.PartId))
@@ -317,6 +354,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                         if (eligible)
                         {
                             incompletePreviewAttached = true;
+                            if (SelectedLocalPreviewKey == incompleteKey)
+                                await InvokePreviewAsync("selectLocalPreview", incompleteKey);
                         }
                         else
                         {
@@ -340,6 +379,36 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     }
                 }
             }
+        }
+
+        if (incompletePreviewKey is { } thumbnailKey && incompletePreviewAttached
+            && !localPreviewThumbnails.ContainsKey(thumbnailKey) && previewInterop is not null)
+        {
+            try
+            {
+                var source = await previewInterop.InvokeAsync<string?>("getLocalThumbnail", thumbnailKey);
+                if (!disposed && incompletePreviewKey == thumbnailKey
+                    && source is { Length: <= 262144 } && source.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
+                {
+                    localPreviewThumbnails[thumbnailKey] = source;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (JSException) { /* The local error remains actionable without a thumbnail. */ }
+        }
+
+        if (!VisibleSections.Viewer && Parts.Count == 0 && previewAttached && previewInterop is not null)
+        {
+            try
+            {
+                var detached = await previewInterop.InvokeAsync<bool>("detachEmptyViewer");
+                if (!disposed && detached)
+                {
+                    previewAttached = false;
+                    if (VisibleSections.Viewer) await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (JSException) { await ReportPreviewUnavailableAsync(); }
         }
 
         if (VisibleSections.Viewer && !previewAttached && previewInterop is not null)
@@ -384,6 +453,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             catch (JSException)
             {
                 await ReportPreviewUnavailableAsync();
+            }
+        }
+
+        if (revealPreviewPartId is { } revealId && previewInterop is not null)
+        {
+            revealPreviewPartId = null;
+            if (!disposed && selectedPreviewPartId == revealId && Parts.Any(part => part.PartId == revealId))
+            {
+                await InvokePreviewAsync("revealPart", workflowSection, revealId.ToString("D"));
             }
         }
 
@@ -476,12 +554,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
 
         batchInProgress = true;
+        var selectionGeneration = InvalidatePreviewSelectionIntent();
         try
         {
             uploadSelectionError = null;
             // A new accepted selection replaces the one local exceptional preview,
             // not previously admitted parts. Rejected/normal replacements also release it.
             await RemoveIncompletePreviewAsync();
+            if (disposed) return;
             var selectedFiles = args.GetMultipleFiles(100).ToArray();
             var browserFiles = selectedFiles
                 .Where(file => file.Size <= InstantQuotationWorkflowCoordinator.MaximumFileSize)
@@ -499,8 +579,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
 
             var keys = await BeginPreviewSelectionAsync();
+            if (disposed) return;
             if (keys.Length != browserFiles.Length)
             {
+                for (var index = 0; index < browserFiles.Length; index++)
+                {
+                    var localKey = $"local-selection-{selectionGeneration}-{index}";
+                    failedPreviewSelections[localKey] = browserFiles[index].Name;
+                    if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= localKey;
+                }
                 foreach (var key in keys)
                 {
                     await InvokePreviewAsync("release", key);
@@ -518,9 +605,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     var claim = await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>(
                         "getGeometryClaim",
                         keys[index]);
-                    if (await previewInterop!.InvokeAsync<bool>("isIncompletePreview", keys[index]))
+                    if (disposed) return;
+                    var incomplete = await previewInterop!.InvokeAsync<bool>("isIncompletePreview", keys[index]);
+                    if (disposed) return;
+                    if (incomplete)
                     {
                         await RemoveIncompletePreviewAsync();
+                        if (disposed) return;
                         incompletePreviewKey = keys[index];
                         incompletePreviewMeasured = false;
                         incompletePreviewRevision = 0;
@@ -530,7 +621,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 }
                 catch (JSException)
                 {
-                    await InvokePreviewAsync("quarantine", keys[index]);
+                    if (disposed) return;
+                    failedPreviewSelections[keys[index]] = browserFiles[index].Name;
+                    if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= keys[index];
+                    await InvokePreviewAsync("release", keys[index]);
                     await ReportPreviewUnavailableAsync();
                 }
             }
@@ -543,6 +637,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             await analytics.RecordUploadStartAsync(
                 $"batch-{Guid.NewGuid():N}",
                 analyzed.Count);
+            if (disposed) return;
 
             var files = analyzed
                 .Select(item => new InstantQuotationWorkflowUploadFile(
@@ -561,6 +656,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 previewKeys[reservedIds[index]] = analyzed[index].PreviewKey;
             }
 
+            if (selectionGeneration == previewSelectionGeneration)
+            {
+                autoPreviewLocalId = reservedIds.LastOrDefault();
+            }
+
             var uploadTask = workflow.UploadReservedAsync(reservedIds, default);
             await InvokeAsync(StateHasChanged);
             try
@@ -569,24 +669,90 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
             finally
             {
-                await ReconcilePreviewsAsync();
+                if (!disposed)
+                {
+                    if (selectionGeneration == previewSelectionGeneration && autoPreviewLocalId is not null)
+                    {
+                        autoPreviewLocalId = reservedIds.Reverse()
+                            .Where(localId => Uploads.Any(upload => upload.LocalId == localId
+                                && upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded))
+                            .Select(static localId => (Guid?)localId).FirstOrDefault();
+                    }
+                    await ReconcilePreviewsAsync();
+                }
             }
         }
         finally
         {
             batchInProgress = false;
-            uploadBatchGate.Release();
+            if (disposed) uploadBatchGate.Dispose();
+            else uploadBatchGate.Release();
         }
+    }
+
+    private long InvalidatePreviewSelectionIntent()
+    {
+        autoPreviewLocalId = null;
+        revealPreviewPartId = null;
+        return checked(++previewSelectionGeneration);
+    }
+
+    private async Task RemoveFailedPreviewAsync(string key)
+    {
+        if (disposed || InputDisabled || IsRepricing || !failedPreviewSelections.Remove(key)) return;
+        InvalidatePreviewSelectionIntent();
+        localPreviewThumbnails.Remove(key);
+        if (selectedFailedPreviewKey == key) selectedFailedPreviewKey = null;
+        await InvokePreviewAsync("release", key);
+        if (!disposed && !HasLocalPreviewSelection && selectedPreviewPartId is { } selectedId
+            && Parts.Any(part => part.PartId == selectedId))
+            await InvokePreviewAsync("select", ViewerPartKey(selectedId));
+        if (!disposed) await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectFailedPreviewAsync(string key)
+    {
+        if (bulkApplying || disposed || !failedPreviewSelections.ContainsKey(key)) return;
+        InvalidatePreviewSelectionIntent();
+        selectedFailedPreviewKey = key;
+        selectedPreviewUploadId = null;
+        await InvokePreviewAsync("selectLocalPreview", key);
+    }
+
+    private async Task SelectUploadPreviewAsync(Guid localId)
+    {
+        if (bulkApplying || disposed || Parts.Any(part => part.PreviewCorrelationId == localId)
+            || !Uploads.Any(upload => upload.LocalId == localId
+                && upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)) return;
+        InvalidatePreviewSelectionIntent();
+        selectedPreviewUploadId = localId;
+        selectedFailedPreviewKey = null;
+        await InvokePreviewAsync("selectLocalPreview", previewKeys.GetValueOrDefault(localId));
+    }
+
+    private async Task RemoveFailedUploadAsync(Guid localId)
+    {
+        if (disposed || InputDisabled || IsRepricing || workflow?.DismissFailedUpload(localId) != true) return;
+        InvalidatePreviewSelectionIntent();
+        if (selectedPreviewUploadId == localId) selectedPreviewUploadId = null;
+        if (previewKeys.TryGetValue(localId, out var key)) localPreviewThumbnails.Remove(key);
+        await ReleasePreviewAsync(localId);
+        if (!disposed && !HasLocalPreviewSelection && selectedPreviewPartId is { } selectedId
+            && Parts.Any(part => part.PartId == selectedId))
+            await InvokePreviewAsync("select", ViewerPartKey(selectedId));
+        if (!disposed) await InvokeAsync(StateHasChanged);
     }
 
     private async Task CancelUpload(Guid localId)
     {
+        if (bulkApplying || disposed) return;
         workflow?.Cancel(localId);
         await QuarantinePreviewAsync(localId);
     }
 
     private async Task RetryUploadAsync(Guid localId)
     {
+        if (bulkApplying || disposed || InputDisabled || IsRepricing) return;
         if (workflow is not null)
         {
             var hasAuthoritativePart = Parts.Any(item => item.PreviewCorrelationId == localId);
@@ -596,7 +762,17 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 try
                 {
-                    previewKeys[localId] = await previewInterop.InvokeAsync<string>("retry", previousKey);
+                    var retryKey = await previewInterop.InvokeAsync<string>("retry", previousKey);
+                    if (disposed || previewKeys.GetValueOrDefault(localId) != previousKey
+                        || !Uploads.Any(upload => upload.LocalId == localId)
+                        || Parts.Any(part => part.PreviewCorrelationId == localId))
+                    {
+                        await InvokePreviewAsync("release", retryKey);
+                        return;
+                    }
+                    previewKeys[localId] = retryKey;
+                    if (localPreviewThumbnails.Remove(previousKey, out var thumbnail))
+                        localPreviewThumbnails[retryKey] = thumbnail;
                 }
                 catch (JSException)
                 {
@@ -612,6 +788,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private async Task RemovePartAsync(Guid partId)
     {
         if (bulkApplying || disposed) return;
+        InvalidatePreviewSelectionIntent();
         InvalidatePhysicalAnalysis(partId);
         if (workflow is not null)
         {
@@ -629,7 +806,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 if (selectedPreviewPartId == partId)
                 {
                     selectedPreviewPartId = Parts.FirstOrDefault()?.PartId;
-                    if (selectedPreviewPartId is { } nextPartId)
+                    if (!HasLocalPreviewSelection && selectedPreviewPartId is { } nextPartId)
                     {
                         await InvokePreviewAsync("select", ViewerPartKey(nextPartId));
                     }
@@ -641,7 +818,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private async Task<string[]> BeginPreviewSelectionAsync()
     {
         await EnsurePreviewInteropAsync();
-        if (previewInterop is null || fileInput is null)
+        if (disposed || previewInterop is null || fileInput is null)
         {
             return [];
         }
@@ -700,7 +877,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ReconcilePreviewsAsync()
     {
-        if (previewInterop is null)
+        if (disposed || previewInterop is null)
         {
             return;
         }
@@ -711,11 +888,32 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
             if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
             {
+                bool IsCurrentAdmission() => !disposed
+                    && previewKeys.TryGetValue(localId, out var currentKey) && currentKey == key
+                    && Parts.Any(item => item.PartId == part.PartId && item.PreviewCorrelationId == localId)
+                    && Uploads.Any(item => item.LocalId == localId
+                        && item.Status is InstantQuotationWorkflowUploadStatus.Uploaded);
                 try
                 {
+                    if (!IsCurrentAdmission()) continue;
                     await previewInterop.InvokeVoidAsync(
                         "admit", key, ViewerPartKey(part.PartId), part.Configuration.MaterialKey);
-                    selectedPreviewPartId ??= part.PartId;
+                    if (!IsCurrentAdmission()) continue;
+                    if (autoPreviewLocalId == localId)
+                    {
+                        autoPreviewLocalId = null;
+                        selectedPreviewUploadId = null;
+                        selectedFailedPreviewKey = null;
+                        selectedPreviewPartId = part.PartId;
+                        revealPreviewPartId = part.PartId;
+                        await InvokePreviewAsync("select", ViewerPartKey(part.PartId));
+                        if (!disposed) await InvokeAsync(StateHasChanged);
+                    }
+                    else
+                    {
+                        selectedPreviewPartId ??= part.PartId;
+                    }
+                    if (!IsCurrentAdmission()) continue;
                     await analytics.RecordStageResultAsync(
                         InstantQuotationStage.Thumbnail,
                         InstantQuotationStageResult.Success,
@@ -724,6 +922,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 }
                 catch (JSException)
                 {
+                    if (!IsCurrentAdmission()) continue;
                     await analytics.RecordStageResultAsync(
                         InstantQuotationStage.Thumbnail,
                         InstantQuotationStageResult.Failure,
@@ -734,6 +933,26 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
+                if (Parts.Count == 0 && selectedFailedPreviewKey is null && selectedPreviewUploadId is null)
+                {
+                    selectedPreviewUploadId = localId;
+                    await InvokePreviewAsync("selectLocalPreview", key);
+                    if (disposed) return;
+                }
+                if (upload.Status is InstantQuotationWorkflowUploadStatus.Error && key != incompletePreviewKey
+                    && previewInterop is not null && !localPreviewThumbnails.ContainsKey(key))
+                {
+                    try
+                    {
+                        var source = await previewInterop.InvokeAsync<string?>("captureFailedThumbnail", key, previewCanvas);
+                        if (!disposed && previewKeys.GetValueOrDefault(localId) == key
+                            && Uploads.Any(item => item.LocalId == localId && item.Status is InstantQuotationWorkflowUploadStatus.Error)
+                            && source is { Length: <= 262144 } && source.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
+                            localPreviewThumbnails[key] = source;
+                    }
+                    catch (JSException) { /* Preserve the controlled upload failure if rendering is unavailable. */ }
+                    if (disposed || previewKeys.GetValueOrDefault(localId) != key) continue;
+                }
                 if (key != incompletePreviewKey || upload.Status is InstantQuotationWorkflowUploadStatus.Cancelled)
                 {
                     await QuarantinePreviewAsync(localId);
@@ -748,6 +967,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task QuarantinePreviewAsync(Guid localId)
     {
+        if (autoPreviewLocalId == localId) InvalidatePreviewSelectionIntent();
         if (previewKeys.TryGetValue(localId, out var key))
         {
             if (key == incompletePreviewKey)
@@ -760,6 +980,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ReleasePreviewAsync(Guid localId)
     {
+        if (autoPreviewLocalId == localId) InvalidatePreviewSelectionIntent();
         if (previewKeys.Remove(localId, out var key))
         {
             if (key == incompletePreviewKey)
@@ -772,12 +993,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task SelectPreviewAsync(Guid partId)
     {
-        if (bulkApplying || disposed) return;
+        if (bulkApplying || disposed || Parts.All(part => part.PartId != partId)) return;
+        InvalidatePreviewSelectionIntent();
+        selectedPreviewUploadId = null;
+        selectedFailedPreviewKey = null;
         selectedPreviewPartId = partId;
+        revealPreviewPartId = partId;
         await InvokePreviewAsync("select", ViewerPartKey(partId));
     }
 
-    private bool IsPreviewSelected(Guid partId) => selectedPreviewPartId == partId;
+    private bool IsPreviewSelected(Guid partId) => !HasLocalPreviewSelection && selectedPreviewPartId == partId;
 
     private Task ResetPreviewAsync() => InvokePreviewAsync("reset");
 
@@ -871,6 +1096,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             StateHasChanged();
         });
 
+    private Task RemoveIncompletePreviewSelectionAsync()
+    {
+        var localId = previewKeys.FirstOrDefault(pair => pair.Value == incompletePreviewKey).Key;
+        return localId != Guid.Empty ? RemoveFailedUploadAsync(localId) : RemoveIncompletePreviewAsync();
+    }
+
     private async Task RemoveIncompletePreviewAsync()
     {
         var key = incompletePreviewKey;
@@ -905,6 +1136,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public Task ReportPreviewUnavailableAsync()
     {
+        if (disposed) return Task.CompletedTask;
         previewUnavailable = true;
         return InvokeAsync(StateHasChanged);
     }
@@ -1124,7 +1356,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         if (disposed || Parts.All(part => part.PartId != partId)) return;
         await InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
-        if (disposed) return;
+        if (disposed || HasLocalPreviewSelection) return;
         var selected = Parts.FirstOrDefault(part => part.PartId == selectedPreviewPartId) ?? Parts.FirstOrDefault();
         selectedPreviewPartId = selected?.PartId;
         if (selected is not null)
@@ -1216,6 +1448,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private void EnterCustomerDetails()
     {
+        if (disposed || InputDisabled || IsRepricing || failedPreviewSelections.Count > 0) return;
         workflow?.EnterCustomerDetails();
         pendingFocus = PendingWorkflowFocus.CustomerDetails;
     }
@@ -1278,6 +1511,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         disposed = true;
+        InvalidatePreviewSelectionIntent();
+        failedPreviewSelections.Clear();
+        selectedPreviewUploadId = null;
+        selectedFailedPreviewKey = null;
+        localPreviewThumbnails.Clear();
         materialDisplaySubscription?.Dispose();
         materialDisplaySubscription = null;
         quantityDrafts.Clear();
@@ -1297,7 +1535,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             finally
             {
                 previewStatusReporter?.Dispose();
-                uploadBatchGate.Dispose();
+                if (!batchInProgress) uploadBatchGate.Dispose();
 
                 if (workflow is not null)
                 {

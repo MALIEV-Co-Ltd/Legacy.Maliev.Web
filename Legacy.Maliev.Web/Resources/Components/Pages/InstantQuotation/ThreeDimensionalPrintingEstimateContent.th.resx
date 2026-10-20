@@ -685,4 +685,5 @@
   <data name="{0} parts selected" xml:space="preserve"><value>เลือกแล้ว {0} ชิ้นงาน</value></data>
   <data name="Apply material to selected parts" xml:space="preserve"><value>ใช้วัสดุกับชิ้นงานที่เลือก</value></data>
   <data name="Select for bulk material: {0}" xml:space="preserve"><value>เลือกเพื่อใช้วัสดุร่วมกัน: {0}</value></data>
+  <data name="Invalid file. Repair the model and reupload it." xml:space="preserve"><value>ไฟล์ไม่สมบูรณ์ กรุณาแก้ไขโมเดลแล้วอัปโหลดใหม่</value></data>
 </root>

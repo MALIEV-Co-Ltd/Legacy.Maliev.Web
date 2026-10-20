@@ -276,6 +276,21 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         RefreshState();
     }
 
+    /// <summary>Drops only an unadmitted terminal local upload; accepted parts and their quote stay untouched.</summary>
+    internal bool DismissFailedUpload(Guid localId)
+    {
+        ThrowIfDisposed();
+        var entry = entries.SingleOrDefault(item => item.LocalId == localId);
+        if (entry is null || entry.Part is not null
+            || entry.Status is not (InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+            return false;
+        entry.OperationCancellation?.Cancel();
+        entry.OperationCancellation?.Dispose();
+        entries.Remove(entry);
+        RefreshState();
+        return true;
+    }
+
     public async Task RetryAsync(Guid localId, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();

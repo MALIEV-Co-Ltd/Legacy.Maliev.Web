@@ -1810,3 +1810,32 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 .instant-quote__bulk-material button {
     min-height: 44px;
 }
+
+/* Keep Add file reachable while the horizontal part rail reveals later parts. */
+@media (min-width: 62rem) {
+    .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--bs-body-bg, #fff);
+    }
+}
+
+
+/* Local failure identity never grants an admitted part or a physical quote. */
+.instant-quote__workflow .instant-quote__local-file { position: relative; min-width: 0; border: 1px solid #687583; border-radius: .5rem; }
+.instant-quote__workflow .instant-quote__local-file.is-error { border-color: #dc3545; box-shadow: 0 0 0 1px #dc3545; }
+.instant-quote__workflow .instant-quote__local-thumbnail { display: block; width: 100%; height: 72px; object-fit: contain; text-align: center; }
+.instant-quote__workflow .instant-quote__file-error-badge { position: absolute; top: 2.5rem; right: .375rem; z-index: 2; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border-radius: 50%; background: #dc3545; color: #fff; font-size: 14px; font-weight: 600; pointer-events: none; }
+.instant-quote__workflow .instant-quote__upload-overlay { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .4rem; padding: .35rem; border-radius: inherit; background: rgba(255, 255, 255, .94); color: #42526a; pointer-events: none; }
+.instant-quote__workflow .instant-quote__upload-overlay ~ button { position: relative; z-index: 2; }
+.instant-quote__workflow > [data-workflow-viewer] > .instant-quote__local-viewer { position: absolute; inset: 0; margin: 0; }
+.instant-quote__workflow > [data-workflow-viewer] .instant-quote__local-viewer canvas { height: 100%; min-height: 0; }
+.instant-quote__workflow > [data-workflow-viewer] .instant-quote__local-viewer > button { position: absolute; bottom: .75rem; left: 1rem; z-index: 2; width: 7.25rem; min-height: 44px; }
+.instant-quote__workflow > [data-workflow-viewer] > .instant-quote__file-error { position: absolute; top: 4.5rem; right: .75rem; z-index: 3; max-width: min(22rem, calc(100% - 10rem)); max-height: calc(100% - 5.25rem); padding: .65rem .75rem; overflow: auto; overflow-wrap: anywhere; border: 1px solid #e8a0ae; border-radius: .5rem; background: #fff1f3; color: #a32136; font-size: .78rem; line-height: 1.4; }
+.instant-quote__workflow .instant-quote__file-error > strong,
+.instant-quote__workflow .instant-quote__file-error > span { display: block; }
+.instant-quote__workflow .instant-quote__file-error > strong { margin-bottom: .2rem; }
+.instant-quote__workflow .instant-quote__file-error:focus-visible { outline: 3px solid #a32136; outline-offset: -3px; }
+
+.instant-quote__workflow > [data-workflow-viewer] > .instant-quote__local-stage-thumbnail { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }

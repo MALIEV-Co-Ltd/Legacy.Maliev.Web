@@ -13,6 +13,20 @@
     <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
     <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
 
+    @if (!VisibleSections.Parts)
+    {
+        @foreach (var failure in failedPreviewSelections)
+        {
+            <article data-workflow-failed-preview>
+                <h4>@failure.Value</h4>
+                <p role="alert">@Localizer["The file could not be uploaded. Try again."]</p>
+                <button type="button" disabled="@(InputDisabled || IsRepricing)"
+                        aria-label="@Localizer["Remove {0}", failure.Value]"
+                        @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
+            </article>
+        }
+    }
+
     @if (VisibleSections.Upload)
     {
         <section data-workflow-upload
@@ -53,28 +67,49 @@
         <p role="alert">@Localizer["The file could not be uploaded. Try again."]</p>
     }
 
-    @if (incompletePreviewKey is not null)
-    {
-        <section data-workflow-incomplete-preview aria-label="@Localizer["3D preview"]">
-            <h3>@Localizer["3D preview"]</h3>
-            <p role="status">@(incompletePreviewMeasured ? Localizer["Thickness analysis is incomplete"] : Localizer["Checking physical build…"])</p>
-            <p>@Localizer["Preview only. No physical price is available. Repair the mesh and upload it again."]</p>
-            <canvas @ref="incompletePreviewCanvas" tabindex="0"
-                    style="display:block;width:100%;max-width:600px;height:300px"
-                    aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
-            <button type="button" @onclick="RemoveIncompletePreviewAsync">@Localizer["Remove"]</button>
-        </section>
-    }
-
     @if (VisibleSections.Viewer)
     {
         <section data-workflow-viewer aria-labelledby="instant-quote-viewer-heading">
             <h3 id="instant-quote-viewer-heading">@Localizer["3D preview"]</h3>
             <p id="instant-quote-preview-help">@Localizer["The uploaded part preview will appear here."]</p>
+            @if (incompletePreviewKey is not null)
+            {
+                <section data-workflow-incomplete-preview class="instant-quote__local-viewer" aria-hidden="@((SelectedLocalPreviewKey != incompletePreviewKey).ToString().ToLowerInvariant())"
+                         style="visibility: @(SelectedLocalPreviewKey == incompletePreviewKey ? "visible" : "hidden")"
+                         inert="@(SelectedLocalPreviewKey != incompletePreviewKey ? string.Empty : null)" aria-label="@Localizer["3D preview"]">
+                    <h3 class="instant-quote__sr-only">@Localizer["3D preview"]</h3>
+                    <p class="instant-quote__sr-only" role="status">@(incompletePreviewMeasured ? Localizer["Thickness analysis is incomplete"] : Localizer["Checking physical build…"])</p>
+                    <p class="instant-quote__sr-only">@Localizer["Preview only. No physical price is available. Repair the mesh and upload it again."]</p>
+                    <canvas @ref="incompletePreviewCanvas" tabindex="0"
+                            aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
+                    <button type="button" @onclick="RemoveIncompletePreviewSelectionAsync">@Localizer["Remove"]</button>
+                </section>
+            }
+
             <canvas @ref="previewCanvas"
+                    style="visibility: @(HasLocalPreviewSelection ? "hidden" : "visible")"
+                    aria-hidden="@HasLocalPreviewSelection.ToString().ToLowerInvariant()"
+                    inert="@(HasLocalPreviewSelection ? string.Empty : null)"
                     tabindex="0"
                     aria-label="@Localizer["Interactive 3D part preview"]"
                     aria-describedby="instant-quote-preview-help"></canvas>
+            @if (HasLocalPreviewSelection && SelectedLocalPreviewKey != incompletePreviewKey
+                && LocalThumbnail(SelectedLocalPreviewKey) is { } localThumbnail)
+            {
+                <img class="instant-quote__local-stage-thumbnail" src="@localThumbnail" alt="@Localizer["3D preview"]" />
+            }
+            <div data-workflow-file-error class="instant-quote__file-error" role="alert" aria-atomic="true" tabindex="0"
+                 hidden="@(SelectedFileError is null)">
+                @if (SelectedFileError is { } fileError)
+                {
+                    <strong>@fileError.Name</strong>
+                    <span>@fileError.Message</span>
+                    @if (fileError.Message != Localizer["The file could not be uploaded. Try again."].Value)
+                    {
+                        <span>@Localizer["The file could not be uploaded. Try again."]</span>
+                    }
+                }
+            </div>
             <button type="button" @onclick="ResetPreviewAsync">@Localizer["Reset view"]</button>
             <button type="button" @onclick="FitPreviewAsync">@Localizer["Fit to view"]</button>
             <button type="button" @onclick="FullscreenPreviewAsync">@Localizer["Fullscreen"]</button>
@@ -126,23 +161,71 @@
                 <strong>@Localizer["Add file"]</strong>
                 <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
             </label>
+            @foreach (var failure in failedPreviewSelections)
+            {
+                <article data-workflow-upload-item data-workflow-failed-preview class="instant-quote__local-file is-error">
+                    <h4>@failure.Value</h4>
+                    <span class="instant-quote__local-thumbnail" aria-hidden="true">◇</span>
+                    <span data-workflow-file-error-badge class="instant-quote__file-error-badge" role="img"
+                          aria-label="@(failure.Value + ": " + Localizer["Invalid file. Repair the model and reupload it."])">!</span>
+                    <button type="button" disabled="@bulkApplying"
+                            aria-label="@Localizer["View {0}", failure.Value]"
+                            aria-pressed="@(selectedFailedPreviewKey == failure.Key ? "true" : "false")"
+                            @onclick="() => SelectFailedPreviewAsync(failure.Key)">@Localizer["View"]</button>
+                    <button type="button" data-workflow-remove-failed disabled="@(InputDisabled || IsRepricing)"
+                            aria-label="@Localizer["Remove {0}", failure.Value]"
+                            @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
+                </article>
+            }
             @foreach (var upload in Uploads.Where(upload => Parts.All(part => part.PreviewCorrelationId != upload.LocalId)))
             {
-                <article data-workflow-upload-item aria-labelledby="upload-name-@upload.LocalId">
+                var failed = upload.Status is InstantQuotationWorkflowUploadStatus.Error;
+                var thumbnail = LocalThumbnail(previewKeys.GetValueOrDefault(upload.LocalId));
+                var failureMessage = Localizer[upload.ProblemCategory is InstantQuotationProblemCategory.Validation
+                    ? "Invalid file. Repair the model and reupload it." : "The file could not be uploaded. Try again."];
+                <article data-workflow-upload-item data-upload-local-id="@upload.LocalId" data-upload-error="@(failed ? "true" : null)"
+                         class="instant-quote__local-file @(failed ? "is-error" : null)" aria-labelledby="upload-name-@upload.LocalId">
                     <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
-                    <p>@UploadStatus(upload.Status)</p>
+                    @if (thumbnail is not null)
+                    {
+                        <img data-workflow-local-thumbnail class="instant-quote__local-thumbnail" src="@thumbnail" alt="@Localizer["3D preview"]" />
+                    }
+                    else
+                    {
+                        <span class="instant-quote__local-thumbnail" aria-hidden="true">◇</span>
+                    }
                     @if (upload.Status is InstantQuotationWorkflowUploadStatus.Uploading)
                     {
-                        <progress aria-label="@Localizer["Upload progress"]"></progress>
+                        <span data-workflow-upload-overlay class="instant-quote__upload-overlay" role="status">
+                            @UploadStatus(upload.Status)
+                            <progress aria-label="@Localizer["Upload progress"]"></progress>
+                        </span>
                         <button type="button"
                                 aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
                                 @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
                     }
                     else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
                     {
+                        @if (failed)
+                        {
+                            <span data-workflow-file-error-badge class="instant-quote__file-error-badge" role="img"
+                                  aria-label="@(upload.DisplayFileName + ": " + failureMessage)">!</span>
+                        }
+                        <button type="button" data-workflow-view-upload disabled="@bulkApplying"
+                                aria-label="@Localizer["View {0}", upload.DisplayFileName]"
+                                aria-pressed="@(selectedPreviewUploadId == upload.LocalId ? "true" : "false")"
+                                @onclick="() => SelectUploadPreviewAsync(upload.LocalId)">@Localizer["View"]</button>
                         <button type="button"
                                 aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
+                                disabled="@(InputDisabled || IsRepricing)"
                                 @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                        <button type="button" data-workflow-remove-upload disabled="@(InputDisabled || IsRepricing)"
+                                aria-label="@Localizer["Remove {0}", upload.DisplayFileName]"
+                                @onclick="() => RemoveFailedUploadAsync(upload.LocalId)">@Localizer["Remove"]</button>
+                    }
+                    else
+                    {
+                        <p>@UploadStatus(upload.Status)</p>
                     }
                 </article>
             }
