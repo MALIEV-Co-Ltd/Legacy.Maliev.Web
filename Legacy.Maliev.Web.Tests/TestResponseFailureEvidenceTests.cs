@@ -163,6 +163,126 @@ public sealed class TestResponseFailureEvidenceTests
         Assert.Equal(0, registry.ActiveCount);
     }
 
+    [Fact]
+    public async Task NavigationLease_CorrelatesOneOwnedDocumentWithoutExposingItsIdentity()
+    {
+        var registry = new TestResponseProbeRegistry();
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        Assert.Null(registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        var context = NavigationContext();
+        context.Request.QueryString = new("?token=private-query");
+        context.Request.Headers.Authorization = "Bearer private-credential";
+        context.Request.Headers.Cookie = "private-cookie";
+        var filter = new TestResponseProbeStartupFilter(registry);
+        await filter.InvokeAsync(context, current =>
+        {
+            Assert.False(current.Request.Headers.ContainsKey(TestResponseProbeRegistry.Header));
+            Assert.Equal("Bearer private-credential", current.Request.Headers.Authorization.ToString());
+            Assert.Equal("private-cookie", current.Request.Headers.Cookie.ToString());
+            Assert.Equal("?token=private-query", current.Request.QueryString.Value);
+            return Task.CompletedTask;
+        });
+        await filter.InvokeAsync(NavigationContext(), current =>
+        {
+            Assert.False(current.Request.Headers.ContainsKey(TestResponseProbeRegistry.Header));
+            return Task.CompletedTask;
+        });
+        using var snapshot = JsonDocument.Parse(lease.Probe.Snapshot());
+        Assert.Single(snapshot.RootElement.GetProperty("Records").EnumerateArray(),
+            item => item.GetProperty("Phase").GetString() == "ServerAdmitted");
+        Assert.Contains("NextReturned", lease.Probe.Snapshot(), StringComparison.Ordinal);
+        foreach (var secret in new[] { lease.Id.ToString("N"), "private", "127.0.0.1", "40001", "Authorization", "Cookie" })
+            Assert.DoesNotContain(secret, lease.Probe.Snapshot(), StringComparison.OrdinalIgnoreCase);
+        lease.Dispose();
+        Assert.Equal(0, registry.ActiveCount);
+        Assert.False(registry.TryFind(lease.Id, out _));
+        var closed = lease.Probe.Snapshot();
+        await filter.InvokeAsync(NavigationContext(), _ => Task.CompletedTask);
+        Assert.Equal(closed, lease.Probe.Snapshot());
+    }
+
+    [Theory]
+    [InlineData("POST", "document", "navigate", "text/html", "/instantquotation/3d-printing", "127.0.0.1:40001")]
+    [InlineData("GET", "iframe", "navigate", "text/html", "/instantquotation/3d-printing", "127.0.0.1:40001")]
+    [InlineData("GET", "script", "no-cors", "*/*", "/_framework/blazor.web.js", "127.0.0.1:40001")]
+    [InlineData("GET", "document", "cors", "text/html", "/instantquotation/3d-printing", "127.0.0.1:40001")]
+    [InlineData("GET", "document", "navigate", "application/json", "/instantquotation/3d-printing", "127.0.0.1:40001")]
+    [InlineData("GET", "document", "navigate", "text/html", "/private-customer", "127.0.0.1:40001")]
+    [InlineData("GET", "document", "navigate", "text/html", "/instantquotation/3d-printing", "foreign.invalid")]
+    public async Task NavigationLease_DoesNotClaimForeignOrNonDocumentRequests(
+        string method, string destination, string mode, string accept, string path, string host)
+    {
+        var registry = new TestResponseProbeRegistry();
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        var foreign = NavigationContext();
+        foreign.Request.Method = method;
+        foreign.Request.Headers["Sec-Fetch-Dest"] = destination;
+        foreign.Request.Headers["Sec-Fetch-Mode"] = mode;
+        foreign.Request.Headers.Accept = accept;
+        foreign.Request.Path = path;
+        foreign.Request.Host = new(host);
+        var filter = new TestResponseProbeStartupFilter(registry);
+        await filter.InvokeAsync(foreign, current =>
+        {
+            Assert.False(current.Request.Headers.ContainsKey(TestResponseProbeRegistry.Header));
+            return Task.CompletedTask;
+        });
+        Assert.DoesNotContain("ServerAdmitted", lease.Probe.Snapshot(), StringComparison.Ordinal);
+        await filter.InvokeAsync(NavigationContext(), _ => Task.CompletedTask);
+        Assert.Contains("ServerAdmitted", lease.Probe.Snapshot(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NavigationLease_ExpiresWithoutTimersAndDisposalReleasesTheFactorySlot()
+    {
+        long now = 0;
+        var registry = new TestResponseProbeRegistry(() => now);
+        Assert.Null(registry.TryBeginNavigation(new Uri("https://foreign.invalid"), TestResponseRequestLabel.BaseQuotation));
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        now = 31 * System.Diagnostics.Stopwatch.Frequency;
+        await new TestResponseProbeStartupFilter(registry).InvokeAsync(NavigationContext(), _ => Task.CompletedTask);
+        Assert.DoesNotContain("ServerAdmitted", lease.Probe.Snapshot(), StringComparison.Ordinal);
+        lease.Dispose();
+        using var next = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        await new TestResponseProbeStartupFilter(registry).InvokeAsync(NavigationContext(), _ => Task.CompletedTask);
+        Assert.Contains("ServerAdmitted", next.Probe.Snapshot(), StringComparison.Ordinal);
+        next.Dispose();
+        Assert.Equal(0, registry.ActiveCount);
+    }
+
+    [Fact]
+    public async Task NavigationMatcherFailure_IsPassiveAndCannotReplaceThePipelineFailure()
+    {
+        var calls = 0;
+        var registry = new TestResponseProbeRegistry(() =>
+            ++calls == 1 ? 0 : throw new InvalidOperationException("private-observer"));
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        var original = new IOException("private-pipeline");
+        Assert.Same(original, await Assert.ThrowsAsync<IOException>(() =>
+            new TestResponseProbeStartupFilter(registry).InvokeAsync(
+                NavigationContext(), _ => Task.FromException(original))));
+        lease.Dispose();
+        Assert.Equal(0, registry.ActiveCount);
+        Assert.DoesNotContain("private", lease.Probe.Snapshot(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DefaultHttpContext NavigationContext()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
+        context.Request.Path = "/instantquotation/3d-printing";
+        context.Request.Host = new("127.0.0.1:40001");
+        context.Request.Headers["Sec-Fetch-Dest"] = "document";
+        context.Request.Headers["Sec-Fetch-Mode"] = "navigate";
+        context.Request.Headers.Accept = "text/html,application/xhtml+xml";
+        return context;
+    }
+
     private sealed class ControlledHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> send) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => send(request);

@@ -459,7 +459,9 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 fixture.Page = await fixture.context.NewPageAsync();
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrorCount);
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                using (var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin))
+                using (var responseProbe = fixture.Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                    .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation))
+                using (var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin, responseProbe?.Probe))
                 {
                     await initialNavigation.RunAsync(
                         () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
@@ -481,7 +483,14 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
                 var part = new InstantQuotationPart(Guid.NewGuid(), displayFileName, reference, geometry, new("M68", "White", 1));
                 Assert.True(await store.PutAsync(stored with { RequestState = new([part]) }, null, default));
-                await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
+                using (var responseProbe = fixture.Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                    .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation))
+                using (var reloadNavigation = new MaterialInitialNavigationDiagnostics(
+                    fixture.Page, origin, responseProbe?.Probe, "reload"))
+                {
+                    await reloadNavigation.RunAsync(
+                        () => fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
+                }
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
                 await fixture.Page.EvaluateAsync("""
                     () => {

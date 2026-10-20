@@ -16,6 +16,7 @@ internal sealed class TestResponseFailureEvidence
     private readonly object gate = new();
     private readonly TestResponseRequestLabel label;
     private readonly long started = Stopwatch.GetTimestamp();
+    private readonly DateTimeOffset clockOriginUtc = DateTimeOffset.UtcNow;
     private readonly List<Observation> records = [];
     private CancellationTokenRegistration? abortRegistration;
     private bool overflow;
@@ -72,6 +73,7 @@ internal sealed class TestResponseFailureEvidence
                 Schema = "test-response-failure/v1",
                 Label = label.ToString(),
                 Frequency = Stopwatch.Frequency,
+                ClockOriginUtc = clockOriginUtc,
                 Records = records.ToArray(),
                 Overflow = overflow,
                 Closed = closed,
@@ -130,6 +132,54 @@ internal sealed class TestResponseProbeRegistry
     internal const string Header = "X-Maliev-Test-Response-Probe";
     private readonly object gate = new();
     private readonly Dictionary<Guid, TestResponseFailureEvidence> active = [];
+    private readonly Func<long> timestamp = Stopwatch.GetTimestamp;
+    private NavigationBinding? navigation;
+
+    public TestResponseProbeRegistry() { }
+
+    internal TestResponseProbeRegistry(Func<long> timestamp) =>
+        this.timestamp = timestamp ?? throw new ArgumentNullException(nameof(timestamp));
+
+    internal Lease? TryBeginNavigation(Uri origin, TestResponseRequestLabel label)
+    {
+        if (!origin.IsAbsoluteUri || !origin.IsLoopback || origin.UserInfo.Length != 0
+            || origin.Scheme is not ("http" or "https") || origin.AbsolutePath != "/") return null;
+        lock (gate)
+        {
+            if (navigation is not null || active.Count == 16) return null;
+            var lease = Begin(label);
+            navigation = new(lease, origin.Authority, timestamp());
+            return lease;
+        }
+    }
+
+    internal bool TryBindNavigation(HttpRequest request, out Guid id)
+    {
+        id = default;
+        lock (gate)
+        {
+            if (navigation is not { Claimed: false } binding) return false;
+            var age = Stopwatch.GetElapsedTime(binding.Started, timestamp());
+            if (age < TimeSpan.Zero || age >= TimeSpan.FromSeconds(30)) return false;
+            if (!HttpMethods.IsGet(request.Method)
+                || !string.Equals(request.Path.Value, "/instantquotation/3d-printing", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(request.Host.Value, binding.Authority, StringComparison.OrdinalIgnoreCase)
+                || request.Headers["Sec-Fetch-Dest"].ToString() != "document"
+                || request.Headers["Sec-Fetch-Mode"].ToString() != "navigate"
+                || !request.Headers.Accept.ToString().StartsWith("text/html", StringComparison.OrdinalIgnoreCase)) return false;
+            binding.Claimed = true;
+            id = binding.Lease.Id;
+            return true;
+        }
+    }
+
+    private sealed class NavigationBinding(Lease lease, string authority, long started)
+    {
+        internal Lease Lease { get; } = lease;
+        internal string Authority { get; } = authority;
+        internal long Started { get; } = started;
+        internal bool Claimed { get; set; }
+    }
 
     internal int ActiveCount { get { lock (gate) return active.Count; } }
 
@@ -157,7 +207,11 @@ internal sealed class TestResponseProbeRegistry
 
         public void Dispose()
         {
-            lock (owner.gate) owner.active.Remove(Id);
+            lock (owner.gate)
+            {
+                owner.active.Remove(Id);
+                if (owner.navigation?.Lease.Id == Id) owner.navigation = null;
+            }
             Probe.Close();
         }
     }
@@ -180,6 +234,16 @@ internal sealed class TestResponseProbeStartupFilter(TestResponseProbeRegistry r
     internal async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         var ids = context.Request.Headers[TestResponseProbeRegistry.Header];
+        try
+        {
+            if (ids.Count == 0 && registry.TryBindNavigation(context.Request, out var navigationId))
+            {
+                // This test-only server request owns the nonce; never send it through the browser.
+                context.Request.Headers[TestResponseProbeRegistry.Header] = navigationId.ToString("N");
+                ids = context.Request.Headers[TestResponseProbeRegistry.Header];
+            }
+        }
+        catch { /* Optional navigation correlation must not replace the existing pipeline result. */ }
         if (ids.Count != 1 || !Guid.TryParseExact(ids[0], "N", out var id)
             || !registry.TryFind(id, out var probe) || probe is null)
         {
