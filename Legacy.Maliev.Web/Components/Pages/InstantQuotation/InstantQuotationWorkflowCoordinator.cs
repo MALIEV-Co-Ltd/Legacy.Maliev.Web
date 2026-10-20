@@ -1071,8 +1071,46 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         if (OrderQuote is not null)
         {
             authoritativeQuoteRevision++;
+            AcceptCurrentDefaultConfigurations(OrderQuote);
         }
         RefreshState();
+    }
+
+    private void AcceptCurrentDefaultConfigurations(InstantQuotationOrderQuote quote)
+    {
+        if (disposed || authoritativePricingService is null || quoteTicketService is null
+            || session?.QuoteAuthorization is not { } authorization
+            || !quoteTicketService.Validate(session, quote, authorization, DateTimeOffset.UtcNow))
+            return;
+
+        var defaults = new InstantQuotationPartConfiguration("PLA", "Black", 1);
+        lock (configurationGate)
+        {
+            foreach (var entry in entries)
+            {
+                if (entry.HasConfigured || entry.RemovalAcknowledged || !entries.Contains(entry)
+                    || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploaded
+                    || entry.Part is not { } part || part.Configuration != defaults
+                    || session.Parts.SingleOrDefault(candidate => candidate.PartId == part.PartId) is not { } current
+                    || current.Configuration != defaults
+                    || current.UploadReference != part.UploadReference
+                    || !string.Equals(current.Geometry.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase)
+                    || quote.Parts.SingleOrDefault(candidate => candidate.PartId == part.PartId) is not
+                        { Process: PrintProcess.Fdm, PhysicalReceipt: { } receipt } line
+                    || line.Color != part.Configuration.Color
+                    || CurrentPhysicalAnalysisBinding(part.PartId, receipt.ProfileVersion) is null
+                    || receipt.AnalysisVersion != Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion
+                    || !double.IsFinite(line.UnitPrice) || line.UnitPrice <= 0
+                    || !double.IsFinite(receipt.DepositedMm3) || receipt.DepositedMm3 <= 0
+                    || !double.IsFinite(receipt.SupportMm3) || receipt.SupportMm3 < 0
+                    || !double.IsFinite(receipt.MotionSeconds) || receipt.MotionSeconds <= 0
+                    || !double.IsFinite(receipt.BoundingCm3PerUnit) || receipt.BoundingCm3PerUnit <= 0)
+                    continue;
+
+                // The protected current physical price accepts the unchanged fresh defaults, not an extra user confirmation.
+                entry.HasConfigured = true;
+            }
+        }
     }
 
     private long BeginMaterialDisplay()
