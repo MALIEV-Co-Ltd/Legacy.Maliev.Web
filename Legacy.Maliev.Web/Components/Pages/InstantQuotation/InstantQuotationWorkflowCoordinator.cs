@@ -313,7 +313,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await StartUploadAsync(entry, cancellationToken);
     }
 
-    public async Task RemoveAsync(Guid partId, CancellationToken cancellationToken)
+    public Task RemoveAsync(Guid partId, CancellationToken cancellationToken) =>
+        RemoveCoreAsync(partId, null, cancellationToken);
+
+    internal Task RemoveAsync(Guid partId, Action acknowledged, CancellationToken cancellationToken) =>
+        RemoveCoreAsync(partId, acknowledged, cancellationToken);
+
+    private async Task RemoveCoreAsync(Guid partId, Action? acknowledged, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
         EnsureInitialized();
@@ -339,6 +345,18 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             return;
         }
 
+        // Only an exact authorized delete acknowledgement relinquishes this part's quote ownership.
+        ConfigurationRequest? obsolete;
+        lock (configurationGate)
+        {
+            entry.RemovalAcknowledged = true;
+            configurationRequests.Remove(partId, out obsolete);
+        }
+        acknowledged?.Invoke();
+        if (obsolete is not null)
+        {
+            lock (configurationGate) CancelQuoteConsumer(obsolete);
+        }
         await WaitForStateGateAsync(cancellationToken);
         try
         {
@@ -400,26 +418,32 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     {
         var material = ValidateConfiguration(partId, materialKey, color, quantity, buildPreference);
         ThrowIfPricingCanceled(cancellationToken);
-        var request = BeginConfigurationRequest(partId);
+        var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
+            ?? throw new ArgumentException("The part was not found.", nameof(partId));
+        var request = BeginConfigurationRequest(partId, entry);
         try
         {
             await WaitForStateGateAsync(cancellationToken);
             try
             {
                 ThrowIfPricingCanceled(cancellationToken);
-                if (!IsCurrentConfigurationRequest(request)) return;
-                var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
-                    ?? throw new ArgumentException("The part was not found.", nameof(partId));
-                var previous = entry.Part!;
-                entry.Part = previous with
+                lock (configurationGate)
                 {
-                    Configuration = new InstantQuotationPartConfiguration(
-                        material.Key, color, quantity,
-                        material.Process is PrintProcess.Resin
-                            ? BuildPreference.Standard
-                            : buildPreference ?? previous.Configuration.BuildPreference),
-                };
-                entry.HasConfigured = true;
+                    if (entry.RemovalAcknowledged
+                        || configurationRequests.GetValueOrDefault(partId) != request) return;
+                    if (!entries.Contains(entry))
+                        throw new ArgumentException("The part was not found.", nameof(partId));
+                    var previous = entry.Part!;
+                    entry.Part = previous with
+                    {
+                        Configuration = new InstantQuotationPartConfiguration(
+                            material.Key, color, quantity,
+                            material.Process is PrintProcess.Resin
+                                ? BuildPreference.Standard
+                                : buildPreference ?? previous.Configuration.BuildPreference),
+                    };
+                    entry.HasConfigured = true;
+                }
                 await PersistAndPriceAsync(cancellationToken, request);
             }
             finally { stateGate.Release(); }
@@ -451,28 +475,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new ArgumentException("The selected color is not supported.", nameof(color));
         if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
             throw new ArgumentOutOfRangeException(nameof(quantity));
-        if (!entries.Any(item => item.Part?.PartId == partId))
+        if (!entries.Any(item => item.Part?.PartId == partId && !item.RemovalAcknowledged))
             throw new ArgumentException("The part was not found.", nameof(partId));
         return material;
     }
 
-    private ConfigurationRequest BeginConfigurationRequest(Guid partId)
+    private ConfigurationRequest BeginConfigurationRequest(Guid partId, UploadEntry entry)
     {
         lock (configurationGate)
         {
+            if (entry.RemovalAcknowledged)
+                throw new ArgumentException("The part was not found.", nameof(partId));
             var previous = configurationRequests.GetValueOrDefault(partId);
             var current = new ConfigurationRequest(partId);
             configurationRequests[partId] = current;
-            if (previous?.QuoteConsumer is { } consumer)
-            {
-                // Callback faults belong to the obsolete request, not its valid replacement.
-                previous.CancellationCallbacks = consumer.CancelAsync();
-                _ = previous.CancellationCallbacks.ContinueWith(static task => { _ = task.Exception; },
-                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-            }
+            if (previous is not null) CancelQuoteConsumer(previous);
             return current;
         }
+    }
+
+    private static void CancelQuoteConsumer(ConfigurationRequest obsolete)
+    {
+        if (obsolete.QuoteConsumer is not { } consumer) return;
+        // Callback faults stay owned by the old request after stateGate is released.
+        obsolete.CancellationCallbacks = consumer.CancelAsync();
+        _ = obsolete.CancellationCallbacks.ContinueWith(static task => { _ = task.Exception; },
+            CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private bool IsCurrentConfigurationRequest(ConfigurationRequest? request)
@@ -1255,6 +1284,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         public string? OperationId { get; set; }
 
+        public bool RemovalAcknowledged { get; set; }
         public CancellationTokenSource? OperationCancellation { get; set; }
 
         public InstantQuotationWorkflowUploadStatus Status { get; set; } = InstantQuotationWorkflowUploadStatus.Pending;

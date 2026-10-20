@@ -184,4 +184,43 @@ public sealed class RepricingActivityTests
     }
 
 
+    [Fact]
+    public async Task ForgetAcknowledgedPart_CompletesOnlyItsGateAndLateFinallyCannotCompleteAnother()
+    {
+        var activity = new RepricingActivity();
+        var part = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        var oldRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var otherRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = activity.RunAsync(part, () => oldRelease.Task, () => Task.CompletedTask);
+        var second = activity.RunAsync(other, () => otherRelease.Task, () => Task.CompletedTask);
+        var oldCurrent = activity.CaptureOwnership(part);
+        var otherCurrent = activity.CaptureOwnership(other);
+        Exception? primary = null;
+        try
+        {
+            activity.Forget(part);
+            Assert.False(oldCurrent());
+            Assert.True(otherCurrent());
+            Assert.True(activity.IsActive);
+            Assert.False(first.IsCompleted);
+            oldRelease.TrySetResult();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(activity.IsActive);
+            Assert.True(otherCurrent());
+            otherRelease.TrySetResult();
+            await second.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(activity.IsActive);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            oldRelease.TrySetResult();
+            otherRelease.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await first.WaitAsync(TimeSpan.FromSeconds(5)),
+                async () => await second.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+    }
+
 }

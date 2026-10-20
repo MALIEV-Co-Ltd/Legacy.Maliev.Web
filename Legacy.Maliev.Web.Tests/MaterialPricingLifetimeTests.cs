@@ -301,6 +301,177 @@ public sealed class MaterialPricingLifetimeTests
         }
     }
 
+    [Theory]
+    [InlineData("success")]
+    [InlineData("refused")]
+    [InlineData("unknown")]
+    [InlineData("mismatch")]
+    [InlineData("denied")]
+    [InlineData("caller-canceled")]
+    public async Task AdmittedRemoval_RetiresOnlyAfterExactAuthorizedAcknowledgement(string outcome)
+    {
+        var removal = new ControlledRemovalClient(outcome);
+        await using var fixture = await Fixture.CreateAsync(physical: true, partCount: 2, removal: removal);
+        using var caller = new CancellationTokenSource();
+        var older = fixture.Pricing.Arm(ignoreCancellation: true, captureBeforeHold: true);
+        var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "PLA", "Black", 2, default);
+        Task removing = Task.CompletedTask;
+        Exception? primary = null;
+        var acknowledged = 0;
+        Task? rejectedAfterAcknowledgement = null;
+        try
+        {
+            await older.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var before = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+            var protectedBefore = System.Text.Json.JsonSerializer.Serialize(before);
+            removing = fixture.Workflow.RemoveAsync(fixture.PartId, () =>
+            {
+                acknowledged++;
+                rejectedAfterAcknowledgement = fixture.Workflow.UpdateConfigurationAsync(
+                    fixture.PartId, "PLA", "Black", 3, default);
+            }, caller.Token);
+            await removal.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(older.Token.IsCancellationRequested);
+            Assert.Equal(0, acknowledged);
+            if (outcome == "caller-canceled") caller.Cancel();
+            else removal.Release.TrySetResult();
+            if (outcome == "caller-canceled")
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => removing);
+            else await removing.WaitAsync(TimeSpan.FromSeconds(5));
+
+            if (outcome == "success")
+            {
+                await first.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.True(older.Token.IsCancellationRequested);
+                Assert.Equal(1, acknowledged);
+                await Assert.ThrowsAsync<ArgumentException>(() => rejectedAfterAcknowledgement!);
+                Assert.False(older.ActualTask!.IsCompleted);
+                Assert.Equal(fixture.OtherPartId, Assert.Single(fixture.Workflow.Parts).PartId);
+                var quote = Assert.IsType<InstantQuotationOrderQuote>(fixture.Workflow.OrderQuote);
+                var current = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+                var receipt = Assert.Single(current.PhysicalReceipts!, row => row.MaterialKey == "PLA");
+                Assert.Equal(fixture.OtherPartId, receipt.PartId);
+                Assert.Equal(Guid.Parse("88888888-8888-8888-8888-888888888888"), receipt.FileId);
+                Assert.Equal(fixture.PhysicalDigest, receipt.UploadSha256);
+                Assert.Equal(Owner, receipt.OwnerIdentity);
+                Assert.Equal(fixture.SessionId, receipt.SessionId);
+                Assert.Equal(1, receipt.Quantity);
+                Assert.True(receipt.DepositedMm3 > 0);
+                Assert.True(fixture.Tickets.Validate(current, quote, current.QuoteAuthorization!, DateTimeOffset.UtcNow));
+                var afterRemoval = System.Text.Json.JsonSerializer.Serialize(current);
+                older.Release.TrySetResult();
+                await older.ActualTask.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Same(quote, fixture.Workflow.OrderQuote);
+                Assert.True(afterRemoval == System.Text.Json.JsonSerializer.Serialize(
+                    (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!));
+            }
+            else
+            {
+                Assert.False(older.Token.IsCancellationRequested);
+                Assert.False(first.IsCompleted);
+                Assert.Equal(0, acknowledged);
+                Assert.Null(rejectedAfterAcknowledgement);
+                Assert.Equal(2, fixture.Workflow.Parts.Count);
+                Assert.True(protectedBefore == System.Text.Json.JsonSerializer.Serialize(
+                    (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!));
+                older.Release.TrySetResult();
+                await first.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Equal(2, fixture.Workflow.Parts.Count);
+            }
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            removal.Release.TrySetResult();
+            older.Release.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await DrainSupersessionTaskAsync(first),
+                async () => await DrainSupersessionTaskAsync(removing),
+                async () => { if (older.ActualTask is { } actual) await DrainSupersessionTaskAsync(actual); });
+        }
+    }
+
+    [Fact]
+    public async Task AcknowledgedRemoval_RejectsCachedAdmissionAndQueuedMutationUnderExistingGates()
+    {
+        var removal = new ControlledRemovalClient("success");
+        await using var fixture = await Fixture.CreateAsync(partCount: 2, removal: removal);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var gate = (SemaphoreSlim)typeof(InstantQuotationWorkflowCoordinator)
+            .GetField("stateGate", flags)!.GetValue(fixture.Workflow)!;
+        var entries = (System.Collections.IEnumerable)typeof(InstantQuotationWorkflowCoordinator)
+            .GetField("entries", flags)!.GetValue(fixture.Workflow)!;
+        var entry = entries.Cast<object>().Single(candidate =>
+            ((InstantQuotationPart?)candidate.GetType().GetProperty("Part")!.GetValue(candidate))?.PartId == fixture.PartId);
+        Assert.Equal("M68", fixture.Workflow.ValidateConfiguration(
+            fixture.PartId, "M68", "White", 7).Key);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await gate.WaitAsync(lease.Token);
+        var held = true;
+        var queued = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 7, default);
+        Task removing = Task.CompletedTask;
+        var acknowledged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Exception? primary = null;
+        try
+        {
+            Assert.False(queued.IsCompleted);
+            removing = fixture.Workflow.RemoveAsync(fixture.PartId, () => acknowledged.TrySetResult(), default);
+            await removal.Entered.Task.WaitAsync(lease.Token);
+            removal.Release.TrySetResult();
+            await acknowledged.Task.WaitAsync(lease.Token);
+            // Exercise the actual private admission boundary with the previously validated cached entry.
+            var admission = typeof(InstantQuotationWorkflowCoordinator)
+                .GetMethod("BeginConfigurationRequest", flags)!;
+            var refused = Assert.Throws<System.Reflection.TargetInvocationException>(() =>
+                admission.Invoke(fixture.Workflow, [fixture.PartId, entry]));
+            Assert.IsType<ArgumentException>(refused.InnerException);
+            Assert.False(queued.IsCompleted);
+            gate.Release();
+            held = false;
+            await queued.WaitAsync(lease.Token);
+            await removing.WaitAsync(lease.Token);
+            var removedPart = (InstantQuotationPart)entry.GetType().GetProperty("Part")!.GetValue(entry)!;
+            Assert.Equal(1, removedPart.Configuration.Quantity);
+            Assert.Equal(fixture.OtherPartId, Assert.Single(fixture.Workflow.Parts).PartId);
+            var stored = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+            Assert.Equal(fixture.OtherPartId, Assert.Single(stored.Parts).PartId);
+            Assert.Equal(1, Assert.Single(stored.Parts).Configuration.Quantity);
+            Assert.NotNull(stored.QuoteAuthorization);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            if (held) gate.Release();
+            removal.Release.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await DrainSupersessionTaskAsync(queued),
+                async () => await DrainSupersessionTaskAsync(removing));
+        }
+    }
+
+    private sealed class ControlledRemovalClient(string outcome) : IInstantQuotationUploadClient
+    {
+        internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? owner,
+            InstantQuotationUploadReference reference, string operationId, CancellationToken token)
+        {
+            Entered.TrySetResult();
+            await Release.Task.WaitAsync(token);
+            return new(outcome == "mismatch" ? "different-operation" : operationId,
+                outcome == "unknown" ? InstantQuotationServiceStatus.Unavailable : InstantQuotationServiceStatus.Available,
+                outcome == "denied" ? InstantQuotationAuthorizationStatus.Denied : InstantQuotationAuthorizationStatus.Authorized,
+                outcome == "refused" ? InstantQuotationOperationStatus.Failed : InstantQuotationOperationStatus.Succeeded,
+                outcome == "refused" ? InstantQuotationProblemCategory.Validation : InstantQuotationProblemCategory.None);
+        }
+        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? owner, Stream content,
+            string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim claim,
+            string operationId, CancellationToken token) => throw new InvalidOperationException("No upload expected.");
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? owner, int requestId,
+            IReadOnlyList<InstantQuotationUploadReference> references, string operationId, CancellationToken token) =>
+            throw new InvalidOperationException("No finalization expected.");
+    }
+
     private static async Task DrainSupersessionTaskAsync(Task task, bool callbackFault = false)
     {
         try { await task.WaitAsync(TimeSpan.FromSeconds(5)); }
@@ -404,7 +575,7 @@ public sealed class MaterialPricingLifetimeTests
         private static readonly byte[] PhysicalBytes = WallThicknessParityBrowserFixture.Box(8);
         public string PhysicalDigest => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(PhysicalBytes));
         public string SessionId { get; private set; } = "";
-        private Fixture(bool physical)
+        private Fixture(bool physical, ControlledRemovalClient? removal)
         {
             scope = factory.Services.CreateAsyncScope();
             Store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
@@ -417,14 +588,14 @@ public sealed class MaterialPricingLifetimeTests
                 : scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
             Tickets = scope.ServiceProvider.GetRequiredService<IInstantQuotationQuoteTicketService>();
             Workflow = new(Store,
-                scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
+                removal ?? scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>(),
                 scope.ServiceProvider.GetRequiredService<IInstantQuotationPricingService>(), Owner,
                 quoteTicketService: Tickets,
                 authoritativePricingService: Pricing);
         }
-        public static async Task<Fixture> CreateAsync(bool initialize = true, bool physical = false, int partCount = 1)
+        public static async Task<Fixture> CreateAsync(bool initialize = true, bool physical = false, int partCount = 1, ControlledRemovalClient? removal = null)
         {
-            var fixture = new Fixture(physical);
+            var fixture = new Fixture(physical, removal);
             try
             {
                 var reference = new InstantQuotationUploadReference("66666666-6666-6666-6666-666666666666");
@@ -443,6 +614,8 @@ public sealed class MaterialPricingLifetimeTests
                 {
                     PartId = fixture.OtherPartId,
                     UploadReference = new InstantQuotationUploadReference("88888888-8888-8888-8888-888888888888"),
+                    PhysicalAnalysisUpload = part.PhysicalAnalysisUpload is { } admitted
+                        ? admitted with { FileId = Guid.Parse("88888888-8888-8888-8888-888888888888") } : null,
                 } };
                 var state = await fixture.Store.CreateAsync(Owner, new InstantQuotationOrderState(parts), default);
                 fixture.SessionId = state.SessionId;
@@ -470,7 +643,9 @@ public sealed class MaterialPricingLifetimeTests
                 token.ThrowIfCancellationRequested();
                 return Task.FromResult(new InstantQuotationPhysicalAnalysisInputResult(
                     PhysicalBytes, InstantQuotationPhysicalAnalysisInputFailure.None,
-                    Guid.Parse("66666666-6666-6666-6666-666666666666"), "controlled.stl",
+                    partId == Guid.Parse("77777777-7777-7777-7777-777777777777")
+                        ? Guid.Parse("88888888-8888-8888-8888-888888888888")
+                        : Guid.Parse("66666666-6666-6666-6666-666666666666"), "controlled.stl",
                     Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(PhysicalBytes))));
             }
         }

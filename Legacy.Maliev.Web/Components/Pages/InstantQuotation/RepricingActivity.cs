@@ -11,7 +11,10 @@ internal sealed class RepricingActivity
         return () => operation is not null && owned.GetValueOrDefault(partId) == operation;
     }
 
-    public void Forget(Guid partId) => owned.Remove(partId);
+    public void Forget(Guid partId)
+    {
+        if (owned.Remove(partId, out var operation)) Complete(operation);
+    }
 
     public void ClearOwnership() => owned.Clear();
 

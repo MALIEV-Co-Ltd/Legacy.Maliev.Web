@@ -1350,6 +1350,118 @@ public sealed class InstantQuotationResinPresentationTests
         public ValueTask DisposeAsync() { disposed = true; return ValueTask.CompletedTask; }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AdmittedRemoveUi_RetiresGateOnlyAfterAuthorizedAcknowledgement(bool succeeds)
+    {
+        using var culture = new CultureScope("en");
+        var part = Part("PLA", BuildPreference.Standard);
+        var other = Part("PETG", BuildPreference.Quality);
+        var removal = new AcknowledgedRemoveClient(succeeds);
+        var pricing = new HeldReviewPricing();
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(part, other), removal, new InstantQuotationPricingService(), null,
+            authoritativePricingService: pricing);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var older = pricing.Arm(false);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            object? Invoke(string name, params object[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            bool Active() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("IsRepricing", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            var updating = (Task)Invoke("ChangeMaterialAsync", part.PartId, new ChangeEventArgs { Value = "PETG" })!;
+            Task removing = Task.CompletedTask;
+            Exception? primary = null;
+            try
+            {
+                await older.Entered.Task.WaitAsync(lease.Token);
+                Assert.True(Active());
+                var removeButton = Regex.Match(WebUtility.HtmlDecode(root.ToHtmlString()),
+                    "<button[^>]*aria-label=\"Remove " + Regex.Escape(part.DisplayFileName) + "\"[^>]*>");
+                Assert.True(removeButton.Success);
+                Assert.DoesNotContain("disabled", removeButton.Value, StringComparison.Ordinal);
+                removing = (Task)Invoke("RemovePartAsync", part.PartId)!;
+                await removal.Entered.Task.WaitAsync(lease.Token);
+                Assert.True(Active());
+                Assert.False(updating.IsCompleted);
+                removal.Release.TrySetResult();
+                await removing.WaitAsync(lease.Token);
+                if (succeeds)
+                {
+                    await updating.WaitAsync(lease.Token);
+                    Assert.False(Active());
+                    Assert.False(older.Actual!.IsCompleted);
+                    Assert.Equal(other.PartId, Assert.Single(coordinator.Parts).PartId);
+                    Assert.True((bool)typeof(InstantQuotationWorkflow)
+                        .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!);
+                }
+                else
+                {
+                    Assert.True(Active());
+                    Assert.False(updating.IsCompleted);
+                    Assert.Equal(2, coordinator.Parts.Count);
+                }
+                var quote = coordinator.OrderQuote;
+                older.Release.TrySetResult();
+                await updating.WaitAsync(lease.Token);
+                await older.Actual!.WaitAsync(lease.Token);
+                if (succeeds)
+                {
+                    Assert.Same(quote, coordinator.OrderQuote);
+                    Assert.Equal(other.PartId, Assert.Single(coordinator.Parts).PartId);
+                }
+                else Assert.Contains(coordinator.Parts, row => row.PartId == part.PartId);
+                Assert.False(Active());
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                removal.Release.TrySetResult();
+                older.Release.TrySetResult();
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        updating, () => lease.Cancel(), () => older.Release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "acknowledged-remove-old-price"),
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        removing, () => lease.Cancel(), () => removal.Release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "acknowledged-remove-consumer"),
+                    async () => await pricing.DrainAsync());
+            }
+        });
+    }
+
+    private sealed class AcknowledgedRemoveClient(bool succeeds) : IInstantQuotationUploadClient
+    {
+        internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? owner,
+            InstantQuotationUploadReference reference, string operationId, CancellationToken token)
+        {
+            Entered.TrySetResult();
+            await Release.Task.WaitAsync(token);
+            return new(operationId, InstantQuotationServiceStatus.Available,
+                InstantQuotationAuthorizationStatus.Authorized,
+                succeeds ? InstantQuotationOperationStatus.Succeeded : InstantQuotationOperationStatus.Failed,
+                succeeds ? InstantQuotationProblemCategory.None : InstantQuotationProblemCategory.Validation);
+        }
+        public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? owner, Stream content,
+            string name, string type, long size, InstantQuotationGeometryClaim claim, string operationId,
+            CancellationToken token) => throw new InvalidOperationException("No upload expected.");
+        public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? owner, int requestId,
+            IReadOnlyList<InstantQuotationUploadReference> references, string operationId, CancellationToken token) =>
+            throw new InvalidOperationException("No finalization expected.");
+    }
+
     private sealed class AdmissionAnalyticsSink : IInstantQuotationAnalyticsSink
     {
         internal List<InstantQuotationAnalyticsPayload> Payloads { get; } = [];

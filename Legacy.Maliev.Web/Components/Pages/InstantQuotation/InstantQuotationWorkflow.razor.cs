@@ -877,7 +877,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (workflow is not null)
         {
             var part = Parts.SingleOrDefault(item => item.PartId == partId);
-            await workflow.RemoveAsync(partId, default);
+            await workflow.RemoveAsync(partId, () => repricing.Forget(partId), default);
             if (part is not null && Parts.All(item => item.PartId != partId))
             {
                 thicknessStatuses.Remove(partId);
