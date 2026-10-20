@@ -177,8 +177,8 @@ internal sealed class InstantQuotationAuthoritativePricingService(
             return null;
         }
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        using var selectedDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30), clock);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, selectedDeadline.Token);
         var evidence = new Dictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>();
         try
         {
@@ -204,8 +204,8 @@ internal sealed class InstantQuotationAuthoritativePricingService(
 
             if (includeComparisons)
             {
-                using var comparisonTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                comparisonTimeout.CancelAfter(TimeSpan.FromSeconds(3));
+                using var comparisonDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(3), clock);
+                using var comparisonTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, comparisonDeadline.Token);
                 foreach (var part in session.Parts)
                 {
                     if (!IsAdmittedStl(part))

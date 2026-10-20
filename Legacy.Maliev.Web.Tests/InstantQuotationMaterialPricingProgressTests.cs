@@ -431,16 +431,18 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         var clock = new ManualClock();
         await Fixture.RunAsync(async fixture =>
         {
-            var session = await fixture.CreateAsync();
+            // Resin keeps this deadline-only gate independent of selected FDM simulation.
+            var session = await fixture.CreateAsync(materialKey: "M68");
             var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(late);
             using var caller = new CancellationTokenSource();
             int observedBoundaries = 0;
+            CancellationToken unavailableToken = default;
             bool waitingForReader = true;
-            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
             {
                 // Fixed bits record only structural boundaries, without material/session data.
-                int boundary = (frame.MaterialKey == "ABS", frame.Status) switch
+                int boundary = (frame.MaterialKey == "M68", frame.Status) switch
                 {
                     (true, InstantQuotationMaterialPricingStatus.Pending) => 1,
                     (true, InstantQuotationMaterialPricingStatus.Completed) => 2,
@@ -452,6 +454,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 };
                 Interlocked.Or(ref observedBoundaries, boundary);
                 if (frame.Status != InstantQuotationMaterialPricingStatus.Unavailable) return ValueTask.CompletedTask;
+                unavailableToken = token;
                 entered.TrySetResult(); return new ValueTask(late.Task);
             }, caller.Token);
             try
@@ -461,10 +464,13 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 clock.Advance(TimeSpan.FromSeconds(3)); fixture.Record("clock", "advance-3");
                 await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
                 Assert.False(run.IsCompleted);
+                Assert.False(unavailableToken.IsCancellationRequested);
                 clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
                 Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+                Assert.True(unavailableToken.IsCancellationRequested);
+                Assert.False(caller.IsCancellationRequested);
                 late.TrySetResult();
-                Assert.Equal(2, fixture.Reader.ReadCount);
+                Assert.Equal(1, fixture.Reader.ReadCount);
             }
             catch (Exception exception)
             {
@@ -474,7 +480,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                     // Samples are advisory; reporting must preserve the original exception.
                     try
                     {
-                        output.WriteLine("reader-ordinal-2: reads={0}; entered={1}; quote={2}; unavailable={3}; boundaries={4}; fault={5}",
+                        output.WriteLine("reader-ordinal-1: reads={0}; entered={1}; quote={2}; unavailable={3}; boundaries={4}; fault={5}",
                             fixture.Reader.ReadCount, fixture.Reader.Entered.Task.IsCompleted, run.Status,
                             entered.Task.IsCompleted, Volatile.Read(ref observedBoundaries),
                             run.Exception?.GetBaseException().GetType().Name ?? "none");
@@ -488,7 +494,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 await fixture.DrainAsync(run, caller.Cancel, () => MaterialPricingTestCleanup.ReleaseAll(
                     () => fixture.Reader.Release.TrySetResult(), () => late.TrySetResult()), caller.Token);
             }
-        }, output, gateRead: 2, clock: clock);
+        }, output, gateRead: 1, clock: clock);
     }
 
     [Theory]
@@ -590,12 +596,14 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             var session = await fixture.CreateAsync(materialKey: "M68");
             var frames = new List<InstantQuotationMaterialPricingProgress>();
-            var quote = await fixture.Service.QuoteAsync(session, Owner, includeComparisons,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            var quote = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, includeComparisons,
+                    (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, token));
             Assert.NotNull(quote);
             if (!includeComparisons)
             {
-                var expected = await fixture.Service.QuoteAsync(session, Owner, false, default);
+                var expected = await fixture.QuoteWithWallLifetimeAsync(token =>
+                    fixture.Service.QuoteAsync(session, Owner, false, token));
                 Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
             }
             if (!includeComparisons) Assert.Equal(0, fixture.Reader.ReadCount);
@@ -616,7 +624,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                     card => card.MaterialKey == "ABS").UnitPrice);
                 Assert.True(frames.IndexOf(completed) < frames.IndexOf(comparison));
             }
-        }, output);
+        }, output, clock: new ManualClock());
     }
 
     [Fact]
@@ -671,10 +679,12 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         await Fixture.RunAsync(async fixture =>
         {
             var session = await fixture.CreateAsync();
-            var expected = await fixture.Service.QuoteAsync(session, Owner, true, default);
+            var expected = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, true, token));
             var frames = new List<InstantQuotationMaterialPricingProgress>();
-            var actual = await fixture.Service.QuoteAsync(session, Owner, true,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            var actual = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, true,
+                    (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, token));
             Assert.NotNull(actual);
             Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(actual));
             var stored = await fixture.Store.GetAsync(session.SessionId, Owner, default);
@@ -687,7 +697,56 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             // 28.0766752577, explicit minimum surcharge 200; ceil10(201.9233) = 210.
             Assert.InRange(Assert.Single(actual.Parts).DirectCostPerUnit, 47.5000001, 50);
             Assert.Equal(210, Assert.Single(actual.Parts).UnitPrice);
-        }, output);
+        }, output, clock: new ManualClock());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PlainOverload_UsesInjectedClockForOwnedDeadlines(bool includeComparisons)
+    {
+        var clock = new ManualClock();
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync(materialKey: includeComparisons ? "M68" : "ABS");
+            using var caller = new CancellationTokenSource();
+            var run = fixture.Service.QuoteAsync(session, Owner, includeComparisons, caller.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                Assert.False(fixture.Reader.ObservedCancellation.IsCancellationRequested);
+                clock.Advance(TimeSpan.FromSeconds(includeComparisons ? 3 : 30));
+                Assert.True(fixture.Reader.ObservedCancellation.IsCancellationRequested);
+                var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+                if (includeComparisons)
+                {
+                    Assert.NotNull(quote);
+                    var line = Assert.Single(quote.Parts);
+                    Assert.Equal(770, line.UnitPrice);
+                    Assert.Null(line.PhysicalReceipt);
+                    var fdmCards = line.MaterialPrices.Where(
+                        card => PricingCatalog.ResolveMaterial(card.MaterialKey)!.Process == PrintProcess.Fdm).ToArray();
+                    Assert.NotEmpty(fdmCards);
+                    Assert.All(fdmCards, card =>
+                    {
+                        Assert.Null(card.UnitPrice);
+                        Assert.Null(card.PhysicalReceipt);
+                    });
+                }
+                else
+                {
+                    Assert.Null(quote);
+                }
+                Assert.Equal(1, fixture.Reader.ReadCount);
+                Assert.False(caller.IsCancellationRequested);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => fixture.Reader.Release.TrySetResult(), caller.Token);
+            }
+        }, output, gateRead: 1, clock: clock);
     }
 
     [Fact]
@@ -760,6 +819,25 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             var session = await Store.CreateAsync(Owner, new InstantQuotationOrderState(parts), default);
             Reader.SessionId = session.SessionId;
             return session;
+        }
+        public async Task<InstantQuotationOrderQuote?> QuoteWithWallLifetimeAsync(
+            Func<CancellationToken, Task<InstantQuotationOrderQuote?>> start)
+        {
+            using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(33));
+            Task<InstantQuotationOrderQuote?>? actual = null;
+            try
+            {
+                actual = start(lifetime.Token);
+                return await actual.WaitAsync(lifetime.Token);
+            }
+            catch (Exception exception) { PrimaryFailure ??= exception; throw; }
+            finally
+            {
+                if (actual is not null && !actual.IsCompletedSuccessfully)
+                {
+                    await DrainAsync(actual, lifetime.Cancel, () => { }, lifetime.Token);
+                }
+            }
         }
         public void Record(string phase, string state) => diagnostics.Record(phase, state);
         public void OwnGate(TaskCompletionSource gate) => gates.Add(() => gate.TrySetResult());
@@ -845,6 +923,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         public Action<string, bool>? Report { get; set; }
         public string? SessionId { get; set; }
         public int ReadCount { get; private set; }
+        public CancellationToken ObservedCancellation { get; private set; }
         public HashSet<Guid> PartIds { get; set; } = [PartId];
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -853,6 +932,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             Assert.Equal(SessionId, sessionId); Assert.Equal(Owner, ownerIdentity); Assert.Contains(partId, PartIds);
             ReadCount++;
+            ObservedCancellation = cancellationToken;
             Report?.Invoke("entered", cancellationToken.IsCancellationRequested);
             if (ReadCount == gateRead) { Entered.TrySetResult(); await Release.Task.WaitAsync(cancellationToken); }
             Report?.Invoke("returned", cancellationToken.IsCancellationRequested);
