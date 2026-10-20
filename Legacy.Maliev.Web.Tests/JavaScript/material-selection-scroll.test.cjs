@@ -78,3 +78,24 @@ test('price rerender preserves a customer scroll away from the selection', () =>
   assert.equal(f.container.scrollTop, 120);
   assert.equal(f.visible(), false);
 });
+
+
+test('price rerender does not reveal after an intervening customer scroll', () => {
+  const f = fixture();
+  f.render(); f.frame();
+  f.item.materialPrices.height = 56;
+  f.render();
+  f.container.scrollTop = 120;
+  f.frame();
+  assert.equal(f.container.scrollTop, 120);
+  assert.equal(f.visible(), false);
+});
+
+test('selection reveal yields to a customer scroll before its frame', () => {
+  const f = fixture();
+  f.render();
+  f.container.scrollTop = 120;
+  f.frame();
+  assert.equal(f.container.scrollTop, 120);
+  assert.equal(f.visible(), false);
+});

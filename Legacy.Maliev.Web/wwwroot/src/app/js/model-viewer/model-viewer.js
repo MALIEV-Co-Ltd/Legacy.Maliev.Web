@@ -3990,8 +3990,10 @@ function ModelViewerUtils(culture, currency, viewer) {
         // the selection event finishes updating the rest of the configuration layout.
         if (selectedKey !== lastRevealedMaterialKey || preserveSelectedVisibility) {
             lastRevealedMaterialKey = selectedKey;
+            var scrollTopBeforeReveal = container.scrollTop;
             window.requestAnimationFrame(function () {
-                if (activeId && items[activeId].material === selectedKey) {
+                if (activeId && items[activeId].material === selectedKey
+                    && container.scrollTop === scrollTopBeforeReveal) {
                     RevealSelectedMaterialCard(container);
                 }
             });
