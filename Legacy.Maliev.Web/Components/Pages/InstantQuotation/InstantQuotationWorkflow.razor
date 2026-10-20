@@ -406,6 +406,13 @@
                     </fieldset>
                 </fieldset>
 
+                @if (!IsRepricing
+                    && OrderQuote?.Parts.SingleOrDefault(line => line.PartId == part.PartId)?.PhysicalReceipt?.GeometryReconstruction is { } reconstruction
+                    && reconstruction.IsValid())
+                {
+                    <InstantQuotationPhysicalResult IsReady="true" Failure="None" Reconstruction="@reconstruction" />
+                }
+
                 @if (workflow?.CurrentPhysicalAnalysisBinding(part.PartId,
                     Services.GetRequiredService<FdmRuntimeProfileCatalog>().ProfileVersion) is not null)
                 {

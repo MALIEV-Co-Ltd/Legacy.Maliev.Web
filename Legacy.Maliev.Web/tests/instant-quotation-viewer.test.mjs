@@ -453,3 +453,55 @@ function fakeLargeMesh(triangleCount, onVertexRead, material = new MeshStandardM
     },
   };
 }
+
+test('standalone additive STEP imports request finer tessellation and leave IGES and cancellation unchanged', async () => {
+  const documentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const factoryDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'occtimportjs');
+  const calls = [];
+  const result = () => ({
+    success: true,
+    meshes: [{ attributes: { position: { array: cubeVertices() } }, index: { array: cubeIndices() } }],
+  });
+  const record = (format, bytes, parameters) => {
+    calls.push({ format, bytes: Array.from(bytes), parameters });
+    return result();
+  };
+  try {
+    globalThis.document = {};
+    globalThis.occtimportjs = async () => ({
+      ReadStepFile: (bytes, parameters) => record('step', bytes, parameters),
+      ReadIgesFile: (bytes, parameters) => record('iges', bytes, parameters),
+    });
+    // A separate module instance keeps this controlled API out of the production-loader cache.
+    const viewer = await import('../wwwroot/src/app/js/instant-quotation/model-viewer.mjs?step-import-parameters');
+    for (const extension of ['step', 'stp', 'igs', 'iges']) {
+      const object = await viewer.loadStandaloneModel({
+        name: 'controlled.' + extension,
+        arrayBuffer: async () => Uint8Array.from([11, 22, 33]).buffer,
+      });
+      object.traverse(child => {
+        child.geometry?.dispose();
+        for (const material of [].concat(child.material ?? [])) material.dispose();
+      });
+    }
+    assert.deepEqual(calls, [
+      { format: 'step', bytes: [11, 22, 33], parameters: { linearDeflection: 0.02 } },
+      { format: 'step', bytes: [11, 22, 33], parameters: { linearDeflection: 0.02 } },
+      { format: 'iges', bytes: [11, 22, 33], parameters: null },
+      { format: 'iges', bytes: [11, 22, 33], parameters: null },
+    ]);
+
+    const cancellation = new AbortController();
+    cancellation.abort();
+    await assert.rejects(viewer.loadStandaloneModel({
+      name: 'cancelled.step',
+      arrayBuffer: async () => Uint8Array.from([11, 22, 33]).buffer,
+    }, { signal: cancellation.signal }), { name: 'AbortError' });
+    assert.equal(calls.length, 4);
+  } finally {
+    if (documentDescriptor) Object.defineProperty(globalThis, 'document', documentDescriptor);
+    else delete globalThis.document;
+    if (factoryDescriptor) Object.defineProperty(globalThis, 'occtimportjs', factoryDescriptor);
+    else delete globalThis.occtimportjs;
+  }
+});

@@ -25,25 +25,36 @@ public sealed record InstantQuotationPhysicalAnalysisReceipt(
     double MotionSeconds,
     double BoundingCm3PerUnit)
 {
+    /// <summary>Gets pricing-only reconstruction evidence bound into the protected physical digest.</summary>
+    public VoxelReconstructionInfo? GeometryReconstruction { get; init; }
+
     internal static InstantQuotationPhysicalAnalysisReceipt Create(
         InstantQuotationPhysicalAnalysisBinding binding,
         string configuredMaterialKey,
         SimulationResult physical,
         double boundingCm3PerUnit)
     {
-        var digest = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('|',
+        if (physical.GeometryReconstruction is { } reconstruction && !reconstruction.IsValid())
+            throw new ArgumentException("Reconstruction provenance is invalid.", nameof(physical));
+        string canonical = string.Join('|',
             physical.AnalysisVersion,
             physical.ProfileSha256,
             physical.TotalDepositedMm3.ToString("R", CultureInfo.InvariantCulture),
             physical.SupportDepositedMm3.ToString("R", CultureInfo.InvariantCulture),
             physical.Motion.TotalSeconds.ToString("R", CultureInfo.InvariantCulture),
             boundingCm3PerUnit.ToString("R", CultureInfo.InvariantCulture),
-            string.Join(',', physical.Diagnostics.Order(StringComparer.Ordinal))))));
+            string.Join(',', physical.Diagnostics.Order(StringComparer.Ordinal)));
+        if (physical.GeometryReconstruction is { } provenance)
+            canonical += FormattableString.Invariant($"|reconstruction:{provenance.Method}|voxel-mm:{provenance.VoxelSizeMm:R}");
+        var digest = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
         return new(binding.SessionId, binding.OwnerIdentity, binding.PartId, binding.FileId,
             binding.UploadSha256, configuredMaterialKey, binding.MaterialKey, binding.BuildPreference,
             binding.Quantity, binding.ProfileVersion, physical.ProfileSha256, physical.AnalysisVersion,
             digest, physical.TotalDepositedMm3, physical.SupportDepositedMm3,
-            physical.Motion.TotalSeconds, boundingCm3PerUnit);
+            physical.Motion.TotalSeconds, boundingCm3PerUnit)
+        {
+            GeometryReconstruction = physical.GeometryReconstruction,
+        };
     }
 
     internal bool Matches(InstantQuotationPhysicalAnalysisBinding binding, string configuredMaterialKey) =>

@@ -334,6 +334,43 @@ public sealed class InstantQuotationSessionStoreTests
                 && descriptor.ImplementationType == typeof(DistributedInstantQuotationSessionStore));
     }
 
+    [Theory]
+    [InlineData("voxel-majority-v1", 0.3, true)]
+    [InlineData("unknown", 0.3, false)]
+    [InlineData("voxel-majority-v1", 0.1, false)]
+    [InlineData("voxel-majority-v1", 0.6, false)]
+    public async Task PutGet_ReconstructionProvenanceRemainsProtectedOwnerScopedAndValidated(
+        string method, double size, bool accepted)
+    {
+        using var services = new ServiceCollection().AddDistributedMemoryCache().BuildServiceProvider();
+        var store = new DistributedInstantQuotationSessionStore(
+            services.GetRequiredService<IDistributedCache>(), new EphemeralDataProtectionProvider(),
+            new AdjustableTimeProvider(Now), NullLogger<DistributedInstantQuotationSessionStore>.Instance);
+        var fileId = Guid.NewGuid();
+        var original = State().Parts.Single();
+        var part = original with
+        {
+            UploadReference = new InstantQuotationUploadReference(fileId.ToString("D")),
+            PhysicalAnalysisUpload = new InstantQuotationPhysicalAnalysisUpload(
+                fileId, "part.stl", "model/stl", 100, original.Geometry.Sha256, "clean"),
+        };
+        var created = await store.CreateAsync("owner-1", new InstantQuotationOrderState([part]), default);
+        var receipt = new InstantQuotationPhysicalAnalysisReceipt(
+            created.SessionId, "owner-1", part.PartId, fileId, part.Geometry.Sha256,
+            "PLA", "PLA", BuildPreference.Standard, 1, "profile-v1", new string('B', 64),
+            "analysis-v1", new string('C', 64), 1000, 100, 3600, 2)
+        { GeometryReconstruction = new(method, size) };
+
+        Assert.Equal(accepted, await store.PutAsync(created with { PhysicalReceipts = [receipt] }, "owner-1", default));
+        var restored = await store.GetAsync(created.SessionId, "owner-1", default);
+        Assert.NotNull(restored);
+        if (accepted)
+            Assert.Equal(receipt, Assert.Single(restored.PhysicalReceipts!));
+        else
+            Assert.Null(restored.PhysicalReceipts);
+        Assert.Null(await store.GetAsync(created.SessionId, "foreign-owner", default));
+    }
+
     private static Fixture CreateFixture()
     {
         var services = new ServiceCollection()
