@@ -877,7 +877,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ReconcilePreviewsAsync()
     {
-        if (disposed || previewInterop is null)
+        var interop = previewInterop;
+        if (disposed || interop is null)
         {
             return;
         }
@@ -896,7 +897,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 try
                 {
                     if (!IsCurrentAdmission()) continue;
-                    await previewInterop.InvokeVoidAsync(
+                    await interop.InvokeVoidAsync(
                         "admit", key, ViewerPartKey(part.PartId), part.Configuration.MaterialKey);
                     if (!IsCurrentAdmission()) continue;
                     if (autoPreviewLocalId == localId)
@@ -944,7 +945,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 {
                     try
                     {
-                        var source = await previewInterop.InvokeAsync<string?>("captureFailedThumbnail", key, previewCanvas);
+                        var source = await interop.InvokeAsync<string?>("captureFailedThumbnail", key, previewCanvas);
                         if (!disposed && previewKeys.GetValueOrDefault(localId) == key
                             && Uploads.Any(item => item.LocalId == localId && item.Status is InstantQuotationWorkflowUploadStatus.Error)
                             && source is { Length: <= 262144 } && source.StartsWith("data:image/png;base64,", StringComparison.Ordinal))

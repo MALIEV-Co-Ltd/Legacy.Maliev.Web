@@ -722,6 +722,85 @@ public sealed class InstantQuotationResinPresentationTests
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreviewAdmission_NullInteropOrDisposedCompletionDoesNotPublishSelection(bool disposes)
+    {
+        var original = Part("PLA", BuildPreference.Quality);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(original), new SuccessfulRemoveClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var selected = new List<string>();
+        var sink = new AdmissionAnalyticsSink();
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var preview = new ControlledPreviewReference(async (name, args) =>
+            {
+                if (name == "admit")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                if (name == "select") selected.Add((string)args![0]!);
+                return null;
+            });
+            void Set(string name, object? value) => typeof(InstantQuotationWorkflow)
+                .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, value);
+            Set("previewInterop", disposes ? preview : null);
+            Set("analytics", new InstantQuotationAnalyticsTracker(sink));
+            Set("selectedPreviewPartId", null);
+            var localId = Assert.Single(coordinator.Parts).PreviewCorrelationId;
+            var keys = (Dictionary<Guid, string>)typeof(InstantQuotationWorkflow)
+                .GetField("previewKeys", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            keys.Add(localId, "held-preview");
+            Set("autoPreviewLocalId", localId);
+            var reconciling = (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ReconcilePreviewsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, null)!;
+            Exception? primary = null;
+            try
+            {
+                if (disposes)
+                {
+                    await entered.Task.WaitAsync(lease.Token);
+                    await component.DisposeAsync();
+                    release.TrySetResult();
+                }
+                else
+                {
+                    Assert.True(reconciling.IsCompletedSuccessfully);
+                    Assert.False(entered.Task.IsCompleted);
+                }
+                await reconciling.WaitAsync(lease.Token);
+                Assert.Null(typeof(InstantQuotationWorkflow)
+                    .GetField("selectedPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                Assert.Null(typeof(InstantQuotationWorkflow)
+                    .GetField("revealPreviewPartId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component));
+                Assert.Empty(selected);
+                Assert.Empty(sink.Payloads);
+            }
+            catch (Exception error) { primary = error; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        reconciling, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "nullable-preview-admission"));
+            }
+        });
+    }
+
     private sealed class AdmissionAnalyticsSink : IInstantQuotationAnalyticsSink
     {
         internal List<InstantQuotationAnalyticsPayload> Payloads { get; } = [];
