@@ -105,7 +105,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 720,
             displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
         var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
-        await card.ScrollIntoViewIfNeededAsync();
+        await card.ClickAsync(new() { Trial = true });
         var hitArea = await card.EvaluateAsync<double[]>("""
             card => {
                 const bounds = card.getBoundingClientRect();
