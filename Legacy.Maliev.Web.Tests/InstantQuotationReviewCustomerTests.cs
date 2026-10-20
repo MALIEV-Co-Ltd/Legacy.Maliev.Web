@@ -20,7 +20,12 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("aria-busy=\"@IsRepricing.ToString().ToLowerInvariant()\"", workflow, StringComparison.Ordinal);
         Assert.Contains("@Money(Quote?.FinalOrderPrice)", review, StringComparison.Ordinal);
         Assert.Contains("@Money(OrderQuote?.FinalOrderPrice)", workflow, StringComparison.Ordinal);
-        Assert.Contains("repricing.RunAsync(update, () => InvokeAsync(StateHasChanged), afterUpdate)", code, StringComparison.Ordinal);
+        Assert.Contains("repricing.RunAsync(update, NotifyAsync, afterUpdate)", code, StringComparison.Ordinal);
+        Assert.Contains(
+            "Task NotifyAsync() => InvokeAsync(() =>\n        {\n            if (!disposed) StateHasChanged();\n        });",
+            code.ReplaceLineEndings("\n"), StringComparison.Ordinal);
+        Assert.Contains("if (!disposed) await NotifyAsync();", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("repricing.RunAsync(update, () => InvokeAsync(StateHasChanged), afterUpdate)", code, StringComparison.Ordinal);
         Assert.Contains("กำลังอัปเดตราคาและระยะเวลาผลิต…", thai, StringComparison.Ordinal);
     }
 
