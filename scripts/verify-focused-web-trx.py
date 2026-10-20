@@ -50,6 +50,77 @@ ROSTERS = {'fdm': {'Legacy.Maliev.Web.Tests.FdmOriginalServiceEligibilityBoundar
  'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 12}}}
 
 
+BILLING_LIFETIME_CASES = (
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: \"exited\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: \"refused\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"start\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"identity\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"readers\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"kill\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"reap\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"readers\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"reader-close\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"handle-close\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"daemon\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"id\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"created\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"owner\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"envelope\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"init\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"signature\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.IO.IOException\", expected: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.Net.Sockets.SocketException\", expected: \"SocketException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.AspNetCore.Connections.AddressInUseExcep\"···, expected: \"AddressInUseException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.Extensions.Options.OptionsValidationExce\"···, expected: \"OptionsValidationException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.InvalidOperationException\", expected: \"InvalidOperationException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Npgsql.NpgsqlException\", expected: \"NpgsqlException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Npgsql.PostgresException\", expected: \"PostgresException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: False, expected: \"NotObserved\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: True, expected: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: False)",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: True)",
+)
+ROSTERS["billing-lifetime"] = {
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests": {
+        "StartupFailure_RecognizesOnlyTheExistingPrivateBoundary": 7,
+        "StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText": 1,
+        "StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks": 2,
+        "StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion": 2,
+        "Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease": 1,
+        "Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce": 2,
+        "ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup": 2,
+        "ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner": 1,
+        "ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled": 1,
+        "AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup": 3,
+        "FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease": 5,
+        "FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance": 1,
+        "InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease": 1,
+        "SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst": 1,
+        "SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt": 1,
+        "SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof": 1,
+        "BackendGenerationChange_RefusesMutationAndAbsenceReceipt": 7,
+        "BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal": 1,
+        "BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup": 1,
+        "BackendSdkIdentityLostBeforeDisposal_RefusesMutation": 1,
+        "BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease": 1,
+    }
+}
+
 ROSTERS["migration-consumers"] = {
     "Legacy.Maliev.Web.Tests.PublicCrawlerInventoryAcceptanceTests": {
         "SourceInventory_ActualEnglishAndThaiDocumentsKeepTheirDiscoveryContract": 54,
@@ -207,6 +278,8 @@ def verify(path, suite, assembly):
         actual[(cls, member)] += 1
     if actual != Counter({(cls, member): rows for cls, methods in expected.items() for member, rows in methods.items()}):
         raise ValueError("Exact independent class/method row roster required")
+    if suite == "billing-lifetime" and names != set(BILLING_LIFETIME_CASES):
+        raise ValueError("Exact lifecycle control identities required")
     if suite == "sidebar":
         cls = "Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"
         exact = {f'{cls}.RealPartsRailExposesLongNamesAndKeyboardActions(culture: "{culture}", width: {width})'

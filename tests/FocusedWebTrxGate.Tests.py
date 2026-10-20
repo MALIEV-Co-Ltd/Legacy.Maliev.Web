@@ -39,6 +39,10 @@ class FocusedGateControls(unittest.TestCase):
                     if suite == "sidebar":
                         culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1024, 1280)][index]
                         name = f'{cls}.{method}(culture: "{culture}", width: {width})'
+                    elif suite == "billing-lifetime":
+                        cases = [name for name in gate.BILLING_LIFETIME_CASES
+                                 if name == f"{cls}.{method}" or name.startswith(f"{cls}.{method}(")]
+                        name = cases[index]
                     else:
                         name = f"{cls}.{method}(syntheticControl: {index})"
                     test, execution = str(uuid.uuid4()), str(uuid.uuid4())
@@ -63,7 +67,7 @@ class FocusedGateControls(unittest.TestCase):
         self.assertEqual(12, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 12), ("migration-consumers", 147)):
+        for suite, total in (("fdm", 59), ("sidebar", 12), ("migration-consumers", 147), ("billing-lifetime", 43)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -102,15 +106,16 @@ class FocusedGateControls(unittest.TestCase):
             "foreign-codebase": lambda r: r.find(NS + "TestDefinitions")[0].find(NS + "TestMethod").set("codeBase", "Foreign.dll"),
             "foreign-storage": lambda r: r.find(NS + "TestDefinitions")[0].set("storage", "Foreign.dll"),
         }
-        with tempfile.TemporaryDirectory() as temp:
-            directory = Path(temp)
-            baseline, dll = self.fixture(directory, "fdm")
-            for label, mutate in mutations.items():
-                with self.subTest(label=label):
-                    root = copy.deepcopy(baseline)
-                    mutate(root)
-                    with self.assertRaises(ValueError):
-                        self.verify(root, directory, dll, "fdm")
+        for suite in ("fdm", "billing-lifetime"):
+            with tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp)
+                baseline, dll = self.fixture(directory, suite)
+                for label, mutate in mutations.items():
+                    with self.subTest(label=label):
+                        root = copy.deepcopy(baseline)
+                        mutate(root)
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, suite)
 
 
     def test_migration_consumer_families_cannot_be_dropped_skipped_or_replaced(self):
@@ -140,7 +145,7 @@ class FocusedGateControls(unittest.TestCase):
 
 
     def test_hidden_structural_rows_and_infrastructure_notices_are_rejected(self):
-        for suite in ("fdm", "sidebar", "migration-consumers"):
+        for suite in ("fdm", "sidebar", "migration-consumers", "billing-lifetime"):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 baseline, dll = self.fixture(directory, suite)
@@ -172,6 +177,26 @@ class FocusedGateControls(unittest.TestCase):
             output = ET.SubElement(summary, NS + "Output")
             ET.SubElement(output, NS + "StdOut").text = "Ordinary native test output"
             self.assertEqual(147, self.verify(root, directory, dll, "migration-consumers")["passed"])
+
+
+    def test_lifecycle_frozen_cases_and_wrong_argument_rejection(self):
+        self.assertEqual(43, len(gate.BILLING_LIFETIME_CASES))
+        self.assertEqual(43, len(set(gate.BILLING_LIFETIME_CASES)))
+        methods = gate.ROSTERS["billing-lifetime"]["Legacy.Maliev.Web.Tests.BillingProofLifetimeTests"]
+        self.assertEqual(31, sum(count for name, count in methods.items() if not name.startswith("StartupFailure_")))
+        self.assertEqual(12, sum(count for name, count in methods.items() if name.startswith("StartupFailure_")))
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll = self.fixture(directory, "billing-lifetime")
+            result = next(row for row in root.find(NS + "Results")
+                          if 'exceptionType: "System.IO.IOException"' in row.get("testName"))
+            changed = result.get("testName").replace("System.IO.IOException", "System.IO.OtherException")
+            result.set("testName", changed)
+            definition = next(row for row in root.find(NS + "TestDefinitions")
+                              if row.get("id") == result.get("testId"))
+            definition.set("name", gate.native_definition_display(changed))
+            with self.assertRaisesRegex(ValueError, "Exact lifecycle control identities"):
+                self.verify(root, directory, dll, "billing-lifetime")
 
     def test_unknown_sidebar_viewport_cannot_replace_required_row(self):
         for culture, width in (("en", 320), ("en", 1024), ("th", 1024)):
