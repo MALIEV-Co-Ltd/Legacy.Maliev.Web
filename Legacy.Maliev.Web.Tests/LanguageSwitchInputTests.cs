@@ -78,4 +78,35 @@ public sealed class LanguageSwitchInputTests
             httpContext.Response.Headers.SetCookie,
             value => value?.Contains(".AspNetCore.Culture=c%3Den%7Cuic%3Den", StringComparison.Ordinal) == true);
     }
+
+    [Theory]
+    [InlineData("en", "/member?tracking=excluded", "en", "/member?culture=en")]
+    [InlineData("EN", "/member?tracking=excluded", "en", "/member?culture=en")]
+    [InlineData("th", "/member?culture=en&tracking=excluded", "th", "/member")]
+    [InlineData("TH", "/member?culture=en&tracking=excluded", "th", "/member")]
+    [InlineData("en-US", "/member", "th", "/member")]
+    [InlineData("not-a-culture", "/member", "th", "/member")]
+    [InlineData(null, "/member", "th", "/member")]
+    [InlineData("", "/member", "th", "/member")]
+    [InlineData("en", "https://attacker.example/path", "en", "~/?culture=en")]
+    [InlineData("th", "//attacker.example/path", "th", "~/")]
+    public void MemberLanguageSwitch_RetainedHandlerNormalizesCookieAndRedirect(
+        string? culture, string returnUrl, string expectedCulture, string expectedReturn)
+    {
+        var context = new DefaultHttpContext();
+        var model = new global::Legacy.Maliev.Web.Areas.Member.Pages.Index(null!, null!, null!, null!, null!)
+        {
+            PageContext = new PageContext { HttpContext = context },
+        };
+        // Retain a compilable baseline overlay when the legacy named handler is absent.
+        var handler = model.GetType().GetMethod("OnPostSetLanguage", [typeof(string), typeof(string)]);
+        Assert.NotNull(handler);
+
+        var redirect = Assert.IsType<LocalRedirectResult>(handler.Invoke(model, [culture, returnUrl]));
+
+        Assert.Equal(expectedReturn, redirect.Url);
+        Assert.Contains(context.Response.Headers.SetCookie, value =>
+            value?.Contains($".AspNetCore.Culture=c%3D{expectedCulture}%7Cuic%3D{expectedCulture}",
+                StringComparison.Ordinal) == true);
+    }
 }

@@ -153,6 +153,7 @@
                  @ref="configurationSection"
                  tabindex="-1"
                  aria-labelledby="instant-quote-configuration-heading">
+            <div data-workflow-configuration-content>
             <h3 id="instant-quote-configuration-heading">@Localizer["Part configuration"]</h3>
 
             <section data-workflow-dfm-status aria-labelledby="instant-quote-dfm-heading">
@@ -226,16 +227,11 @@
                 var displayQuote = DisplayQuote(part);
                 <fieldset data-workflow-material-color-quantity data-workflow-material-picker>
                     <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
-                    <label for="material-@part.PartId">@Localizer["Material"]</label>
-                    <select id="material-@part.PartId"
-                            name="material"
-                            value="@part.Configuration.MaterialKey"
-                            @onchange="args => ChangeMaterialAsync(part.PartId, args)">
-                        @foreach (var material in Materials)
-                        {
-                            <option value="@material.Key">@Localizer[material.DisplayName]</option>
-                        }
-                    </select>
+                    <InstantQuotationMaterialSelector @key="part.PartId" Materials="Materials"
+                        SelectedMaterialKey="@part.Configuration.MaterialKey" PriceRows="CardPriceRows(part)"
+                        PricingPending="@(IsRepricing || HasUnacceptedConfiguration(part))"
+                        FormatPrice="Money"
+                        SelectionChanged="key => ChangeMaterialAsync(part.PartId, new ChangeEventArgs { Value = key })" />
                     <label for="color-@part.PartId">@Localizer["Color"]</label>
                     <select id="color-@part.PartId"
                             name="color"
@@ -405,6 +401,7 @@
                 </dl>
             }
 
+            </div>
             <div class="instant-quote__configuration-footer">
                 <details class="instant-quote__summary-dock" data-workflow-summary-dock>
                     <summary>

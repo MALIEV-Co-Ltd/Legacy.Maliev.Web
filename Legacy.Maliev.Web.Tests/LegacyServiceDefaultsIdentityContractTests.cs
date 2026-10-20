@@ -64,7 +64,6 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         foreach (var package in new[]
         {
             "Microsoft.AspNetCore.Authentication.JwtBearer",
-            "Microsoft.AspNetCore.DataProtection.StackExchangeRedis",
             "Microsoft.AspNetCore.OpenApi",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.EntityFrameworkCore.Relational",
@@ -74,6 +73,9 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         {
             Assert.Contains($"Include=\"{package}\" Version=\"{DotNetPatchVersion}\"", webProject, StringComparison.Ordinal);
         }
+
+        // Issue #572: only the owning DataProtection package uses the reviewed security servicing patch.
+        Assert.Contains("Include=\"Microsoft.AspNetCore.DataProtection.StackExchangeRedis\" Version=\"10.0.13\"", webProject, StringComparison.Ordinal);
 
         Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
         Assert.Contains("Include=\"MassTransit.RabbitMQ\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);

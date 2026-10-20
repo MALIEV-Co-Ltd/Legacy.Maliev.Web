@@ -55,7 +55,18 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.DoesNotContain("data-resin-build-preference", fieldset, StringComparison.Ordinal);
             }
 
-            foreach (var field in new[] { "material", "color" })
+            var materialCards = Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"[^\"]+\"[^>]*>");
+            Assert.NotEmpty(materialCards.Cast<Match>());
+            foreach (Match card in materialCards)
+            {
+                Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", card.Value);
+                Assert.DoesNotContain("aria-disabled=\"true\"", card.Value, StringComparison.Ordinal);
+            }
+            var selectedCard = Assert.Single(materialCards.Cast<Match>(),
+                card => card.Value.Contains("aria-checked=\"true\"", StringComparison.Ordinal));
+            Assert.Contains("data-material-key=\"" + material + "\"", selectedCard.Value, StringComparison.Ordinal);
+
+            foreach (var field in new[] { "color" })
             {
                 var control = Regex.Match(html, "<select\\b[^>]*id=\"" + field + "-" + part.PartId + "\"[^>]*>");
                 Assert.True(control.Success);
@@ -64,6 +75,49 @@ public sealed class InstantQuotationResinPresentationTests
             var quantityControl = Regex.Match(html, "<input\\b[^>]*id=\"quantity-" + part.PartId + "\"[^>]*>");
             Assert.True(quantityControl.Success);
             Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", quantityControl.Value);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", "M68", "Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review")]
+    [InlineData("th", "M68", "ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม")]
+    [InlineData("en", "PLA", null)]
+    [InlineData("th", "PLA", null)]
+    public async Task Review_UsesFinalResinSuitabilityCopyWithoutTechnicalPromises(
+        string culture, string material, string? expectedDetail)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part(material, BuildPreference.Standard);
+        var viewModel = new InstantQuotationWorkflowPartViewModel(
+            part.PartId, Guid.NewGuid(), part.DisplayFileName, part.Geometry, part.Configuration, null);
+        using var services = Services(new CapturingActivator(), new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(InstantQuotationReview.Parts)] = new[] { viewModel },
+                [nameof(InstantQuotationReview.Materials)] = new InstantQuotationWorkflowMaterialOption[]
+                {
+                    new("M68", "M68 resin"), new("PLA", "PLA"),
+                },
+            });
+            return (await renderer.RenderComponentAsync<InstantQuotationReview>(parameters)).ToHtmlString();
+        });
+
+        var details = Regex.Matches(html,
+            "<dd\\b[^>]*data-review-build-preference-detail[^>]*>([\\s\\S]*?)</dd>");
+        if (expectedDetail is null)
+        {
+            Assert.Empty(details.Cast<Match>());
+            return;
+        }
+
+        var detail = WebUtility.HtmlDecode(Assert.Single(details.Cast<Match>()).Groups[1].Value);
+        Assert.Equal(expectedDetail, detail);
+        foreach (var fdmTerm in new[] { "0.05", "full-layer", "post-cure", "walls", "infill", "ชั้นเรซิน", "ฉายแสง", "ผนัง", "อินฟิลล์" })
+        {
+            Assert.DoesNotContain(fdmTerm, detail, StringComparison.OrdinalIgnoreCase);
         }
     }
 

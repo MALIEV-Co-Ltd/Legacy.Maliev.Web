@@ -9,19 +9,137 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Real DOM/circuit events over controlled historical protected input; not FileService or authentication acceptance.</summary>
-public sealed class MaterialPricingDisplayBrowserTests
+public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 {
+    [Theory]
+    [InlineData("en", 375, ColorScheme.Light)]
+    [InlineData("th", 1280, ColorScheme.Dark)]
+    public async Task MaterialCardsSearchBothLanguagesAndArrowFocusDoesNotChangeSelection(string culture, int width, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
+        var selector = fixture.Page.Locator("[data-material-selector]");
+        var selected = selector.Locator("[role='radio'][aria-checked='true']");
+        await Assertions.Expect(selected).ToHaveAttributeAsync("data-material-key", "M68");
+        var initialUnitPrice = Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote).Parts).UnitPrice;
+        await Assertions.Expect(selector.Locator("[data-material-card-price='M68']")).ToContainTextAsync(initialUnitPrice.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
+        var cardLayout = await selected.EvaluateAsync<double[]>("""
+            card => {
+                const name = card.querySelector('strong').getBoundingClientRect();
+                const price = card.querySelector('[data-material-card-price]').getBoundingClientRect();
+                return [name.top, price.top, price.right, card.getBoundingClientRect().right];
+            }
+            """);
+        Assert.True(cardLayout[1] > cardLayout[0], "The price belongs in the source secondary row.");
+        Assert.True(cardLayout[2] <= cardLayout[3], "Card price must remain inside the narrow card.");
+        var firstRow = await selector.EvaluateAsync<double[]>("""
+            selector => {
+                const first = selector.querySelector('[data-material-key="PLA"]').getBoundingClientRect();
+                const second = selector.querySelector('[data-material-key="PETG"]').getBoundingClientRect();
+                return [first.top, second.top, first.left, second.left];
+            }
+            """);
+        Assert.InRange(Math.Abs(firstRow[0] - firstRow[1]), 0, 1);
+        Assert.True(firstRow[3] > firstRow[2], "The source picker uses two columns in both locales.");
+        var informationBounds = await selected.EvaluateAsync<double[]>("""
+            card => {
+                const button = card.querySelector('button').getBoundingClientRect();
+                const price = card.querySelector('[data-material-card-price]').getBoundingClientRect();
+                const bounds = card.getBoundingClientRect();
+                return [button.left, button.top, button.right, button.bottom, bounds.left, bounds.top, bounds.right, bounds.bottom, price.top];
+            }
+            """);
+        Assert.True(informationBounds[0] >= informationBounds[4] && informationBounds[1] >= informationBounds[5]);
+        Assert.True(informationBounds[2] <= informationBounds[6] && informationBounds[3] <= informationBounds[7]);
+        Assert.True(informationBounds[3] <= informationBounds[8], "The info hit area must not overlap the price row.");
+        await selected.Locator("button").ClickAsync();
+        await Assertions.Expect(selected).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(selected.Locator("button")).ToHaveAttributeAsync("aria-expanded", "true");
+        await selected.Locator("button").ClickAsync();
+        var otherInformation = selector.Locator("[data-material-key='PLA'] button");
+        await otherInformation.ClickAsync();
+        await Assertions.Expect(selector.Locator("[data-material-key='PLA']")).ToHaveAttributeAsync("aria-checked", "false");
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await otherInformation.ClickAsync();
+        await selected.FocusAsync();
+        await selected.PressAsync("ArrowDown");
+        await Assertions.Expect(selected).ToHaveAttributeAsync("data-material-key", "M68");
+        await Assertions.Expect(selector.Locator("[data-material-key='K']")).ToBeFocusedAsync();
+        var search = selector.Locator("[data-material-search]");
+        await search.FillAsync("carbon nanotubes");
+        await Assertions.Expect(selector.Locator("[role='radio']")).ToHaveCountAsync(1);
+        await Assertions.Expect(selector.Locator("[data-material-key='PA612-ESD']")).ToBeVisibleAsync();
+        await search.FillAsync("เป็นมิตร");
+        await Assertions.Expect(selector.Locator("[data-material-key='PLA']")).ToBeVisibleAsync();
+        await search.FillAsync("not-a-material-550");
+        await Assertions.Expect(selector.Locator("[data-material-category]")).ToHaveCountAsync(0);
+        await Assertions.Expect(selector.Locator("[role='radio']")).ToHaveCountAsync(0);
+        await search.FillAsync(string.Empty);
+        await Assertions.Expect(selector.Locator("[data-material-key='M68']")).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        var scroller = selector.Locator("[data-material-card-scroll]");
+        await scroller.HoverAsync();
+        var outerScroll = await fixture.Page.EvaluateAsync<double>("() => window.scrollY");
+        await fixture.Page.Mouse.WheelAsync(0, 300);
+        await fixture.Page.WaitForFunctionAsync("() => document.querySelector('[data-material-card-scroll]').scrollTop > 0");
+        Assert.Equal(outerScroll, await fixture.Page.EvaluateAsync<double>("() => window.scrollY"));
+        Assert.Equal("M68", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await selected.FocusAsync();
+        await selected.PressAsync("ArrowDown");
+        await selector.Locator("[data-material-key='K']").PressAsync(" ");
+        await Assertions.Expect(selector.Locator("[data-material-key='K']")).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        Assert.Equal("K", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await fixture.CaptureAsync($"source-material-consumer-{culture}-{width}");
+    }
+
+    [Theory]
+    [InlineData("en", ColorScheme.Light)]
+    [InlineData("th", ColorScheme.Dark)]
+    public async Task ShortDesktopMaterialCardClickIsNotCoveredBySummaryFooter(string culture, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 720,
+            displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
+        var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
+        await card.ScrollIntoViewIfNeededAsync();
+        var hitArea = await card.EvaluateAsync<double[]>("""
+            card => {
+                const bounds = card.getBoundingClientRect();
+                const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
+                const footer = card.closest('[data-workflow-configuration]').querySelector('.instant-quote__configuration-footer').getBoundingClientRect();
+                const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom, footer.top];
+            }
+            """);
+        var evidenceName = $"source-material-safe-hit-area-before-{culture}-1280-720";
+        await fixture.CaptureAsync(evidenceName);
+        await File.WriteAllTextAsync(Path.GetFullPath(Path.Combine("TestResults", "material-display-browser-controls", evidenceName + "-geometry.json")),
+            System.Text.Json.JsonSerializer.Serialize(new { Culture = culture, Width = 1280, Height = 720, Geometry = hitArea }));
+        Assert.True(hitArea[0] == 1 && hitArea[1] >= hitArea[3] - 1 && hitArea[2] <= hitArea[4] + 1 && hitArea[2] <= hitArea[5] + 1,
+            "The complete material card and its normal click target must stay above the summary footer.");
+        await Assertions.Expect(card.Locator("[data-material-card-price]")).ToHaveAttributeAsync("data-price-status", "unavailable");
+        // This historical fixture has resin authority; retain ABS geometry coverage before selecting supported resin.
+        card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
+        await card.ClickAsync();
+        await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        Assert.Equal("K", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await Assertions.Expect(fixture.Page.Locator(".instant-quote__configuration-footer")).ToBeVisibleAsync();
+        await Assertions.Expect(fixture.Page.Locator("[data-summary-legal]")).ToBeVisibleAsync();
+        await fixture.CaptureAsync($"source-material-safe-hit-area-{culture}-1280-720");
+    }
+
     [Theory]
     [InlineData("en", 375, ColorScheme.Light, InstantQuotationMaterialPricingStatus.Pending, "Calculating price…")]
     [InlineData("th", 320, ColorScheme.Dark, InstantQuotationMaterialPricingStatus.Completed, "600.00")]
     public async Task ActualQuantityEventShowsCurrentProgressBeforeFinalAuthority(string culture, int width,
         ColorScheme scheme, InstantQuotationMaterialPricingStatus status, string expected)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var gate = fixture.Control.Arm(2, status);
         try
         {
@@ -30,6 +148,10 @@ public sealed class MaterialPricingDisplayBrowserTests
             await fixture.Page.Locator("[data-workflow-material-comparison] > summary").ClickAsync();
             var row = fixture.Page.Locator("[data-workflow-material-price='M68']");
             await Assertions.Expect(row).ToBeVisibleAsync();
+            var cardPrice = fixture.Page.Locator("[data-material-card-price='M68']");
+            await Assertions.Expect(cardPrice).ToHaveAttributeAsync("data-price-status", status.ToString().ToLowerInvariant());
+            await Assertions.Expect(cardPrice).ToContainTextAsync(culture == "th" && status == InstantQuotationMaterialPricingStatus.Pending
+                ? "กำลังคำนวณราคา" : expected);
             await Assertions.Expect(row).ToContainTextAsync(expected);
             Assert.DoesNotContain("฿0", await row.InnerTextAsync(), StringComparison.Ordinal);
             if (status == InstantQuotationMaterialPricingStatus.Pending)
@@ -57,7 +179,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 320, ColorScheme.Dark)]
     public async Task InputOnlyCannotShowOldNumbersOrEnableReviewForDifferentVisibleQuantity(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var before = await fixture.StoredAsync();
         Assert.NotNull(before.QuoteAuthorization);
         await fixture.Quantity.FillAsync("3"); // actual input event; deliberately no blur/change
@@ -89,7 +211,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 320, ColorScheme.Dark)]
     public async Task QueuedQuantityThreeThenFourDoesNotRelabelOlderActualFrames(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var two = fixture.Control.Arm(2, InstantQuotationMaterialPricingStatus.Completed);
         var three = fixture.Control.Arm(3, InstantQuotationMaterialPricingStatus.Completed);
         var four = fixture.Control.Arm(4, InstantQuotationMaterialPricingStatus.Completed);
@@ -133,7 +255,7 @@ public sealed class MaterialPricingDisplayBrowserTests
     [InlineData("th", 320, ColorScheme.Dark)]
     public async Task OlderAcceptedCompletionCannotEraseNewerInputOnlyDraft(string culture, int width, ColorScheme scheme)
     {
-        await using var fixture = await Fixture.CreateAsync(culture, width, scheme);
+        await using var fixture = await Fixture.CreateAsync(output, culture, width, scheme);
         var three = fixture.Control.Arm(3, InstantQuotationMaterialPricingStatus.Completed, holdAuthorization: true);
         var four = fixture.Control.Arm(4, InstantQuotationMaterialPricingStatus.Completed);
         try
@@ -317,7 +439,8 @@ public sealed class MaterialPricingDisplayBrowserTests
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         public Fixture() => Factory = new(Control);
 
-        public static async Task<Fixture> CreateAsync(string culture, int width, ColorScheme scheme)
+        public static async Task<Fixture> CreateAsync(ITestOutputHelper output, string culture, int width, ColorScheme scheme, int height = 800,
+            string displayFileName = "historical-controlled.stl")
         {
             var fixture = new Fixture();
             try
@@ -332,11 +455,15 @@ public sealed class MaterialPricingDisplayBrowserTests
                 fixture.playwright = await Playwright.CreateAsync();
                 fixture.browser = await fixture.playwright.Chromium.LaunchAsync(new() { Headless = true });
                 fixture.context = await fixture.browser.NewContextAsync(new()
-                { ViewportSize = new() { Width = width, Height = 800 }, ColorScheme = scheme });
+                { ViewportSize = new() { Width = width, Height = height }, ColorScheme = scheme });
                 fixture.Page = await fixture.context.NewPageAsync();
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrorCount);
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
-                await fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle });
+                using (var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin))
+                {
+                    await initialNavigation.RunAsync(
+                        () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
+                }
                 var consent = fixture.Page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await consent.IsVisibleAsync()) await consent.ClickAsync();
                 var cookie = Assert.Single(await fixture.context.CookiesAsync(), candidate => candidate.Name == InstantQuotationSessionIdentityCookie.CookieName);
@@ -352,7 +479,7 @@ public sealed class MaterialPricingDisplayBrowserTests
                     InstantQuotationUploadResult.Succeeded("synthetic-historical-browser", reference, digest),
                     new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
-                var part = new InstantQuotationPart(Guid.NewGuid(), "historical-controlled.stl", reference, geometry, new("M68", "White", 1));
+                var part = new InstantQuotationPart(Guid.NewGuid(), displayFileName, reference, geometry, new("M68", "White", 1));
                 Assert.True(await store.PutAsync(stored with { RequestState = new([part]) }, null, default));
                 await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
@@ -371,7 +498,7 @@ public sealed class MaterialPricingDisplayBrowserTests
                     """);
                 return fixture;
             }
-            catch { await fixture.DisposeAsync(); throw; }
+            catch (Exception primary) { await fixture.DisposeAsync(primary); throw; }
         }
         public async Task ChangeQuantityAsync(int quantity)
         {
@@ -409,17 +536,34 @@ public sealed class MaterialPricingDisplayBrowserTests
                     AcceptedQuantity = Assert.Single((await StoredAsync()).Parts).Configuration.Quantity,
                 }));
         }
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync() => DisposeAsync(null);
+
+        private async ValueTask DisposeAsync(Exception? primary)
         {
-            Control.ReleaseAll();
-            foreach (var gate in Control.Gates.Where(candidate => candidate.Claimed != 0))
-                await gate.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            foreach (var gate in Control.Gates.Where(candidate => Volatile.Read(ref candidate.AuthorizationClaimed) != 0))
-                await gate.AuthorizationFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            if (context is not null) await context.DisposeAsync();
-            if (browser is not null) await browser.DisposeAsync();
-            playwright?.Dispose();
-            await Factory.DisposeAsync();
+            var releases = new List<Func<ValueTask>>
+            {
+                () => { Control.ReleaseAll(); return ValueTask.CompletedTask; },
+            };
+            foreach (var gate in Control.Gates)
+            {
+                releases.Add(async () =>
+                {
+                    if (gate.Claimed != 0) await gate.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                });
+            }
+            foreach (var gate in Control.Gates)
+            {
+                releases.Add(async () =>
+                {
+                    if (Volatile.Read(ref gate.AuthorizationClaimed) != 0)
+                        await gate.AuthorizationFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                });
+            }
+            releases.Add(async () => { if (context is not null) await context.DisposeAsync(); });
+            releases.Add(async () => { if (browser is not null) await browser.DisposeAsync(); });
+            releases.Add(() => { playwright?.Dispose(); return ValueTask.CompletedTask; });
+            releases.Add(() => Factory.DisposeAsync());
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary, releases.ToArray());
         }
     }
 }

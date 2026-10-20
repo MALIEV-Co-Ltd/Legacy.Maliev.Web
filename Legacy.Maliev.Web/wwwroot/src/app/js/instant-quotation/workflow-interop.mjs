@@ -607,3 +607,4 @@ function guardResource(resource, guarded, disposed) {
     // Standard Three.js resources are mutable; immutable test doubles stay untouched.
   }
 }
+export { createMaterialCardSelector } from './material-card-selector.mjs';

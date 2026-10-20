@@ -95,9 +95,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (quantityEdits.IsPending(part.PartId) && !displayIntents.ContainsKey(part.PartId)
             || displayIntents.TryGetValue(part.PartId, out var intended) && intended != part.Configuration)
             return [];
+        if (!IsRepricing && DisplayQuote(part) is not null) return [];
         var snapshot = workflow?.MaterialPriceDisplay;
         if (snapshot is not null && snapshot.Generation > minimumDisplayGeneration)
             return snapshot.Entries.Where(row => row.PartId == part.PartId).ToArray();
+        return [];
+    }
+
+    private IReadOnlyList<InstantQuotationMaterialPricingProgress> CardPriceRows(InstantQuotationWorkflowPartViewModel part)
+    {
+        var current = DisplayRows(part);
+        if (current.Count > 0) return current;
+        if (!IsRepricing && DisplayQuote(part) is { } quote)
+            return quote.MaterialPrices.Select(price => new InstantQuotationMaterialPricingProgress(
+                part.PartId, price.MaterialKey,
+                price.UnitPrice is null ? InstantQuotationMaterialPricingStatus.Unavailable : InstantQuotationMaterialPricingStatus.Completed,
+                price.UnitPrice)).ToArray();
         return [];
     }
 
