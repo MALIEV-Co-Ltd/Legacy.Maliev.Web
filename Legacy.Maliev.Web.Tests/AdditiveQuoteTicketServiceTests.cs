@@ -418,6 +418,43 @@ namespace Legacy.Maliev.Web.Tests
             }, quote, authorization, Now.AddMinutes(1)));
         }
 
+        [Theory]
+        [InlineData("voxel-majority-v1", 0.1, "engineer_review_required", PrintProcess.Fdm)]
+        [InlineData("voxel-majority-v1", 0.6, "engineer_review_required", PrintProcess.Fdm)]
+        [InlineData("unknown", 0.3, "engineer_review_required", PrintProcess.Fdm)]
+        [InlineData("voxel-majority-v1", 0.3, "automatic", PrintProcess.Fdm)]
+        [InlineData("voxel-majority-v1", 0.3, "engineer_review_required", PrintProcess.Resin)]
+        public void ReconstructedTicket_InvalidOrNonFdmProvenanceCannotAuthorizePrice(
+            string method, double size, string review, PrintProcess process)
+        {
+            var service = CreateService();
+            var payload = LinePayload();
+            payload.Process = process;
+            payload.ReviewState = review;
+            payload.GeometryReconstruction = new(method, size);
+            Assert.Throws<AdditiveQuoteTicketException>(() =>
+                service.UnprotectLine(service.ProtectLine(payload), Now));
+        }
+
+        [Theory]
+        [InlineData(0.2)]
+        [InlineData(0.3)]
+        [InlineData(0.4)]
+        [InlineData(0.5)]
+        public void ReconstructedTicket_SignedProvenanceRequiresReviewAndRetainsOriginalSha(double size)
+        {
+            var service = CreateService();
+            var payload = LinePayload();
+            payload.GeometryReconstruction = new("voxel-majority-v1", size);
+            string ticket = service.ProtectLine(payload);
+            var actual = service.UnprotectLine(ticket, Now);
+            Assert.Equal(payload.GeometryReconstruction, actual.GeometryReconstruction);
+            Assert.Equal(new string('A', 64), actual.ContentSha256);
+            Assert.Equal("engineer_review_required", actual.ReviewState);
+            Assert.Throws<AdditiveQuoteTicketException>(() =>
+                service.UnprotectLine(ticket[..^1] + (ticket[^1] == 'A' ? 'B' : 'A'), Now));
+        }
+
         private static AdditiveQuoteTicketService CreateService()
         {
             return new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());

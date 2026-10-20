@@ -286,7 +286,10 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         InstantQuotationPart part,
         string materialKey) =>
         result is { IsReady: true, Binding: { } binding, Physical: { } physical }
-        && physical.Diagnostics.Count == 0
+        && (physical.GeometryReconstruction is null
+            ? physical.Diagnostics.Count == 0
+            : physical.GeometryReconstruction.IsValid()
+                && physical.Diagnostics.All(code => code is "mesh_open_edges" or "mesh_nonmanifold_edges" or "mesh_degenerate_triangles"))
         && double.IsFinite(result.BoundingCm3PerUnit) && result.BoundingCm3PerUnit > 0
         && string.Equals(binding.SessionId, sessionId, StringComparison.Ordinal)
         && string.Equals(binding.OwnerIdentity, ownerIdentity, StringComparison.Ordinal)

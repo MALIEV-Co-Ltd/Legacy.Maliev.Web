@@ -476,6 +476,205 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         
         """;
 
+    [Theory]
+    [InlineData(1, false, "stl")]
+    [InlineData(2, false, "stl")]
+    [InlineData(1, true, "stl")]
+    [InlineData(1, false, "obj")]
+    [InlineData(1, false, "3mf")]
+    [InlineData(1, false, "gltf")]
+    [InlineData(1, false, "glb")]
+    public async Task RecoverableOriginalBytes_ProduceSignedCurrentReviewProvenanceWithoutBrowserAuthority(
+        int quantity, bool collapsedSeam, string extension)
+    {
+        var seed = Fixture(quantity);
+        byte[] bytes = RecoveryFixture(extension, collapsedSeam);
+        string digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var original = Assert.Single(seed.Store.State.Parts);
+        var part = original with
+        {
+            DisplayFileName = "recoverable." + extension,
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, digest),
+                new InstantQuotationGeometryClaim(1, digest, 10, 10, 10, 1000, 500,
+                    Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
+                    collapsedSeam ? 11 : 10, 1, true, true, false, 0))!,
+            PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
+            { FileName = "recoverable." + extension, SizeBytes = bytes.Length, Sha256 = digest },
+        };
+        seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
+        var reader = new BatchInputReader([part], bytes);
+        var profiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        var analysis = new InstantQuotationBoundPhysicalAnalysisService(
+            seed.Store, new InstantQuotationAdmittedMeshService(reader), profiles);
+        var pricing = new InstantQuotationAuthoritativePricingService(analysis, profiles, new InstantQuotationPricingService());
+        var binding = new InstantQuotationPhysicalAnalysisBinding(SessionId, Owner, part.PartId,
+            FileId, digest, "PLA", BuildPreference.Standard, quantity, profiles.ProfileVersion);
+        InstantQuotationPhysicalAnalysisBinding[] invalid =
+        [
+            binding with { OwnerIdentity = "another-member" }, binding with { SessionId = "another-session" },
+            binding with { PartId = Guid.NewGuid() }, binding with { FileId = Guid.NewGuid() },
+            binding with { UploadSha256 = new string('a', 64) }, binding with { MaterialKey = "PETG" },
+            binding with { BuildPreference = BuildPreference.Strength }, binding with { Quantity = quantity + 1 },
+            binding with { ProfileVersion = "other-profile" },
+        ];
+        foreach (var rejected in invalid) Assert.False((await analysis.AnalyzeAsync(rejected, default)).IsReady);
+        Assert.Empty(reader.RequestedParts);
+        Assert.Null(await pricing.QuoteAsync(seed.Store.State, "another-member", false, default));
+        Assert.Empty(reader.RequestedParts);
+        var quote = await pricing.QuoteAsync(seed.Store.State, Owner, false, default);
+        Assert.NotNull(quote);
+        var line = Assert.Single(quote.Parts);
+        var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+        Assert.Equal(digest, receipt.UploadSha256);
+        Assert.Equal(FileId, receipt.FileId);
+        Assert.Equal(PartId, receipt.PartId);
+        Assert.Equal(Owner, receipt.OwnerIdentity);
+        Assert.Equal(SessionId, receipt.SessionId);
+        Assert.Equal(quantity, receipt.Quantity);
+        Assert.Equal("PLA", receipt.MaterialKey);
+        Assert.Equal(BuildPreference.Standard, receipt.BuildPreference);
+        Assert.Equal(1, receipt.BoundingCm3PerUnit, 3);
+        Assert.True(receipt.DepositedMm3 > 0);
+        Assert.True(receipt.MotionSeconds > 0);
+        Assert.True(line.UnitPrice > 0);
+        Assert.Equal(line.UnitPrice * quantity, line.Subtotal);
+        var reconstruction = Assert.IsType<Legacy.Maliev.Web.Application.Pricing.Simulation.VoxelReconstructionInfo>(
+            receipt.GeometryReconstruction);
+        Assert.Equal("voxel-majority-v1", reconstruction.Method);
+        Assert.Equal(0.2, reconstruction.VoxelSizeMm);
+        var state = seed.Store.State with { PhysicalReceipts = [receipt] };
+        var tickets = new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
+        var now = DateTimeOffset.UtcNow;
+        var authorization = tickets.Issue(state, quote, now);
+        var payload = tickets.UnprotectLine(Assert.Single(authorization.LineTickets), now);
+        Assert.Equal(reconstruction, payload.GeometryReconstruction);
+        Assert.Equal("engineer_review_required", payload.ReviewState);
+        Assert.Equal(digest, payload.ContentSha256);
+        Assert.Equal(receipt.PhysicalSha256, payload.PhysicalSha256);
+        Assert.True(tickets.Validate(state, quote, authorization, now));
+        payload.GeometryReconstruction = null;
+        Assert.False(tickets.Validate(state, quote,
+            authorization with { LineTickets = [tickets.ProtectLine(payload)] }, now));
+        Assert.False(tickets.Validate(state with { OwnerIdentity = "another-member" }, quote, authorization, now));
+        Assert.False(tickets.Validate(state with { PhysicalReceipts = [receipt with { GeometryReconstruction = null }] },
+            quote, authorization, now));
+        reader.OnRead = () => seed.Store.State = seed.Store.State with
+        { UpdatedAt = seed.Store.State.UpdatedAt.AddTicks(1) };
+        var stale = await analysis.AnalyzeAsync(binding, default);
+        Assert.False(stale.IsReady);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.StalePart, stale.Failure);
+    }
+
+    [Fact]
+    public async Task RecoveryGridRefusal_ReportsComplexityRatherThanAnUnavailableSimulator()
+    {
+        var seed = Fixture();
+        byte[] bytes = RecoveryFixture("stl", false, 300);
+        string digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var original = Assert.Single(seed.Store.State.Parts);
+        var part = original with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, digest),
+                new InstantQuotationGeometryClaim(1, digest, 300, 300, 300, 27_000_000, 450_000,
+                    Enumerable.Repeat(90_000d, 64).ToArray(), Enumerable.Repeat(1200d, 64).ToArray(),
+                    10, 1, true, true, false, 0))!,
+            PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
+            { SizeBytes = bytes.Length, Sha256 = digest },
+        };
+        seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
+        var profiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        var service = new InstantQuotationBoundPhysicalAnalysisService(
+            seed.Store, new InstantQuotationAdmittedMeshService(new BatchInputReader([part], bytes)), profiles);
+        var binding = new InstantQuotationPhysicalAnalysisBinding(SessionId, Owner, part.PartId,
+            FileId, digest, "PLA", BuildPreference.Standard, 1, profiles.ProfileVersion);
+
+        var result = await service.AnalyzeAsync(binding, default);
+
+        Assert.False(result.IsReady);
+        Assert.Null(result.Physical);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded, result.Failure);
+    }
+
+    // Independent open 10 mm box: the existing literal BinaryBox's two bottom triangles are absent.
+    private static byte[] RecoveryFixture(string extension, bool collapsedSeam, float size = 10)
+    {
+        byte[] closed = BinaryBox(size);
+        byte[] stl = [.. closed[..84], .. closed[184..]];
+        if (collapsedSeam) stl = [.. stl, .. new byte[50]];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(stl.AsSpan(80, 4), collapsedSeam ? 11u : 10u);
+        if (extension == "stl") return stl;
+        var coordinates = new List<float>();
+        for (int triangle = 0; triangle < 10; triangle++)
+            for (int coordinate = 0; coordinate < 9; coordinate++)
+                coordinates.Add(System.Buffers.Binary.BinaryPrimitives.ReadSingleLittleEndian(
+                    stl.AsSpan(84 + triangle * 50 + 12 + coordinate * 4, 4)));
+        string Number(float value) => value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        if (extension == "obj")
+        {
+            var text = new System.Text.StringBuilder();
+            for (int index = 0; index < coordinates.Count; index += 3)
+                text.AppendLine($"v {Number(coordinates[index])} {Number(coordinates[index + 1])} {Number(coordinates[index + 2])}");
+            for (int face = 0; face < 10; face++)
+                text.AppendLine($"f {face * 3 + 1} {face * 3 + 2} {face * 3 + 3}");
+            return System.Text.Encoding.UTF8.GetBytes(text.ToString());
+        }
+        if (extension == "3mf")
+        {
+            var model = new System.Text.StringBuilder(
+                "<model xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\" unit=\"millimeter\"><resources><object id=\"1\" type=\"model\"><mesh><vertices>");
+            for (int index = 0; index < coordinates.Count; index += 3)
+                model.Append($"<vertex x=\"{Number(coordinates[index])}\" y=\"{Number(coordinates[index + 1])}\" z=\"{Number(coordinates[index + 2])}\"/>");
+            model.Append("</vertices><triangles>");
+            for (int face = 0; face < 10; face++)
+                model.Append($"<triangle v1=\"{face * 3}\" v2=\"{face * 3 + 1}\" v3=\"{face * 3 + 2}\"/>");
+            model.Append("</triangles></mesh></object></resources><build><item objectid=\"1\"/></build></model>");
+            using var output = new MemoryStream();
+            using (var zip = new System.IO.Compression.ZipArchive(output,
+                System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            {
+                Add("[Content_Types].xml", "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/></Types>");
+                Add("_rels/.rels", "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Target=\"/3D/3dmodel.model\" Id=\"r1\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/></Relationships>");
+                Add("3D/3dmodel.model", model.ToString());
+                void Add(string name, string content)
+                {
+                    using var stream = zip.CreateEntry(name).Open();
+                    using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false));
+                    writer.Write(content);
+                }
+            }
+            return output.ToArray();
+        }
+        var binary = new byte[coordinates.Count * 4];
+        for (int index = 0; index < coordinates.Count; index++)
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(binary.AsSpan(index * 4, 4), coordinates[index]);
+        object buffer = extension == "glb"
+            ? new { byteLength = binary.Length }
+            : (object)new { byteLength = binary.Length, uri = "data:application/octet-stream;base64," + Convert.ToBase64String(binary) };
+        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            asset = new { version = "2.0" }, scene = 0,
+            scenes = new[] { new { nodes = new[] { 0 } } },
+            nodes = new[] { new { mesh = 0 } },
+            meshes = new[] { new { primitives = new[] { new { attributes = new { POSITION = 0 }, mode = 4 } } } },
+            buffers = new[] { buffer },
+            bufferViews = new[] { new { buffer = 0, byteOffset = 0, byteLength = binary.Length } },
+            accessors = new[] { new { bufferView = 0, byteOffset = 0, componentType = 5126, count = 30, type = "VEC3" } },
+        });
+        if (extension == "gltf") return json;
+        using var glb = new MemoryStream();
+        using var glbWriter = new BinaryWriter(glb);
+        int paddedJson = (json.Length + 3) & ~3;
+        glbWriter.Write(0x46546C67u); glbWriter.Write(2u);
+        glbWriter.Write((uint)(12 + 8 + paddedJson + 8 + binary.Length));
+        glbWriter.Write((uint)paddedJson); glbWriter.Write(0x4E4F534Au); glbWriter.Write(json);
+        for (int index = json.Length; index < paddedJson; index++) glbWriter.Write((byte)0x20);
+        glbWriter.Write((uint)binary.Length); glbWriter.Write(0x004E4942u); glbWriter.Write(binary);
+        glbWriter.Flush();
+        return glb.ToArray();
+    }
+
     private sealed class BatchInputReader(IReadOnlyList<InstantQuotationPart> parts, byte[] bytes)
         : IInstantQuotationPhysicalAnalysisInputReader
     {
