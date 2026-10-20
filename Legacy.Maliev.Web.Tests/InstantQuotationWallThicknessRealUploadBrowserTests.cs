@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
@@ -1051,10 +1050,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
 
     private static int ReserveFreePort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = BrowserTestServerPort.Reserve();
         return port;
     }
 

@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -366,8 +364,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             var fixture = new Fixture { culture = culture };
             try
             {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
+                var port = BrowserTestServerPort.Reserve();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -26,10 +25,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
     {
         var transport = new BoundUploadTransport();
         await using var factory = new AdmittedWallFactory(transport);
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = BrowserTestServerPort.Reserve();
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var http = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });

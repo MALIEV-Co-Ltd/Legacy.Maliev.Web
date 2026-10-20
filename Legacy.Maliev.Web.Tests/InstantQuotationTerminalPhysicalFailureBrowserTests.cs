@@ -1,4 +1,3 @@
-using System.Net.Sockets;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -159,10 +158,7 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
             var fixture = new Fixture(bytes);
             try
             {
-                var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
-                listener.Start();
-                var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
-                listener.Stop();
+                var port = BrowserTestServerPort.Reserve();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
