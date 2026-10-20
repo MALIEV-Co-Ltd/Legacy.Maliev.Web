@@ -246,7 +246,7 @@ public sealed class AdmittedThreeMfMeshReaderTests
             new(0,0,10),new(10,0,10),new(10,10,10),new(0,10,10)];
         Vector3[] inner = [new(3,3,0),new(7,3,0),new(7,7,0),new(3,7,0),
             new(3,3,10),new(7,3,10),new(7,7,10),new(3,7,10)];
-        (int A,int B,int C)[] faces = [(0,2,1),(0,3,2),(4,5,6),(4,6,7),(0,1,5),(0,5,4),
+        (int A, int B, int C)[] faces = [(0,2,1),(0,3,2),(4,5,6),(4,6,7),(0,1,5),(0,5,4),
             (1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)];
         var triangles = faces.Select(f => new MeshTriangle(outer[f.A], outer[f.B], outer[f.C]))
             .Concat(faces.Select(f => new MeshTriangle(inner[f.A], inner[f.C], inner[f.B]))).ToArray();
@@ -254,22 +254,22 @@ public sealed class AdmittedThreeMfMeshReaderTests
         if (obj)
         {
             var text = new StringBuilder();
-            foreach (var point in triangles.SelectMany(t => new[] { t.A,t.B,t.C }))
+            foreach (var point in triangles.SelectMany(t => new[] { t.A, t.B, t.C }))
                 text.AppendLine(FormattableString.Invariant($"v {point.X} {point.Y} {point.Z}"));
-            for (int index=0;index<triangles.Length;index++)
-                text.AppendLine(FormattableString.Invariant($"f {index*3+1} {index*3+2} {index*3+3}"));
+            for (int index = 0; index < triangles.Length; index++)
+                text.AppendLine(FormattableString.Invariant($"f {index * 3 + 1} {index * 3 + 2} {index * 3 + 3}"));
             input = AdmittedObjMeshReader.Read(Encoding.UTF8.GetBytes(text.ToString()));
         }
         else
         {
             using var memory = new MemoryStream();
-            using (var writer = new BinaryWriter(memory, Encoding.UTF8, leaveOpen:true))
+            using (var writer = new BinaryWriter(memory, Encoding.UTF8, leaveOpen: true))
             {
                 writer.Write(new byte[80]); writer.Write((uint)triangles.Length);
                 foreach (var triangle in triangles)
                 {
                     writer.Write(new byte[12]);
-                    foreach (var point in new[] { triangle.A,triangle.B,triangle.C })
+                    foreach (var point in new[] { triangle.A, triangle.B, triangle.C })
                     { writer.Write(point.X); writer.Write(point.Y); writer.Write(point.Z); }
                     writer.Write((ushort)0);
                 }
@@ -351,11 +351,11 @@ public sealed class AdmittedThreeMfMeshReaderTests
             int n = vertices.Count;
             vertices.AddRange([new(low, low, 0), new(high, low, 0), new(high, high, 0), new(low, high, 0),
                 new(low, low, size), new(high, low, size), new(high, high, size), new(low, high, size)]);
-            (int, int, int)[] box = [(0,2,1),(0,3,2),(4,5,6),(4,6,7),(0,1,5),(0,5,4),(1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)];
-            foreach (var (a,b,c) in box) faces.Add((n+a,n+b,n+c));
+            (int, int, int)[] box = [(0, 2, 1), (0, 3, 2), (4, 5, 6), (4, 6, 7), (0, 1, 5), (0, 5, 4), (1, 2, 6), (1, 6, 5), (2, 3, 7), (2, 7, 6), (3, 0, 4), (3, 4, 7)];
+            foreach (var (a, b, c) in box) faces.Add((n + a, n + b, n + c));
         }
         Box(0, size);
-        if (inner) { int begin = faces.Count; Box(3, 7); if (reverseInner) for (int i=begin;i<faces.Count;i++) faces[i]=(faces[i].A,faces[i].C,faces[i].B); }
+        if (inner) { int begin = faces.Count; Box(3, 7); if (reverseInner) for (int i = begin; i < faces.Count; i++) faces[i] = (faces[i].A, faces[i].C, faces[i].B); }
         return "<object id=\"1\" type=\"model\"><mesh><vertices>"
             + string.Join("", vertices.Select(v => FormattableString.Invariant($"<vertex x=\"{v.X}\" y=\"{v.Y}\" z=\"{v.Z}\"/>")))
             + "</vertices><triangles>" + string.Join("", faces.Select(f => $"<triangle v1=\"{f.A}\" v2=\"{f.B}\" v3=\"{f.C}\"/>"))

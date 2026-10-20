@@ -320,7 +320,10 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
                     12, 1, true, false, false, 1))!,
             PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
             {
-                FileName = "original.3mf", ContentType = "model/3mf", SizeBytes = bytes.Length, Sha256 = digest,
+                FileName = "original.3mf",
+                ContentType = "model/3mf",
+                SizeBytes = bytes.Length,
+                Sha256 = digest,
             },
         };
         seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
@@ -386,7 +389,8 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
             {
                 FileName = binary ? "source.glb" : "source.gltf",
                 ContentType = binary ? "model/gltf-binary" : "model/gltf+json",
-                SizeBytes = bytes.Length, Sha256 = digest,
+                SizeBytes = bytes.Length,
+                Sha256 = digest,
             },
         };
         seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };

@@ -124,9 +124,18 @@ public sealed class AdmittedGltfMeshReaderTests
             new JsonObject { ["buffer"] = 0, ["byteLength"] = 36 },
             new JsonObject { ["buffer"] = 0, ["byteOffset"] = 36, ["byteLength"] = 2 },
             new JsonObject { ["buffer"] = 0, ["byteOffset"] = 40, ["byteLength"] = 24 });
-        var accessor = new JsonObject { ["componentType"] = 5126, ["count"] = 3, ["type"] = "VEC3",
-            ["sparse"] = new JsonObject { ["count"] = 2, ["indices"] = new JsonObject { ["bufferView"] = 1, ["componentType"] = 5121 },
-                ["values"] = new JsonObject { ["bufferView"] = 2 } } };
+        var accessor = new JsonObject
+        {
+            ["componentType"] = 5126,
+            ["count"] = 3,
+            ["type"] = "VEC3",
+            ["sparse"] = new JsonObject
+            {
+                ["count"] = 2,
+                ["indices"] = new JsonObject { ["bufferView"] = 1, ["componentType"] = 5121 },
+                ["values"] = new JsonObject { ["bufferView"] = 2 }
+            }
+        };
         if (hasBase) accessor["bufferView"] = 0;
         doc["accessors"] = new JsonArray(accessor);
         Primitive(doc).Remove("indices");
@@ -379,9 +388,12 @@ public sealed class AdmittedGltfMeshReaderTests
                         new JsonObject { ["buffer"] = 0, ["byteLength"] = 36 },
                         new JsonObject { ["buffer"] = 0, ["byteOffset"] = 36, ["byteLength"] = 2 },
                         new JsonObject { ["buffer"] = 0, ["byteOffset"] = 40, ["byteLength"] = 24 });
-                    doc["accessors"]![0]!["sparse"] = new JsonObject { ["count"] = 2,
+                    doc["accessors"]![0]!["sparse"] = new JsonObject
+                    {
+                        ["count"] = 2,
                         ["indices"] = new JsonObject { ["bufferView"] = 1, ["componentType"] = 5121 },
-                        ["values"] = new JsonObject { ["bufferView"] = 2 } };
+                        ["values"] = new JsonObject { ["bufferView"] = 2 }
+                    };
                     Primitive(doc).Remove("indices");
                     break;
                 }
@@ -472,8 +484,13 @@ public sealed class AdmittedGltfMeshReaderTests
     {
         var doc = Triangle();
         doc["nodes"] = new JsonArray(
-            new JsonObject { ["translation"] = new JsonArray(10, 0, 0), ["scale"] = new JsonArray(2, 1, 1),
-                ["rotation"] = new JsonArray(0, 0, 0.7071067811865476, 0.7071067811865476), ["children"] = new JsonArray(1) },
+            new JsonObject
+            {
+                ["translation"] = new JsonArray(10, 0, 0),
+                ["scale"] = new JsonArray(2, 1, 1),
+                ["rotation"] = new JsonArray(0, 0, 0.7071067811865476, 0.7071067811865476),
+                ["children"] = new JsonArray(1)
+            },
             new JsonObject { ["mesh"] = 0, ["translation"] = new JsonArray(1, 0, 0) });
         AssertTriangle(Read(doc), new(10, 0, 2), new(10, 0, 6), new(7, 0, 2));
     }
@@ -506,9 +523,18 @@ public sealed class AdmittedGltfMeshReaderTests
             new JsonObject { ["buffer"] = 0, ["byteOffset"] = 12, ["byteLength"] = 2 * width },
             new JsonObject { ["buffer"] = 0, ["byteOffset"] = start, ["byteLength"] = 24 });
         doc["accessors"] = new JsonArray(
-            new JsonObject { ["componentType"] = 5126, ["count"] = 258, ["type"] = "VEC3",
-                ["sparse"] = new JsonObject { ["count"] = 2, ["indices"] = new JsonObject { ["bufferView"] = 1, ["componentType"] = type },
-                    ["values"] = new JsonObject { ["bufferView"] = 2 } } },
+            new JsonObject
+            {
+                ["componentType"] = 5126,
+                ["count"] = 258,
+                ["type"] = "VEC3",
+                ["sparse"] = new JsonObject
+                {
+                    ["count"] = 2,
+                    ["indices"] = new JsonObject { ["bufferView"] = 1, ["componentType"] = type },
+                    ["values"] = new JsonObject { ["bufferView"] = 2 }
+                }
+            },
             new JsonObject { ["bufferView"] = 0, ["componentType"] = 5125, ["count"] = 3, ["type"] = "SCALAR" });
         AssertTriangle(Read(doc), Vector3.Zero, new(2, 0, 0), new(0, 0, 3));
     }
