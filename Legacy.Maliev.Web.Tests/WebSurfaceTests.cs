@@ -2221,6 +2221,8 @@ public sealed class WebSurfaceTests : IDisposable
     {
         using var response = await client.GetAsync(path);
 
+        Assert.Equal("max-age=63072000; includeSubDomains",
+            Assert.Single(response.Headers.GetValues("Strict-Transport-Security")));
         Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
         Assert.Equal("DENY", Assert.Single(response.Headers.GetValues("X-Frame-Options")));
         var policy = Assert.Single(response.Headers.GetValues("Content-Security-Policy"));
@@ -2232,6 +2234,23 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(
             path.StartsWith("/Error", StringComparison.Ordinal) ? "no-referrer" : "strict-origin-when-cross-origin",
             Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+    }
+
+    [Theory]
+    [InlineData("http://localhost/robots.txt", "https")]
+    [InlineData("http://localhost/robots.txt", "http")]
+    [InlineData("https://localhost/robots.txt", "http")]
+    public async Task TransportSecurityHeader_DoesNotRequireSchemeInferenceOrRedirect(
+        string address, string forwardedScheme)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, address);
+        request.Headers.Add("X-Forwarded-Proto", forwardedScheme);
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+        Assert.Equal("max-age=63072000; includeSubDomains",
+            Assert.Single(response.Headers.GetValues("Strict-Transport-Security")));
     }
 
     [Fact]
