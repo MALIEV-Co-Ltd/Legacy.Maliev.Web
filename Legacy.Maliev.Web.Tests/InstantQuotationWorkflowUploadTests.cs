@@ -913,7 +913,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         var entry = Assert.Single(Assert.IsAssignableFrom<System.Collections.IEnumerable>(
             entriesField.GetValue(workflow)).Cast<object>());
         var sourceProperty = entry.GetType().GetProperty("OperationCancellation")!;
-        var ownedSource = Assert.IsType<CancellationTokenSource>(sourceProperty.GetValue(entry));
+        var ownedSource = Assert.IsAssignableFrom<CancellationTokenSource>(sourceProperty.GetValue(entry));
         ownedSource.Dispose();
 
         await workflow.DiscardUploadAsync(localId, default);
