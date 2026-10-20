@@ -204,7 +204,8 @@ public sealed class KnowledgeVisualAssetDeliveryTests(ITestOutputHelper output)
         });
         using var client = application.CreateClient(new WebApplicationFactoryClientOptions
         {
-            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false,
         });
         foreach (var expected in Source930)
         {
@@ -256,7 +257,8 @@ public sealed class KnowledgeVisualAssetDeliveryTests(ITestOutputHelper output)
             builder.UseSetting("BlazorRouting:KnowledgesIndex", retained ? "false" : "true"));
         using var client = application.CreateClient(new WebApplicationFactoryClientOptions
         {
-            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false,
         });
         using var article = await client.GetAsync("/knowledges/manufacturing/process-selection?culture=" + culture);
         Assert.Equal(HttpStatusCode.OK, article.StatusCode);
