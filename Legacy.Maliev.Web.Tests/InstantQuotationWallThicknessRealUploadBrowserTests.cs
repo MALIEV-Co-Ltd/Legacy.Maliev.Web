@@ -740,7 +740,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
               const box = input.getBoundingClientRect(), label = input.labels[0].getBoundingClientRect();
               return box.width === 16 && box.height === 16 && label.width >= 44 && label.height >= 44;
             })
-            """);
+            """));
         await second.FocusAsync();
         await page.Keyboard.PressAsync("Space");
         await Assertions.Expect(second).Not.ToBeCheckedAsync();
