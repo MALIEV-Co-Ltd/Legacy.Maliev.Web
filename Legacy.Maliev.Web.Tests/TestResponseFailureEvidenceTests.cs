@@ -81,8 +81,8 @@ public sealed class TestResponseFailureEvidenceTests
         await callbacks.CompleteAsync();
         using var json = JsonDocument.Parse(lease.Probe.Snapshot());
         var records = json.RootElement.GetProperty("Records").EnumerateArray().ToArray();
-        Assert.Equal<string?>(new[] { "ServerAdmitted", "HeadersStarting", "RequestAborted", "NextReturned", "ResponseCompleted" },
-            records.Select(item => item.GetProperty("Phase").GetString()).ToArray());
+        Assert.Equal<string?>(new[] { "ServerAdmitted", "HeadersStarting", "RequestAborted", "NextReturned", "ResponseCompleted" }.AsEnumerable(),
+            records.Select(item => item.GetProperty("Phase").GetString()));
         Assert.Equal(404, records[1].GetProperty("Status").GetInt32());
         Assert.Equal(42, records[1].GetProperty("KnownContentLength").GetInt64());
         Assert.DoesNotContain("private", lease.Probe.Snapshot(), StringComparison.OrdinalIgnoreCase);
