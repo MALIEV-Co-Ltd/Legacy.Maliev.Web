@@ -169,7 +169,9 @@ public sealed class InstantQuotationPhysicalResultRendererTests
             await renderer.Dispatcher.InvokeAsync(async () =>
             {
                 var root = await renderer.RenderComponentAsync<InstantQuotationReview>(Parameters(quote, false, [part]));
-                var warning = culture == "th" ? "ต้องให้วิศวกรตรวจสอบ" : "engineering review required";
+                var warning = culture == "th"
+                    ? "ราคาประมาณจากแบบจำลองว็อกเซล (0.2 มม.) — ต้องให้วิศวกรตรวจสอบ"
+                    : "Voxel-based estimate (0.2 mm) — engineering review required";
                 Assert.Contains(warning, WebUtility.HtmlDecode(root.ToHtmlString()), StringComparison.Ordinal);
                 await activator.Review!.SetParametersAsync(Parameters(quote, true, [part]));
                 Assert.DoesNotContain(warning, WebUtility.HtmlDecode(root.ToHtmlString()), StringComparison.Ordinal);
