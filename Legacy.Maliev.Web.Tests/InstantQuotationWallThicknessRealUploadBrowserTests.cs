@@ -1196,7 +1196,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(2, upload.VerifiedUploads);
             Assert.Equal(0, upload.ValidationRejectedUploads);
             await page.GotoAsync("about:blank");
-            Assert.Empty(upload.PendingPhysicalReads.Where(task => !task.IsCompleted));
+            Assert.DoesNotContain(upload.PendingPhysicalReads, task => !task.IsCompleted);
 
             async Task<InstantQuotationSessionState> CurrentReceiptAsync(
                 Guid? partId, string material, int quantityValue, Legacy.Maliev.Web.Application.Pricing.BuildPreference preference)
@@ -1260,7 +1260,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(InstantQuotationPhysicalAnalysisInputFailure.UploadUnavailable, (await late).Failure);
             Assert.False(invoked);
             Assert.Contains(active, upload.ClosedPhysicalReads);
-            Assert.Equal(1, upload.ClosedPhysicalReads.Length);
+            Assert.Single(upload.ClosedPhysicalReads);
             release.TrySetResult();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => active.WaitAsync(TimeSpan.FromSeconds(5)));
