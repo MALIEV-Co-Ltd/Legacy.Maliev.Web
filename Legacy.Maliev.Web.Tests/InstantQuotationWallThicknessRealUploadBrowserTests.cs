@@ -1260,7 +1260,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             Assert.Equal(InstantQuotationPhysicalAnalysisInputFailure.UploadUnavailable, (await late).Failure);
             Assert.False(invoked);
             Assert.Contains(active, upload.ClosedPhysicalReads);
-            Assert.Single(upload.ClosedPhysicalReads);
+            Assert.Same(active, Assert.Single(upload.ClosedPhysicalReads));
             release.TrySetResult();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => active.WaitAsync(TimeSpan.FromSeconds(5)));
