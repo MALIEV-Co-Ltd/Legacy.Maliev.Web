@@ -36,7 +36,9 @@ internal sealed class InstantQuotationAdmittedMeshService(
         Path.GetExtension(fileName) is { } extension
         && (extension.Equals(".stl", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".obj", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".3mf", StringComparison.OrdinalIgnoreCase));
+            || extension.Equals(".3mf", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".glb", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".gltf", StringComparison.OrdinalIgnoreCase));
 
     internal async Task<InstantQuotationAdmittedMeshResult> ReadAsync(
         string sessionId,
@@ -83,11 +85,14 @@ internal sealed class InstantQuotationAdmittedMeshService(
         try
         {
             string? extension = Path.GetExtension(input.FileName);
-            MeshInput parsed = string.Equals(extension, ".3mf", StringComparison.OrdinalIgnoreCase)
-                ? AdmittedThreeMfMeshReader.Read(input.Content!, cancellationToken)
-                : string.Equals(extension, ".obj", StringComparison.OrdinalIgnoreCase)
-                    ? AdmittedObjMeshReader.Read(input.Content!, cancellationToken)
-                    : AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
+            MeshInput parsed = string.Equals(extension, ".glb", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".gltf", StringComparison.OrdinalIgnoreCase)
+                ? AdmittedGltfMeshReader.Read(input.Content!, cancellationToken)
+                : string.Equals(extension, ".3mf", StringComparison.OrdinalIgnoreCase)
+                    ? AdmittedThreeMfMeshReader.Read(input.Content!, cancellationToken)
+                    : string.Equals(extension, ".obj", StringComparison.OrdinalIgnoreCase)
+                        ? AdmittedObjMeshReader.Read(input.Content!, cancellationToken)
+                        : AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
             NormalizedMesh mesh = MeshNormalizer.Normalize(
                 parsed, new GeometryTolerance(0.001, 0.02), cancellationToken);
             return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None);

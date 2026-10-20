@@ -359,6 +359,93 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.StalePart, stale.Failure);
     }
 
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExactSourceGltf_ProducesRealBoundReceiptAndTicketAndRejectsReplay(bool binary)
+    {
+        var seed = Fixture();
+        byte[] bytes = binary ? Convert.FromBase64String(AdmittedGltfMeshReaderTests.OriginalGlb)
+            : System.Text.Encoding.UTF8.GetBytes(AdmittedGltfMeshReaderTests.OriginalGltf);
+        byte[] header = System.Text.Encoding.ASCII.GetBytes($"blob {bytes.Length}\0");
+        byte[] gitObject = [.. header, .. bytes];
+        Assert.Equal(binary ? "32bb65e5ed854a5eef1abc5a8c18b3cc2735206e" : "648d23fc2be788f2564ff62d0b24969fb4f8828b",
+            Convert.ToHexStringLower(SHA1.HashData(gitObject)));
+        string digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var original = Assert.Single(seed.Store.State.Parts);
+        var part = original with
+        {
+            DisplayFileName = binary ? "source.glb" : "source.gltf",
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, digest),
+                new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
+                    Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
+                    12, 1, true, false, false, 1))!,
+            PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
+            {
+                FileName = binary ? "source.glb" : "source.gltf",
+                ContentType = binary ? "model/gltf-binary" : "model/gltf+json",
+                SizeBytes = bytes.Length, Sha256 = digest,
+            },
+        };
+        seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
+        var reader = new BatchInputReader([part], bytes);
+        var profiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        var analysis = new InstantQuotationBoundPhysicalAnalysisService(
+            seed.Store, new InstantQuotationAdmittedMeshService(reader), profiles);
+        var pricing = new InstantQuotationAuthoritativePricingService(analysis, profiles, new InstantQuotationPricingService());
+        var binding = new InstantQuotationPhysicalAnalysisBinding(SessionId, Owner, part.PartId,
+            part.PhysicalAnalysisUpload.FileId, digest, "PLA", BuildPreference.Standard, 1, profiles.ProfileVersion);
+        InstantQuotationPhysicalAnalysisBinding[] invalid =
+        [
+            binding with { OwnerIdentity = "another-member" },
+            binding with { SessionId = "another-session" },
+            binding with { PartId = Guid.NewGuid() },
+            binding with { FileId = Guid.NewGuid() },
+            binding with { UploadSha256 = new string('A', 64) },
+            binding with { MaterialKey = "PETG" },
+            binding with { BuildPreference = BuildPreference.Strength },
+            binding with { Quantity = 2 },
+            binding with { ProfileVersion = "other-profile" },
+        ];
+        foreach (var rejected in invalid) Assert.False((await analysis.AnalyzeAsync(rejected, default)).IsReady);
+        Assert.Empty(reader.RequestedParts);
+        Assert.Null(await pricing.QuoteAsync(seed.Store.State, "another-member", false, default));
+        Assert.Empty(reader.RequestedParts);
+        var quote = await pricing.QuoteAsync(seed.Store.State, Owner, false, default);
+        Assert.NotNull(quote);
+        var line = Assert.Single(quote.Parts);
+        var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+        Assert.Equal(part.PartId, receipt.PartId);
+        Assert.Equal(part.PhysicalAnalysisUpload.FileId, receipt.FileId);
+        Assert.Equal(digest, receipt.UploadSha256);
+        Assert.Equal(Owner, receipt.OwnerIdentity);
+        Assert.Equal(SessionId, receipt.SessionId);
+        Assert.Equal("PLA", receipt.ConfiguredMaterialKey);
+        Assert.Equal("PLA", receipt.MaterialKey);
+        Assert.Equal(BuildPreference.Standard, receipt.BuildPreference);
+        Assert.Equal(1, receipt.Quantity);
+        Assert.Equal(profiles.ProfileVersion, receipt.ProfileVersion);
+        Assert.Equal(1, receipt.BoundingCm3PerUnit, 3);
+        Assert.Equal(1, line.BoundingCm3PerUnit, 3);
+        Assert.True(receipt.MotionSeconds > 0);
+        Assert.True(receipt.DepositedMm3 > 0);
+        Assert.True(line.UnitPrice > 0);
+        var state = seed.Store.State with { PhysicalReceipts = [receipt] };
+        var tickets = new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
+        var now = DateTimeOffset.UtcNow;
+        var ticket = tickets.Issue(state, quote, now);
+        Assert.True(tickets.Validate(state, quote, ticket, now.AddMinutes(1)));
+        Assert.False(tickets.Validate(state with { OwnerIdentity = "another-member" }, quote, ticket, now));
+        Assert.False(tickets.Validate(state with { PhysicalReceipts = [] }, quote, ticket, now));
+        Assert.False(tickets.Validate(state with { PhysicalReceipts = [receipt with { UploadSha256 = new string('A', 64) }] }, quote, ticket, now));
+        reader.OnRead = () => seed.Store.State = seed.Store.State with { UpdatedAt = seed.Store.State.UpdatedAt.AddTicks(1) };
+        var stale = await analysis.AnalyzeAsync(binding, default);
+        Assert.False(stale.IsReady);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.StalePart, stale.Failure);
+    }
+
     // Exact unchanged source fixture 36ffdc2c4029f75cd86818bba6ba6c80e8593a66.
     private const string ObjCube = """
         # https://github.com/mikedh/trimesh
