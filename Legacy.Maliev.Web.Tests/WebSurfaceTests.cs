@@ -3664,7 +3664,12 @@ public sealed class WebSurfaceTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("<html lang=\"en\">", responseSource, StringComparison.Ordinal);
-        Assert.Contains(">First name<", WebUtility.HtmlDecode(responseSource), StringComparison.Ordinal);
+        var firstNameLabelElement = Assert.Single(Regex.Matches(responseSource,
+            "<label\\b[^>]*\\bfor=\"FirstName\"[^>]*>([\\s\\S]*?)</label>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("class=\"form-label\"", firstNameLabelElement.Value, StringComparison.Ordinal);
+        Assert.Equal("First name <span class=\"inquiry-required\">*</span>",
+            WebUtility.HtmlDecode(firstNameLabelElement.Groups[1].Value));
     }
 
     [Fact]
