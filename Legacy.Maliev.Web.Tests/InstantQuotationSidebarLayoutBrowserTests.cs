@@ -26,6 +26,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     [InlineData("th", 992)]
     [InlineData("en", 1280)]
     [InlineData("th", 1280)]
+    [InlineData("en", 1600)]
+    [InlineData("th", 1600)]
     public async Task RealPartsRailExposesLongNamesAndKeyboardActions(string culture, int width)
     {
         await using var factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
@@ -163,6 +165,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             culture == "th" ? "ชิ้นส่วนทดสอบชื่อยาวสำหรับตรวจสอบการแสดงผลครบถ้วน-รุ่นหนึ่ง.stl" : "long-customer-item-name-without-truncated-identification-first.stl",
             culture == "th" ? "ชิ้นส่วนทดสอบชื่อยาวสำหรับตรวจสอบการแสดงผลครบถ้วน-รุ่นสอง.stl" : "long-customer-item-name-without-truncated-identification-second.stl",
         };
+        if (width == 1600)
+            names = Enumerable.Range(1, 8).Select(index => $"{names[0]}-{index}.stl").ToArray();
         var parts = names.Select(name =>
         {
             var digest = new string('a', 64);
@@ -178,7 +182,21 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
         failureEvidence.Stage("PartsRail");
         var rail = page.Locator("[data-workflow-parts]");
-        await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(2);
+        await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(names.Length);
+        if (width == 1600)
+        {
+            // Upload/reveal can leave the rail at its newest part. Exercise a forward gesture from the left edge.
+            await rail.EvaluateAsync("rail => { rail.scrollLeft = 0; }");
+            await rail.Locator("[data-workflow-part] button").First.HoverAsync();
+            var beforeWheel = await rail.EvaluateAsync<double[]>("rail => [rail.scrollLeft, rail.scrollWidth, rail.clientWidth, rail.scrollHeight, rail.clientHeight]");
+            Assert.Equal(0, beforeWheel[0]);
+            Assert.True(beforeWheel[1] > beforeWheel[2], "Eight parts must overflow the desktop rail for this regression to be meaningful.");
+            Assert.True(beforeWheel[3] <= beforeWheel[4], "This gesture must exercise the horizontal rail, not native vertical scrolling.");
+            await page.Mouse.WheelAsync(0, 120);
+            await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-parts]').scrollLeft > 0");
+            Assert.True(await rail.EvaluateAsync<double>("rail => rail.scrollLeft") > 0,
+                "A vertical wheel gesture must move the desktop parts rail horizontally.");
+        }
         var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         await Assertions.Expect(review).ToBeEnabledAsync();
         var directory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
@@ -256,7 +274,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         failureEvidence.AwaitBoundary("review", false);
         await review.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        await Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(2);
+        await Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(names.Length);
         // Complete the application's native accessibility focus transition before moving focus.
         await Assertions.Expect(page.Locator("[data-workflow-review]")).ToBeFocusedAsync();
         var continueButton = page.Locator("[data-review-continue]");

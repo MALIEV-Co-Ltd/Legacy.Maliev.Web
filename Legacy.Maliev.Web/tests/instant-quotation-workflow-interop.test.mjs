@@ -872,3 +872,118 @@ test('a selected unready local file never displays another admitted mesh and pre
   assert.equal(middle.disposed, true);
   assert.equal(last.disposed, true);
 });
+
+function wheelRail({ width = 300, contentWidth = 900, height = 120, contentHeight = 120 } = {}) {
+  const listeners = new Map();
+  const rail = {
+    clientWidth: width, scrollWidth: contentWidth, clientHeight: height, scrollHeight: contentHeight,
+    scrollLeft: 0,
+    addEventListener(type, listener, options) {
+      assert.equal(type, 'wheel');
+      assert.deepEqual(options, { passive: false });
+      listeners.set(type, listener);
+    },
+    removeEventListener(type, listener) {
+      if (listeners.get(type) === listener) listeners.delete(type);
+    },
+    contains: () => true,
+  };
+  const input = {
+    files: [], dataset: {},
+    closest: () => ({ querySelector: () => rail }),
+    addEventListener() {}, removeEventListener() {},
+  };
+  function wheel(overrides = {}) {
+    const event = { deltaX: 0, deltaY: 120, deltaMode: 0,
+      target: { closest: () => null }, prevented: false,
+      preventDefault() { this.prevented = true; }, ...overrides };
+    listeners.get('wheel')?.(event);
+    return event;
+  }
+  return { rail, input, listeners, wheel };
+}
+
+test('parts wheel resets from a revealed end and translates forward, reverse, line and page gestures', () => {
+  const { interop } = harness();
+  const fixture = wheelRail();
+  try {
+    interop.bindInput(fixture.input);
+    fixture.rail.scrollLeft = 600;
+    fixture.rail.scrollLeft = 0;
+    assert.equal(fixture.wheel().prevented, true);
+    assert.equal(fixture.rail.scrollLeft, 120);
+    assert.equal(fixture.wheel({ deltaY: -20 }).prevented, true);
+    assert.equal(fixture.rail.scrollLeft, 100);
+    fixture.wheel({ deltaY: 2, deltaMode: 1 });
+    assert.equal(fixture.rail.scrollLeft, 132);
+    fixture.wheel({ deltaY: 1, deltaMode: 2 });
+    assert.equal(fixture.rail.scrollLeft, 432);
+    fixture.wheel({ deltaY: 1000 });
+    assert.equal(fixture.rail.scrollLeft, 600);
+    assert.equal(fixture.wheel().prevented, false);
+    fixture.rail.scrollLeft = 0;
+    assert.equal(fixture.wheel({ deltaY: -120 }).prevented, false);
+    for (const tag of ['button', 'a', 'label']) {
+      fixture.rail.scrollLeft = 0;
+      assert.equal(fixture.wheel({ target: { closest: selector => selector.split(', ').includes(tag) ? {} : null } }).prevented, true);
+      assert.equal(fixture.rail.scrollLeft, 120);
+    }
+  } finally { interop.dispose(); }
+  assert.equal(fixture.listeners.size, 0);
+});
+
+test('parts wheel leaves native vertical, wrapped, modified, consumed and interactive gestures alone', () => {
+  const { interop } = harness();
+  const fixture = wheelRail();
+  try {
+    interop.bindInput(fixture.input);
+    for (const overrides of [
+      { defaultPrevented: true }, { ctrlKey: true }, { metaKey: true },
+      { altKey: true }, { shiftKey: true }, { deltaY: 0, deltaX: 0 },
+      { target: { closest: selector => {
+        assert.equal(selector, 'input, select, textarea, [contenteditable], [role="slider"], [role="spinbutton"]');
+        return {};
+      } } },
+    ]) {
+      assert.equal(fixture.wheel(overrides).prevented, false);
+      assert.equal(fixture.rail.scrollLeft, 0);
+    }
+    fixture.rail.scrollHeight = 240;
+    assert.equal(fixture.wheel().prevented, false);
+    fixture.rail.scrollHeight = 120;
+    fixture.rail.scrollWidth = 300;
+    assert.equal(fixture.wheel().prevented, false);
+    fixture.rail.scrollWidth = 900;
+    const selection = globalThis.getSelection;
+    try {
+      globalThis.getSelection = () => ({ isCollapsed: false, anchorNode: {} });
+      assert.equal(fixture.wheel().prevented, false);
+    } finally {
+      if (selection === undefined) delete globalThis.getSelection;
+      else globalThis.getSelection = selection;
+    }
+    assert.equal(fixture.rail.scrollLeft, 0);
+  } finally { interop.dispose(); }
+});
+
+test('parts wheel observes actual movement and replaces or disposes only its owned listener', () => {
+  const { interop } = harness();
+  const first = wheelRail(), second = wheelRail();
+  try {
+    interop.bindInput(first.input);
+    interop.bindInput(first.input);
+    assert.equal(first.listeners.size, 1);
+    const oldHandler = first.listeners.get('wheel');
+    first.input.closest = () => ({ querySelector: () => second.rail });
+    interop.bindInput(first.input);
+    assert.equal(first.listeners.size, 0);
+    assert.equal(second.listeners.size, 1);
+    Object.defineProperty(second.rail, 'scrollLeft', { get: () => 0, set() {}, configurable: true });
+    assert.equal(second.wheel().prevented, false);
+    interop.bindInput({ files: [], dataset: {}, addEventListener() {}, removeEventListener() {} });
+    assert.equal(second.listeners.size, 0);
+    const event = { deltaY: 120, target: { closest: () => null }, preventDefault() { throw new Error('stale listener consumed'); } };
+    interop.dispose();
+    oldHandler(event);
+  } finally { interop.dispose(); }
+});

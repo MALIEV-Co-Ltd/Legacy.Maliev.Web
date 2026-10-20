@@ -109,11 +109,14 @@ export function createWorkflowPreviewInterop({
   let nextKey = 0;
   let inputElement = null;
   let inputChangeHandler = null;
+  let partsRail = null;
+  let partsWheelHandler = null;
   const selectionSnapshots = [];
 
   function bindInput(input) {
     assertActive();
     configureFilePickerForPlatform(input);
+    bindPartsWheel(input?.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-parts]') ?? null);
     if (inputElement === input) return;
     unbindInput();
     inputElement = input;
@@ -125,6 +128,39 @@ export function createWorkflowPreviewInterop({
     inputElement?.removeEventListener?.('change', inputChangeHandler, { capture: true });
     inputElement = null;
     inputChangeHandler = null;
+  }
+
+  function bindPartsWheel(rail) {
+    if (partsRail === rail) return;
+    unbindPartsWheel();
+    partsRail = rail;
+    if (!rail) return;
+    partsWheelHandler = event => {
+      if (disposed || partsRail !== rail || event.defaultPrevented || event.cancelable === false
+          || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (event.target?.closest?.('input, select, textarea, [contenteditable], [role="slider"], [role="spinbutton"]')) return;
+      const selection = globalThis.getSelection?.();
+      if (selection && !selection.isCollapsed && rail.contains(selection.anchorNode)) return;
+      // Decide per gesture: the narrow wrapped layout and any vertical overflow stay native.
+      if (rail.scrollHeight > rail.clientHeight || rail.scrollWidth <= rail.clientWidth) return;
+      let delta = event.deltaY || event.deltaX;
+      if (!Number.isFinite(delta) || !delta) return;
+      if (event.deltaMode === 1) delta *= 16;
+      else if (event.deltaMode === 2) delta *= rail.clientWidth;
+      const before = rail.scrollLeft;
+      const target = Math.max(0, Math.min(rail.scrollWidth - rail.clientWidth, before + delta));
+      if (target === before) return;
+      rail.scrollLeft = target;
+      // A pinned or removed rail must not swallow a gesture it did not actually consume.
+      if (rail.scrollLeft !== before) event.preventDefault();
+    };
+    rail.addEventListener('wheel', partsWheelHandler, { passive: false });
+  }
+
+  function unbindPartsWheel() {
+    partsRail?.removeEventListener('wheel', partsWheelHandler);
+    partsRail = null;
+    partsWheelHandler = null;
   }
 
   function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY) {
@@ -644,6 +680,7 @@ export function createWorkflowPreviewInterop({
     for (const files of selectionSnapshots) files.length = 0;
     selectionSnapshots.length = 0;
     unbindInput();
+    unbindPartsWheel();
     partKeys.clear();
     viewer?.dispose();
     viewer = null;
