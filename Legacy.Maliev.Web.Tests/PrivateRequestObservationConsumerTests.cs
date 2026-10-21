@@ -200,7 +200,7 @@ public sealed class PrivateRequestObservationConsumerTests
         using var client = factory.CreateClient();
         var selected = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<
             Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>>().Value.FormatterName;
-        Assert.Equal(Maliev.Aspire.ServiceDefaults.Logging.PrivateFailureConsoleFormatter.FormatterName, selected);
+        Assert.Equal(global::Maliev.Aspire.ServiceDefaults.Logging.PrivateFailureConsoleFormatter.FormatterName, selected);
         Assert.Same(factory.Records.Formatter, Assert.Single(
             factory.Services.GetServices<Microsoft.Extensions.Logging.Console.ConsoleFormatter>(),
             formatter => formatter.Name == selected));
