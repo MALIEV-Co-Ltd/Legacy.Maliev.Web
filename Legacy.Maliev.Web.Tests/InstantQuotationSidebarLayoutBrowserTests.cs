@@ -294,16 +294,40 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             var card = rail.Locator("[data-workflow-part]").Filter(new() { HasText = name });
             await card.ScrollIntoViewIfNeededAsync();
             await Assertions.Expect(card.Locator("h4")).ToBeVisibleAsync();
-            Assert.True(await card.Locator("h4").EvaluateAsync<bool>("""
+            var nameGeometry = await card.Locator("h4").EvaluateAsync<JsonElement>("""
                 heading => {
                   const card=heading.closest('[data-workflow-part]').getBoundingClientRect();
-                  const rail=heading.closest('[data-workflow-parts]').getBoundingClientRect();
+                  const railElement=heading.closest('[data-workflow-parts]');
+                  const rail=railElement.getBoundingClientRect();
                   const range=document.createRange(); range.selectNodeContents(heading);
                   const lines=[...range.getClientRects()];
-                  return lines.length>0 && lines.every(r=>r.left>=Math.max(card.left,rail.left)-1 && r.right<=Math.min(card.right,rail.right)+1
+                  const fits=lines.length>0 && lines.every(r=>r.left>=Math.max(card.left,rail.left)-1 && r.right<=Math.min(card.right,rail.right)+1
                     && r.top>=Math.max(card.top,rail.top)-1 && r.bottom<=Math.min(card.bottom,rail.bottom)+1);
+                  const failures=[];
+                  for (let index=0; index<lines.length && failures.length<8; index++) {
+                    const r=lines[index];
+                    const edges=(r.left<Math.max(card.left,rail.left)-1 ? 1 : 0)
+                      | (r.right>Math.min(card.right,rail.right)+1 ? 2 : 0)
+                      | (r.top<Math.max(card.top,rail.top)-1 ? 4 : 0)
+                      | (r.bottom>Math.min(card.bottom,rail.bottom)+1 ? 8 : 0);
+                    if (edges) failures.push([index,edges,r.left,r.top,r.right,r.bottom]);
+                  }
+                  const rect=heading.getBoundingClientRect();
+                  const style=getComputedStyle(heading);
+                  return { fits, viewport:[innerWidth,innerHeight],
+                    card:[card.left,card.top,card.right,card.bottom],
+                    rail:[rail.left,rail.top,rail.right,rail.bottom],
+                    heading:[rect.left,rect.top,rect.right,rect.bottom],
+                    scroll:[railElement.scrollLeft,railElement.scrollTop,railElement.clientWidth,
+                      railElement.clientHeight,railElement.scrollWidth,railElement.scrollHeight],
+                    typography:[parseFloat(style.fontSize) || 0,parseFloat(style.lineHeight) || 0],
+                    rangeCount:lines.length, firstFailures:failures };
                 }
-                """), "Every rendered line of the full part name must fit its card and rail.");
+                """);
+            Assert.True(nameGeometry.GetProperty("fits").GetBoolean(),
+                "Every rendered line of the full part name must fit its card and rail. "
+                + "Rectangles=[left,top,right,bottom]; failures=[index,edgeMask,left,top,right,bottom], "
+                + "edges=left1/right2/top4/bottom8. " + nameGeometry.GetRawText());
             var view = card.Locator("button").First;
             var remove = card.Locator("button").Last;
             var keyboardOperation = name == names[0] ? "first-keyboard" : "second-keyboard";
