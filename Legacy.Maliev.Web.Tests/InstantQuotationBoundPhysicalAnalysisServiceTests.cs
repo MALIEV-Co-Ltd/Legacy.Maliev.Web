@@ -586,6 +586,9 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         Assert.Equal(digest, payload.ContentSha256);
         Assert.Equal(receipt.PhysicalSha256, payload.PhysicalSha256);
         Assert.True(tickets.Validate(state, quote, authorization, now));
+        await InstantQuotationNotificationPreparationTests.AssertRecoveredQuoteMessagesAsync(state, quote);
+        foreach (var culture in new[] { "en", "th" })
+            await InstantQuotationPhysicalResultRendererTests.AssertRecoveredReviewAsync(part, quote, culture);
         payload.GeometryReconstruction = null;
         Assert.False(tickets.Validate(state, quote,
             authorization with { LineTickets = [tickets.ProtectLine(payload)] }, now));

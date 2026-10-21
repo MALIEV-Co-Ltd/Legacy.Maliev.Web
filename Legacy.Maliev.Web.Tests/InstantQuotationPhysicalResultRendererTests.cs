@@ -205,6 +205,53 @@ public sealed class InstantQuotationPhysicalResultRendererTests
         }
     }
 
+    internal static async Task AssertRecoveredReviewAsync(
+        Legacy.Maliev.Web.Application.InstantQuotationPart source,
+        Legacy.Maliev.Web.Application.InstantQuotationOrderQuote quote, string culture)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var line = Assert.Single(quote.Parts);
+            var receipt = Assert.IsType<Legacy.Maliev.Web.Application.InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+            Assert.Equal(source.PartId, receipt.PartId);
+            Assert.NotNull(receipt.GeometryReconstruction);
+            Assert.True(receipt.GeometryReconstruction.IsValid());
+            var part = new InstantQuotationWorkflowPartViewModel(source.PartId, receipt.FileId,
+                source.DisplayFileName, source.Geometry, source.Configuration, line);
+            using var services = new ServiceCollection().AddLogging()
+                .AddLocalization(options => options.ResourcesPath = "Resources")
+                .AddSingleton<Microsoft.JSInterop.IJSRuntime>(new NoJavaScript())
+                .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment())
+                .BuildServiceProvider();
+            await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+            var html = await renderer.Dispatcher.InvokeAsync(async () =>
+                (await renderer.RenderComponentAsync<InstantQuotationReview>(ParameterView.FromDictionary(
+                    new Dictionary<string, object?>
+                    {
+                        [nameof(InstantQuotationReview.Parts)] = new[] { part },
+                        [nameof(InstantQuotationReview.Quote)] = quote,
+                    }))).ToHtmlString());
+            var decoded = WebUtility.HtmlDecode(html);
+            Assert.Contains(culture == "th" ? "ราคาประมาณจากแบบจำลองว็อกเซล" : "Voxel-based estimate", decoded, StringComparison.Ordinal);
+            Assert.Contains(receipt.GeometryReconstruction.VoxelSizeMm.ToString("0.0", CultureInfo.CurrentCulture),
+                decoded, StringComparison.Ordinal);
+            Assert.Contains(culture == "th" ? "ต้องให้วิศวกรตรวจสอบ" : "engineering review required", decoded, StringComparison.Ordinal);
+            Assert.Contains(culture == "th" ? "ต้องตรวจสอบไฟล์ต้นฉบับก่อนผลิต" : "the original file must be reviewed before manufacture",
+                decoded, StringComparison.Ordinal);
+            Assert.Contains($"฿{quote.FinalOrderPrice:N2}", decoded, StringComparison.Ordinal);
+            Assert.Contains(WebUtility.HtmlEncode(source.DisplayFileName), html, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
+
     private sealed class ReviewActivator : IComponentActivator
     {
         internal InstantQuotationReview? Review { get; private set; }
