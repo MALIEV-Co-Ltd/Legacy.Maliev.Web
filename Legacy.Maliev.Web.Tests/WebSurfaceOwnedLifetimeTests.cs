@@ -99,7 +99,7 @@ public sealed class WebSurfaceOwnedLifetimeTests
     [Fact]
     public async Task DerivedHostDisposalReleasesItsWebRootWatchersWithoutAffectingAnotherHost()
     {
-        await using var parent = new OwnedWebSurfaceParent();
+        await using var parent = new TestingWebApplicationFactory();
         await using var first = parent.WithWebHostBuilder(_ => { });
         await using var second = parent.WithWebHostBuilder(_ => { });
         using var firstClient = first.CreateClient();
@@ -130,6 +130,43 @@ public sealed class WebSurfaceOwnedLifetimeTests
         Assert.True(secondRoot.Watch("dist/still-live.css").ActiveChangeCallbacks);
         await second.DisposeAsync();
         Assert.Equal(0, secondLease.RemainingOwnedProviders);
+    }
+
+    [Fact]
+    public async Task PlainFactoryPreservesRequestedKestrelLoopbackPortAndReleasesItsWebRoot()
+    {
+        var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        int port;
+        try
+        {
+            listener.Start();
+            port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        finally { listener.Stop(); }
+
+        var origin = $"http://127.0.0.1:{port}";
+        var factory = new TestingWebApplicationFactory();
+        try
+        {
+            factory.UseKestrel(port);
+            using var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri(origin),
+                AllowAutoRedirect = false,
+            });
+            var server = factory.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
+            var addresses = Assert.IsAssignableFrom<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>(
+                server.Features[typeof(Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature)]);
+            Assert.Equal(origin, Assert.Single(addresses.Addresses));
+            var lease = factory.Services.GetRequiredService<OwnedWebSurfaceWebRoot>();
+            Assert.Equal(1, lease.RemainingOwnedProviders);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var response = await client.GetAsync("/dist/site.min.css", deadline.Token);
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            await factory.DisposeAsync();
+            Assert.Equal(0, lease.RemainingOwnedProviders);
+        }
+        finally { await factory.DisposeAsync(); }
     }
 
     private static Microsoft.Extensions.FileProviders.PhysicalFileProvider PhysicalWebRoot(
