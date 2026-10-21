@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Microsoft.Extensions.Logging;
 
@@ -47,12 +48,31 @@ internal sealed class CareerClient(
 
             response.EnsureSuccessStatusCode();
             var offer = await response.Content.ReadFromJsonAsync<CareerOffer>(cancellationToken);
+            if (offer is { Level: null, LevelId: > 0 })
+                offer = await ResolveMissingDetailLevelAsync(offer, cancellationToken);
             return new ServiceResponse<CareerOffer>(offer, true);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning(exception, "Career service was unavailable while loading offer {OfferId}.", offerId);
             return new ServiceResponse<CareerOffer>(null, false);
+        }
+    }
+
+    private async Task<CareerOffer> ResolveMissingDetailLevelAsync(CareerOffer offer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var levels = await GetLevelsAsync(cancellationToken);
+            if (!levels.ServiceAvailable || levels.Value is null || levels.Value.Any(level => level is null))
+                return offer;
+            var matches = levels.Value.Where(level => level.Id == offer.LevelId).Take(2).ToArray();
+            return matches.Length == 1 ? offer with { Level = matches[0] } : offer;
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException or InvalidOperationException)
+        {
+            logger.LogWarning("Career level metadata could not be read for offer {OfferId}; {FailureType}.", offer.Id, exception.GetType().Name);
+            return offer;
         }
     }
 
