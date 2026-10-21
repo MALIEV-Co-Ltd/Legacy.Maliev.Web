@@ -93,6 +93,96 @@ public sealed class WebApplicationFactoryLifecycleTests
         }
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RenderedChild_DisposesOwnedWebRootWatcherWithoutDisposingParent(bool active)
+    {
+        using var parent = new TestingWebApplicationFactory();
+        var cleanup = new HashSet<Microsoft.Extensions.FileProviders.PhysicalFileProvider>(ReferenceEqualityComparer.Instance);
+        try
+        {
+            using var parentClient = parent.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+            using var parentResponse = await parentClient.GetAsync("/?culture=en");
+            Assert.Equal(System.Net.HttpStatusCode.OK, parentResponse.StatusCode);
+            var parentEnvironment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(parent.Services);
+            var parentLeaf = Assert.Single(PhysicalLeaves(parentEnvironment.WebRootFileProvider));
+            cleanup.Add(parentLeaf);
+            var parentWatcher = ActiveWatcher(parentLeaf);
+
+            await using var child = parent.WithWebHostBuilder(builder =>
+            {
+                builder.UseSetting("BlazorRouting:Home", active.ToString());
+                builder.ConfigureAppConfiguration((context, _) =>
+                {
+                    // Borrow the live parent provider twice to prove identity ownership, not path-based cleanup.
+                    context.HostingEnvironment.WebRootFileProvider =
+                        new Microsoft.Extensions.FileProviders.CompositeFileProvider(
+                            context.HostingEnvironment.WebRootFileProvider,
+                            parentEnvironment.WebRootFileProvider, parentEnvironment.WebRootFileProvider);
+                });
+            });
+            using var childClient = child.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+            using var childResponse = await childClient.GetAsync("/?culture=en");
+            Assert.Equal(System.Net.HttpStatusCode.OK, childResponse.StatusCode);
+            var childEnvironment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(child.Services);
+            Assert.False(childEnvironment.WebRootFileProvider is IDisposable);
+            var childLeaf = Assert.Single(PhysicalLeaves(childEnvironment.WebRootFileProvider)
+                .Where(provider => !ReferenceEquals(provider, parentLeaf)));
+            cleanup.Add(childLeaf);
+            Assert.NotSame(parentLeaf, childLeaf);
+            Assert.Equal(parentLeaf.Root, childLeaf.Root);
+            var childWatcher = ActiveWatcher(childLeaf);
+            var versioner = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetRequiredService<Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider>(child.Services);
+            Assert.Contains("?v=", versioner.AddFileVersionToPath(default, "/dist/site.min.css"), StringComparison.Ordinal);
+            Assert.True(childWatcher.EnableRaisingEvents);
+            Assert.False(IsDisposed(childLeaf));
+
+            await child.DisposeAsync();
+
+            Assert.True(IsDisposed(childLeaf));
+            Assert.False(childWatcher.EnableRaisingEvents);
+            Assert.False(IsDisposed(parentLeaf));
+            Assert.True(parentWatcher.EnableRaisingEvents);
+            using var stillHealthy = await parentClient.GetAsync("/?culture=th");
+            Assert.Equal(System.Net.HttpStatusCode.OK, stillHealthy.StatusCode);
+        }
+        finally
+        {
+            try { await parent.DisposeAsync(); }
+            finally { foreach (var provider in cleanup) provider.Dispose(); }
+        }
+    }
+
+    private static IEnumerable<Microsoft.Extensions.FileProviders.PhysicalFileProvider> PhysicalLeaves(
+        Microsoft.Extensions.FileProviders.IFileProvider provider)
+    {
+        if (provider is Microsoft.Extensions.FileProviders.PhysicalFileProvider physical) yield return physical;
+        if (provider is Microsoft.Extensions.FileProviders.CompositeFileProvider composite)
+            foreach (var child in composite.FileProviders)
+                foreach (var leaf in PhysicalLeaves(child)) yield return leaf;
+    }
+
+    private static bool IsDisposed(Microsoft.Extensions.FileProviders.PhysicalFileProvider provider) =>
+        (bool)typeof(Microsoft.Extensions.FileProviders.PhysicalFileProvider).GetField("_disposed",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(provider)!;
+
+    private static FileSystemWatcher ActiveWatcher(Microsoft.Extensions.FileProviders.PhysicalFileProvider provider)
+    {
+        var physicalWatcher = typeof(Microsoft.Extensions.FileProviders.PhysicalFileProvider).GetField("_fileWatcher",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(provider);
+        Assert.NotNull(physicalWatcher);
+        var watcher = Assert.IsType<FileSystemWatcher>(physicalWatcher.GetType().GetField("_fileWatcher",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(physicalWatcher));
+        Assert.True(watcher.EnableRaisingEvents);
+        return watcher;
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
