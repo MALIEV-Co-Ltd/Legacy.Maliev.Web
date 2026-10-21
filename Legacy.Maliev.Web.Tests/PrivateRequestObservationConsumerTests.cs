@@ -255,6 +255,24 @@ public sealed class PrivateRequestObservationConsumerTests
         Assert.Equal(root.EnumerateObject().Count(), root.EnumerateObject().Select(property => property.Name).Distinct(StringComparer.Ordinal).Count());
     }
 
+    /// <summary>The private console selection preserves the explicit tracing gate and ordinary metrics registration.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActualProgram_PrivateConsolePreservesConfiguredTracingGate(bool tracingEnabled)
+    {
+        using var factory = new ObservationFactory("127.0.0.1", tracingEnabled: tracingEnabled);
+        using var client = factory.CreateClient();
+
+        Assert.NotNull(factory.Services.GetRequiredService<OpenTelemetry.Metrics.MeterProvider>());
+        if (tracingEnabled)
+            Assert.NotNull(factory.Services.GetRequiredService<OpenTelemetry.Trace.TracerProvider>());
+        else
+            Assert.Null(factory.Services.GetService<OpenTelemetry.Trace.TracerProvider>());
+        Assert.DoesNotContain(factory.Services.GetServices<ILoggerProvider>(), provider =>
+            provider.GetType().Namespace?.StartsWith("OpenTelemetry", StringComparison.Ordinal) == true);
+    }
+
     /// <summary>A provider-specific Trace override cannot make the selected formatter emit success payloads.</summary>
     [Theory]
     [InlineData(LogLevel.Trace)]
@@ -532,7 +550,7 @@ public sealed class PrivateRequestObservationConsumerTests
     private sealed class ObservationFactory(string? peer, bool overwriteSynthetic = false,
         bool overwriteHealth = false, bool ordinaryFailure = false, bool handledFailure = false,
         bool forgedIncidentHeader = false, bool consoleOverride = false,
-        bool missingRecaptchaProject = false) : TestingWebApplicationFactory
+        bool missingRecaptchaProject = false, bool? tracingEnabled = null) : TestingWebApplicationFactory
     {
         public RecordingProvider Records { get; } = new();
         public ObservationClock Clock { get; } = new();
@@ -562,13 +580,17 @@ public sealed class PrivateRequestObservationConsumerTests
                     {
                         ["Recaptcha:ProjectId"] = null,
                     }));
+            if (consoleOverride || tracingEnabled.HasValue)
+            {
+                // Service defaults snapshot this gate before deferred app-configuration callbacks run.
+                builder.UseSetting("Observability:TracingEnabled", (tracingEnabled ?? true).ToString());
+                builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
+            }
             if (consoleOverride)
                 builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                     new Dictionary<string, string?>
                     {
                         ["Logging:Console:LogLevel:Web.PrivacyControl"] = "Trace",
-                        ["Observability:TracingEnabled"] = "true",
-                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = null,
                     }));
             builder.ConfigureServices(services =>
             {
