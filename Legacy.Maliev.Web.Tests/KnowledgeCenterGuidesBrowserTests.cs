@@ -28,11 +28,12 @@ public sealed class KnowledgeCenterGuidesBrowserTests
         await using var fixture = await PublicKnowledgeFixture.CreateAsync(width);
         IPage page = fixture.Page;
         string origin = fixture.Origin;
-        foreach (string path in new[]
-        {
-            "/knowledges", "/knowledges/guidelines", "/knowledges/workflow", "/knowledges/specifications",
-            "/knowledges/specifications/cnc-machining", "/knowledges/specifications/3d-printing", "/knowledges/specifications/3d-scanning",
-        })
+        var knowledgeRoutes = Legacy.Maliev.Web.Pages.PublicSearchRouteCatalog.Routes
+            .Select(route => route.Path)
+            .Where(path => path.StartsWith("/knowledges", StringComparison.Ordinal))
+            .ToArray();
+        Assert.Equal(19, knowledgeRoutes.Length);
+        foreach (string path in knowledgeRoutes)
         {
             var response = await page.GotoAsync($"{origin}{path}?culture={culture}");
             Assert.NotNull(response);
@@ -42,6 +43,13 @@ public sealed class KnowledgeCenterGuidesBrowserTests
             Assert.Equal(culture, await page.Locator("html").GetAttributeAsync("lang"));
             Assert.Equal(1, await page.Locator(".knowledge-document h1").CountAsync());
             Assert.Equal(1, await page.Locator("#knowledge-navigation [aria-current='page']").CountAsync());
+            Assert.Equal(19, await page.Locator("#knowledge-navigation .workspace-nav-link").CountAsync());
+            Assert.Equal(5, await page.Locator(".knowledge-nav-group").CountAsync());
+            Assert.Equal(1, await page.Locator(".knowledge-nav-group[open]").CountAsync());
+            Assert.Equal(await page.Locator(".knowledge-document section[id] > h2").CountAsync(),
+                await page.Locator("[data-knowledge-current-toc] a").CountAsync());
+            Assert.True(await page.EvaluateAsync<bool>(@"() => Array.from(document.querySelectorAll('[data-knowledge-current-toc] a'))
+                .every(link => document.getElementById(decodeURIComponent(link.hash.slice(1))))"));
             Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"), $"Page overflow: {path}, {culture}, {width}px");
             Assert.True(await page.EvaluateAsync<bool>(@"() => Array.from(document.querySelectorAll('.knowledge-document a[href^=""#""]'))
                 .every(link => document.getElementById(decodeURIComponent(link.hash.slice(1))))"), $"Broken section link: {path}");
@@ -65,16 +73,16 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                 await SaveScreenshotAsync(page, $"knowledge-index-{culture}-{width}.png");
             }
 
+            foreach (ILocator image in await page.Locator(".docs-figure img").AllAsync())
+            {
+                await image.ScrollIntoViewIfNeededAsync();
+                await image.EvaluateAsync("image => { image.loading = 'eager'; }");
+                await page.WaitForFunctionAsync("image => image.complete && image.naturalWidth > 0", await image.ElementHandleAsync());
+                Assert.True(await image.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+            }
+
             if (path.EndsWith("cnc-machining", StringComparison.Ordinal))
             {
-                foreach (ILocator image in await page.Locator(".docs-figure img").AllAsync())
-                {
-                    await image.ScrollIntoViewIfNeededAsync();
-                    await image.EvaluateAsync("image => { image.loading = 'eager'; }");
-                    await page.WaitForFunctionAsync("image => image.complete && image.naturalWidth > 0", await image.ElementHandleAsync());
-                    Assert.True(await image.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
-                }
-
                 var diagram = page.Locator("#files .docs-figure.knowledge-diagram");
                 Assert.Equal("/src/images/knowledge/visual-cnc-preparation.svg",
                     await diagram.Locator("img").GetAttributeAsync("src"));
