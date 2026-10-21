@@ -157,6 +157,7 @@ test('returns a same-file upload-derived geometry claim with lowercase SHA-256',
   assert.deepEqual(await interop.getGeometryClaim(key), {
     ...expectedGeometry,
     sha256: '52af3eb361bcd7105f22ad173ae6dadf1674de3201e79ba6f55e11f45dd06bcf',
+    gltfUnitPolicy: { version: 0, unit: 0 },
   });
 });
 
