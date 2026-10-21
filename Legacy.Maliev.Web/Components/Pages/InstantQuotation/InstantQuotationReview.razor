@@ -110,6 +110,13 @@
                         <div><dt>@Localizer["Volume"]</dt><dd>@Measurement(part.Geometry.VolumeMm3 / 1_000) cm³</dd></div>
                         <div><dt>@Localizer["Surface area"]</dt><dd>@Measurement(part.Geometry.SurfaceAreaMm2 / 100) cm²</dd></div>
                         <div><dt>@Localizer["Min. thickness"]</dt><dd>@Measurement(part.Geometry.MinThicknessMm) mm</dd></div>
+                        @if (PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin)
+                        {
+                            <div>
+                                <dt>@Localizer["Build preference"]</dt>
+                                <dd data-review-build-preference-detail>@Localizer["Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review"]</dd>
+                            </div>
+                        }
                     </dl>
                     @if (warnings.Count > 0)
                     {
