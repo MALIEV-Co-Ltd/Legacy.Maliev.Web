@@ -34,8 +34,10 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         Assert.DoesNotContain("IAntiBotVerifier", route, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task DisabledContactRoute_UsesTheRetainedRazorFallback()
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task DisabledContactRoute_UsesTheRetainedRazorFallback(string culture)
     {
         await using var fallbackFactory = factory.WithWebHostBuilder(builder =>
         {
@@ -48,10 +50,24 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         });
         using var client = fallbackFactory.CreateClient(
             new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
-        var source = await client.GetStringAsync("/contact?culture=en");
+        var source = await client.GetStringAsync($"/contact?culture={culture}");
 
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        var renderedLink = System.Text.RegularExpressions.Regex.Match(source,
+            "href=\"([^\"]+)\" data-contact-placement=\"contact_line\"");
+        Assert.True(renderedLink.Success, "The original LINE bridge CTA must be rendered.");
+        var destination = System.Net.WebUtility.HtmlDecode(renderedLink.Groups[1].Value);
+        Assert.Equal($"/contact/line?culture={culture}", destination);
+        using var bridge = await client.GetAsync(destination);
+        Assert.Equal(System.Net.HttpStatusCode.OK, bridge.StatusCode);
+        var bridgeHtml = System.Net.WebUtility.HtmlDecode(await bridge.Content.ReadAsStringAsync());
+        Assert.Contains("noindex,follow", bridgeHtml, StringComparison.Ordinal);
+        Assert.Contains("id=\"line-bridge-status\"", bridgeHtml, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "เพิ่มเพื่อน MALIEV บน LINE" : "Add MALIEV on LINE", bridgeHtml, StringComparison.Ordinal);
+        Assert.Contains("getFriendship", bridgeHtml, StringComparison.Ordinal);
+        Assert.Contains("friendship.friendFlag === true", bridgeHtml, StringComparison.Ordinal);
+        Assert.Contains("line_friend_confirmed", bridgeHtml, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
