@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private static readonly IDataProtectionProvider DataProtectionProvider = new EphemeralDataProtectionProvider();
     private readonly WebApplicationFactory<Program> factory;
@@ -29,6 +29,8 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
                 services.AddSingleton<ICountryClient, StubCountryClient>();
             });
         });
+
+    public void Dispose() => factory.Dispose();
 
     [Fact]
     public void Runtime_RegistersAuthoritativePricingAndServerOnlySessionIdentity()

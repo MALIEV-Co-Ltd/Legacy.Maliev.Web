@@ -15,14 +15,15 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
     private readonly HttpClient client;
+    private readonly WebApplicationFactory<Program> configuredFactory;
 
     public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
     {
-        client = factory.WithWebHostBuilder(builder =>
+        configuredFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Testing");
                 builder.UseSetting("Recaptcha:ProjectId", "test-project");
@@ -32,12 +33,31 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
                     services.RemoveAll<ICountryClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
                 });
-            })
-            .CreateClient(new WebApplicationFactoryClientOptions
+            });
+        try
+        {
+            client = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 BaseAddress = new Uri("https://localhost"),
             });
+        }
+        catch (Exception original)
+        {
+            try { configuredFactory.Dispose(); }
+            catch (Exception cleanup)
+            {
+                try { original.Data["InstantQuotationHostCleanupFailureType"] = cleanup.GetType().Name; }
+                catch (Exception) { /* Preserve the original startup failure if its metadata is unwritable. */ }
+            }
+            throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        try { client.Dispose(); }
+        finally { configuredFactory.Dispose(); }
     }
 
     [Fact]

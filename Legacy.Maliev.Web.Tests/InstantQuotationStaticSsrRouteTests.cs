@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private readonly WebApplicationFactory<Program> factory;
 
@@ -18,6 +18,8 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
             .UseSetting("Recaptcha:ProjectId", "test-project")
             .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
+
+    public void Dispose() => factory.Dispose();
 
     [Fact]
     public async Task BlazorRoute_OwnsDocumentGet_WhileLegacyEstimateQueryReturnsExactJsonContract()
