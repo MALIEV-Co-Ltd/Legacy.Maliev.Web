@@ -8,18 +8,21 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebSurfaceTests : IDisposable
 {
     private readonly OwnedWebSurfaceHost ownedHost;
+    private readonly ITestOutputHelper? output;
     private WebApplicationFactory<Program> configuredFactory => ownedHost.Factory;
     internal OwnedWebSurfaceHost LifetimeOwner => ownedHost;
     private HttpClient client => ownedHost.Client;
 
-    public WebSurfaceTests()
+    public WebSurfaceTests(ITestOutputHelper? output = null)
     {
+        this.output = output;
         ownedHost = OwnedWebSurfaceHost.Create(builder =>
             {
                 builder.UseEnvironment("Testing");
@@ -2162,26 +2165,36 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("th", "กรุณากรอกอีเมลที่แตกต่างจากอีเมลปัจจุบัน")]
     public async Task MemberChangeEmail_RejectsCurrentEmailBeforeEitherService(string culture, string expectedMessage)
     {
-        await SignInAsync();
-        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
-            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
-        var accountClient = Assert.IsType<StubCustomerAccountClient>(
-            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
-        authentication.ResetEmailChangeInvocations();
-        accountClient.ResetEmailInvocations();
-        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
-        form["CurrentPassword"] = "current-password";
-        form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
+        using var observation = new WebSurfaceLoginPhaseObservation(
+            configuredFactory.Services.GetService<System.Diagnostics.DiagnosticListener>(), output);
+        try
+        {
+            await SignInAsync();
+            var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+                configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+            var accountClient = Assert.IsType<StubCustomerAccountClient>(
+                configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+            authentication.ResetEmailChangeInvocations();
+            accountClient.ResetEmailInvocations();
+            var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+            form["CurrentPassword"] = "current-password";
+            form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
 
-        using var response = await client.PostAsync(
-            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
-            new FormUrlEncodedContent(form));
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            using var response = await client.PostAsync(
+                $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+                new FormUrlEncodedContent(form));
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
-        Assert.Null(authentication.LastEmailChangeInvocation);
-        Assert.Empty(accountClient.EmailUpdateInvocations);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+            Assert.Null(authentication.LastEmailChangeInvocation);
+            Assert.Empty(accountClient.EmailUpdateInvocations);
+        }
+        catch (Exception exception)
+        {
+            observation.WriteFailure(exception);
+            throw;
+        }
     }
 
     [Theory]
