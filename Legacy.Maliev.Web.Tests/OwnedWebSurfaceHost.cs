@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.FileProviders;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -53,33 +54,56 @@ internal sealed class OwnedWebSurfaceHost : IDisposable
     }
 }
 
-/// <summary>Owns the built local TestServer host even when Start throws before the factory can assign it.</summary>
+/// <summary>Exposes the shared factory's host-start boundary for ownership controls.</summary>
 internal sealed class OwnedWebSurfaceParent : TestingWebApplicationFactory
 {
-    internal IReadOnlyList<string> StartupCleanupFailureTypes { get; private set; } = [];
+    internal IHost StartForOwnershipControl(IHostBuilder builder) => CreateHost(builder);
+}
 
-    protected override IHost CreateHost(IHostBuilder builder)
+/// <summary>Keeps web-root cleanup outside DI, which can abort when a service disposal throws.</summary>
+internal sealed class OwnedWebSurfaceHostLifetime(IHost host, OwnedWebSurfaceResources resources) : IHost
+{
+    public IServiceProvider Services => host.Services;
+    public Task StartAsync(CancellationToken cancellationToken = default) => host.StartAsync(cancellationToken);
+    public Task StopAsync(CancellationToken cancellationToken = default) => host.StopAsync(cancellationToken);
+    public void Dispose() => resources.Dispose();
+}
+
+/// <summary>Owns the house TestServer builder's default physical web-root leaves, not arbitrary borrowed providers.</summary>
+internal sealed class OwnedWebSurfaceWebRoot : IDisposable
+{
+    private readonly HashSet<PhysicalFileProvider> providers = new(ReferenceEqualityComparer.Instance);
+    internal int RemainingOwnedProviders => providers.Count;
+
+    internal OwnedWebSurfaceWebRoot(IWebHostEnvironment? environment) => Capture(environment);
+
+    internal void Capture(IWebHostEnvironment? environment)
     {
-        // WebSurface uses default TestServer only; no Kestrel port/address configuration is changed.
-        var host = builder.Build();
-        try
+        if (environment is null || string.IsNullOrEmpty(environment.WebRootPath)) return;
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(environment.WebRootPath));
+        void CaptureProvider(IFileProvider provider)
         {
-            host.Start();
-            return host;
-        }
-        catch (Exception original)
-        {
-            try { host.Dispose(); }
-            catch (Exception cleanup)
+            if (provider is CompositeFileProvider composite)
             {
-                StartupCleanupFailureTypes = [cleanup.GetType().Name];
-                OwnedWebSurfaceResources.RecordFailureTypes(original, [cleanup]);
+                foreach (var child in composite.FileProviders) CaptureProvider(child);
             }
-            throw;
+            else if (provider is PhysicalFileProvider physical &&
+                string.Equals(Path.TrimEndingDirectorySeparator(physical.Root), root,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            {
+                providers.Add(physical);
+            }
         }
+        CaptureProvider(environment.WebRootFileProvider);
     }
 
-    internal IHost StartForOwnershipControl(IHostBuilder builder) => CreateHost(builder);
+    public void Dispose()
+    {
+        var owned = new OwnedWebSurfaceResources();
+        foreach (var provider in providers) owned.Own(provider);
+        providers.Clear();
+        owned.Dispose();
+    }
 }
 
 /// <summary>Attempts every owned disposal in reverse order, also after partial initialization.</summary>
@@ -116,7 +140,12 @@ internal sealed class OwnedWebSurfaceResources : IDisposable
         catch (Exception) { /* Unwritable metadata must not replace the primary startup exception. */ }
     }
 
-    internal void ReleasePreserving(Exception original) => RecordFailureTypes(original, Release());
+    internal IReadOnlyList<string> ReleasePreserving(Exception original)
+    {
+        var failures = Release();
+        RecordFailureTypes(original, failures);
+        return failures.Select(failure => failure.GetType().Name).ToArray();
+    }
 
     public void Dispose()
     {

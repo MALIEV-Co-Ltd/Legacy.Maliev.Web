@@ -20,15 +20,21 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> factory;
+    private readonly ITestOutputHelper output;
 
 
-    public InstantQuotationSubmissionEndpointTests(WebApplicationFactory<Program> factory) => this.factory = factory;
+    public InstantQuotationSubmissionEndpointTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
+    {
+        this.factory = factory;
+        this.output = output;
+    }
 
     [Fact]
     public async Task SubmitRequest_RequiresAValidAntiforgeryToken()
@@ -62,7 +68,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
         }
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
         using var response = await client.PostAsync(
             SubmitRoute,
@@ -114,7 +120,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(Completed(725));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var response = await client.PostAsync(
             SubmitRoute,
@@ -137,7 +143,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(Completed(726));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var response = await client.PostAsync(
             SubmitRoute,
@@ -160,7 +166,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(Completed(728));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var response = await client.PostAsync(
             SubmitRoute,
@@ -198,7 +204,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(Completed(730));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var response = await client.PostAsync(
             SubmitRoute,
@@ -220,7 +226,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -248,7 +254,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -286,7 +292,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -321,7 +327,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -347,12 +353,12 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(Completed(719));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var first = await client.PostAsync(
             SubmitRoute,
             CustomerForm(new() { ["__RequestVerificationToken"] = token }));
-        token = await GetAntiforgeryTokenAsync(client);
+        token = await GetAntiforgeryTokenAsync(application.Services, client);
         using var second = await client.PostAsync(
             SubmitRoute,
             CustomerForm(new() { ["__RequestVerificationToken"] = token }));
@@ -378,7 +384,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -400,7 +406,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var service = new RecordingSubmissionService(Completed(724));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var post = await client.PostAsync(
             SubmitRoute,
@@ -425,7 +431,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -449,7 +455,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -488,7 +494,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -524,7 +530,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             category));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         using var response = await client.PostAsync(SubmitRoute, CustomerForm(new()
@@ -551,7 +557,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             InstantQuotationProblemCategory.DependencyUnavailable));
         await using var application = CreateFactory(service);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         using var response = await client.PostAsync(SubmitRoute, CustomerForm(new()
@@ -576,7 +582,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         var tempData = new RecordingTempDataProvider();
         await using var application = CreateFactory(service, tempData);
         using var client = CreateClient(application);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
         tempData.Clear();
 
         using var response = await client.PostAsync(
@@ -679,6 +685,8 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         builder.UseEnvironment("Testing");
         builder.ConfigureServices(services =>
         {
+            services.TryAddSingleton<AntiforgeryPageResponseProbeRegistry>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupFilter, AntiforgeryPageResponseProbeStartupFilter>());
             services.RemoveAll<IInstantQuotationSubmissionService>();
             services.AddSingleton<IInstantQuotationSubmissionService>(service);
             services.RemoveAll<ICountryClient>();
@@ -719,9 +727,13 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             HandleCookies = true,
         });
 
-    private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client)
+    private async Task<string> GetAntiforgeryTokenAsync(IServiceProvider services, HttpClient client)
     {
-        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+        using var response = await AntiforgeryPageResponseEvidence.GetAsync(
+            services, client, "/InstantQuotation/3D-Printing?culture=en",
+            AntiforgeryPageResponseLabel.AntiforgeryPage, output.WriteLine);
+        response.EnsureSuccessStatusCode();
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         var match = AntiforgeryTokenRegex().Match(source);
         Assert.True(match.Success);
         return match.Groups["value"].Value;
