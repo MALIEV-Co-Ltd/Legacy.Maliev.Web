@@ -131,8 +131,8 @@ public sealed class WebApplicationFactoryLifecycleTests
             var childEnvironment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
                 .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(child.Services);
             Assert.False(childEnvironment.WebRootFileProvider is IDisposable);
-            var childLeaf = Assert.Single(PhysicalLeaves(childEnvironment.WebRootFileProvider)
-                .Where(provider => !ReferenceEquals(provider, parentLeaf)));
+            var childLeaf = Assert.Single(PhysicalLeaves(childEnvironment.WebRootFileProvider),
+                provider => !ReferenceEquals(provider, parentLeaf));
             cleanup.Add(childLeaf);
             Assert.NotSame(parentLeaf, childLeaf);
             Assert.Equal(parentLeaf.Root, childLeaf.Root);
