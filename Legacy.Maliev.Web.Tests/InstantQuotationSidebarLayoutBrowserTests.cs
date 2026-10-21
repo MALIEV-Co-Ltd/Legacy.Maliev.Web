@@ -213,20 +213,43 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             await rail.EvaluateAsync("rail => { rail.scrollLeft = 0; }");
             await rail.Locator("[data-workflow-part] button").First.HoverAsync();
             var beforeWheel = await rail.EvaluateAsync<double[]>("""
-                rail => {
-                  const style = getComputedStyle(rail);
-                  return [rail.scrollLeft, rail.scrollWidth, rail.clientWidth, rail.scrollHeight, rail.clientHeight,
-                    parseFloat(style.paddingTop), parseFloat(style.paddingBottom),
-                    rail.querySelector('[data-workflow-part]')?.getBoundingClientRect().height ?? 0,
-                    Math.max(0, ...Array.from(rail.children).slice(0, 16).map(child => child.getBoundingClientRect().height))];
-                }
+                rail => new Promise((resolve, reject) => {
+                  let observer;
+                  const timer = setTimeout(() => {
+                    observer?.disconnect();
+                    reject(new Error('The rail content-box measurement did not arrive.'));
+                  }, 5000);
+                  try {
+                    observer = new ResizeObserver(entries => {
+                      try {
+                        const entry = entries.find(entry => entry.target === rail);
+                        if (!entry) throw new Error('The rail content-box measurement is missing.');
+                        const style = getComputedStyle(rail);
+                        const paddingTop = parseFloat(style.paddingTop);
+                        const paddingBottom = parseFloat(style.paddingBottom);
+                        // Content-box size excludes native scrollbar space without integer CSSOM rounding.
+                        resolve([rail.scrollLeft, rail.scrollWidth, rail.clientWidth, rail.scrollHeight, rail.clientHeight,
+                          paddingTop, paddingBottom,
+                          rail.querySelector('[data-workflow-part]')?.getBoundingClientRect().height ?? 0,
+                          Math.max(0, ...Array.from(rail.children).slice(0, 16).map(child => child.getBoundingClientRect().height)),
+                          entry.contentRect.height + paddingTop + paddingBottom]);
+                      } catch (error) { reject(error); }
+                      finally { observer.disconnect(); clearTimeout(timer); }
+                    });
+                    observer.observe(rail, { box: 'content-box' });
+                  } catch (error) {
+                    observer?.disconnect();
+                    clearTimeout(timer);
+                    reject(error);
+                  }
+                })
                 """);
             Assert.Equal(0, beforeWheel[0]);
             Assert.True(beforeWheel[1] > beforeWheel[2], "Eight parts must overflow the desktop rail for this regression to be meaningful.");
             Assert.True(beforeWheel[3] <= beforeWheel[4],
-                $"This gesture must exercise the horizontal rail, not native vertical scrolling. scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}.");
-            Assert.True(beforeWheel[8] + beforeWheel[5] + beforeWheel[6] <= beforeWheel[4],
-                $"Full part names and 44px actions must fit inside the desktop rail padding without clipping. scrollLeft={beforeWheel[0]}, scrollWidth={beforeWheel[1]}, clientWidth={beforeWheel[2]}, scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}.");
+                $"This gesture must exercise the horizontal rail, not native vertical scrolling. scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}, fractionalClientHeight={beforeWheel[9]}.");
+            Assert.True(beforeWheel[8] + beforeWheel[5] + beforeWheel[6] <= beforeWheel[9],
+                $"Full part names and 44px actions must fit inside the desktop rail padding without clipping. scrollLeft={beforeWheel[0]}, scrollWidth={beforeWheel[1]}, clientWidth={beforeWheel[2]}, scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}, fractionalClientHeight={beforeWheel[9]}.");
             await page.Mouse.WheelAsync(0, 120);
             await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-parts]').scrollLeft > 0");
             Assert.True(await rail.EvaluateAsync<double>("rail => rail.scrollLeft") > 0,
