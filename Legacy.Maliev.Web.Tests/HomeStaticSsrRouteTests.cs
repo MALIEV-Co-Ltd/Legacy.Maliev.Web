@@ -273,9 +273,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
             "landing-service-directory-link"
         })
         {
-            var anchor = Assert.Single(anchors.Where(candidate =>
+            var anchor = Assert.Single(anchors, candidate =>
                 candidate.Groups["classes"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Contains(anchorClass, StringComparer.Ordinal)));
+                    .Contains(anchorClass, StringComparer.Ordinal));
             var href = anchor.Groups["href"].Value;
             Assert.Equal(expectedHref, href);
 
