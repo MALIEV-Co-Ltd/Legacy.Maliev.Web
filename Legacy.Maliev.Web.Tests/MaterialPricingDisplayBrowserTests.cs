@@ -318,6 +318,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 
     private sealed class Control
     {
+        public MaterialCompletionObservation Observation { get; } = new();
         public ConcurrentQueue<Gate> Gates { get; } = new();
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
         public ConcurrentQueue<(string Stage, int Quantity, bool Canceled)> Timeline { get; } = new();
@@ -421,6 +422,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
                         ?? store.ImplementationFactory?.Invoke(provider)
                         ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), store.Lifetime));
+                control.Observation.Decorate(services);
             });
         }
     }
@@ -481,6 +483,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                         Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
                 var part = new InstantQuotationPart(Guid.NewGuid(), displayFileName, reference, geometry, new("M68", "White", 1));
                 Assert.True(await store.PutAsync(stored with { RequestState = new([part]) }, null, default));
+                fixture.Control.Observation.BeginEdit();
                 await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
                 await fixture.Page.EvaluateAsync("""
@@ -498,7 +501,13 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     """);
                 return fixture;
             }
-            catch (Exception primary) { await fixture.DisposeAsync(primary); throw; }
+            catch (Exception primary)
+            {
+                try { output.WriteLine("[material-initialization-services] " + fixture.Control.Observation.Describe()); }
+                catch { /* Secondary observation must not mask the original fixture failure. */ }
+                await fixture.DisposeAsync(primary);
+                throw;
+            }
         }
         public async Task ChangeQuantityAsync(int quantity)
         {
