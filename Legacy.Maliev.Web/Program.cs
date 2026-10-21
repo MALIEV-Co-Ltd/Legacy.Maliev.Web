@@ -5,6 +5,7 @@ using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Middleware;
+using Legacy.Maliev.Web.Pages.Shared;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Antiforgery;
@@ -569,6 +570,9 @@ if (useBlazorRouteHost)
         branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
 }
 app.MapDefaultEndpoints("web");
+app.UseWhen(
+    CareerSearchCompatibilityEndpoint.Matches,
+    branch => branch.Run(CareerSearchCompatibilityEndpoint.HandleAsync));
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))
