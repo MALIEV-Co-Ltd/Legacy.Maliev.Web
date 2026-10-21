@@ -83,10 +83,13 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
             "aeon-fantasy", "lenso", "mfec", "thai-coconut", "khon-kaen-sugar", "bem", "crown-seal",
             "thai-optical", "kumwell", "tpi-polene-power",
             "alten-korea", "forth", "do-day-dream", "thai-agri-foods",
-            "sahamitr-pressure-container", "index-creative-village"
+            "sahamitr-pressure-container", "crown-ceramics"
         ];
         var actual = Regex.Matches(html, "data-customer=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
         Assert.Equal(expected, actual);
+        Assert.DoesNotContain("index-creative-village", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Index Creative Village", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("อินเด็กซ์ ครีเอทีฟ วิลเลจ", html, StringComparison.Ordinal);
         Assert.Contains(culture == "th"
             ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"
             : "Companies that have chosen MALIEV for manufacturing and development work.", html, StringComparison.Ordinal);
@@ -97,8 +100,8 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
             ("forth", "Forth Corporation", "ฟอร์ท คอร์ปอเรชั่น", 169, 50, false),
             ("do-day-dream", "Do Day Dream", "ดู เดย์ ดรีม", 76, 74, false),
             ("thai-agri-foods", "Thai Agri Foods", "ไทยอกริฟู้ดส์", 75, 75, false),
-            ("sahamitr-pressure-container", "Sahamitr Pressure Container", "สหมิตรถังแก๊ส", 264, 168, true),
-            ("index-creative-village", "Index Creative Village", "อินเด็กซ์ ครีเอทีฟ วิลเลจ", 192, 100, true)
+            ("sahamitr-pressure-container", "Sahamitr Pressure Container", "สหมิตรถังแก๊ส", 264, 168, false),
+            ("crown-ceramics", "Crown Ceramics", "คราวน์ เซรามิคส์", 234, 119, false)
         ];
         foreach (var customer in additions)
         {

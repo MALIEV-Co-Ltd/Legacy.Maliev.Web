@@ -32,10 +32,22 @@ public sealed class AboutStaticSsrRouteTests : IClassFixture<TestingWebApplicati
         Assert.Contains(culture == "th"
             ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"
             : "Companies that have chosen MALIEV for manufacturing and development work.", html, StringComparison.Ordinal);
-        foreach (var customer in new[] { "alten-korea", "forth", "do-day-dream", "thai-agri-foods", "sahamitr-pressure-container", "index-creative-village" })
+        foreach (var customer in new[] { "alten-korea", "forth", "do-day-dream", "thai-agri-foods", "sahamitr-pressure-container", "crown-ceramics" })
         {
             Assert.Single(Regex.Matches(html, $"data-customer=\"{customer}\""));
             Assert.Contains($"/src/images/customers/{customer}.webp", html, StringComparison.Ordinal);
+        }
+        Assert.DoesNotContain("index-creative-village", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Index Creative Village", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("อินเด็กซ์ ครีเอทีฟ วิลเลจ", html, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "คราวน์ เซรามิคส์" : "Crown Ceramics", html, StringComparison.Ordinal);
+        foreach (var customer in new[] { "sahamitr-pressure-container", "crown-ceramics" })
+        {
+            var card = Assert.Single(Regex.Matches(html,
+                $"<li class=\"profile-customer\" data-customer=\"{customer}\">(?<card>.*?)</li>",
+                RegexOptions.Singleline)).Groups["card"].Value;
+            Assert.Contains("class=\"profile-customer-logo\"", card, StringComparison.Ordinal);
+            Assert.DoesNotContain("profile-customer-logo-dark", card, StringComparison.Ordinal);
         }
         Assert.Single(Regex.Matches(html, "<h1(?:\\s|>)", RegexOptions.IgnoreCase));
         Assert.Contains($"data-migration-route-owner=\"{(blazor ? "blazor-static-ssr" : "razor-static-ssr")}\"", html, StringComparison.Ordinal);

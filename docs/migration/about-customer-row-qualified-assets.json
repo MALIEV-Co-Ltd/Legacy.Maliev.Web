@@ -1,17 +1,22 @@
 {
   "schema_version": 1,
-  "scope": "Only six About customer-row genuine hosted WebP outputs; no whole-source, old18, browser or protected-main acceptance",
-  "head": "390c514a7a73deb0129bf3d7ddcaf35dc02f097c",
-  "run": 39568596290,
+  "scope": "Only six final About customer-row genuine hosted WebP outputs; application head, browser/full-suite and protected-main acceptance remain required",
+  "head": "3e0b882efdf86c68d3f584b7c5b07b2507f09ad0",
+  "run": 39591479653,
   "attempt": 1,
-  "job": 119116860596,
+  "job": 119193241051,
   "conclusion": "success",
-  "official_whole_log_seal": "26bba2435b846e4737ba30c3b3aed84c635b5077",
+  "official_whole_log_seal": "0fda47e87b86f730ae27c2daa541c5e1c1231db7",
+  "source_commits": [
+    "d7bb4f884786b4bb6460c5003d1da43c7ce1578f",
+    "d5385fdd683e443668bcef10e5e1e5286e43e707",
+    "edf4e45d7ffce2f55b0d607ca82d51e81c330781"
+  ],
   "artifact": {
-    "id": 12331196143,
-    "name": "company-logo-webp-390c514a7a73deb0129bf3d7ddcaf35dc02f097c-39568596290-1",
-    "bytes": 445325,
-    "sha256": "dda2a8a34406769d3d2299c9fefad16a14b89d3e3d94be881559e3bf2f6ffb1f"
+    "id": 12341852298,
+    "name": "company-logo-webp-3e0b882efdf86c68d3f584b7c5b07b2507f09ad0-39591479653-1",
+    "bytes": 449383,
+    "sha256": "555b3b25f6eb6add1c663e4f507ee87875e3f26d0ae04c31adc746fbe9d86d95"
   },
   "outputs": [
     {
@@ -45,55 +50,51 @@
       "bytes": 2968
     },
     {
-      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/index-creative-village.webp",
-      "sha": "3c4e03efd15f5895545e6f2307314f99dcf795df",
-      "sha256": "a701207c3b6b7cc74752f091f1d42ca46a8916944ab6a31971b1e9e5743677f3",
-      "bytes": 4952
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-ceramics.webp",
+      "sha": "7a6ad870de653f8fbfbe136d0d552bb05ab3127c",
+      "sha256": "ecbcbd0693b8cd856ef19dd6f9bf3b5e93d6bde7ed9bdb12aa9c9a804612d765",
+      "bytes": 7380
     }
   ],
-  "receipts": [
-    {
-      "path": "company-logo-webp-proof/cleanup.json",
-      "bytes": 4700,
-      "sha": "4fb2304f1467f3a477219a4594b86a328eec1bcf"
+  "custody": {
+    "full_proof_receipt_controls_cleanup_git_blob": "05cb41052f131dde2c9400a3c652c12c339e8219",
+    "historical_six_input_qualification_git_blob": "b55a33430493bc5d670bd9d8cc13ee4141925605",
+    "reader": {
+      "persistentData": false,
+      "purpose": "Crown exact artifact memory-only reader",
+      "executable": "C:\\Program Files\\GitHub CLI\\gh.exe",
+      "ports": [],
+      "containers": [],
+      "exitCode": 0,
+      "pid": 44900,
+      "actualStartUtc": "2026-10-21T11:25:00.0585903Z",
+      "leaseUntilUtc": "2026-10-21T11:25:30.0585903Z",
+      "volumes": [],
+      "exited": true
     },
-    {
-      "path": "company-logo-webp-proof/customer-row/qualified/six-source-proof.json",
-      "bytes": 14559,
-      "sha": "db010f5e2c58c65d873ad7966348ee8f0e6feb2b"
-    },
-    {
-      "path": "company-logo-webp-proof/customer-row/receipt.json",
-      "bytes": 14591,
-      "sha": "f1f9a2b18b1978a295627a8f08bea5d4e0b7face"
-    },
-    {
-      "path": "company-logo-webp-proof/customer-row-controls.json",
-      "bytes": 1914,
-      "sha": "f4372d55bf42e928f5696954bc07433e018fa9f2"
-    },
-    {
-      "path": "company-logo-webp-admission/customer-row-controls.json",
-      "bytes": 973,
-      "sha": "43af0043bf06d6ed7fee4d0fb3493452b65f4b10"
-    },
-    {
-      "path": "company-logo-webp-admission/customer-row.json",
-      "bytes": 964,
-      "sha": "5810af4b1f6ef4da7054e33bf64395cf0e04c353"
-    }
-  ],
+    "reader_absence_reobserved_by_root": true
+  },
   "qualification": {
     "six_source_fields_match_reviewed_manifest": true,
     "all_output_gitsha_and_sha256_verified": true,
-    "lossless_webp_dimensions_independently_verified": true,
     "hosted_exact_rgba_alpha_dimensions_orientation_icc_exif_xmp": "PASS",
     "new_control_tests": 6,
     "failures": 0,
     "errors": 0,
-    "hosted_cleanup": "four worker/supervisor ownership observations absent; directory absent",
+    "hosted_cleanup": "REMOVED; eight exact worker/supervisor ownership observations absent; directory absent",
     "local_worker_count": 0,
-    "local_checks": "No encoder/SDK/test/browser execution"
+    "local_checks": "No encoder/SDK/test/browser execution",
+    "hosted_lossless_webp_dimensions_verified": true
+  },
+  "crown": {
+    "source_git_blob": "b9f8104db45442cbbf598a6a36d5649a159435d9",
+    "source_bytes": 11291,
+    "width": 234,
+    "height": 119,
+    "decoded_rgba_sha256": "a8b69ddd6f8f465b388917425110e6aa9a838a1c4692ee7fc8033363989a6ac0",
+    "alpha_sha256": "3029787001d92900941c6f4a3cd1d3814798589271ccb3d5a96cbe54ddd241af",
+    "normalized_exif_bytes": 180,
+    "normalized_exif_sha256": "ced9feec0d3626b1336947d8f89c994f962b119a5753a739236f80dda548ee6d"
   },
   "tool": {
     "python": "3.12.3",
@@ -101,6 +102,6 @@
     "webp": "1.6.0",
     "wheel_sha256": "42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca",
     "converter_git_blob": "1a729ae1167675b07717b8809fa9c493ae32e24d",
-    "manifest_git_blob": "4574eb90d161bb078353e7636a305a8a927cc905"
+    "manifest_git_blob": "35e5cf98997ccb2baa13563fcca8f5212fcdde06"
   }
 }

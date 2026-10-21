@@ -23,6 +23,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
+        await AssertFinalCustomerRosterAsync(page, culture);
         await Expect(page.Locator("[data-capability-carousel]")).ToHaveAttributeAsync("data-carousel-state", "ready");
         await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
         await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "reduced");
@@ -66,6 +67,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
+        await AssertFinalCustomerRosterAsync(page, culture);
         Assert.True(await page.Locator("main.profile-about").IsVisibleAsync());
         Assert.Equal(6, await page.Locator(".profile-capability-slide").CountAsync());
         Assert.False(await page.Locator("[data-capability-controls]").IsVisibleAsync());
@@ -109,6 +111,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
+        await AssertFinalCustomerRosterAsync(page, culture);
         await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
         await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "ready");
         await DismissConsentAsync(page);
@@ -147,6 +150,36 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         await page.EvaluateAsync("() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))");
         Assert.Equal(0, await page.EvaluateAsync<int>("() => window.__aboutClock.count()"));
         Assert.Equal("stopped", await page.Locator("[data-workpiece-gallery]").GetAttributeAsync("data-workpiece-ready"));
+    }
+
+    private static async Task AssertFinalCustomerRosterAsync(IPage page, string culture)
+    {
+        string[] expected = [
+            "ptt", "pttep", "bangchak", "siemens-mobility", "mitsubishi-materials", "fabrinet",
+            "minor-food", "kohler", "grohe", "murata", "olympus", "air-liquide", "lixil", "kobelco",
+            "siam-motors", "mektec", "thai-asahi-denso", "yg-1", "sp-syndicate", "singha-kameda",
+            "aeon-fantasy", "lenso", "mfec", "thai-coconut", "khon-kaen-sugar", "bem", "crown-seal",
+            "thai-optical", "kumwell", "tpi-polene-power",
+            "alten-korea", "forth", "do-day-dream", "thai-agri-foods",
+            "sahamitr-pressure-container", "crown-ceramics"
+        ];
+        Assert.Equal(expected, await page.Locator("[data-customer]").EvaluateAllAsync<string[]>(
+            "cards => cards.map(card => card.dataset.customer)"));
+        Assert.Equal(0, await page.Locator("[data-customer='index-creative-village']").CountAsync());
+        var crown = page.Locator("[data-customer='crown-ceramics']");
+        await Expect(crown).ToContainTextAsync(culture == "th" ? "คราวน์ เซรามิคส์" : "Crown Ceramics");
+        var image = crown.Locator("img");
+        foreach (var (name, value) in new[]
+        {
+            ("src", "/src/images/customers/crown-ceramics.webp"),
+            ("width", "234"),
+            ("height", "119"),
+            ("loading", "lazy"), ("decoding", "async"), ("alt", "")
+        })
+            await Expect(image).ToHaveAttributeAsync(name, value);
+        foreach (var slug in new[] { "sahamitr-pressure-container", "crown-ceramics" })
+            await Expect(page.Locator($"[data-customer='{slug}'] > .profile-customer-logo"))
+                .ToHaveAttributeAsync("class", "profile-customer-logo");
     }
 
     private static async Task DismissConsentAsync(IPage page)
