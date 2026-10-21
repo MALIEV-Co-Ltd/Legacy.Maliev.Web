@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -256,10 +255,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
 
     private static int ReserveFreePort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = BrowserTestServerPort.Reserve();
         return port;
     }
 }

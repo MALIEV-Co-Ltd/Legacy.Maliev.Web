@@ -45,6 +45,24 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("flex-wrap: wrap", css, StringComparison.Ordinal);
     }
 
+
+    [Fact]
+    public void Material_details_reserve_both_terminal_price_rows_without_clipping_content()
+    {
+        var css = ReadCss();
+        var selector = "[data-material-selector] .material-card__detail";
+        var rule = System.Text.RegularExpressions.Regex.Match(css,
+            @"(?m)^" + System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*\{(?<declarations>[^}]*)\}");
+        Assert.True(rule.Success);
+        var declarations = rule.Groups["declarations"].Value;
+        Assert.Contains("line-height: 1.2", declarations, StringComparison.Ordinal);
+        Assert.Contains("min-height: calc(2lh + .1rem)", declarations, StringComparison.Ordinal);
+        Assert.DoesNotMatch(@"(?<!-)height\s*:", declarations);
+        Assert.DoesNotContain("overflow: hidden", declarations, StringComparison.Ordinal);
+        Assert.Contains(selector + ":has([data-price-status=\"unavailable\"]) { grid-template-columns: minmax(0, 1fr); row-gap: .1rem; }",
+            css, StringComparison.Ordinal);
+    }
+
     private static string ReadCss() => File.ReadAllText(Path.Combine(
         RepositoryRoot,
         "Legacy.Maliev.Web",

@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -29,10 +27,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     public async Task RealPartsRailExposesLongNamesAndKeyboardActions(string culture, int width)
     {
         await using var factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = BrowserTestServerPort.Reserve();
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });

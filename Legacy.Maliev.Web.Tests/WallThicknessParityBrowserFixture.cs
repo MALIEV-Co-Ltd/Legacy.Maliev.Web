@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
@@ -25,10 +24,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = BrowserTestServerPort.Reserve();
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
