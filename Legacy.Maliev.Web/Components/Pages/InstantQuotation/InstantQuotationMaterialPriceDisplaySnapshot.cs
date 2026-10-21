@@ -5,6 +5,8 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 /// <summary>Immutable local display rows; never a protected quote or readiness signal.</summary>
 public sealed class InstantQuotationMaterialPriceDisplaySnapshot
 {
+    /// <summary>Starts an empty display snapshot for a positive pricing generation.</summary>
+    /// <param name="generation">The positive generation that separates current display rows from obsolete updates.</param>
     public InstantQuotationMaterialPriceDisplaySnapshot(long generation)
         : this(generation, []) { }
 
@@ -16,11 +18,15 @@ public sealed class InstantQuotationMaterialPriceDisplaySnapshot
         Entries = Array.AsReadOnly(entries);
     }
 
+    /// <summary>Gets the pricing generation to which all rows in this snapshot belong.</summary>
     public long Generation { get; }
 
+    /// <summary>Gets the read-only per-part and per-material display rows; these do not authorize pricing.</summary>
     public IReadOnlyList<InstantQuotationMaterialPricingProgress> Entries { get; }
 
     /// <summary>Creates a copied display snapshot after a legal per-part/material transition.</summary>
+    /// <param name="frame">The validated pending or terminal material-display update.</param>
+    /// <returns>This snapshot for an identical update, or a copied snapshot containing the legal transition.</returns>
     public InstantQuotationMaterialPriceDisplaySnapshot Apply(InstantQuotationMaterialPricingProgress frame)
     {
         ArgumentNullException.ThrowIfNull(frame);

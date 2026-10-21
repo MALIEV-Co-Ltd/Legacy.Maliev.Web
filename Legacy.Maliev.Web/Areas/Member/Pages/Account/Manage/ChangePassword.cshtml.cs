@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage;
 
+/// <summary>Changes the signed-in customer's password, ends the current session, and sends a security notification.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [Authorize]
 [EnableRateLimiting("account")]
 public sealed class ChangePassword(
@@ -18,20 +23,28 @@ public sealed class ChangePassword(
     INotificationClient notificationClient,
     ILogger<ChangePassword> logger) : PageModel
 {
+    /// <summary>The existing password submitted for identity verification before an account security change.</summary>
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024)]
     public string CurrentPassword { get; set; } = string.Empty;
 
+    /// <summary>The replacement password submitted to the identity service after local validation.</summary>
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 8)]
     public string NewPassword { get; set; } = string.Empty;
 
+    /// <summary>The repeated password used to detect a mismatched password entry before submission.</summary>
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024), Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The safe password-change validation feedback without password values.</summary>
     public MemberChangePasswordDisplayModel DisplayModel { get; private set; } = MemberChangePasswordDisplayModel.Empty;
 
+    /// <summary>Requires a usable server-side session before displaying the password-change form.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The password-change page or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var accessToken = await sessionManager.GetAccessTokenAsync(HttpContext, cancellationToken);
@@ -44,6 +57,9 @@ public sealed class ChangePassword(
         return Page();
     }
 
+    /// <summary>Changes the identity password and signs out the current session before requesting a security notification.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A sign-in redirect after success, the form with safe errors, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostChangePasswordAsync(CancellationToken cancellationToken)
     {
         var accessToken = await sessionManager.GetAccessTokenAsync(HttpContext, cancellationToken);

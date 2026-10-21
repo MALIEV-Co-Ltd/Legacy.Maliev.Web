@@ -9,45 +9,63 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage;
 
+/// <summary>Loads and updates the signed-in customer's personal and company profile without changing identity credentials.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="customerClient">The typed customer client used by this page to read or update customer details.</param>
 [Authorize]
 public sealed class Profile(
     IAccountSessionManager sessionManager,
     ICustomerAccountClient customerClient) : PageModel
 {
+    /// <summary>The customer's given name used in the account or request contact details.</summary>
     [BindProperty, Required, StringLength(250)]
     public string FirstName { get; set; } = string.Empty;
 
+    /// <summary>The customer's family name used in the account or request contact details.</summary>
     [BindProperty, Required, StringLength(250)]
     public string LastName { get; set; } = string.Empty;
 
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     public string Email { get; private set; } = string.Empty;
 
+    /// <summary>The optional landline contact number supplied with the customer's details.</summary>
     [BindProperty, Phone, StringLength(250)]
     public string? Telephone { get; set; }
 
+    /// <summary>The mobile contact number supplied with the customer's details.</summary>
     [BindProperty, Phone, StringLength(250)]
     public string? Mobile { get; set; }
 
+    /// <summary>The optional fax number stored in the customer's profile.</summary>
     [BindProperty, Phone, StringLength(250)]
     public string? Fax { get; set; }
 
+    /// <summary>The optional customer birth date entered in invariant yyyy-MM-dd form.</summary>
     [BindProperty]
     public string? DateOfBirth { get; set; }
 
+    /// <summary>The company name associated with the customer's profile.</summary>
     [BindProperty, StringLength(250)]
     public string? CompanyName { get; set; }
 
+    /// <summary>The optional tax identifier associated with the customer's billing or company details.</summary>
     [BindProperty, StringLength(250)]
     public string? TaxNumber { get; set; }
 
+    /// <summary>The company registration information retained in the customer's profile.</summary>
     [BindProperty, StringLength(250)]
     public string? Registrar { get; set; }
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The customer profile fields, outcome message, and safe validation feedback.</summary>
     public MemberProfileDisplayModel DisplayModel { get; private set; } = MemberProfileDisplayModel.Empty;
 
+    /// <summary>Loads the signed-in customer's editable profile and display projection.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The profile page or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
@@ -67,6 +85,9 @@ public sealed class Profile(
         return Page();
     }
 
+    /// <summary>Validates profile fields and birth-date format before updating the owned customer profile.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A redirect after success, the form with safe errors, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostUpdateProfileAsync(CancellationToken cancellationToken)
     {
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);

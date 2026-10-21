@@ -10,6 +10,12 @@ using Microsoft.Extensions.Localization;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
+/// <summary>Completes a pending initial-password challenge and attempts sign-in with a validated local return path.</summary>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="localizer">The localizer supplying this page's validation and outcome messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [EnableRateLimiting("account")]
 public sealed class SetInitialPassword(
     ICustomerAuthenticationClient authenticationClient,
@@ -18,24 +24,31 @@ public sealed class SetInitialPassword(
     IStringLocalizer<SetInitialPasswordContent> localizer,
     ILogger<SetInitialPassword> logger) : PageModel
 {
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty, Required(ErrorMessage = "Please enter your email address"), EmailAddress(ErrorMessage = "Please enter a valid email address"), StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The single-use identity challenge submitted to authorize this password operation.</summary>
     [BindProperty, Required(ErrorMessage = "The password setup token is required."), StringLength(256, MinimumLength = 32, ErrorMessage = "The password setup token is invalid.")]
     public string Token { get; set; } = string.Empty;
 
+    /// <summary>The password submitted to the identity workflow; it is excluded from the form display projection.</summary>
     [BindProperty, Required(ErrorMessage = "Please enter a new password"), DataType(DataType.Password), StringLength(1024, MinimumLength = 8, ErrorMessage = "The new password must be between 8 and 1024 characters.")]
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>The repeated password used to detect a mismatched password entry before submission.</summary>
     [BindProperty, Required(ErrorMessage = "Please confirm your new password"), DataType(DataType.Password), Compare(nameof(Password), ErrorMessage = "Password confirmation does not match."), StringLength(1024, ErrorMessage = "Password confirmation is too long.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>The requested post-authentication return path, which must pass local-URL validation before use.</summary>
     [BindProperty]
     public string? ReturnUrl { get; set; }
 
+    /// <summary>Whether successful sign-in should persist the account session beyond the current browser session.</summary>
     [BindProperty]
     public bool RememberMe { get; set; }
 
+    /// <summary>The pending setup challenge, navigation preferences, and localized validation feedback.</summary>
     public SetInitialPasswordFormDisplayModel DisplayModel => new(
         Email,
         Token,
@@ -61,6 +74,12 @@ public sealed class SetInitialPassword(
                 : localizer["The submitted value is invalid."].Value;
     }
 
+    /// <summary>Initializes a pending password-setup form and filters the requested return path.</summary>
+    /// <param name="email">The email address associated with this account request.</param>
+    /// <param name="token">The single-use identity challenge supplied by the account link.</param>
+    /// <param name="returnUrl">The requested local path to visit after completing the account workflow.</param>
+    /// <param name="rememberMe">Whether successful sign-in should persist the account session.</param>
+    /// <returns>The setup page or a sign-in redirect when required challenge inputs are absent.</returns>
     public IActionResult OnGet(string? email, string? token, string? returnUrl, bool rememberMe = false)
     {
         ApplySensitiveResponseHeaders();
@@ -73,6 +92,9 @@ public sealed class SetInitialPassword(
             : Page();
     }
 
+    /// <summary>Completes initial password setup, sends a security notification, and attempts sign-in.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A safe local destination, a sign-in redirect, or the setup page with controlled errors.</returns>
     public async Task<IActionResult> OnPostCompleteAsync(CancellationToken cancellationToken)
     {
         ApplySensitiveResponseHeaders();

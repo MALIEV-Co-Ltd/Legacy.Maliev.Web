@@ -1,6 +1,11 @@
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
 /// <summary>Source material-card copy and grouping, without pricing or manufacturing authority.</summary>
+/// <param name="Key">The stable material key used to match the current server catalog.</param>
+/// <param name="Name">The source material name shown on its card.</param>
+/// <param name="Category">The source grouping label used in the selector.</param>
+/// <param name="Description">The English source description, without price or manufacturing authority.</param>
+/// <param name="ThaiDescription">The Thai source description, without price or manufacturing authority.</param>
 public sealed record MaterialCardPresentation(string Key, string Name, string Category, string Description, string ThaiDescription);
 
 /// <summary>Preserves the source catalogue order independently of pricing dictionary enumeration.</summary>
@@ -37,6 +42,8 @@ public static class MaterialCardPresentationCatalog
     ]);
 
     /// <summary>Offers only current server materials, retaining unknown future keys without inventing descriptions.</summary>
+    /// <param name="materials">The current server material options that constrain the displayed catalog.</param>
+    /// <returns>Known source cards in source order, followed by unknown current materials with empty descriptions.</returns>
     public static IReadOnlyList<MaterialCardPresentation> ForMaterials(IReadOnlyList<InstantQuotationWorkflowMaterialOption> materials)
     {
         var keys = materials.Select(material => material.Key).ToHashSet(StringComparer.Ordinal);
@@ -48,6 +55,10 @@ public static class MaterialCardPresentationCatalog
     }
 
     /// <summary>Searches source names, both description languages and the current category label.</summary>
+    /// <param name="material">The source material card to search.</param>
+    /// <param name="search">The search text, trimmed before matching.</param>
+    /// <param name="localize">The function resolving descriptions and category labels for the active UI language.</param>
+    /// <returns>True for an empty search or a case-insensitive match in the searched card text.</returns>
     public static bool Matches(MaterialCardPresentation material, string search, Func<string, string> localize)
     {
         var needle = search.Trim();

@@ -1,6 +1,8 @@
 namespace Legacy.Maliev.Web.Components.Layout;
 
 /// <summary>Server-derived display state for the public browser compatibility notice.</summary>
+/// <param name="ShowNotice">Whether the case-sensitive legacy Trident marker was detected for this request.</param>
+/// <param name="UserAgent">The request user-agent value used only for compatibility presentation.</param>
 public sealed record PublicBrowserCompatibilityNoticeDisplayModel(bool ShowNotice, string UserAgent)
 {
     /// <summary>Creates display-only compatibility state from the current request.</summary>

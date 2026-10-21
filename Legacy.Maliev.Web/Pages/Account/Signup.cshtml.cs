@@ -13,6 +13,14 @@ using Microsoft.Extensions.Localization;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
+/// <summary>Creates a customer profile and identity after anti-bot verification, then requests email confirmation.</summary>
+/// <param name="customerClient">The typed customer client used by this page to read or update customer details.</param>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="antiBotVerifier">The verifier for the browser's anti-bot challenge.</param>
+/// <param name="recaptchaOptions">The configured public browser challenge settings.</param>
+/// <param name="localizer">The localizer supplying this page's validation and outcome messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [EnableRateLimiting("account")]
 public sealed class Signup(
     ICustomerProfileClient customerClient,
@@ -23,42 +31,51 @@ public sealed class Signup(
     IStringLocalizer<SignupContent> localizer,
     ILogger<Signup> logger) : PageModel
 {
+    /// <summary>The customer's given name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "First name is required")]
     [StringLength(100, ErrorMessage = "First name is too long.")]
     public string FirstName { get; set; } = string.Empty;
 
+    /// <summary>The customer's family name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Last name is required")]
     [StringLength(100, ErrorMessage = "Last name is too long.")]
     public string LastName { get; set; } = string.Empty;
 
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
     [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The password submitted to the identity workflow; it is excluded from the form display projection.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Password is required")]
     [DataType(DataType.Password)]
     [StringLength(1024, MinimumLength = 8, ErrorMessage = "The password must be between 8 and 1024 characters.")]
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>The repeated password used to detect a mismatched password entry before submission.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please confirm your new password")]
     [DataType(DataType.Password)]
     [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>The browser's anti-bot challenge response, verified before the request is persisted.</summary>
     [BindProperty(Name = "g-recaptcha-response")]
     public string? RecaptchaToken { get; set; }
 
+    /// <summary>The configured public site key used to obtain a browser anti-bot challenge.</summary>
     public string RecaptchaSiteKey => recaptchaOptions.Value.SiteKey;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The registration contact fields and localized validation feedback, excluding passwords.</summary>
     public SignupFormDisplayModel DisplayModel => new(
         FirstName,
         LastName,
@@ -83,10 +100,15 @@ public sealed class Signup(
                 : localizer["The submitted value is invalid."].Value;
     }
 
+    /// <summary>Displays registration only when the visitor is not already signed in.</summary>
+    /// <returns>The registration page or a local account redirect.</returns>
     public IActionResult OnGet() => User.Identity?.IsAuthenticated == true
         ? LocalRedirect("~/Account")
         : Page();
 
+    /// <summary>Verifies the anti-bot challenge, creates profile and identity, and requests email confirmation.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A localized outcome or sign-in redirect, or the registration page with controlled errors.</returns>
     public async Task<IActionResult> OnPostSignUpAsync(CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)

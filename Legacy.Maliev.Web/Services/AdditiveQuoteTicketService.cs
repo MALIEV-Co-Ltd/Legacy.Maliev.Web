@@ -248,6 +248,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Protects a server-computed upload receipt.</summary>
+        /// <param name="payload">The server-computed upload receipt to protect for later identity validation.</param>
+        /// <returns>An opaque Data Protection token containing the upload receipt.</returns>
         public string ProtectUpload(AdditiveUploadReceiptPayload payload)
         {
             ArgumentNullException.ThrowIfNull(payload);
@@ -255,6 +257,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Unprotects and validates a server-computed upload receipt.</summary>
+        /// <param name="ticket">The opaque upload receipt token to unprotect.</param>
+        /// <param name="now">The current UTC time used to validate the receipt lifetime.</param>
+        /// <returns>The validated upload receipt; invalid or expired receipts cause a ticket exception.</returns>
         public AdditiveUploadReceiptPayload UnprotectUpload(string ticket, DateTimeOffset now)
         {
             AdditiveUploadReceiptPayload payload = this.Unprotect<AdditiveUploadReceiptPayload>(this.uploadProtector, ticket);
@@ -273,6 +278,10 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Checks session ownership and normalized file identity.</summary>
+        /// <param name="payload">The unprotected upload receipt whose ownership is being checked.</param>
+        /// <param name="sessionId">The current quotation session identifier.</param>
+        /// <param name="fileName">The submitted file name to compare without case sensitivity.</param>
+        /// <returns>True only when the receipt belongs to the supplied session and file name.</returns>
         public bool MatchesUploadIdentity(AdditiveUploadReceiptPayload payload, string sessionId, string fileName)
         {
             return payload != null
@@ -441,6 +450,14 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Determines whether a protected line still belongs to the immutable upload and settings.</summary>
+        /// <param name="payload">The unprotected line quote whose immutable identity is being checked.</param>
+        /// <param name="sessionId">The current quotation session identifier.</param>
+        /// <param name="fileName">The submitted file name to compare without case sensitivity.</param>
+        /// <param name="materialKey">The selected material key.</param>
+        /// <param name="buildPreference">The selected printing build preference.</param>
+        /// <param name="quantity">The requested part quantity.</param>
+        /// <param name="storagePath">The optional normalized upload path to bind; blank omits the path comparison.</param>
+        /// <returns>True only when every required identity and configuration field matches.</returns>
         public bool MatchesLineIdentity(
             AdditiveLineQuotePayload payload,
             string sessionId,

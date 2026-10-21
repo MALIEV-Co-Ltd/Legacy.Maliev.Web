@@ -12,6 +12,12 @@ using Microsoft.Extensions.Localization;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
+/// <summary>Handles customer sign-in, pending password setup, and bounded email-confirmation recovery.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="localizer">The localizer supplying this page's validation and outcome messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [EnableRateLimiting("account")]
 public sealed class Login(
     IAccountSessionManager sessionManager,
@@ -20,31 +26,38 @@ public sealed class Login(
     IStringLocalizer<LoginContent> localizer,
     ILogger<Login> logger) : PageModel
 {
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
     [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The password submitted to the identity workflow; it is excluded from the form display projection.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Password is required")]
     [DataType(DataType.Password)]
     [StringLength(1024)]
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>Whether successful sign-in should persist the account session beyond the current browser session.</summary>
     [BindProperty]
     public bool RememberMe { get; set; }
 
+    /// <summary>The requested post-authentication return path, which must pass local-URL validation before use.</summary>
     [BindProperty]
     public string? ReturnUrl { get; set; }
 
+    /// <summary>The pending identity challenge used to authorize a confirmation-email recovery request.</summary>
     [BindProperty]
     [StringLength(256, MinimumLength = 32)]
     public string? EmailConfirmationRecoveryToken { get; set; }
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The sign-in form state and localized validation feedback, excluding the password.</summary>
     public LoginFormDisplayModel DisplayModel => new(
         Email,
         RememberMe,
@@ -71,6 +84,11 @@ public sealed class Login(
                 : localizer["The submitted value is invalid."].Value;
     }
 
+    /// <summary>Initializes sign-in inputs while accepting only a local return path.</summary>
+    /// <param name="email">The email address associated with this account request.</param>
+    /// <param name="returnUrl">The requested local path to visit after completing the account workflow.</param>
+    /// <param name="accountCreated">Whether to display the account-created confirmation prompt.</param>
+    /// <returns>The sign-in page or the account redirect for an already authenticated user.</returns>
     public IActionResult OnGet(string? email, string? returnUrl, bool accountCreated = false)
     {
         if (User.Identity?.IsAuthenticated == true)
@@ -87,6 +105,9 @@ public sealed class Login(
         return Page();
     }
 
+    /// <summary>Attempts server-managed sign-in and projects any pending identity action without exposing session tokens.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A safe local redirect, an initial-password redirect, or the sign-in page with controlled feedback.</returns>
     public async Task<IActionResult> OnPostLoginAsync(CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -137,6 +158,9 @@ public sealed class Login(
         return Page();
     }
 
+    /// <summary>Uses a pending recovery challenge to request another email-verification link.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The form with controlled feedback or a localized redirect carrying a non-enumerating outcome.</returns>
     public async Task<IActionResult> OnPostResendEmailConfirmationAsync(CancellationToken cancellationToken)
     {
         ModelState.Remove(nameof(Password));

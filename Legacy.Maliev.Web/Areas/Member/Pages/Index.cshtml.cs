@@ -8,6 +8,12 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages;
 
+/// <summary>Loads the authenticated member overview with profile, recent orders, quotations, and service notices.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="accountClient">The typed customer account client used to load the member profile.</param>
+/// <param name="countryClient">The typed country client supplying form country options.</param>
+/// <param name="orderClient">The typed client reading or updating orders owned by the current customer.</param>
+/// <param name="quotationClient">The typed client reading or submitting quotation operations for this page.</param>
 [Authorize]
 public sealed class Index(
     IAccountSessionManager sessionManager,
@@ -16,16 +22,24 @@ public sealed class Index(
     ICustomerOrderClient orderClient,
     ICustomerQuotationClient quotationClient) : PageModel
 {
+    /// <summary>The loaded customer account profile, or null when no profile was returned.</summary>
     public CustomerAccountDetails? Profile { get; private set; }
 
+    /// <summary>The customer's recent orders loaded for the member overview.</summary>
     public IReadOnlyList<CustomerOrder> RecentOrders { get; private set; } = [];
 
+    /// <summary>The customer's recent quotations loaded for the member overview.</summary>
     public IReadOnlyList<CustomerQuotation> RecentQuotations { get; private set; } = [];
 
+    /// <summary>The safe service-availability notices shown on the member overview.</summary>
     public IReadOnlyList<string> Notices { get; private set; } = [];
 
+    /// <summary>The member overview projected from the loaded profile, recent activity, and notices.</summary>
     public MemberOverviewDisplayModel DisplayModel { get; private set; } = MemberOverviewDisplayModel.Empty;
 
+    /// <summary>Loads the member overview through the owned session boundary.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The overview page or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var loaded = await MemberOverviewLoader.LoadAsync(

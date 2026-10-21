@@ -400,6 +400,10 @@ namespace Legacy.Maliev.Web.Pages.Shared
         public string? JourneyId { get; }
 
         /// <summary>Builds the GA4 conversion projection from the persisted lead identity.</summary>
+        /// <param name="eventName">The event name assigned to the persisted lead-conversion projection.</param>
+        /// <param name="currency">The optional currency code included when nonblank.</param>
+        /// <param name="value">The optional conversion value included when supplied.</param>
+        /// <returns>The controlled dictionary projection for a validated persisted quotation.</returns>
         public object BuildGenerateLeadConversionEvent(string eventName = "generate_lead", string currency = "THB", decimal? value = null)
         {
             if (!this.IsPersistedQuotation)

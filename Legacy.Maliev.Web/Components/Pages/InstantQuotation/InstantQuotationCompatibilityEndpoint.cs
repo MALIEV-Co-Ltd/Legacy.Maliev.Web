@@ -2,8 +2,12 @@ using System.Globalization;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Preserves the estimate and order-total GET handlers alongside the component route host.</summary>
 public static class InstantQuotationCompatibilityEndpoint
 {
+    /// <summary>Matches only the two retained quotation calculation GET handlers.</summary>
+    /// <param name="context">The HTTP request whose method, path and handler are inspected.</param>
+    /// <returns>True when the request targets a retained calculation handler.</returns>
     public static bool Matches(HttpContext context)
     {
         if (!HttpMethods.IsGet(context.Request.Method)
@@ -17,6 +21,9 @@ public static class InstantQuotationCompatibilityEndpoint
             || string.Equals(handler, "GetOrderTotal", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Calculates the matched compatibility response, applies display FX and writes JSON.</summary>
+    /// <param name="context">The matched request and response, including its cancellation token.</param>
+    /// <returns>A task that completes after the JSON response is written.</returns>
     public static async Task HandleAsync(HttpContext context)
     {
         var query = context.Request.Query;

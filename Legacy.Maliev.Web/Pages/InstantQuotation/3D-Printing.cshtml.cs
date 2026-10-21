@@ -11,15 +11,20 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Pages.InstantQuotation;
 
+/// <summary>Provides the retained additive quotation page, compatibility calculations, and session-owned customer submission flow.</summary>
 public sealed class ThreeDimensionalPrinting : PageModel
 {
     private readonly ILogger<ThreeDimensionalPrinting>? logger;
     private readonly IInstantQuotationSubmissionService? submissionService;
 
+    /// <summary>Initializes the retained quotation page model without submission dependencies.</summary>
     public ThreeDimensionalPrinting()
     {
     }
 
+    /// <summary>Initializes the quotation page with its owned submission service and diagnostic logger.</summary>
+    /// <param name="submissionService">The service coordinating persistence and follow-up for the owned submission.</param>
+    /// <param name="logger">The logger instance for diagnostic output.</param>
     [ActivatorUtilitiesConstructor]
     public ThreeDimensionalPrinting(
         IInstantQuotationSubmissionService submissionService,
@@ -29,131 +34,177 @@ public sealed class ThreeDimensionalPrinting : PageModel
         this.logger = logger;
     }
 
+    /// <summary>The TempData key carrying a controlled quotation-submission problem category across a redirect.</summary>
     public const string ProblemCategoryTempDataKey = "InstantQuotationProblemCategory";
+    /// <summary>The TempData key carrying the persisted quotation-request reference across a redirect.</summary>
     public const string RequestReferenceTempDataKey = "InstantQuotationRequestReference";
+    /// <summary>The status marker for a completed quotation submission with a persisted reference.</summary>
     public const string SubmissionStatusCompleted = "completed";
+    /// <summary>The status marker for a persisted quotation submission with incomplete follow-up steps.</summary>
     public const string SubmissionStatusPartial = "partial";
+    /// <summary>The status marker for a rejected quotation submission.</summary>
     public const string SubmissionStatusRejected = "rejected";
+    /// <summary>The TempData key carrying the quotation-submission outcome across a redirect.</summary>
     public const string SubmissionStatusTempDataKey = "InstantQuotationSubmissionStatus";
+    /// <summary>The TempData key carrying allowlisted invalid field names for redirected form feedback.</summary>
     public const string ValidationFieldsTempDataKey = "InstantQuotationValidationFields";
+    /// <summary>The TempData key identifying overlength building fields for redirected form feedback.</summary>
     public const string OverlengthBuildingFieldsTempDataKey = "InstantQuotationOverlengthBuildingFields";
 
+    /// <summary>The optional company name associated with the submitted customer request.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? Company { get; set; }
 
+    /// <summary>The optional building name for the customer's billing address, separate from street and locality fields.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? BillingBuilding { get; set; }
 
+    /// <summary>The required first street-address line for quotation billing.</summary>
     [BindProperty]
     [Required]
     [StringLength(256)]
     public string BillingStreet1 { get; set; } = string.Empty;
 
+    /// <summary>The optional second street-address line for quotation billing.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? BillingStreet2 { get; set; }
 
+    /// <summary>The city or district used for customer billing.</summary>
     [BindProperty]
     [Required]
     [StringLength(256)]
     public string BillingCity { get; set; } = string.Empty;
 
+    /// <summary>The state or province used for quotation billing.</summary>
     [BindProperty]
     [Required]
     [StringLength(256)]
     public string BillingProvince { get; set; } = string.Empty;
 
+    /// <summary>The postal code used for customer billing.</summary>
     [BindProperty]
     [Required]
     [StringLength(20)]
     public string BillingPostalCode { get; set; } = string.Empty;
 
+    /// <summary>The customer's country name used for the submitted contact or billing details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please select your country.")]
     [StringLength(50)]
     public string Country { get; set; } = string.Empty;
 
+    /// <summary>The optional customer instructions accompanying the manufacturing request.</summary>
     [BindProperty]
     [StringLength(512)]
     public string? Description { get; set; }
 
+    /// <summary>The calculator catalogue and display options for the retained quotation page.</summary>
     public InstantQuotationDisplayModel DisplayModel => InstantQuotationCalculator.CreateDisplayModel();
 
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your email address.")]
     [EmailAddress]
     [StringLength(50)]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The customer's given name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your first name.")]
     [StringLength(50)]
     public string FirstName { get; set; } = string.Empty;
 
+    /// <summary>The customer's family name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your last name.")]
     [StringLength(50)]
     public string LastName { get; set; } = string.Empty;
 
+    /// <summary>The mobile contact number supplied with the customer's details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your mobile number.")]
     [StringLength(50)]
     public string Mobile { get; set; } = string.Empty;
 
+    /// <summary>The optional tax identifier associated with the customer's billing or company details.</summary>
     [BindProperty]
     [RegularExpression(@"^[0-9]{13}$", ErrorMessage = "Thai tax ID must contain exactly 13 digits.")]
     [StringLength(50)]
     public string? TaxNumber { get; set; }
 
+    /// <summary>The selected head-office or branch designation used when formatting the tax identifier.</summary>
     [BindProperty]
     public string TaxBranch { get; set; } = "head-office";
 
+    /// <summary>The five-digit branch code required when a tax identifier belongs to a branch.</summary>
     [BindProperty]
     [RegularExpression(@"^[0-9]{5}$")]
     [StringLength(5)]
     public string? TaxBranchCode { get; set; }
 
+    /// <summary>Whether the quotation's shipping destination reuses its billing address.</summary>
     [BindProperty]
     public bool ShipToBillingAddress { get; set; } = true;
 
+    /// <summary>The optional building name for the shipping destination, separate from street and locality fields.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? ShippingBuilding { get; set; }
 
+    /// <summary>The first shipping street-address line required when billing and shipping destinations differ.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? ShippingStreet1 { get; set; }
 
+    /// <summary>The optional second street-address line of the separate shipping destination.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? ShippingStreet2 { get; set; }
 
+    /// <summary>The city or district of the shipping destination.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? ShippingCity { get; set; }
 
+    /// <summary>The state or province of the separate shipping destination.</summary>
     [BindProperty]
     [StringLength(256)]
     public string? ShippingProvince { get; set; }
 
+    /// <summary>The postal code of the shipping destination.</summary>
     [BindProperty]
     [StringLength(20)]
     public string? ShippingPostalCode { get; set; }
 
+    /// <summary>The country name required for a separate shipping destination.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? ShippingCountry { get; set; }
 
+    /// <summary>The optional landline contact number supplied with the customer's details.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? Telephone { get; set; }
 
+    /// <summary>Displays the retained additive quotation page.</summary>
     public void OnGet()
     {
     }
 
+    /// <summary>Calculates the retained additive item estimate without performing asynchronous FX conversion.</summary>
+    /// <param name="material">The requested material name used to select a catalogue or estimate option.</param>
+    /// <param name="dimensionZ">The model height used by the additive estimate calculation.</param>
+    /// <param name="volume">The model volume used by the additive estimate calculation.</param>
+    /// <param name="footprint">The model footprint used by the additive estimate calculation.</param>
+    /// <param name="areaProfile">The serialized layer-area profile supplied to the estimate calculator.</param>
+    /// <param name="perimeterProfile">The serialized layer-perimeter profile supplied to the estimate calculator.</param>
+    /// <param name="currency">The requested display currency; authoritative conversion is applied by the FX-aware handlers.</param>
+    /// <param name="quantity">The requested item quantity used by the additive estimate calculation.</param>
+    /// <param name="unsupportedAreaProfile">The optional serialized unsupported-area profile used by the estimate calculator.</param>
+    /// <returns>The calculator's estimate payload as JSON.</returns>
     [NonHandler]
     public JsonResult OnGetGetEstimate(
         string? material,
@@ -175,6 +226,14 @@ public sealed class ThreeDimensionalPrinting : PageModel
             quantity,
             unsupportedAreaProfile));
 
+    /// <summary>Calculates the retained order total without performing asynchronous FX conversion.</summary>
+    /// <param name="processes">The serialized process selections used to calculate the order total.</param>
+    /// <param name="subtotals">The serialized item subtotals used to calculate the order total.</param>
+    /// <param name="totalWeightGrams">The aggregate order weight in grams used for shipping calculation.</param>
+    /// <param name="totalBoundingCm3">The aggregate bounding volume in cubic centimetres used for shipping calculation.</param>
+    /// <param name="currency">The requested display currency; authoritative conversion is applied by the FX-aware handlers.</param>
+    /// <param name="destinationCountry">The optional shipping destination used for the order-total calculation.</param>
+    /// <returns>The calculator's order-total payload as JSON.</returns>
     [NonHandler]
     public JsonResult OnGetGetOrderTotal(
         string? processes,
@@ -190,6 +249,17 @@ public sealed class ThreeDimensionalPrinting : PageModel
             currency,
             destinationCountry));
 
+    /// <summary>Calculates an additive estimate and applies the request-scoped authoritative FX conversion.</summary>
+    /// <param name="material">The requested material name used to select a catalogue or estimate option.</param>
+    /// <param name="dimensionZ">The model height used by the additive estimate calculation.</param>
+    /// <param name="volume">The model volume used by the additive estimate calculation.</param>
+    /// <param name="footprint">The model footprint used by the additive estimate calculation.</param>
+    /// <param name="areaProfile">The serialized layer-area profile supplied to the estimate calculator.</param>
+    /// <param name="perimeterProfile">The serialized layer-perimeter profile supplied to the estimate calculator.</param>
+    /// <param name="currency">The requested display currency; authoritative conversion is applied by the FX-aware handlers.</param>
+    /// <param name="quantity">The requested item quantity used by the additive estimate calculation.</param>
+    /// <param name="unsupportedAreaProfile">The optional serialized unsupported-area profile used by the estimate calculator.</param>
+    /// <returns>The converted estimate payload or controlled FX failure with its HTTP status.</returns>
     public async Task<JsonResult> OnGetGetEstimateAsync(
         string? material,
         double dimensionZ,
@@ -206,6 +276,14 @@ public sealed class ThreeDimensionalPrinting : PageModel
         return new JsonResult(result.Payload) { StatusCode = result.StatusCode };
     }
 
+    /// <summary>Calculates the order total and applies the request-scoped authoritative FX conversion.</summary>
+    /// <param name="processes">The serialized process selections used to calculate the order total.</param>
+    /// <param name="subtotals">The serialized item subtotals used to calculate the order total.</param>
+    /// <param name="totalWeightGrams">The aggregate order weight in grams used for shipping calculation.</param>
+    /// <param name="totalBoundingCm3">The aggregate bounding volume in cubic centimetres used for shipping calculation.</param>
+    /// <param name="currency">The requested display currency; authoritative conversion is applied by the FX-aware handlers.</param>
+    /// <param name="destinationCountry">The optional shipping destination used for the order-total calculation.</param>
+    /// <returns>The converted order-total payload or controlled FX failure with its HTTP status.</returns>
     public async Task<JsonResult> OnGetGetOrderTotalAsync(
         string? processes,
         string? subtotals,
@@ -219,6 +297,9 @@ public sealed class ThreeDimensionalPrinting : PageModel
         return new JsonResult(result.Payload) { StatusCode = result.StatusCode };
     }
 
+    /// <summary>Validates trusted customer details and session ownership before submitting the quotation with controlled retry and terminal outcomes.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A controlled JSON result or local redirect carrying the submission outcome.</returns>
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         var wantsJson = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);

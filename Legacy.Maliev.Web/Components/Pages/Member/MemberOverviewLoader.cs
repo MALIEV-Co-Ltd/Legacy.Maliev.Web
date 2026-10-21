@@ -3,8 +3,22 @@ using Legacy.Maliev.Web.Infrastructure;
 
 namespace Legacy.Maliev.Web.Components.Pages.Member;
 
+/// <summary>
+/// Loads account and recent-order information for the signed-in member overview.
+/// </summary>
 public static class MemberOverviewLoader
 {
+    /// <summary>
+    /// Loads the member profile, country labels, and five recent orders and quotations concurrently.
+    /// </summary>
+    /// <param name="context">The current authenticated request.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="accountClient">The account client used to retrieve the customer profile.</param>
+    /// <param name="countryClient">The country lookup client used to label saved addresses.</param>
+    /// <param name="orderClient">The customer-scoped client used to retrieve recent orders.</param>
+    /// <param name="quotationClient">The customer-scoped client used to retrieve recent quotations.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The loaded account data and overview model, or null when no customer session is available.</returns>
     public static async Task<MemberOverviewLoadResult?> LoadAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
@@ -96,6 +110,14 @@ public static class MemberOverviewLoader
     }
 }
 
+/// <summary>
+/// Carries loaded overview data together with its public member presentation projection.
+/// </summary>
+/// <param name="Profile">The loaded customer profile, or null when unavailable.</param>
+/// <param name="RecentOrders">The recent customer-scoped orders returned by the service.</param>
+/// <param name="RecentQuotations">The recent customer-scoped quotations returned by the service.</param>
+/// <param name="Notices">The account reminders and partial-service failure notices.</param>
+/// <param name="DisplayModel">The formatted overview model rendered by the member component.</param>
 public sealed record MemberOverviewLoadResult(
     CustomerAccountDetails? Profile,
     IReadOnlyList<CustomerOrder> RecentOrders,
