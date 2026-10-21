@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -61,25 +63,71 @@ internal sealed class OwnedWebSurfaceParent : TestingWebApplicationFactory
     protected override IHost CreateHost(IHostBuilder builder)
     {
         // WebSurface uses default TestServer only; no Kestrel port/address configuration is changed.
-        var host = builder.Build();
+        var resources = new OwnedWebSurfaceResources();
+        var webRoot = resources.Own(new OwnedWebSurfaceWebRoot(null));
+        // Register the externally owned instance only for lifetime diagnostics; DI does not dispose it.
+        builder.ConfigureServices(services => services.AddSingleton(webRoot));
         try
         {
+            var host = resources.Own(builder.Build());
+            webRoot.Capture(host.Services.GetService<IWebHostEnvironment>());
             host.Start();
-            return host;
+            return new OwnedWebSurfaceHostLifetime(host, resources);
         }
         catch (Exception original)
         {
-            try { host.Dispose(); }
-            catch (Exception cleanup)
-            {
-                StartupCleanupFailureTypes = [cleanup.GetType().Name];
-                OwnedWebSurfaceResources.RecordFailureTypes(original, [cleanup]);
-            }
+            StartupCleanupFailureTypes = resources.ReleasePreserving(original);
             throw;
         }
     }
 
     internal IHost StartForOwnershipControl(IHostBuilder builder) => CreateHost(builder);
+}
+
+/// <summary>Keeps web-root cleanup outside DI, which can abort when a service disposal throws.</summary>
+internal sealed class OwnedWebSurfaceHostLifetime(IHost host, OwnedWebSurfaceResources resources) : IHost
+{
+    public IServiceProvider Services => host.Services;
+    public Task StartAsync(CancellationToken cancellationToken = default) => host.StartAsync(cancellationToken);
+    public Task StopAsync(CancellationToken cancellationToken = default) => host.StopAsync(cancellationToken);
+    public void Dispose() => resources.Dispose();
+}
+
+/// <summary>Owns the house TestServer builder's default physical web-root leaves, not arbitrary borrowed providers.</summary>
+internal sealed class OwnedWebSurfaceWebRoot : IDisposable
+{
+    private readonly HashSet<PhysicalFileProvider> providers = new(ReferenceEqualityComparer.Instance);
+    internal int RemainingOwnedProviders => providers.Count;
+
+    internal OwnedWebSurfaceWebRoot(IWebHostEnvironment? environment) => Capture(environment);
+
+    internal void Capture(IWebHostEnvironment? environment)
+    {
+        if (environment is null || string.IsNullOrEmpty(environment.WebRootPath)) return;
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(environment.WebRootPath));
+        void CaptureProvider(IFileProvider provider)
+        {
+            if (provider is CompositeFileProvider composite)
+            {
+                foreach (var child in composite.FileProviders) CaptureProvider(child);
+            }
+            else if (provider is PhysicalFileProvider physical &&
+                string.Equals(Path.TrimEndingDirectorySeparator(physical.Root), root,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            {
+                providers.Add(physical);
+            }
+        }
+        CaptureProvider(environment.WebRootFileProvider);
+    }
+
+    public void Dispose()
+    {
+        var owned = new OwnedWebSurfaceResources();
+        foreach (var provider in providers) owned.Own(provider);
+        providers.Clear();
+        owned.Dispose();
+    }
 }
 
 /// <summary>Attempts every owned disposal in reverse order, also after partial initialization.</summary>
@@ -116,7 +164,12 @@ internal sealed class OwnedWebSurfaceResources : IDisposable
         catch (Exception) { /* Unwritable metadata must not replace the primary startup exception. */ }
     }
 
-    internal void ReleasePreserving(Exception original) => RecordFailureTypes(original, Release());
+    internal IReadOnlyList<string> ReleasePreserving(Exception original)
+    {
+        var failures = Release();
+        RecordFailureTypes(original, failures);
+        return failures.Select(failure => failure.GetType().Name).ToArray();
+    }
 
     public void Dispose()
     {
