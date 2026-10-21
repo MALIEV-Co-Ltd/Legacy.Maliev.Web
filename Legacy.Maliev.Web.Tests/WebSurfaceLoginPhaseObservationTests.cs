@@ -60,7 +60,7 @@ public sealed class WebSurfaceLoginPhaseObservationTests
         using var observation = new WebSurfaceLoginPhaseObservation(listener, new RecordingOutput(throwWrites: true));
         var primary = new InvalidOperationException("original");
 
-        var actual = Assert.Throws<InvalidOperationException>(() =>
+        var actual = Assert.Throws<InvalidOperationException>((Action)(() =>
         {
             try { throw primary; }
             catch (Exception exception)
@@ -68,7 +68,7 @@ public sealed class WebSurfaceLoginPhaseObservationTests
                 observation.WriteFailure(exception);
                 throw;
             }
-        });
+        }));
 
         Assert.Same(primary, actual);
     }
