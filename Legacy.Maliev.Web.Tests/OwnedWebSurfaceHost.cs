@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -55,32 +54,9 @@ internal sealed class OwnedWebSurfaceHost : IDisposable
     }
 }
 
-/// <summary>Owns the built local TestServer host even when Start throws before the factory can assign it.</summary>
+/// <summary>Exposes the shared factory's host-start boundary for ownership controls.</summary>
 internal sealed class OwnedWebSurfaceParent : TestingWebApplicationFactory
 {
-    internal IReadOnlyList<string> StartupCleanupFailureTypes { get; private set; } = [];
-
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        // WebSurface uses default TestServer only; no Kestrel port/address configuration is changed.
-        var resources = new OwnedWebSurfaceResources();
-        var webRoot = resources.Own(new OwnedWebSurfaceWebRoot(null));
-        // Register the externally owned instance only for lifetime diagnostics; DI does not dispose it.
-        builder.ConfigureServices(services => services.AddSingleton(webRoot));
-        try
-        {
-            var host = resources.Own(builder.Build());
-            webRoot.Capture(host.Services.GetService<IWebHostEnvironment>());
-            host.Start();
-            return new OwnedWebSurfaceHostLifetime(host, resources);
-        }
-        catch (Exception original)
-        {
-            StartupCleanupFailureTypes = resources.ReleasePreserving(original);
-            throw;
-        }
-    }
-
     internal IHost StartForOwnershipControl(IHostBuilder builder) => CreateHost(builder);
 }
 
