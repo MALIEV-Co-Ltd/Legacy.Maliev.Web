@@ -7,6 +7,15 @@ on:
       - 'scripts/prove-corporate-logo-webp.py'
       - 'tests/CorporateLogoWebpProof.Tests.py'
       - 'tests/corporate-logo-webp-inputs.json'
+      - 'scripts/prove-about-customer-row-webp.py'
+      - 'tests/CorporateCustomerRowWebpProof.Tests.py'
+      - 'tests/about-customer-row-webp-inputs.json'
+      - 'tests/about-customer-row-source-inputs/alten-korea.png'
+      - 'tests/about-customer-row-source-inputs/forth.png'
+      - 'tests/about-customer-row-source-inputs/do-day-dream.jpg'
+      - 'tests/about-customer-row-source-inputs/thai-agri-foods.png'
+      - 'tests/about-customer-row-source-inputs/sahamitr-pressure-container.png'
+      - 'tests/about-customer-row-source-inputs/index-creative-village.png'
       - 'tests/corporate-logo-webp-requirements.txt'
       - 'tests/corporate-logo-webp-srgb-profile.json'
       - 'tests/corporate-logo-webp-srgb-profile.LICENSE.txt'
@@ -42,6 +51,15 @@ jobs:
             /scripts/prove-corporate-logo-webp.py
             /tests/CorporateLogoWebpProof.Tests.py
             /tests/corporate-logo-webp-inputs.json
+            /scripts/prove-about-customer-row-webp.py
+            /tests/CorporateCustomerRowWebpProof.Tests.py
+            /tests/about-customer-row-webp-inputs.json
+            /tests/about-customer-row-source-inputs/alten-korea.png
+            /tests/about-customer-row-source-inputs/forth.png
+            /tests/about-customer-row-source-inputs/do-day-dream.jpg
+            /tests/about-customer-row-source-inputs/thai-agri-foods.png
+            /tests/about-customer-row-source-inputs/sahamitr-pressure-container.png
+            /tests/about-customer-row-source-inputs/index-creative-village.png
             /tests/corporate-logo-webp-requirements.txt
             /tests/corporate-logo-webp-srgb-profile.json
             /tests/corporate-logo-webp-srgb-profile.LICENSE.txt
@@ -85,6 +103,13 @@ jobs:
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 300s "$LOGO_WEBP_VENV/bin/python" -B scripts/prove-corporate-logo-webp.py
+      - name: Prove the six exact new About logos with the unchanged converter
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 60s "$LOGO_WEBP_VENV/bin/python" -B tests/CorporateCustomerRowWebpProof.Tests.py
+          timeout --signal=TERM --kill-after=5s 60s "$LOGO_WEBP_VENV/bin/python" -B scripts/prove-about-customer-row-webp.py
       - name: Release only this run's disposable encoder and record absence
         if: always()
         timeout-minutes: 1
@@ -114,7 +139,7 @@ jobs:
                       or owner.get("persistent_data") is not False):
                       raise ValueError("Disposable encoder ownership mismatch")
                   released = []
-                  for purpose in ("controls", "proof"):
+                  for purpose in ("controls", "proof", "customer-row-controls", "customer-row"):
                       ledger_path = path / (purpose + "-worker.json")
                       if not ledger_path.is_file():
                           continue
