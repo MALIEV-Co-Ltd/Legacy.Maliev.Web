@@ -140,8 +140,8 @@ public sealed class WebSurfaceOwnedLifetimeTests
             provider is Microsoft.Extensions.FileProviders.CompositeFileProvider composite
                 ? composite.FileProviders.SelectMany(Leaves)
                 : provider is Microsoft.Extensions.FileProviders.PhysicalFileProvider physical ? [physical] : [];
-        return Assert.Single(Leaves(environment.WebRootFileProvider).Where(provider =>
-            Path.TrimEndingDirectorySeparator(provider.Root) == Path.TrimEndingDirectorySeparator(environment.WebRootPath)));
+        return Assert.Single(Leaves(environment.WebRootFileProvider), provider =>
+            Path.TrimEndingDirectorySeparator(provider.Root) == Path.TrimEndingDirectorySeparator(environment.WebRootPath));
     }
 
     [Fact]
