@@ -1,4 +1,5 @@
 using System.Collections;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -6,6 +7,143 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebSurfaceOwnedLifetimeTests
 {
+    [Fact]
+    public void FailedStartReleasesRealWebRootEvenWhenHostedServiceDisposalThrows()
+    {
+        var original = new InvalidOperationException("private-startup");
+        using var root = new WebRootProbe(AppContext.BaseDirectory);
+        var environment = new WebRootEnvironment(root);
+        using var parent = new OwnedWebSurfaceParent();
+        var builder = new HostBuilder().ConfigureServices(services =>
+        {
+            services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(environment);
+            services.AddSingleton<IHostedService>(_ => new FailingStartAndDispose(root, original));
+        });
+        var actual = Assert.Throws<InvalidOperationException>(() => parent.StartForOwnershipControl(builder));
+        Assert.Same(original, actual);
+        Assert.Equal(1, root.DisposalAttempts);
+        Assert.Equal(new[] { nameof(ApplicationException) }, parent.StartupCleanupFailureTypes);
+        var failures = Assert.IsType<string[]>(original.Data["WebSurfaceCleanupFailureTypes"]);
+        Assert.Equal(new[] { nameof(ApplicationException) }, failures);
+        Assert.DoesNotContain("private", string.Join(",", failures), StringComparison.Ordinal);
+    }
+
+    private sealed class FailingStartAndDispose(
+        Microsoft.Extensions.FileProviders.PhysicalFileProvider root, Exception original) : IHostedService, IDisposable
+    {
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            Assert.True(root.Watch("owned-startup-control.css").ActiveChangeCallbacks);
+            return Task.FromException(original);
+        }
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public void Dispose() => throw new ApplicationException("private-disposal");
+    }
+
+    [Fact]
+    public void WebRootLeaseDeduplicatesOwnedLeavesAndPreservesBorrowedProvidersAfterCleanupFailure()
+    {
+        using var first = new WebRootProbe(AppContext.BaseDirectory, fail: true);
+        using var second = new WebRootProbe(AppContext.BaseDirectory);
+        using var borrowed = new WebRootProbe(Path.GetTempPath());
+        using var unknown = new BorrowedFileProvider();
+        var environment = new WebRootEnvironment(new Microsoft.Extensions.FileProviders.CompositeFileProvider(
+            first, new Microsoft.Extensions.FileProviders.CompositeFileProvider(first, second, borrowed, unknown)));
+        using var lease = new OwnedWebSurfaceWebRoot(environment);
+        Assert.Throws<AggregateException>(() => lease.Dispose());
+        Assert.Equal(1, first.DisposalAttempts);
+        Assert.Equal(1, second.DisposalAttempts);
+        Assert.Equal(0, borrowed.DisposalAttempts);
+        Assert.Equal(0, unknown.DisposalAttempts);
+        lease.Dispose();
+        Assert.Equal(1, first.DisposalAttempts);
+        Assert.Equal(1, second.DisposalAttempts);
+    }
+
+    private sealed class WebRootEnvironment(Microsoft.Extensions.FileProviders.IFileProvider webRoot)
+        : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
+    {
+        public string ApplicationName { get; set; } = "ownership-control";
+        public string EnvironmentName { get; set; } = "Testing";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; }
+            = new Microsoft.Extensions.FileProviders.NullFileProvider();
+        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
+        public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = webRoot;
+    }
+
+    private sealed class WebRootProbe(string root, bool fail = false)
+        : Microsoft.Extensions.FileProviders.PhysicalFileProvider(root)
+    {
+        internal int DisposalAttempts { get; private set; }
+        protected override void Dispose(bool disposing)
+        {
+            DisposalAttempts++;
+            base.Dispose(disposing);
+            if (fail && DisposalAttempts == 1) throw new ApplicationException("Synthetic web-root cleanup failure.");
+        }
+    }
+
+    private sealed class BorrowedFileProvider : Microsoft.Extensions.FileProviders.IFileProvider, IDisposable
+    {
+        internal int DisposalAttempts { get; private set; }
+        public Microsoft.Extensions.FileProviders.IFileInfo GetFileInfo(string path) =>
+            new Microsoft.Extensions.FileProviders.NotFoundFileInfo(path);
+        public Microsoft.Extensions.FileProviders.IDirectoryContents GetDirectoryContents(string path) =>
+            Microsoft.Extensions.FileProviders.NotFoundDirectoryContents.Singleton;
+        public Microsoft.Extensions.Primitives.IChangeToken Watch(string filter) =>
+            Microsoft.Extensions.FileProviders.NullChangeToken.Singleton;
+        public void Dispose() => DisposalAttempts++;
+    }
+
+    [Fact]
+    public async Task DerivedHostDisposalReleasesItsWebRootWatchersWithoutAffectingAnotherHost()
+    {
+        await using var parent = new OwnedWebSurfaceParent();
+        await using var first = parent.WithWebHostBuilder(_ => { });
+        await using var second = parent.WithWebHostBuilder(_ => { });
+        using var firstClient = first.CreateClient();
+        using var secondClient = second.CreateClient();
+        var firstRoot = PhysicalWebRoot(first);
+        var secondRoot = PhysicalWebRoot(second);
+        Assert.NotSame(firstRoot, secondRoot);
+        foreach (var host in new[] { first, second })
+        {
+            var configuration = Assert.IsAssignableFrom<IConfigurationRoot>(
+                host.Services.GetRequiredService<IConfiguration>());
+            var json = configuration.Providers.OfType<Microsoft.Extensions.Configuration.Json.JsonConfigurationProvider>().ToArray();
+            Assert.NotEmpty(json);
+            Assert.All(json, provider => Assert.True(provider.Source.ReloadOnChange));
+            var versions = host.Services.GetRequiredService<Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider>();
+            Assert.Contains("?v=", versions.AddFileVersionToPath(
+                Microsoft.AspNetCore.Http.PathString.Empty, "/dist/site.min.css"), StringComparison.Ordinal);
+        }
+        var firstLease = first.Services.GetRequiredService<OwnedWebSurfaceWebRoot>();
+        var secondLease = second.Services.GetRequiredService<OwnedWebSurfaceWebRoot>();
+        Assert.Equal(1, firstLease.RemainingOwnedProviders);
+        Assert.Equal(1, secondLease.RemainingOwnedProviders);
+        Assert.True(firstRoot.Watch("dist/site.min.css").ActiveChangeCallbacks);
+        Assert.True(secondRoot.Watch("dist/site.min.css").ActiveChangeCallbacks);
+        await first.DisposeAsync();
+        Assert.Equal(0, firstLease.RemainingOwnedProviders);
+        Assert.Equal(1, secondLease.RemainingOwnedProviders);
+        Assert.True(secondRoot.Watch("dist/still-live.css").ActiveChangeCallbacks);
+        await second.DisposeAsync();
+        Assert.Equal(0, secondLease.RemainingOwnedProviders);
+    }
+
+    private static Microsoft.Extensions.FileProviders.PhysicalFileProvider PhysicalWebRoot(
+        Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> host)
+    {
+        var environment = host.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+        IEnumerable<Microsoft.Extensions.FileProviders.PhysicalFileProvider> Leaves(Microsoft.Extensions.FileProviders.IFileProvider provider) =>
+            provider is Microsoft.Extensions.FileProviders.CompositeFileProvider composite
+                ? composite.FileProviders.SelectMany(Leaves)
+                : provider is Microsoft.Extensions.FileProviders.PhysicalFileProvider physical ? [physical] : [];
+        return Assert.Single(Leaves(environment.WebRootFileProvider), provider =>
+            Path.TrimEndingDirectorySeparator(provider.Root) == Path.TrimEndingDirectorySeparator(environment.WebRootPath));
+    }
+
     [Fact]
     public void ActualCasesOwnIndependentParentsWithOneDerivedFactoryEach()
     {
