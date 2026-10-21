@@ -1175,7 +1175,7 @@ public sealed class InstantQuotationSubmissionTests
         QuotationRequestSubmission Submission,
         string IdempotencyKey);
 
-    private sealed class RecordingSubmissionStore(List<string>? events = null) : IInstantQuotationSubmissionStore
+    internal sealed class RecordingSubmissionStore(List<string>? events = null) : IInstantQuotationSubmissionStore
     {
         private readonly object sync = new();
         private InstantQuotationSubmissionCheckpoint? checkpoint;
