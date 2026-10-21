@@ -223,4 +223,62 @@ public sealed class RepricingActivityTests
         }
     }
 
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SamePartLateCompletion_CannotRetireStillPendingNewerGate(bool failLate)
+    {
+        var activity = new RepricingActivity();
+        var part = Guid.NewGuid();
+        var oldRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var currentRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var failure = new IOException("controlled obsolete failure");
+        var transitions = new List<bool>();
+        Task Notify()
+        {
+            transitions.Add(activity.IsActive);
+            return Task.CompletedTask;
+        }
+        var old = activity.RunAsync(part, () => oldRelease.Task, Notify);
+        var oldCurrent = activity.CaptureOwnership(part);
+        var current = activity.RunAsync(part, () => currentRelease.Task, Notify);
+        var currentOwner = activity.CaptureOwnership(part);
+        Exception? primary = null;
+        try
+        {
+            Assert.False(oldCurrent());
+            Assert.True(currentOwner());
+            Assert.True(activity.IsActive);
+            if (failLate) oldRelease.TrySetException(failure);
+            else oldRelease.TrySetResult();
+            if (failLate)
+                Assert.Same(failure, await Assert.ThrowsAsync<IOException>(() => old.WaitAsync(TimeSpan.FromSeconds(5))));
+            else await old.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.False(current.IsCompleted);
+            Assert.True(activity.IsActive);
+            Assert.True(currentOwner());
+            Assert.All(transitions, value => Assert.True(value));
+
+            currentRelease.TrySetResult();
+            await current.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(activity.IsActive);
+            Assert.False(transitions[^1]);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            oldRelease.TrySetResult();
+            currentRelease.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () =>
+                {
+                    try { await old.WaitAsync(TimeSpan.FromSeconds(5)); }
+                    catch (IOException exception) when (failLate && ReferenceEquals(exception, failure)) { }
+                },
+                async () => await current.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+    }
+
 }
