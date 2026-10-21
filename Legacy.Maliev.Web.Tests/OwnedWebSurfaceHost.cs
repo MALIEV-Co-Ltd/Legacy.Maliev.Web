@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -61,7 +63,7 @@ internal sealed class OwnedWebSurfaceParent : TestingWebApplicationFactory
     protected override IHost CreateHost(IHostBuilder builder)
     {
         // WebSurface uses default TestServer only; no Kestrel port/address configuration is changed.
-        var host = builder.Build();
+        var host = new OwnedWebSurfaceBuiltHost(builder.Build());
         try
         {
             host.Start();
@@ -123,4 +125,43 @@ internal sealed class OwnedWebSurfaceResources : IDisposable
         var failures = Release();
         if (failures.Count > 0) throw new AggregateException("Owned WebSurface cleanup failed.", failures);
     }
+}
+
+/// <summary>Releases physical web-root watchers after the host using them has stopped and disposed.</summary>
+internal sealed class OwnedWebSurfaceBuiltHost : IHost
+{
+    private readonly IHost host;
+    private readonly OwnedWebSurfaceResources resources = new();
+
+    internal OwnedWebSurfaceBuiltHost(IHost host)
+    {
+        this.host = host;
+        if (host.Services.GetService<IWebHostEnvironment>() is { } environment)
+        {
+            var seen = new HashSet<IFileProvider>(ReferenceEqualityComparer.Instance);
+            Capture(environment.WebRootFileProvider, environment.ContentRootFileProvider, seen);
+        }
+        // Reverse disposal stops the host's consumers before releasing their web-root providers.
+        resources.Own(host);
+    }
+
+    private void Capture(IFileProvider provider, IFileProvider contentRoot, HashSet<IFileProvider> seen)
+    {
+        if (!seen.Add(provider) || ReferenceEquals(provider, contentRoot)) return;
+        if (provider is CompositeFileProvider composite)
+        {
+            foreach (var child in composite.FileProviders) Capture(child, contentRoot, seen);
+        }
+        else if (provider is PhysicalFileProvider physical)
+        {
+            // Static-assets manifests return NullChangeToken themselves. Their opaque internals
+            // are not inspected; only this independent host's public physical web-root leaves are owned.
+            resources.Own(physical);
+        }
+    }
+
+    public IServiceProvider Services => host.Services;
+    public Task StartAsync(CancellationToken cancellationToken = default) => host.StartAsync(cancellationToken);
+    public Task StopAsync(CancellationToken cancellationToken = default) => host.StopAsync(cancellationToken);
+    public void Dispose() => resources.Dispose();
 }

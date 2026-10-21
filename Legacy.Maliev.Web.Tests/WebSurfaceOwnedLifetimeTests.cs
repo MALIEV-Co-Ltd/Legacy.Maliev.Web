@@ -1,6 +1,8 @@
 using System.Collections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.FileProviders;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -102,6 +104,100 @@ public sealed class WebSurfaceOwnedLifetimeTests
         resources.ReleasePreserving(new UnavailableMetadataException());
         Assert.Equal(new[] { "child" }, order);
         Assert.Equal(0, resources.Count);
+    }
+
+    [Fact]
+    public void ActualCasesReleasePhysicalWebRootWatchersWithoutDisposingAnotherCase()
+    {
+        using var first = new WebSurfaceTests();
+        using var second = new WebSurfaceTests();
+        var firstProviders = PhysicalWebRoots(first).ToArray();
+        var secondProviders = PhysicalWebRoots(second).ToArray();
+        Assert.NotEmpty(firstProviders);
+        Assert.NotEmpty(secondProviders);
+        Assert.All(firstProviders, provider => Assert.DoesNotContain(provider, secondProviders));
+
+        // Watch a synthetic relative path: no customer file is opened or changed.
+        Assert.All(firstProviders, provider => Assert.NotNull(provider.Watch("owned-first-before.css")));
+        Assert.All(secondProviders, provider => Assert.NotNull(provider.Watch("owned-second-before.css")));
+        first.Dispose();
+
+        Assert.All(firstProviders, provider =>
+            Assert.Throws<ObjectDisposedException>(() => provider.Watch("owned-first-after.css")));
+        Assert.All(secondProviders, provider => Assert.NotNull(provider.Watch("owned-second-still-live.css")));
+        second.Dispose();
+        Assert.All(secondProviders, provider =>
+            Assert.Throws<ObjectDisposedException>(() => provider.Watch("owned-second-after.css")));
+    }
+
+    private static IEnumerable<PhysicalFileProvider> PhysicalWebRoots(WebSurfaceTests test)
+    {
+        var environment = test.LifetimeOwner.Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        return Leaves(environment.WebRootFileProvider).OfType<PhysicalFileProvider>()
+            .Where(provider => !ReferenceEquals(provider, environment.ContentRootFileProvider))
+            .Distinct();
+
+        static IEnumerable<IFileProvider> Leaves(IFileProvider provider) =>
+            provider is CompositeFileProvider composite
+                ? composite.FileProviders.SelectMany(Leaves)
+                : [provider];
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FailedStartReleasesDuplicateWebRootLeavesEvenWhenHostDisposalFails(bool cleanupThrows)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "web-root-ownership-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        using var provider = new PhysicalWebRootProbe(directory);
+        try
+        {
+            var original = new InvalidOperationException("Synthetic web-root startup failure.");
+            var resource = new HostedResource(cleanupThrows);
+            var environment = new WebRootEnvironment
+            {
+                WebRootFileProvider = new CompositeFileProvider(
+                    provider, new CompositeFileProvider(provider)),
+            };
+            var builder = new HostBuilder().ConfigureServices(services =>
+            {
+                services.AddSingleton<IWebHostEnvironment>(environment);
+                services.AddSingleton<HostedResource>(_ => resource);
+                services.AddSingleton<IHostedService>(serviceProvider =>
+                    new FailingStart(serviceProvider.GetRequiredService<HostedResource>(), original));
+            });
+            using var parent = new OwnedWebSurfaceParent();
+            var actual = Assert.Throws<InvalidOperationException>(() => parent.StartForOwnershipControl(builder));
+            Assert.Same(original, actual);
+            Assert.Equal(1, resource.DisposalAttempts);
+            Assert.Equal(1, provider.DisposalAttempts);
+        }
+        finally
+        {
+            provider.Dispose();
+            Directory.Delete(directory);
+        }
+    }
+
+    private sealed class PhysicalWebRootProbe(string root) : PhysicalFileProvider(root)
+    {
+        internal int DisposalAttempts { get; private set; }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) DisposalAttempts++;
+            base.Dispose(disposing);
+        }
+    }
+
+    private sealed class WebRootEnvironment : IWebHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = "Testing";
+        public string ApplicationName { get; set; } = nameof(WebSurfaceOwnedLifetimeTests);
+        public string ContentRootPath { get; set; } = string.Empty;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+        public string WebRootPath { get; set; } = string.Empty;
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private sealed class UnavailableMetadataException : Exception
