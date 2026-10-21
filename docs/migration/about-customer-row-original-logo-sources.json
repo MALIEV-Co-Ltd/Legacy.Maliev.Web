@@ -1,0 +1,57 @@
+[
+  {
+    "slug": "forth",
+    "sha256": "53dd62e9b09fd4c3d8400280146a9a43705dafe5cbae6622d0ea299787b010ae",
+    "source": "https://en.forth.co.th/wp-content/uploads/elementor/thumbs/logo-forth-07_8-pnopstkyz54xjupzgl1tqe1zw09pblq2uh1jniyfb4.png",
+    "file": "forth.png",
+    "dimensions": [
+      169,
+      50
+    ],
+    "bytes": 4716
+  },
+  {
+    "slug": "do-day-dream",
+    "sha256": "327e29ced590bece6a5ab481c4da784c220b36fa56057d5de005ce9e5d0bb826",
+    "source": "https://www.dodaydream.com/themes/default/assets/static/images/logo.jpg",
+    "file": "do-day-dream.jpg",
+    "dimensions": [
+      76,
+      74
+    ],
+    "bytes": 1105
+  },
+  {
+    "slug": "thai-agri-foods",
+    "sha256": "1e28582aa9426446b758a0bb7cd9cdf066a3b2d4bc8ee84249bc024284c3a17f",
+    "source": "https://thaiagri.com/img/logo/taf_logo.png",
+    "file": "thai-agri-foods.png",
+    "dimensions": [
+      75,
+      75
+    ],
+    "bytes": 3008
+  },
+  {
+    "slug": "sahamitr-pressure-container",
+    "sha256": "950f8c6ad5b10da8c791538fc2bf0263d24c957dccd2e68a3e0f0cb4a16532fe",
+    "source": "https://www.smpcplc.com/wp-content/uploads/2020/01/Group@3x.png",
+    "file": "sahamitr-pressure-container.png",
+    "dimensions": [
+      264,
+      168
+    ],
+    "bytes": 3017
+  },
+  {
+    "slug": "index-creative-village",
+    "sha256": "2dbbe7f6cbe24c28f3e4a0b97548c3ba1846856e42c6c19339c5b0e5a63ac6fe",
+    "source": "https://www.indexcreativevillage.com/wp-content/uploads/2020/05/indexcreativevillage_white_logo_H100.png",
+    "file": "index-creative-village.png",
+    "dimensions": [
+      192,
+      100
+    ],
+    "bytes": 7716
+  }
+]

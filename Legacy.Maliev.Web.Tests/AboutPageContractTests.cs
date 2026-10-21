@@ -81,10 +81,33 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
             "minor-food", "kohler", "grohe", "murata", "olympus", "air-liquide", "lixil", "kobelco",
             "siam-motors", "mektec", "thai-asahi-denso", "yg-1", "sp-syndicate", "singha-kameda",
             "aeon-fantasy", "lenso", "mfec", "thai-coconut", "khon-kaen-sugar", "bem", "crown-seal",
-            "thai-optical", "kumwell", "tpi-polene-power"
+            "thai-optical", "kumwell", "tpi-polene-power",
+            "alten-korea", "forth", "do-day-dream", "thai-agri-foods",
+            "sahamitr-pressure-container", "index-creative-village"
         ];
         var actual = Regex.Matches(html, "data-customer=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
         Assert.Equal(expected, actual);
+        Assert.Contains(culture == "th"
+            ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"
+            : "Companies that have chosen MALIEV for manufacturing and development work.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Companies we have completed manufacturing and development work for.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("บริษัทที่เราเคยร่วมพัฒนาและผลิตชิ้นงานให้", html, StringComparison.Ordinal);
+        (string Slug, string English, string Thai, int Width, int Height, bool Dark)[] additions = [
+            ("alten-korea", "ALTEN Korea", "ALTEN Korea", 50, 83, false),
+            ("forth", "Forth Corporation", "ฟอร์ท คอร์ปอเรชั่น", 169, 50, false),
+            ("do-day-dream", "Do Day Dream", "ดู เดย์ ดรีม", 76, 74, false),
+            ("thai-agri-foods", "Thai Agri Foods", "ไทยอกริฟู้ดส์", 75, 75, false),
+            ("sahamitr-pressure-container", "Sahamitr Pressure Container", "สหมิตรถังแก๊ส", 264, 168, true),
+            ("index-creative-village", "Index Creative Village", "อินเด็กซ์ ครีเอทีฟ วิลเลจ", 192, 100, true)
+        ];
+        foreach (var customer in additions)
+        {
+            var card = Assert.Single(Regex.Matches(html,
+                $"<li class=\"profile-customer\" data-customer=\"{customer.Slug}\">(?<card>.*?)</li>", RegexOptions.Singleline)).Groups["card"].Value;
+            Assert.Contains($"class=\"profile-customer-logo{(customer.Dark ? " profile-customer-logo-dark" : "")}\"", card, StringComparison.Ordinal);
+            Assert.Contains($"src=\"/src/images/customers/{customer.Slug}.webp\" width=\"{customer.Width}\" height=\"{customer.Height}\" loading=\"lazy\" decoding=\"async\" alt=\"\"", card, StringComparison.Ordinal);
+            Assert.Contains($">{(culture == "th" ? customer.Thai : customer.English)}<", card, StringComparison.Ordinal);
+        }
         Assert.Contains("/src/images/customers/kobelco.webp", html, StringComparison.Ordinal);
         Assert.Contains("/src/images/customers/yg-1-official-mark.webp", html, StringComparison.Ordinal);
         Assert.Contains("/src/images/customers/tpi-polene-power-emblem.webp", html, StringComparison.Ordinal);

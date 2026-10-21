@@ -35,7 +35,7 @@
   <data name="Clarify the process, material, finish, quantity and inspection scope so the quotation reflects the work and deliverables agreed together." xml:space="preserve"><value>กำหนดกระบวนการ วัสดุ ผิวงาน จำนวน และขอบเขตการตรวจสอบ ให้ใบเสนอราคาสอดคล้องกับงานและสิ่งส่งมอบที่ตกลงร่วมกัน</value></data>
   <data name="Clarify the technical requirements, project scope and confidentiality before quotation and manufacturing." xml:space="preserve"><value>พูดคุยข้อกำหนดทางเทคนิค ขอบเขตงาน และการรักษาความลับ ก่อนเสนอราคาและเริ่มผลิต</value></data>
   <data name="CNC machining" xml:space="preserve"><value>งาน CNC</value></data>
-  <data name="Companies we have completed manufacturing and development work for." xml:space="preserve"><value>บริษัทที่เราเคยร่วมพัฒนาและผลิตชิ้นงานให้</value></data>
+  <data name="Companies that have chosen MALIEV for manufacturing and development work." xml:space="preserve"><value>บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV</value></data>
   <data name="Company at a glance" xml:space="preserve"><value>ข้อมูลบริษัท</value></data>
   <data name="Compare mouse-shell design revisions in Autodesk Fusion" xml:space="preserve"><value>เปรียบเทียบแบบตัวเรือนเมาส์แต่ละรุ่นใน Autodesk Fusion</value></data>
   <data name="Crown Seal" xml:space="preserve"><value>ฝาจีบ</value></data>
@@ -172,4 +172,10 @@
   <data name="View service" xml:space="preserve"><value>ดูรายละเอียดบริการ</value></data>
   <data name="Work from the customer sketch alongside the CAD model. Refine the mounting holes, upright supports and camera fit before making prototypes." xml:space="preserve"><value>พัฒนาโมเดล CAD ควบคู่กับภาพร่างของลูกค้า ปรับรูยึด ขารองรับ และจุดประกอบกล้อง ก่อนสร้างต้นแบบ</value></data>
   <data name="YG-1 Thailand" xml:space="preserve"><value>วายจี-1 ประเทศไทย</value></data>
+  <data name="ALTEN Korea" xml:space="preserve"><value>ALTEN Korea</value></data>
+  <data name="Forth Corporation" xml:space="preserve"><value>ฟอร์ท คอร์ปอเรชั่น</value></data>
+  <data name="Do Day Dream" xml:space="preserve"><value>ดู เดย์ ดรีม</value></data>
+  <data name="Thai Agri Foods" xml:space="preserve"><value>ไทยอกริฟู้ดส์</value></data>
+  <data name="Sahamitr Pressure Container" xml:space="preserve"><value>สหมิตรถังแก๊ส</value></data>
+  <data name="Index Creative Village" xml:space="preserve"><value>อินเด็กซ์ ครีเอทีฟ วิลเลจ</value></data>
 </root>

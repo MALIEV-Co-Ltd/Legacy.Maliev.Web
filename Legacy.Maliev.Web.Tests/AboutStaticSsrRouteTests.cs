@@ -28,6 +28,15 @@ public sealed class AboutStaticSsrRouteTests : IClassFixture<TestingWebApplicati
         Assert.Contains($"<title>{title}</title>", html, StringComparison.Ordinal);
         Assert.Contains($"property=\"og:title\" content=\"{title}\"", html, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", html, StringComparison.Ordinal);
+        Assert.Equal(36, Regex.Matches(html, "data-customer=\"([^\"]+)\"").Count);
+        Assert.Contains(culture == "th"
+            ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"
+            : "Companies that have chosen MALIEV for manufacturing and development work.", html, StringComparison.Ordinal);
+        foreach (var customer in new[] { "alten-korea", "forth", "do-day-dream", "thai-agri-foods", "sahamitr-pressure-container", "index-creative-village" })
+        {
+            Assert.Single(Regex.Matches(html, $"data-customer=\"{customer}\""));
+            Assert.Contains($"/src/images/customers/{customer}.webp", html, StringComparison.Ordinal);
+        }
         Assert.Single(Regex.Matches(html, "<h1(?:\\s|>)", RegexOptions.IgnoreCase));
         Assert.Contains($"data-migration-route-owner=\"{(blazor ? "blazor-static-ssr" : "razor-static-ssr")}\"", html, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", html, StringComparison.Ordinal);

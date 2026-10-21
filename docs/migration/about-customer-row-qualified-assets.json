@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "scope": "Only six About customer-row genuine hosted WebP outputs; no whole-source, old18, browser or protected-main acceptance",
+  "head": "390c514a7a73deb0129bf3d7ddcaf35dc02f097c",
+  "run": 39568596290,
+  "attempt": 1,
+  "job": 119116860596,
+  "conclusion": "success",
+  "official_whole_log_seal": "26bba2435b846e4737ba30c3b3aed84c635b5077",
+  "artifact": {
+    "id": 12331196143,
+    "name": "company-logo-webp-390c514a7a73deb0129bf3d7ddcaf35dc02f097c-39568596290-1",
+    "bytes": 445325,
+    "sha256": "dda2a8a34406769d3d2299c9fefad16a14b89d3e3d94be881559e3bf2f6ffb1f"
+  },
+  "outputs": [
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/alten-korea.webp",
+      "sha": "28297bbc07b01e43d0690b32470a53a1be5558f0",
+      "sha256": "fcd87b22c1f18f7274dacdccb2656cd06ae0bc41b7a7e6f382ef99de56db78e6",
+      "bytes": 3078
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/forth.webp",
+      "sha": "60bae6060c853877ebcb3da2b6c92267db1bfb3a",
+      "sha256": "f407f432f156f3c782efbe123f34901e3f4508a6f2f8ddeb0a6de65f4773dc40",
+      "bytes": 2342
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/do-day-dream.webp",
+      "sha": "512d4c2ca25fa3c56290150de952b9394876763c",
+      "sha256": "b0bba17c14873b2c4bdf9dadbcd55e2d096394d7eae49597d30f3230825b50bf",
+      "bytes": 3820
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-agri-foods.webp",
+      "sha": "7636c77aca15f9e5a9844b41249c632de6502fac",
+      "sha256": "c142086b0412daf5b318f2d9faa927431db4f025e9ec96de6a94bee1f069db81",
+      "bytes": 1892
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sahamitr-pressure-container.webp",
+      "sha": "b046223b022e04a56fb70a0bae6163cede5d7353",
+      "sha256": "ad3f4df02352bf76d74a12d8fefa1efb99aaec4cfdbc135182e586f83ac6d2c3",
+      "bytes": 2968
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/index-creative-village.webp",
+      "sha": "3c4e03efd15f5895545e6f2307314f99dcf795df",
+      "sha256": "a701207c3b6b7cc74752f091f1d42ca46a8916944ab6a31971b1e9e5743677f3",
+      "bytes": 4952
+    }
+  ],
+  "receipts": [
+    {
+      "path": "company-logo-webp-proof/cleanup.json",
+      "bytes": 4700,
+      "sha": "4fb2304f1467f3a477219a4594b86a328eec1bcf"
+    },
+    {
+      "path": "company-logo-webp-proof/customer-row/qualified/six-source-proof.json",
+      "bytes": 14559,
+      "sha": "db010f5e2c58c65d873ad7966348ee8f0e6feb2b"
+    },
+    {
+      "path": "company-logo-webp-proof/customer-row/receipt.json",
+      "bytes": 14591,
+      "sha": "f1f9a2b18b1978a295627a8f08bea5d4e0b7face"
+    },
+    {
+      "path": "company-logo-webp-proof/customer-row-controls.json",
+      "bytes": 1914,
+      "sha": "f4372d55bf42e928f5696954bc07433e018fa9f2"
+    },
+    {
+      "path": "company-logo-webp-admission/customer-row-controls.json",
+      "bytes": 973,
+      "sha": "43af0043bf06d6ed7fee4d0fb3493452b65f4b10"
+    },
+    {
+      "path": "company-logo-webp-admission/customer-row.json",
+      "bytes": 964,
+      "sha": "5810af4b1f6ef4da7054e33bf64395cf0e04c353"
+    }
+  ],
+  "qualification": {
+    "six_source_fields_match_reviewed_manifest": true,
+    "all_output_gitsha_and_sha256_verified": true,
+    "lossless_webp_dimensions_independently_verified": true,
+    "hosted_exact_rgba_alpha_dimensions_orientation_icc_exif_xmp": "PASS",
+    "new_control_tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "hosted_cleanup": "four worker/supervisor ownership observations absent; directory absent",
+    "local_worker_count": 0,
+    "local_checks": "No encoder/SDK/test/browser execution"
+  },
+  "tool": {
+    "python": "3.12.3",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "wheel_sha256": "42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca",
+    "converter_git_blob": "1a729ae1167675b07717b8809fa9c493ae32e24d",
+    "manifest_git_blob": "4574eb90d161bb078353e7636a305a8a927cc905"
+  }
+}
