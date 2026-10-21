@@ -420,3 +420,37 @@ test('unadmitted cleanup disposes shared geometry, materials, and textures once 
   interop.release(keys[1]);
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });
 });
+
+test('quote intent starts once at first size and extension accepted file before parse/hash', async () => {
+  const order = [];
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => { order.push('parse'); throw new Error('unreadable private-model.stl'); },
+    analyzeGeometry: () => ({}),
+    createViewer: () => ({}),
+    reportQuoteStarted: () => { order.push('started'); },
+  });
+  try {
+    interop.beginSelection({ files: [{ ...modelFile('too-large.stl'), size: 11 }] }, 10);
+    interop.beginSelection({ files: [{ ...modelFile('unsupported.exe'), size: 1 }] }, 10);
+    assert.deepEqual(order, []);
+    const keys = interop.beginSelection({ files: [{ ...modelFile('accepted.stl'), size: 1 }] }, 10);
+    await assert.rejects(interop.getGeometryClaim(keys[0]));
+    interop.beginSelection({ files: [{ ...modelFile('second.obj'), size: 1 }] }, 10);
+    assert.deepEqual(order, ['started', 'parse', 'parse']);
+  } finally { interop.dispose(); }
+});
+
+test('a failing quote intent callback never blocks parsing', async () => {
+  let parsed = false;
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => { parsed = true; return disposableObject(); },
+    analyzeGeometry: () => ({ version: 1, dimensionZMm: 10, volumeMm3: 1000 }),
+    createViewer: () => ({}),
+    reportQuoteStarted: () => { throw new Error('analytics unavailable'); },
+  });
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('accepted.stl')] });
+    await interop.getGeometryClaim(key);
+    assert.equal(parsed, true);
+  } finally { interop.dispose(); }
+});

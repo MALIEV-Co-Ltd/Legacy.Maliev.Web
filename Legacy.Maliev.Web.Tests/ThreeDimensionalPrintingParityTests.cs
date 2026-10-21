@@ -229,6 +229,100 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         }
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task ToleranceComparison_RendersFourSourceRangesAndExpandableFactors(
+        bool servicesEnabled,
+        string culture)
+    {
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", servicesEnabled ? "true" : "false"));
+        using var client = routeFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost")
+        });
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}", deadline.Token);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(servicesEnabled, html.Contains(
+            "data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var start = html.IndexOf("<section id=\"printing-tolerances\"", StringComparison.Ordinal);
+        Assert.True(start >= 0);
+        var end = html.IndexOf("</section>", start, StringComparison.Ordinal);
+        Assert.True(end > start);
+        var section = html[start..end];
+
+        Assert.Contains("class=\"service-tolerance-grid\"", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("<table", section, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "เปรียบเทียบค่าความคลาดเคลื่อนเริ่มต้นโดยทั่วไปสำหรับชิ้นงานที่ออกแบบมาเหมาะสม ค่านี้ไม่ใช่การรับประกัน กรุณาส่งแบบเพื่อให้เรายืนยันขนาดสำคัญก่อนผลิต"
+            : "Compare typical starting ranges for a well-designed part. These are not guarantees; send the drawing so we can confirm the critical dimensions before production.",
+            section, StringComparison.Ordinal);
+
+        (string Heading, string Value, string? Alternative, string Rule)[] expected = culture == "th"
+            ? [
+                ("FDM", "±0.3–0.5 มม.", "หรือ ±0.5%", "ฟีเจอร์ขนาดเล็ก · ใช้ค่าเปอร์เซ็นต์เมื่อขนาดเกินราว 100 มม."),
+                ("เรซิ่น SLA / DLP", "±0.05–0.15 มม.", "หรือ ±0.2–0.3%", "ฟีเจอร์ไม่เกินราว 30 มม. · ใช้ค่าเปอร์เซ็นต์สำหรับขนาดที่ใหญ่ขึ้น"),
+                ("ไนลอน MJF / SLS", "±0.3 มม. หรือ ±0.3%", null, "ใช้ค่าที่มากกว่า"),
+                ("โลหะ SLM / DMLS", "±0.1–0.2 มม.", "จากนั้นประมาณ ±0.1%", "ช่วง 25 มม. แรก · ใช้ค่าเปอร์เซ็นต์กับขนาดที่เหลือ")
+            ]
+            : [
+                ("FDM", "±0.3–0.5 mm", "or ±0.5%", "Small features · percentage basis above about 100 mm"),
+                ("Resin SLA / DLP", "±0.05–0.15 mm", "or ±0.2–0.3%", "Features up to about 30 mm · percentage basis for larger dimensions"),
+                ("MJF / SLS nylon", "±0.3 mm or ±0.3%", null, "Use whichever value is greater"),
+                ("Metal SLM / DMLS", "±0.1–0.2 mm", "then about ±0.1%", "First 25 mm · percentage basis for the remaining nominal dimension")
+            ];
+        var cards = Regex.Matches(section,
+            "<article class=\"service-tolerance-item\">(?<body>[\\s\\S]*?)</article>",
+            RegexOptions.CultureInvariant);
+        Assert.Equal(4, cards.Count);
+        for (var index = 0; index < expected.Length; index++)
+        {
+            var body = cards[index].Groups["body"].Value;
+            var item = expected[index];
+            Assert.Contains($"<h3>{item.Heading}</h3>", body, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{item.Value}</strong>", body, StringComparison.Ordinal);
+            Assert.Single(Regex.Matches(body, "class=\"service-tolerance-value\"",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains($"<p class=\"service-tolerance-rule\">{item.Rule}</p>", body, StringComparison.Ordinal);
+            if (item.Alternative is not null)
+            {
+                Assert.Contains($"<span>{item.Alternative}</span>", body, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.DoesNotContain("<span>", body, StringComparison.Ordinal);
+            }
+        }
+
+        var details = Assert.Single(Regex.Matches(section,
+            "<details class=\"service-tolerance-details service-tolerance-factors\"(?<attributes>[^>]*)>(?<body>[\\s\\S]*?)</details>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.False(Regex.IsMatch(details.Groups["attributes"].Value,
+            "(?:^|\\s)open(?:\\s|=|$)", RegexOptions.CultureInvariant));
+        var explanation = details.Groups["body"].Value;
+        Assert.Contains(culture == "th"
+            ? "<summary>อะไรทำให้ค่าคลาดเคลื่อนและการประกอบเปลี่ยนไป?</summary>"
+            : "<summary>What changes these ranges and part fit?</summary>",
+            explanation, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "การหดตัวของวัสดุ ขนาดชิ้นงาน ทิศทางการพิมพ์ ตำแหน่งซัพพอร์ต การอบหรือความเค้นจากความร้อน และการกัดแต่งหลังพิมพ์"
+            : "Material shrinkage, part size, build orientation, support placement, curing or thermal stress, and any post-machining.",
+            explanation, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "ค่าความคลาดเคลื่อนไม่เท่ากับการประกอบได้พอดี ชิ้นงานสองชิ้นที่คุมได้ ±0.3 มม. เท่ากันก็ยังอาจประกอบติดขัดได้ ควรระบุขนาดที่สำคัญจริงลงในแบบงาน เราสามารถคว้าน ต๊าปเกลียว หรือกัดแต่งเฉพาะจุดหลังพิมพ์ได้เมื่อค่าจากการพิมพ์ไม่เพียงพอ"
+            : "Tolerance is not the same as fit. Two parts that each hold ±0.3 mm can still bind when assembled. Mark the dimensions that actually matter on your drawing — we can ream, tap, or machine those features after printing when the printed tolerance is not enough.",
+            explanation, StringComparison.Ordinal);
+        Assert.Contains("<section id=\"printing-workflow\" class=\"service-section\">",
+            html, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

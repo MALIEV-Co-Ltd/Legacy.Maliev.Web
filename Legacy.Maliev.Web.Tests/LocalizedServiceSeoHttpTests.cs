@@ -103,11 +103,10 @@ public sealed class LocalizedServiceSeoHttpTests(TestingWebApplicationFactory fa
 
         var location = Assert.Single(Elements(RemoveScripts(html), "section"), element =>
             Attribute(element.Attributes, "data-migration-component") == "service-location");
-        var eyebrow = Assert.Single(Elements(location.Body, "p"), element =>
+        Assert.DoesNotContain(Elements(location.Body, "p"), element =>
             Attribute(element.Attributes, "class").Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Contains("service-eyebrow", StringComparer.Ordinal));
-        Assert.Equal(culture == "th" ? "สถานที่และช่องทางการติดต่อ" : "Verified workshop and contact",
-            Text(eyebrow.Body));
+        Assert.DoesNotContain("สถานที่และช่องทางติดต่อที่ยืนยันแล้ว", Text(location.Body), StringComparison.Ordinal);
         var visibleAddress = Text(Assert.Single(Elements(location.Body, "address")).Body);
         var expectedAddress = culture == "th"
             ? "Maliev Co., Ltd. 36/1 หมู่ 3 ตำบลคลองข่อย อำเภอปากเกร็ด จังหวัดนนทบุรี 11120 ประเทศไทย"

@@ -1,0 +1,1205 @@
+{
+  "schema": "maliev-knowledge-source-intake.v1",
+  "sourceRepository": "MALIEV-Co-Ltd/maliev-web",
+  "sourceCommit": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+  "sourceTree": "a1ef9061734c2a57fd6b621b56559c3efa59168e",
+  "targetBase": "681f948583e41d7a9d11b4071dec2182f18408db",
+  "sourceCommits": [
+    {
+      "sha": "73357e3fff70a4b6131d1a12413e9f680aec319b",
+      "parents": [
+        "e1edc6de1537712f52c016318e311c8dd3819e5c"
+      ]
+    },
+    {
+      "sha": "51158c450e713863fe46a82d6b150b3493ad65d6",
+      "parents": [
+        "73357e3fff70a4b6131d1a12413e9f680aec319b"
+      ]
+    },
+    {
+      "sha": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+      "parents": [
+        "51158c450e713863fe46a82d6b150b3493ad65d6"
+      ]
+    },
+    {
+      "sha": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+      "parents": [
+        "c3f53426bfa3843441015a69a6624706f4b0bb98"
+      ]
+    },
+    {
+      "sha": "94eaf9bb0571594114b8aaab6335cb446ea9ed2e",
+      "parents": [
+        "cdb7e480238424f208a36f54dd1e9770db5a9506"
+      ]
+    },
+    {
+      "sha": "995ab350353fa81cbcfdba8f9b4148e02493588a",
+      "parents": [
+        "94eaf9bb0571594114b8aaab6335cb446ea9ed2e"
+      ]
+    },
+    {
+      "sha": "adbed46b23ec00a8302e3ebc5bf2d73d48121734",
+      "parents": [
+        "995ab350353fa81cbcfdba8f9b4148e02493588a"
+      ]
+    },
+    {
+      "sha": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+      "parents": [
+        "adbed46b23ec00a8302e3ebc5bf2d73d48121734"
+      ]
+    },
+    {
+      "sha": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+      "parents": [
+        "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff"
+      ]
+    },
+    {
+      "sha": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+      "parents": [
+        "f96a6cbe23407ac25af3ebc4bc669296a09ac164"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-manufacturing-knowledge-library.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-manufacturing-knowledge-library.md",
+      "blob": "eb99f3abc3001183cbeb93f19b63b0ffba9d66ed",
+      "bytes": 6380,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "51158c450e713863fe46a82d6b150b3493ad65d6",
+          "status": "added",
+          "blob": "eb99f3abc3001183cbeb93f19b63b0ffba9d66ed"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview-small.webp",
+      "blob": "49a863c6abe53a9cb31cc9fdd0f74754d2b895b6",
+      "bytes": 55324,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "d79c9b9cd473b2f2e8a74addd952ca5595f9297f"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "49a863c6abe53a9cb31cc9fdd0f74754d2b895b6"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview.webp",
+      "blob": "2cf4e9d5b90bd70d468482fc3c404b726d54c98d",
+      "bytes": 241966,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "5736aa5481742248ca3669f3ada42c4a8d4cbfbc"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "2cf4e9d5b90bd70d468482fc3c404b726d54c98d"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools-small.webp",
+      "blob": "cf8cadda595d1d5a9a712fa7e0f7da60a9a7aab6",
+      "bytes": 48858,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "cf8cadda595d1d5a9a712fa7e0f7da60a9a7aab6"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools.webp",
+      "blob": "dc5ea85de92301eadee8b03b3937ab81f888a165",
+      "bytes": 151226,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "dc5ea85de92301eadee8b03b3937ab81f888a165"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection-small.webp",
+      "blob": "0298b0482052ad9e5d88fdf72ef183bfad18af9a",
+      "bytes": 79424,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "ac34dda2df197f69ec3dca4b183fc0a73c8073b5"
+        },
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "modified",
+          "blob": "0298b0482052ad9e5d88fdf72ef183bfad18af9a"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection.webp",
+      "blob": "018c11396b8316f3d7de6d8c9fc3c845540185e3",
+      "bytes": 289356,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "6f3665f5364deb0c5957c3536b02fc7a090759ad"
+        },
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "modified",
+          "blob": "018c11396b8316f3d7de6d8c9fc3c845540185e3"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics-small.webp",
+      "blob": "34150108666546d4f48f41cf6e0a24b62bc9db63",
+      "bytes": 29992,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "34150108666546d4f48f41cf6e0a24b62bc9db63"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics.webp",
+      "blob": "76dae672b01ca888da2d6b04964d541b3902eba4",
+      "bytes": 102262,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "76dae672b01ca888da2d6b04964d541b3902eba4"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow-small.webp",
+      "blob": "3f76dec13d38296b4334a67771ddbab52e7f4ab7",
+      "bytes": 39244,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "3f76dec13d38296b4334a67771ddbab52e7f4ab7"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow.webp",
+      "blob": "54c97fe9ce334fa68406218277f8def74d0e77e5",
+      "bytes": 108596,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "54c97fe9ce334fa68406218277f8def74d0e77e5"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds-small.webp",
+      "blob": "1a940bb85534549a81cdf2bc01a0aa532af7f821",
+      "bytes": 46638,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "1a940bb85534549a81cdf2bc01a0aa532af7f821"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds.webp",
+      "blob": "c5554058c8e197775466c28935ca7a755eaec461",
+      "bytes": 156194,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "c5554058c8e197775466c28935ca7a755eaec461"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment-small.webp",
+      "blob": "1b1c4e98d9ee9367f0d03f5bc7119862343daa11",
+      "bytes": 47534,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "1b1c4e98d9ee9367f0d03f5bc7119862343daa11"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment.webp",
+      "blob": "96668ab1fda0850391e0e607c3bba4d2693fa7fe",
+      "bytes": 123652,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "96668ab1fda0850391e0e607c3bba4d2693fa7fe"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances-small.webp",
+      "blob": "e4ffb773c6fe377e4af402ab66e1e8b0bb9c9848",
+      "bytes": 56182,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "e4ffb773c6fe377e4af402ab66e1e8b0bb9c9848"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances.webp",
+      "blob": "4a48ee8cc096cbc12eaab60d4c577557ffdef44d",
+      "bytes": 177930,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "4a48ee8cc096cbc12eaab60d4c577557ffdef44d"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/library-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/library-small.webp",
+      "blob": "00eb843e3d8e3ab750e25e8e0aee66af738a3770",
+      "bytes": 65204,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "00eb843e3d8e3ab750e25e8e0aee66af738a3770"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/library.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/library.webp",
+      "blob": "e0419ad1b748534d7fd62fe317218af365eac3f3",
+      "bytes": 225042,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "e0419ad1b748534d7fd62fe317218af365eac3f3"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection-small.webp",
+      "blob": "ecf8f2b7ddc39077edddc440360d6993fe099707",
+      "bytes": 43904,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "ecf8f2b7ddc39077edddc440360d6993fe099707"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection.webp",
+      "blob": "dc61cd0e69aaa9e84c000bb8c6d04e380c487a5a",
+      "bytes": 147360,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "dc61cd0e69aaa9e84c000bb8c6d04e380c487a5a"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/metals-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/metals-small.webp",
+      "blob": "c5a7633348dbb313c054f8f857484845db117e52",
+      "bytes": 45578,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "c5a7633348dbb313c054f8f857484845db117e52"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/metals.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/metals.webp",
+      "blob": "6bebf53b05c99228683760bd458ad670e275fac9",
+      "bytes": 156334,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "6bebf53b05c99228683760bd458ad670e275fac9"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis-small.webp",
+      "blob": "6cd0bbc8d7513a07b7b3894da1e0f2feb75ee40c",
+      "bytes": 30480,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "6cd0bbc8d7513a07b7b3894da1e0f2feb75ee40c"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis.webp",
+      "blob": "9eeddeb3fb172532e697d83ef282c18e0b0d72ab",
+      "bytes": 98868,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "9eeddeb3fb172532e697d83ef282c18e0b0d72ab"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/printing-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/printing-small.webp",
+      "blob": "757122343ffc52c4b9aa5763fd36a2344d9ad563",
+      "bytes": 33486,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "757122343ffc52c4b9aa5763fd36a2344d9ad563"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/printing.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/printing.webp",
+      "blob": "051d6e00ab3a11e9fb3133b69d1e1f07b638bc88",
+      "bytes": 119110,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "051d6e00ab3a11e9fb3133b69d1e1f07b638bc88"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection-small.webp",
+      "blob": "6fc9e23b69a566f4d50cf6d73ed083243dbd0b6a",
+      "bytes": 38226,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "6fc9e23b69a566f4d50cf6d73ed083243dbd0b6a"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection.webp",
+      "blob": "623bb42f005866788e454767fdfb57b406186325",
+      "bytes": 134064,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "623bb42f005866788e454767fdfb57b406186325"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files-small.webp",
+      "blob": "5d15ff2391cd3a513e9e9c62f63bcd9d7fb621ea",
+      "bytes": 29032,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "5d15ff2391cd3a513e9e9c62f63bcd9d7fb621ea"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files.webp",
+      "blob": "7aa3a64d15095cce97b2fe4207f0e58cb39f5e26",
+      "bytes": 79948,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "7aa3a64d15095cce97b2fe4207f0e58cb39f5e26"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/scanning-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/scanning-small.webp",
+      "blob": "9f2acd15f01c829e08af54d9157e2b2b62cae4d4",
+      "bytes": 36564,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "9f2acd15f01c829e08af54d9157e2b2b62cae4d4"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/scanning.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/scanning.webp",
+      "blob": "39feb4239a039fe5bd13ed9f496bdeda18659e46",
+      "bytes": 112734,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "39feb4239a039fe5bd13ed9f496bdeda18659e46"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides-small.webp",
+      "blob": "d12a43a9549a4eb9734f9035eaab3aaa9956cf57",
+      "bytes": 43352,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "d12a43a9549a4eb9734f9035eaab3aaa9956cf57"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides.webp",
+      "blob": "e2eac24c4dcb28b1b9bda4c3b014fdbfd5f8f13d",
+      "bytes": 142896,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "e2eac24c4dcb28b1b9bda4c3b014fdbfd5f8f13d"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes-small.webp",
+      "blob": "996dd603c133c64d6ea0c291d59fa5624db9d7f5",
+      "bytes": 20868,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "996dd603c133c64d6ea0c291d59fa5624db9d7f5"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes.webp",
+      "blob": "0c55ece68f358c77f57b4b8ca7d89258d57bdfab",
+      "bytes": 70376,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "0c55ece68f358c77f57b4b8ca7d89258d57bdfab"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/workholding-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/workholding-small.webp",
+      "blob": "b53fa04ea8e5273a1aaf9685c69e8ccab15cf83d",
+      "bytes": 35304,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "b53fa04ea8e5273a1aaf9685c69e8ccab15cf83d"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/workholding.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/workholding.webp",
+      "blob": "59cd08027593a020498fd667ef7a25620b91a0bf",
+      "bytes": 128386,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "59cd08027593a020498fd667ef7a25620b91a0bf"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-photo-prompts.json",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-photo-prompts.json",
+      "blob": "310e9e472a0e4b96ab647463c8afd55875e92420",
+      "bytes": 24652,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "c3f53426bfa3843441015a69a6624706f4b0bb98",
+          "status": "added",
+          "blob": "310e9e472a0e4b96ab647463c8afd55875e92420"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-cnc-preparation.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-cnc-preparation.svg",
+      "blob": "d9fee4db56638dc242419f9c4dcb81b0f391b734",
+      "bytes": 3829,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "06d04ee47ccde68eaafaa05a74ddc6ff71d87855"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "d9fee4db56638dc242419f9c4dcb81b0f391b734"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-cutting-tool-reach.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-cutting-tool-reach.svg",
+      "blob": "23046a19cff12c1674892c4063146a4319a5e1e5",
+      "bytes": 2995,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "23046a19cff12c1674892c4063146a4319a5e1e5"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-feeds-speeds.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-feeds-speeds.svg",
+      "blob": "41ccf1e9f5417e511535eb96200406932136df31",
+      "bytes": 2576,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "41ccf1e9f5417e511535eb96200406932136df31"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-hole-depths.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-hole-depths.svg",
+      "blob": "61ed15230758fc1824f5697b9f07f62fb8c2c5b4",
+      "bytes": 5041,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "5fe8770165f385672dee8e1b4c8e47fd315abd4f"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "61ed15230758fc1824f5697b9f07f62fb8c2c5b4"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-machining-access.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-machining-access.svg",
+      "blob": "4da62a319cb71b2702909f046b14391f3db2222f",
+      "bytes": 3236,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "d5db4c2348f4a01d9331a23316ce51a3e0c06503"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "4da62a319cb71b2702909f046b14391f3db2222f"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-material-criteria.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-material-criteria.svg",
+      "blob": "2e329bf64624671a81f99f79979c76254e5355ee",
+      "bytes": 4300,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "08f3d918cf01dd50d5f11ed1262c93fb7f1991a8"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "2e329bf64624671a81f99f79979c76254e5355ee"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-metal-designation.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-metal-designation.svg",
+      "blob": "d7c3f33ed118f69353205495c3988cbdd5cc171e",
+      "bytes": 2266,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "d7c3f33ed118f69353205495c3988cbdd5cc171e"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-polymer-creep.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-polymer-creep.svg",
+      "blob": "bf7318e313cdfb0d7774b96ce6a9a6d04deb0c5c",
+      "bytes": 1985,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "bf7318e313cdfb0d7774b96ce6a9a6d04deb0c5c"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-print-orientation.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-print-orientation.svg",
+      "blob": "488a03af97f7d2f09607b09c135f7297710442cf",
+      "bytes": 3711,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "b1d078661de7135a2944c48143dc25e0e3986fc1"
+        },
+        {
+          "commit": "995ab350353fa81cbcfdba8f9b4148e02493588a",
+          "status": "modified",
+          "blob": "488a03af97f7d2f09607b09c135f7297710442cf"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-process-routes.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-process-routes.svg",
+      "blob": "f68e77865a172928c1741a64ba4c1d2b4155aede",
+      "bytes": 2829,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "eacadee4e5840f14a762142277e3d9af8eb4c7a1"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "f68e77865a172928c1741a64ba4c1d2b4155aede"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-quotation-package.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-quotation-package.svg",
+      "blob": "f93ad604fba57ff9f79265ddc7af5e48d2ec15b7",
+      "bytes": 3293,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "6589367b71493346fcfddd6e11ed2490d1eb4daa"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "f93ad604fba57ff9f79265ddc7af5e48d2ec15b7"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-review-loop.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-review-loop.svg",
+      "blob": "d4fab4ed787906251b1a15ee0f22d6e629d777c5",
+      "bytes": 3190,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "d1c25fddcfb7f93de6c246fb2c1d2ba9c2137c4b"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "d4fab4ed787906251b1a15ee0f22d6e629d777c5"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-scan-to-cad.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-scan-to-cad.svg",
+      "blob": "9f7f00c287d6e1e0f82a30ba481cefc919159339",
+      "bytes": 3505,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "9f7f00c287d6e1e0f82a30ba481cefc919159339"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-service-inputs.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-service-inputs.svg",
+      "blob": "7aeb07d58101f0ba2963e305669e2a0cc6956b43",
+      "bytes": 3096,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "30e4140d4c1d3f5eaa748bd4a9eb2fcc913e967b"
+        },
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "7aeb07d58101f0ba2963e305669e2a0cc6956b43"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-thermal-measurement.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-thermal-measurement.svg",
+      "blob": "3352a9cde32d439b013691b55545d40559b0666b",
+      "bytes": 1887,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "3352a9cde32d439b013691b55545d40559b0666b"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/visual-treatment-allowance.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/visual-treatment-allowance.svg",
+      "blob": "a49380b786525a7c84713b8eb2994418809953fc",
+      "bytes": 2031,
+      "kind": "svg",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "a49380b786525a7c84713b8eb2994418809953fc"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-diagram-captions.json",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-diagram-captions.json",
+      "blob": "d4656e473875655da527905e7a4ad670312fda34",
+      "bytes": 22629,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "cdb7e480238424f208a36f54dd1e9770db5a9506",
+          "status": "added",
+          "blob": "0a01d84ef2cc68b9f6fe44c707987e01a7d6d139"
+        },
+        {
+          "commit": "995ab350353fa81cbcfdba8f9b4148e02493588a",
+          "status": "modified",
+          "blob": "d4656e473875655da527905e7a4ad670312fda34"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-visuals.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-visuals.md",
+      "blob": "e5d0034bfb5fcbbc06a8d96ede7aa30cc9cbd449",
+      "bytes": 5852,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "94eaf9bb0571594114b8aaab6335cb446ea9ed2e",
+          "status": "added",
+          "blob": "e5d0034bfb5fcbbc06a8d96ede7aa30cc9cbd449"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-fact-audit.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-fact-audit.md",
+      "blob": "253d94e832e81cb2e1925a31cec580aa602b2c42",
+      "bytes": 13886,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "995ab350353fa81cbcfdba8f9b4148e02493588a",
+          "status": "added",
+          "blob": "253d94e832e81cb2e1925a31cec580aa602b2c42"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-search-and-hover.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-search-and-hover.md",
+      "blob": "439929828950e9b4ddc9c58b416bcc238489c6af",
+      "bytes": 5573,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "adbed46b23ec00a8302e3ebc5bf2d73d48121734",
+          "status": "added",
+          "blob": "439929828950e9b4ddc9c58b416bcc238489c6af"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+      "blob": "190a6756bdae3ea76d0117eb36f401361826a408",
+      "bytes": 2802,
+      "kind": "svg",
+      "targetPreimage": "cc65568285c3c519cc2dc1411310a418b2840763",
+      "history": [
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "modified",
+          "blob": "190a6756bdae3ea76d0117eb36f401361826a408"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-visual-corrections.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-visual-corrections.md",
+      "blob": "4633827aeb6c66e16003ebe396d4090fb7ece00d",
+      "bytes": 8357,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f69f8aa2682cdfd2bb57beb7f3dcbfc548157fff",
+          "status": "added",
+          "blob": "4633827aeb6c66e16003ebe396d4090fb7ece00d"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/chatter-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/chatter-small.webp",
+      "blob": "bd8e3effb27290b5103f0c5efed9665cd984b46e",
+      "bytes": 66438,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "added",
+          "blob": "bd8e3effb27290b5103f0c5efed9665cd984b46e"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/chatter.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/chatter.webp",
+      "blob": "66f847c61544eb01cf6c1068735994ff2bfd59c9",
+      "bytes": 248222,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "added",
+          "blob": "66f847c61544eb01cf6c1068735994ff2bfd59c9"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/warpage-small.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/warpage-small.webp",
+      "blob": "f8c2271c14cca635f5864129bcb404bb6d97eb91",
+      "bytes": 39462,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "added",
+          "blob": "f8c2271c14cca635f5864129bcb404bb6d97eb91"
+        }
+      ]
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/photos/warpage.webp",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/photos/warpage.webp",
+      "blob": "ed5e23ca9b8d5f44db6205a5123835553af7431c",
+      "bytes": 139502,
+      "kind": "webp",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "added",
+          "blob": "ed5e23ca9b8d5f44db6205a5123835553af7431c"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-reading-images.json",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-reading-images.json",
+      "blob": "6e187a6fbeb86929a2dac4ec85862225587d0193",
+      "bytes": 4039,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "added",
+          "blob": "6e187a6fbeb86929a2dac4ec85862225587d0193"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-reading-layout.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-reading-layout.md",
+      "blob": "8a3f6cb923ab30422da1dc087b07a72e5b18da16",
+      "bytes": 7086,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "f96a6cbe23407ac25af3ebc4bc669296a09ac164",
+          "status": "added",
+          "blob": "8a3f6cb923ab30422da1dc087b07a72e5b18da16"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-16-knowledge-format-error.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-16-knowledge-format-error.md",
+      "blob": "40e9f93286224fc5f9d0260f8e3bf40153764724",
+      "bytes": 4532,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+          "status": "added",
+          "blob": "40e9f93286224fc5f9d0260f8e3bf40153764724"
+        }
+      ]
+    },
+    {
+      "sourcePath": "docs/superpowers/verification/2026-10-17-knowledge-production-release.md",
+      "targetPath": "docs/migration/knowledge-770cb580/source-provenance/2026-10-17-knowledge-production-release.md",
+      "blob": "b645ea88d537cb55c771e5076c2ca9547586b171",
+      "bytes": 4003,
+      "kind": "provenance",
+      "targetPreimage": null,
+      "history": [
+        {
+          "commit": "770cb58032969ae4a0fe169686b53ab61a44fff8",
+          "status": "added",
+          "blob": "b645ea88d537cb55c771e5076c2ca9547586b171"
+        }
+      ]
+    }
+  ],
+  "inherited": [
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/cnc-corner-clearance.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/cnc-corner-clearance.svg",
+      "blob": "2234ca7b5497fd584ea73bcea836ba2b73ab1b45",
+      "bytes": 926
+    },
+    {
+      "sourcePath": "Maliev.Web/wwwroot/src/images/knowledge/cnc-wall-stiffness.svg",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/knowledge/cnc-wall-stiffness.svg",
+      "blob": "f22982c9b91ecc5c711528ebe51529dc7e5440e2",
+      "bytes": 688
+    }
+  ]
+}

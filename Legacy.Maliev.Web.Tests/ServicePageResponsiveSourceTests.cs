@@ -12,6 +12,12 @@ public sealed class ServicePageResponsiveSourceTests
         var js = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "service-toc.js");
         var entry = Read("Legacy.Maliev.Web", "assets", "route-service-toc.js");
 
+        Assert.Matches(@"(?m)^\.service-page\s*\{[^}]*overflow:\s*clip\s*;", css);
+        Assert.Matches(@"(?m)^\.service-page-toc\s*\{(?=[^}]*position:\s*sticky\s*;)(?=[^}]*padding-block:\s*\.25rem\s*;)", css);
+        Assert.Matches(@"(?m)^\.service-page-toc-inner\s*\{[^}]*min-width:\s*0\s*;", css);
+        Assert.Matches(@"(?m)^\.service-page-toc ul\s*\{(?=[^}]*justify-content:\s*flex-start\s*;)(?=[^}]*overflow-x:\s*auto\s*;)(?=[^}]*overflow-y:\s*hidden\s*;)(?=[^}]*scroll-padding-inline:\s*\.25rem\s*;)(?=[^}]*scrollbar-width:\s*none\s*;)(?=[^}]*-ms-overflow-style:\s*none\s*;)(?=[^}]*-webkit-overflow-scrolling:\s*touch\s*;)", css);
+        Assert.Matches(@"(?m)^\.service-page-toc ul::-webkit-scrollbar\s*\{[^}]*display:\s*none\s*;", css);
+
         Assert.Contains("data-service-toc", toc, StringComparison.Ordinal);
         Assert.Contains("data-service-toc-list", toc, StringComparison.Ordinal);
         Assert.Contains("data-service-toc-toggle", toc, StringComparison.Ordinal);

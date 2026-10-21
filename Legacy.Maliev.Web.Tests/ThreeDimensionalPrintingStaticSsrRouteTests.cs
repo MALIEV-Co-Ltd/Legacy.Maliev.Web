@@ -72,22 +72,34 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -231,8 +243,8 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var content = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
-        Assert.Contains("well-designed part — not a guarantee", content, StringComparison.Ordinal);
-        Assert.Contains("งานที่ออกแบบมาเหมาะสม ไม่ใช่การรับประกัน", content, StringComparison.Ordinal);
+        Assert.Contains("Compare typical starting ranges for a well-designed part. These are not guarantees; send the drawing so we can confirm the critical dimensions before production.", content, StringComparison.Ordinal);
+        Assert.Contains("เปรียบเทียบค่าความคลาดเคลื่อนเริ่มต้นโดยทั่วไปสำหรับชิ้นงานที่ออกแบบมาเหมาะสม ค่านี้ไม่ใช่การรับประกัน กรุณาส่งแบบเพื่อให้เรายืนยันขนาดสำคัญก่อนผลิต", content, StringComparison.Ordinal);
         Assert.Contains("drawing — we can ream, tap, or machine", content, StringComparison.Ordinal);
         Assert.Contains("Indicative starting prices for FDM and resin are listed in the pricing section on this page.", content, StringComparison.Ordinal);
         Assert.Contains("ราคาเริ่มต้นของงาน FDM และเรซิ่นแสดงอยู่ในส่วนราคาเริ่มต้นของหน้านี้", content, StringComparison.Ordinal);

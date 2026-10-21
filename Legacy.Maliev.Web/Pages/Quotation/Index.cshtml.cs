@@ -281,20 +281,7 @@ public sealed class Index(
             return Page();
         }
 
-        var uploads = Files
-            .Where(file => file.Length > 0)
-            .Select(file => new QuotationUpload(
-                Path.GetFileName(file.FileName),
-                string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-                file.Length,
-                file.OpenReadStream))
-            .ToArray();
-
-        var fileResult = await quotationFileClient.UploadAndLinkAsync(
-            referenceNumber,
-            SubmissionId,
-            uploads,
-            cancellationToken);
+        bool hasFiles = Files.Any(file => file.Length > 0);
         bool analyticsQueued = false;
         Exception? analyticsFailure = null;
         if (result.TransactionId is { Length: > 0 }
@@ -304,14 +291,14 @@ public sealed class Index(
                 ? LeadAnalyticsEventQueue.TryQueueManualQuotation(
                     TempData,
                     result.TransactionId,
-                    uploads.Length > 0,
+                    hasFiles,
                     ServiceContext,
                     journeyId.ToString(),
                     out analyticsFailure)
                 : LeadAnalyticsEventQueue.TryQueueManualQuotationWithFinder(
                     TempData,
                     result.TransactionId,
-                    uploads.Length > 0,
+                    hasFiles,
                     ServiceContext,
                     journeyId.ToString(),
                     finderAttribution,
@@ -325,12 +312,37 @@ public sealed class Index(
         if (!analyticsQueued)
         {
             logger.LogWarning(
-                analyticsFailure,
                 "Analytics queue failed after quotation request {QuotationRequestId} was persisted.",
                 referenceNumber);
         }
 
-        var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        var fileResult = new QuotationFileResult(false, false, false, false);
+        var notificationsSent = false;
+        try
+        {
+            var uploads = Files
+                .Where(file => file.Length > 0)
+                .Select(file => new QuotationUpload(
+                    Path.GetFileName(file.FileName),
+                    string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    file.Length,
+                    file.OpenReadStream))
+                .ToArray();
+
+            fileResult = await quotationFileClient.UploadAndLinkAsync(
+                referenceNumber,
+                SubmissionId,
+                uploads,
+                cancellationToken);
+            notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(
+                "Quotation follow-up failed after request {QuotationRequestId} was persisted.",
+                referenceNumber);
+        }
+
         Notification = fileResult.Completed && notificationsSent
             ? localizer["Thank you. Your quotation request reference is #{0}.", referenceNumber].Value
             : fileResult.Rejected
@@ -343,29 +355,35 @@ public sealed class Index(
         int referenceNumber,
         CancellationToken cancellationToken)
     {
-        var customer = notificationClient.SendAsync(
-            NotificationChannel.Manufacturing,
-            new EmailNotification(
-                Email.Trim(),
-                localizer["Quotation request #{0}", referenceNumber].Value,
-                "<p>" + Encode(localizer["Thank you for requesting a quotation from MALIEV. Your reference number is #{0}.", referenceNumber].Value)
-                    + "</p><p>" + Encode(localizer["Our manufacturing team will review the request and reply directly."].Value) + "</p>",
-                null,
-                null,
-                null),
-            cancellationToken);
-        var internalNotification = notificationClient.SendAsync(
-            NotificationChannel.Manufacturing,
-            new EmailNotification(
-                "manufacturing@maliev.com",
-                $"Quotation request #{referenceNumber}",
-                BuildInternalMessage(referenceNumber),
-                Email.Trim(),
-                null,
-                null),
-            cancellationToken);
+        var customer = SendCustomerAsync();
+        var internalNotification = SendInternalAsync();
         var results = await Task.WhenAll(customer, internalNotification);
         return results.All(result => result.Sent);
+
+        async Task<NotificationResult> SendCustomerAsync() =>
+            await notificationClient.SendAsync(
+                NotificationChannel.Manufacturing,
+                new EmailNotification(
+                    Email.Trim(),
+                    localizer["Quotation request #{0}", referenceNumber].Value,
+                    "<p>" + Encode(localizer["Thank you for requesting a quotation from MALIEV. Your reference number is #{0}.", referenceNumber].Value)
+                        + "</p><p>" + Encode(localizer["Our manufacturing team will review the request and reply directly."].Value) + "</p>",
+                    null,
+                    null,
+                    null),
+                cancellationToken);
+
+        async Task<NotificationResult> SendInternalAsync() =>
+            await notificationClient.SendAsync(
+                NotificationChannel.Manufacturing,
+                new EmailNotification(
+                    "manufacturing@maliev.com",
+                    $"Quotation request #{referenceNumber}",
+                    BuildInternalMessage(referenceNumber),
+                    Email.Trim(),
+                    null,
+                    null),
+                cancellationToken);
     }
 
     private string BuildInternalMessage(int referenceNumber) =>
