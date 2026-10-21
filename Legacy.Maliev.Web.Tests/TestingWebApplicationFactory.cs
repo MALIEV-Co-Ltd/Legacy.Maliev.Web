@@ -1,3 +1,4 @@
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -33,7 +34,7 @@ public class TestingWebApplicationFactory : WebApplicationFactory<Program>
             var host = base.CreateHost(new OwnershipCapturingHostBuilder(builder, built =>
             {
                 resources.Own(built);
-                webRoot.Capture(built.Services.GetService<IWebHostEnvironment>());
+                webRoot.Capture(built.Services.GetService<TestingWebRootLease>());
             }));
             return new OwnedWebSurfaceHostLifetime(host, resources);
         }

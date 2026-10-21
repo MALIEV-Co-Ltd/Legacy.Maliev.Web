@@ -1,7 +1,7 @@
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.FileProviders;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -69,39 +69,24 @@ internal sealed class OwnedWebSurfaceHostLifetime(IHost host, OwnedWebSurfaceRes
     public void Dispose() => resources.Dispose();
 }
 
-/// <summary>Owns the house TestServer builder's default physical web-root leaves, not arbitrary borrowed providers.</summary>
+/// <summary>Releases only explicit application-created Testing leases, never inferred provider ownership.</summary>
 internal sealed class OwnedWebSurfaceWebRoot : IDisposable
 {
-    private readonly HashSet<PhysicalFileProvider> providers = new(ReferenceEqualityComparer.Instance);
-    internal int RemainingOwnedProviders => providers.Count;
+    private readonly HashSet<TestingWebRootLease> leases = new(ReferenceEqualityComparer.Instance);
+    internal int RemainingOwnedProviders => leases.Count;
 
-    internal OwnedWebSurfaceWebRoot(IWebHostEnvironment? environment) => Capture(environment);
+    internal OwnedWebSurfaceWebRoot(TestingWebRootLease? lease) => Capture(lease);
 
-    internal void Capture(IWebHostEnvironment? environment)
+    internal void Capture(TestingWebRootLease? lease)
     {
-        if (environment is null || string.IsNullOrEmpty(environment.WebRootPath)) return;
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(environment.WebRootPath));
-        void CaptureProvider(IFileProvider provider)
-        {
-            if (provider is CompositeFileProvider composite)
-            {
-                foreach (var child in composite.FileProviders) CaptureProvider(child);
-            }
-            else if (provider is PhysicalFileProvider physical &&
-                string.Equals(Path.TrimEndingDirectorySeparator(physical.Root), root,
-                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            {
-                providers.Add(physical);
-            }
-        }
-        CaptureProvider(environment.WebRootFileProvider);
+        if (lease is not null) leases.Add(lease);
     }
 
     public void Dispose()
     {
         var owned = new OwnedWebSurfaceResources();
-        foreach (var provider in providers) owned.Own(provider);
-        providers.Clear();
+        foreach (var lease in leases) owned.Own(lease);
+        leases.Clear();
         owned.Dispose();
     }
 }
