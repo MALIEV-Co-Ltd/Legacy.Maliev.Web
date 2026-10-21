@@ -219,20 +219,34 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         {
             await fixture.ChangeQuantityAsync(2);
             await two.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            await fixture.ChangeQuantityAsync(3);
+            await fixture.Quantity.FillAsync("3");
             await Assertions.Expect(fixture.Quantity).ToHaveValueAsync("3");
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price] strong")).ToHaveCountAsync(0);
             Assert.False(three.Entered.Task.IsCompleted, "A queued configuration cannot bypass the active state gate.");
-            two.Release.TrySetResult();
+            Assert.False(two.Completed.Task.IsCompleted);
+            await fixture.Quantity.PressAsync("Tab");
             await three.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await two.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(two.ConsumerToken.IsCancellationRequested,
+                "A newer accepted configuration must retire the obsolete quote consumer.");
+            Assert.False(two.Release.Task.IsCompleted, "The newer edit must not depend on releasing the obsolete pricing gate.");
+            two.Release.TrySetResult();
             Assert.Equal(3, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
-            await fixture.ChangeQuantityAsync(4);
+            Assert.Null((await fixture.StoredAsync()).QuoteAuthorization);
+            await fixture.Quantity.FillAsync("4");
             await Assertions.Expect(fixture.Quantity).ToHaveValueAsync("4");
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price] strong")).ToHaveCountAsync(0);
             Assert.False(four.Entered.Task.IsCompleted);
-            three.Release.TrySetResult();
+            Assert.False(three.Completed.Task.IsCompleted);
+            await fixture.Quantity.PressAsync("Tab");
             await four.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await three.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(three.ConsumerToken.IsCancellationRequested,
+                "The newest accepted configuration must retire the previous quote consumer.");
+            Assert.False(three.Release.Task.IsCompleted);
+            three.Release.TrySetResult();
             Assert.Equal(4, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
+            Assert.Null((await fixture.StoredAsync()).QuoteAuthorization);
             await fixture.Page.Locator("[data-workflow-material-comparison] > summary").ClickAsync();
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price='M68']")).ToBeVisibleAsync();
             // This is a current-tuple/DOM routing control, not another commercial arithmetic golden.
@@ -246,8 +260,14 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             two.Release.TrySetResult(); three.Release.TrySetResult(); four.Release.TrySetResult();
         }
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
-        Assert.Equal(4, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
+        var stored = await fixture.StoredAsync();
+        Assert.Equal(4, Assert.Single(stored.Parts).Configuration.Quantity);
         Assert.Equal(new[] { 2, 3, 4 }, fixture.Control.AcceptedQuantities.ToArray());
+        var final = Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote);
+        Assert.Equal(4, Assert.Single(final.Parts).Quantity);
+        Assert.NotNull(stored.QuoteAuthorization);
+        Assert.True(fixture.Factory.Services.GetRequiredService<IInstantQuotationQuoteTicketService>()
+            .Validate(stored, final, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
     }
 
     [Theory]
@@ -312,6 +332,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public TaskCompletionSource AuthorizationRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AuthorizationStored { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AuthorizationFinished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationToken ConsumerToken { get; set; }
         public int Claimed;
         public int AuthorizationClaimed;
     }
@@ -377,7 +398,11 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             var quantity = session.Parts.Single().Configuration.Quantity;
             control.Timeline.Enqueue(("attempt", quantity, token.IsCancellationRequested));
             var gate = control.Gates.FirstOrDefault(candidate => candidate.Quantity == quantity && candidate.Claimed == 0);
-            if (gate is not null) control.AcceptedQuantities.Enqueue(quantity);
+            if (gate is not null)
+            {
+                gate.ConsumerToken = token;
+                control.AcceptedQuantities.Enqueue(quantity);
+            }
             try
             {
                 var result = await inner.QuoteAsync(session, owner, comparisons, async (frame, callbackToken) =>
