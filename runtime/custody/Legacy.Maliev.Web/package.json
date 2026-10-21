@@ -1,0 +1,22 @@
+{
+  "name": "legacy-maliev-web-assets",
+  "private": true,
+  "scripts": {
+    "build": "node build-assets.mjs && npm run verify:release-assets",
+    "verify:release-assets": "node verify-release-assets.mjs",
+    "ci": "node install-assets.mjs && npm run build && npm run test:browser-module",
+    "test:browser-module": "node --test tests/release-asset-validator.test.mjs tests/cnc-stock.test.cjs tests/contact-channel-analytics.test.mjs tests/finish-color-matcher-core.test.cjs tests/instant-quotation-address-validation.test.mjs tests/instant-quotation-controller.test.mjs tests/instant-quotation-geometry-analysis.test.mjs tests/instant-quotation-incomplete-preview.test.mjs tests/instant-quotation-optional-fields.test.mjs tests/instant-quotation-preliminary.test.mjs tests/instant-quotation-submission.test.mjs tests/instant-quotation-three-mf-loader-patch.test.mjs tests/instant-quotation-upload-controller.test.mjs tests/instant-quotation-viewer.test.mjs tests/instant-quotation-wall-thickness.test.mjs tests/instant-quotation-workflow-interop.test.mjs tests/legacy-ui-without-jquery.test.mjs tests/member-order-form.test.mjs tests/scanning-comparison.test.mjs tests/scanning-proof-tabs.test.mjs tests/service-part-gallery.test.mjs tests/shared-public-modules.test.mjs tests/space-error-physics.test.cjs tests/webmcp.test.mjs && npm run test:cnc-engine",
+    "test:cnc-engine": "node --test ../Legacy.Maliev.Web.Tests/JavaScript/*.test.cjs"
+  },
+  "dependencies": {
+    "@fontsource/outfit": "5.3.0",
+    "@fontsource/noto-sans-thai": "5.3.0",
+    "@fortawesome/fontawesome-free": "7.3.1",
+    "bootstrap": "5.3.8",
+    "three": "0.186.1",
+    "three-cnc-compat": "npm:three@0.129.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
