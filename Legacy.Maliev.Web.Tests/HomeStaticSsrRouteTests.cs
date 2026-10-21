@@ -88,7 +88,7 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($">{reasons}<", source, StringComparison.Ordinal);
         Assert.Contains($">{finalCallToAction}<", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/Services/Index\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(culture == "en" ? "href=\"/services?culture=en\"" : "href=\"/services\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/Contact\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "th" ? "ค้นหาบริการที่เหมาะกับคุณ" : "Find the right service", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
@@ -247,6 +247,50 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         }
     }
 
+
+    [Theory]
+    [InlineData("en", true, "/services?culture=en", "Manufacturing services | MALIEV")]
+    [InlineData("th", true, "/services", "บริการผลิตชิ้นส่วน | MALIEV")]
+    [InlineData("en", false, "/services?culture=en", "Manufacturing services | MALIEV")]
+    [InlineData("th", false, "/services", "บริการผลิตชิ้นส่วน | MALIEV")]
+    public async Task HomeServiceLinks_FollowTheRenderedDirectoryAndHeroLinksToLocalizedServices(
+        string culture,
+        bool active,
+        string expectedHref,
+        string expectedTitle)
+    {
+        using var host = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Home", active ? "true" : "false"));
+        using var client = CreateClient(host);
+        using var homeResponse = await client.GetAsync($"/?culture={culture}&tracking=excluded");
+        var home = WebUtility.HtmlDecode(await homeResponse.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, homeResponse.StatusCode);
+        Assert.Contains($"<html lang=\"{culture}\"", home, StringComparison.Ordinal);
+        var anchors = HomeAnchorRegex().Matches(home).Cast<Match>().ToArray();
+        foreach (var anchorClass in new[]
+        {
+            "landing-button-secondary",
+            "landing-service-directory-link"
+        })
+        {
+            var anchor = Assert.Single(anchors.Where(candidate =>
+                candidate.Groups["classes"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Contains(anchorClass, StringComparer.Ordinal)));
+            var href = anchor.Groups["href"].Value;
+            Assert.Equal(expectedHref, href);
+
+            using var destination = await client.GetAsync(href);
+            var services = WebUtility.HtmlDecode(await destination.Content.ReadAsStringAsync());
+
+            Assert.Equal(HttpStatusCode.OK, destination.StatusCode);
+            Assert.Contains($"<html lang=\"{culture}\"", services, StringComparison.Ordinal);
+            Assert.Contains($"<title>{expectedTitle}</title>", services, StringComparison.Ordinal);
+            Assert.Equal(active, services.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+            Assert.Contains("class=\"maliev-page maliev-page-main services-index-page\"", services, StringComparison.Ordinal);
+            Assert.Contains("data-migration-component=\"service-breadcrumb\"", services, StringComparison.Ordinal);
+        }
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(
         new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
@@ -271,6 +315,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
     }
+
+    [GeneratedRegex("<a\\b(?=[^>]*\\bclass=\"(?<classes>[^\"]*)\")(?=[^>]*\\bhref=\"(?<href>[^\"]*)\")[^>]*>", RegexOptions.CultureInvariant)]
+    private static partial Regex HomeAnchorRegex();
 
     [GeneratedRegex("data-cookie-string=\"(?<cookie>[^\"]+)\"")]
     private static partial Regex ConsentCookieRegex();
