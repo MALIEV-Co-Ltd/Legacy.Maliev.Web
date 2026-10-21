@@ -19,6 +19,11 @@ public static class AdditiveBenchmarkCli
             return RunResolveProfile(args[1..]);
         }
 
+        if (args.Length > 0 && string.Equals(args[0], "inventory-corpus", StringComparison.Ordinal))
+        {
+            return RunInventoryCorpus(args[1..]);
+        }
+
         if (!TryParseArguments(args, out string? manifestPath, out string? schemaPath, out string? reportPath))
         {
             Console.Error.WriteLine(
@@ -102,6 +107,56 @@ public static class AdditiveBenchmarkCli
             Console.Error.WriteLine($"Unable to resolve Bambu Studio profile: {exception.Message}");
             return 1;
         }
+    }
+
+    private static int RunInventoryCorpus(string[] args)
+    {
+        string? root = null;
+        string? output = null;
+        string? consentId = null;
+        int limit = 48;
+        for (int index = 0; index < args.Length; index += 2)
+        {
+            if (index + 1 >= args.Length)
+            {
+                return WriteInventoryUsage();
+            }
+
+            switch (args[index])
+            {
+                case "--root": root = args[index + 1]; break;
+                case "--output": output = args[index + 1]; break;
+                case "--consent-id": consentId = args[index + 1]; break;
+                case "--limit" when int.TryParse(args[index + 1], out int parsed): limit = parsed; break;
+                default: return WriteInventoryUsage();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(output) || string.IsNullOrWhiteSpace(consentId))
+        {
+            return WriteInventoryUsage();
+        }
+
+        try
+        {
+            PrivateCorpusInventoryResult inventory = PrivateCorpusInventory.Create(root, limit, consentId);
+            string fullOutput = Path.GetFullPath(output);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
+            File.WriteAllText(fullOutput, inventory.Json, new UTF8Encoding(false));
+            Console.WriteLine($"Anonymous private corpus inventory: {inventory.EntryCount} unique entries; output: {fullOutput}");
+            return inventory.EntryCount == limit ? 0 : 2;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Console.Error.WriteLine($"Unable to inventory restricted corpus: {exception.Message}");
+            return 1;
+        }
+    }
+
+    private static int WriteInventoryUsage()
+    {
+        Console.Error.WriteLine("Usage: Maliev.AdditiveBenchmark inventory-corpus --root <directory> --output <path> --consent-id <id> [--limit <count>]");
+        return 1;
     }
 
     private static int WriteResolveProfileUsage()

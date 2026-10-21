@@ -1,5 +1,6 @@
 using Maliev.AdditiveBenchmark;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -20,6 +21,7 @@ public sealed class AdditiveBenchmarkTests
 
     private static readonly string ManifestPath = Path.Combine(AssetDirectory, "manifest.v1.json");
     private static readonly string SchemaPath = Path.Combine(AssetDirectory, "manifest.v1.schema.json");
+    private static readonly string MatchedSchemaPath = Path.Combine(AssetDirectory, "manifest.v2.schema.json");
     private static readonly string ReportPath = Path.Combine(AssetDirectory, "report.v1.json");
 
     /// <summary>
@@ -148,5 +150,164 @@ public sealed class AdditiveBenchmarkTests
         string[] files = Directory.GetFiles(AssetDirectory, "*", SearchOption.AllDirectories);
 
         Assert.DoesNotContain(files, file => forbiddenExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PrivateCorpusInventory_IsDeterministicAnonymousAndDeduplicated()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"private-corpus-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "customer-secret.stl"), "solid one");
+            File.WriteAllText(Path.Combine(root, "duplicate-name.stl"), "solid one");
+            File.WriteAllText(Path.Combine(root, "another-customer.3mf"), "project two");
+
+            PrivateCorpusInventoryResult first = PrivateCorpusInventory.Create(root, 2, "owner-instruction-2026-09-20");
+            PrivateCorpusInventoryResult second = PrivateCorpusInventory.Create(root, 2, "owner-instruction-2026-09-20");
+
+            Assert.Equal(first.Json, second.Json);
+            Assert.Equal(2, first.EntryCount);
+            Assert.DoesNotContain("customer-secret", first.Json, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("duplicate-name", first.Json, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(root, first.Json, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("owner-instruction-2026-09-20", first.Json, StringComparison.Ordinal);
+            Assert.Contains("release-holdout", first.Json, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void ReferenceComparability_DifferentPose_IsRejected()
+    {
+        double[] requested = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
+        double[] rotated = [
+            0, -1, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
+
+        BenchmarkComparisonResult result = BenchmarkReferenceValidator.Validate(
+            requested,
+            rotated,
+            "fixed");
+
+        Assert.False(result.IsComparable);
+        Assert.Equal("reference_pose_mismatch", result.ReasonCode);
+    }
+
+    [Fact]
+    public void BambuCli_FixedPose_UsesPreparedProjectWithoutAutoOrientation()
+    {
+        var request = new BambuStudioSliceRequest(
+            "fixture.3mf",
+            "machine.json",
+            "process.json",
+            "filament.json",
+            "output",
+            "slice.3mf",
+            "High Temp Plate",
+            BambuStudioOrientationPolicy.Fixed);
+
+        IReadOnlyList<string> arguments = BambuStudioCli.BuildArguments(request);
+
+        Assert.DoesNotContain("--orient", arguments);
+        Assert.DoesNotContain("--arrange", arguments);
+    }
+
+    [Fact]
+    public void ParseGCodeEvidence_TracksModesResetsToolsArcsAndSupport()
+    {
+        const string gcode = """
+            M82
+            ; FEATURE: Outer wall
+            G1 X10 E2
+            G1 E1.5
+            G92 E0
+            T1
+            ; FEATURE: Support
+            G2 X20 Y10 I5 J0 E3
+            M83
+            G1 E-0.4
+            G1 X30 E1.2
+            ; FEATURE: Custom
+            G1 X31 E0.2
+            """;
+
+        GCodeExtrusionEvidence result = BambuStudioResultParser.ParseGCodeEvidence(gcode);
+
+        Assert.Equal(6.4, result.TotalPositiveExtrusionMillimetres, 6);
+        Assert.Equal(4.2, result.SupportExtrusionMillimetres, 6);
+        Assert.Null(result.SupportExtrusionMillimetresForCertification);
+        Assert.Contains("ambiguous_feature_role", result.ReasonCodes);
+    }
+
+    [Fact]
+    public void Run_VersionTwoPoseMismatch_IsInvalid()
+    {
+        JsonNode manifest = JsonNode.Parse(File.ReadAllText(ManifestPath))!;
+        JsonNode schema = JsonNode.Parse(File.ReadAllText(SchemaPath))!;
+        manifest["schemaVersion"] = "2.0";
+        schema["properties"]!["schemaVersion"]!["const"] = "2.0";
+        JsonObject benchmarkCase = manifest["cases"]![0]!.AsObject();
+        benchmarkCase["orientationPolicy"] = "fixed";
+        benchmarkCase["inputArtifactSha256"] = benchmarkCase["modelSha256"]!.DeepClone();
+        benchmarkCase["profileBundleSha256"] = benchmarkCase["profileSha256"]!.DeepClone();
+        benchmarkCase["referenceTransform4x4"] = new JsonArray(
+            0, -1, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+        benchmarkCase["metricDefinitions"] = new JsonObject
+        {
+            ["time"] = "Bambu total_predication seconds",
+            ["material"] = "Bambu total_used_g grams",
+            ["support"] = "feature-tagged positive extrusion converted with pinned filament geometry",
+        };
+
+        string temporaryManifest = Path.Combine(Path.GetTempPath(), $"additive-benchmark-v2-{Guid.NewGuid():N}.json");
+        string temporarySchema = Path.Combine(Path.GetTempPath(), $"additive-benchmark-v2-schema-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(temporaryManifest, manifest.ToJsonString());
+            File.WriteAllText(temporarySchema, schema.ToJsonString());
+
+            BenchmarkRunResult result = AdditiveBenchmarkRunner.Run(temporaryManifest, temporarySchema);
+
+            Assert.Equal("invalid", result.Status);
+            Assert.Contains(result.Report.InvalidIssues, issue => issue.Code == "reference_pose_mismatch");
+        }
+        finally
+        {
+            File.Delete(temporaryManifest);
+            File.Delete(temporarySchema);
+        }
+    }
+
+    [Fact]
+    public void ManifestSchema_VersionTwo_RequiresMatchedInputProvenance()
+    {
+        using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(MatchedSchemaPath));
+        JsonElement benchmarkCase = schema.RootElement.GetProperty("$defs").GetProperty("benchmarkCase");
+        string[] required = benchmarkCase.GetProperty("required").EnumerateArray()
+            .Select(value => value.GetString()!)
+            .ToArray();
+
+        Assert.Equal("2.0", schema.RootElement.GetProperty("properties").GetProperty("schemaVersion").GetProperty("const").GetString());
+        Assert.False(benchmarkCase.GetProperty("additionalProperties").GetBoolean());
+        Assert.Contains("orientationPolicy", required);
+        Assert.Contains("referenceTransform4x4", required);
+        Assert.Contains("inputArtifactSha256", required);
+        Assert.Contains("profileBundleSha256", required);
+        Assert.Contains("metricDefinitions", required);
     }
 }
