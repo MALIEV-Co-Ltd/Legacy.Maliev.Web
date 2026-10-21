@@ -1,4 +1,5 @@
 using System.Collections;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,11 +13,13 @@ public sealed class WebSurfaceOwnedLifetimeTests
     {
         var original = new InvalidOperationException("private-startup");
         using var root = new WebRootProbe(AppContext.BaseDirectory);
+        using var ownership = new TestingWebRootLease(root);
         var environment = new WebRootEnvironment(root);
         using var parent = new OwnedWebSurfaceParent();
         var builder = new HostBuilder().ConfigureServices(services =>
         {
             services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(environment);
+            services.AddSingleton(ownership);
             services.AddSingleton<IHostedService>(_ => new FailingStartAndDispose(root, original));
         });
         var actual = Assert.Throws<InvalidOperationException>(() => parent.StartForOwnershipControl(builder));
@@ -47,14 +50,18 @@ public sealed class WebSurfaceOwnedLifetimeTests
         using var second = new WebRootProbe(AppContext.BaseDirectory);
         using var borrowed = new WebRootProbe(Path.GetTempPath());
         using var unknown = new BorrowedFileProvider();
-        var environment = new WebRootEnvironment(new Microsoft.Extensions.FileProviders.CompositeFileProvider(
-            first, new Microsoft.Extensions.FileProviders.CompositeFileProvider(first, second, borrowed, unknown)));
-        using var lease = new OwnedWebSurfaceWebRoot(environment);
+        using var firstOwnership = new TestingWebRootLease(first);
+        using var secondOwnership = new TestingWebRootLease(second);
+        using var lease = new OwnedWebSurfaceWebRoot(null);
+        lease.Capture(firstOwnership);
+        lease.Capture(firstOwnership);
+        lease.Capture(secondOwnership);
         Assert.Throws<AggregateException>(() => lease.Dispose());
         Assert.Equal(1, first.DisposalAttempts);
         Assert.Equal(1, second.DisposalAttempts);
         Assert.Equal(0, borrowed.DisposalAttempts);
         Assert.Equal(0, unknown.DisposalAttempts);
+        Assert.True(borrowed.Watch("borrowed-still-live.css").ActiveChangeCallbacks);
         lease.Dispose();
         Assert.Equal(1, first.DisposalAttempts);
         Assert.Equal(1, second.DisposalAttempts);
@@ -104,6 +111,9 @@ public sealed class WebSurfaceOwnedLifetimeTests
         await using var second = parent.WithWebHostBuilder(_ => { });
         using var firstClient = first.CreateClient();
         using var secondClient = second.CreateClient();
+        using var rendered = await firstClient.GetAsync("/about?culture=en");
+        Assert.Equal(System.Net.HttpStatusCode.OK, rendered.StatusCode);
+        Assert.Contains("?v=", await rendered.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         var firstRoot = PhysicalWebRoot(first);
         var secondRoot = PhysicalWebRoot(second);
         Assert.NotSame(firstRoot, secondRoot);
@@ -167,6 +177,157 @@ public sealed class WebSurfaceOwnedLifetimeTests
             Assert.Equal(0, lease.RemainingOwnedProviders);
         }
         finally { await factory.DisposeAsync(); }
+    }
+
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SameRootBorrowedProviderBeforeOrAfterBaseRemainsAlive(bool beforeBase)
+    {
+        var factory = new BorrowingFactory(beforeBase);
+        try
+        {
+            using var client = factory.CreateClient();
+            var ownership = factory.Services.GetRequiredService<TestingWebRootLease>();
+            var environment = factory.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+            var borrowed = Assert.IsType<WebRootProbe>(factory.Borrowed);
+            Assert.Same(borrowed, environment.WebRootFileProvider);
+            Assert.NotSame(borrowed, ownership.Provider);
+            Assert.Equal(Path.TrimEndingDirectorySeparator(borrowed.Root),
+                Path.TrimEndingDirectorySeparator(ownership.Provider.Root));
+            Assert.True(ownership.Provider.Watch("owned-replaced-root.css").ActiveChangeCallbacks);
+            Assert.True(borrowed.Watch("borrowed-root.css").ActiveChangeCallbacks);
+            var lease = factory.Services.GetRequiredService<OwnedWebSurfaceWebRoot>();
+            Assert.Equal(1, lease.RemainingOwnedProviders);
+            await factory.DisposeAsync();
+            Assert.Equal(0, lease.RemainingOwnedProviders);
+            Assert.Throws<ObjectDisposedException>(() => ownership.Provider.Watch("owned-after-dispose.css"));
+            Assert.Equal(0, borrowed.DisposalAttempts);
+            Assert.True(borrowed.Watch("borrowed-after-dispose.css").ActiveChangeCallbacks);
+        }
+        finally
+        {
+            try { await factory.DisposeAsync(); }
+            finally { factory.Borrowed?.Dispose(); }
+        }
+    }
+
+    private sealed class BorrowingFactory(bool beforeBase) : TestingWebApplicationFactory
+    {
+        internal WebRootProbe? Borrowed { get; private set; }
+
+        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+        {
+            if (beforeBase) ReplaceWebRoot(builder);
+            base.ConfigureWebHost(builder);
+            if (!beforeBase) ReplaceWebRoot(builder);
+        }
+
+        private void ReplaceWebRoot(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder) =>
+            builder.ConfigureServices((context, _) =>
+            {
+                Borrowed = new WebRootProbe(context.HostingEnvironment.WebRootPath);
+                context.HostingEnvironment.WebRootFileProvider = Borrowed;
+            });
+    }
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    [InlineData("Development")]
+    public void ExplicitWebRootCreationDoesNotChangeNonTestingEnvironment(string name)
+    {
+        using var borrowed = new WebRootProbe(AppContext.BaseDirectory);
+        var environment = new WebRootEnvironment(borrowed) { EnvironmentName = name };
+        Assert.Null(TestingWebRootLease.Create(environment));
+        Assert.Same(borrowed, environment.WebRootFileProvider);
+        Assert.Equal(0, borrowed.DisposalAttempts);
+        Assert.True(borrowed.Watch("non-testing-still-live.css").ActiveChangeCallbacks);
+    }
+
+    [Fact]
+    public void ExplicitCreationDoesNotClaimTheOverwrittenInitialProvider()
+    {
+        using var initial = new WebRootProbe(AppContext.BaseDirectory);
+        var environment = new WebRootEnvironment(initial);
+        using var ownership = Assert.IsType<TestingWebRootLease>(TestingWebRootLease.Create(environment));
+        Assert.Same(ownership.Provider, environment.WebRootFileProvider);
+        Assert.NotSame(initial, ownership.Provider);
+        Assert.True(ownership.Provider.Watch("explicit-owned-root.css").ActiveChangeCallbacks);
+        ownership.Dispose();
+        ownership.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => ownership.Provider.Watch("explicit-owned-after-dispose.css"));
+        Assert.Equal(0, initial.DisposalAttempts);
+        Assert.True(initial.Watch("initial-borrowed-still-live.css").ActiveChangeCallbacks);
+    }
+
+    [Fact]
+    public async Task ProgramScopeReleasesCreatedRootWhenBuildFailsBeforeHostCapture()
+    {
+        var original = new InvalidOperationException("private-build");
+        TestingWebRootLease? ownership = null;
+        await using var parent = new TestingWebApplicationFactory();
+        await using var child = parent.WithWebHostBuilder(builder => builder.ConfigureServices((_, services) =>
+        {
+            ownership = Assert.IsType<TestingWebRootLease>(
+                Assert.Single(services, descriptor => descriptor.ServiceType == typeof(TestingWebRootLease))
+                    .ImplementationInstance);
+            Assert.True(ownership.Provider.Watch("build-failure-control.css").ActiveChangeCallbacks);
+            throw original;
+        }));
+        var actual = Record.Exception(() => child.CreateClient());
+        Assert.Same(original, actual);
+        var created = Assert.IsType<TestingWebRootLease>(ownership);
+        Assert.Throws<ObjectDisposedException>(() => created.Provider.Watch("build-failure-after-dispose.css"));
+    }
+
+    [Fact]
+    public async Task ActualProgramFailedStartReleasesCreatedRootAndRetainsPrimary()
+    {
+        var original = new InvalidOperationException("private-start");
+        TestingWebRootLease? ownership = null;
+        await using var parent = new TestingWebApplicationFactory();
+        await using var child = parent.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<HostedResource>(_ => new HostedResource(false));
+            services.AddSingleton<IHostedService>(provider =>
+            {
+                ownership = provider.GetRequiredService<TestingWebRootLease>();
+                Assert.True(ownership.Provider.Watch("actual-start-failure.css").ActiveChangeCallbacks);
+                return new FailingStart(provider.GetRequiredService<HostedResource>(), original);
+            });
+        }));
+        var actual = Record.Exception(() => child.CreateClient());
+        Assert.Same(original, actual);
+        var created = Assert.IsType<TestingWebRootLease>(ownership);
+        Assert.Throws<ObjectDisposedException>(() => created.Provider.Watch("actual-start-after-dispose.css"));
+    }
+
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DifferentRootOrUnknownCallerProviderIsNeverClaimed(bool useUnknown)
+    {
+        using var differentRoot = new WebRootProbe(Path.GetTempPath());
+        using var unknown = new BorrowedFileProvider();
+        Microsoft.Extensions.FileProviders.IFileProvider borrowed = useUnknown ? unknown : differentRoot;
+        await using var parent = new TestingWebApplicationFactory();
+        await using var child = parent.WithWebHostBuilder(builder => builder.ConfigureServices((context, _) =>
+            context.HostingEnvironment.WebRootFileProvider = borrowed));
+        using var client = child.CreateClient();
+        var environment = child.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+        var ownership = child.Services.GetRequiredService<TestingWebRootLease>();
+        Assert.Same(borrowed, environment.WebRootFileProvider);
+        Assert.NotSame(borrowed, ownership.Provider);
+        Assert.True(ownership.Provider.Watch("owned-with-custom-root.css").ActiveChangeCallbacks);
+        await child.DisposeAsync();
+        Assert.Throws<ObjectDisposedException>(() => ownership.Provider.Watch("custom-root-after-dispose.css"));
+        Assert.Equal(0, differentRoot.DisposalAttempts);
+        Assert.Equal(0, unknown.DisposalAttempts);
+        Assert.True(differentRoot.Watch("different-root-still-live.css").ActiveChangeCallbacks);
+        Assert.False(unknown.Watch("unknown-still-live.css").ActiveChangeCallbacks);
     }
 
     private static Microsoft.Extensions.FileProviders.PhysicalFileProvider PhysicalWebRoot(
