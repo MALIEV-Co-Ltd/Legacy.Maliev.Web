@@ -267,6 +267,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 receipt is not null
                 && string.Equals(receipt.SessionId, session.SessionId, StringComparison.Ordinal)
                 && string.Equals(receipt.OwnerIdentity, session.OwnerIdentity, StringComparison.Ordinal)
+                && (receipt.GeometryReconstruction is null || receipt.GeometryReconstruction.IsValid())
                 && receipt.PartId != Guid.Empty && receipt.FileId != Guid.Empty
                 && receipt.UploadSha256 is { Length: 64 }
                 && receipt.PhysicalSha256 is { Length: 64 }

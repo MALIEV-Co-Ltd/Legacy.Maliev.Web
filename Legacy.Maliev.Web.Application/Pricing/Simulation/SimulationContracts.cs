@@ -54,7 +54,12 @@ public sealed record MeshTriangle(Vector3 A, Vector3 B, Vector3 C);
 public sealed record MeshInput(
     IReadOnlyList<MeshTriangle> Triangles,
     double UnitsToMillimetres,
-    Matrix4x4 ComponentTransform);
+    Matrix4x4 ComponentTransform)
+{
+    /// <summary>Per-triangle positive-fill object occurrence; null preserves legacy even-odd fill.</summary>
+    /// <remarks>One non-negative group per triangle, at most 256 groups. Object solids are unioned.</remarks>
+    public IReadOnlyList<int>? PositiveFillGroups { get; init; }
+}
 
 /// <summary>Normalized finite mesh and its stable identity.</summary>
 /// <param name="Triangles">Local-origin triangles in millimetres.</param>
@@ -63,7 +68,12 @@ public sealed record MeshInput(
 public sealed record NormalizedMesh(
     IReadOnlyList<MeshTriangle> Triangles,
     string Sha256,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics)
+{
+    /// <summary>Per-triangle positive-fill object occurrence; null preserves legacy even-odd fill.</summary>
+    /// <remarks>One non-negative group per triangle, at most 256 groups. Object solids are unioned.</remarks>
+    public IReadOnlyList<int>? PositiveFillGroups { get; init; }
+}
 
 /// <summary>Rigid build pose with a deterministic identifier.</summary>
 /// <param name="Id">Stable tie-break identifier.</param>
@@ -185,6 +195,16 @@ public sealed record RoleDeposition(
     double DepositedMm3,
     double Seconds);
 
+/// <summary>Signed provenance of a pricing-only voxel surrogate, never a replacement manufacturing model.</summary>
+/// <param name="Method">Bounded algorithm revision.</param>
+/// <param name="VoxelSizeMm">Voxel pitch in millimetres.</param>
+public sealed record VoxelReconstructionInfo(string Method, double VoxelSizeMm)
+{
+    /// <summary>Checks the source reconstruction provenance envelope.</summary>
+    public bool IsValid() => string.Equals(Method, "voxel-majority-v1", StringComparison.Ordinal)
+        && double.IsFinite(VoxelSizeMm) && VoxelSizeMm is >= 0.2 and <= 0.5;
+}
+
 /// <summary>Immutable physical simulation result, excluding money.</summary>
 public sealed class SimulationResult
 {
@@ -229,6 +249,9 @@ public sealed class SimulationResult
 
     /// <summary>Gets stable review and limitation reason codes.</summary>
     public IReadOnlyList<string> Diagnostics { get; }
+
+    /// <summary>Gets server-produced pricing-only reconstruction provenance.</summary>
+    public VoxelReconstructionInfo? GeometryReconstruction { get; private init; }
 
     /// <summary>Gets all deposited material, including adhesion and purge.</summary>
     public double TotalDepositedMm3 { get; }
@@ -279,8 +302,20 @@ public sealed class SimulationResult
         IReadOnlyList<RoleDeposition> roles,
         MotionLedger motion,
         IReadOnlyList<SupportRegionReport> supportRegions,
-        IReadOnlyList<string> diagnostics)
+        IReadOnlyList<string> diagnostics) =>
+        Create(analysisVersion, profileSha256, roles, motion, supportRegions, diagnostics, null);
+
+    internal static SimulationResult Create(
+        string analysisVersion,
+        string profileSha256,
+        IReadOnlyList<RoleDeposition> roles,
+        MotionLedger motion,
+        IReadOnlyList<SupportRegionReport> supportRegions,
+        IReadOnlyList<string> diagnostics,
+        VoxelReconstructionInfo? geometryReconstruction)
     {
+        if (geometryReconstruction is not null && !geometryReconstruction.IsValid())
+            throw new ArgumentException("Reconstruction provenance is invalid.", nameof(geometryReconstruction));
         SimulationResult basic = Create(analysisVersion, profileSha256, roles);
         ArgumentNullException.ThrowIfNull(motion);
         ArgumentNullException.ThrowIfNull(supportRegions);
@@ -296,7 +331,10 @@ public sealed class SimulationResult
             basic.Roles,
             motion,
             supportRegions.ToArray(),
-            diagnostics.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray());
+            diagnostics.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray())
+        {
+            GeometryReconstruction = geometryReconstruction,
+        };
     }
 }
 
