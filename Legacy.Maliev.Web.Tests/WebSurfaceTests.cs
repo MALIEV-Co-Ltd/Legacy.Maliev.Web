@@ -2216,6 +2216,8 @@ public sealed class WebSurfaceTests : IDisposable
     {
         using var response = await client.GetAsync(path);
 
+        Assert.Equal("max-age=63072000; includeSubDomains",
+            Assert.Single(response.Headers.GetValues("Strict-Transport-Security")));
         Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
         Assert.Equal("DENY", Assert.Single(response.Headers.GetValues("X-Frame-Options")));
         var policy = Assert.Single(response.Headers.GetValues("Content-Security-Policy"));
@@ -2227,6 +2229,23 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(
             path.StartsWith("/Error", StringComparison.Ordinal) ? "no-referrer" : "strict-origin-when-cross-origin",
             Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+    }
+
+    [Theory]
+    [InlineData("http://localhost/robots.txt", "https")]
+    [InlineData("http://localhost/robots.txt", "http")]
+    [InlineData("https://localhost/robots.txt", "http")]
+    public async Task TransportSecurityHeader_DoesNotRequireSchemeInferenceOrRedirect(
+        string address, string forwardedScheme)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, address);
+        request.Headers.Add("X-Forwarded-Proto", forwardedScheme);
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+        Assert.Equal("max-age=63072000; includeSubDomains",
+            Assert.Single(response.Headers.GetValues("Strict-Transport-Security")));
     }
 
     [Fact]
@@ -2371,16 +2390,14 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Fact]
-    public async Task ContactLocales_PersistTheSameCanonicalRequestQuotePayload()
+    public async Task ContactLocales_PersistTheSameThreeKeyDiagnostic()
     {
         using var english = await SubmitPersistedContactAsync("en");
         using var thai = await SubmitPersistedContactAsync("th");
 
         Assert.Equal(english.RootElement.GetRawText(), thai.RootElement.GetRawText());
-        Assert.Equal("maliev_lead_submitted", english.RootElement.GetProperty("event").GetString());
-        Assert.Equal("contact", english.RootElement.GetProperty("lead_type").GetString());
-        Assert.Equal("general_contact", english.RootElement.GetProperty("service").GetString());
-        Assert.Equal("persisted", english.RootElement.GetProperty("lead_status").GetString());
+        AssertContactDiagnostic(english.RootElement);
+        AssertContactDiagnostic(thai.RootElement);
     }
 
     [Fact]
@@ -2416,9 +2433,16 @@ public sealed class WebSurfaceTests : IDisposable
         var source = landing.StatusCode == HttpStatusCode.MovedPermanently
             ? await client.GetStringAsync(landing.Headers.Location)
             : await landing.Content.ReadAsStringAsync();
-        Assert.Contains("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
-        Assert.Contains("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+        var payload = Regex.Match(
+            source,
+            @"window\.malievAnalytics\.emit\((\{[^;]+\})\);",
+            RegexOptions.CultureInvariant);
+        Assert.True(payload.Success, "Persisted contact must render its queued diagnostic.");
+        using var document = JsonDocument.Parse(payload.Groups[1].Value);
+        AssertContactDiagnostic(document.RootElement);
+        Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.dataLayer.push({\"event\":\"maliev_contact_submitted\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("private@example.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Private project details", source, StringComparison.Ordinal);
     }
@@ -4257,10 +4281,32 @@ public sealed class WebSurfaceTests : IDisposable
         var payload = Regex.Match(source, @"window\.malievAnalytics\.emit\((\{[^;]+\})\);", RegexOptions.CultureInvariant);
         Assert.True(payload.Success, "Persisted inquiry must retain its queued analytics event.");
         using var document = JsonDocument.Parse(payload.Groups[1].Value);
-        Assert.Equal("persisted", document.RootElement.GetProperty("lead_status").GetString());
-        Assert.Equal(route == "contact" ? "message-1" : "request-1", document.RootElement.GetProperty("transaction_id").GetString());
+        if (route == "contact")
+        {
+            AssertContactDiagnostic(document.RootElement);
+            Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"maliev_lead_submitted\"", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("window.malievAnalytics.emit({\"event\":\"generate_lead\"", source, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal("quotation", route);
+            Assert.Equal("persisted", document.RootElement.GetProperty("lead_status").GetString());
+            Assert.Equal("request-1", document.RootElement.GetProperty("transaction_id").GetString());
+        }
         Assert.DoesNotContain("inquiry-locale@example.com", payload.Value, StringComparison.Ordinal);
         Assert.DoesNotContain("inquiry-probe", payload.Value, StringComparison.Ordinal);
+    }
+
+    private static void AssertContactDiagnostic(JsonElement payload)
+    {
+        Assert.Equal(JsonValueKind.Object, payload.ValueKind);
+        Assert.Equal(3, payload.EnumerateObject().Count());
+        Assert.Equal("maliev_contact_submitted", payload.GetProperty("event").GetString());
+        Assert.Equal("general_contact", payload.GetProperty("service").GetString());
+        Assert.Equal("persisted", payload.GetProperty("submission_status").GetString());
+        Assert.False(payload.TryGetProperty("lead_type", out _));
+        Assert.False(payload.TryGetProperty("lead_status", out _));
+        Assert.False(payload.TryGetProperty("transaction_id", out _));
     }
 
 

@@ -285,7 +285,13 @@ return await PrivateWebLogging.RunHostAsync(
                 options.Conventions.AddAreaPageRouteModelConvention(
                     "Member",
                     "/Index",
-                    model => model.Selectors.Clear());
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
                 options.Conventions.AddAreaPageRouteModelConvention(
                     "Member",
                     "/Account/Index",

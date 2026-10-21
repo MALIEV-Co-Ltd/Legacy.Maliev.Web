@@ -17,6 +17,8 @@ namespace Legacy.Maliev.Web.Pages.Shared
     public static class LeadAnalyticsEventQueue
     {
         private const string TempDataKey = "Maliev.LeadAnalyticsEvent";
+        // Pre-605 consumers treat every event under the legacy key as a conversion.
+        private const string ContactTempDataKey = "Maliev.ContactAnalyticsEvent.v1";
 
         /// <summary>
         /// Attempts to queue a persisted contact-message event without allowing analytics failures to escape.
@@ -207,13 +209,19 @@ namespace Legacy.Maliev.Web.Pages.Shared
         {
             ArgumentNullException.ThrowIfNull(tempData);
 
+            return TryConsume(tempData, ContactTempDataKey, out leadEvent)
+                || TryConsume(tempData, TempDataKey, out leadEvent);
+        }
+
+        private static bool TryConsume(ITempDataDictionary tempData, string key, out LeadAnalyticsEvent? leadEvent)
+        {
             leadEvent = null;
-            if (!tempData.TryGetValue(TempDataKey, out object? value))
+            if (!tempData.TryGetValue(key, out object? value))
             {
                 return false;
             }
 
-            tempData.Remove(TempDataKey);
+            tempData.Remove(key);
             if (value is not string serializedEvent)
             {
                 return false;
@@ -239,7 +247,10 @@ namespace Legacy.Maliev.Web.Pages.Shared
         private static void Queue(ITempDataDictionary tempData, LeadAnalyticsEvent leadEvent)
         {
             ArgumentNullException.ThrowIfNull(tempData);
-            tempData[TempDataKey] = JsonSerializer.Serialize(leadEvent);
+            var key = string.Equals(leadEvent.LeadType, "contact", StringComparison.Ordinal)
+                ? ContactTempDataKey
+                : TempDataKey;
+            tempData[key] = JsonSerializer.Serialize(leadEvent);
         }
 
         private static bool TryQueue(
@@ -332,7 +343,14 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// Gets the application-owned event name.
         /// </summary>
         [JsonPropertyName("event")]
-        public string Event { get; } = "maliev_lead_submitted";
+        public string Event => string.Equals(this.LeadType, "contact", StringComparison.Ordinal)
+            ? "maliev_contact_submitted"
+            : "maliev_lead_submitted";
+
+        /// <summary>Gets whether this is a validated persisted quotation conversion.</summary>
+        [JsonIgnore]
+        public bool IsPersistedQuotation => this.IsAllowed()
+            && (this.LeadType is "manual_quote" or "instant_3d_quote" or "instant_cnc_quote");
 
         /// <summary>
         /// Gets the controlled lead type.
@@ -384,6 +402,11 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// <summary>Builds the GA4 conversion projection from the persisted lead identity.</summary>
         public object BuildGenerateLeadConversionEvent(string eventName = "generate_lead", string currency = "THB", decimal? value = null)
         {
+            if (!this.IsPersistedQuotation)
+            {
+                throw new InvalidOperationException("Only persisted quotations may project a lead conversion event.");
+            }
+
             var payload = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["event"] = eventName,
@@ -403,8 +426,7 @@ namespace Legacy.Maliev.Web.Pages.Shared
 
         internal bool IsAllowed()
         {
-            if (!string.Equals(this.Event, "maliev_lead_submitted", StringComparison.Ordinal)
-                || !string.Equals(this.LeadStatus, "persisted", StringComparison.Ordinal))
+            if (!string.Equals(this.LeadStatus, "persisted", StringComparison.Ordinal))
             {
                 return false;
             }
@@ -415,6 +437,7 @@ namespace Legacy.Maliev.Web.Pages.Shared
                 || (string.Equals(this.LeadType, "manual_quote", StringComparison.Ordinal)
                     && IsAllowedManualQuotationService(this.Service)
                     && HasPositiveId(this.TransactionId, "request")
+                    && (this.JourneyId is null || Guid.TryParse(this.JourneyId, out _))
                     && ServiceFinderAttribution.IsAllowedLeadValues(this.Intent, this.FinderPath))
                 || (string.Equals(this.LeadType, "instant_3d_quote", StringComparison.Ordinal)
                     && string.Equals(this.Service, "3d_printing", StringComparison.Ordinal)

@@ -1765,6 +1765,17 @@ html.privacy-consent-open {
     }
 }
 
+/* Arrow icons must never inherit a link-wide underline, including page hover rules.
+   Put any desired text underline on a separate label, outside the icon. */
+a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
+    text-decoration: none !important;
+}
+
+.arrow-link-label {
+    text-decoration: underline;
+    text-underline-offset: .25em;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
