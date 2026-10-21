@@ -30,7 +30,8 @@ public sealed class CountrySourceFailureObservationTests
         Assert.Equal(available, result.ServiceAvailable);
         Assert.Empty(result.Value!);
         Assert.Equal(1, fixture.Transport.Calls);
-        fixture.AssertFailure(status);
+        if (status == 404) fixture.AssertResourceNotFound();
+        else fixture.AssertFailure(status);
     }
 
     [Fact]
@@ -230,6 +231,7 @@ public sealed class CountrySourceFailureObservationTests
             Transport = new(send);
             var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
             builder.Logging.AddProvider(Events);
+            builder.Logging.AddFilter("Maliev.Aspire.ServiceDefaults.Diagnostics.PrivateDependencyFailureHandler", LogLevel.Debug);
             builder.Configuration["Services:Country"] = "https://private-country-host.example/";
             builder.Configuration["Services:Career"] = "https://private-career-host.example/";
             builder.Services.AddLegacyServiceClients(builder.Configuration);
@@ -258,12 +260,33 @@ public sealed class CountrySourceFailureObservationTests
         internal void AssertQuiet()
         {
             Assert.Empty(Events.Failures);
+            Assert.Empty(Events.ResourceNotFound);
             Assert.Empty(Events.CountryWarnings);
+        }
+
+        internal void AssertResourceNotFound()
+        {
+            var entry = Assert.Single(Events.ResourceNotFound);
+            Assert.Equal(LogLevel.Debug, entry.Level);
+            Assert.Null(entry.Exception);
+            Assert.Equal("DependencyResourceNotFound", entry.Fields["EventName"]);
+            Assert.Equal("CountryService", entry.Fields["Dependency"]);
+            Assert.Equal("Countries.Get", entry.Fields["Operation"]);
+            Assert.Equal(404, entry.Fields["StatusCode"]);
+            Assert.Equal("GET", entry.Fields["Method"]);
+            Assert.Empty(Events.Failures);
+            Assert.Empty(Events.CountryWarnings);
+            Assert.Equal(string.Empty, entry.Wire);
+            var metadata = JsonSerializer.Serialize(entry.Fields);
+            Assert.DoesNotContain("private-", metadata, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("filename.stl", metadata, StringComparison.Ordinal);
+            Assert.DoesNotContain("Bearer", metadata, StringComparison.OrdinalIgnoreCase);
         }
 
         internal void AssertFailure(int? status)
         {
             var entry = Assert.Single(Events.Failures);
+            Assert.Empty(Events.ResourceNotFound);
             Assert.Equal(LogLevel.Error, entry.Level);
             Assert.Null(entry.Exception);
             Assert.Equal("CountryService", entry.Fields["Dependency"]);
@@ -332,6 +355,7 @@ public sealed class CountrySourceFailureObservationTests
     private sealed class Capture : ILoggerProvider
     {
         internal ConcurrentQueue<Entry> Failures { get; } = new();
+        internal ConcurrentQueue<Entry> ResourceNotFound { get; } = new();
         internal ConcurrentQueue<string> CountryWarnings { get; } = new();
         internal ConcurrentQueue<Exception?> CountryWarningExceptions { get; } = new();
         public ILogger CreateLogger(string categoryName) => new Logger(categoryName, this);
@@ -347,13 +371,15 @@ public sealed class CountrySourceFailureObservationTests
                     owner.CountryWarnings.Enqueue(formatter(state, exception));
                     owner.CountryWarningExceptions.Enqueue(exception);
                 }
-                if (id.Id != 5101 || id.Name != "DependencyRequestFailure") return;
+                if (id.Id != 5101 || id.Name is not ("DependencyRequestFailure" or "DependencyResourceNotFound")) return;
                 var fields = Assert.IsAssignableFrom<IEnumerable<KeyValuePair<string, object?>>>(state)
                     .ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal);
                 var entry = new LogEntry<TState>(level, category, id, state, exception, (_, _) => "private-rendered-text");
                 using var writer = new StringWriter();
                 new PrivateFailureConsoleFormatter().Write(in entry, null, writer);
-                owner.Failures.Enqueue(new(level, exception, fields, writer.ToString()));
+                var captured = new Entry(level, exception, fields, writer.ToString());
+                if (id.Name == "DependencyResourceNotFound") owner.ResourceNotFound.Enqueue(captured);
+                else owner.Failures.Enqueue(captured);
             }
         }
     }

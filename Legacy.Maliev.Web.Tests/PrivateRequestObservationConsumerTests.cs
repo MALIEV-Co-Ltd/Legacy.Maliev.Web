@@ -150,6 +150,10 @@ public sealed class PrivateRequestObservationConsumerTests
         Assert.False(response.Headers.Contains("X-Maliev-Health-Instance"));
         Assert.False(response.Headers.Contains("X-Maliev-Diagnostic-Id"));
         AssertPrivate(factory.Records.Snapshot);
+        var formatted = AssertFormattedEvent(factory.Records.Formatted, "UnhandledRequestFailure", "CRITICAL");
+        Assert.Equal(incident, formatted.GetProperty("IncidentId").GetString());
+        Assert.Equal(webIncident.Fields["OccurredAtUtc"], formatted.GetProperty("OccurredAtUtc").GetString());
+        Assert.Equal(typeof(InvalidOperationException).FullName, formatted.GetProperty("exceptionType").GetString());
     }
 
     [Theory]
@@ -181,6 +185,295 @@ public sealed class PrivateRequestObservationConsumerTests
             entry.Fields.GetValueOrDefault("EventName") as string == "HandledOperationFailure");
         Assert.Equal(LogLevel.Error, observed.Level);
         Assert.DoesNotContain(factory.Records.Snapshot, entry => entry.HasSyntheticScope);
+        AssertFormattedEvent(factory.Records.Formatted, "HandledOperationFailure", "ERROR");
+    }
+
+
+    /// <summary>The actual Program selects the private native console sink without dropping metrics or traces.</summary>
+    [Theory]
+    [InlineData(LogLevel.Warning, "WARNING")]
+    [InlineData(LogLevel.Error, "ERROR")]
+    [InlineData(LogLevel.Critical, "CRITICAL")]
+    public void ActualProgram_PrivateConsoleFormatsOnlySafeFailureMetadata(LogLevel level, string severity)
+    {
+        using var factory = new ObservationFactory("127.0.0.1", consoleOverride: true);
+        using var client = factory.CreateClient();
+        var selected = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<
+            Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>>().Value.FormatterName;
+        Assert.Equal(global::Maliev.Aspire.ServiceDefaults.Logging.PrivateFailureConsoleFormatter.FormatterName, selected);
+        Assert.Same(factory.Records.Formatter, Assert.Single(
+            factory.Services.GetServices<Microsoft.Extensions.Logging.Console.ConsoleFormatter>(),
+            formatter => formatter.Name == selected));
+        var providers = factory.Services.GetServices<ILoggerProvider>().ToArray();
+        Assert.Equal(2, providers.Length);
+        Assert.Contains(providers, provider => provider is Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider);
+        Assert.Contains(providers, provider => ReferenceEquals(provider, factory.Records));
+        Assert.DoesNotContain(providers, provider => provider.GetType().Namespace?.StartsWith("OpenTelemetry", StringComparison.Ordinal) == true);
+        Assert.NotNull(factory.Services.GetRequiredService<OpenTelemetry.Metrics.MeterProvider>());
+        Assert.NotNull(factory.Services.GetRequiredService<OpenTelemetry.Trace.TracerProvider>());
+
+        using var activity = new System.Diagnostics.Activity("WebPrivacyControl")
+            .SetIdFormat(System.Diagnostics.ActivityIdFormat.W3C).Start();
+        var logger = factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Web.PrivacyControl");
+        var fields = new Dictionary<string, object?>
+        {
+            ["EventName"] = "BusinessOperationFailure",
+            ["Operation"] = "Quotation",
+            ["StatusCode"] = 503,
+            ["Code"] = "quote_invalid",
+            ["Path"] = "/uploads/" + Sensitive,
+            ["Authorization"] = Sensitive,
+            ["Cookie"] = Sensitive,
+            ["Payload"] = new OpaqueCustomerPayload(),
+            ["{OriginalFormat}"] = Sensitive,
+            ["exceptionType"] = "ForgedCustomerException",
+            ["sourceLocation"] = Sensitive,
+            ["service"] = Sensitive,
+            ["deploymentVersion"] = Sensitive,
+            ["traceId"] = new string('1', 32),
+            ["spanId"] = new string('2', 16),
+        };
+        using var scope = logger.BeginScope(fields);
+        factory.Records.Clear();
+        logger.Log(level, new EventId(79), fields, new InvalidOperationException(Sensitive),
+            static (_, _) => Sensitive);
+        var output = Assert.Single(factory.Records.Formatted);
+        using var json = JsonDocument.Parse(output);
+        var root = json.RootElement;
+        Assert.Equal(severity, root.GetProperty("severity").GetString());
+        Assert.Equal("BusinessOperationFailure", root.GetProperty("EventName").GetString());
+        Assert.Equal("Quotation", root.GetProperty("Operation").GetString());
+        Assert.Equal(503, root.GetProperty("StatusCode").GetInt32());
+        Assert.Equal("quote_invalid", root.GetProperty("Code").GetString());
+        Assert.Equal(typeof(InvalidOperationException).FullName, root.GetProperty("exceptionType").GetString());
+        Assert.Equal(activity.TraceId.ToHexString(), root.GetProperty("traceId").GetString());
+        Assert.Equal(activity.SpanId.ToHexString(), root.GetProperty("spanId").GetString());
+        foreach (var name in new[] { "Path", "Authorization", "Cookie", "Payload", "{OriginalFormat}", "State", "Scopes", "Message", "TraceId", "SpanId" })
+            Assert.False(root.TryGetProperty(name, out _));
+        Assert.DoesNotContain(Sensitive, output, StringComparison.Ordinal);
+        Assert.DoesNotContain("ForgedCustomerException", output, StringComparison.Ordinal);
+        Assert.Equal(root.EnumerateObject().Count(), root.EnumerateObject().Select(property => property.Name).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    /// <summary>The private console selection preserves the explicit tracing gate and ordinary metrics registration.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActualProgram_PrivateConsolePreservesConfiguredTracingGate(bool tracingEnabled)
+    {
+        using var factory = new ObservationFactory("127.0.0.1", tracingEnabled: tracingEnabled);
+        using var client = factory.CreateClient();
+
+        Assert.NotNull(factory.Services.GetRequiredService<OpenTelemetry.Metrics.MeterProvider>());
+        if (tracingEnabled)
+            Assert.NotNull(factory.Services.GetRequiredService<OpenTelemetry.Trace.TracerProvider>());
+        else
+            Assert.Null(factory.Services.GetService<OpenTelemetry.Trace.TracerProvider>());
+        Assert.DoesNotContain(factory.Services.GetServices<ILoggerProvider>(), provider =>
+            provider.GetType().Namespace?.StartsWith("OpenTelemetry", StringComparison.Ordinal) == true);
+    }
+
+    /// <summary>A provider-specific Trace override cannot make the selected formatter emit success payloads.</summary>
+    [Theory]
+    [InlineData(LogLevel.Trace)]
+    [InlineData(LogLevel.Debug)]
+    [InlineData(LogLevel.Information)]
+    public void ActualProgram_PrivateConsoleRemainsQuietUnderCategoryOverride(LogLevel level)
+    {
+        using var factory = new ObservationFactory("127.0.0.1", consoleOverride: true);
+        using var client = factory.CreateClient();
+        factory.Records.Clear();
+        var logger = factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Web.PrivacyControl");
+        logger.Log(level, new EventId(80), Sensitive, null, static (state, _) => state);
+        Assert.Empty(factory.Records.Formatted);
+        Assert.Equal(level, Assert.Single(factory.Records.Snapshot).Level);
+        using var output = new StringWriter();
+        var entry = new Microsoft.Extensions.Logging.Abstractions.LogEntry<string>(
+            level, "Web.PrivacyControl", new EventId(80), Sensitive, null,
+            static (_, _) => throw new InvalidOperationException("Formatter callback must stay unused."));
+        factory.Records.Formatter.Write(in entry, null, output);
+        Assert.Equal(string.Empty, output.ToString());
+    }
+
+    /// <summary>The real readiness endpoint reports bounded failures and resets after a healthy response.</summary>
+    [Fact]
+    public async Task ActualProgram_FormattedHealthFailureIsBoundedAndResetsAfterRecovery()
+    {
+        using var factory = new ObservationFactory("127.0.0.1");
+        using var client = factory.CreateClient();
+        factory.HealthFails = true;
+        factory.Records.Clear();
+        async Task Probe(HttpStatusCode expected)
+        {
+            using var response = await client.GetAsync("/web/readiness");
+            Assert.Equal(expected, response.StatusCode);
+            Assert.DoesNotContain(Sensitive, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+        await Probe(HttpStatusCode.ServiceUnavailable);
+        Assert.Equal(1, HealthFailureCount(factory.Records.Formatted));
+        await Probe(HttpStatusCode.ServiceUnavailable);
+        Assert.Equal(1, HealthFailureCount(factory.Records.Formatted));
+        factory.Clock.Advance(TimeSpan.FromMinutes(5));
+        await Probe(HttpStatusCode.ServiceUnavailable);
+        Assert.Equal(2, HealthFailureCount(factory.Records.Formatted));
+        factory.HealthFails = false;
+        await Probe(HttpStatusCode.OK);
+        Assert.Equal(2, HealthFailureCount(factory.Records.Formatted));
+        factory.HealthFails = true;
+        await Probe(HttpStatusCode.ServiceUnavailable);
+        Assert.Equal(3, HealthFailureCount(factory.Records.Formatted));
+        Assert.All(factory.Records.Formatted, output => Assert.DoesNotContain(Sensitive, output, StringComparison.Ordinal));
+    }
+
+    /// <summary>The actual entry seam preserves tooling interception and safely contains ordinary startup failures.</summary>
+    [Theory]
+    [InlineData("success")]
+    [InlineData("synchronous")]
+    [InlineData("asynchronous")]
+    [InlineData("sink-failure")]
+    [InlineData("host-aborted")]
+    public async Task ProgramEntry_StartupBoundaryPreservesExitAndToolingContracts(string kind)
+    {
+        var previousExitCode = Environment.ExitCode;
+        using var output = kind == "sink-failure" ? new ThrowingWriter() : new StringWriter();
+        var aborted = new Microsoft.Extensions.Hosting.HostAbortedException();
+        var calls = 0;
+        try
+        {
+            Environment.ExitCode = 37;
+            Task Start()
+            {
+                calls++;
+                return kind switch
+                {
+                    "success" => Task.CompletedTask,
+                    "asynchronous" => Task.FromException(new InvalidOperationException(Sensitive)),
+                    "host-aborted" => throw aborted,
+                    _ => throw new InvalidOperationException(Sensitive),
+                };
+            }
+            if (kind == "host-aborted")
+            {
+                var actual = await Assert.ThrowsAsync<Microsoft.Extensions.Hosting.HostAbortedException>(
+                    () => Program.RunHostAsync(Start, output));
+                Assert.Same(aborted, actual);
+            }
+            else
+                Assert.Null(await Xunit.Record.ExceptionAsync(() => Program.RunHostAsync(Start, output)));
+            Assert.Equal(1, calls);
+            Assert.Equal(kind is "success" or "host-aborted" ? 37 : 1, Environment.ExitCode);
+            if (kind is "success" or "host-aborted" or "sink-failure")
+                Assert.Equal(string.Empty, output.ToString());
+            else
+            {
+                using var json = JsonDocument.Parse(output.ToString());
+                Assert.Equal("CRITICAL", json.RootElement.GetProperty("severity").GetString());
+                Assert.Equal(5102, json.RootElement.GetProperty("eventId").GetInt32());
+                Assert.Equal("StartupFailure", json.RootElement.GetProperty("EventName").GetString());
+                Assert.Equal("HostInitialization", json.RootElement.GetProperty("Operation").GetString());
+                Assert.Equal(typeof(InvalidOperationException).FullName, json.RootElement.GetProperty("exceptionType").GetString());
+                Assert.DoesNotContain(Sensitive, output.ToString(), StringComparison.Ordinal);
+            }
+        }
+        finally { Environment.ExitCode = previousExitCode; }
+    }
+
+    /// <summary>Testing startup preserves the original failure and exit code instead of signaling successful host discovery.</summary>
+    [Theory]
+    [InlineData("synchronous")]
+    [InlineData("asynchronous")]
+    [InlineData("tokenless-cancellation")]
+    [InlineData("foreign-cancellation")]
+    public async Task ProgramEntry_TestingStartupPreservesOriginalFailureAndExitCode(string kind)
+    {
+        var previousExitCode = Environment.ExitCode;
+        using var output = new StringWriter();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Exception failure = kind switch
+        {
+            "tokenless-cancellation" => new OperationCanceledException(Sensitive),
+            "foreign-cancellation" => new OperationCanceledException(Sensitive, cancellation.Token),
+            _ => new InvalidOperationException(Sensitive),
+        };
+        var calls = 0;
+        Task Start()
+        {
+            calls++;
+            if (kind == "synchronous") throw failure;
+            return Task.FromException(failure);
+        }
+        try
+        {
+            Environment.ExitCode = 53;
+
+            var actual = await Xunit.Record.ExceptionAsync(() =>
+                Program.RunHostAsync(Start, output, preserveTestingException: () => true));
+
+            Assert.Same(failure, actual);
+            Assert.Equal(1, calls);
+            Assert.Equal(53, Environment.ExitCode);
+            Assert.Equal(string.Empty, output.ToString());
+            if (failure is OperationCanceledException canceled)
+                Assert.Equal(canceled.CancellationToken, Assert.IsType<OperationCanceledException>(actual).CancellationToken);
+        }
+        finally
+        {
+            Environment.ExitCode = previousExitCode;
+        }
+    }
+
+    /// <summary>The real Testing Program lets WAF observe its original options failure without changing the process exit code.</summary>
+    [Fact]
+    public void ActualProgram_TestingValidationFailureRemainsAnOptionsFailure()
+    {
+        var previousExitCode = Environment.ExitCode;
+        try
+        {
+            Environment.ExitCode = 53;
+            using var factory = new ObservationFactory("127.0.0.1", missingRecaptchaProject: true);
+
+            var failure = Assert.Throws<Microsoft.Extensions.Options.OptionsValidationException>(() =>
+            {
+                using var client = factory.CreateClient();
+            });
+
+            Assert.Contains(failure.Failures, value => value.Contains("Recaptcha:ProjectId", StringComparison.Ordinal));
+            Assert.Equal(53, Environment.ExitCode);
+        }
+        finally
+        {
+            Environment.ExitCode = previousExitCode;
+        }
+    }
+
+    private static JsonElement AssertFormattedEvent(string[] records, string name, string severity)
+    {
+        var events = records.Select(output =>
+        {
+            using var document = JsonDocument.Parse(output);
+            return document.RootElement.Clone();
+        }).Where(entry => entry.TryGetProperty("EventName", out var value) && value.GetString() == name).ToArray();
+        var failure = Assert.Single(events);
+        Assert.Equal(severity, failure.GetProperty("severity").GetString());
+        Assert.All(records, output => Assert.DoesNotContain(Sensitive, output, StringComparison.Ordinal));
+        return failure;
+    }
+
+    private static int HealthFailureCount(string[] records) => records.Count(output =>
+    {
+        using var document = JsonDocument.Parse(output);
+        return document.RootElement.TryGetProperty("EventName", out var name) && name.GetString() == "HealthProbeFailure";
+    });
+
+    private sealed class OpaqueCustomerPayload
+    {
+        public override string ToString() => throw new InvalidOperationException("Customer payload must not be rendered.");
+    }
+
+    private sealed class ThrowingWriter : StringWriter
+    {
+        public override void WriteLine(string? value) => throw new IOException("Synthetic sink failure.");
     }
 
     private static async Task<HttpResponseMessage> SendAsync(HttpClient client, string path,
@@ -256,7 +549,8 @@ public sealed class PrivateRequestObservationConsumerTests
 
     private sealed class ObservationFactory(string? peer, bool overwriteSynthetic = false,
         bool overwriteHealth = false, bool ordinaryFailure = false, bool handledFailure = false,
-        bool forgedIncidentHeader = false) : TestingWebApplicationFactory
+        bool forgedIncidentHeader = false, bool consoleOverride = false,
+        bool missingRecaptchaProject = false, bool? tracingEnabled = null) : TestingWebApplicationFactory
     {
         public RecordingProvider Records { get; } = new();
         public ObservationClock Clock { get; } = new();
@@ -264,6 +558,7 @@ public sealed class PrivateRequestObservationConsumerTests
         public bool ShouldOverwriteHealth => overwriteHealth;
         public int SyntheticOverwrites;
         public int HealthOverwrites;
+        public bool HealthFails;
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -279,11 +574,36 @@ public sealed class PrivateRequestObservationConsumerTests
                     ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
                     ["ForwardedHeaders:KnownProxies:0"] = "203.0.113.7",
                 }));
+            if (missingRecaptchaProject)
+                builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["Recaptcha:ProjectId"] = null,
+                    }));
+            if (consoleOverride || tracingEnabled.HasValue)
+            {
+                // Service defaults snapshot this gate before deferred app-configuration callbacks run.
+                builder.UseSetting("Observability:TracingEnabled", (tracingEnabled ?? true).ToString());
+                builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
+            }
+            if (consoleOverride)
+                builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["Logging:Console:LogLevel:Web.PrivacyControl"] = "Trace",
+                    }));
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton<TimeProvider>(Clock);
-                services.AddSingleton<ILoggerProvider>(Records);
+                services.AddSingleton<ILoggerProvider>(provider =>
+                {
+                    var name = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<
+                        Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>>().Value.FormatterName;
+                    Records.Formatter = Assert.Single(provider.GetServices<Microsoft.Extensions.Logging.Console.ConsoleFormatter>(),
+                        formatter => formatter.Name == name);
+                    return Records;
+                });
                 services.AddSingleton<IStartupFilter>(new PeerFilter(peer));
                 services.AddHttpContextAccessor();
                 services.AddHealthChecks().AddCheck("owned-observation-control", new HeaderHealthCheck(this));
@@ -336,7 +656,7 @@ public sealed class PrivateRequestObservationConsumerTests
                         return Task.CompletedTask;
                     });
             }
-            return Task.FromResult(HealthCheckResult.Healthy());
+            return Task.FromResult(owner.HealthFails ? HealthCheckResult.Unhealthy(Sensitive) : HealthCheckResult.Healthy());
         }
     }
 
@@ -381,14 +701,18 @@ public sealed class PrivateRequestObservationConsumerTests
             && scope.GetValueOrDefault("DiagnosticId") as string == Nonce);
     }
 
+    [Microsoft.Extensions.Logging.ProviderAlias("Console")]
     private sealed class RecordingProvider : ILoggerProvider, ISupportExternalScope
     {
         private readonly ConcurrentQueue<Record> records = new();
         private IExternalScopeProvider scopes = new LoggerExternalScopeProvider();
+        private readonly ConcurrentQueue<string> formatted = new();
+        public Microsoft.Extensions.Logging.Console.ConsoleFormatter Formatter { get; set; } = null!;
+        public string[] Formatted => formatted.ToArray();
         public Action? OnFrameworkError { get; set; }
         public Record[] Snapshot => records.ToArray();
         public Record[] Failures => Snapshot.Where(entry => entry.Level >= LogLevel.Warning).ToArray();
-        public void Clear() => records.Clear();
+        public void Clear() { records.Clear(); formatted.Clear(); }
         public void SetScopeProvider(IExternalScopeProvider scopeProvider) => scopes = scopeProvider;
         public ILogger CreateLogger(string categoryName) => new Recorder(this, categoryName);
         public void Dispose() { }
@@ -399,6 +723,11 @@ public sealed class PrivateRequestObservationConsumerTests
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
                 Func<TState, Exception?, string> formatter)
             {
+                using var output = new StringWriter();
+                var entry = new Microsoft.Extensions.Logging.Abstractions.LogEntry<TState>(
+                    logLevel, category, eventId, state, exception, formatter);
+                owner.Formatter.Write(in entry, owner.scopes, output);
+                if (output.GetStringBuilder().Length > 0) owner.formatted.Enqueue(output.ToString());
                 var fields = state is IEnumerable<KeyValuePair<string, object?>> values
                     ? values.ToDictionary(pair => pair.Key, pair => pair.Value) : new Dictionary<string, object?>();
                 var snapshot = new List<Dictionary<string, object?>>();
