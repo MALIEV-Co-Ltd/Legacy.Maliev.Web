@@ -1673,7 +1673,8 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 
     .instant-quote__workflow [data-workflow-parts] {
-        max-height: min(30dvh, 16rem);
+        /* Preserve the content cap in addition to the rail's two 1rem paddings. */
+        max-height: calc(min(30dvh, 16rem) + 2rem);
         min-height: 0;
         overflow-y: auto;
         align-items: flex-start;

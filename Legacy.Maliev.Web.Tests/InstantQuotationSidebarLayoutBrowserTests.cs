@@ -205,7 +205,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             Assert.True(beforeWheel[3] <= beforeWheel[4],
                 $"This gesture must exercise the horizontal rail, not native vertical scrolling. scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}.");
             Assert.True(beforeWheel[8] + beforeWheel[5] + beforeWheel[6] <= beforeWheel[4],
-                "Full part names and 44px actions must fit inside the desktop rail padding without clipping.");
+                $"Full part names and 44px actions must fit inside the desktop rail padding without clipping. scrollLeft={beforeWheel[0]}, scrollWidth={beforeWheel[1]}, clientWidth={beforeWheel[2]}, scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}.");
             await page.Mouse.WheelAsync(0, 120);
             await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-parts]').scrollLeft > 0");
             Assert.True(await rail.EvaluateAsync<double>("rail => rail.scrollLeft") > 0,
