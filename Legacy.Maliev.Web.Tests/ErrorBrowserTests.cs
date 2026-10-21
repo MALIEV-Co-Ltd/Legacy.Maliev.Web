@@ -75,7 +75,7 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
         Assert.Equal(1, await page.Locator("footer").CountAsync());
         Assert.Equal(0, await page.Locator("#incident-id, #incident-occurred-at").CountAsync());
         Assert.Equal(0, await page.Locator("a[href^='mailto:support@maliev.com']").CountAsync());
-        string content = await page.Locator("main").InnerTextAsync();
+        string content = await page.Locator("main").TextContentAsync() ?? string.Empty;
         Assert.Contains(previewLabel, content, StringComparison.Ordinal);
         Assert.DoesNotContain(incidentInstruction, content, StringComparison.Ordinal);
         string source = await page.ContentAsync();
